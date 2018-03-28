@@ -1,0 +1,161 @@
+{
+  "url": {
+    "api": "https://api.citizenos.com",
+    "fe": "https://app.citizenos.com"
+  },
+  "db": {
+    "uri": "postgres://citizenos:citizenos@localhost:5432/citizenos",
+    "options": {
+      "logging": true,
+      "benchmark": true,
+      "sync": {
+        "force": false,
+        "logging": true
+      },
+      "define": {
+        "underscored": false,
+        "freezeTableName": false,
+        "syncOnAssociation": false,
+        "charset": "utf8",
+        "collate": "utf8_general_ci",
+        "timestamps": true,
+        "paranoid": true
+      },
+      "omitNull": false,
+      "dialectOptions": {
+        "ssl": true
+      },
+      "pool": {
+        "min": 0,
+        "max": 100
+      }
+    }
+  },
+  "session": {
+    "name": "app.sid",
+    "privateKey": "TO BE OVERWRITTEN IN ENV SPECIFIC CONF",
+    "publicKey": "TO BE OVERWRITTEN IN ENV SPECIFIC CONF",
+    "algorithm": "RS256",
+    "secret": "",
+    "cookie": {
+      "path": "/api",
+      "httpOnly": true,
+      "secure": true,
+      "maxAge": 1209600000,
+      "domain": false
+    }
+  },
+  "api": {
+    "cors": {
+      "paths": [
+        "/api",
+        "/static/fonts"
+      ],
+      "origin": [
+        "rahvaalgatus\\.ee(:[0-9]{2,4})?$",
+        "citizenos\\.com(:[0-9]{2,4})?$"
+      ],
+      "methods": [
+        "GET",
+        "PUT",
+        "POST",
+        "DELETE",
+        "PATCH"
+      ],
+      "credentials": true
+    },
+    "key": ""
+  },
+  "passport": {
+    "google": {
+      "clientId": "11623449066-fua92rmgai358bqb63hqcc4sm1j17lev.apps.googleusercontent.com",
+      "clientSecret": "7b5hFOkbU9I948EoiixQ9ezW",
+      "url": "/api/auth/google",
+      "callbackUrl": "/api/auth/google/callback"
+    },
+    "facebook": {
+      "clientId": "1673474289579933",
+      "clientSecret": "9ad10ff099bf11ad932163b9be81c595",
+      "url": "/api/auth/facebook",
+      "callbackUrl": "/api/auth/facebook/callback"
+    }
+  },
+  "email": {
+    "provider": {
+      "name": "mailgun",
+      "options": {
+        "apiKey": null,
+        "authority": "https://citizenos.com"
+      }
+    },
+    "from": "CitizenOS <no-reply@citizenos.com>",
+    "trap": false
+  },
+  "services": {
+    "digiDoc": {
+      "serviceWsdlUrl": "https://dds.citizenos.com:8000/?wsdl",
+      "serviceName": "CitizenOS"
+    },
+    "etherpad": {
+      "host": "p.citizenos.com",
+      "port": "443",
+      "ssl": true,
+      "rejectUnauthorized": true
+    },
+    "idCard": {
+      "serviceUrl": "https://id.citizenos.com:8443/info",
+      "apiKey": null
+    },
+    "smartId": {
+      "hostname": "smartid.citizenos.com:8001",
+      "authorizeToken": "m3EvIdswsiIpeOXqXb185fgoS9h0zpu5jrweZWLVGeVR5FoQpE",
+      "apiPath": "/v1"
+    },
+    "twitter": {
+      "consumer_key": null,
+      "consumer_secret": null,
+      "access_token": null,
+      "access_token_secret": null,
+      "timeout_ms": 10000
+    },
+    "prerender": {
+      "serviceUrl": "https://citizenos-prerender-prod.herokuapp.com/",
+      "apiKey": "YOUR_KEY_HERE"
+    }
+  },
+  "logging": {
+    "log4js": {
+      "levels": {
+        "development": "DEBUG",
+        "test": "DEBUG",
+        "production": "INFO"
+      },
+      "appenders": [
+        {
+          "type": "console",
+          "category": "production"
+        }
+      ]
+    },
+    "morgan": {
+      "format": ":remote-addr - :remote-user \":method :url HTTP/:http-version\" :status :res[content-length] - :response-time ms"
+    }
+  },
+  "features": {
+    "sendToParliament": {
+      "voteCountMin": 1000,
+      "urlPrefix": "https://rahvaalgatus.ee",
+      "from": "info@rahvaalgatus.ee",
+      "to": [
+        "riigikogu@riigikogu.ee",
+        "info@rahvaalgatus.ee",
+        "citizenos@citizenos.com"
+      ]
+    }
+  },
+  "storage": {
+    "accessKeyId": "AWS_ACCESS_KEY_ID",
+    "secretAccessKey": "AWS_SECRET_ACCESS_KEY",
+    "bucket": "AWS_S3_BUCKET_NAME"
+  }
+}

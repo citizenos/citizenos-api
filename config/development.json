@@ -1,0 +1,118 @@
+{
+  "url": {
+    "api": "https://dev.api.citizenos.com:3001",
+    "fe": "https://dev.citizenos.com:3001"
+  },
+  "db": {
+    "uri": "postgres://citizenos:citizenos@localhost:5432/citizenos",
+    "options": {
+      "logging": true,
+      "sync": {
+        "force": true,
+        "logging": true
+      },
+      "define": {
+        "syncOnAssociation": true
+      },
+      "pool": {
+        "min": 0,
+        "max": 5
+      }
+    }
+  },
+  "session": {
+    "name": "app.sid",
+    "privateKey": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDjHct3tpX5B5+S\nt0hJ3Cw0U/afEilj+9V9+21TGsGZDwUplM/va5F8nintNp8/YBjr1QpL24p6YpCz\n8T1TjLJiAo9MPWbd/OzpMeHR/A/wS3qqKdAjkc/45y5EOb3mrcaguTiBwXgQpwAV\nkDYmsUJJZaGInuoJv758zdsVzLWLXRWgtRos0nGGTDE6uTXlA+BHy4W8uoMjO8mf\nca4qmSS6e9TxVna+5wJVQf3Uk9jbeI26Qa5QT975vwf2jKL++iZGlTfM0goKuT9/\nKfI8CEylBZo5Phw2Jsc5L4o2omkIoqLfG9/Fv59m9f2xUovNuJsKPa9IvzCNTJrL\nDTM5+djVAgMBAAECggEAQMM+QeTO3zRNTIj3FBi0gjdvG+0R4HDvb/1CL3BxxDOE\nRVcp9Bu4YNC5I+tvfaLpeFZHmVoBIuT4XldsJWb5dvlD43me265D4DtZKYe3A86C\nLAPAVmQ96bwCdXIBtMXY3fvzIQ0KL7VvULbOujnRrRxN86ddFWqX5v7MemrlWden\nznVnJGbtK/1fxk6+BoD11Qn9+Ccq94h/yNhS5LkaWLCWNXsR3rKJCEmEj/uGmVXD\njD/2uQCtHoFqV+HAYRgYJ6uaclAH+TLVP5LguFlTua3WSsRXdO3rvMkHrBIt/Ahv\nbT+aVmJ1xqHui/40o/rmGTGTmLiKUysLK0yOta/sAQKBgQDyIKz5psdDk5VtqPcF\nAEnHatn/mOVjNs/D5+EWjhVbt7XIDN1M7ZC+ZerXHI4QXbJ1h5qf90zkjADCM0hz\nF05toDjQyF5FC0RX6tZy60rPAbV1ZN58fpID4cwCS8grIsmwDjU9oXFl72ncUuL7\n3IHDcV36w21Za06uahff4ysMwwKBgQDwIPJaCHsobb9esm+4fipd0mzhSeYth8WQ\n4HCmjlKzudtTYnuxWuujkUcxxEucXrNJtFueOZFcMX1GSv23waML8NR7pg/nEC9y\nSUGFTHAsuFUvc5IBH9YRqROwZTz0Dy8lzoDUsJ+XlsjFj8ubv3eUsRj0YTVONIxp\ncUpy3reKhwKBgQCUirNT3Zt1u776raQN72VT8BuZkSV5PpEr8L/IZJZ51DSzbCEA\nJuabyE7QdXY6WCE5tV2JMeB8fd+hRHD4Gp5E5vy0KZib5xOglDPIAM2+PaAjSySr\nX8MYmpfb+L3uqMLvPWgwTTEShlR9lGQoe9koHA653tbg+tIkcnX/JpCsnQKBgDgO\nSOURo8Z9UDZIC2KTOUqrq7Uv7ibk0g8PBd0rzkycb4HYtK1jXyzQ5kDM5SW8ybfD\n/btDDxbpiqgVK4NxFaHc941h58Z19c2FImF+xZT69w/bt9LBXtTClpEQIRmMTeJS\ngaqlDKxzi6zq84oJOV4htYSfCLWX+MtIoiuMqGYTAoGBAMSJyBqaAb+tO7LsaPbZ\nQPcaHEChQ4jRoKnN2GWxsDQYp/iTm/N3udUrYJ/qB2s3WXDFf413DQ0uZXRFwrdv\nlCI3Af+dXhvYUftN0rpfok+nv6Ku9jH45tbDPMfRvEbnhlqSm3V6Wg+0Al8k9NhF\nVfF0eAES/LOx8NL/dJklQSmn\n-----END PRIVATE KEY-----",
+    "publicKey": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4x3Ld7aV+QefkrdISdws\nNFP2nxIpY/vVffttUxrBmQ8FKZTP72uRfJ4p7TafP2AY69UKS9uKemKQs/E9U4yy\nYgKPTD1m3fzs6THh0fwP8Et6qinQI5HP+OcuRDm95q3GoLk4gcF4EKcAFZA2JrFC\nSWWhiJ7qCb++fM3bFcy1i10VoLUaLNJxhkwxOrk15QPgR8uFvLqDIzvJn3GuKpkk\nunvU8VZ2vucCVUH91JPY23iNukGuUE/e+b8H9oyi/vomRpU3zNIKCrk/fynyPAhM\npQWaOT4cNibHOS+KNqJpCKKi3xvfxb+fZvX9sVKLzbibCj2vSL8wjUyayw0zOfnY\n1QIDAQAB\n-----END PUBLIC KEY-----",
+    "secret": "Sup13rSecretStuffInDev",
+    "cookie": {
+      "domain": ".dev.api.citizenos.com"
+    }
+  },
+  "api": {
+    "cors": {
+      "origin": [
+        "dev\\.citizenos\\.com(:[0-9]{2,4})?$",
+        "rahvaalgatus\\.ee(:[0-9]{2,4})?$",
+        "citizenospartner\\.ee(:[0-9]{2,4})?$"
+      ]
+    },
+    "key": "superSecretAPIkeySentInXApiKeyHeader"
+  },
+  "email": {
+    "provider": {
+      "name": "noop"
+    }
+  },
+  "services": {
+    "digiDoc": {
+      "serviceWsdlUrl": "https://tsp.demo.sk.ee/dds.wsdl",
+      "serviceName": "Testimine"
+    },
+    "etherpad": {
+      "host": "dev.p.citizenos.com",
+      "port": "9001",
+      "ssl": true,
+      "rejectUnauthorized": false,
+      "apikey": "LUVORFBXdUhrb0RMLXhzekREcXpjR1NsU1BBeTZRWmJGRUR4blZpX3YzYjJRa3FZ"
+    },
+    "idCard": {
+      "serviceUrl": "https://dev.id.citizenos.com:3002/info",
+      "apiKey": "ZWeCMMQSoIpOnavNnEo2daBjXbmG3PoEWgNnQ13EtZ9jF43gkInxok5fIioX"
+    },
+    "smartId": {
+      "hostname": "sid.demo.sk.ee",
+      "apiPath": "/smart-id-rp/v1",
+      "relyingPartyUUID": "00000000-0000-0000-0000-000000000000",
+      "replyingPartyName": "DEMO"
+    },
+    "twitter": {
+      "consumer_key": "kkFbJ3tySB9XIzXDbDQPqedSt",
+      "consumer_secret": "qYP9gsmKDdA8P4FIe1sgEiEMnctjUiep55Ai6mZuNIXmNa55V6",
+      "access_token": "743386047959212032-tJMA8osUwpwqF8DbMO71NAuS9CqJ1Vl",
+      "access_token_secret": "WLw9aRslEi7nodftuicaU1I4ovjZDF7r4ZsE00fIij1Ia",
+      "timeout_ms": 10000
+    },
+    "prerender": {
+      "serviceUrl": "https://dev.prerender.citizenos.com/",
+      "apiKey": "YOUR_KEY_HERE"
+    }
+  },
+  "logging": {
+    "log4js": {
+      "levels": {
+        "development": "DEBUG",
+        "test": "DEBUG",
+        "production": "INFO"
+      },
+      "appenders": [
+        {
+          "type": "console",
+          "category": "development"
+        },
+        {
+          "type": "dateFile",
+          "filename": "logs/app.log",
+          "pattern": "-dd",
+          "alwaysIncludePattern": false,
+          "category": "test"
+        }
+      ]
+    }
+  },
+  "features": {
+    "sendToParliament": {
+      "voteCountMin": 2,
+      "urlPrefix": "http://next.rahvaalgatus.ee",
+      "from": "Rahvaalgatus TEST <test_info@rahvaalgatus.ee>",
+      "to": [
+        "riigikogu_@riigikogu.test.ee"
+      ]
+    }
+  },
+  "storage": {
+    "accessKeyId": "AKIAIUP7LQV6IL7CU4FA",
+    "secretAccessKey": "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",
+    "bucket": "citizenos-test"
+  }
+}

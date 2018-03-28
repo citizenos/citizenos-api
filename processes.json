@@ -1,0 +1,13 @@
+{
+  "apps": [
+    {
+      "name": "citizenos-api",
+      "script": "bin/www",
+      "args": [
+      ],
+      "exec_mode": "cluster",
+      "instances": 2,
+      "node_args": ["--max-old-space-size=250"]
+    }
+  ]
+}

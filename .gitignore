@@ -1,0 +1,15 @@
+node_modules
+*.swp
+Thumbs.db
+*.lock
+*.log
+*.log-*
+*.sublime-project
+*.sublime-workspace
+*.iws
+*.ipr
+*.iml
+/.idea/*
+/logs/*.log*
+/config/local.*
+/files/**/
