@@ -1,5 +1,3 @@
-[TOC]
-
 # CitizenOS-API
 
 CitizenOS API - https://api.citizenos.com
