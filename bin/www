@@ -13,8 +13,8 @@ if (app.get('env') === 'development') {
     host = null; // Binds 0.0.0.0, thus open on all interfaces. In dev useful so that app running in Vbox is visible to the host machine.
 }
 
-app.set('port', process.env.PORT || 3000);
-var serverHttp = http.createServer(app).listen(process.env.PORT || 3000, host, function () {
+app.set('port', process.env.PORT || 3002);
+var serverHttp = http.createServer(app).listen(process.env.PORT || 3002, host, function () {
     logger.debug('Express HTTP server listening on port ' + serverHttp.address().port);
 });
 
@@ -24,7 +24,7 @@ if (app.get('env') === 'development') {
         key: fs.readFileSync('./config/certs/dev.api.citizenos.com.key'),
         cert: fs.readFileSync('./config/certs/dev.api.citizenos.com.crt')
     };
-    var serverHttps = https.createServer(options, app).listen(process.env.PORT_SSL || 3001, host, function () {
+    var serverHttps = https.createServer(options, app).listen(process.env.PORT_SSL || 3003, host, function () {
         logger.debug('Express HTTPS server listening on port ' + serverHttps.address().port);
     });
 }

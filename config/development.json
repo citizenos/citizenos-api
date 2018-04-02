@@ -1,6 +1,6 @@
 {
   "url": {
-    "api": "https://dev.api.citizenos.com:3001",
+    "api": "https://dev.api.citizenos.com:3003",
     "fe": "https://dev.citizenos.com:3001"
   },
   "db": {
