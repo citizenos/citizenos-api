@@ -4,40 +4,24 @@
  * Convert HTML to docx
  */
 
-var officeClippy = require('office-clippy');
+var docx = require('docx');
 
 // Used to create docx files
-var docx = officeClippy.docx;
 var htmlparser = require('htmlparser2');
 var Promise = require('bluebird');
 var encoder = require('html-entities').AllHtmlEntities;
 var fs = require('fs');
+var https = require('https');
+var path = require('path');
+var sizeOf = require('image-size');
+var FILE_CREATE_MODE = '0760';
 
-var headingStyleMethods = {
-    heading1: [
-        {'size': 69}, //px to half-pts
-        'bold'
-    ],
-    heading2: [
-        {'size': 60},
-        'bold'
-    ],
-    heading3: [
-        {'size': 51},
-        'bold'
-    ],
-    heading4: [
-        {'size': 42},
-        'bold'
-    ],
-    heading5: [
-        {'size': 33},
-        'bold'
-    ],
-    heading6: [
-        {'size': 24},
-        'bold'
-    ]
+var _addStyles = function (doc) {
+    doc.Styles.createParagraphStyle('code', 'code')
+        .basedOn('Normal')
+        .next('Normal')
+        .font('Courier New')
+        .size(24);
 };
 
 var style = {
@@ -88,6 +72,60 @@ var findItemByProperty = function (items, text, property) {
     }
 };
 
+var getFilesPath = function (pathIn) {
+    var pathOut = pathIn || 'files';
+    if (path.basename(pathOut).indexOf('.') > -1) {
+        pathOut = pathOut.replace(path.basename(pathOut), '');
+    }
+
+    return pathOut;
+};
+
+var getImageFile = function (url, dirpath) {
+    var fileDirPath = getFilesPath(dirpath);
+
+    return new Promise(function (resolve, reject) {
+        if (!fs.existsSync(fileDirPath)) {
+            fs.mkdir(fileDirPath, FILE_CREATE_MODE);
+        }
+        var filename = url.split('/').pop().split('#')[0].split('?')[0];
+        var filepath = path.join(fileDirPath, filename);
+        var file = fs.createWriteStream(filepath);
+        
+        https.get(url, function (response) {
+            response.pipe(file);
+            file.on('finish', function () {
+                file.close();
+
+                return resolve(filepath);
+            });
+        }).on('error', function (err) { // Handle errors
+            fs.unlink(filepath);
+          
+            return reject(err);
+        });
+    });
+};
+
+var removeImageFile = function (url, dirpath) {
+    var fileDirPath = getFilesPath(dirpath);
+
+    return new Promise(function (resolve) {
+        if (!fs.existsSync(fileDirPath)) {
+            return resolve();
+        }
+        var filename = url.split('/').pop().split('#')[0].split('?')[0];
+        var filepath = path.join(fileDirPath, filename);
+        if (fs.exists(filepath)) {
+            fs.unlink(filepath);
+
+            return resolve();
+        } else {
+            return resolve();
+        }
+    });
+};
+
 var findItemByClass = function (item, className) {
     if (!item) {
         return;
@@ -130,14 +168,18 @@ function CosHtmlToDocx (html, title, resPath) {
     if (title) {
         params.title = title;
     }
-    var finalDoc = docx.create(params);
-
+    var finalDoc = new docx.Document(params);
+    _addStyles(finalDoc);
     var _isHeadingElement = function (element) {
         if (element.name) {
             return element.name.match(/h+[0-6]/gi);
         }
 
         return false;
+    };
+
+    var _isCodeElement = function (element) {
+        return element.type === 'tag' && element.name && element.name === 'code';
     };
 
     var _isAlignmentElement = function (element) {
@@ -154,9 +196,8 @@ function CosHtmlToDocx (html, title, resPath) {
         }
 
         return false;
-
     };
-
+    
     var _isListElement = function (element) {
         return element.type === 'tag' && element.name && (element.name === 'ul' || element.name === 'ol' || element.name === 'li');
     };
@@ -181,9 +222,17 @@ function CosHtmlToDocx (html, title, resPath) {
         return element.type === 'tag' && element.name && element.name === 's';
     };
 
+    var _isImgElement = function (element) {
+        return element.type === 'tag' && element.name && element.name === 'img';
+    };
+
     var _isParagraphElement = function (element) {
         if (element.type !== 'text') {
             if (_isHeadingElement(element)) {
+                return true;
+            } else if (_isCodeElement(element)) {
+                return true;
+            } else if (_isImgElement(element)) {
                 return true;
             } else if (_isAlignmentElement(element)) {
                 return true;
@@ -236,6 +285,14 @@ function CosHtmlToDocx (html, title, resPath) {
 
         if (item.name && _isHeadingElement(item)) {
             attributes.push('heading' + item.name[1]);
+        }
+
+        if (item.name && _isCodeElement(item)) {
+            attributes.push('code');
+        }
+
+        if (item.name && _isImgElement(item)) {
+            attributes.push({'img': item.attribs.src});
         }
 
         if (_isAlignmentElement(item)) {
@@ -463,81 +520,132 @@ function CosHtmlToDocx (html, title, resPath) {
         });
     };
 
+    var downloadDocImages = function (paragraphs) {
+        var imageDownloadPromises = [];
+
+        return new Promise(function (resolve) {
+            var counter = 0;
+            paragraphs.forEach(function (row) {
+                row.paragraph.forEach(function (method) {
+                    if (method && typeof method === 'object') {
+                        var key = Object.keys(method);
+                        if (key[0] === 'img') {
+                            imageDownloadPromises.push(getImageFile(method.img, resPath));
+                        }
+                    }
+                });
+                counter++;
+            });
+            if (counter >= paragraphs.length) {
+                return Promise
+                    .all(imageDownloadPromises)
+                    .then(function () {
+                        return resolve();
+                    });
+            }
+        });
+    };
+    
+    var removeDocImages = function (paragraphs) {
+        var imageDeletePromises = [];
+
+        return new Promise(function (resolve) {
+            var counter = 0;
+            paragraphs.forEach(function (row) {
+                row.paragraph.forEach(function (method) {
+                    if (method && typeof method === 'object') {
+                        var key = Object.keys(method);
+                        if (key[0] === 'img') {
+                            imageDeletePromises.push(removeImageFile(method.img));
+                        }
+                    }
+                });
+                counter++;
+            });
+            if (counter >= paragraphs.length) {
+                return Promise
+                    .all(imageDeletePromises)
+                    .then(function () {
+                        return resolve();
+                    });
+            }
+        });
+    };
+
+    var scaleImage = function (path) {
+        var dimensions = sizeOf(path);
+        if (dimensions.width > 605) {
+            return Math.round((605 / dimensions.width) * 100) / 100;
+        }
+
+        return 1;
+    };
+
     /**
      * Iterates through all paragraphs and texts to return final structure and formatting of the document
      *
-     * @param {array} paragraph objects with formatting values
+     * @param {array} paragraphs objects with formatting values
      *
-     * @returns {Promise}
+     * @returns {Promise} Promise
      * @private
      */
-
     var createFinalDoc = function (paragraphs) {
         return new Promise(function (resolve) {
             if (!paragraphs || !paragraphs.length) {
                 return resolve();
             }
+            downloadDocImages(paragraphs)
+                .then(function () {
 
-            var parCount = 0;
+                    var parCount = 0;
+                    paragraphs.forEach(function (row) {
+                        parCount++;
+                        var paragraph = new docx.Paragraph();
+                        var addImageInProgress = false;
 
-            paragraphs.forEach(function (row) {
-                parCount++;
-                var isHeading = false; // to create heading style according to CitizenOS etherpad styles
-                var headingMethod = null;
-                var paragraph = docx.createParagraph();
+                        row.paragraph.forEach(function (method) {
+                            if (method && typeof method === 'object') {
+                                var key = Object.keys(method);
+                                if (key[0] === 'img') {
 
-                row.paragraph.forEach(function (method) {
-                    if (method && typeof method === 'object') {
-                        var key = Object.keys(method);
-                        paragraph[key[0]](method[key[0]]);
-                    }
-
-                    if (paragraph[method]) {
-                        paragraph[method]();
-                    }
-
-                    if (method && typeof method === 'string' && method.search('heading') > -1) {
-                        isHeading = true;
-                        headingMethod = method;
-                    }
-                });
-
-                row.texts.forEach(function (text) {
-                    if (text.text) {
-                        var textObject = docx.createText(encoder.decode(text.text.replace(/ /g, '\xa0'))); // otherwise spaces  will get trimmed
-                        text.style.forEach(function (style) {
-                            if (style && typeof style === 'object') {
-                                var key = Object.keys(style);
-                                textObject[key[0]](style[key[0]]);
-                            }
-
-                            if (textObject[style]) {
-                                textObject[style]();
+                                    var filename = method.img.split('/').pop().split('#')[0].split('?')[0];
+                                    var filesDirPath = getFilesPath(resPath);
+                                    var filePath = path.join(filesDirPath, filename);
+                                    var image1 = finalDoc.createImage(filePath);
+                                    var scale = scaleImage(filePath);
+                                    image1.scale(scale);
+                                } else {
+                                    paragraph[key[0]](method[key[0]]);
+                                }                         
+                            } else if (paragraph[method]) {
+                                paragraph[method]();
+                            } else if (['code'].indexOf(method) > -1) {
+                                paragraph.style(method);                         
                             }
                         });
-                        if (isHeading) {
-                            var headingStyle = headingStyleMethods[headingMethod];
-                            headingStyle.forEach(function (style) {
-                                if (style && typeof style === 'object') {
-                                    var key = Object.keys(style);
-                                    textObject[key[0]](style[key[0]]);
-                                }
 
-                                if (textObject[style]) {
-                                    textObject[style]();
-                                }
-                            });
+                        row.texts.forEach(function (text) {
+                            if (text.text) {
+                                var textObject = new docx.TextRun(encoder.decode(text.text.replace(/ /g, '\xa0'))); // otherwise spaces  will get trimmed
+                                text.style.forEach(function (style) {
+                                    if (style && typeof style === 'object') {
+                                        var key = Object.keys(style);
+                                        textObject[key[0]](style[key[0]]);
+                                    } else if (textObject[style]) {
+                                        textObject[style]();
+                                    }
+                                });
+                                paragraph.addRun(textObject);
+                            }
+                        });
+
+                        finalDoc.addParagraph(paragraph);
+
+                        if (parCount === paragraphs.length && !addImageInProgress) {
+                            return resolve();
                         }
-                        paragraph.addText(textObject);
-                    }
+                    });
                 });
-
-                finalDoc.addParagraph(paragraph);
-
-                if (parCount === paragraphs.length) {
-                    return resolve();
-                }
-            });
         });
 
     };
@@ -555,23 +663,25 @@ function CosHtmlToDocx (html, title, resPath) {
     this.processHTML = function (html) {
         var processHtml = this.html || html;
         var path = this.path;
-
+        
         return new Promise(function (resolve, reject) {
-            var handler = new htmlparser.DefaultHandler(function (err, res) {
+            var handler = new htmlparser.DefaultHandler(function (err, result) {
                 if (err) {
                     return reject(err);
                 }
 
-                _handleParserResult(res)
+                _handleParserResult(result)
                     .then(function (paragraphs) {
                         createFinalDoc(paragraphs)
                             .then(function () {
-                                var output = fs.createWriteStream(path);
-                                var exporter = officeClippy.exporter;
-
-                                exporter.local(output, finalDoc).then(function () {
-                                    return resolve();
-                                });
+                                var exporter = new docx.LocalPacker(finalDoc);
+                                exporter.pack(path)
+                                    .then(function () {
+                                      //  removeDocImages(paragraphs)
+                                        //    .then(function () {
+                                                return resolve();
+                                          //  });
+                                    });
                             });
                     });
             });
