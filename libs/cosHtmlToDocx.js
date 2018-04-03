@@ -107,25 +107,6 @@ var getImageFile = function (url, dirpath) {
     });
 };
 
-var removeImageFile = function (url, dirpath) {
-    var fileDirPath = getFilesPath(dirpath);
-
-    return new Promise(function (resolve) {
-        if (!fs.existsSync(fileDirPath)) {
-            return resolve();
-        }
-        var filename = url.split('/').pop().split('#')[0].split('?')[0];
-        var filepath = path.join(fileDirPath, filename);
-        if (fs.exists(filepath)) {
-            fs.unlink(filepath);
-
-            return resolve();
-        } else {
-            return resolve();
-        }
-    });
-};
-
 var findItemByClass = function (item, className) {
     if (!item) {
         return;
@@ -545,32 +526,6 @@ function CosHtmlToDocx (html, title, resPath) {
             }
         });
     };
-    
-    var removeDocImages = function (paragraphs) {
-        var imageDeletePromises = [];
-
-        return new Promise(function (resolve) {
-            var counter = 0;
-            paragraphs.forEach(function (row) {
-                row.paragraph.forEach(function (method) {
-                    if (method && typeof method === 'object') {
-                        var key = Object.keys(method);
-                        if (key[0] === 'img') {
-                            imageDeletePromises.push(removeImageFile(method.img));
-                        }
-                    }
-                });
-                counter++;
-            });
-            if (counter >= paragraphs.length) {
-                return Promise
-                    .all(imageDeletePromises)
-                    .then(function () {
-                        return resolve();
-                    });
-            }
-        });
-    };
 
     var scaleImage = function (path) {
         var dimensions = sizeOf(path);
@@ -677,10 +632,7 @@ function CosHtmlToDocx (html, title, resPath) {
                                 var exporter = new docx.LocalPacker(finalDoc);
                                 exporter.pack(path)
                                     .then(function () {
-                                      //  removeDocImages(paragraphs)
-                                        //    .then(function () {
-                                                return resolve();
-                                          //  });
+                                        return resolve();
                                     });
                             });
                     });
