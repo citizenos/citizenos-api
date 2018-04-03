@@ -1,0 +1,51 @@
+@startuml
+scale max 1024 width
+
+skinparam component {
+  BorderColor black
+  BackgroundColor gold
+  ArrowColor black
+}
+
+skinparam actor {
+  BorderColor black
+  BackgroundColor white
+}
+
+skinparam database {
+  BackgroundColor 87B5FF
+}
+
+actor User
+actor Partner
+
+database "citizenos-api-db \n(postgres)" {
+   ["public.*"] #white
+}
+
+database "etherpad-lite-db" {
+   ["store"] #white
+}
+
+cloud "3rd party services" {
+   ["DigiDocService API"] #White
+   ["Amazon API"] #white
+   ["Google API"] #white
+   ["Facebook API"] #white
+   ["Twitter API"] #white
+}
+
+User-down->[citizenos-fe]
+User-down->[etherpad-lite]
+Partner-down-->[citizenos-api]: REST
+[citizenos-fe]-down->[citizenos-api]: REST
+[citizenos-api]-left->[etherpad-lite]: REST
+[citizenos-api]-down->["public.*"]
+[citizenos-api]--->["DigiDocService API"]
+[citizenos-api]--->["Twitter API"]
+[citizenos-api]--->["Facebook API"]
+[citizenos-api]--->["Amazon API"]
+[citizenos-api]--->["Google API"]
+[etherpad-lite]-right->[citizenos-api]: REST
+[etherpad-lite]-down->["store"]
+@enduml

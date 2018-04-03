@@ -1,7 +1,7 @@
 {
   "name": "citizenos-api",
   "version": "1.0.0",
-  "private": true,
+  "private": false,
   "license": "Apache-2.0",
   "main": "./bin/www",
   "scripts": {
@@ -85,6 +85,7 @@
     "grunt-eslint": "20.1.0",
     "grunt-exec": "0.4.6",
     "grunt-mustache-render": "1.7.0",
+    "grunt-plantuml": "0.2.3",
     "husky": "0.14.3",
     "mocha": "2.2.5",
     "supertest": "1.2.0"

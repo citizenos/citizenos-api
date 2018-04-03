@@ -141,6 +141,15 @@ module.exports = function (grunt) {
                 ]
             }
         },
+        plantuml: {
+            dev: {
+                src: ['docs/src/schematics/*.puml'],
+                dest: 'docs/imgs/schematics',
+                options: {
+                    format: 'svg'
+                }
+            }
+        },
         watch: {
             eslint: {
                 files: ['**/*.js', '!node_modules/**'],
@@ -149,6 +158,10 @@ module.exports = function (grunt) {
             emails: {
                 files: ['views/emails/**/*.mu', '!views/emails/build/**'],
                 tasks: ['mustache_render']
+            },
+            plantuml: {
+                files: ['docs/src/schematics/**'],
+                tasks: ['plantuml']
             }
         }
     });
@@ -159,10 +172,12 @@ module.exports = function (grunt) {
     grunt.loadNpmTasks('grunt-concurrent');
     grunt.loadNpmTasks('grunt-exec');
     grunt.loadNpmTasks('grunt-mustache-render');
+    grunt.loadNpmTasks('grunt-plantuml');
 
     // Default task(s).
     grunt.registerTask('default', ['concurrent:dev']);
     grunt.registerTask('start', ['concurrent:dev']);
     grunt.registerTask('test', ['exec:test']);
+    grunt.registerTask('docs', ['plantuml:dev']);
 
 };
