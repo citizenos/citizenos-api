@@ -11,6 +11,7 @@ var htmlparser = require('htmlparser2');
 var Promise = require('bluebird');
 var encoder = require('html-entities').AllHtmlEntities;
 var fs = require('fs');
+var fsExtra = require('fs-extra');
 var https = require('https');
 var path = require('path');
 var sizeOf = require('image-size');
@@ -85,25 +86,28 @@ var getImageFile = function (url, dirpath) {
     var fileDirPath = getFilesPath(dirpath);
 
     return new Promise(function (resolve, reject) {
-        if (!fs.existsSync(fileDirPath)) {
-            fs.mkdir(fileDirPath, FILE_CREATE_MODE);
-        }
-        var filename = url.split('/').pop().split('#')[0].split('?')[0];
-        var filepath = path.join(fileDirPath, filename);
-        var file = fs.createWriteStream(filepath);
-        
-        https.get(url, function (response) {
-            response.pipe(file);
-            file.on('finish', function () {
-                file.close();
+        fsExtra.ensureDir(fileDirPath)
+            .then(function () {
+                var filename = url.split('/').pop().split('#')[0].split('?')[0];
+                var filepath = path.join(fileDirPath, filename);
+                var file = fs.createWriteStream(filepath);
+                
+                https.get(url, function (response) {
+                    response.pipe(file);
+                    file.on('finish', function () {
+                        file.close();
 
-                return resolve(filepath);
+                        return resolve(filepath);
+                    });
+                }).on('error', function (err) { // Handle errors
+                    fs.unlink(filepath);
+                
+                    return reject(err);
+                });
+            })
+            .catch(function (err) {
+                return reject(err);
             });
-        }).on('error', function (err) { // Handle errors
-            fs.unlink(filepath);
-          
-            return reject(err);
-        });
     });
 };
 
