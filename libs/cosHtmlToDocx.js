@@ -15,7 +15,6 @@ var fsExtra = require('fs-extra');
 var https = require('https');
 var path = require('path');
 var sizeOf = require('image-size');
-var FILE_CREATE_MODE = '0760';
 
 var _addStyles = function (doc) {
     doc.Styles.createParagraphStyle('code', 'code')
