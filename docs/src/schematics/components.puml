@@ -28,7 +28,7 @@ database "etherpad-lite-db" {
 }
 
 cloud "3rd party services" {
-   ["DigiDocService API"] #White
+   ["DigiDocService API"] #white
    ["Amazon API"] #white
    ["Google API"] #white
    ["Facebook API"] #white
