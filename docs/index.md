@@ -12,5 +12,5 @@ Where:
     * **NOTE:** In order to run **citizenos-api** following Etherpad (EP) plugins need to be installed and configured:
         * https://github.com/citizenos/ep_auth_citizenos - CitizenOS authentication and authorization
         * https://github.com/citizenos/ep_webhooks - Sync pad updates between CitizenOS and Etherpad.
-    * Live environment Etherpad plugin list (package.json) and configuration (settings.json) can be found https://github.com/citizenos/etherpad-lite-heroku.
+    * Live environment Etherpad plugin list (`package.json`) and sample configuration (`settings.json`) can be found https://github.com/citizenos/etherpad-lite-heroku.
    
