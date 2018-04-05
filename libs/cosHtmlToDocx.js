@@ -15,6 +15,7 @@ var fsExtra = require('fs-extra');
 var https = require('https');
 var path = require('path');
 var sizeOf = require('image-size');
+var _ = require('lodash');
 
 var _addStyles = function (doc) {
     doc.Styles.createParagraphStyle('code', 'code')
@@ -283,7 +284,7 @@ function CosHtmlToDocx (html, title, resPath) {
             attributes.push(item.attribs.class);
         }
         if (_isBulletListElement(item)) {
-            attributes.paragraph.push('bullet');
+            attributes.push('bullet');
         } else if (item.name && item.name === 'ul') {
             attributes.push('numberLi');
         }
@@ -300,7 +301,7 @@ function CosHtmlToDocx (html, title, resPath) {
         }
     };
 
-    var _getTextWithFormat = function (item, texts, attributes) {
+    var _getTextWithFormat = function (item, texts, attributes, isList) {
         if (!attributes) {
             attributes = [];
         }
@@ -327,7 +328,7 @@ function CosHtmlToDocx (html, title, resPath) {
             });
 
             return true;
-        } else if (item.children) {
+        } else if (item.children && !isList) {
             item.children.forEach(function (gc) {
                 var itemAttributes = attributes.slice(0);
                 var value = _getTextWithFormat(gc, texts, itemAttributes);
@@ -340,13 +341,13 @@ function CosHtmlToDocx (html, title, resPath) {
         }
     };
 
-    var _childTagToFormat = function (child, properties) {
+    var _childTagToFormat = function (child, properties, isList) {
 
         _getParagraphStyle(child, properties.paragraph);
         if (child.children) {
             child.children.forEach(function (gchild) {
                 _getParagraphStyle(gchild, properties.paragraph);
-                _getTextWithFormat(gchild, properties.texts);
+                _getTextWithFormat(gchild, properties.texts, null, isList);
             });
         }
 
@@ -354,37 +355,40 @@ function CosHtmlToDocx (html, title, resPath) {
 
     };
 
-
     var _listParser = function (items, paragraphs, styles, depth) {
-        var paragraphElement = null;
-        depth = depth || 0;
 
+        var paragraphElement = null;
+        var curdepth = _.clone(depth) || 0;
         styles.forEach(function (style, k) {
-            if ((style === 'bullet' || style === 'indent' || style === 'numberLi') && depth > 0) {
+            if ((style === 'bullet' || style === 'indent' || style === 'numberLi') && curdepth > 0) {
                 var styleObject = {};
-                styleObject[style] = depth;
-                styles[k] = styleObject;
+                styleObject[style] = curdepth;
+                styles[k] = styleObject;                
             }
 
             if (typeof style === 'object') {
                 var keys = Object.keys(style);
                 if (keys[0] === 'bullet' || keys[0] === 'indent' || keys[0] === 'numberLi') {
-                    style[keys[0]] = depth;
+                    style[keys[0]] = curdepth;
                 }
             }
         });
+        styles = _.uniq(styles, function (item) {
+            if (typeof item === 'object') {
+                return Object.keys(item)[0];
+            }
+
+            return item;
+        });
+        
         items.forEach(function (tag) {
             var itemStyle = styles.slice(0);
+
             if (_isListElement(tag) && tag.name !== 'li') {
-                if (_isIndentListElement(tag)) {
-                    itemStyle.push({'indent': depth});
-                } else if (_isBulletListElement(tag)) {
-                    itemStyle.push({'bullet': depth});
-                } else if (tag.name === 'ol') {
-                    itemStyle.push({'numberLi': depth});
-                }
-                depth++;
-                _listParser(tag.children, paragraphs, itemStyle, depth);
+                var nextItemStyle = _.cloneDeep(itemStyle);                
+                var nextDepth = _.clone(depth);
+                nextDepth++;
+                _listParser(tag.children, paragraphs, nextItemStyle, nextDepth);
             } else if (_isParagraphElement(tag)) {
                 if (paragraphElement) {
                     paragraphs.push(paragraphElement);
@@ -395,13 +399,19 @@ function CosHtmlToDocx (html, title, resPath) {
                     texts: []
                 };
 
-                var paragraphProperties = _childTagToFormat(tag, paragraphElement);
-                if (paragraphProperties) {
-                    var parClone = JSON.parse(JSON.stringify(paragraphElement));
-                    paragraphs.push(parClone);
+                var paragraphProperties = _childTagToFormat(tag, paragraphElement, true);
+
+                if (paragraphProperties) {                    
+                    var parClone = _.cloneDeep(paragraphElement);      
+
+                    if (parClone && parClone.texts && parClone.texts.length) {
+                        paragraphs.push(parClone);                        
+                    }
                     paragraphElement = null;
                 }
+                var sameDepth = _.clone(depth);
 
+                _listParser(tag.children, paragraphs, itemStyle, sameDepth);
             } else if (_isTextElement(tag)) {
                 if (!paragraphElement) {
                     paragraphElement = {
@@ -415,14 +425,22 @@ function CosHtmlToDocx (html, title, resPath) {
                         style: []
                     });
                 } else {
-                    _getTextWithFormat(tag, paragraphElement.texts);
+                    _getTextWithFormat(tag, paragraphElement.texts, null, true);
                 }
 
-            } else {
-                depth++;
-                _listParser(tag.children, paragraphs, itemStyle, depth);
             }
         });
+    };
+
+    var _listElementHandler = function (element, paragraphs) {
+        
+        if (_isIndentListElement(element)) {
+            _listParser(element.children, paragraphs, ['indent']);
+        } else if (_isBulletListElement(element)) {
+            _listParser(element.children, paragraphs, [{'bullet': 0}], 0);
+        } else if (element.name === 'ol') {
+            _listParser(element.children, paragraphs, [{'numberLi': 0}], 0);
+        }
     };
 
     /**
@@ -445,8 +463,9 @@ function CosHtmlToDocx (html, title, resPath) {
 
                 body.children.forEach(function (tag) {
                     i++;
-
-                    if (_isParagraphElement(tag)) {
+                    if (_isListElement(tag)) {
+                        _listElementHandler(tag, paragraphs);
+                    } else if (_isParagraphElement(tag)) {
                         if (_isBrElement(tag)) {
                             brCounter++;
                         }
@@ -463,6 +482,9 @@ function CosHtmlToDocx (html, title, resPath) {
                             };
                             var paragraphProperties = _childTagToFormat(tag, paragraphElement);
                             if (paragraphProperties) {
+                                if (_isBrElement(tag)) {
+                                    paragraphElement.texts.push('');
+                                }
                                 paragraphs.push(paragraphElement);
                                 paragraphElement = null;
                             }
@@ -560,7 +582,6 @@ function CosHtmlToDocx (html, title, resPath) {
                         parCount++;
                         var paragraph = new docx.Paragraph();
                         var addImageInProgress = false;
-
                         row.paragraph.forEach(function (method) {
                             if (method && typeof method === 'object') {
                                 var key = Object.keys(method);
@@ -572,9 +593,19 @@ function CosHtmlToDocx (html, title, resPath) {
                                     var image1 = finalDoc.createImage(filePath);
                                     var scale = scaleImage(filePath);
                                     image1.scale(scale);
-                                } else {
+                                } else if (key[0] === 'numberLi') {
+                                    var numbering = new docx.Numbering();
+                                    var numberedAbstract = numbering.createAbstractNumbering();
+                                    numberedAbstract.createLevel(0, 'decimal', '%1)', 'left');
+                                    numberedAbstract.createLevel(1, 'decimal', '%2)', 'left');
+                                    numberedAbstract.createLevel(2, 'decimal', '%3)', 'left');
+                                    numberedAbstract.createLevel(3, 'decimal', '%4).', 'left');
+
+                                    var concrete = numbering.createConcreteNumbering(numberedAbstract);
+                                    paragraph.setNumbering(concrete, method[key[0]]);
+                                } else if (paragraph[key[0]]) {
                                     paragraph[key[0]](method[key[0]]);
-                                }                         
+                                } 
                             } else if (paragraph[method]) {
                                 paragraph[method]();
                             } else if (['code'].indexOf(method) > -1) {
@@ -618,10 +649,10 @@ function CosHtmlToDocx (html, title, resPath) {
      * @public
      */
 
-    this.processHTML = function (html) {
+    this.processHTML = function (html, res) {
         var processHtml = this.html || html;
         var path = this.path;
-        
+
         return new Promise(function (resolve, reject) {
             var handler = new htmlparser.DefaultHandler(function (err, result) {
                 if (err) {
@@ -632,7 +663,13 @@ function CosHtmlToDocx (html, title, resPath) {
                     .then(function (paragraphs) {
                         createFinalDoc(paragraphs)
                             .then(function () {
-                                var exporter = new docx.LocalPacker(finalDoc);
+                                var exporter = null;
+                                if (res) {
+                                    exporter = new docx.ExpressPacker(finalDoc, res);
+
+                                    return exporter.pack('Mydocx');
+                                }
+                                exporter = new docx.LocalPacker(finalDoc);
                                 exporter.pack(path)
                                     .then(function () {
                                         return resolve();
