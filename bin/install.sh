@@ -40,12 +40,6 @@ else
     fi
 fi
 
-echo -e "\nInstall Grunt task runner - http://gruntjs.com/"
-npm install -g grunt-cli
-
-echo -e "\nInstall Mocha test runner - http://visionmedia.github.io/mocha/"
-npm install -g mocha
-
 echo -e "\nInstall Postgres database - https://www.postgresql.org/docs/manuals/"
 sudo apt-get -y install postgresql postgresql-contrib
 
