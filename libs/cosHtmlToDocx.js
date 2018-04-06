@@ -177,7 +177,9 @@ function CosHtmlToDocx (html, title, resPath) {
 
     var _isColorElement = function (element) {
         if (element.attribs && element.attribs.class) {
-            return Object.keys(style.colors).indexOf(element.attribs.class) > -1;
+            var iclass = element.attribs.class.replace('color:', '');
+
+            return Object.keys(style.colors).indexOf(iclass) > -1;
         }
 
         return false;
@@ -300,6 +302,20 @@ function CosHtmlToDocx (html, title, resPath) {
             return size * 2; // pts to half pts
         }
     };
+    var _getItemDepth = function (item, depth, isList) {
+        depth = depth || 0;
+        if (item.parent && item.parent.name !== 'body') {
+            if (!isList || (isList === true && _isListElement(item.parent) && item.parent.name !== 'li')) {
+                depth++;
+            }
+
+            return _getItemDepth(item.parent, depth, isList);
+        } else if (isList) {
+            return depth - 1; 
+        }
+        
+        return depth;
+    };
 
     var _getTextWithFormat = function (item, texts, attributes, isList) {
         if (!attributes) {
@@ -307,7 +323,7 @@ function CosHtmlToDocx (html, title, resPath) {
         }
 
         if (_isColorElement(item)) {
-            attributes.push({color: item.attribs.class});
+            attributes.push({color: item.attribs.class.replace('color:', '')});
         } else if (_isBoldElement(item)) {
             attributes.push('bold');
         } else if (_isItalicElement(item)) {
@@ -324,7 +340,8 @@ function CosHtmlToDocx (html, title, resPath) {
         if (item.type === 'text') {
             texts.push({
                 text: item.data,
-                style: attributes
+                style: attributes,
+                item: item
             });
 
             return true;
@@ -332,7 +349,7 @@ function CosHtmlToDocx (html, title, resPath) {
             item.children.forEach(function (gc) {
                 var itemAttributes = attributes.slice(0);
                 var value = _getTextWithFormat(gc, texts, itemAttributes);
-                if (value) {
+                if (value && typeof value === 'object') {
                     texts.push(value);
 
                     return true;
@@ -355,91 +372,74 @@ function CosHtmlToDocx (html, title, resPath) {
 
     };
 
-    var _listParser = function (items, paragraphs, styles, depth) {
+    var _getListItemProperties = function (item, properties) {
+        properties = properties || [];
+        if (item.name && _isHeadingElement(item)) {
+            properties.push('heading' + item.name[1]);
+        }
 
-        var paragraphElement = null;
-        var curdepth = _.clone(depth) || 0;
-        styles.forEach(function (style, k) {
-            if ((style === 'bullet' || style === 'indent' || style === 'numberLi') && curdepth > 0) {
-                var styleObject = {};
-                styleObject[style] = curdepth;
-                styles[k] = styleObject;                
-            }
+        if (item.name && _isCodeElement(item)) {
+            properties.push('code');
+        }    
+        if (_isAlignmentElement(item)) {
+            properties.push(item.attribs.class);
+        }
+        if (_isBulletListElement(item)) {
+            properties.push('bullet');
+        } else if (item.name && item.name === 'ol') {
+            properties.push('numberLi');
+        }
+        if (item.parent && item.parent.name !== 'body') {
+            return _getListItemProperties(item.parent, properties);
+        }
 
-            if (typeof style === 'object') {
-                var keys = Object.keys(style);
-                if (keys[0] === 'bullet' || keys[0] === 'indent' || keys[0] === 'numberLi') {
-                    style[keys[0]] = curdepth;
-                }
-            }
-        });
-        styles = _.uniq(styles, function (item) {
-            if (typeof item === 'object') {
-                return Object.keys(item)[0];
-            }
-
-            return item;
-        });
-        
-        items.forEach(function (tag) {
-            var itemStyle = styles.slice(0);
-
-            if (_isListElement(tag) && tag.name !== 'li') {
-                var nextItemStyle = _.cloneDeep(itemStyle);                
-                var nextDepth = _.clone(depth);
-                nextDepth++;
-                _listParser(tag.children, paragraphs, nextItemStyle, nextDepth);
-            } else if (_isParagraphElement(tag)) {
-                if (paragraphElement) {
-                    paragraphs.push(paragraphElement);
-                }
-
-                paragraphElement = {
-                    paragraph: itemStyle,
-                    texts: []
-                };
-
-                var paragraphProperties = _childTagToFormat(tag, paragraphElement, true);
-
-                if (paragraphProperties) {                    
-                    var parClone = _.cloneDeep(paragraphElement);      
-
-                    if (parClone && parClone.texts && parClone.texts.length) {
-                        paragraphs.push(parClone);                        
-                    }
-                    paragraphElement = null;
-                }
-                var sameDepth = _.clone(depth);
-
-                _listParser(tag.children, paragraphs, itemStyle, sameDepth);
-            } else if (_isTextElement(tag)) {
-                if (!paragraphElement) {
-                    paragraphElement = {
-                        paragraph: itemStyle,
-                        texts: []
-                    };
-                }
-                if (tag.type === 'text') {
-                    paragraphElement.texts.push({
-                        text: tag.data,
-                        style: []
-                    });
-                } else {
-                    _getTextWithFormat(tag, paragraphElement.texts, null, true);
-                }
-
-            }
-        });
+        return properties;
     };
+    var _listItems = function (element, items) {
+        items = items || [];
 
+        element.children.forEach(function (child) {
+            if (_isTextElement(child) && element.name === 'li') {
+                items.push(element);
+
+                return items;
+            } 
+
+            return _listItems(child, items);
+        });
+
+        return items;
+    };
     var _listElementHandler = function (element, paragraphs) {
-        
-        if (_isIndentListElement(element)) {
-            _listParser(element.children, paragraphs, ['indent']);
-        } else if (_isBulletListElement(element)) {
-            _listParser(element.children, paragraphs, [{'bullet': 0}], 0);
-        } else if (element.name === 'ol') {
-            _listParser(element.children, paragraphs, [{'numberLi': 0}], 0);
+
+        if (_isIndentListElement(element) || _isBulletListElement(element) || element.name === 'ol') {
+            var liItems = _listItems(element);
+
+            liItems.forEach(function (li) {
+                var texts = [];
+                _getTextWithFormat(li, texts);
+                var paragrpahProperties = [];
+                var d = _getItemDepth(texts[0].item, null, true);
+                _getListItemProperties(li, paragrpahProperties);
+
+                paragrpahProperties = _.uniq(paragrpahProperties, function (v) { 
+                    return v;
+                });
+                var paragraphElement = {
+                    paragraph: [],
+                    texts: texts
+                };
+                
+                paragrpahProperties.forEach(function (prop) {
+                    if (prop === 'bullet' || prop === 'indent' || prop === 'numberLi') {
+                        var propObj = {};
+                        propObj[prop] = d;
+                        paragraphElement.paragraph.push(propObj);
+                    }
+                });
+
+                paragraphs.push(paragraphElement);
+            });
         }
     };
 
@@ -616,12 +616,20 @@ function CosHtmlToDocx (html, title, resPath) {
                         row.texts.forEach(function (text) {
                             if (text.text) {
                                 var textObject = new docx.TextRun(encoder.decode(text.text.replace(/ /g, '\xa0'))); // otherwise spaces  will get trimmed
-                                text.style.forEach(function (style) {
-                                    if (style && typeof style === 'object') {
-                                        var key = Object.keys(style);
-                                        textObject[key[0]](style[key[0]]);
-                                    } else if (textObject[style]) {
-                                        textObject[style]();
+                                text.style.forEach(function (textStyle) {
+                                    if (textStyle && typeof textStyle === 'object') {
+                                        var key = Object.keys(textStyle);
+                                        if (key[0] === 'color') {
+                                            textObject.color(style.colors[textStyle[key[0]]]);
+                                        } else {
+                                            textObject[key[0]](textStyle[key[0]]);
+                                        }
+                                    } else if (textObject[textStyle]) {
+                                        if (textStyle === 'underline') {
+                                            textObject.underline('single', null);
+                                        } else {
+                                            textObject[textStyle]();
+                                        }
                                     }
                                 });
                                 paragraph.addRun(textObject);
@@ -673,6 +681,9 @@ function CosHtmlToDocx (html, title, resPath) {
                                 exporter.pack(path)
                                     .then(function () {
                                         return resolve();
+                                    })
+                                    .catch(function (err) {
+                                        return reject(err);
                                     });
                             });
                     });
