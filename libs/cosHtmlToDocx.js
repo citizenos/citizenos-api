@@ -177,9 +177,8 @@ function CosHtmlToDocx (html, title, resPath) {
 
     var _isColorElement = function (element) {
         if (element.attribs && element.attribs.class) {
-            var iclass = element.attribs.class.replace('color:', '');
 
-            return Object.keys(style.colors).indexOf(iclass) > -1;
+            return Object.keys(style.colors).indexOf(element.attribs.class) > -1;
         }
 
         return false;
@@ -323,7 +322,7 @@ function CosHtmlToDocx (html, title, resPath) {
         }
 
         if (_isColorElement(item)) {
-            attributes.push({color: item.attribs.class.replace('color:', '')});
+            attributes.push({color: item.attribs.class});
         } else if (_isBoldElement(item)) {
             attributes.push('bold');
         } else if (_isItalicElement(item)) {
