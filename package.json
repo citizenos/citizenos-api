@@ -8,6 +8,7 @@
     "start": "NODE_ENV=development NODE_TLS_REJECT_UNAUTHORIZED=0 node ./bin/www",
     "debug": "node --expose-gc --debug ./bin/www",
     "test": "NODE_ENV=test FORCE_DB_SYNC=0 NODE_TLS_REJECT_UNAUTHORIZED=0 ./node_modules/.bin/mocha --expose-gc --async-only --check-leaks --trace-deprecation --reporter spec --no-exit --recursive --ui tdd test/",
+    "createdb": "NODE_ENV=development FORCE_DB_SYNC=1 NODE_TLS_REJECT_UNAUTHORIZED=0 ./node_modules/.bin/mocha --full-trace --expose-gc --async-only --check-leaks --reporter spec --no-exit --recursive --ui tdd --no-timeouts --grep \"Auth Login Username & password Success\" test/",
     "precommit": "./bin/hooks/no-unresolved-conflicts.sh",
     "prepush": "./node_modules/.bin/grunt eslint"
   },

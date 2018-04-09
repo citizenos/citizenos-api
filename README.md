@@ -21,16 +21,33 @@ CitizenOS API - https://api.citizenos.com
 * Go to the source directory - `cd citizenos-api`
 * Install dependencies - `npm install`
 * Add to dev.api.citizenos.com to your hosts file - `sudo -- sh -c -e "echo '127.0.0.1 dev.api.citizenos.com' >> /etc/hosts"`
-* **FIXME:** Add DB creation structure creation instructions here! :shipit:
+* Create the DB:
+    * **NOTE:** Do not use this in production, you may want different privileges! 
+    ```
+    sudo su -c "createdb citizenos" postgres
+    sudo su -c "psql -c \"CREATE USER citizenos WITH PASSWORD 'citizenos'\"" postgres
+    sudo su -c "psql -c \"GRANT ALL PRIVILEGES ON DATABASE citizenos TO citizenos\"" postgres
+    ```
+    * Create the DB structure - `npm run createdb` - this test should pass, if it does not or it hangs, you should consult the `./logs/app.log`
+      
+### Debugging
 
-**NOTES:**
+* By default logs are in `./logs/app.log`
 
-* When using over HTTPS you need to add `./config/certs/citizenosCARoot.pem` to your trusted CA certificate store or browsers will complain.
 
 ### Running
 
 * Start the app - `npm start`
 * By default API is available https://dev.citizenos.com:3003 or over plain HTTP http://dev.api.citizenos.com:3002.
+
+**NOTES:**
+
+* When using over HTTPS you need to add `./config/certs/citizenosCARoot.pem` to your trusted CA certificate store or browsers will complain.
+
+### Testing
+
+* You need an instance of `citizenos-api` and `etherpad-lite` running before you execute tests.
+* `npm test`
 
 ## Contributing
 
