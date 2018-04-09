@@ -2,6 +2,21 @@
 
 CitizenOS API - https://api.citizenos.com
 
+**TOC:**
+
+<!-- toc -->
+
+- [Running locally](#running-locally)
+  * [Prerequisites](#prerequisites)
+  * [Installing](#installing)
+  * [Debugging](#debugging)
+  * [Running](#running)
+  * [Testing](#testing)
+- [Contributing](#contributing)
+  * [Pull requests](#pull-requests)
+
+<!-- tocstop -->
+
 ## Running locally
 
 ### Prerequisites
