@@ -13,3 +13,4 @@ Thumbs.db
 /logs/*.log*
 /config/local.*
 /files/**/
+/routes/api/test.js
