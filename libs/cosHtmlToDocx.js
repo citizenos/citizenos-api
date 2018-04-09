@@ -84,30 +84,26 @@ var getFilesPath = function (pathIn) {
 
 var getImageFile = function (url, dirpath) {
     var fileDirPath = getFilesPath(dirpath);
-
+    
     return new Promise(function (resolve, reject) {
-        fsExtra.ensureDir(fileDirPath)
-            .then(function () {
-                var filename = url.split('/').pop().split('#')[0].split('?')[0];
-                var filepath = path.join(fileDirPath, filename);
-                var file = fs.createWriteStream(filepath);
-                
-                https.get(url, function (response) {
-                    response.pipe(file);
-                    file.on('finish', function () {
-                        file.close();
+        fsExtra.ensureDir(fileDirPath, {mode: '0760'}, function () {
+            var filename = url.split('/').pop().split('#')[0].split('?')[0];
+            var filepath = path.join(fileDirPath, filename);
+            var file = fs.createWriteStream(filepath);
+            
+            https.get(url, function (response) {
+                response.pipe(file);
+                file.on('finish', function () {
+                    file.close();
 
-                        return resolve(filepath);
-                    });
-                }).on('error', function (err) { // Handle errors
-                    fs.unlink(filepath);
-                
-                    return reject(err);
+                    return resolve(filepath);
                 });
-            })
-            .catch(function (err) {
+            }).on('error', function (err) { // Handle errors
+                fs.unlink(filepath);
+            
                 return reject(err);
             });
+        });
     });
 };
 
@@ -389,6 +385,8 @@ function CosHtmlToDocx (html, title, resPath) {
             properties.push('bullet');
         } else if (item.name && item.name === 'ol') {
             properties.push('numberLi');
+        } else if (_isIndentListElement(item)) {
+            properties.push('indent');
         }
         if (item.parent && item.parent.name !== 'body') {
             return _getListItemProperties(item.parent, properties);
@@ -450,7 +448,7 @@ function CosHtmlToDocx (html, title, resPath) {
                         paragraphElement.paragraph.push(prop);
                     }
                 });
-
+                paragraphElement.paragraph.reverse();
                 paragraphs.push(paragraphElement);
             });
         }
@@ -594,7 +592,7 @@ function CosHtmlToDocx (html, title, resPath) {
                     paragraphs.forEach(function (row) {
                         parCount++;
                         var paragraph = new docx.Paragraph();
-                        var addImageInProgress = false; 
+                        var addImageInProgress = false;
                         row.paragraph.forEach(function (method) {
                             
                             if (method && typeof method === 'object') {
