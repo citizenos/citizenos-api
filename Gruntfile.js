@@ -150,6 +150,11 @@ module.exports = function (grunt) {
                 }
             }
         },
+        markdown_toc: {
+            dev: {
+                src: ['./README.md']
+            }
+        },
         watch: {
             eslint: {
                 files: ['**/*.js', '!node_modules/**'],
@@ -162,6 +167,13 @@ module.exports = function (grunt) {
             plantuml: {
                 files: ['docs/src/schematics/**'],
                 tasks: ['plantuml']
+            },
+            markdown_toc: {
+                files: ['./README.md'],
+                tasks: ['markdown_toc'],
+                options: {
+                    debounceDelay: 5000
+                }
             }
         }
     });
@@ -173,11 +185,12 @@ module.exports = function (grunt) {
     grunt.loadNpmTasks('grunt-exec');
     grunt.loadNpmTasks('grunt-mustache-render');
     grunt.loadNpmTasks('grunt-plantuml');
+    grunt.loadNpmTasks('grunt-markdown-toc');
 
     // Default task(s).
     grunt.registerTask('default', ['concurrent:dev']);
     grunt.registerTask('start', ['concurrent:dev']);
     grunt.registerTask('test', ['exec:test']);
-    grunt.registerTask('docs', ['plantuml:dev']);
+    grunt.registerTask('docs', ['plantuml:dev', 'markdown_toc:dev']);
 
 };
