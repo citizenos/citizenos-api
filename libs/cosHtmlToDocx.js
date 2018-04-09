@@ -344,15 +344,17 @@ function CosHtmlToDocx (html, title, resPath) {
             });
 
             return true;
-        } else if (item.children && !isList) {
+        } else if (item.children) {
             item.children.forEach(function (gc) {
-                var itemAttributes = attributes.slice(0);
-                var value = _getTextWithFormat(gc, texts, itemAttributes);
-                if (value && typeof value === 'object') {
-                    texts.push(value);
+                if (!_isListElement(gc)) {
+                    var itemAttributes = attributes.slice(0);
+                    var value = _getTextWithFormat(gc, texts, itemAttributes);
+                    if (value && typeof value === 'object') {
+                        texts.push(value);
 
-                    return true;
-                }
+                        return true;
+                    }
+                }                
             });
         }
     };
@@ -396,16 +398,28 @@ function CosHtmlToDocx (html, title, resPath) {
     };
     var _listItems = function (element, items) {
         items = items || [];
-
-        element.children.forEach(function (child) {
-            if (_isTextElement(child) && element.name === 'li') {
-                items.push(element);
-
-                return items;
-            } 
-
-            return _listItems(child, items);
-        });
+        if (element.children) {
+            element.children.forEach(function (child) {
+                var lastItem = null;
+                if (_isTextElement(child) && element.name === 'li') {
+                    lastItem = items[items.length - 1];
+                    if (!_.isEqual(element, lastItem)) {
+                        items.push(element);
+                    }
+    
+                    return items;
+                } else if (_isHeadingElement(child) && element.name === 'li') {
+                    lastItem = items[items.length - 1];
+                    if (!_.isEqual(child, lastItem)) {
+                        items.push(child);
+                    }
+    
+                    return items;
+                }
+    
+                return _listItems(child, items);
+            });
+        }
 
         return items;
     };
@@ -413,14 +427,12 @@ function CosHtmlToDocx (html, title, resPath) {
 
         if (_isIndentListElement(element) || _isBulletListElement(element) || element.name === 'ol') {
             var liItems = _listItems(element);
-
             liItems.forEach(function (li) {
                 var texts = [];
                 _getTextWithFormat(li, texts);
                 var paragrpahProperties = [];
                 var d = _getItemDepth(texts[0].item, null, true);
                 _getListItemProperties(li, paragrpahProperties);
-
                 paragrpahProperties = _.uniq(paragrpahProperties, function (v) { 
                     return v;
                 });
@@ -430,10 +442,12 @@ function CosHtmlToDocx (html, title, resPath) {
                 };
                 
                 paragrpahProperties.forEach(function (prop) {
-                    if (prop === 'bullet' || prop === 'indent' || prop === 'numberLi') {
+                    if (prop === 'bullet' || prop === 'indent' || prop === 'numberLi') { //Add level to list item
                         var propObj = {};
                         propObj[prop] = d;
                         paragraphElement.paragraph.push(propObj);
+                    } else {
+                        paragraphElement.paragraph.push(prop);
                     }
                 });
 
@@ -580,8 +594,9 @@ function CosHtmlToDocx (html, title, resPath) {
                     paragraphs.forEach(function (row) {
                         parCount++;
                         var paragraph = new docx.Paragraph();
-                        var addImageInProgress = false;
+                        var addImageInProgress = false; 
                         row.paragraph.forEach(function (method) {
+                            
                             if (method && typeof method === 'object') {
                                 var key = Object.keys(method);
                                 if (key[0] === 'img') {
