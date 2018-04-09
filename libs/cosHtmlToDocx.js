@@ -312,7 +312,7 @@ function CosHtmlToDocx (html, title, resPath) {
         return depth;
     };
 
-    var _getTextWithFormat = function (item, texts, attributes, isList) {
+    var _getTextWithFormat = function (item, texts, attributes) {
         if (!attributes) {
             attributes = [];
         }
@@ -615,6 +615,10 @@ function CosHtmlToDocx (html, title, resPath) {
 
                                     var concrete = numbering.createConcreteNumbering(numberedAbstract);
                                     paragraph.setNumbering(concrete, method[key[0]]);
+                                } else if (key[0] === 'indent') {
+                                    var multiplier = method[key[0]];
+                                    var start = 720 * (multiplier + 1);
+                                    paragraph.indent({left: start, hanging: multiplier});
                                 } else if (paragraph[key[0]]) {
                                     paragraph[key[0]](method[key[0]]);
                                 } 
