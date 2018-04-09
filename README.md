@@ -9,9 +9,9 @@ CitizenOS API - https://api.citizenos.com
 - [Running locally](#running-locally)
   * [Prerequisites](#prerequisites)
   * [Installing](#installing)
-  * [Debugging](#debugging)
   * [Running](#running)
   * [Testing](#testing)
+  * [Debugging](#debugging)
 - [Contributing](#contributing)
   * [Pull requests](#pull-requests)
 
@@ -45,11 +45,6 @@ CitizenOS API - https://api.citizenos.com
     ```
     * Create the DB structure - `npm run createdb` - this test should pass, if it does not or it hangs, you should consult the `./logs/app.log`
       
-### Debugging
-
-* By default logs are in `./logs/app.log`
-
-
 ### Running
 
 * Start the app - `npm start`
@@ -63,6 +58,10 @@ CitizenOS API - https://api.citizenos.com
 
 * You need an instance of `citizenos-api` and `etherpad-lite` running before you execute tests.
 * `npm test`
+
+### Debugging
+
+* By default logs are in `./logs/app.log`
 
 ## Contributing
 
