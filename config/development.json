@@ -111,8 +111,8 @@
     }
   },
   "storage": {
-    "accessKeyId": "AKIAIUP7LQV6IL7CU4FA",
-    "secretAccessKey": "qxm+AFDRsjvWLjuqW72ghTPe8tC9j2Juc2W1N0u9",
-    "bucket": "citizenos-test"
+    "accessKeyId": "YOUR_AWS_S3_ACCESS_KEY_ID",
+    "secretAccessKey": "YOUR_AWS_S3_SECRET_ACCESS_KEY",
+    "bucket": "YOUR_AWS_S3_BUCKET_NAME"
   }
 }
