@@ -76,5 +76,5 @@ CitizenOS API - https://api.citizenos.com
 * Support different authentication and signing methods so that anyone could add their country specifics. That takes us to modular architecture where ideally I would like to add new methods by installing a module and configuring it.
 * Generic file storage - don't force the use of AWS as a storage. As a starting point local file storage would be nice for "off the grid" deployments.
 * Implement generic "if this, then that" engine where anyone can plug into Topic state changes with their own custom logic. Right now for example Rahvaalgatus.ee has a flow where a signed document is sent to Parliament via e-mail, but this is very region/partner specific.  
-* Email layout designing should be much simpler. Right now there is hard-coded CitizenOS layout and special layout for Rahvaalgatus.ee.
+* Email layout designing should be much simpler. Right now there is hard-coded CitizenOS layout and special layout for Rahvaalgatus.ee. We may consider using MailChimp or other services so that there is a separate service where mails are designed and sent and for which each Partner pays themselves.
 * ...
