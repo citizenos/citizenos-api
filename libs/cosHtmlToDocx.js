@@ -394,6 +394,7 @@ function CosHtmlToDocx (html, title, resPath) {
 
         return properties;
     };
+    
     var _listItems = function (element, items) {
         items = items || [];
         if (element.children) {
@@ -421,6 +422,7 @@ function CosHtmlToDocx (html, title, resPath) {
 
         return items;
     };
+
     var _listElementHandler = function (element, paragraphs) {
 
         if (_isIndentListElement(element) || _isBulletListElement(element) || element.name === 'ol') {
