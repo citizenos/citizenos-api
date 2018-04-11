@@ -31,7 +31,7 @@
     "cookie-parser": "1.3.3",
     "cors": "^2.7.1",
     "debug": "2.0.0",
-    "docx": "git+https://github.com/citizenos/docx.git#build",
+    "docx": "git+https://github.com/citizenos/docx.git#8b29efc4bca266a434c08445bd0be9cea43df96c",
     "etherpad-lite-client": "0.8.0",
     "express": "4.12.4",
     "express-device": "0.4.2",
