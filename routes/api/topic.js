@@ -1317,7 +1317,7 @@ module.exports = function (app) {
                             }
                         });
 
-                        var topicUpdatePromise = cosActivities
+                        var topicActivityPromise = cosActivities
                             .updateActivity(
                                 topic,
                                 null,
@@ -1328,22 +1328,23 @@ module.exports = function (app) {
                                 null,
                                 req.method + ' ' + req.path,
                                 t
-                            )
-                            .then(function () {
-                                return topic
-                                    .update(
-                                        req.body,
-                                        {
-                                            fields: fields,
-                                            where: {
-                                                id: topicId
-                                            }
-                                        },
-                                        {
-                                            transaction: t
-                                        }
-                                    );
-                            });
+                            );
+
+                        promisesToResolve.push(topicActivityPromise);
+
+                        var topicUpdatePromise = topic
+                            .update(
+                                req.body,
+                                {
+                                    fields: fields,
+                                    where: {
+                                        id: topicId
+                                    }
+                                },
+                                {
+                                    transaction: t
+                                }
+                            );
 
                         promisesToResolve.push(topicUpdatePromise);
 
@@ -1358,9 +1359,13 @@ module.exports = function (app) {
                                     force: true,
                                     transaction: t
                                 });
+
                             promisesToResolve.push(topicEventsDeletePromise);
                         }
 
+                        return Promise.all(promisesToResolve);
+                    })
+                    .then(function () {
                         // TODO: This logic is specific to Rahvaalgatus.ee, with next Partner we have to make it more generic - https://trello.com/c/Sj3XRF5V/353-raa-ee-followup-email-to-riigikogu-and-token-access-to-events-api
                         if (isSendToParliament) {
                             logger.info('Sending to Parliament', req.method, req.path);
@@ -1390,7 +1395,7 @@ module.exports = function (app) {
                             emailLib.sendToParliament(topic, contact, downloadUriBdocFinal, linkDownloadBdocFinalExpiryDate, linkAddEvent);
                         }
 
-                        return Promise.all(promisesToResolve);
+                        return Promise.resolve();
                     });
             });
     };
