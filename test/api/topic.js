@@ -2293,23 +2293,6 @@ suite('Users', function () {
                 });
             });
 
-            test('Fail - Bad Request - invalid categories', function (done) {
-                var invalidCategories = ['asd', 'foo'];
-                var validCategories = [Topic.CATEGORIES.culture];
-
-                var categories = [].concat(invalidCategories, validCategories);
-
-                _topicUpdate(agent, user.id, topic.id, topicStatusNew, Topic.VISIBILITY.private, categories, null, null, 400, function (err, res) {
-                    if (err) return done(err);
-
-                    var errors = res.body.errors;
-
-                    assert.equal(errors.categories, util.format('Invalid categories %s provided. Valid categories are %s', invalidCategories.join(', '), _.values(Topic.CATEGORIES).join(', ')));
-
-                    done();
-                });
-            });
-
             test('Fail - Bad Request - too many categories', function (done) {
                 var categories = [Topic.CATEGORIES.culture, Topic.CATEGORIES.agriculture, Topic.CATEGORIES.education, Topic.CATEGORIES.varia];
 

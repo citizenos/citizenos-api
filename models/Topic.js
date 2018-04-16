@@ -103,17 +103,6 @@ module.exports = function (sequelize, DataTypes) {
                         if (values.length > CATEGORIES_COUNT_MAX) {
                             throw new Error(util.format('Maximum of %d categories allowed.', CATEGORIES_COUNT_MAX));
                         }
-
-                        var invalidValues = [];
-                        values.forEach(function (v) {
-                            if (_.values(CATEGORIES).indexOf(v) < 0) {
-                                invalidValues.push(v);
-                            }
-                        });
-
-                        if (invalidValues.length > 0) {
-                            throw new Error(util.format('Invalid categories %s provided. Valid categories are %s', invalidValues.join(', '), _.values(CATEGORIES).join(', ')));
-                        }
                     }
                 }
             },
