@@ -26,10 +26,7 @@ CitizenOS API - https://api.citizenos.com
 * Software
     * Node.JS >= 6.13.1 (https://github.com/mklement0/n-install) 
     * PostgreSQL >= 9.5
-    * Etherpad-Lite >=1.6.3 (https://github.com/citizenos/etherpad-lite/tree/html_export_fix) with minimum set of plugins:
-        * https://github.com/citizenos/ep_auth_citizenos - CitizenOS authentication and authorization
-        * https://github.com/citizenos/ep_webhooks - Sync pad updates between CitizenOS and Etherpad.
-        * Live environment Etherpad plugin list (`package.json`) and sample configuration (`settings.json`) can be found https://github.com/citizenos/etherpad-lite-heroku.
+    * Etherpad-Lite - https://github.com/citizenos/etherpad-lite-heroku. See the README.md and use the `config/local.json.example` as a basis to get the right plugin configuration.
 
 ### Installing
 
