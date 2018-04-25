@@ -198,8 +198,6 @@ module.exports = function (app) {
 
         // Remove all HTML tags
         title = title.replace(/<[^>]*>/gm, '');
-        // Replace all whitespace characters with ' '
-        title = title.replace(/​\s/gm, ' '); //eslint-disable-line no-irregular-whitespace
 
         if (title.length > Topic.TITLE_LENGTH_MAX) {
             title = title.substr(0, Topic.TITLE_LENGTH_MAX - 1 - 3) + '...';
@@ -207,6 +205,9 @@ module.exports = function (app) {
 
         // Etherpad has HTML encoded everything, we want it stored not encoded
         title = encoder.decode(title);
+
+        // Replace all whitespace characters with ' '
+        title = title.replace(/[​\s]+/g, ' '); //eslint-disable-line no-irregular-whitespace
 
         return title;
     };
