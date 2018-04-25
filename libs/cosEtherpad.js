@@ -199,7 +199,7 @@ module.exports = function (app) {
         // Remove all HTML tags
         title = title.replace(/<[^>]*>/gm, '');
         // Replace all non-breaking-space characters with ' '
-        title = title.replace(/​\u00A0/gm, ' ');
+        title = title.replace(/​\u00A0/gm, ' '); //eslint-disable-line no-irregular-whitespace
 
         if (title.length > Topic.TITLE_LENGTH_MAX) {
             title = title.substr(0, Topic.TITLE_LENGTH_MAX - 1 - 3) + '...';
