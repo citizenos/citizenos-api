@@ -83,6 +83,14 @@ suite('cosEtherpad', function () {
             done();
         });
 
+        test('Success - unicode nbsp', function (done) {
+            var str = '<!DOCTYPE HTML><html><body>Topic​\u00A0content​\u00A0here...<br></body></html>';
+            var expected = 'Topic content here...';
+
+            assert.equal(cosEtherpad.getTopicTitleFromPadContent(str), expected);
+            done();
+        });
+
         test('Success - single line without tags, which is longer than allowed title - substring and add ... as last 3 characters', function (done) {
             var str = 'Topic content hereTopic content hereTopic content hereTopic content hereTopic content hereTopic content hereTopic content here';
             var expected = str.substr(0, Topic.TITLE_LENGTH_MAX - 4) + '...';
