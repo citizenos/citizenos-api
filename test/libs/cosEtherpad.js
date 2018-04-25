@@ -83,7 +83,7 @@ suite('cosEtherpad', function () {
             done();
         });
 
-        test('Success - unicode nbsp', function (done) {
+        test('Success - unicode whitespace', function (done) {
             var str = '<!DOCTYPE HTML><html><body>Topic​\u00A0content​\u00A0here...<br></body></html>';
             var expected = 'Topic content here...';
 
