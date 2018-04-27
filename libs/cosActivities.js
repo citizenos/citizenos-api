@@ -8,6 +8,7 @@ module.exports = function (app) {
     var _ = app.get('lodash');
     var db = app.get('db');
     var uuid = app.get('uuid');
+    var moment = app.get('moment');
 
     var _saveActivity = function (activity, transaction) { //eslint-disable-line complexity
         var activityObject = {
@@ -86,6 +87,8 @@ module.exports = function (app) {
         activityObject.topicIds = _.unique(activityObject.topicIds);
         activityObject.groupIds = _.unique(activityObject.groupIds);
         activityObject.userIds = _.unique(activityObject.userIds);
+        activityObject.createdAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS ZZ');
+        activityObject.updatedAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS ZZ');
 
         return Activity
             .create(activityObject, {
