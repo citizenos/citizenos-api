@@ -2600,77 +2600,82 @@ module.exports = function (app) {
             .then(
                 function (results) {
                     if (results && results[0]) {
-                        var findOrCreatePromises = results.map(function (result) {
-                            var member = _.find(members, function (o) {
-                                return o.groupId === result.id;
+                        return db.transaction(function (t) {
+                            var findOrCreatePromises = results.map(function (result) {
+                                var member = _.find(members, function (o) {
+                                    return o.groupId === result.id;
+                                });
+
+                                return TopicMemberGroup
+                                    .findOrCreate({
+                                        where: {
+                                            topicId: topicId,
+                                            groupId: member.groupId
+                                        },
+                                        defaults: {
+                                            level: member.level || TopicMember.LEVELS.read
+                                        },
+                                        transaction: t
+                                    });
                             });
 
-                            return TopicMemberGroup
-                                .findOrCreate({
-                                    where: {
-                                        topicId: topicId,
-                                        groupId: member.groupId
-                                    },
-                                    defaults: {
-                                        level: member.level || TopicMember.LEVELS.read
-                                    }
-                                });
-                        });
+                            return Promise
+                                .settle(findOrCreatePromises)
+                                .then(function (results) {
+                                    return Topic
+                                        .findOne({
+                                            where: {
+                                                id: topicId
+                                            },
+                                            transaction: t
+                                        })
+                                        .then(function (topic) {
+                                            return Group
+                                                .findAll({
+                                                    where: {
+                                                        id: groupIds
+                                                    },
+                                                    transaction: t
+                                                }).then(function (groups) {
+                                                    return [topic, groups];
+                                                });
+                                        })
+                                        .then(function (resTopicGroups) {
+                                            var topic = resTopicGroups[0];
+                                            var groupIdsToInvite = [];
 
-                        return Promise
-                            .settle(findOrCreatePromises)
-                            .then(function (results) {
-                                Topic
-                                    .findOne({
-                                        where: {
-                                            id: topicId
-                                        }
-                                    })
-                                    .then(function (topic) {
-                                        return Group
-                                            .findAll({
-                                                where: {
-                                                    id: groupIds
+                                            results.forEach(function (result, i) {
+                                                if (result.isFulfilled()) {
+                                                    var value = result.value(); // findOrCreate returns [instance, created=true/false]
+                                                    if (value && value[1]) {
+                                                        groupIdsToInvite.push(members[i].groupId);
+                                                        var group = _.find(resTopicGroups[1], function (item) {
+                                                            return item.dataValues.id === members[i].groupId;
+                                                        });
+
+                                                        return cosActivities.addActivity(
+                                                            topic,
+                                                            {
+                                                                type: 'User',
+                                                                id: req.user.id
+                                                            },
+                                                            null,
+                                                            group,
+                                                            req.method + ' ' + req.path,
+                                                            t
+                                                        );
+                                                    }
+                                                } else {
+                                                    logger.error('Failed to add Group', members[i]);
                                                 }
-                                            }).then(function (groups) {
-                                                return [topic, groups];
                                             });
-                                    })
-                                    .then(function (resTopicGroups) {
-                                        var topic = resTopicGroups[0];
-                                        var groupIdsToInvite = [];
 
-                                        results.forEach(function (result, i) {
-                                            if (result.isFulfilled()) {
-                                                var value = result.value(); // findOrCreate returns [instance, created=true/false]
-                                                if (value && value[1]) {
-                                                    groupIdsToInvite.push(members[i].groupId);
-                                                    var group = _.find(resTopicGroups[1], function (item) {
-                                                        item.dataValues.id = members[i].groupId;
-                                                    });
+                                            emailLib.sendTopicGroupInvite(groupIdsToInvite, req.user.id, topicId);
 
-                                                    //FIXME: Transaction?
-                                                    cosActivities.addActivity(
-                                                        topic,
-                                                        {
-                                                            type: 'User',
-                                                            id: req.user.id
-                                                        },
-                                                        null,
-                                                        group,
-                                                        req.method + ' ' + req.path
-                                                    );
-                                                }
-                                            } else {
-                                                logger.error('Failed to add Group', members[i]);
-                                            }
+                                            return res.created();
                                         });
-
-                                        emailLib.sendTopicGroupInvite(groupIdsToInvite, req.user.id, topicId);
-
-                                        return res.created();
-                                    });
-                            })
+                                });
+                        })
                             .catch(next);
                     } else {
                         return res.forbidden();
