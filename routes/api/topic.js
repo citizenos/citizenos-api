@@ -1240,9 +1240,6 @@ module.exports = function (app) {
             })
             .then(function (topic) {
                 if (!topic) return res.badRequest();
-                if (topic.endsAt === endsAt) {
-                    delete topic.endsAt;
-                }
 
                 var statuses = _.values(Topic.STATUSES);
 
@@ -1311,7 +1308,10 @@ module.exports = function (app) {
             })
             .spread(function (topic, vote) {
                 var fields = ['visibility', 'status', 'categories', 'endsAt', 'hashtag'];
-
+                if (topic.endsAt === endsAt) {
+                    delete topic.endsAt;
+                }
+                
                 return db
                     .transaction(function (t) {
                         var promisesToResolve = [];
