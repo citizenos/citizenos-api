@@ -1228,6 +1228,7 @@ module.exports = function (app) {
         var topicId = req.params.topicId;
         var contact = req.body.contact; // TODO: This logic is specific to Rahvaalgatus.ee, with next Partner we have to make it more generic - https://trello.com/c/Sj3XRF5V/353-raa-ee-followup-email-to-riigikogu-and-token-access-to-events-api
         var statusNew = req.body.status;
+        var endsAt = req.body.endsAt;
 
         var isBackToVoting = false;
         var isSendToParliament = false;
@@ -1239,6 +1240,9 @@ module.exports = function (app) {
             })
             .then(function (topic) {
                 if (!topic) return res.badRequest();
+                if (topic.endsAt === endsAt) {
+                    delete topic.endsAt;
+                }
 
                 var statuses = _.values(Topic.STATUSES);
 
