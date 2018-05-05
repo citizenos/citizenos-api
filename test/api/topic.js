@@ -65,12 +65,21 @@ var _topicUpdate = function (agent, userId, topicId, status, visibility, categor
         .replace(':topicId', topicId);
 
     var payload = {
-        status: status,
         visibility: visibility,
-        categories: categories,
-        endsAt: endsAt,
-        contact: contact
+        status: status
     };
+
+    if (categories) {
+        payload.categories = categories;
+    }
+
+    if (endsAt) {
+        payload.endsAt = endsAt;
+    }
+
+    if (contact) {
+        payload.contact = contact;
+    }
 
     agent
         .put(path)
@@ -2117,12 +2126,14 @@ suite('Users', function () {
                 Topic
                     .update(
                         {
-                            title: 'TEST TITLE FOR SENDING TO PARLIAMENT' // Add  title which is not there as Topic is not edited in EP
+                            title: 'TEST TITLE FOR SENDING TO PARLIAMENT', // Add  title which is not there as Topic is not edited in EP,
+                            endsAt: new Date(new Date().getTime() - 1000 * 60 * 60 * 24)
                         },
                         {
                             where: {
                                 id: topic.id
-                            }
+                            },
+                            validate: false
                         }
                     )
                     .then(function () {

@@ -1306,16 +1306,18 @@ module.exports = function (app) {
                 return Promise.resolve([topic, vote]);
             })
             .spread(function (topic, vote) {
-                var fields = ['visibility', 'status', 'categories', 'endsAt', 'hashtag'];
+                var fieldsAllowedToUpdate = ['visibility', 'status', 'categories', 'endsAt', 'hashtag'];
+
+                var fieldsToUpdate = [];
+                Object.keys(req.body).forEach(function (key) {
+                    if (fieldsAllowedToUpdate.indexOf(key) >= 0) {
+                        fieldsToUpdate.push(key);
+                    }
+                });
 
                 return db
                     .transaction(function (t) {
                         var promisesToResolve = [];
-                        fields.forEach(function (field) {
-                            if (Object.prototype.hasOwnProperty.call(req.body, field)) {
-                                topic[field] = req.body[field];
-                            }
-                        });
 
                         var topicActivityPromise = cosActivities
                             .updateActivity(
@@ -1336,7 +1338,7 @@ module.exports = function (app) {
                             .update(
                                 req.body,
                                 {
-                                    fields: fields,
+                                    fields: fieldsToUpdate,
                                     where: {
                                         id: topicId
                                     }
@@ -4850,6 +4852,7 @@ module.exports = function (app) {
 
         // Make sure the Vote is actually related to the Topic through which the permission was granted.
         var fields = ['endsAt'];
+
         Topic
             .findOne({
                 where: {
