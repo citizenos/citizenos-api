@@ -1321,19 +1321,17 @@ suite('Users', function () {
                 var geofence = require('../resources/geofence/ee.json');
 
                 Geofence
-                    .findOrCreate(
-                        {
-                            where: {
-                                sourceId: 'natearth_ee'
-                            },
-                            defaults: {
-                                name: 'The Country of Estonia',
-                                source: 'http://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/',
-                                geometry: geofence,
-                                sourceId: 'natearth_ee'
-                            }
+                    .findOrCreate({
+                        where: {
+                            sourceId: 'natearth_ee'
+                        },
+                        defaults: {
+                            name: 'The Country of Estonia',
+                            source: 'http://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/',
+                            geometry: geofence,
+                            sourceId: 'natearth_ee'
                         }
-                    )
+                    })
                     .then(function (res) {
                         return Partner
                             .create({
