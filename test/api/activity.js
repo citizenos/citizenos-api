@@ -55,7 +55,7 @@ suite('Users', function () {
 
                     user = res;
 
-                    topicLib.topicCreate(agent, user.id, null, null, null, null, null, function (err) {
+                    topicLib.topicCreate(agent, null, user.id, null, null, null, null, null, function (err) {
                         if (err) return done(err);
 
                         done();

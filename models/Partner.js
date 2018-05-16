@@ -33,6 +33,15 @@ module.exports = function (sequelize, DataTypes) {
                 type: DataTypes.STRING,
                 allowNull: false,
                 comment: 'Partner callback (callback_uri) validation regexp. Also may be used to check request Origin and Referer if present.'
+            },
+            geofenceId: {
+                type: DataTypes.UUID,
+                allowNull: true,
+                references: {
+                    model: 'Geofences',
+                    key: 'id'
+                },
+                comment: 'Default geo-fence id for Partner created content.'
             }
         }
     );

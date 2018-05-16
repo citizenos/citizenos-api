@@ -25,7 +25,7 @@ CitizenOS API - https://api.citizenos.com
 * [Understand the architecture of CitizenOS platform](docs/index.md)
 * Software
     * Node.JS >= 6.13.1 (https://github.com/mklement0/n-install) 
-    * PostgreSQL >= 9.5
+    * PostgreSQL >= 9.5 with PostGIS >= 2.4
     * Etherpad-Lite - https://github.com/citizenos/etherpad-lite-heroku. See the README.md and use the `config/local.json.example` as a basis to get the right plugin configuration.
 
 ### Installing
@@ -40,6 +40,7 @@ CitizenOS API - https://api.citizenos.com
     sudo su -c "createdb citizenos" postgres
     sudo su -c "psql -c \"CREATE USER citizenos WITH PASSWORD 'citizenos'\"" postgres
     sudo su -c "psql -c \"GRANT ALL PRIVILEGES ON DATABASE citizenos TO citizenos\"" postgres
+    sudo su -c "psql citizenos -c \"CREATE EXTENSION postgis;\"" postgres
     ```
     * Create the DB structure - `npm run createdb` - this test should pass, if it does not or it hangs, you should consult the `./logs/app.log`
       

@@ -9,31 +9,13 @@
  */
 module.exports = function (app) {
     var logger = app.get('logger');
-    var Promise = app.get('Promise');
     var _ = app.get('lodash');
 
     var Partner = app.get('models.Partner');
 
-    // Local cache for the Partner config
-    var partners;
-
-    // Fetch and cache Partner config
-    var getPartnerConfig = function () {
-        if (partners) {
-            return Promise.resolve(partners);
-        } else {
-            return Partner
-                .findAll()
-                .then(function (partnerArr) {
-                    partners = partnerArr;
-
-                    return Promise.resolve(partners);
-                });
-        }
-    };
-
     return function (req, res, next) {
-        getPartnerConfig()
+        return Partner
+            .findAll()
             .then(function (partners) {
                 var partnerId = req.query.partnerId || req.headers['x-partner-id'];
                 var sourceUrl = req.headers.origin || req.headers.referer;

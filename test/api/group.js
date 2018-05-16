@@ -617,7 +617,7 @@ suite('Users', function () {
                                                 groupMembersCreate(agent, user.id, group.id, members, cb);
                                             },
                                             function (cb) {
-                                                topicLib.topicCreate(agent, user.id, null, null, null, null, null, cb);
+                                                topicLib.topicCreate(agent, null, user.id, null, null, null, null, null, cb);
                                             }
                                         ],
                                         function (err, results) {
@@ -1424,7 +1424,7 @@ suite('Users', function () {
 
                                 group = res.body.data;
 
-                                topicLib.topicCreate(agent, creator.id, null, null, null, '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>', null, function (err, res) {
+                                topicLib.topicCreate(agent, null, creator.id, null, null, null, '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>', null, function (err, res) {
                                     if (err) {
                                         return done(err);
                                     }
@@ -1537,7 +1537,7 @@ suite('Users', function () {
 
                     test('Success - Remove Topic from Group after Topic delete', function (done) {
                         var topic;
-                        topicLib.topicCreate(agent, member.id, null, null, null, null, null, function (err, res) {
+                        topicLib.topicCreate(agent, null, member.id, null, null, null, null, null, function (err, res) {
                             if (err) {
                                 return done(err);
                             }

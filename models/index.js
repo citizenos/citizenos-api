@@ -45,6 +45,8 @@ module.exports = function (app) {
     var VoteDelegation = sequelize.import(path.join(__dirname, 'VoteDelegation'));
     var VoteList = sequelize.import(path.join(__dirname, 'VoteList'));
 
+    var Geofence = sequelize.import(__dirname + '/Geofence');
+
     User.hasMany(UserConnection, {
         foreignKey: 'userId'
     });
@@ -268,4 +270,6 @@ module.exports = function (app) {
     app.set('models.VoteUserContainer', VoteUserContainer);
     app.set('models.VoteList', VoteList);
     app.set('models.VoteDelegation', VoteDelegation);
+
+    app.set('models.Geofence', Geofence);
 };

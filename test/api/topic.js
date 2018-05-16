@@ -1,12 +1,12 @@
 'use strict';
 
-var _topicCreate = function (agent, userId, visibility, categories, endsAt, description, hashtag, expectedHttpCode, callback) {
+var _topicCreate = function (agent, partnerId, userId, visibility, categories, endsAt, description, hashtag, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics'.replace(':userId', userId);
 
     agent
         .post(path)
         .set('Content-Type', 'application/json')
-        .set('Origin', 'https://citizenos.com')
+        .set('x-partner-id', partnerId)
         .send({
             visibility: visibility,
             categories: categories,
@@ -19,8 +19,8 @@ var _topicCreate = function (agent, userId, visibility, categories, endsAt, desc
         .end(callback);
 };
 
-var topicCreate = function (agent, userId, visibility, categories, endsAt, description, hashtag, callback) {
-    _topicCreate(agent, userId, visibility, categories, endsAt, description, hashtag, 201, callback);
+var topicCreate = function (agent, partnerId, userId, visibility, categories, endsAt, description, hashtag, callback) {
+    _topicCreate(agent, partnerId, userId, visibility, categories, endsAt, description, hashtag, 201, callback);
 };
 
 var _topicRead = function (agent, userId, topicId, include, expectedHttpCode, callback) {
@@ -1197,6 +1197,8 @@ var Vote = app.get('models.Vote');
 var VoteOption = app.get('models.VoteOption');
 var VoteDelegation = app.get('models.VoteDelegation');
 
+var Geofence = app.get('models.Geofence');
+
 // API - /api/users*
 suite('Users', function () {
 
@@ -1226,7 +1228,7 @@ suite('Users', function () {
             });
 
             test('Success', function (done) {
-                topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
+                topicCreate(agent, null, user.id, null, null, null, null, null, function (err, res) {
                     if (err) return done(err);
                     var topic = res.body.data;
                     assert.property(topic, 'id');
@@ -1240,7 +1242,7 @@ suite('Users', function () {
             });
 
             test('Success - non-default visibility', function (done) {
-                topicCreate(agent, user.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health], null, null, null, function (err, res) {
+                topicCreate(agent, null, user.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health], null, null, null, function (err, res) {
                     if (err) return done(err);
                     var topic = res.body.data;
                     assert.equal(topic.visibility, Topic.VISIBILITY.public);
@@ -1251,7 +1253,7 @@ suite('Users', function () {
             test('Success - description', function (done) {
                 var description = '<!DOCTYPE HTML><html><body><h1>H1</h1><br><h2>h2</h2><br><h3>h3</h3><br><script>alert("owned!");</script><br><br>script<br><br></body></html>';
 
-                topicCreate(agent, user.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health], null, description, null, function (err, res) {
+                topicCreate(agent, null, user.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health], null, description, null, function (err, res) {
                     if (err) return done(err);
                     var topic = res.body.data;
                     etherpadClient
@@ -1277,7 +1279,7 @@ suite('Users', function () {
             test('Success - create with categories', function (done) {
                 var categories = [Topic.CATEGORIES.work, Topic.CATEGORIES.varia, Topic.CATEGORIES.transport];
 
-                topicCreate(agent, user.id, Topic.VISIBILITY.public, categories, null, null, null, function (err, res) {
+                topicCreate(agent, null, user.id, Topic.VISIBILITY.public, categories, null, null, null, function (err, res) {
                     if (err) return done(err);
                     var topic = res.body.data;
                     assert.deepEqual(topic.categories, categories);
@@ -1287,7 +1289,7 @@ suite('Users', function () {
 
             test('Success - valid hashtag', function (done) {
                 var hashtag = 'abcdefghijklmnopqrstuvxyzabcdefghijklmnopqrstuvxyzabcdefghi';
-                topicCreate(agent, user.id, null, null, null, null, hashtag, function (err, res) {
+                topicCreate(agent, null, user.id, null, null, null, null, hashtag, function (err, res) {
                     if (err) return done(err);
                     var topic = res.body.data;
                     assert.equal(topic.hashtag, hashtag);
@@ -1297,7 +1299,7 @@ suite('Users', function () {
 
             test('Success - empty hashtag', function (done) {
                 var hashtag = '';
-                topicCreate(agent, user.id, null, null, null, null, hashtag, function (err, res) {
+                topicCreate(agent, null, user.id, null, null, null, null, hashtag, function (err, res) {
                     if (err) return done(err);
                     var topic = res.body.data;
                     assert.equal(topic.hashtag, null);
@@ -1307,7 +1309,7 @@ suite('Users', function () {
 
             test('Success - Replace invalid characters in hashtag', function (done) {
                 var hashtag = '      #abc   defgh ijk.lmn,opqrstuvxyzabcdefghij:klmnopqrstuvxyzabcdefghi        ';
-                topicCreate(agent, user.id, null, null, null, null, hashtag, function (err, res) {
+                topicCreate(agent, null, user.id, null, null, null, null, hashtag, function (err, res) {
                     if (err) return done(err);
                     var topic = res.body.data;
                     assert.equal(topic.hashtag, 'abcdefghijklmnopqrstuvxyzabcdefghijklmnopqrstuvxyzabcdefghi');
@@ -1315,15 +1317,54 @@ suite('Users', function () {
                 });
             });
 
+            test('Success - geofence', function (done) {
+                var geofence = require('../resources/geofence/ee.json');
+
+                Geofence
+                    .findOrCreate(
+                        {
+                            where: {
+                                sourceId: 'natearth_ee'
+                            },
+                            defaults: {
+                                name: 'The Country of Estonia',
+                                source: 'http://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/',
+                                geometry: geofence,
+                                sourceId: 'natearth_ee'
+                            }
+                        }
+                    )
+                    .then(function (res) {
+                        return Partner
+                            .create({
+                                website: 'notimportant',
+                                redirectUriRegexp: 'notimportant',
+                                geofenceId: res[0].id
+                            });
+                    })
+                    .then(function (partner) {
+                        topicCreate(agent, partner.id, user.id, null, null, null, null, null, function (err, res) {
+                            if (err) return done(err);
+
+                            var topic = res.body.data;
+
+                            assert.equal(topic.geofence.id, partner.geofenceId);
+
+                            done();
+                        });
+                    })
+                    .catch(done);
+            });
+
             test('Fail - 40100', function (done) {
-                _topicCreate(request.agent(app), user.id, Topic.VISIBILITY.public, null, null, null, null, 401, function (err) {
+                _topicCreate(request.agent(app), null, user.id, Topic.VISIBILITY.public, null, null, null, null, 401, function (err) {
                     if (err) return done(err);
                     done();
                 });
             });
 
             test('Fail - 40000 - invalid hashtag', function (done) {
-                _topicCreate(agent, user.id, null, null, null, null, 'üüüüüüüüüüüüüüüüüüüüüüüüüüüüüüü', 400, function (err, res) {
+                _topicCreate(agent, null, user.id, null, null, null, null, 'üüüüüüüüüüüüüüüüüüüüüüüüüüüüüüü', 400, function (err, res) {
                     if (err) return done(err);
 
                     var expectedBody = {
@@ -1358,7 +1399,7 @@ suite('Users', function () {
 
                     user = res;
 
-                    topicCreate(agent, user.id, Topic.VISIBILITY.private, topicCategories, null, null, null, function (err, res) {
+                    topicCreate(agent, null, user.id, Topic.VISIBILITY.private, topicCategories, null, null, null, function (err, res) {
                         if (err) return done(err);
 
                         topic = res.body.data;
@@ -1553,7 +1594,7 @@ suite('Users', function () {
                         userLib.createUserAndLogin(voteAgent, voteEmail, votePassword, null, function (err, res) {
                             if (err) return done(err);
                             creator = res;
-                            topicCreate(voteAgent, creator.id, Topic.VISIBILITY.private, voteTopicCategories, null, null, null, function (err, res) {
+                            topicCreate(voteAgent, null, creator.id, Topic.VISIBILITY.private, voteTopicCategories, null, null, null, function (err, res) {
                                 if (err) return done(err);
                                 voteTopic = res.body.data;
 
@@ -1687,7 +1728,7 @@ suite('Users', function () {
                                                     groupLib.create(agentCreator, creator.id, 'Group', null, null, cb);
                                                 },
                                                 function (cb) {
-                                                    topicCreate(agentCreator, creator.id, Topic.VISIBILITY.private, null, null, null, null, cb);
+                                                    topicCreate(agentCreator, null, creator.id, Topic.VISIBILITY.private, null, null, null, null, cb);
                                                 }
                                             ]
                                             , function (err, results) {
@@ -1967,7 +2008,7 @@ suite('Users', function () {
                                     creator = results[0];
                                     user = results[1];
 
-                                    topicCreate(agentCreator, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.taxes, Topic.CATEGORIES.transport], null, null, null, function (err, res) {
+                                    topicCreate(agentCreator, null, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.taxes, Topic.CATEGORIES.transport], null, null, null, function (err, res) {
                                         if (err) return done(err);
 
                                         topic = res.body.data;
@@ -2034,7 +2075,7 @@ suite('Users', function () {
             });
 
             setup(function (done) {
-                topicCreate(agent, user.id, null, null, null, null, 'testtag', function (err, res) {
+                topicCreate(agent, null, user.id, null, null, null, null, 'testtag', function (err, res) {
                     if (err) return done(err);
                     topic = res.body.data;
                     done();
@@ -2444,7 +2485,7 @@ suite('Users', function () {
                 userLib.createUserAndLogin(agent, email, password, null, function (err, res) {
                     if (err) return done(err);
                     user = res;
-                    topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
+                    topicCreate(agent, null, user.id, null, null, null, null, null, function (err, res) {
                         if (err) return done(err);
                         topic = res.body.data;
                         done();
@@ -2548,7 +2589,7 @@ suite('Users', function () {
                                             groupLib.create(agentCreator, creator.id, 'Group', null, null, cb);
                                         },
                                         function (cb) {
-                                            topicCreate(agentCreator, creator.id, Topic.VISIBILITY.private, null, null, null, null, function (err, res) {
+                                            topicCreate(agentCreator, null, creator.id, Topic.VISIBILITY.private, null, null, null, null, function (err, res) {
                                                 if (err) return cb(err);
 
                                                 // Add title & description in DB. NULL title topics are not to be returned.
@@ -2651,7 +2692,7 @@ suite('Users', function () {
             test('Success - without deleted topics', function (done) {
                 var deletedTopic;
 
-                topicCreate(agentUser, user.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
+                topicCreate(agentUser, null, user.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
                     if (err) return done(err);
 
                     deletedTopic = res.body.data;
@@ -2707,7 +2748,7 @@ suite('Users', function () {
             });
 
             test('Success - visibility private', function (done) {
-                topicCreate(agentUser, user.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
+                topicCreate(agentUser, null, user.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
                     if (err) return done(err);
 
                     var publicTopic = res.body.data;
@@ -2746,7 +2787,7 @@ suite('Users', function () {
             });
 
             test('Success - visibility public', function (done) {
-                topicCreate(agentUser, user.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
+                topicCreate(agentUser, null, user.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
                     if (err) return done(err);
 
                     var publicTopic = res.body.data;
@@ -2785,7 +2826,7 @@ suite('Users', function () {
             });
 
             test('Success - only users topics', function (done) {
-                topicCreate(agentUser, user.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
+                topicCreate(agentUser, null, user.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
                     if (err) return done(err);
 
                     var publicTopic = res.body.data;
@@ -2837,7 +2878,7 @@ suite('Users', function () {
                     userLib.createUserAndLogin(agent, null, null, null, function (err, res) {
                         if (err) return done(err);
                         user = res;
-                        topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
+                        topicCreate(agent, null, user.id, null, null, null, null, null, function (err, res) {
                             if (err) return done(err);
                             topic = res.body.data;
                             Topic
@@ -3237,7 +3278,7 @@ suite('Users', function () {
                         .parallel(
                             [
                                 function (cb) {
-                                    topicCreate(agent, user.id, null, null, null, null, null, cb);
+                                    topicCreate(agent, null, user.id, null, null, null, null, null, cb);
                                 },
                                 function (cb) {
                                     groupLib.create(agent, user.id, 'Topic List Test Group', null, null, cb);
@@ -3460,7 +3501,7 @@ suite('Users', function () {
                                 if (err) return done(err);
 
                                 user = res;
-                                topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
+                                topicCreate(agent, null, user.id, null, null, null, null, null, function (err, res) {
                                     if (err) return done(err);
 
                                     topic = res.body.data;
@@ -3649,7 +3690,7 @@ suite('Users', function () {
                             userLib.createUserAndLogin(agent, email, password, null, function (err, res) {
                                 if (err) return done(err);
                                 user = res;
-                                topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
+                                topicCreate(agent, null, user.id, null, null, null, null, null, function (err, res) {
                                     if (err) return done(err);
                                     topic = res.body.data;
 
@@ -3734,7 +3775,7 @@ suite('Users', function () {
                             userLib.createUserAndLogin(agent, email, password, null, function (err, res) {
                                 if (err) return done(err);
                                 user = res;
-                                topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
+                                topicCreate(agent, null, user.id, null, null, null, null, null, function (err, res) {
                                     if (err) return done(err);
                                     topic = res.body.data;
 
@@ -3917,7 +3958,7 @@ suite('Users', function () {
                                     var groupMemberUser = res[1];
                                     var user2 = res[2];
 
-                                    topicCreate(agent, user.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
+                                    topicCreate(agent, null, user.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
                                         if (err) return done(err);
 
                                         topic = res.body.data;
@@ -4068,7 +4109,7 @@ suite('Users', function () {
                         userLib.createUserAndLogin(agent, email, password, null, function (err, res) {
                             if (err) return done(err);
                             user = res;
-                            topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
+                            topicCreate(agent, null, user.id, null, null, null, null, null, function (err, res) {
                                 if (err) return done(err);
                                 topic = res.body.data;
 
@@ -4143,7 +4184,7 @@ suite('Users', function () {
                         userLib.createUserAndLogin(agent, email, password, null, function (err, res) {
                             if (err) return done(err);
                             user = res;
-                            topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
+                            topicCreate(agent, null, user.id, null, null, null, null, null, function (err, res) {
                                 if (err) return done(err);
                                 topic = res.body.data;
 
@@ -4237,7 +4278,7 @@ suite('Users', function () {
             });
 
             setup(function (done) {
-                topicCreate(agentCreator, creator.id, null, null, null, null, null, function (err, res) {
+                topicCreate(agentCreator, null, creator.id, null, null, null, null, null, function (err, res) {
                     if (err) return done(err);
 
                     topic = res.body.data;
@@ -4316,7 +4357,7 @@ suite('Users', function () {
                 });
 
                 setup(function (done) {
-                    topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
+                    topicCreate(agent, null, user.id, null, null, null, null, null, function (err, res) {
                         if (err) return done(err);
                         topic = res.body.data;
                         done();
@@ -4661,7 +4702,7 @@ suite('Users', function () {
                 });
 
                 setup(function (done) {
-                    topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
+                    topicCreate(agent, null, user.id, null, null, null, null, null, function (err, res) {
                         if (err) return done(err);
                         topic = res.body.data;
 
@@ -4703,7 +4744,7 @@ suite('Users', function () {
                 });
 
                 test('Fail - Not Found - trying to access Vote that does not belong to the Topic', function (done) {
-                    topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
+                    topicCreate(agent, null, user.id, null, null, null, null, null, function (err, res) {
                         if (err) return done(err);
 
                         var topicWrong = res.body.data;
@@ -4746,7 +4787,7 @@ suite('Users', function () {
                 });
 
                 setup(function (done) {
-                    topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
+                    topicCreate(agent, null, user.id, null, null, null, null, null, function (err, res) {
                         if (err) return done(err);
                         topic = res.body.data;
 
@@ -4855,7 +4896,7 @@ suite('Users', function () {
                 suite('Create', function () {
 
                     setup(function (done) {
-                        topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
+                        topicCreate(agent, null, user.id, null, null, null, null, null, function (err, res) {
                             if (err) return done(err);
                             topic = res.body.data;
 
@@ -5126,7 +5167,7 @@ suite('Users', function () {
                 suite('Delete', function () {
 
                     setup(function (done) {
-                        topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
+                        topicCreate(agent, null, user.id, null, null, null, null, null, function (err, res) {
                             if (err) return done(err);
                             topic = res.body.data;
 
@@ -5259,10 +5300,10 @@ suite('Users', function () {
                         .parallel(
                             [
                                 function (cb) {
-                                    topicCreate(agent, user.id, null, null, null, null, null, cb);
+                                    topicCreate(agent, null, user.id, null, null, null, null, null, cb);
                                 },
                                 function (cb) {
-                                    topicCreate(agent, user.id, Topic.VISIBILITY.public, null, null, null, null, cb);
+                                    topicCreate(agent, null, user.id, Topic.VISIBILITY.public, null, null, null, null, cb);
                                 }
                             ],
                             function (err, results) {
@@ -5426,7 +5467,7 @@ suite('Users', function () {
                     });
 
                     test('Fail - Not Found - trying to vote on a Topic while the Vote actually does not belong to the Topic', function (done) {
-                        topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
+                        topicCreate(agent, null, user.id, null, null, null, null, null, function (err, res) {
                             if (err) return done(err);
 
                             var topicWrong = res.body.data;
@@ -6220,7 +6261,7 @@ suite('Users', function () {
                     userLib.createUserAndLogin(agent, null, null, null, function (err, res) {
                         if (err) return done(err);
                         user = res;
-                        topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
+                        topicCreate(agent, null, user.id, null, null, null, null, null, function (err, res) {
                             if (err) return done(err);
                             topic = res.body.data;
                             done();
@@ -6308,7 +6349,7 @@ suite('Users', function () {
                         userLib.createUserAndLogin(agent3, null, null, null, function (err, res) {
                             if (err) return done(err);
                             user3 = res;
-                            topicCreate(agent2, user2.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
+                            topicCreate(agent2, null, user2.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
                                 if (err) return done(err);
                                 topic = res.body.data;
                                 done();
@@ -6388,7 +6429,7 @@ suite('Users', function () {
                         if (err) return done(err);
 
                         user = result;
-                        topicCreate(agent, user.id, null, null, null, null, null, function (err, result) {
+                        topicCreate(agent, null, user.id, null, null, null, null, null, function (err, result) {
                             if (err) return done(err);
 
                             topic = result.body.data;
@@ -6729,7 +6770,7 @@ suite('Users', function () {
                         if (err) return done(err);
                         user = res;
 
-                        topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
+                        topicCreate(agent, null, user.id, null, null, null, null, null, function (err, res) {
                             if (err) return done(err);
                             topic = res.body.data;
 
@@ -6778,7 +6819,7 @@ suite('Users', function () {
                         if (err) return done(err);
                         user = res;
 
-                        topicCreate(agent, user.id, null, null, null, null, 'banana', function (err, res) {
+                        topicCreate(agent, null, user.id, null, null, null, null, 'banana', function (err, res) {
                             if (err) return done(err);
                             topic = res.body.data;
 
@@ -6824,7 +6865,7 @@ suite('Users', function () {
                 userLib.createUserAndLogin(creatorAgent, null, null, null, function (err, res) {
                     if (err) return done(err);
                     creator = res;
-                    topicCreate(creatorAgent, creator.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
+                    topicCreate(creatorAgent, null, creator.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
                         if (err) return done(err);
                         topic = res.body.data;
                         done();
@@ -7091,7 +7132,7 @@ suite('Topics', function () {
         });
 
         setup(function (done) {
-            topicCreate(creatorAgent, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business], null, null, null, function (err, res) {
+            topicCreate(creatorAgent, null, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business], null, null, null, function (err, res) {
                 if (err) return done(err);
                 topic = res.body.data;
                 done();
@@ -7315,7 +7356,7 @@ suite('Topics', function () {
         });
 
         setup(function (done) {
-            topicCreate(creatorAgent, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health], null, null, null, function (err, res) {
+            topicCreate(creatorAgent, null, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health], null, null, null, function (err, res) {
                 if (err) return done(err);
                 topic = res.body.data;
 
@@ -7470,7 +7511,7 @@ suite('Topics', function () {
 
         test('Success - non-authenticated User - don\'t show deleted "public" Topics', function (done) {
 
-            topicCreate(creatorAgent, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health], null, null, null, function (err, res) {
+            topicCreate(creatorAgent, null, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health], null, null, null, function (err, res) {
                 if (err) return done(err);
                 var deletedTopic = res.body.data;
 
@@ -7548,7 +7589,7 @@ suite('Topics', function () {
                     }
                 )
                 .then(function () {
-                    topicCreate(creatorAgent, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health], null, null, null, function (err, res) {
+                    topicCreate(creatorAgent, null, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health], null, null, null, function (err, res) {
                         if (err) return done(err);
 
                         var partnerTopic = res.body.data;
@@ -7615,7 +7656,7 @@ suite('Topics', function () {
             });
 
             setup(function (done) {
-                topicCreate(creatorAgent, creator.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
+                topicCreate(creatorAgent, null, creator.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
                     if (err) return done(err);
 
                     topic = res.body.data;
@@ -7839,7 +7880,7 @@ suite('Topics', function () {
 
                     creator = res;
 
-                    topicCreate(creatorAgent, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.communities, Topic.CATEGORIES.culture], null, null, null, function (err, res) {
+                    topicCreate(creatorAgent, null, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.communities, Topic.CATEGORIES.culture], null, null, null, function (err, res) {
                         if (err) return done(err);
 
                         topic = res.body.data;
@@ -8060,7 +8101,7 @@ suite('Topics', function () {
             });
 
             test('Success', function (done) {
-                topicCreate(creatorAgent, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.communities, Topic.CATEGORIES.culture], null, null, null, function (err, res) {
+                topicCreate(creatorAgent, null, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.communities, Topic.CATEGORIES.culture], null, null, null, function (err, res) {
                     if (err) return done(err);
 
                     var topic = res.body.data;
@@ -8095,7 +8136,7 @@ suite('Topics', function () {
             });
 
             test('Success - public Topic without comments', function (done) {
-                topicCreate(creatorAgent, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.defense, Topic.CATEGORIES.education], null, null, null, function (err, res) {
+                topicCreate(creatorAgent, null, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.defense, Topic.CATEGORIES.education], null, null, null, function (err, res) {
                     if (err) return done(err);
 
                     var topic = res.body.data;
@@ -8405,7 +8446,7 @@ suite('Topics', function () {
             });
 
             test('Fail - 404 - trying to fetch comments of non-public Topic', function (done) {
-                topicCreate(creatorAgent, creator.id, Topic.VISIBILITY.private, null, null, null, null, function (err, res) {
+                topicCreate(creatorAgent, null, creator.id, Topic.VISIBILITY.private, null, null, null, null, function (err, res) {
                     if (err) return done(err);
 
                     var topic = res.body.data;
@@ -8439,7 +8480,7 @@ suite('Topics', function () {
                 });
 
                 setup(function (done) {
-                    topicCreate(creatorAgent, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business], null, null, null, function (err, res) {
+                    topicCreate(creatorAgent, null, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business], null, null, null, function (err, res) {
                         if (err) return done(err);
                         topic = res.body.data;
 
@@ -8607,7 +8648,7 @@ suite('Topics', function () {
                                 userModerator = results[1];
                                 userReporter = results[2];
 
-                                topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
+                                topicCreate(agentCreator, null, userCreator.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
                                     if (err) return done(err);
 
                                     topic = res.body.data;
@@ -8730,7 +8771,7 @@ suite('Topics', function () {
                                 userCreator = results[0];
                                 userModerator = results[1];
 
-                                topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
+                                topicCreate(agentCreator, null, userCreator.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
                                     if (err) return done(err);
 
                                     topic = res.body.data;
@@ -8885,7 +8926,7 @@ suite('Topics', function () {
                                 userCreator = results[0];
                                 userModerator = results[1];
 
-                                topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.private, null, null, null, null, function (err, res) {
+                                topicCreate(agentCreator, null, userCreator.id, Topic.VISIBILITY.private, null, null, null, null, function (err, res) {
                                     if (err) return done(err);
 
                                     topic = res.body.data;
@@ -9122,7 +9163,7 @@ suite('Topics', function () {
             });
 
             test('Success', function (done) {
-                topicCreate(creatorAgent, creator.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
+                topicCreate(creatorAgent, null, creator.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
                     if (err) return done(err);
 
                     var topic = res.body.data;
@@ -9168,7 +9209,7 @@ suite('Topics', function () {
             });
 
             test('Fail - 404 - trying to fetch Vote of non-public Topic', function (done) {
-                topicCreate(creatorAgent, creator.id, Topic.VISIBILITY.private, null, null, null, null, function (err, res) {
+                topicCreate(creatorAgent, null, creator.id, Topic.VISIBILITY.private, null, null, null, null, function (err, res) {
                     if (err) return done(err);
 
                     var topic = res.body.data;
@@ -9367,7 +9408,7 @@ suite('Topics', function () {
                     if (err) return done(err);
                     user = res;
 
-                    topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
+                    topicCreate(agent, null, user.id, null, null, null, null, null, function (err, res) {
                         if (err) return done(err);
 
                         topic = res.body.data;
@@ -9556,7 +9597,7 @@ suite('Topics', function () {
                     if (err) return done(err);
                     user = res;
 
-                    topicCreate(agent, user.id, 'public', null, null, null, 'banana', function (err, res) {
+                    topicCreate(agent, null, user.id, 'public', null, null, null, 'banana', function (err, res) {
                         if (err) return done(err);
 
                         topic = res.body.data;
@@ -9624,7 +9665,7 @@ suite('Topics', function () {
                         if (err) return done(err);
                         user = res;
 
-                        topicCreate(agent, user.id, 'public', null, null, null, null, function (err, res) {
+                        topicCreate(agent, null, user.id, 'public', null, null, null, null, function (err, res) {
                             if (err) return done(err);
 
                             topic = res.body.data;
@@ -9660,7 +9701,7 @@ suite('Topics', function () {
                 userLib.createUserAndLogin(agent, null, null, null, function (err, res) {
                     if (err) return done(err);
 
-                    topicCreate(agent, res.id, 'public', null, null, null, cosUtil.randomString(40), function (err, res) {
+                    topicCreate(agent, null, res.id, 'public', null, null, null, cosUtil.randomString(40), function (err, res) {
                         if (err) return done(err);
 
                         var topic = res.body.data;

@@ -165,6 +165,15 @@ module.exports = function (sequelize, DataTypes) {
                     }
                 },
                 defaultValue: null
+            },
+            geofenceId: {
+                type: DataTypes.UUID,
+                allowNull: true,
+                references: {
+                    model: 'Geofences',
+                    key: 'id'
+                },
+                comment: 'Geo-fence ID. Initially designed to provide Topics geo-fence, which means the Topics Vote will be restricted to that fence.'
             }
         },
         {
@@ -199,6 +208,13 @@ module.exports = function (sequelize, DataTypes) {
                     } else {
                         data.creator = {};
                         data.creator.id = this.dataValues.creatorId;
+                    }
+
+                    if (this.dataValues.geofence) {
+                        data.geofence = this.dataValues.geofence;
+                    } else if (this.dataValues.geofenceId) {
+                        data.geofence = {};
+                        data.geofence.id = this.dataValues.geofenceId;
                     }
 
                     if (this.dataValues.memberGroups) {

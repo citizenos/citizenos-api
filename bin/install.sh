@@ -41,12 +41,14 @@ else
 fi
 
 echo -e "\nInstall Postgres database - https://www.postgresql.org/docs/manuals/"
-sudo apt-get -y install postgresql postgresql-contrib
+sudo apt-get -y install postgresql postgresql-contrib postgresql-9.6-postgis-2.4
 
 echo -e "\n Create Postgres DB for CitizenOS API. User 'citizenos' with password 'citizenos'"
 sudo su -c "createdb citizenos" postgres
 sudo su -c "psql -c \"CREATE USER citizenos WITH PASSWORD 'citizenos'\"" postgres
 sudo su -c "psql -c \"GRANT ALL PRIVILEGES ON DATABASE citizenos TO citizenos\"" postgres
+sudo su -c "psql citizenos -c \"CREATE EXTENSION postgis;\"" postgres
+
 
 echo -e "\nInstall app dependencies"
 npm install --no-bin-links

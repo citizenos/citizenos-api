@@ -31,6 +31,8 @@ module.exports = function (app) {
     var loginCheck = app.get('middleware.loginCheck');
     var partnerParser = app.get('middleware.partnerParser');
 
+    var Partner = app.get('models.Partner');
+
     var Activity = app.get('models.Activity');
     var User = app.get('models.User');
     var UserConnection = app.get('models.UserConnection');
@@ -853,9 +855,32 @@ module.exports = function (app) {
             .then(function (u) {
                 user = u;
 
-                return cosEtherpad.createTopic(topic.id, user.language, topicDescription);
+                var epCreateTopicPromise = cosEtherpad.createTopic(topic.id, user.language, topicDescription);
+
+                var partnerInfoPromise = null;
+                if (req.locals.partner) {
+                    partnerInfoPromise = Partner.findOne({
+                        where: {
+                            id: req.locals.partner.id,
+                            geofenceId: {
+                                $ne: null
+                            }
+                        }
+                    });
+                } else {
+                    partnerInfoPromise = Promise.resolve();
+                }
+
+                return Promise.all([epCreateTopicPromise, partnerInfoPromise]);
             })
-            .then(function () {
+            .then(function (res) {
+                var partnerInfo = res[1];
+
+                // If Partner has a geofence, all Topics are created with the geofence
+                if (partnerInfo && partnerInfo.geofenceId) {
+                    topic.geofenceId = partnerInfo.geofenceId;
+                }
+
                 topic.padUrl = cosEtherpad.getTopicPadUrl(topic.id);
 
                 return db
