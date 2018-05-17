@@ -211,7 +211,9 @@ module.exports = function (app) {
                         // Naming convention ".locals" is inspired by "res.locals" - http://expressjs.com/api.html#res.locals
                         req.locals = authorizationResult;
 
-                        return next(null, req, res);
+                        return new Promise(function (resolve) {
+                            return resolve(next(null, req, res));
+                        });
                     },
                     function (err) {
                         if (err) {
@@ -300,7 +302,9 @@ module.exports = function (app) {
             }
 
             if (!topicId || !userId) {
-                return next(null, req, res);
+                return new Promise(function (resolve) {
+                    return resolve(next(null, req, res));
+                });
             }
 
             _isModerator(topicId, userId)
@@ -310,7 +314,9 @@ module.exports = function (app) {
                             req.user.moderator = result.isModerator;
                         }
 
-                        return next(null, req, res);
+                        return new Promise(function (resolve) {
+                            return resolve(next(null, req, res));
+                        });
                     },
                     function (err) {
                         return next(err);
@@ -332,7 +338,9 @@ module.exports = function (app) {
                 }
             }).then(function (comment) {
                 if (comment.creatorId === userId) {
-                    return next(null, req, res);
+                    return new Promise(function (resolve) {
+                        return resolve(next(null, req, res));
+                    });
                 } else {
                     return res.forbidden('Insufficient permissions');
                 }
@@ -2178,7 +2186,9 @@ module.exports = function (app) {
                 });
 
                 return Promise
-                    .settle(findOrCreatePromises)
+                    .all(findOrCreatePromises.map(function (promise) {
+                        return promise.reflect();
+                    }))
                     .then(function (results) {
                         Topic
                             .findOne({
@@ -6634,6 +6644,26 @@ module.exports = function (app) {
                                     ), \
                                 false) INTO finalData FROM "Groups" g WHERE g.id::text = data#>>\'{object, id}\'; \
                             END IF; \
+                            IF ((finalData ? \'origin\') AND finalData#>>\'{origin, @type}\' = \'Group\') THEN \
+                                SELECT jsonb_set( \
+                                    finalData, \
+                                    \'{origin}\', \
+                                    to_jsonb( \
+                                        json_build_object( \
+                                            \'id\', g.id, \
+                                            \'@type\', finalData#>>\'{origin, @type}\', \
+                                            \'parentId\', g."parentId", \
+                                            \'name\', g.name, \
+                                            \'creatorId\', g."creatorId", \
+                                            \'visibility\', g.visibility, \
+                                            \'sourcePartnerId\', g."sourcePartnerId", \
+                                            \'createdAt\', g."createdAt", \
+                                            \'updatedAt\', g."updatedAt", \
+                                            \'deletedAt\', g."deletedAt" \
+                                        ) \
+                                    ), \
+                                false) INTO finalData FROM "Groups" g WHERE g.id::text = data#>>\'{origin, id}\'; \
+                            END IF; \
                             IF ((finalData ? \'object\') AND finalData#>>\'{object, @type}\' = \'Topic\') THEN \
                                 SELECT jsonb_set( \
                                     finalData, \
@@ -6710,7 +6740,26 @@ module.exports = function (app) {
                                             \'topicTitle\', t.title \
                                         ) \
                                     ), \
-                                false) INTO finalData FROM "Groups" g JOIN "Topics" t ON t.id = t.id WHERE g.id::text = data#>>\'{origin, userId}\' AND t.id::text = data#>>\'{origin, topicId}\'; \
+                                false) INTO finalData FROM "Groups" g JOIN "Topics" t ON t.id = t.id WHERE g.id::text = data#>>\'{origin, groupId}\' AND t.id::text = data#>>\'{origin, topicId}\'; \
+                            END IF; \
+                            IF ((finalData ? \'origin\') AND finalData#>>\'{origin, @type}\' = \'GroupMember\') THEN \
+                                SELECT jsonb_set( \
+                                    finalData, \
+                                    \'{object}\', \
+                                    to_jsonb( \
+                                        json_build_object( \
+                                            \'@type\', finalData#>>\'{origin, @type}\', \
+                                            \'level\', finalData#>>\'{origin, level}\', \
+                                            \'userId\', finalData#>>\'{origin, userId}\', \
+                                            \'topicId\', finalData#>>\'{origin, topicId}\', \
+                                            \'createdAt\', finalData#>>\'{origin, createdAt}\', \
+                                            \'deletedAt\', finalData#>>\'{origin, deletedAt}\', \
+                                            \'updatedAt\', finalData#>>\'{origin, updatedAt}\', \
+                                            \'groupName\', g.name, \
+                                            \'userName\', u.name \
+                                        ) \
+                                    ), \
+                                false) INTO finalData FROM "Groups" g JOIN "Users" u ON u.id = u.id WHERE u.id::text = data#>>\'{origin, userId}\' AND g.id::text = data#>>\'{origin, groupId}\'; \
                             END IF; \
                             IF ((finalData ? \'target\') AND finalData#>>\'{target, @type}\' = \'Group\') THEN \
                                 SELECT jsonb_set( \
@@ -7076,6 +7125,26 @@ module.exports = function (app) {
                             ), \
                         false) INTO finalData FROM "Groups" g WHERE g.id::text = data#>>\'{object, id}\'; \
                     END IF; \
+                    IF ((finalData ? \'origin\') AND finalData#>>\'{origin, @type}\' = \'Group\') THEN \
+                                SELECT jsonb_set( \
+                                    finalData, \
+                                    \'{origin}\', \
+                                    to_jsonb( \
+                                        json_build_object( \
+                                            \'id\', g.id, \
+                                            \'@type\', finalData#>>\'{origin, @type}\', \
+                                            \'parentId\', g."parentId", \
+                                            \'name\', g.name, \
+                                            \'creatorId\', g."creatorId", \
+                                            \'visibility\', g.visibility, \
+                                            \'sourcePartnerId\', g."sourcePartnerId", \
+                                            \'createdAt\', g."createdAt", \
+                                            \'updatedAt\', g."updatedAt", \
+                                            \'deletedAt\', g."deletedAt" \
+                                        ) \
+                                    ), \
+                                false) INTO finalData FROM "Groups" g WHERE g.id::text = data#>>\'{origin, id}\'; \
+                            END IF; \
                     IF ((finalData ? \'object\') AND finalData#>>\'{object, @type}\' = \'Topic\') THEN \
                         SELECT jsonb_set( \
                             finalData, \
@@ -7152,7 +7221,26 @@ module.exports = function (app) {
                                     \'topicTitle\', t.title \
                                 ) \
                             ), \
-                        false) INTO finalData FROM "Groups" g JOIN "Topics" t ON t.id = t.id WHERE g.id::text = data#>>\'{origin, userId}\' AND t.id::text = data#>>\'{origin, topicId}\'; \
+                        false) INTO finalData FROM "Groups" g JOIN "Topics" t ON t.id = t.id WHERE g.id::text = data#>>\'{origin, groupId}\' AND t.id::text = data#>>\'{origin, topicId}\'; \
+                    END IF; \
+                    IF ((finalData ? \'origin\') AND finalData#>>\'{origin, @type}\' = \'GroupMember\') THEN \
+                        SELECT jsonb_set( \
+                            finalData, \
+                            \'{object}\', \
+                            to_jsonb( \
+                                json_build_object( \
+                                    \'@type\', finalData#>>\'{origin, @type}\', \
+                                    \'level\', finalData#>>\'{origin, level}\', \
+                                    \'userId\', finalData#>>\'{origin, userId}\', \
+                                    \'topicId\', finalData#>>\'{origin, topicId}\', \
+                                    \'createdAt\', finalData#>>\'{origin, createdAt}\', \
+                                    \'deletedAt\', finalData#>>\'{origin, deletedAt}\', \
+                                    \'updatedAt\', finalData#>>\'{origin, updatedAt}\', \
+                                    \'groupName\', g.name, \
+                                    \'userName\', u.name \
+                                ) \
+                            ), \
+                        false) INTO finalData FROM "Groups" g JOIN "Users" u ON u.id = u.id WHERE u.id::text = data#>>\'{origin, userId}\' AND g.id::text = data#>>\'{origin, groupId}\'; \
                     END IF; \
                     IF ((finalData ? \'target\') AND finalData#>>\'{target, @type}\' = \'Group\') THEN \
                         SELECT jsonb_set( \

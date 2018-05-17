@@ -102,7 +102,9 @@ module.exports = function (app) {
 
             return _hasPermission(groupId, userId, level, allowPublic, allowDeleteSelf)
                 .then(function () {
-                    return next(null, req, res);
+                    return new Promise(function (resolve) {
+                        return resolve(next(null, req, res));
+                    });
                 }, function (err) {
                     if (err) {
                         return next(err);
@@ -681,7 +683,9 @@ module.exports = function (app) {
                 });
 
                 return Promise
-                    .settle(findOrCreatePromises)
+                    .all(findOrCreatePromises.map(function (promise) {
+                        return promise.reflect();
+                    }))
                     .then(function (newMembers) {
                         return Group
                             .findOne({

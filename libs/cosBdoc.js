@@ -155,8 +155,10 @@ module.exports = function (app) {
             })
             .then(function () {
                 // Best effort to remove temporary files, no need to block request
-                fsExtra
-                    .removeAsync(_getTopicFileDir(topic.id))
+                return fsExtra
+                    .removeAsync(function () {
+                        return _getTopicFileDir(topic.id);
+                    })
                     .catch(function () {
                         logger.warn('Failed to clean up temporary Topic files', destinationDir);
                     });
