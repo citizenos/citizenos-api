@@ -4861,6 +4861,7 @@ module.exports = function (app) {
 
         // Make sure the Vote is actually related to the Topic through which the permission was granted.
         var fields = ['endsAt'];
+
         Topic
             .findOne({
                 where: {
