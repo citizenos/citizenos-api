@@ -6894,7 +6894,7 @@ module.exports = function (app) {
 
     app.get('/api/users/:userId/activities', loginCheck(['partner']), function (req, res, next) {
         var userId = req.user.id;
-        var partnerId = req.params.partnerId;
+        var sourcePartnerId = req.query.sourcePartnerId;
         var limitMax = 50;
         var limitDefault = 10;
         var page = parseInt(req.query.page, 10);
@@ -6983,9 +6983,9 @@ module.exports = function (app) {
         // All partners should see only Topics created by their site, but our own app sees all.
         var wherePartnerTopics = '';
         var wherePartnerGroups = '';
-        if (partnerId) {
-            wherePartnerTopics = ' AND t."sourcePartnerId" = :partnerId ';
-            wherePartnerGroups = ' AND g."sourcePartnerId" = :partnerId ';
+        if (sourcePartnerId) {
+            wherePartnerTopics = ' AND t."sourcePartnerId" = :sourcePartnerId ';
+            wherePartnerGroups = ' AND g."sourcePartnerId" = :sourcePartnerId ';
         }
 
         var query = '\
@@ -7434,7 +7434,7 @@ module.exports = function (app) {
                         {
                             replacements: {
                                 userId: userId,
-                                partnerId: partnerId,
+                                sourcePartnerId: sourcePartnerId,
                                 limit: limit,
                                 offset: offset
                             },
@@ -7465,8 +7465,8 @@ module.exports = function (app) {
 
     });
 
-    app.get('/api/activities', loginCheck(['partner']), function (req, res, next) {
-        var partnerId = req.params.partnerId;
+    app.get('/api/activities', function (req, res, next) {
+        var sourcePartnerId = req.query.sourcePartnerId;
         var limitMax = 50;
         var limitDefault = 10;
         var page = parseInt(req.query.page, 10);
@@ -7520,9 +7520,9 @@ module.exports = function (app) {
         // All partners should see only Topics created by their site, but our own app sees all.
         var wherePartnerTopics = '';
         var wherePartnerGroups = '';
-        if (partnerId) {
-            wherePartnerTopics = ' AND t."sourcePartnerId" = :partnerId ';
-            wherePartnerGroups = ' AND g."sourcePartnerId" = :partnerId ';
+        if (sourcePartnerId) {
+            wherePartnerTopics = ' AND t."sourcePartnerId" = :sourcePartnerId ';
+            wherePartnerGroups = ' AND g."sourcePartnerId" = :sourcePartnerId ';
         }
 
         var query = '\
@@ -7878,19 +7878,12 @@ module.exports = function (app) {
 
         return db
             .transaction(function (t) {
-                var activity = Activity.build({
-                    data: {
-                        offset: offset,
-                        limit: limit
-                    }
-                });
-
                 return db
                     .query(
                         query,
                         {
                             replacements: {
-                                partnerId: partnerId,
+                                sourcePartnerId: sourcePartnerId,
                                 limit: limit,
                                 offset: offset
                             },

@@ -1,6 +1,6 @@
 'use strict';
 
-var _activityRead = function (agent, userId, filters, expectedHttpCode, callback) {
+var _activitiesRead = function (agent, userId, filters, expectedHttpCode, callback) {
     var path = '/api/users/:userId/activities'.replace(':userId', userId);
 
     agent
@@ -11,11 +11,27 @@ var _activityRead = function (agent, userId, filters, expectedHttpCode, callback
         .end(callback);
 };
 
-var activityRead = function (agent, userId, filters, callback) {
-    _activityRead(agent, userId, filters, 200, callback);
+var activitiesRead = function (agent, userId, filters, callback) {
+    _activitiesRead(agent, userId, filters, 200, callback);
 };
 
-module.exports.activityRead = activityRead;
+var _publicActivitiesRead = function (agent, filters, expectedHttpCode, callback) {
+    var path = '/api/activities';
+
+    agent
+        .get(path)
+        .query(filters)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var publicActivitiesRead = function (agent, filters, callback) {
+    _publicActivitiesRead(agent, filters, 200, callback);
+};
+
+module.exports.activitiesRead = activitiesRead;
+module.exports.publicActivitiesRead = publicActivitiesRead;
 
 var chai = require('chai');
 chai.use(require('chai-datetime'));
@@ -24,9 +40,12 @@ var assert = chai.assert;
 var request = require('supertest');
 var app = require('../../app');
 
+var async = app.get('async');
 var shared = require('../utils/shared')(app);
 var userLib = require('./lib/user')(app);
 var topicLib = require('./topic');
+var Partner = app.get('models.Partner');
+var Topic = app.get('models.Topic');
 
 
 // API - /api/users*
@@ -64,13 +83,100 @@ suite('Users', function () {
             });
 
             test('Success', function (done) {
-                activityRead(agent, user.id, null, function (err, res) {
+                activitiesRead(agent, user.id, null, function (err, res) {
                     if (err) return done(err);
 
                     var activities = res.body.data;
                     assert.equal(activities.length, 3);
 
                     done();
+                });
+            });
+        });
+
+        suite('Public', function () {
+            suite('Read', function () {
+                var agent = request.agent(app);
+                var agent2 = request.agent(app);
+                var email = 'test_topicc_' + new Date().getTime() + '@test.ee';
+                var password = 'testPassword123';
+                var topic1;
+                var topic2;
+                var user;
+                var partner;
+
+                suiteSetup(function (done) {
+                    userLib.createUserAndLogin(agent, email, password, null, function (err, res) {
+                        if (err) return done(err);
+
+                        user = res;
+
+                        async
+                            .parallel(
+                                [
+                                    function (cb) {
+                                        topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null, cb);
+                                    },
+                                    function (cb) {
+                                        topicLib.topicCreate(agent, user.id, 'public', null, null, null, null, cb);
+                                    }
+                                ]
+                                , function (err, results) {
+                                    if (err) return done(err);
+
+                                    topic1 = results[0];
+                                    topic2 = results[1];
+
+                                    Partner
+                                        .create({
+                                            website: 'notimportant',
+                                            redirectUriRegexp: 'notimportant'
+                                        })
+                                        .then(function (res) {
+                                            partner = res;
+
+                                            return Topic
+                                                .update(
+                                                    {
+                                                        title: 'Test topic',
+                                                        sourcePartnerId: partner.id
+                                                    },
+                                                    {
+                                                        where: {
+                                                            id: topic2.id
+                                                        }
+                                                    }
+                                                );
+                                        })
+                                        .then(function () {
+                                            done();
+                                        });
+                                }
+                            );
+                
+                    });
+                });
+
+                test('Success', function (done) {
+                    publicActivitiesRead(agent2, {sourcePartnerId: partner.id}, function (err, res) {
+                        if (err) return done(err);
+
+                        var activities = res.body.data;
+                        assert.equal(activities.length, 1);
+
+                        done();
+                    });
+                });
+
+                test('Success - without partnerId', function (done) {
+                    publicActivitiesRead(agent2, null, function (err, res) {
+                        if (err) return done(err);
+
+                        var activities = res.body.data;
+                        assert.equal(activities.length, 3);
+
+                        done();
+                    });
                 });
             });
         });
