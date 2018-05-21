@@ -64,12 +64,11 @@ suite('Users', function () {
 
         suite('Read', function () {
             var agent = request.agent(app);
-            var email = 'test_topicc_' + new Date().getTime() + '@test.ee';
-            var password = 'testPassword123';
+
             var user;
 
             suiteSetup(function (done) {
-                userLib.createUserAndLogin(agent, email, password, null, function (err, res) {
+                userLib.createUserAndLogin(agent, null, null, null, function (err, res) {
                     if (err) return done(err);
 
                     user = res;
@@ -110,14 +109,13 @@ suite('Activities', function () {
     suite('Read', function () {
         var agent = request.agent(app);
         var agent2 = request.agent(app);
-        var email = 'test_topicc_' + new Date().getTime() + '@test.ee';
-        var password = 'testPassword123';
+
         var topic;
         var user;
         var partner;
 
         suiteSetup(function (done) {
-            userLib.createUserAndLogin(agent, email, password, null, function (err, res) {
+            userLib.createUserAndLogin(agent, null, null, null, function (err, res) {
                 if (err) return done(err);
 
                 user = res;
