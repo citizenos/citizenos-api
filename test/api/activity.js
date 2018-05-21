@@ -118,15 +118,15 @@ suite('Users', function () {
                                         topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null, cb);
                                     },
                                     function (cb) {
-                                        topicLib.topicCreate(agent, user.id, 'public', null, null, null, null, cb);
+                                        topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST2</h2></body></html>', null, cb);
                                     }
                                 ]
                                 , function (err, results) {
                                     if (err) return done(err);
 
-                                    topic1 = results[0];
-                                    topic2 = results[1];
-
+                                    topic1 = results[0].body.data;
+                                    topic2 = results[1].body.data;
+                                    
                                     Partner
                                         .create({
                                             website: 'notimportant',
@@ -134,11 +134,10 @@ suite('Users', function () {
                                         })
                                         .then(function (res) {
                                             partner = res;
-
+                                            
                                             return Topic
                                                 .update(
                                                     {
-                                                        title: 'Test topic',
                                                         sourcePartnerId: partner.id
                                                     },
                                                     {
@@ -162,7 +161,12 @@ suite('Users', function () {
                         if (err) return done(err);
 
                         var activities = res.body.data;
-                        assert.equal(activities.length, 1);
+                        
+                        assert.equal(activities.length, 2);
+                        activities.forEach(function (activity) {
+                            assert.equal(activity.data.object.id, topic2.id);
+                            assert.equal(activity.data.object.sourcePartnerId, partner.id);
+                        });
 
                         done();
                     });
@@ -173,7 +177,7 @@ suite('Users', function () {
                         if (err) return done(err);
 
                         var activities = res.body.data;
-                        assert.equal(activities.length, 3);
+                        assert.equal(activities.length, 4);
 
                         done();
                     });
