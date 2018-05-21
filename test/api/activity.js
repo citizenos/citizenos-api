@@ -100,8 +100,7 @@ suite('Users', function () {
                 var agent2 = request.agent(app);
                 var email = 'test_topicc_' + new Date().getTime() + '@test.ee';
                 var password = 'testPassword123';
-                var topic1;
-                var topic2;
+                var topic;
                 var user;
                 var partner;
 
@@ -124,8 +123,7 @@ suite('Users', function () {
                                 , function (err, results) {
                                     if (err) return done(err);
 
-                                    topic1 = results[0].body.data;
-                                    topic2 = results[1].body.data;
+                                    topic = results[1].body.data;
                                     
                                     Partner
                                         .create({
@@ -142,7 +140,7 @@ suite('Users', function () {
                                                     },
                                                     {
                                                         where: {
-                                                            id: topic2.id
+                                                            id: topic.id
                                                         }
                                                     }
                                                 );
@@ -164,7 +162,7 @@ suite('Users', function () {
                         
                         assert.equal(activities.length, 2);
                         activities.forEach(function (activity) {
-                            assert.equal(activity.data.object.id, topic2.id);
+                            assert.equal(activity.data.object.id, topic.id);
                             assert.equal(activity.data.object.sourcePartnerId, partner.id);
                         });
 
