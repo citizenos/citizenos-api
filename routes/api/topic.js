@@ -2645,8 +2645,8 @@ module.exports = function (app) {
                                         })
                                         .then(function (topic) {
                                             var groupIdsToInvite = [];
-
-                                            var memberGroupActivities = memberGroups.map(function (memberGroup, i) {
+                                            var memberGroupActivities = [];
+                                            memberGroups.forEach(function (memberGroup, i) {
                                                 if (memberGroup.isFulfilled()) {
                                                     var value = memberGroup.value(); // findOrCreate returns [instance, created=true/false]
                                                     if (value && value[1]) {
@@ -2656,7 +2656,7 @@ module.exports = function (app) {
                                                         });
                                                         var group = Group.build(groupData);
 
-                                                        return cosActivities.addActivity(
+                                                        var addActivity = cosActivities.addActivity(
                                                             topic,
                                                             {
                                                                 type: 'User',
@@ -2667,6 +2667,7 @@ module.exports = function (app) {
                                                             req.method + ' ' + req.path,
                                                             t
                                                         );
+                                                        memberGroupActivities.push(addActivity);
                                                     }
                                                 } else {
                                                     logger.error('Failed to add Group', members[i]);
@@ -2675,10 +2676,7 @@ module.exports = function (app) {
 
                                             return Promise
                                                 .all(memberGroupActivities.map(function (promise) {
-                                                    if (promise) {
-                                                        
-                                                        return promise.reflect();
-                                                    }                                                    
+                                                    return promise.reflect();                                                    
                                                 }))
                                                 .then(function () {
                                                     emailLib.sendTopicGroupInvite(groupIdsToInvite, req.user.id, topicId);
