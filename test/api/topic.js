@@ -6729,7 +6729,7 @@ suite('Users', function () {
                         if (err) return done(err);
                         user = res;
 
-                        topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
+                        topicCreate(agent, user.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
                             if (err) return done(err);
                             topic = res.body.data;
 
@@ -6754,6 +6754,29 @@ suite('Users', function () {
                             assert.equal(comments.rows.length, 0);
 
                             done();
+                        });
+                    });
+                });
+
+
+                test('Success - delete own comment from Topic with read permissions', function (done) {
+                    var agentComment = request.agent(app);
+
+                    userLib.createUserAndLogin(agentComment, null, null, null, function (err, res) {
+                        if (err) return done(err);
+
+                        var userComment = res;
+
+                        topicCommentCreate(agentComment, userComment.id, topic.id, null, null, commentType, commentSubject, commentText, function (err, res) {
+                            if (err) return done(err);
+
+                            var comment = res.body.data;
+
+                            topicCommentDelete(agentComment, userComment.id, topic.id, comment.id, function (err) {
+                                if (err) return done(err);
+
+                                done();
+                            });
                         });
                     });
                 });

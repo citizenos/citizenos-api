@@ -326,26 +326,28 @@ module.exports = function (app) {
         };
     };
 
-    var hasPermissionsToEditComment = function (req, res, next) {
-        var userId = req.user.id;
-        var commentId = req.params.commentId;
+    var isCommentCreator = function () {
+        return function (req, res, next) {
+            var userId = req.user.id;
+            var commentId = req.params.commentId;
 
-        return Comment
-            .findOne({
-                where: {
-                    id: commentId,
-                    deletedAt: null
-                }
-            }).then(function (comment) {
-                if (comment.creatorId === userId) {
-                    return new Promise(function (resolve) {
-                        return resolve(next(null, req, res));
-                    });
-                } else {
-                    return res.forbidden('Insufficient permissions');
-                }
-            })
-            .catch(next);
+            Comment
+                .findOne({
+                    where: {
+                        id: commentId,
+                        creatorId: userId,
+                        deletedAt: null
+                    }
+                })
+                .then(function (comment) {
+                    if (comment) {
+                        return next('route');
+                    } else {
+                        return res.forbidden('Insufficient permissions');
+                    }
+                })
+                .catch(next);
+        };
     };
 
     var getVoteResults = function (voteId, userId) {
@@ -2612,73 +2614,74 @@ module.exports = function (app) {
             .then(
                 function (allowedGroups) {
                     if (allowedGroups && allowedGroups[0]) {
-                        return db.transaction(function (t) {
-                            var findOrCreateTopicMemberGroups = allowedGroups.map(function (group) {
-                                var member = _.find(members, function (o) {
-                                    return o.groupId === group.id;
-                                });
-
-                                return TopicMemberGroup
-                                    .findOrCreate({
-                                        where: {
-                                            topicId: topicId,
-                                            groupId: member.groupId
-                                        },
-                                        defaults: {
-                                            level: member.level || TopicMember.LEVELS.read
-                                        },
-                                        transaction: t
+                        return db
+                            .transaction(function (t) {
+                                var findOrCreateTopicMemberGroups = allowedGroups.map(function (group) {
+                                    var member = _.find(members, function (o) {
+                                        return o.groupId === group.id;
                                     });
-                            });
 
-                            return Promise
-                                .all(findOrCreateTopicMemberGroups.map(function (promise) {
-                                    return promise.reflect();
-                                }))
-                                .then(function (memberGroups) {
-                                    return Topic
-                                        .findOne({
+                                    return TopicMemberGroup
+                                        .findOrCreate({
                                             where: {
-                                                id: topicId
+                                                topicId: topicId,
+                                                groupId: member.groupId
+                                            },
+                                            defaults: {
+                                                level: member.level || TopicMember.LEVELS.read
                                             },
                                             transaction: t
-                                        })
-                                        .then(function (topic) {
-                                            var groupIdsToInvite = [];
-
-                                            memberGroups.forEach(function (memberGroup, i) {
-                                                if (memberGroup.isFulfilled()) {
-                                                    var value = memberGroup.value(); // findOrCreate returns [instance, created=true/false]
-                                                    if (value && value[1]) {
-                                                        groupIdsToInvite.push(members[i].groupId);
-                                                        var groupData = _.find(allowedGroups, function (item) {
-                                                            return item.id === members[i].groupId;
-                                                        });
-                                                        var group = Group.build(groupData);
-
-                                                        return cosActivities.addActivity(
-                                                            topic,
-                                                            {
-                                                                type: 'User',
-                                                                id: req.user.id
-                                                            },
-                                                            null,
-                                                            group,
-                                                            req.method + ' ' + req.path,
-                                                            t
-                                                        );
-                                                    }
-                                                } else {
-                                                    logger.error('Failed to add Group', members[i]);
-                                                }
-                                            });
-
-                                            emailLib.sendTopicGroupInvite(groupIdsToInvite, req.user.id, topicId);
-
-                                            return res.created();
                                         });
                                 });
-                        })
+
+                                return Promise
+                                    .all(findOrCreateTopicMemberGroups.map(function (promise) {
+                                        return promise.reflect();
+                                    }))
+                                    .then(function (memberGroups) {
+                                        return Topic
+                                            .findOne({
+                                                where: {
+                                                    id: topicId
+                                                },
+                                                transaction: t
+                                            })
+                                            .then(function (topic) {
+                                                var groupIdsToInvite = [];
+
+                                                memberGroups.forEach(function (memberGroup, i) {
+                                                    if (memberGroup.isFulfilled()) {
+                                                        var value = memberGroup.value(); // findOrCreate returns [instance, created=true/false]
+                                                        if (value && value[1]) {
+                                                            groupIdsToInvite.push(members[i].groupId);
+                                                            var groupData = _.find(allowedGroups, function (item) {
+                                                                return item.id === members[i].groupId;
+                                                            });
+                                                            var group = Group.build(groupData);
+
+                                                            return cosActivities.addActivity(
+                                                                topic,
+                                                                {
+                                                                    type: 'User',
+                                                                    id: req.user.id
+                                                                },
+                                                                null,
+                                                                group,
+                                                                req.method + ' ' + req.path,
+                                                                t
+                                                            );
+                                                        }
+                                                    } else {
+                                                        logger.error('Failed to add Group', members[i]);
+                                                    }
+                                                });
+
+                                                emailLib.sendTopicGroupInvite(groupIdsToInvite, req.user.id, topicId);
+
+                                                return res.created();
+                                            });
+                                    });
+                            })
                             .catch(next);
                     } else {
                         return res.forbidden();
@@ -3899,7 +3902,10 @@ module.exports = function (app) {
     /**
      * Delete Topic Comment
      */
-    app.delete('/api/users/:userId/topics/:topicId/comments/:commentId', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.admin, false, null, true), function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/comments/:commentId', loginCheck(['partner']), isCommentCreator(), hasPermission(TopicMember.LEVELS.admin, false, null, true));
+    //WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition
+    //NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
+    app.delete('/api/users/:userId/topics/:topicId/comments/:commentId', function (req, res, next) {
         db
             .transaction(function (t) {
                 return Comment
@@ -3917,10 +3923,17 @@ module.exports = function (app) {
                                 transaction: t
                             })
                             .then(function () {
-                                return cosActivities.deleteActivity(comment, comment.Topics[0], {
-                                    type: 'User',
-                                    id: req.user.id
-                                }, req.method + ' ' + req.path, t);
+                                return cosActivities
+                                    .deleteActivity(
+                                        comment,
+                                        comment.Topics[0],
+                                        {
+                                            type: 'User',
+                                            id: req.user.id
+                                        },
+                                        req.method + ' ' + req.path,
+                                        t
+                                    );
                             })
                             .then(function () {
                                 return Comment
@@ -3939,7 +3952,11 @@ module.exports = function (app) {
             .catch(next);
     });
 
-    app.put('/api/users/:userId/topics/:topicId/comments/:commentId', loginCheck(['partner']), hasPermissionsToEditComment, function (req, res, next) {
+
+    app.put('/api/users/:userId/topics/:topicId/comments/:commentId', loginCheck(['partner']), isCommentCreator());
+    //WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition.
+    //NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
+    app.put('/api/users/:userId/topics/:topicId/comments/:commentId', function (req, res, next) {
         var subject = req.body.subject;
         var text = req.body.text;
         var type = req.body.type;
@@ -4323,7 +4340,7 @@ module.exports = function (app) {
             })
             .then(function (mentions) {
                 if (!mentions || (mentions.createdAt && (Math.floor(new Date() - new Date(mentions.createdAt)) / (1000 * 60) >= 15))) {
-                    
+
                     return twitter.getAsync(queryurl, {
                         q: '"#' + hashtag + '"',
                         count: 20
@@ -7483,7 +7500,7 @@ module.exports = function (app) {
         } else if (!include) {
             include = ['topics', 'groups'];
         }
-        var includedSql = [];        
+        var includedSql = [];
         include.forEach(function (item) {
             switch (item) {
                 case 'topics':
