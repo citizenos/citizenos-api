@@ -2646,7 +2646,7 @@ module.exports = function (app) {
                                         .then(function (topic) {
                                             var groupIdsToInvite = [];
 
-                                            memberGroups.forEach(function (memberGroup, i) {
+                                            var memberGroupActivities = memberGroups.map(function (memberGroup, i) {
                                                 if (memberGroup.isFulfilled()) {
                                                     var value = memberGroup.value(); // findOrCreate returns [instance, created=true/false]
                                                     if (value && value[1]) {
@@ -2673,9 +2673,18 @@ module.exports = function (app) {
                                                 }
                                             });
 
-                                            emailLib.sendTopicGroupInvite(groupIdsToInvite, req.user.id, topicId);
+                                            return Promise
+                                                .all(memberGroupActivities.map(function (promise) {
+                                                    if (promise) {
+                                                        
+                                                        return promise.reflect();
+                                                    }                                                    
+                                                }))
+                                                .then(function () {
+                                                    emailLib.sendTopicGroupInvite(groupIdsToInvite, req.user.id, topicId);
 
-                                            return res.created();
+                                                    return res.created();
+                                                });
                                         });
                                 });
                         })
