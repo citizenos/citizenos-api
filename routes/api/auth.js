@@ -924,7 +924,8 @@ module.exports = function (app) {
         setStateCookie(req, res, COOKIE_NAME_COS_AUTH_STATE);
 
         passport.authenticate('facebook', {
-            scope: ['email']
+            scope: ['email'],
+            display: 'popup'
         })(req, res, next);
     });
 
