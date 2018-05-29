@@ -326,26 +326,28 @@ module.exports = function (app) {
         };
     };
 
-    var hasPermissionsToEditComment = function (req, res, next) {
-        var userId = req.user.id;
-        var commentId = req.params.commentId;
+    var isCommentCreator = function () {
+        return function (req, res, next) {
+            var userId = req.user.id;
+            var commentId = req.params.commentId;
 
-        return Comment
-            .findOne({
-                where: {
-                    id: commentId,
-                    deletedAt: null
-                }
-            }).then(function (comment) {
-                if (comment.creatorId === userId) {
-                    return new Promise(function (resolve) {
-                        return resolve(next(null, req, res));
-                    });
-                } else {
-                    return res.forbidden('Insufficient permissions');
-                }
-            })
-            .catch(next);
+            Comment
+                .findOne({
+                    where: {
+                        id: commentId,
+                        creatorId: userId,
+                        deletedAt: null
+                    }
+                })
+                .then(function (comment) {
+                    if (comment) {
+                        return next('route');
+                    } else {
+                        return res.forbidden('Insufficient permissions');
+                    }
+                })
+                .catch(next);
+        };
     };
 
     var getVoteResults = function (voteId, userId) {
@@ -3906,7 +3908,10 @@ module.exports = function (app) {
     /**
      * Delete Topic Comment
      */
-    app.delete('/api/users/:userId/topics/:topicId/comments/:commentId', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.admin, false, null, true), function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/comments/:commentId', loginCheck(['partner']), isCommentCreator(), hasPermission(TopicMember.LEVELS.admin, false, null, true));
+    //WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition
+    //NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
+    app.delete('/api/users/:userId/topics/:topicId/comments/:commentId', function (req, res, next) {
         db
             .transaction(function (t) {
                 return Comment
@@ -3924,10 +3929,17 @@ module.exports = function (app) {
                                 transaction: t
                             })
                             .then(function () {
-                                return cosActivities.deleteActivity(comment, comment.Topics[0], {
-                                    type: 'User',
-                                    id: req.user.id
-                                }, req.method + ' ' + req.path, t);
+                                return cosActivities
+                                    .deleteActivity(
+                                        comment,
+                                        comment.Topics[0],
+                                        {
+                                            type: 'User',
+                                            id: req.user.id
+                                        },
+                                        req.method + ' ' + req.path,
+                                        t
+                                    );
                             })
                             .then(function () {
                                 return Comment
@@ -3946,7 +3958,11 @@ module.exports = function (app) {
             .catch(next);
     });
 
-    app.put('/api/users/:userId/topics/:topicId/comments/:commentId', loginCheck(['partner']), hasPermissionsToEditComment, function (req, res, next) {
+
+    app.put('/api/users/:userId/topics/:topicId/comments/:commentId', loginCheck(['partner']), isCommentCreator());
+    //WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition.
+    //NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
+    app.put('/api/users/:userId/topics/:topicId/comments/:commentId', function (req, res, next) {
         var subject = req.body.subject;
         var text = req.body.text;
         var type = req.body.type;
@@ -4330,7 +4346,7 @@ module.exports = function (app) {
             })
             .then(function (mentions) {
                 if (!mentions || (mentions.createdAt && (Math.floor(new Date() - new Date(mentions.createdAt)) / (1000 * 60) >= 15))) {
-                    
+
                     return twitter.getAsync(queryurl, {
                         q: '"#' + hashtag + '"',
                         count: 20
