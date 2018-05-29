@@ -7490,7 +7490,7 @@ module.exports = function (app) {
         } else if (!include) {
             include = ['topics', 'groups'];
         }
-        var includedSql = [];        
+        var includedSql = [];
         include.forEach(function (item) {
             switch (item) {
                 case 'topics':
