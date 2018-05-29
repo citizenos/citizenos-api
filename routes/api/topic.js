@@ -2539,59 +2539,54 @@ module.exports = function (app) {
 
         var minRequiredLevel = level || 'read';
 
-        return new Promise(function (resolve, reject) {
-            return db
-                .query(
-                    '\
-                    SELECT \
-                        g.visibility = \'public\' AS "isPublic", \
-                        gm."userId" AS "allowed", \
-                        gm."userId" AS uid, \
-                        gm."level" AS level, \
-                        g.id \
-                    FROM "Groups" g \
-                    LEFT JOIN "GroupMembers" gm \
-                        ON(gm."groupId" = g.id) \
-                    WHERE g.id IN (:groupIds) \
-                        AND gm."userId" = :userId \
-                        AND gm."deletedAt" IS NULL \
-                        AND g."deletedAt" IS NULL \
-                    GROUP BY id, uid, level;',
-                    {
-                        replacements: {
-                            groupIds: groupIds,
-                            userId: userId,
-                            level: minRequiredLevel
-                        },
-                        type: db.QueryTypes.SELECT,
-                        raw: true
+        return db
+            .query(
+                '\
+                SELECT \
+                    g.visibility = \'public\' AS "isPublic", \
+                    gm."userId" AS "allowed", \
+                    gm."userId" AS uid, \
+                    gm."level" AS level, \
+                    g.id \
+                FROM "Groups" g \
+                LEFT JOIN "GroupMembers" gm \
+                    ON(gm."groupId" = g.id) \
+                WHERE g.id IN (:groupIds) \
+                    AND gm."userId" = :userId \
+                    AND gm."deletedAt" IS NULL \
+                    AND g."deletedAt" IS NULL \
+                GROUP BY id, uid, level;',
+                {
+                    replacements: {
+                        groupIds: groupIds,
+                        userId: userId,
+                        level: minRequiredLevel
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true
+                }
+            )
+            .then(function (result) {
+                if (result && result.length) {
+                    if (result.length < groupIds.length) {
+                        return Promise.reject();
                     }
-                )
-                .then(function (result) {
-                    if (result && result.length) {
-                        if (result.length < groupIds.length) {
-                            return reject();
+
+                    result.forEach(function (row) {
+                        var blevel = row.level;
+
+                        if (LEVELS[minRequiredLevel] > LEVELS[blevel]) {
+                            logger.warn('Access denied to topic due to member without permissions trying to delete user! ', 'userId:', userId);
+
+                            return Promise.reject();
                         }
+                    });
 
-                        result.forEach(function (row) {
-                            var blevel = row.level;
-
-                            if (LEVELS[minRequiredLevel] > LEVELS[blevel]) {
-                                logger.warn('Access denied to topic due to member without permissions trying to delete user! ', 'userId:', userId);
-
-                                return reject();
-                            }
-                        });
-
-                        return resolve(result);
-                    } else {
-                        return reject();
-                    }
-                })
-                .catch(function (err) {
-                    return reject(err);
-                });
-        });
+                    return result;
+                } else {
+                    return Promise.reject();
+                }
+            });
     };
 
     /**
@@ -2605,16 +2600,17 @@ module.exports = function (app) {
         if (!Array.isArray(members)) {
             members = [members];
         }
+
         var groupIds = [];
         members.forEach(function (member) {
             groupIds.push(member.groupId);
         });
 
         checkPermissionsForGroups(groupIds, req.user.id) // Checks if all groups are allowed
-            .then(
-                function (allowedGroups) {
-                    if (allowedGroups && allowedGroups[0]) {
-                        return db.transaction(function (t) {
+            .then(function (allowedGroups) {
+                if (allowedGroups && allowedGroups[0]) {
+                    return db
+                        .transaction(function (t) {
                             var findOrCreateTopicMemberGroups = allowedGroups.map(function (group) {
                                 var member = _.find(members, function (o) {
                                     return o.groupId === group.id;
@@ -2634,9 +2630,7 @@ module.exports = function (app) {
                             });
 
                             return Promise
-                                .all(findOrCreateTopicMemberGroups.map(function (promise) {
-                                    return promise.reflect();
-                                }))
+                                .all(findOrCreateTopicMemberGroups)
                                 .then(function (memberGroups) {
                                     return Topic
                                         .findOne({
@@ -2648,50 +2642,43 @@ module.exports = function (app) {
                                         .then(function (topic) {
                                             var groupIdsToInvite = [];
                                             var memberGroupActivities = [];
-                                            memberGroups.forEach(function (memberGroup, i) {
-                                                if (memberGroup.isFulfilled()) {
-                                                    var value = memberGroup.value(); // findOrCreate returns [instance, created=true/false]
-                                                    if (value && value[1]) {
-                                                        groupIdsToInvite.push(members[i].groupId);
-                                                        var groupData = _.find(allowedGroups, function (item) {
-                                                            return item.id === members[i].groupId;
-                                                        });
-                                                        var group = Group.build(groupData);
 
-                                                        var addActivity = cosActivities.addActivity(
-                                                            topic,
-                                                            {
-                                                                type: 'User',
-                                                                id: req.user.id
-                                                            },
-                                                            null,
-                                                            group,
-                                                            req.method + ' ' + req.path,
-                                                            t
-                                                        );
-                                                        memberGroupActivities.push(addActivity);
-                                                    }
-                                                } else {
-                                                    logger.error('Failed to add Group', members[i]);
-                                                }
+                                            memberGroups.forEach(function (memberGroup, i) {
+                                                groupIdsToInvite.push(members[i].groupId);
+                                                var groupData = _.find(allowedGroups, function (item) {
+                                                    return item.id === members[i].groupId;
+                                                });
+                                                var group = Group.build(groupData);
+
+                                                var addActivity = cosActivities.addActivity(
+                                                    topic,
+                                                    {
+                                                        type: 'User',
+                                                        id: req.user.id
+                                                    },
+                                                    null,
+                                                    group,
+                                                    req.method + ' ' + req.path,
+                                                    t
+                                                );
+                                                memberGroupActivities.push(addActivity);
                                             });
 
                                             return Promise
-                                                .all(memberGroupActivities.map(function (promise) {
-                                                    return promise.reflect();                                                    
-                                                }))
+                                                .all(memberGroupActivities)
                                                 .then(function () {
                                                     emailLib.sendTopicGroupInvite(groupIdsToInvite, req.user.id, topicId);
-
-                                                    return res.created();
                                                 });
                                         });
                                 });
-                        })
-                            .catch(next);
-                    } else {
-                        return res.forbidden();
-                    }
+                        });
+                } else {
+                    return Promise.reject();
+                }
+            })
+            .then(
+                function () {
+                    return res.created();
                 },
                 function (err) {
                     logger.error(err);
