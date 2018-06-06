@@ -843,9 +843,11 @@ module.exports = function (app) {
             creatorId: req.user.id,
             categories: req.body.categories,
             hashtag: req.body.hashtag,
-            endsAt: req.body.endsAt
+            endsAt: req.body.endsAt,
+            sourcePartnerObjectId: req.body.sourcePartnerObjectId
         });
 
+        logger.debug('CREATE TOPIC PARTNER ID', req.locals.partner);
         if (req.locals.partner) {
             topic.sourcePartnerId = req.locals.partner.id;
         }
@@ -1316,7 +1318,8 @@ module.exports = function (app) {
                 return Promise.resolve([topic, vote]);
             })
             .spread(function (topic, vote) {
-                var fieldsAllowedToUpdate = ['visibility', 'status', 'categories', 'endsAt', 'hashtag'];
+                // NOTE: Description is handled separately below
+                var fieldsAllowedToUpdate = ['visibility', 'status', 'categories', 'endsAt', 'hashtag', 'sourcePartnerObjectId'];
 
                 var fieldsToUpdate = [];
                 Object.keys(req.body).forEach(function (key) {
@@ -1375,7 +1378,32 @@ module.exports = function (app) {
                             promisesToResolve.push(topicEventsDeletePromise);
                         }
 
+
+                        if (req.body.description) {
+                            var epUpdateTopicPromise = cosEtherpad
+                                .updateTopic(
+                                    topicId,
+                                    req.body.description
+                                );
+                            promisesToResolve.push(epUpdateTopicPromise);
+                        }
+
                         return Promise.all(promisesToResolve);
+                    })
+                    .then(function () {
+                        if (req.body.description) {
+                            return cosEtherpad
+                                .syncTopicWithPad(
+                                    topicId,
+                                    req.method + ' ' + req.path,
+                                    {
+                                        type: 'User',
+                                        id: req.user.id
+                                    }
+                                );
+                        } else {
+                            return Promise.resolve();
+                        }
                     })
                     .then(function () {
                         // TODO: This logic is specific to Rahvaalgatus.ee, with next Partner we have to make it more generic - https://trello.com/c/Sj3XRF5V/353-raa-ee-followup-email-to-riigikogu-and-token-access-to-events-api

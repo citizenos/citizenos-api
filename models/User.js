@@ -18,6 +18,7 @@ module.exports = function (sequelize, DataTypes) {
 
     var SOURCES = {
         citizenos: 'citizenos',
+        citizenosSystem: 'citizenosSystem', // Created by CitizenOS systems - migrations, data import etc.
         google: 'google',
         facebook: 'facebook'
     };

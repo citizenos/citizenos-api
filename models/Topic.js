@@ -115,6 +115,11 @@ module.exports = function (sequelize, DataTypes) {
                     key: 'id'
                 }
             },
+            sourcePartnerObjectId: {
+                type: DataTypes.STRING,
+                allowNull: true,
+                comment: 'The Partner object/entity id for mapping'
+            },
             creatorId: {
                 type: DataTypes.UUID,
                 comment: 'User ID of the creator of the Topic.',
@@ -224,6 +229,10 @@ module.exports = function (sequelize, DataTypes) {
                             $eq: null
                         }
                     }
+                },
+                {
+                    unique: true,
+                    fields: ['sourcePartnerId', 'sourcePartnerObjectId']
                 }
             ]
         }

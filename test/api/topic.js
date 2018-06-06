@@ -1304,7 +1304,7 @@ suite('Users', function () {
                     done();
                 });
             });
-
+''
             test('Success - Replace invalid characters in hashtag', function (done) {
                 var hashtag = '      #abc   defgh ijk.lmn,opqrstuvxyzabcdefghij:klmnopqrstuvxyzabcdefghi        ';
                 topicCreate(agent, user.id, null, null, null, null, hashtag, function (err, res) {

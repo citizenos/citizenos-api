@@ -69,6 +69,14 @@ module.exports = function (app) {
             });
     };
 
+
+    var _updateTopic = function (topicId, html) {
+        return etherpadClient.setHTMLAsync({
+            padID: topicId,
+            html: html
+        });
+    };
+
     /**
      * Delete Topic from Etherpad system.
      *
@@ -269,6 +277,7 @@ module.exports = function (app) {
 
     return {
         createTopic: _createTopic,
+        updateTopic: _updateTopic,
         deleteTopic: _deleteTopic,
         getUserAccessUrl: _getUserAccessUrl,
         getTopicPadUrl: _getTopicPadUrl,
