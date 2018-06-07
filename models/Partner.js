@@ -27,8 +27,7 @@ module.exports = function (sequelize, DataTypes) {
             website: {
                 type: DataTypes.STRING,
                 allowNull: false,
-                comment: 'Partner website',
-                unique: true
+                comment: 'Partner website'
             },
             redirectUriRegexp: {
                 type: DataTypes.STRING,

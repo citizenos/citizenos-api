@@ -37,7 +37,7 @@ var stats = {
     created: 0,
     failed: 0,
     ignored: 0
-}
+};
 
 Partner
     .findOrCreate({
