@@ -1,4 +1,5 @@
 'use strict';
+
 var Promise = require('bluebird');
 
 var path = require('path');
@@ -18,10 +19,11 @@ var User = db.import('../models/User');
 var urlApi = config.url.api;
 var userEmail = process.env.CITIZENOS_ARVAMUSFESTIVAL_DATA_IMPORTER_USER_EMAIL;
 var userPassword = process.env.CITIZENOS_ARVAMUSFESTIVAL_DATA_IMPORTER_USER_PASSWORD;
+var afApiKey = process.env.CITIZENOS_ARVAMUSFESTIVAL_DATA_IMPORTER_AF_API_KEY;
 
-var partnerWebsite = 'https://arvamusfestival.ee'
+var partnerWebsite = 'https://arvamusfestival.ee';
 
-if (!urlApi || !userEmail || !userPassword) {
+if (!urlApi || !userEmail || !userPassword || !afApiKey) {
     return logger.error('Missing required parameters - API url or User email or password!', urlApi, userEmail);
 }
 
@@ -70,7 +72,7 @@ Partner
                     language: 'et',
                     source: User.SOURCES.citizenosSystem
                 }
-            })
+            });
     })
     .then(function (userResult) {
         user = userResult[0];
@@ -95,7 +97,7 @@ Partner
     .then(function () {
         return superagent.agent()
             .post('https://www.arvamusfestival.ee/api/?events')
-            .send('app_secret=mGPQztP3ByOEqT4eX')
+            .send('app_secret=' + afApiKey)
             .set('Accept', 'application/json');
     })
     .then(function (resultEvents) {
@@ -105,10 +107,8 @@ Partner
 
         stats.total = events.length;
 
-        var topicCreatePromises = [];
-
         return Promise
-            .each(events, function (event, index, length) {
+            .each(events, function (event) {
                 var title = event.name_est;
                 var description = event.short_description_est;
 
