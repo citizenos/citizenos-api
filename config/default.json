@@ -28,7 +28,8 @@
       "pool": {
         "min": 0,
         "max": 100
-      }
+      },
+      "isolationLevel": "READ COMMITTED"
     }
   },
   "session": {

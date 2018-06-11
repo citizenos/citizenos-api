@@ -8635,61 +8635,42 @@ suite('Topics', function () {
 
                                     topic = res.body.data;
 
-                                    topicCommentCreate(agentCreator, userCreator.id, topic.id, null, null, Comment.TYPES.pro, 'test abuse report', 'test abuse report', function (err) {
+                                    topicCommentCreate(agentCreator, userCreator.id, topic.id, null, null, Comment.TYPES.pro, 'test abuse report', 'test abuse report', function (err, res) {
                                         if (err) return done(err);
 
-                                        async
-                                            .parallel(
-                                                [
-                                                    function (cb) {
-                                                        Partner
-                                                            .create({
-                                                                website: 'notimportant',
-                                                                redirectUriRegexp: 'notimportant'
-                                                            })
-                                                            .then(function (res) {
-                                                                partner = res;
+                                        comment = res.body.data;
 
-                                                                return Topic
-                                                                    .update(
-                                                                        {
-                                                                            sourcePartnerId: partner.id
-                                                                        },
-                                                                        {
-                                                                            where: {
-                                                                                id: topic.id
-                                                                            }
-                                                                        }
-                                                                    );
-                                                            })
-                                                            .then(function () {
-                                                                return Moderator
-                                                                    .create({
-                                                                        userId: userModerator.id,
-                                                                        partnerId: partner.id
-                                                                    });
-                                                            })
-                                                            .then(function () {
-                                                                cb();
-                                                            })
-                                                            .catch(cb);
-                                                    },
-                                                    function (cb) {
-                                                        topicCommentCreate(agentCreator, userCreator.id, topic.id, null, null, Comment.TYPES.pro, 'test abuse report', 'test abuse report', function (err, res) {
-                                                            if (err) return cb(err);
+                                        Partner
+                                            .create({
+                                                website: 'notimportant',
+                                                redirectUriRegexp: 'notimportant'
+                                            })
+                                            .then(function (res) {
+                                                partner = res;
 
-                                                            comment = res.body.data;
-
-                                                            cb();
-                                                        });
-                                                    }
-                                                ],
-                                                function (err) {
-                                                    if (err) return done(err);
-
-                                                    done();
-                                                }
-                                            );
+                                                return Topic
+                                                    .update(
+                                                        {
+                                                            sourcePartnerId: partner.id
+                                                        },
+                                                        {
+                                                            where: {
+                                                                id: topic.id
+                                                            }
+                                                        }
+                                                    );
+                                            })
+                                            .then(function () {
+                                                return Moderator
+                                                    .create({
+                                                        userId: userModerator.id,
+                                                        partnerId: partner.id
+                                                    });
+                                            })
+                                            .then(function(){
+                                                done();
+                                            })
+                                            .catch(done);
                                     });
                                 });
                             }
