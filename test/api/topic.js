@@ -8667,7 +8667,7 @@ suite('Topics', function () {
                                                         partnerId: partner.id
                                                     });
                                             })
-                                            .then(function(){
+                                            .then(function () {
                                                 done();
                                             })
                                             .catch(done);

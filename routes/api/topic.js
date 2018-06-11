@@ -876,12 +876,14 @@ module.exports = function (app) {
                             .then(function () {
 
                                 // The creator is also the first member
-                                return topic.addMemberUser( // Magic method by Sequelize - https://github.com/sequelize/sequelize/wiki/API-Reference-Associations#hasmanytarget-options
-                                    user.id,
-                                    {
-                                        level: TopicMember.LEVELS.admin,
-                                        transaction: t
-                                    }
+
+                                return topic
+                                    .addMemberUser(// Magic method by Sequelize - https://github.com/sequelize/sequelize/wiki/API-Reference-Associations#hasmanytarget-options
+                                        user.id,
+                                        {
+                                            level: TopicMember.LEVELS.admin,
+                                            transaction: t
+                                        }
                                     )
                                     .then(function () {
                                         return cosActivities
