@@ -97,8 +97,8 @@ Partner
     .then(function () {
         return superagent.agent()
             .post('https://www.arvamusfestival.ee/api/?events')
-            .send('app_secret=' + afApiKey)
-            .set('Accept', 'application/json');
+            .timeout(1000 * 10)
+            .send('app_secret=' + afApiKey);
     })
     .then(function (resultEvents) {
         // AF API returns JSON but response content type is text/html thus Superagent does not parse JSON
@@ -112,7 +112,7 @@ Partner
                 var title = event.name_est;
                 var description = event.short_description_est;
 
-                if (title && description) {
+                if (title && description && Boolean(title.trim()) && Boolean(description.trim())) {
                     return Topic
                         .findOne({
                             where: {
@@ -143,12 +143,11 @@ Partner
                                 logger.info('Updating a Topic', topic.id, event.event_id);
 
                                 // FIXME: Every update will trigger a new update event, we need to avoid that if content has not changed?
-
                                 return userAgent
                                     .put(urlApi + '/api/users/self/topics/' + topic.id)
                                     .set('x-partner-id', partner.id)
                                     .send({
-                                        description: '<!DOCTYPE HTML><html><body><<h1>' + title + '</h1><p>' + description + '</p></body>'
+                                        description: '<!DOCTYPE HTML><html><body><h1>' + title + '</h1><p>' + description + '</p></body>'
                                     })
                                     .then(function () {
                                         logger.info('Done updating Topic', event.event_id);
