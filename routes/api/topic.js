@@ -60,7 +60,6 @@ module.exports = function (app) {
     var Attachment = app.get('models.Attachment');
 
     var checkPartnerTopicId = function (topicId, sourcePartnerId) {
-        console.log(topicId, sourcePartnerId);
         if (topicId.indexOf('p.') === 0 && sourcePartnerId) {
             Topic.findOne({
                 fields: ['id'],
@@ -208,7 +207,7 @@ module.exports = function (app) {
         return function (req, res, next) {
             var userId = req.user.id;
             var partnerId = req.user.partnerId;
-            console.log('partnerId', partnerId);
+            
             var topicId = checkPartnerTopicId(req.params.topicId, partnerId);
 
             allowPublic = allowPublic ? allowPublic : false;
@@ -957,7 +956,6 @@ module.exports = function (app) {
         var include = req.query.include;
         var join = '';
         var returncolumns = '';
-        console.log('QEUER', req.query);
         var topicId = checkPartnerTopicId(req.params.topicId, req.query.partnerId);
 
         if (include && !Array.isArray(include)) {

@@ -27,7 +27,7 @@ var _partnerTopicRead = function (agent, userId, topicId, include, partnerWebsit
     var path = '/api/users/:userId/topics/:topicId'
         .replace(':userId', userId)
         .replace(':topicId', topicId);
-    console.log('PATH', path);
+    
     agent
         .get(path)
         .query({include: include, partnerId: partnerId})
