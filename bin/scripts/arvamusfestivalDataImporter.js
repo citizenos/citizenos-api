@@ -33,8 +33,6 @@ if (!urlApi || !userEmail || !userPassword || !afApiKey) {
     return process.exit(1);
 }
 
-console.log('Heroku, is there anything running?', config);
-
 var user;
 var partner;
 var userAgent;
@@ -203,10 +201,8 @@ Partner
             });
     })
     .then(function () {
-        console.log('Data import finished!', stats);
         logger.info('Data import finished!', stats);
     })
     .catch(function (err) {
-        console.log('Data import failed', err, stats);
         logger.error('Data import failed', err, stats);
     });
