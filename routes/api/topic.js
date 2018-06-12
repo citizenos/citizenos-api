@@ -59,6 +59,28 @@ module.exports = function (app) {
     var TopicAttachment = app.get('models.TopicAttachment');
     var Attachment = app.get('models.Attachment');
 
+    var checkPartnerTopicId = function (topicId, sourcePartnerId) {
+        console.log(topicId, sourcePartnerId);
+        if (topicId.indexOf('p.') === 0 && sourcePartnerId) {
+            Topic.findOne({
+                fields: ['id'],
+                where: {
+                    sourcePartnerId: sourcePartnerId,
+                    sourcePartnerObjectId: topicId.substr(2)
+                }
+            }).then(function (topic) {
+                if (topic) {
+
+                    return topic.id;
+                }
+
+                return topicId;
+            });
+        } else {
+            return topicId;
+        }
+    };
+    
     var _hasPermission = function (topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelf, partnerId) {
         var LEVELS = {
             none: 0, // Enables to override inherited permissions.
@@ -184,9 +206,10 @@ module.exports = function (app) {
      */
     var hasPermission = function (level, allowPublic, topicStatusesAllowed, allowSelf) {
         return function (req, res, next) {
-            var topicId = req.params.topicId;
             var userId = req.user.id;
             var partnerId = req.user.partnerId;
+            console.log('partnerId', partnerId);
+            var topicId = checkPartnerTopicId(req.params.topicId, partnerId);
 
             allowPublic = allowPublic ? allowPublic : false;
 
@@ -934,6 +957,8 @@ module.exports = function (app) {
         var include = req.query.include;
         var join = '';
         var returncolumns = '';
+        console.log('QEUER', req.query);
+        var topicId = checkPartnerTopicId(req.params.topicId, req.query.partnerId);
 
         if (include && !Array.isArray(include)) {
             include = [include];
@@ -1104,7 +1129,7 @@ module.exports = function (app) {
                 ',
                 {
                     replacements: {
-                        topicId: req.params.topicId,
+                        topicId: topicId,
                         userId: req.user.id
                     },
                     type: db.QueryTypes.SELECT,
@@ -1152,7 +1177,7 @@ module.exports = function (app) {
                                                 topic.vote.downloads = {
                                                     bdocVote: getBdocURL({
                                                         userId: req.user.id,
-                                                        topicId: req.params.topicId,
+                                                        topicId: topicId,
                                                         voteId: topic.vote.id,
                                                         type: 'user'
                                                     })
@@ -1184,12 +1209,13 @@ module.exports = function (app) {
 
     app.get('/api/topics/:topicId', function (req, res, next) {
         var include = req.query.include;
+        var topicId = checkPartnerTopicId(req.params.topicId, req.query.partnerId);
 
         if (include && !Array.isArray(include)) {
             include = [include];
         }
 
-        readTopicUnauth(req.params.topicId, include)
+        readTopicUnauth(topicId, include)
             .then(function (result) {
                 if (result && result.length && result[0]) {
                     var topic = result[0];

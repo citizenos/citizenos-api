@@ -23,6 +23,25 @@ var topicCreate = function (agent, userId, visibility, categories, endsAt, descr
     _topicCreate(agent, userId, visibility, categories, endsAt, description, hashtag, 201, callback);
 };
 
+var _partnerTopicRead = function (agent, userId, topicId, include, partnerWebsite, partnerId, expectedHttpCode, callback) {
+    var path = '/api/users/:userId/topics/:topicId'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId);
+    console.log('PATH', path);
+    agent
+        .get(path)
+        .query({include: include, partnerId: partnerId})
+        .set('Content-Type', 'application/json')
+        .set('x-partner-id', partnerId)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var partnerTopicRead = function (agent, userId, topicId, include, partnerWebsite, partnerId, callback) {
+    _partnerTopicRead(agent, userId, topicId, include, partnerWebsite, partnerId, 200, callback);
+};
+
 var _topicRead = function (agent, userId, topicId, include, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId'
         .replace(':userId', userId)
@@ -1347,10 +1366,12 @@ suite('Users', function () {
             var agent = request.agent(app);
             var email = 'test_topicr_' + new Date().getTime() + '@test.ee';
             var password = 'testPassword123';
-            var topicCategories = [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.communities];
+            var topicCategories = [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.communities]; 
 
             var user;
             var topic;
+            var partner;
+            var sourcePartnerObjectId = '911-112-random';
 
             suiteSetup(function (done) {
                 userLib.createUserAndLogin(agent, email, password, null, function (err, res) {
@@ -1363,7 +1384,56 @@ suite('Users', function () {
 
                         topic = res.body.data;
 
-                        done();
+                        Partner
+                            .create({
+                                website: 'notimportant',
+                                redirectUriRegexp: 'notimportant'
+                            })
+                            .then(function (res) {
+                                partner = res;
+
+                                User
+                                    .update(
+                                        {
+                                            sourcePartnerId: partner.id
+                                        },
+                                        {
+                                            where: {
+                                                id: user.id
+                                            }
+                                        }
+                                    );
+                                Topic
+                                    .update(
+                                        {
+                                            sourcePartnerId: partner.id,
+                                            sourcePartnerObjectId: sourcePartnerObjectId
+                                        },
+                                        {
+                                            where: {
+                                                id: topic.id
+                                            },
+                                            returning: true
+                                        }
+                                    )
+                                    .then(function (res) {
+                                        topic.sourcePartnerId = partner.id;
+
+                                        Topic
+                                            .findOne({
+                                                where: {
+                                                    id: topic.id
+                                                }
+                                            })
+                                            .then(function (res) {
+                                                console.log(res.sourcePartnerId);
+                                                topic.updatedAt = moment.utc(res.updatedAt).format('YYYY-MM-DDTHH:mm:ss.SSS')+ 'Z';
+                                                done();
+                                            });
+                                        
+                                    });
+                            
+                            });
                     });
                 });
             });
@@ -1412,8 +1482,58 @@ suite('Users', function () {
                 });
             });
 
+            test('Success - partnerId mapping', function (done) {
+                partnerTopicRead(agent, user.id, sourcePartnerObjectId, null, partner.website, partner.id, function (err, res) {
+                    if (err) return done(err);
+
+                    var topicRead = res.body.data;
+
+                    // The difference from create result is that there is "members" and "creator" is extended. Might consider changing in the future..
+                    var expectedTopic = _.cloneDeep(topic);
+                    expectedTopic.members = {
+                        users: {
+                            count: 1
+                        },
+                        groups: {
+                            count: 0
+                        }
+                    };
+                    expectedTopic.creator = user.toJSON();
+
+                    delete expectedTopic.creator.email; // Email url is not returned by Topic read, we don't need it
+                    delete expectedTopic.creator.imageUrl; // Image url is not returned by Topic read, we don't need it
+                    delete expectedTopic.creator.language; // Language is not returned by Topic read, we don't need it
+
+                    expectedTopic.permission = {
+                        level: TopicMember.LEVELS.admin
+                    };
+
+                    // The difference from create result is that there is no voteId
+                    assert.isNull(topicRead.voteId);
+                    delete topicRead.voteId;
+
+                    // Check the padUrl, see if token is there. Delete later, as tokens are not comparable due to different expiry timestamps
+                    // TODO: May want to decrypt the tokens and compare data
+                    assert.match(topicRead.padUrl, /http(s)?:\/\/.*\/p\/[a-zA-Z0-9-]{36}\?jwt=.*&lang=[a-z]{2}/);
+                    assert.match(expectedTopic.padUrl, /http(s)?:\/\/.*\/p\/[a-zA-Z0-9-]{36}\?jwt=.*&lang=[a-z]{2}/);
+                    delete topicRead.padUrl;
+                    delete expectedTopic.padUrl;
+
+                    assert.deepEqual(topicRead, expectedTopic);
+
+                    done();
+                });
+            });
+
             test('Fail - Unauthorized', function (done) {
                 _topicRead(request.agent(app), user.id, topic.id, null, 401, function (err) {
+                    if (err) return done(err);
+                    done();
+                });
+            });
+
+            test('Fail - Unauthorized partnerId mapping', function (done) {
+                _partnerTopicRead(agent, user.id, sourcePartnerObjectId, null, 'www.test.ee', partner.id, 404, function (err) {
                     if (err) return done(err);
                     done();
                 });
