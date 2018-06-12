@@ -33,7 +33,7 @@ if (!urlApi || !userEmail || !userPassword || !afApiKey) {
     return process.exit(1);
 }
 
-console.log('Heroku, is there anything running?', 2);
+console.log('Heroku, is there anything running?', process.env);
 
 var user;
 var partner;
