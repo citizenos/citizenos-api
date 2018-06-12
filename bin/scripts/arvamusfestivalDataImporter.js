@@ -27,7 +27,8 @@ var afApiKey = process.env.CITIZENOS_ARVAMUSFESTIVAL_DATA_IMPORTER_AF_API_KEY;
 var partnerWebsite = 'https://arvamusfestival.ee';
 
 if (!urlApi || !userEmail || !userPassword || !afApiKey) {
-    return logger.error('Missing required parameters - API url or User email or password!', urlApi, userEmail);
+    logger.error('Missing required parameters - API url or User email or password!', urlApi, userEmail);
+    process.exit(1);
 }
 
 var user;
