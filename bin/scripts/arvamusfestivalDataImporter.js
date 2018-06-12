@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 'use strict';
 
 var Promise = require('bluebird');
@@ -11,11 +13,11 @@ var log4js = require('log4js');
 log4js.configure(config.logging.log4js);
 var logger = log4js.getLogger(path.basename(__filename));
 
-var db = require('../libs/sequelize/sequelize')(config.db.uri, config.db.options, logger);
+var db = require('../../libs/sequelize/sequelize')(config.db.uri, config.db.options, logger);
 
-var Topic = db.import('../models/Topic');
-var Partner = db.import('../models/Partner');
-var User = db.import('../models/User');
+var Topic = db.import('../../models/Topic');
+var Partner = db.import('../../models/Partner');
+var User = db.import('../../models/User');
 
 var urlApi = config.url.api;
 var userEmail = process.env.CITIZENOS_ARVAMUSFESTIVAL_DATA_IMPORTER_USER_EMAIL;
