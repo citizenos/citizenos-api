@@ -163,7 +163,7 @@ Partner
                                     .send({
                                         description: '<!DOCTYPE HTML><html><body><h1>' + title + '</h1><p>' + description + '</p></body>'
                                     })
-                                    .then(function(){
+                                    .then(function () {
                                         return Topic
                                             .update(
                                                 {
