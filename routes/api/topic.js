@@ -59,9 +59,12 @@ module.exports = function (app) {
     var TopicAttachment = app.get('models.TopicAttachment');
     var Attachment = app.get('models.Attachment');
 
-    var checkPartnerTopicId = function (topicId, sourcePartnerId) {
-        if (topicId.indexOf('p.') === 0 && sourcePartnerId) {
-            Topic.findOne({
+    var checkPartnerTopicId = function (req, res, next) {
+        var topicId = req.params.topicId;
+        var sourcePartnerId = req.user.partnerId || req.query.partnerId;
+
+        if (topicId && topicId.indexOf('p.') === 0 && sourcePartnerId) {
+            return Topic.findOne({
                 fields: ['id'],
                 where: {
                     sourcePartnerId: sourcePartnerId,
@@ -69,14 +72,22 @@ module.exports = function (app) {
                 }
             }).then(function (topic) {
                 if (topic) {
+                    req.params.topicId = topic.id;
 
-                    return topic.id;
+                    return next();
+                } else {
+                    
+                    return res.notFound();
                 }
+            })
+            .catch(next);
 
-                return topicId;
-            });
         } else {
-            return topicId;
+            if (!validator.isUUID(topicId, 4)) {
+                return res.notFound();
+            }
+
+            return next();                
         }
     };
     
@@ -207,9 +218,8 @@ module.exports = function (app) {
         return function (req, res, next) {
             var userId = req.user.id;
             var partnerId = req.user.partnerId;
-            
-            var topicId = checkPartnerTopicId(req.params.topicId, partnerId);
-
+            var topicId = req.params.topicId;
+    
             allowPublic = allowPublic ? allowPublic : false;
 
             if (req.user && req.user.moderator) {
@@ -952,11 +962,11 @@ module.exports = function (app) {
     /**
      * Read a Topic
      */
-    app.get('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.read, true), isModerator(), partnerParser, function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId', loginCheck(['partner']), partnerParser, checkPartnerTopicId,  hasPermission(TopicMember.LEVELS.read, true), isModerator(), function (req, res, next) {
         var include = req.query.include;
         var join = '';
         var returncolumns = '';
-        var topicId = checkPartnerTopicId(req.params.topicId, req.query.partnerId);
+        var topicId = req.params.topicId;
 
         if (include && !Array.isArray(include)) {
             include = [include];
@@ -1017,39 +1027,39 @@ module.exports = function (app) {
         db
             .query(
                 'SELECT \
-                     t.id, \
-                     t.title, \
-                     t.description, \
-                     t.status, \
-                     t.visibility, \
-                     t.hashtag, \
-                     CASE \
+                        t.id, \
+                        t.title, \
+                        t.description, \
+                        t.status, \
+                        t.visibility, \
+                        t.hashtag, \
+                        CASE \
                         WHEN COALESCE(tmup.level, tmgp.level, \'none\') = \'admin\' THEN t."tokenJoin" \
                         ELSE NULL \
-                     END as "tokenJoin", \
-                     t.categories, \
-                     t."endsAt", \
-                     t."padUrl", \
-                     t."sourcePartnerId", \
-                     t."createdAt", \
-                     t."updatedAt", \
-                     c.id as "creator.id", \
-                     c.name as "creator.name", \
-                     c.company as "creator.company", \
-                     COALESCE(\
+                        END as "tokenJoin", \
+                        t.categories, \
+                        t."endsAt", \
+                        t."padUrl", \
+                        t."sourcePartnerId", \
+                        t."createdAt", \
+                        t."updatedAt", \
+                        c.id as "creator.id", \
+                        c.name as "creator.name", \
+                        c.company as "creator.company", \
+                        COALESCE(\
                         tmup.level, \
                         tmgp.level, \
                         \'none\' \
                     ) as "permission.level", \
-                     muc.count as "members.users.count", \
-                     COALESCE(mgc.count, 0) as "members.groups.count", \
-                     tv."voteId", \
-                     u.id as "user.id", \
-                     u.name as "user.name", \
-                     u.language as "user.language" \
-                     ' + returncolumns + ' \
+                        muc.count as "members.users.count", \
+                        COALESCE(mgc.count, 0) as "members.groups.count", \
+                        tv."voteId", \
+                        u.id as "user.id", \
+                        u.name as "user.name", \
+                        u.language as "user.language" \
+                        ' + returncolumns + ' \
                 FROM "Topics" t \
-                     LEFT JOIN ( \
+                        LEFT JOIN ( \
                         SELECT \
                             tmu."topicId", \
                             tmu."userId", \
@@ -1123,7 +1133,7 @@ module.exports = function (app) {
                     ) AS tv ON (tv."topicId" = t.id) \
                     ' + join + ' \
                 WHERE t.id = :topicId \
-                  AND t."deletedAt" IS NULL \
+                    AND t."deletedAt" IS NULL \
                 ',
                 {
                     replacements: {
@@ -1207,7 +1217,7 @@ module.exports = function (app) {
 
     app.get('/api/topics/:topicId', function (req, res, next) {
         var include = req.query.include;
-        var topicId = checkPartnerTopicId(req.params.topicId, req.query.partnerId);
+        var topicId = req.params.topicId;
 
         if (include && !Array.isArray(include)) {
             include = [include];

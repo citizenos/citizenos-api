@@ -1426,8 +1426,7 @@ suite('Users', function () {
                                                 }
                                             })
                                             .then(function (res) {
-                                                console.log(res.sourcePartnerId);
-                                                topic.updatedAt = moment.utc(res.updatedAt).format('YYYY-MM-DDTHH:mm:ss.SSS')+ 'Z';
+                                                topic.updatedAt = moment.utc(res.updatedAt).format('YYYY-MM-DDTHH:mm:ss.SSS') + 'Z';
                                                 done();
                                             });
                                         
@@ -1483,7 +1482,7 @@ suite('Users', function () {
             });
 
             test('Success - partnerId mapping', function (done) {
-                partnerTopicRead(agent, user.id, sourcePartnerObjectId, null, partner.website, partner.id, function (err, res) {
+                partnerTopicRead(agent, user.id, 'p.' + sourcePartnerObjectId, null, partner.website, partner.id, function (err, res) {
                     if (err) return done(err);
 
                     var topicRead = res.body.data;
