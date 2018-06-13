@@ -1104,8 +1104,7 @@ suite('Auth', function () {
                     });
 
 
-                    //FIXME: Unskip when SID API stops giving  404 for 10101010027. SK support request in progress.
-                    test.skip('Fail - 40011 - Timeout', function (done) {
+                    test('Fail - 40011 - Timeout', function (done) {
                         this.timeout(120000); //eslint-disable-line no-invalid-this
 
                         var agent = request.agent(app);

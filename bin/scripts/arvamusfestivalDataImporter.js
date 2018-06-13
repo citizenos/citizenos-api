@@ -134,7 +134,7 @@ Partner
                                     .post(urlApi + '/api/users/self/topics')
                                     .set('x-partner-id', partner.id)
                                     .send({
-                                        description: '<!DOCTYPE HTML><html><body><h1>' + title + '</h1><p>' + description + '</p></body>',
+                                        description: '<!DOCTYPE HTML><html><body><h1>' + title + '</h1><p>' + description.replace(/\r/g, '').replace(/\n/g, '<br>') + '</p></body>',
                                         visibility: Topic.VISIBILITY.public,
                                         categories: ['arvamusfestival2018'],
                                         sourcePartnerObjectId: event.event_id
@@ -165,7 +165,7 @@ Partner
                                     .put(urlApi + '/api/users/self/topics/' + topic.id)
                                     .set('x-partner-id', partner.id)
                                     .send({
-                                        description: '<!DOCTYPE HTML><html><body><h1>' + title + '</h1><p>' + description + '</p></body>'
+                                        description: '<!DOCTYPE HTML><html><body><h1>' + title + '</h1><p>' + description.replace(/\r/g, '').replace(/\n/g, '<br>') + '</p></body>'
                                     })
                                     .then(function () {
                                         return Topic
