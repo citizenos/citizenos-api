@@ -1,12 +1,12 @@
 'use strict';
 
-/**
- * Middleware to map partner topicId-s to local topicId-s. This modifies req.params to replace incoming partner topicId with local topicId for further handling
- */
+/* Middleware to map partner topicId-s to local topicId-s. */
+/* This modifies req.params to replace incoming partner topicId with local topicId for further handling*/
+
 module.exports = function (req, res, next) {
     var app = req.app;
     var Topic = app.get('models.Topic');
-    var validator = app.get('validator')
+    var validator = app.get('validator');
     var topicId = req.params.topicId;
     var sourcePartnerId = null;
 
