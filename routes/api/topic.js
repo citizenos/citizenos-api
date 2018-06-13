@@ -30,6 +30,7 @@ module.exports = function (app) {
 
     var loginCheck = app.get('middleware.loginCheck');
     var partnerParser = app.get('middleware.partnerParser');
+    var partnerTopicIdMapperMiddleware = app.get('middleware.partnerTopicIdMapperMiddleware');
 
     var Activity = app.get('models.Activity');
     var User = app.get('models.User');
@@ -58,38 +59,6 @@ module.exports = function (app) {
     var TopicVote = app.get('models.TopicVote');
     var TopicAttachment = app.get('models.TopicAttachment');
     var Attachment = app.get('models.Attachment');
-
-    var checkPartnerTopicId = function (req, res, next) {
-        var topicId = req.params.topicId;
-        var sourcePartnerId = req.user.partnerId || req.query.partnerId;
-
-        if (topicId && topicId.indexOf('p.') === 0 && sourcePartnerId) {
-            return Topic.findOne({
-                fields: ['id'],
-                where: {
-                    sourcePartnerId: sourcePartnerId,
-                    sourcePartnerObjectId: topicId.substr(2)
-                }
-            }).then(function (topic) {
-                if (topic) {
-                    req.params.topicId = topic.id;
-
-                    return next();
-                } else {
-                    
-                    return res.notFound();
-                }
-            })
-            .catch(next);
-
-        } else {
-            if (!validator.isUUID(topicId, 4)) {
-                return res.notFound();
-            }
-
-            return next();                
-        }
-    };
     
     var _hasPermission = function (topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelf, partnerId) {
         var LEVELS = {
@@ -962,7 +931,7 @@ module.exports = function (app) {
     /**
      * Read a Topic
      */
-    app.get('/api/users/:userId/topics/:topicId', loginCheck(['partner']), partnerParser, checkPartnerTopicId,  hasPermission(TopicMember.LEVELS.read, true), isModerator(), function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId', loginCheck(['partner']), partnerParser, partnerTopicIdMapperMiddleware, hasPermission(TopicMember.LEVELS.read, true), isModerator(), function (req, res, next) {
         var include = req.query.include;
         var join = '';
         var returncolumns = '';
@@ -1215,7 +1184,7 @@ module.exports = function (app) {
             .catch(next);
     });
 
-    app.get('/api/topics/:topicId', function (req, res, next) {
+    app.get('/api/topics/:topicId', partnerTopicIdMapperMiddleware, function (req, res, next) {
         var include = req.query.include;
         var topicId = req.params.topicId;
 

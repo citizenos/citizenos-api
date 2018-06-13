@@ -10,11 +10,12 @@
 module.exports = function (app) {
     var validator = app.get('validator');
 
-    app.param(['groupId', 'memberId', 'partnerId', 'commentId', 'voteId'], function (req, res, next, id) {
-        if (!validator.isUUID(id, 4)) {
-            return res.notFound();
+    app.param(['topicId', 'groupId', 'memberId', 'partnerId', 'commentId', 'voteId'], function (req, res, next, id) {
+        if (validator.isUUID(id, 4) || id.indexOf('p.') === 0) {
+            return next();
         }
-        next();
+
+        return res.notFound();
     });
 
 };

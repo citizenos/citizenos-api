@@ -23,6 +23,7 @@ module.exports = function (req, res, next) {
 
     if (apiKey) {
         if (apiKey === config.api.key) {
+            console.log('APIKEY OK');
             return next();
         } else {
             return res.unauthorised('Invalid API key');

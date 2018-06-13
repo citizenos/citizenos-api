@@ -15,7 +15,6 @@
  * @see http://expressjs.com/en/guide/error-handling.html
  */
 function cosErrorHandler (err, req, res, next) { //eslint-disable-line no-unused-vars
-
     var logger = req.app.get('logger') || console;
 
     logger.error(
