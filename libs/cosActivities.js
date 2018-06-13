@@ -91,9 +91,12 @@ module.exports = function (app) {
         activityObject.updatedAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS ZZ');
 
         return Activity
-            .create(activityObject, {
-                transaction: transaction
-            });
+            .create(
+                activityObject,
+                {
+                    transaction: transaction
+                }
+            );
     };
 
     var _getInstanceChangeSet = function (instance) {

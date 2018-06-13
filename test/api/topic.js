@@ -6942,8 +6942,8 @@ suite('Users', function () {
                         var list = res.body.data;
                         var mentions = list.rows;
 
-                        assert.isAbove(list.count, 0);
-                        assert.isAbove(mentions.length, 0);
+                        assert.isTrue(list.count > 0);
+                        assert.equal(list.count, mentions.length);
 
                         // Mention
                         var m1 = _.find(mentions, {id: mention1.id});
@@ -8754,61 +8754,42 @@ suite('Topics', function () {
 
                                     topic = res.body.data;
 
-                                    topicCommentCreate(agentCreator, userCreator.id, topic.id, null, null, Comment.TYPES.pro, 'test abuse report', 'test abuse report', function (err) {
+                                    topicCommentCreate(agentCreator, userCreator.id, topic.id, null, null, Comment.TYPES.pro, 'test abuse report', 'test abuse report', function (err, res) {
                                         if (err) return done(err);
 
-                                        async
-                                            .parallel(
-                                                [
-                                                    function (cb) {
-                                                        Partner
-                                                            .create({
-                                                                website: 'notimportant',
-                                                                redirectUriRegexp: 'notimportant'
-                                                            })
-                                                            .then(function (res) {
-                                                                partner = res;
+                                        comment = res.body.data;
 
-                                                                return Topic
-                                                                    .update(
-                                                                        {
-                                                                            sourcePartnerId: partner.id
-                                                                        },
-                                                                        {
-                                                                            where: {
-                                                                                id: topic.id
-                                                                            }
-                                                                        }
-                                                                    );
-                                                            })
-                                                            .then(function () {
-                                                                return Moderator
-                                                                    .create({
-                                                                        userId: userModerator.id,
-                                                                        partnerId: partner.id
-                                                                    });
-                                                            })
-                                                            .then(function () {
-                                                                cb();
-                                                            })
-                                                            .catch(cb);
-                                                    },
-                                                    function (cb) {
-                                                        topicCommentCreate(agentCreator, userCreator.id, topic.id, null, null, Comment.TYPES.pro, 'test abuse report', 'test abuse report', function (err, res) {
-                                                            if (err) return cb(err);
+                                        Partner
+                                            .create({
+                                                website: 'notimportant',
+                                                redirectUriRegexp: 'notimportant'
+                                            })
+                                            .then(function (res) {
+                                                partner = res;
 
-                                                            comment = res.body.data;
-
-                                                            cb();
-                                                        });
-                                                    }
-                                                ],
-                                                function (err) {
-                                                    if (err) return done(err);
-
-                                                    done();
-                                                }
-                                            );
+                                                return Topic
+                                                    .update(
+                                                        {
+                                                            sourcePartnerId: partner.id
+                                                        },
+                                                        {
+                                                            where: {
+                                                                id: topic.id
+                                                            }
+                                                        }
+                                                    );
+                                            })
+                                            .then(function () {
+                                                return Moderator
+                                                    .create({
+                                                        userId: userModerator.id,
+                                                        partnerId: partner.id
+                                                    });
+                                            })
+                                            .then(function () {
+                                                done();
+                                            })
+                                            .catch(done);
                                     });
                                 });
                             }
@@ -9716,8 +9697,8 @@ suite('Topics', function () {
                     var list = res.body.data;
                     var mentions = list.rows;
 
-                    assert.isAbove(list.count, 0);
-                    assert.isAbove(mentions.length, 0);
+                    assert.isTrue(list.count > 0);
+                    assert.equal(list.count, mentions.length);
                     assert.deepEqual(Object.keys(mentions[0]), Object.keys(mention1));
 
                     done();
@@ -9732,8 +9713,8 @@ suite('Topics', function () {
                     var list = res.body.data;
                     var mentions = list.rows;
 
-                    assert.isAbove(list.count, 0);
-                    assert.isAbove(mentions.length, 0);
+                    assert.isTrue(list.count > 0);
+                    assert.equal(list.count, mentions.length);
                     assert.deepEqual(Object.keys(mentions[0]), Object.keys(mention1));
 
                     done();
@@ -9746,8 +9727,8 @@ suite('Topics', function () {
                     var list = res.body.data;
                     var mentions = list.rows;
 
-                    assert.isAbove(list.count, 0);
-                    assert.isAbove(mentions.length, 0);
+                    assert.isTrue(list.count > 0);
+                    assert.equal(list.count, mentions.length);
                     assert.deepEqual(Object.keys(mentions[0]), Object.keys(mention1));
 
                     done();

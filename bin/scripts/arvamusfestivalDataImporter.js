@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 'use strict';
 
 var Promise = require('bluebird');
@@ -5,16 +7,17 @@ var Promise = require('bluebird');
 var path = require('path');
 var config = require('config');
 var superagent = require('superagent');
+var moment = require('moment');
 
 var log4js = require('log4js');
 log4js.configure(config.logging.log4js);
 var logger = log4js.getLogger(path.basename(__filename));
 
-var db = require('../libs/sequelize/sequelize')(config.db.uri, config.db.options, logger);
+var db = require('../../libs/sequelize/sequelize')(config.db.uri, config.db.options, logger);
 
-var Topic = db.import('../models/Topic');
-var Partner = db.import('../models/Partner');
-var User = db.import('../models/User');
+var Topic = db.import('../../models/Topic');
+var Partner = db.import('../../models/Partner');
+var User = db.import('../../models/User');
 
 var urlApi = config.url.api;
 var userEmail = process.env.CITIZENOS_ARVAMUSFESTIVAL_DATA_IMPORTER_USER_EMAIL;
@@ -24,7 +27,9 @@ var afApiKey = process.env.CITIZENOS_ARVAMUSFESTIVAL_DATA_IMPORTER_AF_API_KEY;
 var partnerWebsite = 'https://arvamusfestival.ee';
 
 if (!urlApi || !userEmail || !userPassword || !afApiKey) {
-    return logger.error('Missing required parameters - API url or User email or password!', urlApi, userEmail);
+    logger.error('Missing required parameters - API url or User email or password!', urlApi, userEmail);
+
+    return process.exit(1);
 }
 
 var user;
@@ -97,8 +102,8 @@ Partner
     .then(function () {
         return superagent.agent()
             .post('https://www.arvamusfestival.ee/api/?events')
-            .send('app_secret=' + afApiKey)
-            .set('Accept', 'application/json');
+            .timeout(1000 * 10)
+            .send('app_secret=' + afApiKey);
     })
     .then(function (resultEvents) {
         // AF API returns JSON but response content type is text/html thus Superagent does not parse JSON
@@ -112,7 +117,7 @@ Partner
                 var title = event.name_est;
                 var description = event.short_description_est;
 
-                if (title && description) {
+                if (title && description && Boolean(title.trim()) && Boolean(description.trim())) {
                     return Topic
                         .findOne({
                             where: {
@@ -123,35 +128,60 @@ Partner
                         })
                         .then(function (topic) {
                             if (!topic) { // create Topic
-                                logger.info('Creating a new Topic', event.event_id);
+                                logger.info('Creating a new Topic', event.event_id, event.time_updated);
 
                                 return userAgent
                                     .post(urlApi + '/api/users/self/topics')
                                     .set('x-partner-id', partner.id)
                                     .send({
-                                        description: '<!DOCTYPE HTML><html><body><<h1>' + title + '</h1><p>' + description + '</p></body>',
+                                        description: '<!DOCTYPE HTML><html><body><h1>' + title + '</h1><p>' + description.replace(/\r/g, '').replace(/\n/g, '<br>') + '</p></body>',
                                         visibility: Topic.VISIBILITY.public,
                                         categories: ['arvamusfestival2018'],
                                         sourcePartnerObjectId: event.event_id
                                     })
-                                    .then(function () {
-                                        logger.info('Done inserting Topic', event.event_id);
+                                    .then(function (res) {
+                                        var resTopic = res.body.data;
 
+                                        return Topic
+                                            .update(
+                                                {
+                                                    createdAt: moment.tz(event.time_updated, 'Europe/Tallinn'),
+                                                    updatedAt: moment.tz(event.time_updated, 'Europe/Tallinn')
+                                                },
+                                                {
+                                                    where: {
+                                                        id: resTopic.id
+                                                    }
+                                                }
+                                            );
+                                    })
+                                    .then(function () {
                                         stats.created++;
                                     });
                             } else { // update Topic
                                 logger.info('Updating a Topic', topic.id, event.event_id);
 
-                                // FIXME: Every update will trigger a new update event, we need to avoid that if content has not changed?
-
                                 return userAgent
                                     .put(urlApi + '/api/users/self/topics/' + topic.id)
                                     .set('x-partner-id', partner.id)
                                     .send({
-                                        description: '<!DOCTYPE HTML><html><body><<h1>' + title + '</h1><p>' + description + '</p></body>'
+                                        description: '<!DOCTYPE HTML><html><body><h1>' + title + '</h1><p>' + description.replace(/\r/g, '').replace(/\n/g, '<br>') + '</p></body>'
                                     })
                                     .then(function () {
-                                        logger.info('Done updating Topic', event.event_id);
+                                        return Topic
+                                            .update(
+                                                {
+                                                    updatedAt: moment.tz(event.time_updated, 'Europe/Tallinn')
+                                                },
+                                                {
+                                                    where: {
+                                                        id: topic.id
+                                                    }
+                                                }
+                                            );
+                                    })
+                                    .then(function (res) {
+                                        logger.info('Done updating Topic', res.body, event.event_id);
 
                                         stats.updated++;
                                     });

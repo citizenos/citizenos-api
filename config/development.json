@@ -80,24 +80,26 @@
   },
   "logging": {
     "log4js": {
-      "levels": {
-        "development": "DEBUG",
-        "test": "DEBUG",
-        "production": "INFO"
-      },
-      "appenders": [
-        {
-          "type": "console",
-          "category": "development"
-        },
-        {
+      "appenders": {
+        "file": {
           "type": "dateFile",
           "filename": "logs/app.log",
           "pattern": "-dd",
-          "alwaysIncludePattern": false,
-          "category": "test"
+          "alwaysIncludePattern": false
+        },
+        "console": {
+          "type": "console"
         }
-      ]
+      },
+      "categories": {
+        "default": {
+          "appenders": [
+            "file",
+            "console"
+          ],
+          "level": "debug"
+        }
+      }
     }
   },
   "features": {

@@ -848,7 +848,6 @@ module.exports = function (app) {
             sourcePartnerObjectId: req.body.sourcePartnerObjectId
         });
 
-        logger.debug('CREATE TOPIC PARTNER ID', req.locals.partner);
         if (req.locals.partner) {
             topic.sourcePartnerId = req.locals.partner.id;
         }
@@ -878,18 +877,27 @@ module.exports = function (app) {
                             .then(function () {
 
                                 // The creator is also the first member
-                                return topic.addMemberUser( // Magic method by Sequelize - https://github.com/sequelize/sequelize/wiki/API-Reference-Associations#hasmanytarget-options
-                                    user.id,
-                                    {
-                                        level: TopicMember.LEVELS.admin,
-                                        transaction: t
-                                    }
-                                ).then(function () {
-                                    return cosActivities.createActivity(topic, null, {
-                                        type: 'User',
-                                        id: req.user.id
-                                    }, req.method + ' ' + req.path, t);
-                                });
+                                return topic
+                                    .addMemberUser(// Magic method by Sequelize - https://github.com/sequelize/sequelize/wiki/API-Reference-Associations#hasmanytarget-options
+                                        user.id,
+                                        {
+                                            level: TopicMember.LEVELS.admin,
+                                            transaction: t
+                                        }
+                                    )
+                                    .then(function () {
+                                        return cosActivities
+                                            .createActivity(
+                                                topic,
+                                                null,
+                                                {
+                                                    type: 'User',
+                                                    id: req.user.id
+                                                }
+                                                , req.method + ' ' + req.path,
+                                                t
+                                            );
+                                    });
                             });
                     });
             })
@@ -897,10 +905,14 @@ module.exports = function (app) {
                 // Sync Topic with Etherpad only when description was actually set.
                 if (topicDescription) {
                     return cosEtherpad
-                        .syncTopicWithPad(topic.id, req.method + ' ' + req.path, {
-                            type: 'User',
-                            id: req.user.id
-                        });
+                        .syncTopicWithPad(
+                            topic.id,
+                            req.method + ' ' + req.path,
+                            {
+                                type: 'User',
+                                id: req.user.id
+                            }
+                        );
                 } else {
                     return Promise.resolve();
                 }
@@ -3422,7 +3434,8 @@ module.exports = function (app) {
                             .findOne({
                                 where: {
                                     id: req.params.topicId
-                                }
+                                },
+                                transaction: t
                             })
                             .then(function (topic) {
                                 if (parentId) {
@@ -3434,10 +3447,18 @@ module.exports = function (app) {
                                             transaction: t
                                         })
                                         .then(function (parentComment) {
-                                            return cosActivities.replyActivity(comment, parentComment, topic, {
-                                                type: 'User',
-                                                id: req.user.id
-                                            }, req.method + ' ' + req.path, t);
+                                            return cosActivities
+                                                .replyActivity(
+                                                    comment,
+                                                    parentComment,
+                                                    topic,
+                                                    {
+                                                        type: 'User',
+                                                        id: req.user.id
+                                                    }
+                                                    , req.method + ' ' + req.path,
+                                                    t
+                                                );
                                         });
                                 } else {
                                     return cosActivities
