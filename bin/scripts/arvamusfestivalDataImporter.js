@@ -2,8 +2,6 @@
 
 'use strict';
 
-console.log('Heroku, is there anything running?');
-
 var Promise = require('bluebird');
 
 var path = require('path');
@@ -30,6 +28,7 @@ var partnerWebsite = 'https://arvamusfestival.ee';
 
 if (!urlApi || !userEmail || !userPassword || !afApiKey) {
     logger.error('Missing required parameters - API url or User email or password!', urlApi, userEmail);
+
     return process.exit(1);
 }
 

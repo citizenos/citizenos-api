@@ -126,17 +126,26 @@
   },
   "logging": {
     "log4js": {
-      "levels": {
-        "development": "DEBUG",
-        "test": "DEBUG",
-        "production": "INFO"
-      },
-      "appenders": [
-        {
-          "type": "console",
-          "category": "production"
+      "appenders": {
+        "file": {
+          "type": "dateFile",
+          "filename": "logs/app.log",
+          "pattern": "-dd",
+          "alwaysIncludePattern": false
+        },
+        "console": {
+          "type": "console"
         }
-      ]
+      },
+      "categories": {
+        "default": {
+          "appenders": [
+            "file",
+            "console"
+          ],
+          "level": "info"
+        }
+      }
     },
     "morgan": {
       "format": ":remote-addr - :remote-user \":method :url HTTP/:http-version\" :status :res[content-length] - :response-time ms"
