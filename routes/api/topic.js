@@ -59,7 +59,7 @@ module.exports = function (app) {
     var TopicVote = app.get('models.TopicVote');
     var TopicAttachment = app.get('models.TopicAttachment');
     var Attachment = app.get('models.Attachment');
-    
+
     var _hasPermission = function (topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelf, partnerId) {
         var LEVELS = {
             none: 0, // Enables to override inherited permissions.
@@ -70,107 +70,105 @@ module.exports = function (app) {
         var minRequiredLevel = level;
 
         // TODO: That casting to "enum_TopicMemberUsers_level". Sequelize does not support naming enums, through inheritance I have 2 enums that are the same but with different name thus different type in PG. Feature request - https://github.com/sequelize/sequelize/issues/2577
-        return new Promise(function (resolve, reject) {
-            return db
-                .query(
-                    'SELECT \
-                        t.visibility = \'public\' AS "isPublic", \
-                        t.status, \
-                        COALESCE(\
-                            tmup.level, \
-                            tmgp.level, \
-                            CASE \
-                                WHEN t.visibility = \'public\' THEN \'read\' ELSE NULL \
-                            END, \
-                            \'none\'\
-                        ) as level, \
-                        COALESCE(tmup.level, tmgp.level, \'none\')::"enum_TopicMemberUsers_level" >= :level AS "hasDirectAccess", \
-                        t."sourcePartnerId" \
-                    FROM "Topics" t \
-                        LEFT JOIN ( \
-                            SELECT \
-                                tmu."topicId",  \
-                                tmu."userId",  \
-                                tmu.level::text AS level  \
-                            FROM "TopicMemberUsers" tmu  \
-                            WHERE tmu."deletedAt" IS NULL  \
-                        ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId)  \
-                        LEFT JOIN (  \
-                            SELECT  \
-                                tmg."topicId",  \
-                                gm."userId",  \
-                                MAX(tmg.level)::text AS level  \
-                            FROM "TopicMemberGroups" tmg  \
-                                JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")  \
-                            WHERE tmg."deletedAt" IS NULL  \
-                            AND gm."deletedAt" IS NULL  \
-                            GROUP BY "topicId", "userId"  \
-                        ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)  \
-                    WHERE t.id = :topicId \
-                    AND t."deletedAt" IS NULL; \
-                    ',
-                    {
-                        replacements: {
-                            topicId: topicId,
-                            userId: userId,
-                            level: level
-                        },
-                        type: db.QueryTypes.SELECT,
-                        raw: true
-                    }
-                )
-                .then(function (result) {
-                    if (result && result[0]) {
-                        var isPublic = result[0].isPublic;
-                        var status = result[0].status;
-                        var hasDirectAccess = result[0].hasDirectAccess;
-                        var level = result[0].level;
-                        var sourcePartnerId = result[0].sourcePartnerId;
-                        if (hasDirectAccess || (allowPublic && isPublic) || allowSelf) {
-                            // If Topic status is not in the allowed list, deny access.
-                            if (topicStatusesAllowed && !(topicStatusesAllowed.indexOf(status) > -1)) {
-                                logger.warn('Access denied to topic due to status mismatch! ', 'topicStatusesAllowed:', topicStatusesAllowed, 'status:', status);
+        return db
+            .query(
+                'SELECT \
+                    t.visibility = \'public\' AS "isPublic", \
+                    t.status, \
+                    COALESCE(\
+                        tmup.level, \
+                        tmgp.level, \
+                        CASE \
+                            WHEN t.visibility = \'public\' THEN \'read\' ELSE NULL \
+                        END, \
+                        \'none\'\
+                    ) as level, \
+                    COALESCE(tmup.level, tmgp.level, \'none\')::"enum_TopicMemberUsers_level" >= :level AS "hasDirectAccess", \
+                    t."sourcePartnerId" \
+                FROM "Topics" t \
+                    LEFT JOIN ( \
+                        SELECT \
+                            tmu."topicId",  \
+                            tmu."userId",  \
+                            tmu.level::text AS level  \
+                        FROM "TopicMemberUsers" tmu  \
+                        WHERE tmu."deletedAt" IS NULL  \
+                    ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId)  \
+                    LEFT JOIN (  \
+                        SELECT  \
+                            tmg."topicId",  \
+                            gm."userId",  \
+                            MAX(tmg.level)::text AS level  \
+                        FROM "TopicMemberGroups" tmg  \
+                            JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")  \
+                        WHERE tmg."deletedAt" IS NULL  \
+                        AND gm."deletedAt" IS NULL  \
+                        GROUP BY "topicId", "userId"  \
+                    ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)  \
+                WHERE t.id = :topicId \
+                AND t."deletedAt" IS NULL; \
+                ',
+                {
+                    replacements: {
+                        topicId: topicId,
+                        userId: userId,
+                        level: level
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true
+                }
+            )
+            .then(function (result) {
+                if (result && result[0]) {
+                    var isPublic = result[0].isPublic;
+                    var status = result[0].status;
+                    var hasDirectAccess = result[0].hasDirectAccess;
+                    var level = result[0].level;
+                    var sourcePartnerId = result[0].sourcePartnerId;
+                    if (hasDirectAccess || (allowPublic && isPublic) || allowSelf) {
+                        // If Topic status is not in the allowed list, deny access.
+                        if (topicStatusesAllowed && !(topicStatusesAllowed.indexOf(status) > -1)) {
+                            logger.warn('Access denied to topic due to status mismatch! ', 'topicStatusesAllowed:', topicStatusesAllowed, 'status:', status);
 
-                                return reject();
-                            }
-
-                            // Don't allow Partner to edit other Partners topics
-                            if (!isPublic && partnerId && sourcePartnerId) {
-                                if (partnerId !== sourcePartnerId) {
-                                    logger.warn('Access denied to topic due to Partner mismatch! ', 'partnerId:', partnerId, 'sourcePartnerId:', sourcePartnerId);
-
-                                    return reject();
-                                }
-                            }
-
-                            if (!allowSelf && (LEVELS[minRequiredLevel] > LEVELS[level])) {
-                                logger.warn('Access denied to topic due to member without permissions trying to delete user! ', 'userId:', userId);
-
-                                return reject();
-                            }
-
-                            var authorizationResult = {
-                                topic: {
-                                    id: topicId,
-                                    isPublic: isPublic,
-                                    sourcePartnerId: sourcePartnerId,
-                                    status: status,
-                                    permissions: {
-                                        level: level,
-                                        hasDirectAccess: hasDirectAccess
-                                    }
-                                }
-                            };
-
-                            return resolve(authorizationResult);
-                        } else {
-                            return reject();
+                            return Promise.reject();
                         }
+
+                        // Don't allow Partner to edit other Partners topics
+                        if (!isPublic && partnerId && sourcePartnerId) {
+                            if (partnerId !== sourcePartnerId) {
+                                logger.warn('Access denied to topic due to Partner mismatch! ', 'partnerId:', partnerId, 'sourcePartnerId:', sourcePartnerId);
+
+                                return Promise.reject();
+                            }
+                        }
+
+                        if (!allowSelf && (LEVELS[minRequiredLevel] > LEVELS[level])) {
+                            logger.warn('Access denied to topic due to member without permissions trying to delete user! ', 'userId:', userId);
+
+                            return Promise.reject();
+                        }
+
+                        var authorizationResult = {
+                            topic: {
+                                id: topicId,
+                                isPublic: isPublic,
+                                sourcePartnerId: sourcePartnerId,
+                                status: status,
+                                permissions: {
+                                    level: level,
+                                    hasDirectAccess: hasDirectAccess
+                                }
+                            }
+                        };
+
+                        return Promise.resolve(authorizationResult);
                     } else {
-                        return reject();
+                        return Promise.reject();
                     }
-                });
-        });
+                } else {
+                    return Promise.reject();
+                }
+            });
     };
 
     /**
@@ -188,7 +186,7 @@ module.exports = function (app) {
             var userId = req.user.id;
             var partnerId = req.user.partnerId;
             var topicId = req.params.topicId;
-    
+
             allowPublic = allowPublic ? allowPublic : false;
 
             if (req.user && req.user.moderator) {
