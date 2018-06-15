@@ -136,7 +136,6 @@ Partner
                                     .send({
                                         description: '<!DOCTYPE HTML><html><body><h1>' + title + '</h1><p>' + description.replace(/\r/g, '').replace(/\n/g, '<br>') + '</p></body>',
                                         visibility: Topic.VISIBILITY.public,
-                                        categories: ['arvamusfestival2018'],
                                         sourcePartnerObjectId: event.event_id
                                     })
                                     .then(function (res) {
