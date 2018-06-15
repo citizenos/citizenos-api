@@ -68,7 +68,8 @@ suite('Partners', function () {
                         .then(function (resultPartner) {
                             partner = resultPartner[0];
 
-                            topicLib.topicCreate(agent, user.id, null, null, null, null, null, function (err, resultTopic) {
+                            topicLib
+                                .topicCreate(agent, user.id, null, null, null, null, null, function (err, resultTopic) {
                                     if (err) {
                                         return done(err);
                                     }
