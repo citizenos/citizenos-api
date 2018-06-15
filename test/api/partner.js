@@ -98,7 +98,6 @@ suite('Partners', function () {
                 });
             });
 
-
             test('Success', function (done) {
                 partnerTopicRead(request.agent(app), partner.id, partnerObjectId, function (err, res) {
                     if (err) {

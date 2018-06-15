@@ -30,7 +30,6 @@ module.exports = function (app) {
 
     var loginCheck = app.get('middleware.loginCheck');
     var partnerParser = app.get('middleware.partnerParser');
-    var partnerTopicIdMapperMiddleware = app.get('middleware.partnerTopicIdMapperMiddleware');
 
     var Activity = app.get('models.Activity');
     var User = app.get('models.User');
@@ -941,7 +940,7 @@ module.exports = function (app) {
     /**
      * Read a Topic
      */
-    app.get('/api/users/:userId/topics/:topicId', loginCheck(['partner']), partnerParser, partnerTopicIdMapperMiddleware, hasPermission(TopicMember.LEVELS.read, true), isModerator(), function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId', loginCheck(['partner']), partnerParser, hasPermission(TopicMember.LEVELS.read, true), isModerator(), function (req, res, next) {
         var include = req.query.include;
         var join = '';
         var returncolumns = '';
@@ -1194,7 +1193,7 @@ module.exports = function (app) {
             .catch(next);
     });
 
-    app.get('/api/topics/:topicId', partnerTopicIdMapperMiddleware, function (req, res, next) {
+    app.get('/api/topics/:topicId', function (req, res, next) {
         var include = req.query.include;
         var topicId = req.params.topicId;
 

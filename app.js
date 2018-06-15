@@ -230,7 +230,6 @@ app.use(/^\/api\/auth\/.*/, passport.initialize());
 app.set('middleware.loginCheck', require('./libs/middleware/loginCheck'));
 app.set('middleware.authApiKey', require('./libs/middleware/authApiKey'));
 app.set('middleware.partnerParser', require('./libs/middleware/partnerParser')(app));
-app.set('middleware.partnerTopicIdMapperMiddleware', require('./libs/middleware/partnerTopicIdMapperMiddleware'));
 app.set('middleware.uuidValidator', require('./libs/middleware/uuidValidator')(app));
 
 // Bot header logger

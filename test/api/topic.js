@@ -23,25 +23,6 @@ var topicCreate = function (agent, userId, visibility, categories, endsAt, descr
     _topicCreate(agent, userId, visibility, categories, endsAt, description, hashtag, 201, callback);
 };
 
-var _partnerTopicRead = function (agent, userId, topicId, include, partnerWebsite, partnerId, expectedHttpCode, callback) {
-    var path = '/api/users/:userId/topics/:topicId'
-        .replace(':userId', userId)
-        .replace(':topicId', topicId);
-    
-    agent
-        .get(path)
-        .query({include: include, partnerId: partnerId})
-        .set('Content-Type', 'application/json')
-        .set('x-partner-id', partnerId)
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
-};
-
-var partnerTopicRead = function (agent, userId, topicId, include, partnerWebsite, partnerId, callback) {
-    _partnerTopicRead(agent, userId, topicId, include, partnerWebsite, partnerId, 200, callback);
-};
-
 var _topicRead = function (agent, userId, topicId, include, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId'
         .replace(':userId', userId)
@@ -1481,58 +1462,8 @@ suite('Users', function () {
                 });
             });
 
-            test('Success - partnerId mapping', function (done) {
-                partnerTopicRead(agent, user.id, 'p.' + sourcePartnerObjectId, null, partner.website, partner.id, function (err, res) {
-                    if (err) return done(err);
-
-                    var topicRead = res.body.data;
-
-                    // The difference from create result is that there is "members" and "creator" is extended. Might consider changing in the future..
-                    var expectedTopic = _.cloneDeep(topic);
-                    expectedTopic.members = {
-                        users: {
-                            count: 1
-                        },
-                        groups: {
-                            count: 0
-                        }
-                    };
-                    expectedTopic.creator = user.toJSON();
-
-                    delete expectedTopic.creator.email; // Email url is not returned by Topic read, we don't need it
-                    delete expectedTopic.creator.imageUrl; // Image url is not returned by Topic read, we don't need it
-                    delete expectedTopic.creator.language; // Language is not returned by Topic read, we don't need it
-
-                    expectedTopic.permission = {
-                        level: TopicMember.LEVELS.admin
-                    };
-
-                    // The difference from create result is that there is no voteId
-                    assert.isNull(topicRead.voteId);
-                    delete topicRead.voteId;
-
-                    // Check the padUrl, see if token is there. Delete later, as tokens are not comparable due to different expiry timestamps
-                    // TODO: May want to decrypt the tokens and compare data
-                    assert.match(topicRead.padUrl, /http(s)?:\/\/.*\/p\/[a-zA-Z0-9-]{36}\?jwt=.*&lang=[a-z]{2}/);
-                    assert.match(expectedTopic.padUrl, /http(s)?:\/\/.*\/p\/[a-zA-Z0-9-]{36}\?jwt=.*&lang=[a-z]{2}/);
-                    delete topicRead.padUrl;
-                    delete expectedTopic.padUrl;
-
-                    assert.deepEqual(topicRead, expectedTopic);
-
-                    done();
-                });
-            });
-
             test('Fail - Unauthorized', function (done) {
                 _topicRead(request.agent(app), user.id, topic.id, null, 401, function (err) {
-                    if (err) return done(err);
-                    done();
-                });
-            });
-
-            test('Fail - Unauthorized partnerId mapping', function (done) {
-                _partnerTopicRead(agent, user.id, sourcePartnerObjectId, null, 'www.test.ee', partner.id, 404, function (err) {
                     if (err) return done(err);
                     done();
                 });
