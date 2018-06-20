@@ -46,6 +46,7 @@ var userLib = require('./lib/user')(app);
 var topicLib = require('./topic');
 var Partner = app.get('models.Partner');
 var Topic = app.get('models.Topic');
+var TopicMember = app.get('models.TopicMember');
 
 
 // API - /api/users*
@@ -116,6 +117,7 @@ suite('Activities', function () {
 
         var topic;
         var user;
+        var user2;
         var partner;
 
         suiteSetup(function (done) {
@@ -132,12 +134,16 @@ suite('Activities', function () {
                             },
                             function (cb) {
                                 topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST2</h2></body></html>', null, cb);
+                            },
+                            function (cb) {
+                                userLib.createUser(agent2, null, null, null, cb);
                             }
                         ]
                         , function (err, results) {
                             if (err) return done(err);
 
                             topic = results[1].body.data;
+                            user2 = results[2];
 
                             Partner
                                 .create({
@@ -160,7 +166,22 @@ suite('Activities', function () {
                                         );
                                 })
                                 .then(function () {
-                                    done();
+                                    topicLib.topicMemberUsersCreate(
+                                        agent,
+                                        user.id,
+                                        topic.id,
+                                        [
+                                            {
+                                                userId: user2.id,
+                                                level: TopicMember.LEVELS.read
+                                            }
+                                        ],
+                                        function (err) {
+                                            if (err) return done(err);
+
+                                            done();
+                                        }
+                                    );
                                 });
                         }
                     );
@@ -174,13 +195,20 @@ suite('Activities', function () {
 
                 var activities = res.body.data;
 
-                assert.equal(activities.length, 2);
+                assert.equal(activities.length, 3);
                 activities.forEach(function (activity) {
-                    assert.equal(activity.data.object.id, topic.id);
-                    assert.equal(activity.data.object.sourcePartnerId, partner.id);
                     assert.notProperty(activity.data.actor, 'email');
                     assert.notProperty(activity.data.actor, 'imageUrl');
                     assert.notProperty(activity.data.actor, 'language');
+
+                    if (activity.data.object['@type'] === 'User') {
+                        assert.notProperty(activity.data.object, 'email');
+                        assert.notProperty(activity.data.object, 'imageUrl');
+                        assert.notProperty(activity.data.object, 'language');                            
+                    } else {
+                        assert.equal(activity.data.object.id, topic.id);
+                        assert.equal(activity.data.object.sourcePartnerId, partner.id);
+                    }
                 });
 
                 done();
@@ -196,8 +224,14 @@ suite('Activities', function () {
                     assert.notProperty(activity.data.actor, 'email');
                     assert.notProperty(activity.data.actor, 'imageUrl');
                     assert.notProperty(activity.data.actor, 'language');
+
+                    if (activity.data.object['@type'] === 'User') {
+                        assert.notProperty(activity.data.object, 'email');
+                        assert.notProperty(activity.data.object, 'imageUrl');
+                        assert.notProperty(activity.data.object, 'language');                            
+                    }
                 });
-                assert.equal(activities.length, 4);
+                assert.equal(activities.length, 5);
 
                 done();
             });
