@@ -6661,9 +6661,7 @@ module.exports = function (app) {
                                             \'id\', u.id, \
                                             \'type\', data#>>\'{actor, type}\', \
                                             \'name\', u.name, \
-                                            \'company\', u.company, \
-                                            \'email\', u.email, \
-                                            \'imageUrl\', u."imageUrl" \
+                                            \'company\', u.company \
                                         ) \
                                     ), \
                                 false) INTO finalData FROM "Users" u WHERE u.id::text = data#>>\'{actor, id}\'; \
@@ -6741,6 +6739,7 @@ module.exports = function (app) {
                                             \'visibility\', t.visibility, \
                                             \'categories\', t.categories, \
                                             \'sourcePartnerId\', t."sourcePartnerId", \
+                                            \'sourcePartnerObjectId\', t."sourcePartnerObjectId", \
                                             \'creatorId\', t."creatorId", \
                                             \'tokenJoin\', t."tokenJoin", \
                                             \'padUrl\', t."padUrl", \
@@ -6761,9 +6760,7 @@ module.exports = function (app) {
                                             \'id\', u.id, \
                                             \'@type\', finalData#>>\'{object, @type}\', \
                                             \'name\', u.name, \
-                                            \'company\', u."company", \
-                                            \'language\', u.language, \
-                                            \'imageUrl\', u."imageUrl" \
+                                            \'company\', u."company" \
                                         ) \
                                     ), \
                                 false) INTO finalData FROM "Users" u WHERE u.id::text = data#>>\'{object, id}\'; \
@@ -6858,6 +6855,7 @@ module.exports = function (app) {
                                             \'visibility\', t.visibility, \
                                             \'categories\', t.categories, \
                                             \'sourcePartnerId\', t."sourcePartnerId", \
+                                            \'sourcePartnerObjectId\', t."sourcePartnerObjectId", \
                                             \'creatorId\', t."creatorId", \
                                             \'tokenJoin\', t."tokenJoin", \
                                             \'padUrl\', t."padUrl", \
@@ -7142,9 +7140,7 @@ module.exports = function (app) {
                                     \'id\', u.id, \
                                     \'type\', data#>>\'{actor, type}\', \
                                     \'name\', u.name, \
-                                    \'company\', u.company, \
-                                    \'email\', u.email, \
-                                    \'imageUrl\', u."imageUrl" \
+                                    \'company\', u.company \
                                 ) \
                             ), \
                         false) INTO finalData FROM "Users" u WHERE u.id::text = data#>>\'{actor, id}\'; \
@@ -7222,6 +7218,7 @@ module.exports = function (app) {
                                     \'visibility\', t.visibility, \
                                     \'categories\', t.categories, \
                                     \'sourcePartnerId\', t."sourcePartnerId", \
+                                    \'sourcePartnerObjectId\', t."sourcePartnerObjectId", \
                                     \'creatorId\', t."creatorId", \
                                     \'tokenJoin\', t."tokenJoin", \
                                     \'padUrl\', t."padUrl", \
@@ -7242,9 +7239,7 @@ module.exports = function (app) {
                                     \'id\', u.id, \
                                     \'@type\', finalData#>>\'{object, @type}\', \
                                     \'name\', u.name, \
-                                    \'company\', u."company", \
-                                    \'language\', u.language, \
-                                    \'imageUrl\', u."imageUrl" \
+                                    \'company\', u."company" \
                                 ) \
                             ), \
                         false) INTO finalData FROM "Users" u WHERE u.id::text = data#>>\'{object, id}\'; \
@@ -7339,6 +7334,7 @@ module.exports = function (app) {
                                     \'visibility\', t.visibility, \
                                     \'categories\', t.categories, \
                                     \'sourcePartnerId\', t."sourcePartnerId", \
+                                    \'sourcePartnerObjectId\', t."sourcePartnerObjectId", \
                                     \'creatorId\', t."creatorId", \
                                     \'tokenJoin\', t."tokenJoin", \
                                     \'padUrl\', t."padUrl", \
@@ -7633,9 +7629,7 @@ module.exports = function (app) {
                                     \'id\', u.id, \
                                     \'type\', data#>>\'{actor, type}\', \
                                     \'name\', u.name, \
-                                    \'company\', u.company, \
-                                    \'email\', u.email, \
-                                    \'imageUrl\', u."imageUrl" \
+                                    \'company\', u.company \
                                 ) \
                             ), \
                         false) INTO finalData FROM "Users" u WHERE u.id::text = data#>>\'{actor, id}\'; \
@@ -7713,6 +7707,7 @@ module.exports = function (app) {
                                     \'visibility\', t.visibility, \
                                     \'categories\', t.categories, \
                                     \'sourcePartnerId\', t."sourcePartnerId", \
+                                    \'sourcePartnerObjectId\', t."sourcePartnerObjectId", \
                                     \'creatorId\', t."creatorId", \
                                     \'tokenJoin\', t."tokenJoin", \
                                     \'padUrl\', t."padUrl", \
@@ -7733,9 +7728,7 @@ module.exports = function (app) {
                                     \'id\', u.id, \
                                     \'@type\', finalData#>>\'{object, @type}\', \
                                     \'name\', u.name, \
-                                    \'company\', u."company", \
-                                    \'language\', u.language, \
-                                    \'imageUrl\', u."imageUrl" \
+                                    \'company\', u."company" \
                                 ) \
                             ), \
                         false) INTO finalData FROM "Users" u WHERE u.id::text = data#>>\'{object, id}\'; \
@@ -7830,6 +7823,7 @@ module.exports = function (app) {
                                     \'visibility\', t.visibility, \
                                     \'categories\', t.categories, \
                                     \'sourcePartnerId\', t."sourcePartnerId", \
+                                    \'sourcePartnerObjectId\', t."sourcePartnerObjectId", \
                                     \'creatorId\', t."creatorId", \
                                     \'tokenJoin\', t."tokenJoin", \
                                     \'padUrl\', t."padUrl", \

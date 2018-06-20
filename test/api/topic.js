@@ -1148,6 +1148,7 @@ module.exports.topicList = topicList;
 module.exports.topicCommentCreate = topicCommentCreate;
 
 module.exports.topicMemberGroupsCreate = topicMemberGroupsCreate;
+module.exports.topicMemberUsersCreate = topicMemberUsersCreate;
 
 
 var chai = require('chai');

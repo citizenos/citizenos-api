@@ -87,7 +87,11 @@ suite('Users', function () {
 
                     var activities = res.body.data;
                     assert.equal(activities.length, 3);
-
+                    activities.forEach(function (activity) {
+                        assert.notProperty(activity.data.actor, 'email');
+                        assert.notProperty(activity.data.actor, 'imageUrl');
+                        assert.notProperty(activity.data.actor, 'language');
+                    });
                     done();
                 });
             });
@@ -174,6 +178,9 @@ suite('Activities', function () {
                 activities.forEach(function (activity) {
                     assert.equal(activity.data.object.id, topic.id);
                     assert.equal(activity.data.object.sourcePartnerId, partner.id);
+                    assert.notProperty(activity.data.actor, 'email');
+                    assert.notProperty(activity.data.actor, 'imageUrl');
+                    assert.notProperty(activity.data.actor, 'language');
                 });
 
                 done();
@@ -185,6 +192,11 @@ suite('Activities', function () {
                 if (err) return done(err);
 
                 var activities = res.body.data;
+                activities.forEach(function (activity) {
+                    assert.notProperty(activity.data.actor, 'email');
+                    assert.notProperty(activity.data.actor, 'imageUrl');
+                    assert.notProperty(activity.data.actor, 'language');
+                });
                 assert.equal(activities.length, 4);
 
                 done();
