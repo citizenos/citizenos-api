@@ -1160,7 +1160,6 @@ var app = require('../../app');
 var config = app.get('config');
 var db = app.get('db');
 var _ = app.get('lodash');
-var util = require('util');
 var cosUtil = app.get('util');
 var async = app.get('async');
 var fs = app.get('fs');
@@ -1347,12 +1346,11 @@ suite('Users', function () {
             var agent = request.agent(app);
             var email = 'test_topicr_' + new Date().getTime() + '@test.ee';
             var password = 'testPassword123';
-            var topicCategories = [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.communities]; 
+            var topicCategories = [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.communities];
 
             var user;
             var topic;
             var partner;
-            var sourcePartnerObjectId = '911-112-random';
 
             suiteSetup(function (done) {
                 userLib.createUserAndLogin(agent, email, password, null, function (err, res) {
@@ -1365,6 +1363,7 @@ suite('Users', function () {
 
                         topic = res.body.data;
 
+                        //FIXME: This is a hack. Actually we should have topicCreate that enables setting the Partner headers and sourcePartnerObjectId but not sure what the interface should look like
                         Partner
                             .create({
                                 website: 'notimportant',
@@ -1373,22 +1372,11 @@ suite('Users', function () {
                             .then(function (res) {
                                 partner = res;
 
-                                User
-                                    .update(
-                                        {
-                                            sourcePartnerId: partner.id
-                                        },
-                                        {
-                                            where: {
-                                                id: user.id
-                                            }
-                                        }
-                                    );
-                                Topic
+                                return Topic
                                     .update(
                                         {
                                             sourcePartnerId: partner.id,
-                                            sourcePartnerObjectId: sourcePartnerObjectId
+                                            sourcePartnerObjectId: cosUtil.randomString()
                                         },
                                         {
                                             where: {
@@ -1396,24 +1384,18 @@ suite('Users', function () {
                                             },
                                             returning: true
                                         }
-                                    )
-                                    .then(function () {
-                                        topic.sourcePartnerId = partner.id;
+                                    );
+                            })
+                            .then(function (resTopic) {
+                                var updatedTopic = resTopic[1][0].toJSON();
 
-                                        Topic
-                                            .findOne({
-                                                where: {
-                                                    id: topic.id
-                                                }
-                                            })
-                                            .then(function (res) {
-                                                topic.updatedAt = moment.utc(res.updatedAt).format('YYYY-MM-DDTHH:mm:ss.SSS') + 'Z';
-                                                done();
-                                            });
-                                        
-                                    });
-                            
-                            });
+                                topic.sourcePartnerId = updatedTopic.sourcePartnerId;
+                                topic.sourcePartnerObjectId = updatedTopic.sourcePartnerObjectId;
+                                topic.updatedAt = updatedTopic.updatedAt.toJSON();
+
+                                return done();
+                            })
+                            .catch(done);
                     });
                 });
             });
@@ -2362,7 +2344,7 @@ suite('Users', function () {
 
                     var errors = res.body.errors;
 
-                    assert.equal(errors.categories, util.format('Maximum of %d categories allowed.', Topic.CATEGORIES_COUNT_MAX));
+                    assert.equal(errors.categories, 'Maximum of :count categories allowed.'.replace(':count', Topic.CATEGORIES_COUNT_MAX));
 
                     done();
                 });

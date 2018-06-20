@@ -590,6 +590,7 @@ module.exports = function (app) {
                      t."endsAt", \
                      t."padUrl", \
                      t."sourcePartnerId", \
+                     t."sourcePartnerObjectId", \
                      t."updatedAt", \
                      t."createdAt", \
                      t."hashtag", \
@@ -1019,6 +1020,7 @@ module.exports = function (app) {
                         t."endsAt", \
                         t."padUrl", \
                         t."sourcePartnerId", \
+                        t."sourcePartnerObjectId", \
                         t."createdAt", \
                         t."updatedAt", \
                         c.id as "creator.id", \
@@ -1666,6 +1668,7 @@ module.exports = function (app) {
                      END as "tokenJoin", \
                      t.categories, \
                      t."sourcePartnerId", \
+                     t."sourcePartnerObjectId", \
                      t."endsAt", \
                      t."createdAt", \
                      c.id as "creator.id", \
@@ -1949,6 +1952,7 @@ module.exports = function (app) {
                     t."endsAt", \
                     t."createdAt", \
                     t."sourcePartnerId", \
+                    t."sourcePartnerObjectId", \
                     c.id as "creator.id", \
                     c.name as "creator.name", \
                     c.company as "creator.company", \

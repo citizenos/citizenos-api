@@ -193,6 +193,7 @@ module.exports = function (sequelize, DataTypes) {
                         categories: this.dataValues.categories,
                         padUrl: this.dataValues.padUrl,
                         sourcePartnerId: this.dataValues.sourcePartnerId,
+                        sourcePartnerObjectId: this.dataValues.sourcePartnerObjectId,
                         endsAt: this.dataValues.endsAt,
                         hashtag: this.dataValues.hashtag,
                         createdAt: this.dataValues.createdAt,
