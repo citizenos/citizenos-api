@@ -1847,7 +1847,7 @@ module.exports = function (app) {
      * Topic list
      */
     app.get('/api/topics', function (req, res, next) {
-        var limitMax = 100;
+        var limitMax = 500;
         var limitDefault = 26;
         var join = '';
         var returncolumns = '';
