@@ -577,7 +577,6 @@ module.exports = function (app) {
             .get(config.services.idCard.serviceUrl)
             .query({token: token})
             .set('X-API-KEY', config.services.idCard.apiKey)
-            .end()
             .then(function (res) {
                 var status = res.body.data.status;
 
