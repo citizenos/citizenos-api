@@ -5304,25 +5304,10 @@ module.exports = function (app) {
                                 })
                                 .then(function (userConnectionInfo) {
                                     if (!userConnectionInfo) {
-                                        var fullName = null;
-
-                                        // ID-card has signers first and last name, but Mobiil-ID does not. For Mobiil-ID we update the name when signing is completed.
-                                        if (personalInfo.firstName && personalInfo.lastName) {
-                                            // TODO: Basically lodash.capitalize but lodash update requires a big effort - https://trello.com/c/2mCYtfa2/266-technical-dept-upgrade-lodash-to-4-x
-
-                                            var firstName = personalInfo.firstName.toLowerCase();
-                                            firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
-
-                                            var lastName = personalInfo.lastName.toLowerCase();
-                                            lastName = lastName.charAt(0).toUpperCase() + lastName.slice(1);
-
-                                            fullName = firstName + ' ' + lastName;
-                                        }
-
                                         return User
                                             .create(
                                                 {
-                                                    name: fullName,
+                                                    name: db.fn('initcap', personalInfo.firstName + ' ' + personalInfo.lastName),
                                                     source: User.SOURCES.citizenos
                                                 },
                                                 {
@@ -5847,18 +5832,11 @@ module.exports = function (app) {
                             );
 
                         if (!req.user) {
-                            // TODO: Basically lodash.capitalize but lodash update requires a big effort - https://trello.com/c/2mCYtfa2/266-technical-dept-upgrade-lodash-to-4-x
-                            var firstName = signedDocInfo.signerInfo.firstName.toLowerCase();
-                            firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
-
-                            var lastName = signedDocInfo.signerInfo.lastName.toLowerCase();
-                            lastName = lastName.charAt(0).toUpperCase() + lastName.slice(1);
-
                             // When starting signing with Mobile-ID we have no full name, thus we need to fetch and update
                             var userNameUpdatePromise = User
                                 .update(
                                     {
-                                        name: firstName + ' ' + lastName
+                                        name: db.fn('initcap', signedDocInfo.signerInfo.firstName + ' ' + signedDocInfo.signerInfo.lastName)
                                     },
                                     {
                                         where: {
