@@ -776,7 +776,7 @@ suite('Auth', function () {
 
                                                     // Makes sure login succeeded AND consistency between /auth/status and /auth/mobile/status endpoints
                                                     assert.deepEqual(res.body.data, userInfoFromMobiilIdStatusResponse);
-                                                    assert.equal(userInfoFromMobiilIdStatusResponse.name, 'Mary änn O’connež-šuslik'); // Special check for encoding issues 
+                                                    assert.equal(userInfoFromMobiilIdStatusResponse.name, 'Mary Änn O’Connež-Šuslik'); // Special check for encoding issues
 
                                                     return done();
                                                 });
@@ -1022,7 +1022,7 @@ suite('Auth', function () {
 
                                                     // Makes sure login succeeded AND consistency between /auth/status and /auth/mobile/status endpoints
                                                     assert.deepEqual(res.body.data, userInfoFromSmartIdStatusResponse);
-                                                    assert.equal(userInfoFromSmartIdStatusResponse.name, 'Demo Smart-id'); // Special check for encoding issues 
+                                                    assert.equal(userInfoFromSmartIdStatusResponse.name, 'Demo Smart-Id'); // Special check for encoding issues
 
                                                     return done();
                                                 });

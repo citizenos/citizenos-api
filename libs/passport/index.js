@@ -61,7 +61,6 @@ module.exports = function (app) {
                     })
                     .then(function (userConnectionInfo) {
                         if (!userConnectionInfo) {
-                            // TODO: Basically lodash.capitalize but lodash update requires a big effort - https://trello.com/c/2mCYtfa2/266-technical-dept-upgrade-lodash-to-4-x
                             return db.transaction(function (t) {
                                 return User
                                     .findOrCreate({
@@ -152,7 +151,6 @@ module.exports = function (app) {
                     })
                     .then(function (userConnectionInfo) {
                         if (!userConnectionInfo) {
-                            // TODO: Basically lodash.capitalize but lodash update requires a big effort - https://trello.com/c/2mCYtfa2/266-technical-dept-upgrade-lodash-to-4-x
                             return db.transaction(function (t) {
                                 return User
                                     .findOrCreate({
@@ -176,12 +174,17 @@ module.exports = function (app) {
                                         }
 
                                         return UserConnection
-                                            .create({
-                                                userId: user.id,
-                                                connectionId: UserConnection.CONNECTION_IDS.facebook,
-                                                connectionUserId: sourceId,
-                                                connectionData: profile
-                                            }, {transaction: t})
+                                            .create(
+                                                {
+                                                    userId: user.id,
+                                                    connectionId: UserConnection.CONNECTION_IDS.facebook,
+                                                    connectionUserId: sourceId,
+                                                    connectionData: profile
+                                                },
+                                                {
+                                                    transaction: t
+                                                }
+                                            )
                                             .then(function () {
                                                 if (!user.imageUrl) {
                                                     logger.info('Updating User profile image from social network');
@@ -227,19 +230,28 @@ module.exports = function (app) {
                     })
                     .then(function (user) {
                         if (!user || !user.password) {
-                            return done({message: 'The account does not exists.', code: 1}, false);
+                            return done({
+                                message: 'The account does not exists.',
+                                code: 1
+                            }, false);
                         }
 
                         if (!user.emailIsVerified) {
                             emailLib.sendVerification(user.email, user.emailVerificationCode);
 
-                            return done({message: 'The account verification has not been completed. Please check your e-mail.', code: 2}, false);
+                            return done({
+                                message: 'The account verification has not been completed. Please check your e-mail.',
+                                code: 2
+                            }, false);
                         }
 
                         if (user.password === cryptoLib.getHash(password, 'sha256')) {
                             return done(null, user.toJSON());
                         } else {
-                            return done({message: {password: 'Invalid password'}, code: 3}, false);
+                            return done({
+                                message: {password: 'Invalid password'},
+                                code: 3
+                            }, false);
                         }
                     });
             }

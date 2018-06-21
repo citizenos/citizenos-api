@@ -514,18 +514,11 @@ module.exports = function (app) {
                     })
                     .then(function (userConnectionInfo) {
                         if (!userConnectionInfo) {
-                            // TODO: Basically lodash.capitalize but lodash update requires a big effort - https://trello.com/c/2mCYtfa2/266-technical-dept-upgrade-lodash-to-4-x
-                            var firstName = personalInfo.firstName.toLowerCase();
-                            firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
-
-                            var lastName = personalInfo.lastName.toLowerCase();
-                            lastName = lastName.charAt(0).toUpperCase() + lastName.slice(1);
-
                             return db.transaction(function (t) {
                                 return User
                                     .create(
                                         {
-                                            name: firstName + ' ' + lastName,
+                                            name: db.fn('initcap', personalInfo.firstName + ' ' + personalInfo.lastName),
                                             source: User.SOURCES.citizenos
                                         },
                                         {
@@ -631,18 +624,11 @@ module.exports = function (app) {
                     })
                     .then(function (userConnectionInfo) {
                         if (!userConnectionInfo) {
-                            // TODO: Basically lodash.capitalize but lodash update requires a big effort - https://trello.com/c/2mCYtfa2/266-technical-dept-upgrade-lodash-to-4-x
-                            var firstName = personalInfo.firstName.toLowerCase();
-                            firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
-
-                            var lastName = personalInfo.lastName.toLowerCase();
-                            lastName = lastName.charAt(0).toUpperCase() + lastName.slice(1);
-
                             return db.transaction(function (t) {
                                 return User
                                     .create(
                                         {
-                                            name: firstName + ' ' + lastName,
+                                            name: db.fn('initcap', personalInfo.firstName + ' ' + personalInfo.lastName),
                                             source: User.SOURCES.citizenos
                                         },
                                         {
@@ -826,18 +812,11 @@ module.exports = function (app) {
                     })
                     .then(function (userConnectionInfo) {
                         if (!userConnectionInfo) {
-                            // TODO: Basically lodash.capitalize but lodash update requires a big effort - https://trello.com/c/2mCYtfa2/266-technical-dept-upgrade-lodash-to-4-x
-                            var firstName = personalInfo.firstName.toLowerCase();
-                            firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
-
-                            var lastName = personalInfo.lastName.toLowerCase();
-                            lastName = lastName.charAt(0).toUpperCase() + lastName.slice(1);
-
                             return db.transaction(function (t) {
                                 return User
                                     .create(
                                         {
-                                            name: firstName + ' ' + lastName,
+                                            name: db.fn('initcap', personalInfo.firstName + ' ' + personalInfo.lastName),
                                             source: User.SOURCES.citizenos
                                         },
                                         {
