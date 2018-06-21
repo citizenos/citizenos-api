@@ -655,7 +655,10 @@ module.exports = function (app) {
                         }
                     });
             })
-            .spread(function (user, created) {
+            .then(function (userInfo) {
+                var user = userInfo[0];
+                var created = userInfo[1];
+
                 setAuthCookie(res, user.id);
                 if (created) {
                     return res.ok(user, 3); // New user was created
