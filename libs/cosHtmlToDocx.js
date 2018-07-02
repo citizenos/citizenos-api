@@ -84,25 +84,32 @@ var getFilesPath = function (pathIn) {
 
 var getImageFile = function (url, dirpath) {
     var fileDirPath = getFilesPath(dirpath);
-    
+
+    // Base64 quickfix
+    if (url.indexOf('data:') === 0) {
+        return Promise.resolve();
+    }
+
     return new Promise(function (resolve, reject) {
         fsExtra.ensureDir(fileDirPath, {mode: '0760'}, function () {
             var filename = url.split('/').pop().split('#')[0].split('?')[0];
             var filepath = path.join(fileDirPath, filename);
             var file = fs.createWriteStream(filepath);
-            
-            https.get(url, function (response) {
-                response.pipe(file);
-                file.on('finish', function () {
-                    file.close();
 
-                    return resolve(filepath);
+            https
+                .get(url, function (response) {
+                    response.pipe(file);
+                    file.on('finish', function () {
+                        file.close();
+
+                        return resolve(filepath);
+                    });
+                })
+                .on('error', function (err) { // Handle errors
+                    fs.unlink(filepath);
+
+                    return reject(err);
                 });
-            }).on('error', function (err) { // Handle errors
-                fs.unlink(filepath);
-            
-                return reject(err);
-            });
         });
     });
 };
@@ -179,7 +186,7 @@ function CosHtmlToDocx (html, title, resPath) {
 
         return false;
     };
-    
+
     var _isListElement = function (element) {
         return element.type === 'tag' && element.name && (element.name === 'ul' || element.name === 'ol' || element.name === 'li');
     };
@@ -306,9 +313,9 @@ function CosHtmlToDocx (html, title, resPath) {
 
             return _getItemDepth(item.parent, depth, isList);
         } else if (isList) {
-            return depth - 1; 
+            return depth - 1;
         }
-        
+
         return depth;
     };
 
@@ -350,7 +357,7 @@ function CosHtmlToDocx (html, title, resPath) {
 
                         return true;
                     }
-                }                
+                }
             });
         }
     };
@@ -377,7 +384,7 @@ function CosHtmlToDocx (html, title, resPath) {
 
         if (item.name && _isCodeElement(item)) {
             properties.push('code');
-        }    
+        }
         if (_isAlignmentElement(item)) {
             properties.push(item.attribs.class);
         }
@@ -394,7 +401,7 @@ function CosHtmlToDocx (html, title, resPath) {
 
         return properties;
     };
-    
+
     var _listItems = function (element, items) {
         items = items || [];
         if (element.children) {
@@ -405,17 +412,17 @@ function CosHtmlToDocx (html, title, resPath) {
                     if (!_.isEqual(element, lastItem)) {
                         items.push(element);
                     }
-    
+
                     return items;
                 } else if (_isHeadingElement(child) && element.name === 'li') {
                     lastItem = items[items.length - 1];
                     if (!_.isEqual(child, lastItem)) {
                         items.push(child);
                     }
-    
+
                     return items;
                 }
-    
+
                 return _listItems(child, items);
             });
         }
@@ -433,14 +440,14 @@ function CosHtmlToDocx (html, title, resPath) {
                 var paragrpahProperties = [];
                 var d = _getItemDepth(texts[0].item, null, true);
                 _getListItemProperties(li, paragrpahProperties);
-                paragrpahProperties = _.uniq(paragrpahProperties, function (v) { 
+                paragrpahProperties = _.uniq(paragrpahProperties, function (v) {
                     return v;
                 });
                 var paragraphElement = {
                     paragraph: [],
                     texts: texts
                 };
-                
+
                 paragrpahProperties.forEach(function (prop) {
                     if (prop === 'bullet' || prop === 'indent' || prop === 'numberLi') { //Add level to list item
                         var propObj = {};
@@ -596,7 +603,7 @@ function CosHtmlToDocx (html, title, resPath) {
                         var paragraph = new docx.Paragraph();
                         var addImageInProgress = false;
                         row.paragraph.forEach(function (method) {
-                            
+
                             if (method && typeof method === 'object') {
                                 var key = Object.keys(method);
                                 if (key[0] === 'img') {
@@ -620,14 +627,17 @@ function CosHtmlToDocx (html, title, resPath) {
                                 } else if (key[0] === 'indent') {
                                     var multiplier = method[key[0]];
                                     var start = 720 * (multiplier + 1);
-                                    paragraph.indent({left: start, hanging: multiplier});
+                                    paragraph.indent({
+                                        left: start,
+                                        hanging: multiplier
+                                    });
                                 } else if (paragraph[key[0]]) {
                                     paragraph[key[0]](method[key[0]]);
-                                } 
+                                }
                             } else if (paragraph[method]) {
                                 paragraph[method]();
                             } else if (['code'].indexOf(method) > -1) {
-                                paragraph.style(method);                         
+                                paragraph.style(method);
                             }
                         });
 
