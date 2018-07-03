@@ -82,27 +82,55 @@ var getFilesPath = function (pathIn) {
     return pathOut;
 };
 
+var getFileNameFromPath = function (path) {
+    if (!path) {
+        return null;
+    }
+    if (path.indexOf('data') === 0) {
+        var name = path.split(';base64,').pop().substr(0, 7);
+        var extension = path.split(';base64,')[0].split('/')[1];
+
+        return name + '.' + extension;
+    }
+
+    return path.split('/').pop().split('#')[0].split('?')[0];
+};
+
 var getImageFile = function (url, dirpath) {
     var fileDirPath = getFilesPath(dirpath);
     
     return new Promise(function (resolve, reject) {
         fsExtra.ensureDir(fileDirPath, {mode: '0760'}, function () {
-            var filename = url.split('/').pop().split('#')[0].split('?')[0];
+            var filename = getFileNameFromPath(url);
             var filepath = path.join(fileDirPath, filename);
-            var file = fs.createWriteStream(filepath);
             
-            https.get(url, function (response) {
-                response.pipe(file);
-                file.on('finish', function () {
-                    file.close();
+            if (url.indexOf('data') === 0) {
+                var imageData = url.split(';base64,').pop();
+        
+                fs.writeFile(filepath, imageData, {encoding: 'base64'}, function (err) {
+                    if (err) {
+                        fs.unlink(filepath);
 
+                        return reject(err);
+                    }
+                    
                     return resolve(filepath);
                 });
-            }).on('error', function (err) { // Handle errors
-                fs.unlink(filepath);
-            
-                return reject(err);
-            });
+            } else {
+                var file = fs.createWriteStream(filepath);
+                https.get(url, function (response) {
+                    response.pipe(file);
+                    file.on('finish', function () {
+                        file.close();
+
+                        return resolve(filepath);
+                    });
+                }).on('error', function (err) { // Handle errors
+                    fs.unlink(filepath);
+                
+                    return reject(err);
+                });
+            }
         });
     });
 };
@@ -601,7 +629,7 @@ function CosHtmlToDocx (html, title, resPath) {
                                 var key = Object.keys(method);
                                 if (key[0] === 'img') {
 
-                                    var filename = method.img.split('/').pop().split('#')[0].split('?')[0];
+                                    var filename = getFileNameFromPath(method.img);
                                     var filesDirPath = getFilesPath(resPath);
                                     var filePath = path.join(filesDirPath, filename);
                                     var image1 = finalDoc.createImage(filePath);
