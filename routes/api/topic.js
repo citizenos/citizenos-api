@@ -1769,13 +1769,19 @@ module.exports = function (app) {
                     ) AS tc ON (tc."topicId" = t.id) \
                     LEFT JOIN ( \
                         SELECT \
-                            tc."topicId", \
-                            c."createdAt" \
-                        FROM "TopicComments" tc \
-                        JOIN "Comments" c ON c.id = tc."commentId" \
-                        GROUP BY tc."topicId", c."createdAt" \
-                        ORDER BY c."createdAt" DESC \
-                        LIMIT 1 \
+                            tcc."topicId", \
+                            MAX(tcc."createdAt") as "createdAt" \
+                            FROM \
+                                (SELECT \
+                                    tc."topicId", \
+                                    c."createdAt" \
+                                FROM "TopicComments" tc \
+                                JOIN "Comments" c ON c.id = tc."commentId" \
+                                GROUP BY tc."topicId", c."createdAt" \
+                                ORDER BY c."createdAt" DESC \
+                                ) AS tcc \
+                                GROUP BY tcc."topicId" \
+                            WHERE tcc."topicId" = t.id \
                     ) AS com ON (com."topicId" = t.id) \
                     ' + join + ' \
                 WHERE ' + where + ' \
@@ -2018,13 +2024,19 @@ module.exports = function (app) {
                     ) AS tc ON (tc."topicId" = t.id) \
                     LEFT JOIN ( \
                         SELECT \
-                            tc."topicId", \
-                            c."createdAt" \
-                        FROM "TopicComments" tc \
-                        JOIN "Comments" c ON c.id = tc."commentId" \
-                        GROUP BY tc."topicId", c."createdAt" \
-                        ORDER BY c."createdAt" DESC \
-                        LIMIT 1 \
+                            tcc."topicId", \
+                            MAX(tcc."createdAt") as "createdAt" \
+                            FROM \
+                                (SELECT \
+                                    tc."topicId", \
+                                    c."createdAt" \
+                                FROM "TopicComments" tc \
+                                JOIN "Comments" c ON c.id = tc."commentId" \
+                                GROUP BY tc."topicId", c."createdAt" \
+                                ORDER BY c."createdAt" DESC \
+                                ) AS tcc \
+                                GROUP BY tcc."topicId" \
+                            WHERE tcc."topicId" = t.id \
                     ) AS com ON (com."topicId" = t.id) \
                     LEFT JOIN ( \
                         SELECT \
