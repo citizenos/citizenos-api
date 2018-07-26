@@ -1780,8 +1780,7 @@ module.exports = function (app) {
                                 GROUP BY tc."topicId", c."createdAt" \
                                 ORDER BY c."createdAt" DESC \
                                 ) AS tcc \
-                                GROUP BY tcc."topicId" \
-                            WHERE tcc."topicId" = t.id \
+                            GROUP BY tcc."topicId" \
                     ) AS com ON (com."topicId" = t.id) \
                     ' + join + ' \
                 WHERE ' + where + ' \
@@ -2035,8 +2034,7 @@ module.exports = function (app) {
                                 GROUP BY tc."topicId", c."createdAt" \
                                 ORDER BY c."createdAt" DESC \
                                 ) AS tcc \
-                                GROUP BY tcc."topicId" \
-                            WHERE tcc."topicId" = t.id \
+                            GROUP BY tcc."topicId" \
                     ) AS com ON (com."topicId" = t.id) \
                     LEFT JOIN ( \
                         SELECT \
