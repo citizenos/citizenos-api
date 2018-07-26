@@ -2646,38 +2646,68 @@ suite('Users', function () {
             });
 
             test('Success', function (done) {
-                topicList(agentCreator, creator.id, null, null, null, function (err, res) {
+                var type = Comment.TYPES.pro;
+                var type2 = Comment.TYPES.con;
+                var subject = 'TEST';
+                var text = 'THIS IS A TEST';
+                var comment, comment2;
+                topicCommentCreate(agentCreator, creator.id, topic.id, null, null, Comment.TYPES.pro, subject, text, function (err, res) {
                     if (err) return done(err);
 
-                    var list = res.body.data;
-                    assert.equal(list.count, 1);
+                    comment = res.body.data;
 
-                    var rows = list.rows;
-                    assert.equal(rows.length, 1);
+                    assert.property(comment, 'id');
+                    assert.equal(comment.type, type);
+                    assert.equal(comment.subject, subject);
+                    assert.equal(comment.text, text);
+                    assert.equal(comment.creator.id, creator.id);
+                    
+                    topicCommentCreate(agentCreator, creator.id, topic.id, null, null, Comment.TYPES.con, subject, text, function (err, res) {
+                        if (err) return done(err);
 
-                    var topicRead = rows[0];
-                    assert.equal(topicRead.id, topic.id);
-                    assert.equal(topicRead.title, topic.title);
-                    assert.equal(topicRead.description, topic.description);
-                    assert.equal(topicRead.status, topic.status);
-                    assert.equal(topicRead.visibility, topic.visibility);
-                    assert.property(topicRead, 'createdAt');
-                    assert.notProperty(topicRead, 'events');
+                        comment2 = res.body.data;
 
-                    var creator = topicRead.creator;
-                    assert.equal(creator.id, topic.creator.id);
+                        assert.property(comment2, 'id');
+                        assert.equal(comment2.type, type2);
+                        assert.equal(comment2.subject, subject);
+                        assert.equal(comment2.text, text);
+                        assert.equal(comment2.creator.id, creator.id);
 
-                    var members = topicRead.members;
-                    assert.equal(members.users.count, 2);
-                    assert.equal(members.groups.count, 1);
+                        topicList(agentCreator, creator.id, null, null, null, function (err, res) {
+                            if (err) return done(err);
 
-                    var permission = topicRead.permission;
-                    assert.equal(permission.level, TopicMember.LEVELS.admin);
+                            var list = res.body.data;
+                            assert.equal(list.count, 1);
 
-                    var comments = topicRead.comments;
-                    assert.equal(comments.count, 0);
+                            var rows = list.rows;
+                            assert.equal(rows.length, 1);
 
-                    done();
+                            var topicRead = rows[0];
+                            assert.equal(topicRead.id, topic.id);
+                            assert.equal(topicRead.title, topic.title);
+                            assert.equal(topicRead.description, topic.description);
+                            assert.equal(topicRead.status, topic.status);
+                            assert.equal(topicRead.visibility, topic.visibility);
+                            assert.property(topicRead, 'createdAt');
+                            assert.notProperty(topicRead, 'events');
+
+                            var creator = topicRead.creator;
+                            assert.equal(creator.id, topic.creator.id);
+
+                            var members = topicRead.members;
+                            assert.equal(members.users.count, 2);
+                            assert.equal(members.groups.count, 1);
+
+                            var permission = topicRead.permission;
+                            assert.equal(permission.level, TopicMember.LEVELS.admin);
+
+                            var comments = topicRead.comments;
+                            assert.equal(comments.count, 2);
+                            assert.equal(comments.lastCreatedAt, comment2.createdAt);
+
+                            done();
+                        });
+                    });
                 });
             });
 
@@ -6533,7 +6563,6 @@ suite('Users', function () {
                         done();
                     });
                 });
-
 
                 test('Success - Comments with replies - c1->r1.1 c2->r2.1 c2->r2.2', function (done) {
                     var replyText11 = 'R1.1';

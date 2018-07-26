@@ -1684,8 +1684,9 @@ module.exports = function (app) {
                         WHEN t.status = \'followUp\' THEN 3 \
                      ELSE 4 \
                      END AS "order", \
-                     COALESCE(tc.count, 0) AS "comments.count" \
-                     ' + returncolumns + '\
+                     COALESCE(tc.count, 0) AS "comments.count", \
+                     COALESCE(com."createdAt", NULL) AS "comments.lastCreatedAt" \
+                     ' + returncolumns + ' \
                 FROM "Topics" t \
                     LEFT JOIN ( \
                         SELECT \
@@ -1763,9 +1764,19 @@ module.exports = function (app) {
                         SELECT \
                             "topicId", \
                             COUNT(*) AS count \
-                        FROM "TopicComments"\
+                        FROM "TopicComments" \
                         GROUP BY "topicId" \
                     ) AS tc ON (tc."topicId" = t.id) \
+                    LEFT JOIN ( \
+                        SELECT \
+                            tc."topicId", \
+                            c."createdAt" \
+                        FROM "TopicComments" tc \
+                        JOIN "Comments" c ON c.id = tc."commentId" \
+                        GROUP BY tc."topicId", c."createdAt" \
+                        ORDER BY c."createdAt" DESC \
+                        LIMIT 1 \
+                    ) AS com ON (com."topicId" = t.id) \
                     ' + join + ' \
                 WHERE ' + where + ' \
                 ORDER BY "order" ASC, t."updatedAt" DESC \
@@ -1965,6 +1976,7 @@ module.exports = function (app) {
                     END AS "order", \
                     tv."voteId", \
                     COALESCE(tc.count, 0) AS "comments.count", \
+                    COALESCE(com."createdAt", NULL) AS "comments.lastCreatedAt", \
                     count(*) OVER()::integer AS "countTotal" \
                     ' + returncolumns + ' \
                 FROM "Topics" t \
@@ -2001,9 +2013,19 @@ module.exports = function (app) {
                         SELECT \
                             "topicId", \
                             COUNT(*)::integer AS count \
-                        FROM "TopicComments"\
+                        FROM "TopicComments" \
                         GROUP BY "topicId" \
                     ) AS tc ON (tc."topicId" = t.id) \
+                    LEFT JOIN ( \
+                        SELECT \
+                            tc."topicId", \
+                            c."createdAt" \
+                        FROM "TopicComments" tc \
+                        JOIN "Comments" c ON c.id = tc."commentId" \
+                        GROUP BY tc."topicId", c."createdAt" \
+                        ORDER BY c."createdAt" DESC \
+                        LIMIT 1 \
+                    ) AS com ON (com."topicId" = t.id) \
                     LEFT JOIN ( \
                         SELECT \
                             tv."topicId", \
