@@ -1685,7 +1685,7 @@ module.exports = function (app) {
                      ELSE 4 \
                      END AS "order", \
                      COALESCE(tc.count, 0) AS "comments.count", \
-                     COALESCE(com."createdAt", NULL) AS "comments.lastCreatedAt" \
+                     com."createdAt" AS "comments.lastCreatedAt" \
                      ' + returncolumns + ' \
                 FROM "Topics" t \
                     LEFT JOIN ( \
