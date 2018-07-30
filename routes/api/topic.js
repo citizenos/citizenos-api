@@ -6976,11 +6976,25 @@ module.exports = function (app) {
         var offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         var limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
         var include = req.query.include;
+        var filters = req.query.filter || [];
 
         if (page && page > 0) {
             offset = page * limitDefault - limitDefault;
             limit = limitDefault;
         }
+
+        if (filters && !Array.isArray(filters)) {
+            filters = [filters];
+        } 
+        
+        filters.forEach(function (filter, key) {
+            filters[key] = '\'' + filter + '\'';
+        });
+        var filterBy = '';
+        if (filters.length) {
+            filterBy = 'WHERE uac.data#>>\'{object, @type}\' IN (' + filters.join(',') + ')';
+        }
+
         if (include && !Array.isArray(include)) {
             include = [include];
         } else if (!include) {
@@ -7488,6 +7502,7 @@ module.exports = function (app) {
                     ' + includes + ' \
                     ) uac \
                 JOIN pg_temp.parseData(uac.data) pdata ON uac.id = uac.id \
+                ' + filterBy + ' \
                 ORDER BY uac."updatedAt" DESC \
                 LIMIT :limit OFFSET :offset \
             ;';
@@ -7546,7 +7561,7 @@ module.exports = function (app) {
         var offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         var limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
         var include = req.query.include;
-        var filters = req.query.filter;
+        var filters = req.query.filter || [];
 
         if (page && page > 0) {
             offset = page * limitDefault - limitDefault;
@@ -7559,8 +7574,6 @@ module.exports = function (app) {
         }
         if (filters && !Array.isArray(filters)) {
             filters = [filters];
-        } else {
-            filters = [];
         }
 
         var includedSql = [];
@@ -7594,13 +7607,13 @@ module.exports = function (app) {
         });
 
         var includes = includedSql.join(' UNION ');
-        var filterSql = [];
-        filters.forEach(function (filter) {
-            filterSql.push('uac.data#>>\'{object, @type}\' = ' + filter);
+
+        filters.forEach(function (filter, key) {
+            filters[key] = '\'' + filter + '\'';
         });
         var filterBy = '';
         if (filters.length) {
-            filterBy = 'WHERE' + filterSql.join(' OR ');
+            filterBy = 'WHERE uac.data#>>\'{object, @type}\' IN (' + filters.join(',') + ')';
         }
         if (limit > limitMax) limit = limitDefault;
 
