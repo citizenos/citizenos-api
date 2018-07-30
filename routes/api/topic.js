@@ -5237,6 +5237,10 @@ module.exports = function (app) {
                             return Promise.reject();
                         case 301:
                             res.badRequest('User is not a Mobile-ID client. Please double check phone number and/or id code.', 21);
+                        
+                            return Promise.reject();
+                        case 302:
+                            res.badRequest('User certificates are revoked or suspended.', 22);
 
                             return Promise.reject();
                         default:
@@ -7542,6 +7546,7 @@ module.exports = function (app) {
         var offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         var limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
         var include = req.query.include;
+        var filters = req.query.filter;
 
         if (page && page > 0) {
             offset = page * limitDefault - limitDefault;
@@ -7552,6 +7557,12 @@ module.exports = function (app) {
         } else if (!include) {
             include = ['topics', 'groups'];
         }
+        if (filters && !Array.isArray(filters)) {
+            filters = [filters];
+        } else {
+            filters = [];
+        }
+
         var includedSql = [];
         include.forEach(function (item) {
             switch (item) {
@@ -7583,7 +7594,14 @@ module.exports = function (app) {
         });
 
         var includes = includedSql.join(' UNION ');
-
+        var filterSql = [];
+        filters.forEach(function (filter) {
+            filterSql.push('uac.data#>>\'{object, @type}\' = ' + filter);
+        });
+        var filterBy = '';
+        if (filters.length) {
+            filterBy = 'WHERE' + filterSql.join(' OR ');
+        }
         if (limit > limitMax) limit = limitDefault;
 
         // All partners should see only Topics created by their site, but our own app sees all.
@@ -7939,6 +7957,7 @@ module.exports = function (app) {
                     ' + includes + ' \
                     ) uac \
                 JOIN pg_temp.parseData(uac.data) pdata ON uac.id = uac.id \
+                ' + filterBy + ' \
                 ORDER BY uac."updatedAt" DESC \
                 LIMIT :limit OFFSET :offset \
             ;';

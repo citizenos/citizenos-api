@@ -613,8 +613,8 @@ suite('Auth', function () {
                 });
 
                 test('Fail - 40022 - Mobile-ID user certificates are revoked or suspended for Estonian citizen', function (done) {
-                    var phoneNumber = '+37200009';
-                    var pid = '14212128027';
+                    var phoneNumber = '+37200000266';
+                    var pid = '60001019939';
 
                     _loginMobileInit(request.agent(app), pid, phoneNumber, 400, function (err, res) {
                         if (err) {
@@ -635,8 +635,8 @@ suite('Auth', function () {
                 });
 
                 test('Fail - 40022 - Mobile-ID user certificates are revoked or suspended for Lithuanian citizen', function (done) {
-                    var phoneNumber = '+37060000009';
-                    var pid = '51001091094';
+                    var phoneNumber = '+37060000266';
+                    var pid = '50001018832';
 
                     _loginMobileInit(request.agent(app), pid, phoneNumber, 400, function (err, res) {
                         if (err) {
