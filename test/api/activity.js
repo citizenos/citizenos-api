@@ -387,7 +387,7 @@ suite('Activities', function () {
 
                 var activities = res.body.data;
                 assert.isTrue(activities.length > 0);
-                topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST3</h2></body></html>', null, function (err, res) {
+                topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST3</h2></body></html>', null, function (err) {
                     if (err) return done(err);
 
                     activitiesUnreadCountRead(agent, {sourcePartnerId: partner.id}, function (err, res) {
