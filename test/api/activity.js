@@ -15,6 +15,20 @@ var activitiesRead = function (agent, userId, filters, callback) {
     _activitiesRead(agent, userId, filters, 200, callback);
 };
 
+var _activitiesUnreadCountRead = function (agent, userId, expectedHttpCode, callback) {
+    var path = '/api/users/:userId/activities/unread'.replace(':userId', userId);
+
+    agent
+        .get(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var activitiesUnreadCountRead = function (agent, userId, callback) {
+    _activitiesUnreadCountRead(agent, userId, 200, callback);
+};
+
 var _activitiesReadUnauth = function (agent, filters, expectedHttpCode, callback) {
     var path = '/api/activities';
 
@@ -209,7 +223,6 @@ suite('Activities', function () {
                 if (err) return done(err);
 
                 var activities = res.body.data;
-
                 assert.equal(activities.length, 3);
                 activities.forEach(function (activity) {
                     assert.notProperty(activity.data.actor, 'email');
@@ -276,6 +289,158 @@ suite('Activities', function () {
 
                 done();
             });
+        });
+    });
+    
+    suite('Count', function () {
+        var agent = request.agent(app);
+        var agent2 = request.agent(app);
+
+        var topic;
+        var user;
+        var user2;
+        var partner;
+
+        suiteSetup(function (done) {
+            userLib.createUserAndLogin(agent, null, null, null, function (err, res) {
+                if (err) return done(err);
+
+                user = res;
+
+                async
+                    .parallel(
+                        [
+                            function (cb) {
+                                topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null, cb);
+                            },
+                            function (cb) {
+                                topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST2</h2></body></html>', null, cb);
+                            },
+                            function (cb) {
+                                userLib.createUser(agent2, null, null, null, cb);
+                            }
+                        ]
+                        , function (err, results) {
+                            if (err) return done(err);
+
+                            topic = results[1].body.data;
+                            user2 = results[2];
+
+                            Partner
+                                .create({
+                                    website: 'notimportant',
+                                    redirectUriRegexp: 'notimportant'
+                                })
+                                .then(function (res) {
+                                    partner = res;
+
+                                    return Topic
+                                        .update(
+                                            {
+                                                sourcePartnerId: partner.id
+                                            },
+                                            {
+                                                where: {
+                                                    id: topic.id
+                                                }
+                                            }
+                                        );
+                                })
+                                .then(function () {
+                                    topicLib.topicMemberUsersCreate(
+                                        agent,
+                                        user.id,
+                                        topic.id,
+                                        [
+                                            {
+                                                userId: user2.id,
+                                                level: TopicMember.LEVELS.read
+                                            }
+                                        ],
+                                        function (err) {
+                                            if (err) return done(err);
+
+                                            done();
+                                        }
+                                    );
+                                });
+                        }
+                    );
+
+            });
+        });
+
+        test('Success - count 0 - user has never viewed activity feed', function (done) {
+            activitiesUnreadCountRead(agent, {sourcePartnerId: partner.id}, function (err, res) {
+                if (err) return done(err);
+
+                var count = res.body.data.count;
+
+                assert.equal(count, 0);
+                done();
+            });
+        });
+
+        test('Success', function (done) {
+            activitiesRead(agent, user.id, null, function (err, res) {
+                if (err) return done(err);
+
+                var activities = res.body.data;
+                assert.isTrue(activities.length > 0);
+                topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST3</h2></body></html>', null, function (err, res) {
+                    if (err) return done(err);
+
+                    activitiesUnreadCountRead(agent, {sourcePartnerId: partner.id}, function (err, res) {
+                        if (err) return done(err);
+        
+                        var count = res.body.data.count;
+        
+                        assert.equal(count, 2);
+                        done();
+                    });
+                });
+            });
+            
+        });
+
+        test('Success - user has viewed all activities', function (done) {
+            activitiesRead(agent, user.id, null, function (err, res) {
+                if (err) return done(err);
+
+                var activities = res.body.data;
+                assert.isTrue(activities.length > 0);
+                activities.forEach(function (activity) {
+                    assert.notProperty(activity.data.actor, 'email');
+                    assert.notProperty(activity.data.actor, 'imageUrl');
+                    assert.notProperty(activity.data.actor, 'language');
+                });
+                activitiesUnreadCountRead(agent, {sourcePartnerId: partner.id}, function (err, res) {
+                    if (err) return done(err);
+    
+                    var count = res.body.data.count;
+    
+                    assert.equal(count, 0);
+                    done();
+                });
+            });
+            
+        });
+
+        test('Fail - user not logged in', function (done) {
+            _activitiesRead(agent2, user.id, null, 401, function (err, res) {
+                if (err) return done(err);
+
+                var message = res.body;
+                var expectedResult = {
+                    status: {
+                        code: 40100,
+                        message: 'Unauthorized'
+                    }
+                };
+                assert.deepEqual(message, expectedResult);
+                done();
+            });
+            
         });
     });
 });
