@@ -33,6 +33,8 @@ var Entities = require('html-entities').AllHtmlEntities;
 var striptags = require('striptags');
 var device = require('express-device');
 var SevenZip = require('node-7z');
+var swaggerUi = require('swagger-ui-express');
+var swaggerDocument = require('./swagger.json');
 var app = express();
 
 // Express settings
@@ -41,6 +43,8 @@ if (app.get('env') === 'production' || app.get('env') === 'test') {
     app.set('trust proxy', true); // http://expressjs.com/guide/behind-proxies.html
 }
 
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 var prerender = require('prerender-node');
 prerender.set('prerenderServiceUrl', config.services.prerender.serviceUrl).set('prerenderToken', config.services.prerender.apiKey);
 app.use(prerender);
