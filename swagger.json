@@ -1,0 +1,687 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+      "version": "1.0.0",
+      "description": "CitizenOS  ",
+      "title": "CitizenS API",
+      "termsOfService": "https://app.citizenos.com/en/topics/7abdd244-d45b-40d3-997c-a6290d4e972c",
+      "contact": {
+        "email": "info@citizenos.com"
+      },
+      "license": {
+        "name": "Apache 2.0",
+        "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+      }
+    },
+    "tags": [
+      {
+        "name": "CitizenOS",
+        "description": "Everything about your Pets",
+        "externalDocs": {
+          "description": "Find out more",
+          "url": "https://citizenos.com"
+        }
+      },
+      {
+        "name": "auth",
+        "description": "User authorization endpoints",
+        "externalDocs": {
+          "description": "Find out more about our store",
+          "url": "http://swagger.io"
+        }
+      }
+    ],
+    "paths": {
+      "/api/auth/signup": {
+        "post": {
+          "tags": [
+            "auth"
+          ],
+          "summary": "Create new user",
+          "description": "This can only be done by the logged in user.",
+          "operationId": "createUser",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "email": {
+                      "type": "string",
+                      "example": "user@gmail.com"
+                    },
+                    "password": {
+                      "type": "string",
+                      "example": "anything secure"
+                    },
+                    "name": {
+                      "type": "string",
+                      "example": "John Smith"
+                    },
+                    "company": {
+                      "type": "string",
+                      "example": "CitizenOS"
+                    },
+                    "language": {
+                      "type": "string",
+                      "example": "en"
+                    },
+                    "redirectSuccess": {
+                      "type": "string",
+                      "example": "https://mysite.com/success"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "User created successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "integer",
+                            "example": 20000
+                          }
+                        }
+                      },
+                      "data": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Email address allready in use",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "integer",
+                            "example": 40001
+                          }
+                        }
+                      },
+                      "errors": {
+                        "type": "object",
+                        "properties": {
+                          "email": {
+                            "type": "string",
+                            "example": "The email address is already in use."
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/auth/login": {
+        "post": {
+          "tags": [
+            "auth"
+          ],
+          "summary": "User login",
+          "description": "User login endpoint",
+          "operationId": "loginUser",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "email": {
+                      "type": "string",
+                      "example": "user@gmail.com"
+                    },
+                    "password": {
+                      "type": "string",
+                      "example": "anything secure"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "User loged in successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "integer",
+                            "example": 20000
+                          }
+                        }
+                      },
+                      "data": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Email address allready in use",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "integer",
+                            "example": 40000
+                          }
+                        }
+                      },
+                      "errors": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string",
+                            "example": "Invalid email"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/auth/logout": {
+        "post": {
+          "tags": [
+            "auth"
+          ],
+          "summary": "User logout",
+          "description": "User logout endpoint",
+          "operationId": "logoutUser",
+          "responses": {
+            "200": {
+              "description": "User logged out successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "integer",
+                            "example": 20000
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/auth/verify/{code}": {
+        "get": {
+          "tags": [
+            "auth"
+          ],
+          "summary": "Verify user",
+          "description": "Verify user by verification code sent to email",
+          "operationId": "verifyUser",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "code",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "verification code sent to email"
+            },
+            {
+              "in": "query",
+              "name": "token",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "description": "verification token that contains redirect success path"
+            }
+          ],
+          "responses": {
+            "302": {
+              "description": "Redirect to URI set in token, also authorized cookie is set containing user id"
+            }
+          }
+        }
+      },
+      "/api/auth/password": {
+        "post": {
+          "tags": [
+            "auth"
+          ],
+          "summary": "Create new user password",
+          "description": "Create new user password",
+          "operationId": "renewPasswordUser",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "currentPassword": {
+                      "type": "string",
+                      "example": "password1234"
+                    },
+                    "newPassword": {
+                      "type": "string",
+                      "example": "Password must be at least 6 character long, containing at least 1 digit, 1 lower and upper case character."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "New password saved successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "integer",
+                            "example": 20000
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Email address allready in use",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "integer",
+                            "example": 40000
+                          }
+                        }
+                      },
+                      "errors": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string",
+                            "example": "Invalid email or new password."
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/auth/password/reset/send": {
+        "post": {
+          "tags": [
+            "auth"
+          ],
+          "summary": "Request password reset",
+          "description": "Request password reset",
+          "operationId": "requestPasswordResetUser",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "email": {
+                      "type": "string",
+                      "example": "john.smith@gmail.com"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Password recovery request sent successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "integer",
+                            "example": 20000
+                          },
+                          "message": {
+                            "type": "string",
+                            "example": "Success! Please check your email :email to complete your password recovery."
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Email address allready in use",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "integer",
+                            "example": 40000
+                          }
+                        }
+                      },
+                      "errors": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string",
+                            "example": "Invalid email"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/auth/password/reset": {
+        "post": {
+          "tags": [
+            "auth"
+          ],
+          "summary": "Request password reset",
+          "description": "Request password reset",
+          "operationId": "requestPasswordResetUser",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "email": {
+                      "type": "string",
+                      "example": "john.smith@gmail.com"
+                    },
+                    "password": {
+                      "type": "string",
+                      "example": "Password must be at least 6 character long, containing at least 1 digit, 1 lower and upper case character."
+                    },
+                    "passwordResetCode": {
+                      "type": "string",
+                      "example": "Reset code sent on email"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Password recovery request sent successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "integer",
+                            "example": 20000
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Email address allready in use",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "integer",
+                            "example": 40000
+                          }
+                        }
+                      },
+                      "errors": {
+                        "type": "object",
+                        "properties": {
+                          "email": {
+                            "type": "string",
+                            "example": "Invalid email, password or password reset code."
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/auth/status": {
+        "get": {
+          "tags": [
+            "auth"
+          ],
+          "summary": "Request password reset",
+          "description": "Request password reset",
+          "operationId": "requestPasswordResetUser",
+          "responses": {
+            "200": {
+              "description": "Password recovery request sent successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "integer",
+                            "example": 20000
+                          }
+                        }
+                      },
+                      "data": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Email address allready in use",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "integer",
+                            "example": 40400
+                          }
+                        }
+                      },
+                      "errors": {
+                        "type": "string",
+                        "example": "Not Found"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "schemas": {
+        "User": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "example": "2345-23523-25-235-"
+            },
+            "name": {
+              "type": "string",
+              "example": "John Smith"
+            },
+            "company": {
+              "type": "string",
+              "example": "CitizenOS"
+            },
+            "language": {
+              "type": "string",
+              "example": "en"
+            },
+            "email": {
+              "type": "string",
+              "example": "john.smith@gmail.com"
+            },
+            "imageUrl": {
+              "type": "string",
+              "example": "https://images.com/john-smith.jpg"
+            }
+          }
+        },
+        "Topic": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "example": "2345-23523-25-235-"
+            },
+            "title": {
+              "type": "string",
+              "example": "John Smith"
+            },
+            "description": {
+              "type": "string",
+              "example": "CitizenOS"
+            },
+            "creator": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string",
+                  "example": "John Smit"
+                }
+              }
+            },
+            "createdAt": {
+              "type": "string",
+              "example": "2018-08-06T04:11:41.568Z"
+            },
+            "hashtag": {
+              "type": "string",
+              "example": "banana"
+            },
+            "padUrl": {
+              "type": "string",
+              "format": "url"
+            }
+          }
+        }
+      }
+    },
+    "externalDocs": {
+      "description": "Find out more about CitizenOS",
+      "url": "http://citizenos.com"
+    }
+  }

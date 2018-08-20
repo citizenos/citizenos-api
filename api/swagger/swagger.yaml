@@ -1,0 +1,14 @@
+swagger: "2.0"
+info:
+  vesion: "0.0.1"
+  title: CitizenOS App
+host: dev.api.citizenos:3000
+basePath: /
+#
+schemes:
+  - http
+  - https
+consumes:
+  -application/json
+produces:
+  -application/json
