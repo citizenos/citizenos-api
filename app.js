@@ -44,7 +44,7 @@ if (app.get('env') === 'production' || app.get('env') === 'test') {
 }
 
 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+app.use('/documentation', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 var prerender = require('prerender-node');
 prerender.set('prerenderServiceUrl', config.services.prerender.serviceUrl).set('prerenderToken', config.services.prerender.apiKey);
 app.use(prerender);

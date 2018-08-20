@@ -7230,7 +7230,8 @@ module.exports = function (app) {
         var limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
         var include = req.query.include;
         var filters = req.query.filter || [];
-
+        var allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User'];
+        
         if (page && page > 0) {
             offset = page * limitDefault - limitDefault;
             limit = limitDefault;
@@ -7241,8 +7242,13 @@ module.exports = function (app) {
         } 
         
         filters.forEach(function (filter, key) {
-            filters[key] = '\'' + filter + '\'';
+            if (allowedFilters.indexOf(filter) > -1) {
+                filters[key] = filter;
+            } else {
+                filters.splice(key, 1);
+            }
         });
+        
         var filterBy = '';
         if (filters.length) {
             filterBy = 'WHERE uac.data#>>\'{object, @type}\' IN (' + filters.join(',') + ')';
@@ -7877,7 +7883,7 @@ module.exports = function (app) {
 
         filters.forEach(function (filter, key) {
             if (allowedFilters.indexOf(filter) > -1) {
-                filters[key] = db.escape(filter);
+                filters[key] = filter;
             } else {
                 filters.splice(key, 1);
             }

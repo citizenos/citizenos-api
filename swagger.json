@@ -1,687 +1,5960 @@
 {
-    "openapi": "3.0.0",
-    "info": {
-      "version": "1.0.0",
-      "description": "CitizenOS  ",
-      "title": "CitizenS API",
-      "termsOfService": "https://app.citizenos.com/en/topics/7abdd244-d45b-40d3-997c-a6290d4e972c",
-      "contact": {
-        "email": "info@citizenos.com"
-      },
-      "license": {
-        "name": "Apache 2.0",
-        "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
-      }
+  "openapi": "3.0.0",
+  "info": {
+    "version": "1.0.0",
+    "description": "CitizenOS  ",
+    "title": "CitizenS API",
+    "termsOfService": "https://app.citizenos.com/en/topics/7abdd244-d45b-40d3-997c-a6290d4e972c",
+    "contact": {
+      "email": "info@citizenos.com"
     },
-    "tags": [
-      {
-        "name": "CitizenOS",
-        "description": "Everything about your Pets",
-        "externalDocs": {
-          "description": "Find out more",
-          "url": "https://citizenos.com"
-        }
-      },
-      {
-        "name": "auth",
-        "description": "User authorization endpoints",
-        "externalDocs": {
-          "description": "Find out more about our store",
-          "url": "http://swagger.io"
-        }
-      }
-    ],
-    "paths": {
-      "/api/auth/signup": {
-        "post": {
-          "tags": [
-            "auth"
-          ],
-          "summary": "Create new user",
-          "description": "This can only be done by the logged in user.",
-          "operationId": "createUser",
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "email": {
-                      "type": "string",
-                      "example": "user@gmail.com"
-                    },
-                    "password": {
-                      "type": "string",
-                      "example": "anything secure"
-                    },
-                    "name": {
-                      "type": "string",
-                      "example": "John Smith"
-                    },
-                    "company": {
-                      "type": "string",
-                      "example": "CitizenOS"
-                    },
-                    "language": {
-                      "type": "string",
-                      "example": "en"
-                    },
-                    "redirectSuccess": {
-                      "type": "string",
-                      "example": "https://mysite.com/success"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "responses": {
-            "200": {
-              "description": "User created successfully",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {
-                      "status": {
-                        "type": "object",
-                        "properties": {
-                          "code": {
-                            "type": "integer",
-                            "example": 20000
-                          }
-                        }
-                      },
-                      "data": {
-                        "$ref": "#/components/schemas/User"
-                      }
-                    }
-                  }
-                }
-              }
-            },
-            "400": {
-              "description": "Email address allready in use",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {
-                      "status": {
-                        "type": "object",
-                        "properties": {
-                          "code": {
-                            "type": "integer",
-                            "example": 40001
-                          }
-                        }
-                      },
-                      "errors": {
-                        "type": "object",
-                        "properties": {
-                          "email": {
-                            "type": "string",
-                            "example": "The email address is already in use."
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/api/auth/login": {
-        "post": {
-          "tags": [
-            "auth"
-          ],
-          "summary": "User login",
-          "description": "User login endpoint",
-          "operationId": "loginUser",
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "email": {
-                      "type": "string",
-                      "example": "user@gmail.com"
-                    },
-                    "password": {
-                      "type": "string",
-                      "example": "anything secure"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "responses": {
-            "200": {
-              "description": "User loged in successfully",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {
-                      "status": {
-                        "type": "object",
-                        "properties": {
-                          "code": {
-                            "type": "integer",
-                            "example": 20000
-                          }
-                        }
-                      },
-                      "data": {
-                        "$ref": "#/components/schemas/User"
-                      }
-                    }
-                  }
-                }
-              }
-            },
-            "400": {
-              "description": "Email address allready in use",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {
-                      "status": {
-                        "type": "object",
-                        "properties": {
-                          "code": {
-                            "type": "integer",
-                            "example": 40000
-                          }
-                        }
-                      },
-                      "errors": {
-                        "type": "object",
-                        "properties": {
-                          "message": {
-                            "type": "string",
-                            "example": "Invalid email"
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/api/auth/logout": {
-        "post": {
-          "tags": [
-            "auth"
-          ],
-          "summary": "User logout",
-          "description": "User logout endpoint",
-          "operationId": "logoutUser",
-          "responses": {
-            "200": {
-              "description": "User logged out successfully",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {
-                      "status": {
-                        "type": "object",
-                        "properties": {
-                          "code": {
-                            "type": "integer",
-                            "example": 20000
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/api/auth/verify/{code}": {
-        "get": {
-          "tags": [
-            "auth"
-          ],
-          "summary": "Verify user",
-          "description": "Verify user by verification code sent to email",
-          "operationId": "verifyUser",
-          "parameters": [
-            {
-              "in": "path",
-              "name": "code",
-              "schema": {
-                "type": "string"
-              },
-              "required": true,
-              "description": "verification code sent to email"
-            },
-            {
-              "in": "query",
-              "name": "token",
-              "schema": {
-                "type": "string"
-              },
-              "required": true,
-              "description": "verification token that contains redirect success path"
-            }
-          ],
-          "responses": {
-            "302": {
-              "description": "Redirect to URI set in token, also authorized cookie is set containing user id"
-            }
-          }
-        }
-      },
-      "/api/auth/password": {
-        "post": {
-          "tags": [
-            "auth"
-          ],
-          "summary": "Create new user password",
-          "description": "Create new user password",
-          "operationId": "renewPasswordUser",
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "currentPassword": {
-                      "type": "string",
-                      "example": "password1234"
-                    },
-                    "newPassword": {
-                      "type": "string",
-                      "example": "Password must be at least 6 character long, containing at least 1 digit, 1 lower and upper case character."
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "responses": {
-            "200": {
-              "description": "New password saved successfully",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {
-                      "status": {
-                        "type": "object",
-                        "properties": {
-                          "code": {
-                            "type": "integer",
-                            "example": 20000
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            },
-            "400": {
-              "description": "Email address allready in use",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {
-                      "status": {
-                        "type": "object",
-                        "properties": {
-                          "code": {
-                            "type": "integer",
-                            "example": 40000
-                          }
-                        }
-                      },
-                      "errors": {
-                        "type": "object",
-                        "properties": {
-                          "message": {
-                            "type": "string",
-                            "example": "Invalid email or new password."
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/api/auth/password/reset/send": {
-        "post": {
-          "tags": [
-            "auth"
-          ],
-          "summary": "Request password reset",
-          "description": "Request password reset",
-          "operationId": "requestPasswordResetUser",
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "email": {
-                      "type": "string",
-                      "example": "john.smith@gmail.com"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "responses": {
-            "200": {
-              "description": "Password recovery request sent successfully",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {
-                      "status": {
-                        "type": "object",
-                        "properties": {
-                          "code": {
-                            "type": "integer",
-                            "example": 20000
-                          },
-                          "message": {
-                            "type": "string",
-                            "example": "Success! Please check your email :email to complete your password recovery."
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            },
-            "400": {
-              "description": "Email address allready in use",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {
-                      "status": {
-                        "type": "object",
-                        "properties": {
-                          "code": {
-                            "type": "integer",
-                            "example": 40000
-                          }
-                        }
-                      },
-                      "errors": {
-                        "type": "object",
-                        "properties": {
-                          "message": {
-                            "type": "string",
-                            "example": "Invalid email"
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/api/auth/password/reset": {
-        "post": {
-          "tags": [
-            "auth"
-          ],
-          "summary": "Request password reset",
-          "description": "Request password reset",
-          "operationId": "requestPasswordResetUser",
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "email": {
-                      "type": "string",
-                      "example": "john.smith@gmail.com"
-                    },
-                    "password": {
-                      "type": "string",
-                      "example": "Password must be at least 6 character long, containing at least 1 digit, 1 lower and upper case character."
-                    },
-                    "passwordResetCode": {
-                      "type": "string",
-                      "example": "Reset code sent on email"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "responses": {
-            "200": {
-              "description": "Password recovery request sent successfully",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {
-                      "status": {
-                        "type": "object",
-                        "properties": {
-                          "code": {
-                            "type": "integer",
-                            "example": 20000
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            },
-            "400": {
-              "description": "Email address allready in use",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {
-                      "status": {
-                        "type": "object",
-                        "properties": {
-                          "code": {
-                            "type": "integer",
-                            "example": 40000
-                          }
-                        }
-                      },
-                      "errors": {
-                        "type": "object",
-                        "properties": {
-                          "email": {
-                            "type": "string",
-                            "example": "Invalid email, password or password reset code."
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/api/auth/status": {
-        "get": {
-          "tags": [
-            "auth"
-          ],
-          "summary": "Request password reset",
-          "description": "Request password reset",
-          "operationId": "requestPasswordResetUser",
-          "responses": {
-            "200": {
-              "description": "Password recovery request sent successfully",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {
-                      "status": {
-                        "type": "object",
-                        "properties": {
-                          "code": {
-                            "type": "integer",
-                            "example": 20000
-                          }
-                        }
-                      },
-                      "data": {
-                        "$ref": "#/components/schemas/User"
-                      }
-                    }
-                  }
-                }
-              }
-            },
-            "404": {
-              "description": "Email address allready in use",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {
-                      "status": {
-                        "type": "object",
-                        "properties": {
-                          "code": {
-                            "type": "integer",
-                            "example": 40400
-                          }
-                        }
-                      },
-                      "errors": {
-                        "type": "string",
-                        "example": "Not Found"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "tags": [
+    {
+      "name": "CitizenOS",
+      "description": "Everything about CitizenOS API"
     },
-    "components": {
-      "schemas": {
-        "User": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "format": "uuid",
-              "example": "2345-23523-25-235-"
-            },
-            "name": {
-              "type": "string",
-              "example": "John Smith"
-            },
-            "company": {
-              "type": "string",
-              "example": "CitizenOS"
-            },
-            "language": {
-              "type": "string",
-              "example": "en"
-            },
-            "email": {
-              "type": "string",
-              "example": "john.smith@gmail.com"
-            },
-            "imageUrl": {
-              "type": "string",
-              "example": "https://images.com/john-smith.jpg"
+    {
+      "name": "auth",
+      "description": "User authorization endpoints"
+    },
+    {
+      "name": "topic",
+      "description": "Topic endpoints"
+    },
+    {
+      "name": "topicMembers",
+      "description": "Topic Members endpoints"
+    },
+    {
+      "name": "attachments",
+      "description": "Topic Attachments endpoints"
+    },
+    {
+      "name": "comments",
+      "description": "Topic Comments endpoints"
+    },
+    {
+      "name": "mentions",
+      "description": "Topic Mentions endpoints"
+    },
+    {
+      "name": "vote",
+      "description": "Topic Votes endpoints"
+    },
+    {
+      "name": "events",
+      "description": "Topic Events endpoints"
+    },
+    {
+      "name": "activities",
+      "description": "Activities endpoints"
+    },
+    {
+      "name": "groups",
+      "description": "Groups endpoints"
+    }
+  ],
+  "paths": {
+    "/api/auth/signup": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Create new user",
+        "description": "This can only be done by the logged in user.",
+        "operationId": "createUser",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "example": "user@gmail.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "example": "anything secure"
+                  },
+                  "name": {
+                    "type": "string",
+                    "example": "John Smith"
+                  },
+                  "company": {
+                    "type": "string",
+                    "example": "CitizenOS"
+                  },
+                  "language": {
+                    "type": "string",
+                    "example": "en"
+                  },
+                  "redirectSuccess": {
+                    "type": "string",
+                    "example": "https://mysite.com/success"
+                  }
+                }
+              }
             }
           }
         },
-        "Topic": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "format": "uuid",
-              "example": "2345-23523-25-235-"
-            },
-            "title": {
-              "type": "string",
-              "example": "John Smith"
-            },
-            "description": {
-              "type": "string",
-              "example": "CitizenOS"
-            },
-            "creator": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "name": {
-                  "type": "string",
-                  "example": "John Smit"
+        "responses": {
+          "200": {
+            "description": "User created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
                 }
               }
-            },
-            "createdAt": {
-              "type": "string",
-              "example": "2018-08-06T04:11:41.568Z"
-            },
-            "hashtag": {
-              "type": "string",
-              "example": "banana"
-            },
-            "padUrl": {
-              "type": "string",
-              "format": "url"
+            }
+          },
+          "400": {
+            "description": "Email address allready in use",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 40001
+                        }
+                      }
+                    },
+                    "errors": {
+                      "type": "object",
+                      "properties": {
+                        "email": {
+                          "type": "string",
+                          "example": "The email address is already in use."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
             }
           }
         }
       }
     },
-    "externalDocs": {
-      "description": "Find out more about CitizenOS",
-      "url": "http://citizenos.com"
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "User login",
+        "description": "User login endpoint",
+        "operationId": "loginUser",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "example": "user@gmail.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "example": "anything secure"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User loged in successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Email address allready in use",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 40000
+                        }
+                      }
+                    },
+                    "errors": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                          "example": "Invalid email"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "User logout",
+        "description": "User logout endpoint",
+        "operationId": "logoutUser",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User logged out successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/verify/{code}": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Verify user",
+        "description": "Verify user by verification code sent to email",
+        "operationId": "verifyUser",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "verification code sent to email"
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "verification token that contains redirect success path"
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to URI set in token, also authorized cookie is set containing user id"
+          }
+        }
+      }
+    },
+    "/api/auth/password": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Create new user password",
+        "description": "Create new user password",
+        "operationId": "renewPasswordUser",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "currentPassword": {
+                    "type": "string",
+                    "example": "password1234"
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "example": "Password must be at least 6 character long, containing at least 1 digit, 1 lower and upper case character."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "New password saved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Email address allready in use",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 40000
+                        }
+                      }
+                    },
+                    "errors": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                          "example": "Invalid email or new password."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/password/reset/send": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Request password reset",
+        "description": "Request password reset",
+        "operationId": "requestPasswordResetUser",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "example": "john.smith@gmail.com"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password recovery request sent successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Success! Please check your email :email to complete your password recovery."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Email address allready in use",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 40000
+                        }
+                      }
+                    },
+                    "errors": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                          "example": "Invalid email"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/password/reset": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Reset password",
+        "description": "Reset password",
+        "operationId": "passwordReset",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "example": "john.smith@gmail.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "example": "Password must be at least 6 character long, containing at least 1 digit, 1 lower and upper case character."
+                  },
+                  "passwordResetCode": {
+                    "type": "string",
+                    "example": "Reset code sent on email"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password recovery request sent successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Email address allready in use",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 40000
+                        }
+                      }
+                    },
+                    "errors": {
+                      "type": "object",
+                      "properties": {
+                        "email": {
+                          "type": "string",
+                          "example": "Invalid email, password or password reset code."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/status": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Request password reset",
+        "description": "Request password reset",
+        "operationId": "authStatus",
+        "responses": {
+          "200": {
+            "description": "Password recovery request sent successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/users/:userId/topics": {
+      "post": {
+        "tags": [
+          "topic"
+        ],
+        "summary": "Create new topic",
+        "description": "Logged in user can create a new topic",
+        "operationId": "createTopic",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "public",
+                      "private"
+                    ],
+                    "default": "private"
+                  },
+                  "categories": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "default": []
+                  },
+                  "hashtag": {
+                    "type": "string",
+                    "example": "banana",
+                    "nullable": true
+                  },
+                  "endsAt": {
+                    "type": "string",
+                    "format": "timestamp",
+                    "nullable": true,
+                    "example": "2018-08-06T04:11:41.568Z"
+                  },
+                  "sourcePartnerObjectId": {
+                    "type": "string",
+                    "description": "related object id on partner",
+                    "example": 123
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "New topic created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Topic"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "topic"
+        ],
+        "summary": "All user topics",
+        "description": "Get all topics user belongs to",
+        "operationId": "readTopics",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "query",
+            "name": "include",
+            "schema": {
+              "type": "string"
+            },
+            "description": "if return objects should include vote, event fields"
+          },
+          {
+            "in": "query",
+            "name": "creatorId",
+            "schema": {
+              "type": "string"
+            },
+            "description": "return only topics created by user with creatorId value"
+          },
+          {
+            "in": "query",
+            "name": "visibility",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return all user related topics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer",
+                          "example": 1,
+                          "description": "number of returned topics"
+                        },
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Topic"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/:userId/topics/:topicId": {
+      "get": {
+        "tags": [
+          "topic"
+        ],
+        "summary": "Read a topic with users permissions",
+        "description": "Read a topic with logged in users permissions",
+        "operationId": "readTopic",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "requested topics id"
+          },
+          {
+            "in": "query",
+            "name": "include",
+            "schema": {
+              "type": "string"
+            },
+            "example": "vote",
+            "description": "To include vote data in response if available"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "New topic created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Topic"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "topic"
+        ],
+        "summary": "Update topic",
+        "description": "Update a topic",
+        "operationId": "updateTopic",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "requested topics id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "inProgress",
+                      "voting",
+                      "followUp",
+                      "closed"
+                    ]
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "public",
+                      "private"
+                    ],
+                    "default": "private"
+                  },
+                  "categories": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "default": []
+                  },
+                  "hashtag": {
+                    "type": "string",
+                    "example": "banana",
+                    "nullable": true
+                  },
+                  "endsAt": {
+                    "type": "string",
+                    "format": "timestamp",
+                    "nullable": true,
+                    "example": "2018-08-06T04:11:41.568Z"
+                  },
+                  "sourcePartnerObjectId": {
+                    "type": "string",
+                    "description": "related object id on partner",
+                    "example": 123
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Topic updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "topic"
+        ],
+        "summary": "Update topic",
+        "description": "Update a topic",
+        "operationId": "patchTopic",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "requested topics id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "inProgress",
+                      "voting",
+                      "followUp",
+                      "closed"
+                    ]
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "public",
+                      "private"
+                    ],
+                    "default": "private"
+                  },
+                  "categories": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "default": []
+                  },
+                  "hashtag": {
+                    "type": "string",
+                    "example": "banana",
+                    "nullable": true
+                  },
+                  "endsAt": {
+                    "type": "string",
+                    "format": "timestamp",
+                    "nullable": true,
+                    "example": "2018-08-06T04:11:41.568Z"
+                  },
+                  "sourcePartnerObjectId": {
+                    "type": "string",
+                    "description": "related object id on partner",
+                    "example": 123
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/NoContent"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "topic"
+        ],
+        "summary": "Delete topic",
+        "description": "Delete a topic",
+        "operationId": "deleteTopic",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "requested topics id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/topics/:topicId": {
+      "get": {
+        "tags": [
+          "topic"
+        ],
+        "summary": "Read a public topic",
+        "description": "Read a public topic",
+        "operationId": "readTopicUnauth",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "requested topics id"
+          },
+          {
+            "in": "query",
+            "name": "include",
+            "schema": {
+              "type": "string"
+            },
+            "example": "vote",
+            "description": "To include vote data in response if available"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "New topic created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Topic"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/users/:userId/topics/:topicId/tokenJoin": {
+      "put": {
+        "tags": [
+          "topic"
+        ],
+        "summary": "Update topic join token",
+        "description": "Create and update new topic join token",
+        "operationId": "updateTopicTokenJoin",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "requested topics id"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Topics join token updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20100
+                        },
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "tokenJoin": {
+                              "type": "string",
+                              "example": "1234abcd"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/topics": {
+      "get": {
+        "tags": [
+          "topic"
+        ],
+        "summary": "Get all public topics",
+        "description": "Get all public topics",
+        "operationId": "readTopicsUnauth",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "include",
+            "schema": {
+              "type": "string"
+            },
+            "description": "if return objects should include vote, event fields"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "description": "Offset index of results for paggination purposes"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "default": 26
+            },
+            "description": "number of results to return"
+          },
+          {
+            "in": "query",
+            "name": "statuses",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Offset index of results for paggination purposes"
+          },
+          {
+            "in": "query",
+            "name": "categories",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "description": "Array of categories that topics are included in"
+          },
+          {
+            "in": "query",
+            "name": "sourcePartnerId",
+            "schema": {
+              "type": "string"
+            },
+            "description": "return only topics created by source partner"
+          },
+          {
+            "in": "query",
+            "name": "title",
+            "schema": {
+              "type": "string"
+            },
+            "description": "can be used for search"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return all user related topics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer",
+                          "example": 1,
+                          "description": "number of returned topics"
+                        },
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Topic"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/NoPermission"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/users/:userId/topics/:topicId/members/users": {
+      "post": {
+        "tags": [
+          "topicMembers"
+        ],
+        "summary": "Create new member Users to a Topic",
+        "description": "You can add User with e-mail or User id. If e-mail does not exist, User is created in the DB with NULL password.",
+        "operationId": "createTopicMemberUser",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id to add new members to"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "email": {
+                      "description": "Member email or user id"
+                    },
+                    "level": {
+                      "type": "string",
+                      "enum": [
+                        "read",
+                        "edit",
+                        "admin",
+                        "none"
+                      ],
+                      "default": "read"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Created"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "topicMembers"
+        ],
+        "summary": "Get member Users of the Topic",
+        "description": "Returns all users of the topic",
+        "operationId": "getTopicMemberUser",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id to return members"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Topic members users data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "count": {
+                        "type": "integer",
+                        "example": 1,
+                        "description": "returned users count"
+                      },
+                      "rows": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "levelUser": {
+                              "type": "string",
+                              "enum": [
+                                "read",
+                                "edit",
+                                "admin",
+                                "none"
+                              ]
+                            },
+                            "company": {
+                              "type": "string"
+                            },
+                            "imageUrl": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/:userId/topics/:topicId/members/users/:memberId": {
+      "put": {
+        "tags": [
+          "topicMembers"
+        ],
+        "summary": "Update User membership information",
+        "description": "Update User membership information",
+        "operationId": "updateTopicMemberUser",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id to add new members to"
+          },
+          {
+            "in": "path",
+            "name": "memberId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "member User id to update"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "level": {
+                    "type": "string",
+                    "enum": [
+                      "read",
+                      "edit",
+                      "admin",
+                      "none"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "topicMembers"
+        ],
+        "summary": "Delete User membership information",
+        "description": "Delete User membership information",
+        "operationId": "deleteTopicMemberUser",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id to add new members to"
+          },
+          {
+            "in": "path",
+            "name": "memberId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "member User id to delete"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          }
+        }
+      }
+    },
+    "/api/users/:userId/topics/:topicId/members/groups": {
+      "post": {
+        "tags": [
+          "topicMembers"
+        ],
+        "summary": "Create new member Groups to a Topic",
+        "description": "Add new member groups to a Topic",
+        "operationId": "createTopicMemberGroups",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id to add new members to"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "groupId": {
+                      "description": "Group id to add as a member to the topic"
+                    },
+                    "level": {
+                      "type": "string",
+                      "enum": [
+                        "read",
+                        "edit",
+                        "admin",
+                        "none"
+                      ],
+                      "default": "read"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Created"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "topicMembers"
+        ],
+        "summary": "Get member Users of the Topic",
+        "description": "Returns all users of the topic",
+        "operationId": "getTopicMemberUser",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id to return members"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Topic members users data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "count": {
+                        "type": "integer",
+                        "example": 1,
+                        "description": "returned groups count"
+                      },
+                      "rows": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "level": {
+                              "type": "string",
+                              "enum": [
+                                "read",
+                                "edit",
+                                "admin",
+                                "none"
+                              ]
+                            },
+                            "visibility": {
+                              "type": "string",
+                              "enum": [
+                                "private",
+                                "public"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/:userId/topics/:topicId/members/groups/:memberId": {
+      "put": {
+        "tags": [
+          "topicMembers"
+        ],
+        "summary": "Update Group membership information",
+        "description": "Update Group membership information",
+        "operationId": "updateTopicMemberGroup",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id to add new members to"
+          },
+          {
+            "in": "path",
+            "name": "memberId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "member group id to update"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "level": {
+                    "type": "string",
+                    "enum": [
+                      "read",
+                      "edit",
+                      "admin",
+                      "none"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "topicMembers"
+        ],
+        "summary": "Delete Group membership information",
+        "description": "Delete Group membership information",
+        "operationId": "deleteTopicMemberGroup",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id to add new members to"
+          },
+          {
+            "in": "path",
+            "name": "memberId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "member Group id to delete"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/users/:userId/topics/:topicId/members": {
+      "get": {
+        "tags": [
+          "topicMembers"
+        ],
+        "summary": "Get all members of the Topic'",
+        "description": "Get all member users and groups of the Topic",
+        "operationId": "getTopicMembers",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id to add new members to"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return all member users and groups of topic",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "groups": {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer",
+                          "example": 1,
+                          "description": "returned groups count"
+                        },
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "level": {
+                                "type": "string",
+                                "enum": [
+                                  "read",
+                                  "edit",
+                                  "admin",
+                                  "none"
+                                ]
+                              },
+                              "visibility": {
+                                "type": "string",
+                                "enum": [
+                                  "private",
+                                  "public"
+                                ]
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "users": {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer",
+                          "example": 1,
+                          "description": "returned users count"
+                        },
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "levelUser": {
+                                "type": "string",
+                                "enum": [
+                                  "read",
+                                  "edit",
+                                  "admin",
+                                  "none"
+                                ]
+                              },
+                              "company": {
+                                "type": "string"
+                              },
+                              "imageUrl": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/topics/join/:tokenJoin": {
+      "post": {
+        "tags": [
+          "topic"
+        ],
+        "summary": "Join authenticated User to Topic with a given token.",
+        "description": "Allows sharing of private join urls for example in forums, on conference screen...",
+        "operationId": "userJoinTopic",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tokenJoin",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Join token of the topic to join"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "returns topic that user has joined",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "example": "c2eb6752-7d88-4153-93ae-fe47aee26573"
+                        },
+                        "title": {
+                          "type": "string",
+                          "example": "My topic title",
+                          "nullable": true
+                        },
+                        "description": {
+                          "type": "string",
+                          "format": "html",
+                          "example": "<html><head></head><body><h1>My topic title</h1></body></html>"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "inProgress",
+                            "voting",
+                            "followUp",
+                            "closed"
+                          ],
+                          "default": "inProgress"
+                        },
+                        "visibility": {
+                          "type": "string",
+                          "enum": [
+                            "public",
+                            "private"
+                          ],
+                          "default": "private"
+                        },
+                        "categories": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "default": []
+                        },
+                        "sourcePartnerId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "sourcePartnerObjectId": {
+                          "type": "string"
+                        },
+                        "creator": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "name": {
+                              "type": "string",
+                              "example": "John Smith"
+                            }
+                          }
+                        },
+                        "tokenJoin": {
+                          "type": "string",
+                          "nullable": true,
+                          "maxLength": 8
+                        },
+                        "padUrl": {
+                          "type": "string",
+                          "maxLength": 255
+                        },
+                        "url": {
+                          "type": "string",
+                          "description": "link to topic"
+                        },
+                        "endsAt": {
+                          "type": "string",
+                          "example": "2018-08-06T04:11:41.568Z"
+                        },
+                        "hashtag": {
+                          "type": "string",
+                          "example": "banana"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "example": "2018-08-06T04:11:41.568Z"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "example": "2018-08-06T04:11:41.568Z"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Matching token not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 40001
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Matching token not found"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/:userId/topics/:topicId/attachments": {
+      "post": {
+        "tags": [
+          "attachments"
+        ],
+        "summary": "Add Topic Attachment",
+        "description": "Add an Attachment to the topic",
+        "operationId": "addTopicAttachment",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Topici id to add attachment to"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "size": {
+                    "type": "integer"
+                  },
+                  "source": {
+                    "type": "string"
+                  },
+                  "link": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "New Attachment added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Attachment"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "attachments"
+        ],
+        "summary": "get user topic attachments",
+        "description": "returns all attachments of the topic where user has permissions",
+        "operationId": "getUserTopicAttachments",
+        "security": [
+          {
+            "oAuth2": [
+              "admin",
+              "edit",
+              "read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id that has attachments"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns attachments list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer",
+                          "description": "attachments count",
+                          "example": 1
+                        },
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Attachment"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/:userId/topics/:topicId/attachments/:attachmentId": {
+      "put": {
+        "tags": [
+          "attachments"
+        ],
+        "summary": "Update Topic Attachment information",
+        "description": "Update Topic Attachment information",
+        "operationId": "updateTopicAttachment",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          },
+          {
+            "in": "path",
+            "name": "attachmentId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "attachment id to update"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "New Attachment added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Attachment"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "attachments"
+        ],
+        "summary": "Delete Topic attachment",
+        "description": "Delete Topic attachment",
+        "operationId": "deleteTopicAttachment",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          },
+          {
+            "in": "path",
+            "name": "attachmentId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "attachment id to delete"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          }
+        }
+      }
+    },
+    "/api/topics/:topicId/attachments": {
+      "get": {
+        "tags": [
+          "attachments"
+        ],
+        "summary": "get public topic attachments",
+        "description": "returns all attachments of the public topic",
+        "operationId": "getTopicAttachments",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id that has attachments"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns attachments list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer",
+                          "description": "attachments count",
+                          "example": 1
+                        },
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Attachment"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/:userId/topics/:topicId/comments": {
+      "post": {
+        "tags": [
+          "comments"
+        ],
+        "summary": "Add Topic Comment",
+        "description": "Add an Comment to the topic",
+        "operationId": "addTopicComment",
+        "security": [
+          {
+            "oAuth2": [
+              "admin",
+              "edit",
+              "read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Topic id to add Comment"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "pro",
+                      "con",
+                      "reply"
+                    ]
+                  },
+                  "parentId": {
+                    "type": "string",
+                    "description": "parent comment id if comment is a reply"
+                  },
+                  "parentVersion": {
+                    "type": "integer",
+                    "description": "if comment is reply then parent version can show exact version that was replied in case parent comment is edited"
+                  },
+                  "subject": {
+                    "type": "string",
+                    "description": "comments subject"
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "comments content"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "New Comment added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Comment"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/users/:userId/topics/:topicId/comments": {
+      "get": {
+        "tags": [
+          "comments"
+        ],
+        "summary": "Read (List) Topic Comments",
+        "description": "returns all comments of the topic user has access to",
+        "operationId": "getTopicComments",
+        "security": [
+          {
+            "oAuth2": [
+              "admin",
+              "edit",
+              "read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id that has comments"
+          },
+          {
+            "in": "query",
+            "name": "orderBy",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "rating",
+                "popularity",
+                "date"
+              ]
+            },
+            "description": "how to order comments in result"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns comments list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer",
+                          "description": "comments count",
+                          "example": 1
+                        },
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/CommentInList"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/topics/:topicId/comments": {
+      "get": {
+        "tags": [
+          "comments"
+        ],
+        "summary": "Read (List) public Topic Comments",
+        "description": "returns all public topic comments",
+        "operationId": "getTopicCommentsUnauth",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id that has comments"
+          },
+          {
+            "in": "query",
+            "name": "orderBy",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "rating",
+                "popularity",
+                "date"
+              ]
+            },
+            "description": "how to order comments in result"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns comments list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer",
+                          "description": "comments count",
+                          "example": 1
+                        },
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/CommentInList"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/:userId/topics/:topicId/comments/:commentId": {
+      "put": {
+        "tags": [
+          "comments"
+        ],
+        "summary": "Update Topic Comment",
+        "description": "Update Topic Comment",
+        "operationId": "updateTopicComment",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          },
+          {
+            "in": "path",
+            "name": "commentId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Comment id to update"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "subject": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "pro",
+                      "con",
+                      "reply"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "comments"
+        ],
+        "summary": "Delete Topic Comment",
+        "description": "Delete Topic Comment",
+        "operationId": "deleteTopicComment",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          },
+          {
+            "in": "path",
+            "name": "commentId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Comment id to delete"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          }
+        }
+      }
+    },
+    "/api/users/:userId/topics/:topicId/comments/:commentId/reports": {
+      "post": {
+        "tags": [
+          "comments"
+        ],
+        "summary": "Report Topic Comment",
+        "description": "Report Topic Comment",
+        "operationId": "reportTopicComment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          },
+          {
+            "in": "path",
+            "name": "commentId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Comment id to report"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "abuse",
+                      "obscene",
+                      "spam",
+                      "hate",
+                      "netiquette",
+                      "duplicate"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "New Comment added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Report"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/topics/:topicId/comments/:commentId/reports": {
+      "post": {
+        "tags": [
+          "comments"
+        ],
+        "summary": "Report Topic Comment",
+        "description": "Report Topic Comment",
+        "operationId": "reportTopicComment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          },
+          {
+            "in": "path",
+            "name": "commentId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Comment id to report"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "abuse",
+                      "obscene",
+                      "spam",
+                      "hate",
+                      "netiquette",
+                      "duplicate"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "New Comment added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Report"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/topics/:topicId/comments/:commentId/reports/:reportId": {
+      "get": {
+        "tags": [
+          "comments"
+        ],
+        "summary": "Read Report",
+        "description": "Read Report",
+        "operationId": "getTopicCommentsReportUnauthorized",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id that has"
+          },
+          {
+            "in": "path",
+            "name": "commentId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "comment id"
+          },
+          {
+            "in": "path",
+            "name": "reportId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "report to read id"
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "authorization token"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns comments report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ReportWithComment"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/:userId/topics/:topicId/comments/:commentId/reports/:reportId": {
+      "get": {
+        "tags": [
+          "comments"
+        ],
+        "summary": "Read Report logged in",
+        "description": "Read Report",
+        "operationId": "getTopicCommentsReport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id that has"
+          },
+          {
+            "in": "path",
+            "name": "commentId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "comment id"
+          },
+          {
+            "in": "path",
+            "name": "reportId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "report to read id"
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "authorization token"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns comments report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ReportWithComment"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/topics/:topicId/comments/:commentId/reports/:reportId/moderate": {
+      "put": {
+        "tags": [
+          "comments"
+        ],
+        "summary": "Moderate Topic Comment",
+        "description": "Moderate Topic Comment",
+        "operationId": "moderateTopicComment",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          },
+          {
+            "in": "path",
+            "name": "commentId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Comment id to moderate"
+          },
+          {
+            "in": "path",
+            "name": "reportId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Report id"
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "authorization token"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "description": "comment delete reason text"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "abuse",
+                      "obscene",
+                      "spam",
+                      "hate",
+                      "netiquette",
+                      "duplicate"
+                    ],
+                    "description": "comment delete reason type"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          }
+        }
+      }
+    },
+    "/api/topics/:topicId/comments/:commentId/votes": {
+      "post": {
+        "tags": [
+          "comments"
+        ],
+        "summary": "Create a Comment Vote",
+        "description": "Create a Comment Vote",
+        "operationId": "createTopicCommentVote",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          },
+          {
+            "in": "path",
+            "name": "commentId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Comment id to vote on"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "New Comment vote added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "up": {
+                          "type": "object",
+                          "properties": {
+                            "count": {
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "down": {
+                          "type": "object",
+                          "properties": {
+                            "count": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/:userId/topics/:topicId/mentions": {
+      "get": {
+        "tags": [
+          "mentions"
+        ],
+        "summary": "Read Topic Mentions",
+        "description": "Read Topic Mentions",
+        "operationId": "getTopicMentions",
+        "security": [
+          {
+            "oAuth2": [
+              "admin",
+              "edit",
+              "read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in user id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id that has"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns topic mentions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "hashtag": {
+                          "type": "string"
+                        },
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Mention"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/topics/:topicId/mentions": {
+      "get": {
+        "tags": [
+          "mentions"
+        ],
+        "summary": "Read (List) public Topic Mentions",
+        "description": "Read (List) public Topic Mentions",
+        "operationId": "getTopicMentionsUnauth",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id that has"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns topic mentions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "hashtag": {
+                          "type": "string"
+                        },
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Mention"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/:userId/topics/:topicId/votes": {
+      "post": {
+        "tags": [
+          "vote"
+        ],
+        "summary": "Create a Vote",
+        "description": "Create a Vote",
+        "operationId": "createTopicVote",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in user id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "options": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "authType": {
+                    "type": "string",
+                    "enum": [
+                      "soft",
+                      "hard"
+                    ]
+                  },
+                  "minChoices": {
+                    "type": "integer",
+                    "default": 1
+                  },
+                  "maxChoices": {
+                    "type": "integer",
+                    "default": 1
+                  },
+                  "delegationIsAllowed": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "endsAt": {
+                    "type": "string",
+                    "example": "2018-08-06T04:11:41.568Z"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "regular",
+                      "multiple"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "New Vote created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Vote"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/:userId/topics/:topicId/votes/:voteId": {
+      "get": {
+        "tags": [
+          "vote"
+        ],
+        "summary": "Read a Vote",
+        "description": "Read a Vote",
+        "operationId": "readTopicVote",
+        "security": [
+          {
+            "oAuth2": [
+              "admin",
+              "edit",
+              "read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in user id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return vote data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Vote"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "vote"
+        ],
+        "summary": "Update a Vote",
+        "description": "Update a Vote",
+        "operationId": "updateTopicVote",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in user id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "endsAt": {
+                    "type": "string",
+                    "example": "2018-08-06T04:11:41.568Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Vote update successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Vote"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/topics/:topicId/votes/:voteId": {
+      "post": {
+        "tags": [
+          "vote"
+        ],
+        "summary": "Vote",
+        "description": "Vote",
+        "operationId": "voteTopicVote",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in user id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "options": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "vote"
+        ],
+        "summary": "Read a public Topics Vote",
+        "description": "Read a public Topics Vote",
+        "operationId": "readTopicVoteUnauth",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          },
+          {
+            "in": "path",
+            "name": "voteId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "vote id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return vote data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Vote"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/:userId/topics/:topicId/votes/:voteId/downloads/zip/final": {
+      "get": {
+        "tags": [
+          "vote"
+        ],
+        "summary": "Download votes final results zip",
+        "description": "Download votes final results zip",
+        "operationId": "downloadTopicVoteFinalZip",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in user id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          },
+          {
+            "in": "path",
+            "name": "voteId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "vote id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "starts zip download"
+          }
+        }
+      }
+    },
+    "/api/topics/:topicId/votes/:voteId/downloads/zip/final": {
+      "get": {
+        "tags": [
+          "vote"
+        ],
+        "summary": "Download votes final results zip",
+        "description": "Download votes final results zip",
+        "operationId": "downloadTopicVoteFinalZipUnauth",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          },
+          {
+            "in": "path",
+            "name": "voteId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "vote id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "starts zip download"
+          }
+        }
+      }
+    },
+    "/api/users/:userId/topics/:topicId/votes/:voteId/delegations": {
+      "post": {
+        "tags": [
+          "vote"
+        ],
+        "summary": "Delegate a Vote",
+        "description": "Delegate a Vote",
+        "operationId": "delegateTopicVote",
+        "security": [
+          {
+            "oAuth2": [
+              "admin",
+              "edit",
+              "read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in user id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          },
+          {
+            "in": "path",
+            "name": "voteId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "vote id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "description": "users id to delegate vote to"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "vote"
+        ],
+        "summary": "Delete Vote delegation",
+        "description": "Delete Vote delegation",
+        "operationId": "deleteTopicVoteDelegation",
+        "security": [
+          {
+            "oAuth2": [
+              "admin",
+              "edit",
+              "read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in user id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          },
+          {
+            "in": "path",
+            "name": "voteId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "vote id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          }
+        }
+      }
+    },
+    "/api/users/:userId/topics/:topicId/events": {
+      "post": {
+        "tags": [
+          "events"
+        ],
+        "summary": "Create an Event",
+        "description": "Create an Event",
+        "operationId": "createTopicEvent",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in user id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "subject": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": 20100
+                        }
+                      }
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TopicEvent"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "events"
+        ],
+        "summary": "List Events",
+        "description": "List Events",
+        "operationId": "getTopicEvents",
+        "security": [
+          {
+            "oAuth2": [
+              "admin",
+              "edit",
+              "read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in user id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer"
+                        },
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/TopicEvent"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/topics/:topicId/events": {
+      "post": {
+        "tags": [
+          "events"
+        ],
+        "summary": "Create an Event with a token issued to a 3rd party",
+        "description": "Create an Event with a token issued to a 3rd party",
+        "operationId": "createTopicEventToken",
+        "security": [
+          {
+            "ApiKeyAuth": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in user id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "subject": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": 20100
+                        }
+                      }
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TopicEvent"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "events"
+        ],
+        "summary": "Read (List) public Topic Events",
+        "description": "Read (List) public Topic Events",
+        "operationId": "getTopicEventsUnauth",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer"
+                        },
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/TopicEvent"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/:userId/topics/:topicId/events/:eventId": {
+      "delete": {
+        "tags": [
+          "events"
+        ],
+        "summary": "Delete Topic Event",
+        "description": "Delete Topic Event",
+        "operationId": "deleteTopicEvent",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in user id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          },
+          {
+            "in": "path",
+            "name": "eventId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "event id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          }
+        }
+      }
+    },
+    "/api/topics/:topicId/activities": {
+      "get": {
+        "tags": [
+          "activities"
+        ],
+        "summary": "Read (List) public Topic Activities",
+        "description": "Read (List) public Topic Activities",
+        "operationId": "getTopicActivitiesUnauth",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "offset where to start returning results"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "number of results to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Activity"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/users/:userId/topics/:topicId/activities": {
+      "get": {
+        "tags": [
+          "activities"
+        ],
+        "summary": "Read Topic Activities",
+        "description": "Read Topic Activities",
+        "operationId": "getTopicActivities",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "user id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "offset where to start returning results"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "number of results to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Activity"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/users/:userId/activities/unread": {
+      "get": {
+        "tags": [
+          "activities"
+        ],
+        "summary": "Get number on unread activities",
+        "description": "Get number on unread activities",
+        "operationId": "unreadActivities",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "user id"
+          },
+          {
+            "in": "query",
+            "name": "sourcePartnerId",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Partner id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/:userId/activities": {
+      "get": {
+        "tags": [
+          "activities"
+        ],
+        "summary": "Get activities list",
+        "description": "Get activities list",
+        "operationId": "getActivities",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "user id"
+          },
+          {
+            "in": "query",
+            "name": "sourcePartnerId",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Partner id"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "page nr of results to return"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "offset where to start returning results"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "number of results to return"
+          },
+          {
+            "in": "query",
+            "name": "include",
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array"
+                }
+              ],
+              "default": [
+                "topics",
+                "groups",
+                "user",
+                "self"
+              ]
+            },
+            "description": "activities types to return possible ['topics', 'groups', 'user', 'self']"
+          },
+          {
+            "in": "query",
+            "name": "filter",
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array"
+                }
+              ]
+            },
+            "description": "activities types to return possible ['Topic', 'Group', 'TopicComment', 'Vote', 'User']"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Activity"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/activities": {
+      "get": {
+        "tags": [
+          "activities"
+        ],
+        "summary": "Get public activities list",
+        "description": "Get public activities list",
+        "operationId": "getPublicActivities",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "user id"
+          },
+          {
+            "in": "query",
+            "name": "sourcePartnerId",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Partner id"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "page nr of results to return"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "offset where to start returning results"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "number of results to return"
+          },
+          {
+            "in": "query",
+            "name": "include",
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array"
+                }
+              ],
+              "default": [
+                "topics",
+                "groups"
+              ]
+            },
+            "description": "activities types to return possible ['topics', 'groups']"
+          },
+          {
+            "in": "query",
+            "name": "filter",
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array"
+                }
+              ]
+            },
+            "description": "activities types to return possible ['Topic', 'Group', 'TopicComment', 'Vote', 'User']"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Activity"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
+  },
+  "components": {
+    "responses": {
+      "NotFound": {
+        "description": "The specified resource was not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "example": 40400
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Not Found"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Unauthorized",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "example": 40100
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Unauthorized"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Unauthorized",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "example": 40300
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Forbidden"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          }
+        }
+      },
+      "Ok": {
+        "description": "Ok",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "example": 20000
+                    }
+                  }
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          }
+        }
+      },
+      "Created": {
+        "description": "Created",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "example": 20100
+                    }
+                  }
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          }
+        }
+      },
+      "NoContent": {
+        "description": "No content",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "example": 20400
+                    }
+                  }
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          }
+        }
+      },
+      "NoPermission": {
+        "description": "No Permission",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "example": 40000
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "No Permission"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "2345-23523-25-235-"
+          },
+          "name": {
+            "type": "string",
+            "example": "John Smith"
+          },
+          "company": {
+            "type": "string",
+            "example": "CitizenOS"
+          },
+          "language": {
+            "type": "string",
+            "example": "en"
+          },
+          "email": {
+            "type": "string",
+            "example": "john.smith@gmail.com"
+          },
+          "imageUrl": {
+            "type": "string",
+            "example": "https://images.com/john-smith.jpg"
+          }
+        }
+      },
+      "Topic": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c2eb6752-7d88-4153-93ae-fe47aee26573"
+          },
+          "title": {
+            "type": "string",
+            "example": "My topic title",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "format": "html",
+            "example": "<html><head></head><body><h1>My topic title</h1></body></html>"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "inProgress",
+              "voting",
+              "followUp",
+              "closed"
+            ],
+            "default": "inProgress"
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ],
+            "default": "private"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "sourcePartnerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourcePartnerObjectId": {
+            "type": "string"
+          },
+          "creator": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string",
+                "example": "John Smith"
+              }
+            }
+          },
+          "tokenJoin": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 8
+          },
+          "padUrl": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "endsAt": {
+            "type": "string",
+            "example": "2018-08-06T04:11:41.568Z"
+          },
+          "hashtag": {
+            "type": "string",
+            "example": "banana"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2018-08-06T04:11:41.568Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2018-08-06T04:11:41.568Z"
+          }
+        }
+      },
+      "Group": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "c2eb6752-7d88-4153-93ae-fe47aee26573"
+          },
+          "name": {
+            "type": "string",
+            "example": "CitizenOS members"
+          },
+          "parentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Parent Groups id."
+          },
+          "creator": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "example": "c2eb6752-7d88-4153-93ae-fe47aee26573",
+                "description": "Group creators id"
+              }
+            }
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ],
+            "default": "private"
+          },
+          "sourcePartnerObjectId": {
+            "type": "string"
+          }
+        }
+      },
+      "Attachment": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "source": {
+            "type": "string"
+          },
+          "creatorId": {
+            "type": "string"
+          },
+          "link": {
+            "type": "string"
+          }
+        }
+      },
+      "Comment": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "text": {
+            "type": "integer"
+          },
+          "parent": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "version": {
+                "type": "integer"
+              }
+            }
+          },
+          "creator": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "company": {
+                "type": "string"
+              }
+            }
+          },
+          "edits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "createdAt": {
+                  "type": "string"
+                },
+                "subject": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "pro",
+                    "con",
+                    "reply"
+                  ]
+                }
+              }
+            }
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string"
+          },
+          "deletedBy": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            }
+          },
+          "deletedReasonText": {
+            "type": "string"
+          },
+          "deletedReasonType": {
+            "type": "string",
+            "enum": [
+              "abuse",
+              "obscene",
+              "spam",
+              "hate",
+              "netiquette",
+              "duplicate"
+            ]
+          },
+          "report": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        }
+      },
+      "CommentInList": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "text": {
+            "type": "integer"
+          },
+          "parent": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "version": {
+                "type": "integer"
+              }
+            }
+          },
+          "creator": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "company": {
+                "type": "string"
+              }
+            }
+          },
+          "edits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "createdAt": {
+                  "type": "string"
+                },
+                "subject": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "pro",
+                    "con",
+                    "reply"
+                  ]
+                }
+              }
+            }
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string"
+          },
+          "deletedBy": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            }
+          },
+          "deletedReasonText": {
+            "type": "string"
+          },
+          "deletedReasonType": {
+            "type": "string",
+            "enum": [
+              "abuse",
+              "obscene",
+              "spam",
+              "hate",
+              "netiquette",
+              "duplicate"
+            ]
+          },
+          "replies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommentInList"
+            }
+          },
+          "report": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "votes": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "integer"
+              },
+              "up": {
+                "type": "object",
+                "properties": {
+                  "count": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "down": {
+                "type": "object",
+                "properties": {
+                  "count": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Report": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "creator": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            }
+          },
+          "text": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "abuse",
+              "obscene",
+              "spam",
+              "hate",
+              "netiquette",
+              "duplicate"
+            ]
+          }
+        }
+      },
+      "ReportWithComment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "abuse",
+              "obscene",
+              "spam",
+              "hate",
+              "netiquette",
+              "duplicate"
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "comment": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "subject": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "Mention": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "creator": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "profilePictureUrl": {
+                "type": "string"
+              },
+              "profileUrl": {
+                "type": "string"
+              }
+            }
+          },
+          "sourceId": {
+            "type": "string",
+            "description": "where mention is loaded from eg. twitter"
+          },
+          "sourceUrl": {
+            "type": "string",
+            "description": "link to mention"
+          },
+          "text": {
+            "type": "string",
+            "description": "mentions content"
+          }
+        }
+      },
+      "Vote": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "minChoices": {
+            "type": "integer"
+          },
+          "maxChoices": {
+            "type": "integer"
+          },
+          "delegationIsAllowed": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "endsAt": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "regular",
+              "multiple"
+            ]
+          },
+          "authType": {
+            "type": "string",
+            "enum": [
+              "soft",
+              "hard"
+            ]
+          },
+          "downloads": {
+            "type": "object",
+            "properties": {
+              "bdocVote": {
+                "type": "string"
+              },
+              "bdocFinal": {
+                "type": "string"
+              },
+              "zipFinal": {
+                "type": "string"
+              }
+            }
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "rows": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "string"
+                      },
+                      "voteCount": {
+                        "type": "integer"
+                      },
+                      "selected": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "TopicEvent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        }
+      },
+      "Activity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "context": {
+                "type": "string"
+              },
+              "object": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "@type": {
+                    "type": "string"
+                  }
+                }
+              },
+              "actor": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "company": {
+                    "type": "string"
+                  }
+                }
+              },
+              "type": {
+                "type": "string"
+              }
+            }
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "OAuth2": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://example.com/oauth/authorize",
+            "tokenUrl": "https://example.com/oauth/token",
+            "scopes": {
+              "read": "Grants read access",
+              "edit": "Grants edit access",
+              "admin": "Grants access to admin operations"
+            }
+          }
+        }
+      },
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "authorization"
+      }
+    }
+  },
+  "externalDocs": {
+    "description": "Find out more about CitizenOS",
+    "url": "http://citizenos.com"
   }
+}
