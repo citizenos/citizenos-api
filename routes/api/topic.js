@@ -6666,7 +6666,20 @@ module.exports = function (app) {
                         DECLARE \
                         finalData jsonb = data; \
                         BEGIN \
-                            IF ((data ? \'actor\') AND data#>>\'{actor, type}\' = \'User\' AND data#>>\'{actor, id}\' IS NOT NULL ) THEN \
+                            IF ((data ? \'actor\') AND data#>>\'{actor, type}\' = \'User\' AND data#>>\'{actor, id}\' IS NOT NULL AND (data ? \'object\' AND data#>>\'{object, 0, @type}\' = \'VoteList\')) THEN \
+                                SELECT jsonb_set( \
+                                    data, \
+                                    \'{actor}\', \
+                                    to_jsonb( \
+                                        json_build_object( \
+                                            \'id\', u.id, \
+                                            \'type\', data#>>\'{actor, type}\', \
+                                            \'name\', \'User\', \
+                                            \'company\', \'\' \
+                                        ) \
+                                    ), \
+                                false) INTO finalData FROM "Users" u WHERE u.id::text = data#>>\'{actor, id}\'; \
+                            ELSIF ((data ? \'actor\') AND data#>>\'{actor, type}\' = \'User\' AND data#>>\'{actor, id}\' IS NOT NULL ) THEN \
                                 SELECT jsonb_set( \
                                     data, \
                                     \'{actor}\', \
@@ -7399,7 +7412,20 @@ module.exports = function (app) {
                 DECLARE \
                     finalData jsonb = data; \
                 BEGIN \
-                    IF ((data ? \'actor\') AND data#>>\'{actor, type}\' = \'User\' AND data#>>\'{actor, id}\' IS NOT NULL ) THEN \
+                    IF ((data ? \'actor\') AND data#>>\'{actor, type}\' = \'User\' AND data#>>\'{actor, id}\' IS NOT NULL AND (data ? \'object\' AND data#>>\'{object, 0, @type}\' = \'VoteList\')) THEN \
+                        SELECT jsonb_set( \
+                            data, \
+                            \'{actor}\', \
+                            to_jsonb( \
+                                json_build_object( \
+                                    \'id\', u.id, \
+                                    \'type\', data#>>\'{actor, type}\', \
+                                    \'name\', \'User\', \
+                                    \'company\', \'\' \
+                                ) \
+                            ), \
+                        false) INTO finalData FROM "Users" u WHERE u.id::text = data#>>\'{actor, id}\'; \
+                    ELSIF ((data ? \'actor\') AND data#>>\'{actor, type}\' = \'User\' AND data#>>\'{actor, id}\' IS NOT NULL ) THEN \
                         SELECT jsonb_set( \
                             data, \
                             \'{actor}\', \
