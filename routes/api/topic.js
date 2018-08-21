@@ -6672,7 +6672,6 @@ module.exports = function (app) {
                                     \'{actor}\', \
                                     to_jsonb( \
                                         json_build_object( \
-                                            \'id\', u.id, \
                                             \'type\', data#>>\'{actor, type}\', \
                                             \'name\', \'User\', \
                                             \'company\', \'\' \
@@ -7424,7 +7423,6 @@ module.exports = function (app) {
                             \'{actor}\', \
                             to_jsonb( \
                                 json_build_object( \
-                                    \'id\', u.id, \
                                     \'type\', data#>>\'{actor, type}\', \
                                     \'name\', \'User\', \
                                     \'company\', \'\' \
@@ -7944,7 +7942,6 @@ module.exports = function (app) {
                             \'{actor}\', \
                             to_jsonb( \
                                 json_build_object( \
-                                    \'id\', u.id, \
                                     \'type\', data#>>\'{actor, type}\', \
                                     \'name\', \'User\', \
                                     \'company\', \'\' \
