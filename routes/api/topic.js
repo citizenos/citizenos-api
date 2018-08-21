@@ -7243,7 +7243,7 @@ module.exports = function (app) {
         
         filters.forEach(function (filter, key) {
             if (allowedFilters.indexOf(filter) > -1) {
-                filters[key] = filter;
+                filters[key] = db.escape(filter);
             } else {
                 filters.splice(key, 1);
             }
@@ -7883,7 +7883,7 @@ module.exports = function (app) {
 
         filters.forEach(function (filter, key) {
             if (allowedFilters.indexOf(filter) > -1) {
-                filters[key] = filter;
+                filters[key] = db.escape(filter);
             } else {
                 filters.splice(key, 1);
             }
