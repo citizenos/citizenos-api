@@ -1115,7 +1115,7 @@ module.exports = function (app) {
                     {
                         model: User,
                         as: 'creator',
-                        attributes: ['id', 'name', 'email', 'company', 'language', 'imageUrl'] // TODO: Should fix User model not to return "email" by default. I guess requires Sequelize scopes - https://github.com/sequelize/sequelize/issues/1462
+                        attributes: ['id', 'name', 'company'] // TODO: Should fix User model not to return "email" by default. I guess requires Sequelize scopes - https://github.com/sequelize/sequelize/issues/1462
                     }
                 ],
                 limit: limit,
@@ -1170,7 +1170,19 @@ module.exports = function (app) {
                         DECLARE \
                         finalData jsonb = data; \
                         BEGIN \
-                            IF ((data ? \'actor\') AND data#>>\'{actor, type}\' = \'User\' AND data#>>\'{actor, id}\' IS NOT NULL ) THEN \
+                            IF ((data ? \'actor\') AND data#>>\'{actor, type}\' = \'User\' AND data#>>\'{actor, id}\' IS NOT NULL AND (data ? \'object\' AND data#>>\'{object, 0, @type}\' = \'VoteList\')) THEN \
+                                SELECT jsonb_set( \
+                                    data, \
+                                    \'{actor}\', \
+                                    to_jsonb( \
+                                        json_build_object( \
+                                            \'type\', data#>>\'{actor, type}\', \
+                                            \'name\', \'User\', \
+                                            \'company\', \'\' \
+                                        ) \
+                                    ), \
+                                false) INTO finalData FROM "Users" u WHERE u.id::text = data#>>\'{actor, id}\'; \
+                            ELSIF ((data ? \'actor\') AND data#>>\'{actor, type}\' = \'User\' AND data#>>\'{actor, id}\' IS NOT NULL ) THEN \
                                 SELECT jsonb_set( \
                                     data, \
                                     \'{actor}\', \
@@ -1179,9 +1191,7 @@ module.exports = function (app) {
                                             \'id\', u.id, \
                                             \'type\', data#>>\'{actor, type}\', \
                                             \'name\', u.name, \
-                                            \'company\', u.company, \
-                                            \'email\', u.email, \
-                                            \'imageUrl\', u."imageUrl" \
+                                            \'company\', u.company \
                                         ) \
                                     ), \
                                 false) INTO finalData FROM "Users" u WHERE u.id::text = data#>>\'{actor, id}\'; \
@@ -1259,9 +1269,7 @@ module.exports = function (app) {
                                             \'id\', u.id, \
                                             \'@type\', finalData#>>\'{object, @type}\', \
                                             \'name\', u.name, \
-                                            \'company\', u."company", \
-                                            \'language\', u.language, \
-                                            \'imageUrl\', u."imageUrl" \
+                                            \'company\', u."company" \
                                         ) \
                                     ), \
                                 false) INTO finalData FROM "Users" u WHERE u.id::text = data#>>\'{object, id}\'; \
@@ -1367,8 +1375,6 @@ module.exports = function (app) {
                         ' + visibilityCondition + ' \
                         ARRAY[:groupId] <@  a."groupIds" \
                         OR \
-                        a."objectType" = \'Activity\' \
-                        AND \
                         a.data@>\'{"type": "View"}\' \
                         AND \
                         a."actorType" = \'User\' \

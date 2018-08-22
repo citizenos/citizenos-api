@@ -6912,8 +6912,6 @@ module.exports = function (app) {
                         ' + visibilityCondition + ' \
                         ARRAY[:topicId] <@  a."topicIds" \
                         OR \
-                        a."objectType" = \'Activity\' \
-                        AND \
                         a.data@>\'{"type": "View"}\' \
                         AND \
                         a."actorType" = \'User\' \

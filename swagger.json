@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "version": "1.0.1",
+    "version": "1.0.0",
     "description": "CitizenOS API endpoints and descriptions",
     "title": "CitizenOS API",
     "termsOfService": "https://app.citizenos.com/en/topics/7abdd244-d45b-40d3-997c-a6290d4e972c",
@@ -57,6 +57,18 @@
     {
       "name": "groups",
       "description": "Groups endpoints"
+    },
+    {
+      "name": "search",
+      "description": "search endpoints"
+    },
+    {
+      "name": "partner",
+      "description": "partners endpoints"
+    },
+    {
+      "name": "users",
+      "description": "users endpoints"
     }
   ],
   "paths": {
@@ -5515,6 +5527,1147 @@
         "responses": {
           "201": {
             "$ref": "#/components/responses/Created"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Get member Users of the Group",
+        "description": "Returns all member users of the group",
+        "operationId": "getGroupMemberUser",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "groupId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "group id to return members"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Group members users data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "count": {
+                        "type": "integer",
+                        "example": 1,
+                        "description": "returned users count"
+                      },
+                      "rows": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "level": {
+                              "type": "string",
+                              "enum": [
+                                "read",
+                                "edit",
+                                "admin",
+                                "none"
+                              ]
+                            },
+                            "company": {
+                              "type": "string"
+                            },
+                            "imageUrl": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/:userId/groups/:groupId/members/users/:memberId": {
+      "put": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Update User membership information",
+        "description": "Update User membership information",
+        "operationId": "updateGroupMemberUser",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "groupId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "group id"
+          },
+          {
+            "in": "path",
+            "name": "memberId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "member User id to update"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "level": {
+                    "type": "string",
+                    "enum": [
+                      "read",
+                      "edit",
+                      "admin",
+                      "none"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Delete User membership information",
+        "description": "Delete User membership information",
+        "operationId": "deleteGroupMemberUser",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "groupId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "group id"
+          },
+          {
+            "in": "path",
+            "name": "memberId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "member User id to delete"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          }
+        }
+      }
+    },
+    "/api/users/:userId/groups/:groupId/topics": {
+      "get": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Get member Topics of the Group",
+        "description": "Returns all member Topics of the group",
+        "operationId": "getGroupMemberTopics",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "groupId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "group id to return topics"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Group topics data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "count": {
+                        "type": "integer",
+                        "example": 1,
+                        "description": "returned topics count"
+                      },
+                      "rows": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "example": "c2eb6752-7d88-4153-93ae-fe47aee26573"
+                            },
+                            "title": {
+                              "type": "string",
+                              "example": "My topic title",
+                              "nullable": true
+                            },
+                            "visibility": {
+                              "type": "string",
+                              "enum": [
+                                "public",
+                                "private"
+                              ],
+                              "default": "private"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "inProgress",
+                                "voting",
+                                "followUp",
+                                "closed"
+                              ],
+                              "default": "inProgress"
+                            },
+                            "categories": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "default": []
+                            },
+                            "endsAt": {
+                              "type": "string",
+                              "example": "2018-08-06T04:11:41.568Z"
+                            },
+                            "hashtag": {
+                              "type": "string",
+                              "example": "banana"
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "example": "2018-08-06T04:11:41.568Z"
+                            },
+                            "updatedAt": {
+                              "type": "string",
+                              "example": "2018-08-06T04:11:41.568Z"
+                            },
+                            "permission": {
+                              "type": "object",
+                              "properties": {
+                                "level": {
+                                  "type": "string",
+                                  "enum": [
+                                    "read",
+                                    "edit",
+                                    "admin",
+                                    "none"
+                                  ]
+                                }
+                              }
+                            },
+                            "members": {
+                              "type": "object",
+                              "properties": {
+                                "users": {
+                                  "type": "object",
+                                  "properties": {
+                                    "count": {
+                                      "type": "integer"
+                                    }
+                                  }
+                                },
+                                "groups": {
+                                  "type": "object",
+                                  "properties": {
+                                    "count": {
+                                      "type": "integer"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/groups": {
+      "get": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Get Groups list",
+        "description": "Returns groups",
+        "operationId": "getGroups",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "description": "Offset index of results for paggination purposes"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "default": 26
+            },
+            "description": "number of results to return"
+          },
+          {
+            "in": "query",
+            "name": "sourcePartnerId",
+            "schema": {
+              "type": "string"
+            },
+            "description": "return only groups created by source partner"
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "type": "string"
+            },
+            "description": "can be used for search"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Groups list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "c2eb6752-7d88-4153-93ae-fe47aee26573"
+                      },
+                      "name": {
+                        "type": "string",
+                        "example": "CitizenOS members"
+                      },
+                      "parentId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true,
+                        "description": "Parent Groups id."
+                      },
+                      "creator": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "example": "c2eb6752-7d88-4153-93ae-fe47aee26573",
+                            "description": "Group creators id"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "company": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "visibility": {
+                        "type": "string",
+                        "enum": [
+                          "public",
+                          "private"
+                        ],
+                        "default": "private"
+                      },
+                      "sourcePartnerId": {
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "example": "2018-08-06T04:11:41.568Z"
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "example": "2018-08-06T04:11:41.568Z"
+                      },
+                      "deletedAt": {
+                        "type": "string",
+                        "example": "2018-08-06T04:11:41.568Z"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/groups/:groupId/activities": {
+      "get": {
+        "tags": [
+          "activities"
+        ],
+        "summary": "Read (List) public Group Activities",
+        "description": "Read (List) public Group Activities",
+        "operationId": "getGroupActivitiesUnauth",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "group id"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "offset where to start returning results"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "number of results to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public groups activities list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Activity"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/users/:userId/groups/:groupId/activities": {
+      "get": {
+        "tags": [
+          "activities"
+        ],
+        "summary": "Read Group Activities",
+        "description": "Read Group Activities",
+        "operationId": "getGroupActivities",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "user id"
+          },
+          {
+            "in": "path",
+            "name": "groupId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Group id"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "offset where to start returning results"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "number of results to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Users Groups activities list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Activity"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v2/search": {
+      "get": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Search topics and groups",
+        "description": "Search topics and groups",
+        "operationId": "search",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "str",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "user id"
+          },
+          {
+            "in": "query",
+            "name": "include",
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array"
+                }
+              ]
+            },
+            "required": true,
+            "description": "items to include in results"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "offset where to start returning results"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "number of results to return"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "page of results to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Users Groups activities list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "results": {
+                          "type": "object",
+                          "properties": {
+                            "my": {
+                              "type": "object",
+                              "properties": {
+                                "topics": {
+                                  "type": "object",
+                                  "properties": {
+                                    "count": {
+                                      "type": "integer"
+                                    },
+                                    "rows": {
+                                      "type": "array",
+                                      "items": {
+                                        "$ref": "#/components/schemas/Topic"
+                                      }
+                                    }
+                                  }
+                                },
+                                "groups": {
+                                  "type": "object",
+                                  "properties": {
+                                    "count": {
+                                      "type": "integer"
+                                    },
+                                    "rows": {
+                                      "type": "array",
+                                      "items": {
+                                        "$ref": "#/components/schemas/Group"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "public": {
+                              "type": "object",
+                              "properties": {
+                                "topics": {
+                                  "type": "object",
+                                  "properties": {
+                                    "count": {
+                                      "type": "integer"
+                                    },
+                                    "rows": {
+                                      "type": "array",
+                                      "items": {
+                                        "$ref": "#/components/schemas/Topic"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/partners/:partnerId/topics/:sourcePartnerObjectId": {
+      "get": {
+        "tags": [
+          "partners"
+        ],
+        "summary": "Get Partner Topic mapping",
+        "description": "Enables Partner to map its object id to CitizenOS topic",
+        "operationId": "getPartnerTopicMapping",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "partnerId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "partner id"
+          },
+          {
+            "in": "path",
+            "name": "sourcePartnerObjectId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "id of the partner object linked to topic"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Topic that has partner object id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Topic"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/:userId": {
+      "put": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Update User information",
+        "description": "Update User information",
+        "operationId": "updateUser",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "company": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "language": {
+                    "type": "string"
+                  },
+                  "imageUrl": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated  user data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "get User information",
+        "description": "Get User information",
+        "operationId": "getUser",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/:userId/consents": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Create UserConsent",
+        "description": "Create UserConsent",
+        "operationId": "createUserConsent",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "partnerId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "get User consents",
+        "description": "Get User consents",
+        "operationId": "getUserConsents",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer"
+                        },
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "website": {
+                                "type": "string"
+                              },
+                              "createdAt": {
+                                "type": "string"
+                              },
+                              "updatedAt": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/:userId/consents/:partnerId": {
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Delete User consent",
+        "description": "Delete User consent",
+        "operationId": "deleteUserConsent",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "partnerId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "partner id of consent to delete"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
           }
         }
       }
