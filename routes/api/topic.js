@@ -7217,27 +7217,15 @@ module.exports = function (app) {
 
     });
 
-    var activitiesList = function (req, res, next, visibility) {
-        var limitMax = 50;
-        var limitDefault = 10;
-        var allowedIncludeAuth = ['userTopics', 'userGroups', 'user', 'self'];
-        var allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User'];
-        var userId;
-        var allowedInclude = ['publicTopics', 'publicGroups'];
-    
-        if (req.user) {
-            userId = req.user.id;
-        }
-        var sourcePartnerId = req.query.sourcePartnerId;    
-        var page = parseInt(req.query.page, 10);
-        var offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
-        var limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+    var buildActivityFeedIncludeString = function (req, visibility) {
         var queryInclude = req.query.include || [];
         
         if (queryInclude && !Array.isArray(queryInclude)) {
             queryInclude = [queryInclude];
         }
-    
+        var allowedIncludeAuth = ['userTopics', 'userGroups', 'user', 'self'];
+        var allowedInclude = ['publicTopics', 'publicGroups'];
+        
         var include = queryInclude.filter(function (item, key, input) {
             if (visibility && visibility === 'public') {
                 return allowedInclude.indexOf(item) > -1 && (input.indexOf(item) === key);
@@ -7252,28 +7240,10 @@ module.exports = function (app) {
                 include = allowedInclude;
             }
         }
-        var queryFilters = req.query.filter || [];
-        if (queryFilters && !Array.isArray(queryFilters)) {
-            queryFilters = [queryFilters];
-        } 
-    
-        var filters = queryFilters.filter(function (item, key, input) {
-            return allowedFilters.indexOf(item) > -1 && (input.indexOf(item) === key);
-        });
-        
-        var filterBy = '';
-        if (filters.length) {
-            var filtersEscaped = filters.map(function (filter ) { return db.escape(filter);});
-            filterBy = 'WHERE uac.data#>>\'{object, @type}\' IN (' + filtersEscaped.join(',') + ')';
-        }
 
-        if (page && page > 0) {
-            offset = page * limitDefault - limitDefault;
-            limit = limitDefault;
-        }
         var includedSql = [];
 
-        if (userId && (!visibility || visibility !== 'public')) {
+        if (req.user && req.user.id && (!visibility || visibility !== 'public')) {
             var viewActivity = 'SELECT \
                 va.id, \
                 va.data, \
@@ -7362,7 +7332,42 @@ module.exports = function (app) {
             }
         });
 
-        var includeSql = includedSql.join(' UNION ');
+        return includedSql.join(' UNION ');
+    }
+    var activitiesList = function (req, res, next, visibility) {
+        var limitMax = 50;
+        var limitDefault = 10;        
+        var allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User'];
+        var userId;        
+    
+        if (req.user) {
+            userId = req.user.id;
+        }
+        var sourcePartnerId = req.query.sourcePartnerId;    
+        var page = parseInt(req.query.page, 10);
+        var offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
+        var limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+
+        var includeSql = buildActivityFeedIncludeString(req, visibility);
+        var queryFilters = req.query.filter || [];
+        if (queryFilters && !Array.isArray(queryFilters)) {
+            queryFilters = [queryFilters];
+        } 
+    
+        var filters = queryFilters.filter(function (item, key, input) {
+            return allowedFilters.indexOf(item) > -1 && (input.indexOf(item) === key);
+        });
+        
+        var filterBy = '';
+        if (filters.length) {
+            var filtersEscaped = filters.map(function (filter ) { return db.escape(filter);});
+            filterBy = 'WHERE uac.data#>>\'{object, @type}\' IN (' + filtersEscaped.join(',') + ')';
+        }
+
+        if (page && page > 0) {
+            offset = page * limitDefault - limitDefault;
+            limit = limitDefault;
+        }
     
         if (limit > limitMax) limit = limitDefault;
     
