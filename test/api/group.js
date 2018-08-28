@@ -715,7 +715,6 @@ suite('Users', function () {
                         var creator = group.creator;
                         assert.equal(creator.id, user.id);
                         assert.equal(creator.name, user.name);
-                        assert.equal(creator.email, user.email);
 
                         done();
                     });

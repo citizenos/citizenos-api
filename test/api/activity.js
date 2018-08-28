@@ -269,6 +269,32 @@ suite('Activities', function () {
             });
         });
 
+        test('Success - filter with invalid value', function (done) {
+            activitiesReadUnauth(agent2, {sourcePartnerId: partner.id, filter: ['Hello']}, function (err, res) {
+                if (err) return done(err);
+
+                var activities = res.body.data;
+
+                assert.equal(activities.length, 3);
+                activities.forEach(function (activity) {
+                    assert.notProperty(activity.data.actor, 'email');
+                    assert.notProperty(activity.data.actor, 'imageUrl');
+                    assert.notProperty(activity.data.actor, 'language');
+
+                    if (activity.data.object['@type'] === 'User') {
+                        assert.notProperty(activity.data.object, 'email');
+                        assert.notProperty(activity.data.object, 'imageUrl');
+                        assert.notProperty(activity.data.object, 'language');                            
+                    } else {
+                        assert.equal(activity.data.object.id, topic.id);
+                        assert.equal(activity.data.object.sourcePartnerId, partner.id);
+                    }
+                });
+
+                done();
+            });
+        });
+
         test('Success - without partnerId', function (done) {
             activitiesReadUnauth(agent2, null, function (err, res) {
                 if (err) return done(err);

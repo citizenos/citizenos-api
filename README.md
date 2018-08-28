@@ -1,6 +1,7 @@
 # CitizenOS-API
 
-CitizenOS API - https://api.citizenos.com
+* CitizenOS API - https://api.citizenos.com
+* Documentation - http://api.citizenos.com/documentation
 
 **TOC:**
 
