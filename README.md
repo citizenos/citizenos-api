@@ -43,6 +43,19 @@ CitizenOS API - https://api.citizenos.com
     ```
     * Create the DB structure - `npm run createdb` - this test should pass, if it does not or it hangs, you should consult the `./logs/app.log`
       
+### Configuration
+
+We use https://github.com/lorenwest/node-config.
+
+Configuration files are in `./config` directory.
+
+Order of applying, further down the list overrides value from the sources above it:
+
+* `default.json` - Global configuration that is same for all environments.
+* `{process.env.NODE_ENV}.json` - Environment specific overrides.
+* `local.json` - Your local configuration that you create your self. This file is for YOUR SPECIFIC overrides, the file is in .gitignore so you don't accidentally commit it.
+* ENV - configuration values defined in environment variables. What can be overwritten there, can be read from `custom-environment-variables.json`
+
 ### Running
 
 * Start the app - `npm start`
