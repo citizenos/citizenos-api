@@ -270,7 +270,7 @@ suite('Activities', function () {
         });
 
         test('Success - filter with invalid value', function (done) {
-            activitiesReadUnauth(agent2, {sourcePartnerId: partner.id, filter: ['Hello']}, function (err, res) {
+            activitiesReadUnauth(agent2, {sourcePartnerId: partner.id, filter: ['Hello', 'Hack']}, function (err, res) {
                 if (err) return done(err);
 
                 var activities = res.body.data;

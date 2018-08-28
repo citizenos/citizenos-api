@@ -7217,59 +7217,78 @@ module.exports = function (app) {
 
     });
 
-    app.get('/api/users/:userId/activities', loginCheck(['partner']), function (req, res, next) {
-        var userId = req.user.id;
-        var sourcePartnerId = req.query.sourcePartnerId;
+    var activitiesList = function (req, res, next, visibility) {
         var limitMax = 50;
         var limitDefault = 10;
+        var allowedIncludeAuth = ['userTopics', 'userGroups', 'user', 'self'];
+        var allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User'];
+        var userId;
+        var allowedInclude = ['publicTopics', 'publicGroups'];
+    
+        if (req.user) {
+            userId = req.user.id;
+        }
+        var sourcePartnerId = req.query.sourcePartnerId;    
         var page = parseInt(req.query.page, 10);
         var offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         var limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
-        var include = req.query.include;
-        var filters = req.query.filter || [];
-        var allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User'];
+        var queryInclude = req.query.include || [];
         
-        if (page && page > 0) {
-            offset = page * limitDefault - limitDefault;
-            limit = limitDefault;
+        if (queryInclude && !Array.isArray(queryInclude)) {
+            queryInclude = [queryInclude];
         }
-
-        if (filters && !Array.isArray(filters)) {
-            filters = [filters];
-        } 
-        
-        filters.forEach(function (filter, key) {
-            if (allowedFilters.indexOf(filter) > -1) {
-                filters[key] = db.escape(filter);
+    
+        var include = queryInclude.filter(function (item, key, input) {
+            if (visibility && visibility === 'public') {
+                return allowedInclude.indexOf(item) > -1 && (input.indexOf(item) === key);
             } else {
-                filters.splice(key, 1);
+                return allowedIncludeAuth.indexOf(item) > -1 && (input.indexOf(item) === key);
+            }        
+        });
+
+        if (!include || !include.length) {
+            include = allowedIncludeAuth;
+            if (visibility === 'public') {
+                include = allowedInclude;
             }
+        }
+        var queryFilters = req.query.filter || [];
+        if (queryFilters && !Array.isArray(queryFilters)) {
+            queryFilters = [queryFilters];
+        } 
+    
+        var filters = queryFilters.filter(function (item, key, input) {
+            return allowedFilters.indexOf(item) > -1 && (input.indexOf(item) === key);
         });
         
         var filterBy = '';
         if (filters.length) {
-            filterBy = 'WHERE uac.data#>>\'{object, @type}\' IN (' + filters.join(',') + ')';
+            var filtersEscaped = filters.map(function (filter ) { return db.escape(filter);});
+            filterBy = 'WHERE uac.data#>>\'{object, @type}\' IN (' + filtersEscaped.join(',') + ')';
         }
 
-        if (include && !Array.isArray(include)) {
-            include = [include];
-        } else if (!include) {
-            include = ['topics', 'groups', 'user', 'self'];
+        if (page && page > 0) {
+            offset = page * limitDefault - limitDefault;
+            limit = limitDefault;
         }
         var includedSql = [];
-        var viewActivity = 'SELECT \
-            va.id, \
-            va.data, \
-            va."createdAt", \
-            va."updatedAt", \
-            va."deletedAt" \
-            FROM "Activities" va \
-            WHERE \
-            va."actorType" = \'User\' AND va."actorId" = :userId::text \
-            AND va.data@>\'{"type": "View"}\' \
-            AND va.data#>>\'{object, @type}\' = \'Activity\' \
-            ';
-        includedSql.push(viewActivity);
+
+        if (userId && (!visibility || visibility !== 'public')) {
+            var viewActivity = 'SELECT \
+                va.id, \
+                va.data, \
+                va."createdAt", \
+                va."updatedAt", \
+                va."deletedAt" \
+                FROM "Activities" va \
+                WHERE \
+                va."actorType" = \'User\' AND va."actorId" = :userId::text \
+                AND va.data@>\'{"type": "View"}\' \
+                AND va.data#>>\'{object, @type}\' = \'Activity\' \
+                ';
+            includedSql.push(viewActivity);
+        }
+    
         include.forEach(function (item) {
             switch (item) {
                 case 'user':
@@ -7283,28 +7302,6 @@ module.exports = function (app) {
                         pg_temp.getUserActivities(:userId) ua \
                     ');
                     break;
-                case 'topics':
-                    includedSql.push('SELECT \
-                        guta.id, \
-                        guta.data, \
-                        guta."createdAt", \
-                        guta."updatedAt", \
-                        guta."deletedAt" \
-                    FROM \
-                        pg_temp.getUserTopicActivities(:userId) guta \
-                    ');
-                    break;
-                case 'groups':
-                    includedSql.push('SELECT \
-                        guga.id, \
-                        guga.data, \
-                        guga."createdAt", \
-                        guga."updatedAt", \
-                        guga."deletedAt" \
-                    FROM \
-                        pg_temp.getUserGroupActivities(:userId) guga \
-                    ');
-                    break;
                 case 'self':
                     includedSql.push('SELECT \
                         guaaa.id, \
@@ -7316,15 +7313,59 @@ module.exports = function (app) {
                         pg_temp.getUserAsActorActivities(:userId) guaaa \
                     ');
                     break;
+                case 'userTopics':
+                    includedSql.push('SELECT \
+                        guta.id, \
+                        guta.data, \
+                        guta."createdAt", \
+                        guta."updatedAt", \
+                        guta."deletedAt" \
+                    FROM \
+                        pg_temp.getUserTopicActivities(:userId) guta \
+                    ');
+                    break;
+                case 'userGroups':
+                    includedSql.push('SELECT \
+                        guga.id, \
+                        guga.data, \
+                        guga."createdAt", \
+                        guga."updatedAt", \
+                        guga."deletedAt" \
+                    FROM \
+                        pg_temp.getUserGroupActivities(:userId) guga \
+                    ');
+                    break;
+                case 'publicTopics':
+                    includedSql.push('SELECT \
+                        guta.id, \
+                        guta.data, \
+                        guta."createdAt", \
+                        guta."updatedAt", \
+                        guta."deletedAt" \
+                    FROM \
+                        pg_temp.getPublicTopicActivities() guta \
+                    ');
+                    break;
+                case 'publicGroups':
+                    includedSql.push('SELECT \
+                        guga.id, \
+                        guga.data, \
+                        guga."createdAt", \
+                        guga."updatedAt", \
+                        guga."deletedAt" \
+                    FROM \
+                        pg_temp.getPublicGroupActivities() guga \
+                    ');
+                    break;
                 default:
                 // Do nothing
             }
         });
 
-        var includes = includedSql.join(' UNION ');
-
+        var includeSql = includedSql.join(' UNION ');
+    
         if (limit > limitMax) limit = limitDefault;
-
+    
         // All partners should see only Topics created by their site, but our own app sees all.
         var wherePartnerTopics = '';
         var wherePartnerGroups = '';
@@ -7334,6 +7375,34 @@ module.exports = function (app) {
         }
 
         var query = '\
+            CREATE OR REPLACE FUNCTION pg_temp.getPublicTopics() \
+                RETURNS TABLE("topicId" uuid) \
+                AS $$ \
+                    SELECT \
+                            t.id \
+                    FROM "Topics" t \
+                        LEFT JOIN "Users" c ON (c.id = t."creatorId") \
+                    WHERE \
+                        t.title IS NOT NULL \
+                        AND t.visibility = \'public\' \
+                        ' + wherePartnerTopics + ' \
+                    ORDER BY t."updatedAt" DESC \
+                ; $$ \
+            LANGUAGE SQL; \
+            \
+            CREATE OR REPLACE FUNCTION pg_temp.getPublicGroups() \
+                RETURNS TABLE("groupId" uuid) \
+                AS $$ \
+                    SELECT \
+                        g.id \
+                    FROM "Groups" g \
+                    WHERE g."visibility" = \'public\' \
+                        ' + wherePartnerGroups + ' \
+                    GROUP BY g.id \
+                    ORDER BY g."updatedAt" DESC, g.id \
+                ; $$ \
+            LANGUAGE SQL; \
+            \
             CREATE OR REPLACE FUNCTION pg_temp.getUserTopics(uuid) \
                 RETURNS TABLE("topicId" uuid) \
                 AS $$ \
@@ -7689,6 +7758,42 @@ module.exports = function (app) {
                 $BODY$ \
             LANGUAGE plpgsql; \
                 \
+            CREATE OR REPLACE FUNCTION pg_temp.getPublicTopicActivities() \
+                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
+                AS $$ \
+                    SELECT \
+                        a.id, \
+                        a.data, \
+                        a."createdAt", \
+                        a."updatedAt", \
+                        a."deletedAt" \
+                    FROM \
+                        "Activities" a, \
+                        pg_temp.getPublicTopics() ut \
+                        WHERE \
+                        ARRAY[ut."topicId"::text] <@ (a."topicIds") \
+                        ORDER BY a."updatedAt" DESC \
+                ; $$ \
+            LANGUAGE SQL; \
+            \
+            CREATE OR REPLACE FUNCTION pg_temp.getPublicGroupActivities() \
+                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
+                AS $$ \
+                    SELECT \
+                        a.id, \
+                        a.data, \
+                        a."createdAt", \
+                        a."updatedAt", \
+                        a."deletedAt" \
+                    FROM \
+                        "Activities" a, \
+                        pg_temp.getPublicGroups() ug \
+                        WHERE \
+                        ARRAY[ug."groupId"::text] <@ (a."groupIds") \
+                        ORDER BY a."updatedAt" DESC \
+                ; $$ \
+            LANGUAGE SQL; \
+            \
             CREATE OR REPLACE FUNCTION pg_temp.getUserTopicActivities(uuid) \
                 RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
                 AS $$ \
@@ -7767,7 +7872,7 @@ module.exports = function (app) {
                     uac."deletedAt" \
                 FROM \
                     ( \
-                    ' + includes + ' \
+                    ' + includeSql + ' \
                     ) uac \
                 JOIN pg_temp.parseData(uac.data) pdata ON uac.id = uac.id \
                 ' + filterBy + ' \
@@ -7777,12 +7882,14 @@ module.exports = function (app) {
 
         return db
             .transaction(function (t) {
-                var activity = Activity.build({
-                    data: {
-                        offset: offset,
-                        limit: limit
-                    }
-                });
+                if (userId) {
+                    var activity = Activity.build({
+                        data: {
+                            offset: offset,
+                            limit: limit
+                        }
+                    });
+                }
 
                 return db
                     .query(
@@ -7800,6 +7907,10 @@ module.exports = function (app) {
                             transaction: t
                         }
                     ).then(function (results) {
+                        if (!userId) {
+                            return results;
+                        }
+
                         return cosActivities
                             .viewActivityFeedActivity(
                                 activity,
@@ -7812,478 +7923,19 @@ module.exports = function (app) {
                             )
                             .then(function () {
                                 return results;
-                            });
+                            });                        
                     });
             }).then(function (results) {
                 return res.ok(results);
             })
             .catch(next);
+    };
 
+    app.get('/api/users/:userId/activities', loginCheck(['partner']), function (req, res, next) {
+        return activitiesList(req, res, next);
     });
 
     app.get('/api/activities', function (req, res, next) {
-        var sourcePartnerId = req.query.sourcePartnerId;
-        var limitMax = 50;
-        var limitDefault = 10;
-        var page = parseInt(req.query.page, 10);
-        var offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
-        var limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
-        var include = req.query.include;
-        var filters = req.query.filter || [];
-        var allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User'];
-
-        if (page && page > 0) {
-            offset = page * limitDefault - limitDefault;
-            limit = limitDefault;
-        }
-        if (include && !Array.isArray(include)) {
-            include = [include];
-        } else if (!include) {
-            include = ['topics', 'groups'];
-        }
-        if (filters && !Array.isArray(filters)) {
-            filters = [filters];
-        }
-
-        var includedSql = [];
-        include.forEach(function (item) {
-            switch (item) {
-                case 'topics':
-                    includedSql.push('SELECT \
-                        guta.id, \
-                        guta.data, \
-                        guta."createdAt", \
-                        guta."updatedAt", \
-                        guta."deletedAt" \
-                    FROM \
-                        pg_temp.getTopicActivities() guta \
-                    ');
-                    break;
-                case 'groups':
-                    includedSql.push('SELECT \
-                        guga.id, \
-                        guga.data, \
-                        guga."createdAt", \
-                        guga."updatedAt", \
-                        guga."deletedAt" \
-                    FROM \
-                        pg_temp.getGroupActivities() guga \
-                    ');
-                    break;
-                default:
-                // Do nothing
-            }
-        });
-
-        var includes = includedSql.join(' UNION ');
-
-        filters.forEach(function (filter, key) {
-            if (allowedFilters.indexOf(filter) > -1) {
-                filters[key] = db.escape(filter);
-            } else {
-                filters.splice(key, 1);
-            }
-        });
-        var filterBy = '';
-        if (filters.length) {
-            filterBy = 'WHERE uac.data#>>\'{object, @type}\' IN (' + filters.join(',') + ')';
-        }
-        if (limit > limitMax) limit = limitDefault;
-
-        // All partners should see only Topics created by their site, but our own app sees all.
-        var wherePartnerTopics = '';
-        var wherePartnerGroups = '';
-        if (sourcePartnerId) {
-            wherePartnerTopics = ' AND t."sourcePartnerId" = :sourcePartnerId ';
-            wherePartnerGroups = ' AND g."sourcePartnerId" = :sourcePartnerId ';
-        }
-
-        var query = '\
-            CREATE OR REPLACE FUNCTION pg_temp.getPublicTopics() \
-                RETURNS TABLE("topicId" uuid) \
-                AS $$ \
-                    SELECT \
-                            t.id \
-                    FROM "Topics" t \
-                        LEFT JOIN "Users" c ON (c.id = t."creatorId") \
-                    WHERE \
-                        t.title IS NOT NULL \
-                        AND t.visibility = \'public\' \
-                        ' + wherePartnerTopics + ' \
-                    ORDER BY t."updatedAt" DESC \
-                ; $$ \
-            LANGUAGE SQL; \
-                \
-            CREATE OR REPLACE FUNCTION pg_temp.getPublicGroups() \
-                RETURNS TABLE("groupId" uuid) \
-                AS $$ \
-                    SELECT \
-                        g.id \
-                    FROM "Groups" g \
-                    WHERE g."visibility" = \'public\' \
-                        ' + wherePartnerGroups + ' \
-                    GROUP BY g.id \
-                    ORDER BY g."updatedAt" DESC, g.id \
-                ; $$ \
-            LANGUAGE SQL; \
-            \
-            CREATE OR REPLACE FUNCTION pg_temp.parseData(data jsonb) \
-                RETURNS jsonb \
-                AS \
-                $BODY$ \
-                DECLARE \
-                    finalData jsonb = data; \
-                BEGIN \
-                    IF ((data ? \'actor\') AND data#>>\'{actor, type}\' = \'User\' AND data#>>\'{actor, id}\' IS NOT NULL AND (data ? \'object\' AND data#>>\'{object, 0, @type}\' = \'VoteList\')) THEN \
-                        SELECT jsonb_set( \
-                            data, \
-                            \'{actor}\', \
-                            to_jsonb( \
-                                json_build_object( \
-                                    \'type\', data#>>\'{actor, type}\', \
-                                    \'name\', \'User\', \
-                                    \'company\', \'\' \
-                                ) \
-                            ), \
-                        false) INTO finalData FROM "Users" u WHERE u.id::text = data#>>\'{actor, id}\'; \
-                    ELSIF  ((data ? \'actor\') AND data#>>\'{actor, type}\' = \'User\' AND data#>>\'{actor, id}\' IS NOT NULL ) THEN \
-                        SELECT jsonb_set( \
-                            data, \
-                            \'{actor}\', \
-                            to_jsonb( \
-                                json_build_object( \
-                                    \'id\', u.id, \
-                                    \'type\', data#>>\'{actor, type}\', \
-                                    \'name\', u.name, \
-                                    \'company\', u.company \
-                                ) \
-                            ), \
-                        false) INTO finalData FROM "Users" u WHERE u.id::text = data#>>\'{actor, id}\'; \
-                    ELSE \
-                        SELECT jsonb_set( \
-                            data, \
-                            \'{actor}\', \
-                            to_jsonb( \
-                                json_build_object( \
-                                    \'type\', data#>>\'{actor, type}\' \
-                                ) \
-                            ), \
-                        false) INTO finalData; \
-                    END IF; \
-                    IF ((data ? \'actor\') AND data#>>\'{actor, type}\' = \'User\' AND data#>>\'{actor, id}\' IS NULL  AND (data ? \'object\' AND data#>>\'{object, 0, @type}\' = \'VoteList\')) THEN \
-                        SELECT \
-                            jsonb_set( \
-                                data, \
-                                \'{object, 0}\', \
-                                to_jsonb( \
-                                    (data#>>\'{object, 0}\')::jsonb - \'userId\' \
-                                ), \
-                            false ) INTO finalData; \
-                    END IF; \
-                    IF ((finalData ? \'object\') AND finalData#>>\'{object, @type}\' = \'Group\') THEN \
-                        SELECT jsonb_set( \
-                            finalData, \
-                            \'{object}\', \
-                            to_jsonb( \
-                                json_build_object( \
-                                    \'id\', g.id, \
-                                    \'@type\', finalData#>>\'{object, @type}\', \
-                                    \'parentId\', g."parentId", \
-                                    \'name\', g.name, \
-                                    \'creatorId\', g."creatorId", \
-                                    \'visibility\', g.visibility, \
-                                    \'sourcePartnerId\', g."sourcePartnerId", \
-                                    \'createdAt\', g."createdAt", \
-                                    \'updatedAt\', g."updatedAt", \
-                                    \'deletedAt\', g."deletedAt" \
-                                ) \
-                            ), \
-                        false) INTO finalData FROM "Groups" g WHERE g.id::text = data#>>\'{object, id}\'; \
-                    END IF; \
-                    IF ((finalData ? \'origin\') AND finalData#>>\'{origin, @type}\' = \'Group\') THEN \
-                                SELECT jsonb_set( \
-                                    finalData, \
-                                    \'{origin}\', \
-                                    to_jsonb( \
-                                        json_build_object( \
-                                            \'id\', g.id, \
-                                            \'@type\', finalData#>>\'{origin, @type}\', \
-                                            \'parentId\', g."parentId", \
-                                            \'name\', g.name, \
-                                            \'creatorId\', g."creatorId", \
-                                            \'visibility\', g.visibility, \
-                                            \'sourcePartnerId\', g."sourcePartnerId", \
-                                            \'createdAt\', g."createdAt", \
-                                            \'updatedAt\', g."updatedAt", \
-                                            \'deletedAt\', g."deletedAt" \
-                                        ) \
-                                    ), \
-                                false) INTO finalData FROM "Groups" g WHERE g.id::text = data#>>\'{origin, id}\'; \
-                            END IF; \
-                    IF ((finalData ? \'object\') AND finalData#>>\'{object, @type}\' = \'Topic\') THEN \
-                        SELECT jsonb_set( \
-                            finalData, \
-                            \'{object}\', \
-                            to_jsonb( \
-                                json_build_object( \
-                                    \'id\', t.id, \
-                                    \'@type\', finalData#>>\'{object, @type}\', \
-                                    \'title\', t.title, \
-                                    \'status\', t.status, \
-                                    \'visibility\', t.visibility, \
-                                    \'categories\', t.categories, \
-                                    \'sourcePartnerId\', t."sourcePartnerId", \
-                                    \'sourcePartnerObjectId\', t."sourcePartnerObjectId", \
-                                    \'creatorId\', t."creatorId", \
-                                    \'tokenJoin\', t."tokenJoin", \
-                                    \'padUrl\', t."padUrl", \
-                                    \'endsAt\', t."endsAt", \
-                                    \'hashtag\', t.hashtag, \
-                                    \'createdAt\', t."createdAt", \
-                                    \'updatedAt\', t."updatedAt" \
-                                ) \
-                            ), \
-                        false) INTO finalData FROM "Topics" t WHERE t.id::text = data#>>\'{object, id}\'; \
-                    END IF; \
-                    IF ((finalData ? \'object\') AND finalData#>>\'{object, @type}\' = \'User\') THEN \
-                        SELECT jsonb_set( \
-                            finalData, \
-                            \'{object}\', \
-                            to_jsonb( \
-                                json_build_object( \
-                                    \'id\', u.id, \
-                                    \'@type\', finalData#>>\'{object, @type}\', \
-                                    \'name\', u.name, \
-                                    \'company\', u."company" \
-                                ) \
-                            ), \
-                        false) INTO finalData FROM "Users" u WHERE u.id::text = data#>>\'{object, id}\'; \
-                    END IF; \
-                    IF ((finalData ? \'origin\') AND finalData#>>\'{origin, @type}\' = \'TopicMemberUser\') THEN \
-                        SELECT jsonb_set( \
-                            finalData, \
-                            \'{object}\', \
-                            to_jsonb( \
-                                json_build_object( \
-                                    \'@type\', finalData#>>\'{origin, @type}\', \
-                                    \'level\', finalData#>>\'{origin, level}\', \
-                                    \'userId\', finalData#>>\'{origin, userId}\', \
-                                    \'topicId\', finalData#>>\'{origin, topicId}\', \
-                                    \'createdAt\', finalData#>>\'{origin, createdAt}\', \
-                                    \'deletedAt\', finalData#>>\'{origin, deletedAt}\', \
-                                    \'updatedAt\', finalData#>>\'{origin, updatedAt}\', \
-                                    \'userName\', u.name, \
-                                    \'topicTitle\', t.title \
-                                ) \
-                            ), \
-                        false) INTO finalData FROM "Users" u JOIN "Topics" t ON t.id = t.id WHERE u.id::text = data#>>\'{origin, userId}\' AND t.id::text = data#>>\'{origin, topicId}\'; \
-                    END IF; \
-                    IF ((finalData ? \'origin\') AND finalData#>>\'{origin, @type}\' = \'TopicMemberGroup\') THEN \
-                        SELECT jsonb_set( \
-                            finalData, \
-                            \'{object}\', \
-                            to_jsonb( \
-                                json_build_object( \
-                                    \'@type\', finalData#>>\'{origin, @type}\', \
-                                    \'level\', finalData#>>\'{origin, level}\', \
-                                    \'userId\', finalData#>>\'{origin, userId}\', \
-                                    \'topicId\', finalData#>>\'{origin, topicId}\', \
-                                    \'createdAt\', finalData#>>\'{origin, createdAt}\', \
-                                    \'deletedAt\', finalData#>>\'{origin, deletedAt}\', \
-                                    \'updatedAt\', finalData#>>\'{origin, updatedAt}\', \
-                                    \'groupName\', g.name, \
-                                    \'topicTitle\', t.title \
-                                ) \
-                            ), \
-                        false) INTO finalData FROM "Groups" g JOIN "Topics" t ON t.id = t.id WHERE g.id::text = data#>>\'{origin, groupId}\' AND t.id::text = data#>>\'{origin, topicId}\'; \
-                    END IF; \
-                    IF ((finalData ? \'origin\') AND finalData#>>\'{origin, @type}\' = \'GroupMember\') THEN \
-                        SELECT jsonb_set( \
-                            finalData, \
-                            \'{object}\', \
-                            to_jsonb( \
-                                json_build_object( \
-                                    \'@type\', finalData#>>\'{origin, @type}\', \
-                                    \'level\', finalData#>>\'{origin, level}\', \
-                                    \'userId\', finalData#>>\'{origin, userId}\', \
-                                    \'topicId\', finalData#>>\'{origin, topicId}\', \
-                                    \'createdAt\', finalData#>>\'{origin, createdAt}\', \
-                                    \'deletedAt\', finalData#>>\'{origin, deletedAt}\', \
-                                    \'updatedAt\', finalData#>>\'{origin, updatedAt}\', \
-                                    \'groupName\', g.name, \
-                                    \'userName\', u.name \
-                                ) \
-                            ), \
-                        false) INTO finalData FROM "Groups" g JOIN "Users" u ON u.id = u.id WHERE u.id::text = data#>>\'{origin, userId}\' AND g.id::text = data#>>\'{origin, groupId}\'; \
-                    END IF; \
-                    IF ((finalData ? \'target\') AND finalData#>>\'{target, @type}\' = \'Group\') THEN \
-                        SELECT jsonb_set( \
-                            finalData, \
-                            \'{target}\', \
-                            to_jsonb( \
-                                json_build_object( \
-                                    \'id\', g.id, \
-                                    \'@type\', finalData#>>\'{target, @type}\', \
-                                    \'parentId\', g."parentId", \
-                                    \'name\', g.name, \
-                                    \'creatorId\', g."creatorId", \
-                                    \'visibility\', g.visibility, \
-                                    \'sourcePartnerId\', g."sourcePartnerId", \
-                                    \'createdAt\', g."createdAt", \
-                                    \'updatedAt\', g."updatedAt", \
-                                    \'deletedAt\', g."deletedAt" \
-                                ) \
-                            ), \
-                        false) INTO finalData FROM "Groups" g WHERE g.id::text = data#>>\'{target, id}\'; \
-                    END IF; \
-                    IF ((finalData ? \'target\') AND finalData#>>\'{target, @type}\' = \'Topic\') THEN \
-                        SELECT jsonb_set( \
-                            finalData, \
-                            \'{target}\', \
-                            to_jsonb( \
-                                json_build_object( \
-                                    \'id\', t.id, \
-                                    \'@type\', finalData#>>\'{target, @type}\', \
-                                    \'title\', t.title, \
-                                    \'status\', t.status, \
-                                    \'visibility\', t.visibility, \
-                                    \'categories\', t.categories, \
-                                    \'sourcePartnerId\', t."sourcePartnerId", \
-                                    \'sourcePartnerObjectId\', t."sourcePartnerObjectId", \
-                                    \'creatorId\', t."creatorId", \
-                                    \'tokenJoin\', t."tokenJoin", \
-                                    \'padUrl\', t."padUrl", \
-                                    \'endsAt\', t."endsAt", \
-                                    \'hashtag\', t.hashtag, \
-                                    \'createdAt\', t."createdAt", \
-                                    \'updatedAt\', t."updatedAt" \
-                                ) \
-                            ), \
-                        false) INTO finalData FROM "Topics" t WHERE t.id::text = data#>>\'{target, id}\'; \
-                    END IF; \
-                    IF ((finalData ? \'target\') AND finalData#>>\'{target, @type}\' = \'Comment\') THEN \
-                        SELECT jsonb_set( \
-                            finalData, \
-                            \'{target, topicId}\', \
-                            to_jsonb(tc."topicId"), \
-                        true) INTO finalData FROM "TopicComments" tc WHERE tc."commentId"::text = data#>>\'{target, id}\'; \
-                    END IF; \
-                    IF ((finalData ? \'object\') AND finalData#>>\'{object, @type}\' = \'VoteUserContainer\') THEN \
-                        SELECT jsonb_set( \
-                            finalData, \
-                            \'{object}\', \
-                            to_jsonb( \
-                                json_build_object( \
-                                    \'@type\', data#>>\'{object, @type}\', \
-                                    \'userId\', data#>>\'{object, userId}\', \
-                                    \'voteId\', data#>>\'{object, voteId}\', \
-                                    \'createdAt\', data#>>\'{object, createdAt}\', \
-                                    \'updatedAt\', data#>>\'{object, updatedAt}\', \
-                                    \'deletedAt\', data#>>\'{object, deletedAt}\', \
-                                    \'topicId\', tv."topicId", \
-                                    \'topicTitle\', t.title \
-                                ) \
-                            ), \
-                        true) INTO finalData FROM "TopicVotes" tv \
-                        JOIN "Topics" t ON t.id = tv."topicId" \
-                        WHERE tv."voteId"::text = data#>>\'{object, voteId}\' \
-                        ; \
-                    END IF; \
-                    IF ((finalData ? \'object\') AND finalData#>>\'{type}\' = \'Join\' AND finalData#>>\'{object, @type}\' = \'Topic\' AND NOT(finalData#>\'{actor}\' ? \'level\')) THEN \
-                        SELECT jsonb_set( \
-                            finalData, \
-                            \'{actor}\', \
-                            to_jsonb( \
-                                json_build_object( \
-                                    \'type\', data#>>\'{actor, type}\', \
-                                    \'id\', data#>>\'{actor, id}\', \
-                                    \'level\', \'read\' \
-                                ) \
-                            ), \
-                        true) INTO finalData \
-                        ; \
-                    END IF; \
-                    RETURN finalData; \
-                END; \
-                $BODY$ \
-            LANGUAGE plpgsql; \
-                \
-            CREATE OR REPLACE FUNCTION pg_temp.getTopicActivities() \
-                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
-                AS $$ \
-                    SELECT \
-                        a.id, \
-                        a.data, \
-                        a."createdAt", \
-                        a."updatedAt", \
-                        a."deletedAt" \
-                    FROM \
-                        "Activities" a, \
-                        pg_temp.getPublicTopics() ut \
-                        WHERE \
-                        ARRAY[ut."topicId"::text] <@ (a."topicIds") \
-                        ORDER BY a."updatedAt" DESC \
-                ; $$ \
-            LANGUAGE SQL; \
-            \
-            CREATE OR REPLACE FUNCTION pg_temp.getGroupActivities() \
-                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
-                AS $$ \
-                    SELECT \
-                        a.id, \
-                        a.data, \
-                        a."createdAt", \
-                        a."updatedAt", \
-                        a."deletedAt" \
-                    FROM \
-                        "Activities" a, \
-                        pg_temp.getPublicGroups() ug \
-                        WHERE \
-                        ARRAY[ug."groupId"::text] <@ (a."groupIds") \
-                        ORDER BY a."updatedAt" DESC \
-                ; $$ \
-            LANGUAGE SQL; \
-            \
-            SELECT \
-                    uac.id, \
-                    pdata as data, \
-                    uac."createdAt", \
-                    uac."updatedAt", \
-                    uac."deletedAt" \
-                FROM \
-                    ( \
-                    ' + includes + ' \
-                    ) uac \
-                JOIN pg_temp.parseData(uac.data) pdata ON uac.id = uac.id \
-                ' + filterBy + ' \
-                ORDER BY uac."updatedAt" DESC \
-                LIMIT :limit OFFSET :offset \
-            ;';
-
-        return db
-            .transaction(function (t) {
-                return db
-                    .query(
-                        query,
-                        {
-                            replacements: {
-                                sourcePartnerId: sourcePartnerId,
-                                limit: limit,
-                                offset: offset
-                            },
-                            type: db.QueryTypes.SELECT,
-                            raw: true,
-                            nest: true,
-                            transaction: t
-                        }
-                    ).then(function (results) {
-                        return results;
-                    });
-            }).then(function (results) {
-                return res.ok(results);
-            })
-            .catch(next);
-
+        return activitiesList(req, res, next, 'public');
     });
-
 };
