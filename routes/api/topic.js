@@ -7333,7 +7333,8 @@ module.exports = function (app) {
         });
 
         return includedSql.join(' UNION ');
-    }
+    };
+
     var activitiesList = function (req, res, next, visibility) {
         var limitMax = 50;
         var limitDefault = 10;        
@@ -7360,7 +7361,9 @@ module.exports = function (app) {
         
         var filterBy = '';
         if (filters.length) {
-            var filtersEscaped = filters.map(function (filter ) { return db.escape(filter);});
+            var filtersEscaped = filters.map(function (filter) {
+                return db.escape(filter);
+            });
             filterBy = 'WHERE uac.data#>>\'{object, @type}\' IN (' + filtersEscaped.join(',') + ')';
         }
 
