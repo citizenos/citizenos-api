@@ -22,6 +22,7 @@ module.exports = function (app) {
     var superagent = app.get('superagent');
     var Promise = app.get('Promise');
     var DigiDocServiceClient = app.get('ddsClient');
+    var url = app.get('url');
 
     var User = app.get('models.User');
     var UserConnection = app.get('models.UserConnection');
@@ -1026,16 +1027,22 @@ module.exports = function (app) {
                     return res.status(400).send('Invalid partner configuration. Please contact system administrator.');
                 }
 
-                var re = new RegExp(partner.redirectUriRegexp, 'i');
+                var partnerUriRegexp = new RegExp(partner.redirectUriRegexp, 'i');
 
                 // Check referer IF it exists, not always true. May help in some XSRF scenarios.
-                if (referer && !re.test(referer) && referer.indexOf(urlLib.getFe()) !== 0 && referer.indexOf(urlLib.getApi()) !== 0) {
-                    logger.warn('Possible XSRF attempt! Referer header does not match expected partner URI scheme', referer, req.path, reqQuery, !re.test(referer), referer.indexOf(urlLib.getFe()) !== 0, referer.indexOf(urlLib.getApi()) !== 0);
+                if (referer && !partnerUriRegexp.test(referer)) {
+                    var refererHostname = url.parse(referer).hostname;
+                    var feHostname = url.parse(urlLib.getFe()).hostname;
+                    var apiHostname = url.parse(urlLib.getApi()).hostname;
 
-                    return res.status(400).send('Invalid referer. Referer header does not match expected partner URI scheme.');
+                    if (refererHostname !== feHostname && refererHostname !== apiHostname) {
+                        logger.warn('Possible XSRF attempt! Referer header does not match expected partner URI scheme', referer, req.path, reqQuery, !partnerUriRegexp.test(referer), refererHostname, apiHostname, feHostname);
+
+                        return res.status(400).send('Invalid referer. Referer header does not match expected partner URI scheme.');
+                    }
                 }
 
-                if (!redirectUri || !re.test(redirectUri)) {
+                if (!redirectUri || !partnerUriRegexp.test(redirectUri)) {
                     return res.status(400).send('Invalid or missing "redirect_uri" parameter value.');
                 }
 
