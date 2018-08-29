@@ -103,10 +103,6 @@
       "ssl": true,
       "rejectUnauthorized": true
     },
-    "idCard": {
-      "serviceUrl": "https://id.citizenos.com:8443/info",
-      "apiKey": null
-    },
     "smartId": {
       "hostname": "smartid.citizenos.com:8001",
       "authorizeToken": "m3EvIdswsiIpeOXqXb185fgoS9h0zpu5jrweZWLVGeVR5FoQpE",

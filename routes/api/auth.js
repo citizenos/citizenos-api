@@ -569,6 +569,12 @@ module.exports = function (app) {
         var token = req.body.token; // Token to access the ID info service
         var cert = req.headers['x-ssl-client-cert'];
 
+        if (config.services.idCard && cert) {
+            logger.error('X-SSL-Client-Cert header is not allowed when ID-card service is enabled. IF you trust your proxy, sending the X-SSL-Client-Cert, delete the services.idCard from your configuration.');
+
+            return res.badRequest('X-SSL-Client-Cert header is not allowed when ID-card proxy service is enabled.');
+        }
+
         if (!token && !cert) {
             logger.warn('Missing required parameter "token" OR certificate in X-SSL-Client-Cert header. One must be provided!', req.path, req.headers);
 
