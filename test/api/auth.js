@@ -19,7 +19,10 @@ var _login = function (agent, email, password, expectedHttpCode, callback) {
     var a = agent
         .post(path)
         .set('Content-Type', 'application/json')
-        .send({email: email, password: password})
+        .send({
+            email: email,
+            password: password
+        })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 
@@ -32,6 +35,24 @@ var _login = function (agent, email, password, expectedHttpCode, callback) {
 
 var login = function (agent, email, password, callback) {
     _login(agent, email, password, 200, callback);
+};
+
+var _loginId = function (agent, token, clientCert, expectedHttpCode, callback) {
+    var path = '/api/auth/id';
+
+    var a = agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .set('X-SSL-Client-Cert', clientCert)
+        .send({token: token})
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+
+    if (expectedHttpCode === 202 || expectedHttpCode === 203) {
+        a.expect('set-cookie', /.*\.sid=.*; Path=\/api; Expires=.*; HttpOnly/);
+    }
+
+    a.end(callback);
 };
 
 /**
@@ -52,7 +73,10 @@ var _loginMobileInit = function (agent, pid, phoneNumber, expectedHttpCode, call
     agent
         .post(path)
         .set('Content-Type', 'application/json')
-        .send({pid: pid, phoneNumber: phoneNumber})
+        .send({
+            pid: pid,
+            phoneNumber: phoneNumber
+        })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/)
         .end(callback);
@@ -183,7 +207,11 @@ var _signup = function (agent, email, password, language, expectedHttpCode, call
     agent
         .post(path)
         .set('Content-Type', 'application/json')
-        .send({email: email, password: password, language: language})
+        .send({
+            email: email,
+            password: password,
+            language: language
+        })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/)
         .end(callback);
@@ -223,7 +251,10 @@ var _passwordSet = function (agent, currentPassword, newPassword, expectedHttpCo
     agent
         .post(path)
         .set('Content-Type', 'application/json')
-        .send({currentPassword: currentPassword, newPassword: newPassword})
+        .send({
+            currentPassword: currentPassword,
+            newPassword: newPassword
+        })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/)
         .end(callback);
@@ -286,7 +317,11 @@ var _passwordResetComplete = function (agent, email, password, passwordResetCode
     agent
         .post(path)
         .set('Content-Type', 'application/json')
-        .send({email: email, password: password, passwordResetCode: passwordResetCode})
+        .send({
+            email: email,
+            password: password,
+            passwordResetCode: passwordResetCode
+        })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/)
         .end(callback);
@@ -451,7 +486,10 @@ suite('Auth', function () {
                 agent
                     .post('/api/auth/login')
                     .set('Content-Type', 'application/json')
-                    .send({email: 'test_nonexistent_' + new Date().getTime() + '@test.ee', password: password})
+                    .send({
+                        email: 'test_nonexistent_' + new Date().getTime() + '@test.ee',
+                        password: password
+                    })
                     .expect(400)
                     .expect('Content-Type', /json/)
                     .end(function (err, res) {
@@ -496,7 +534,10 @@ suite('Auth', function () {
                 agent
                     .post('/api/auth/login')
                     .set('Content-Type', 'application/json')
-                    .send({email: email, password: 'thisinvalidpassword'})
+                    .send({
+                        email: email,
+                        password: 'thisinvalidpassword'
+                    })
                     .expect(400)
                     .expect('Content-Type', /json/)
                     .end(function (err, res) {
@@ -514,8 +555,15 @@ suite('Auth', function () {
             });
         });
 
-        suite.skip('ID-card', function () {
-            // TODO: Create some
+        suite('ID-card', function () {
+
+            test.skip('Success - client certificate in X-SSL-Client-Cert header', function (done) {
+                done();
+            });
+
+            test('Fail - no token or client certificate in header', function (done) {
+                _loginId(request.agent(app), null, null, 400, done);
+            });
         });
 
         suite('Mobiil-ID', function () {
@@ -1821,7 +1869,13 @@ suite('Auth', function () {
             var agent = request.agent(app);
 
             var path = '/api/auth/status';
-            var token = jwt.sign({id: 'notimportantinthistest', scope: 'all'}, config.session.privateKey, {expiresIn: '.1ms', algorithm: config.session.algorithm});
+            var token = jwt.sign({
+                id: 'notimportantinthistest',
+                scope: 'all'
+            }, config.session.privateKey, {
+                expiresIn: '.1ms',
+                algorithm: config.session.algorithm
+            });
 
             agent
                 .get(path)
@@ -1924,7 +1978,10 @@ suite('Auth', function () {
                             return done(err);
                         }
 
-                        var expectedUrl = urlLib.getFe('/:language/partners/:partnerId/consent', {partnerId: TEST_PARTNER.id, language: 'en'});
+                        var expectedUrl = urlLib.getFe('/:language/partners/:partnerId/consent', {
+                            partnerId: TEST_PARTNER.id,
+                            language: 'en'
+                        });
 
                         assert.equal(authRes.headers.location, expectedUrl);
                         // FIXME: Verify OpenID callback parameters!

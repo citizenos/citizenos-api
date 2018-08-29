@@ -562,7 +562,7 @@ module.exports = function (app) {
     /**
      * Authenticate using ID-card
      *
-     * NOTE: Requires proxy in front of the app to set "ssl_client_cert" header
+     * NOTE: Requires proxy in front of the app to set "X-SSL-Client-Cert" header
      */
     app.post('/api/auth/id', function (req, res, next) {
         var token = req.body.token; // Token to access the ID info service
