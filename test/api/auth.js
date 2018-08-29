@@ -54,7 +54,7 @@ var _loginId = function (agent, token, clientCert, expectedHttpCode, callback) {
         a.send({token: token});
     }
 
-    if (expectedHttpCode === 202 || expectedHttpCode === 203) {
+    if (expectedHttpCode === 200) {
         a.expect('set-cookie', /.*\.sid=.*; Path=\/api; Expires=.*; HttpOnly/);
     }
 
@@ -568,10 +568,7 @@ suite('Auth', function () {
                 var agent = request.agent(app);
                 var cert = fs.readFileSync('./test/resources/certificates/dds_good_igor_sign.pem', {encoding: 'utf8'}).replace(/\n/g, ''); //eslint-disable-line no-sync
 
-                _loginId(agent, null, cert, 200, function (err, res) {
-                    if (err) return done(err);
-                    done();
-                });
+                _loginId(agent, null, cert, 200, done);
             });
 
             test('Fail - no token or client certificate in header', function (done) {
