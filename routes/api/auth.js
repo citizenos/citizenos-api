@@ -21,6 +21,7 @@ module.exports = function (app) {
     var urlLib = app.get('urlLib');
     var superagent = app.get('superagent');
     var Promise = app.get('Promise');
+    var DigiDocServiceClient = app.get('ddsClient');
 
     var User = app.get('models.User');
     var UserConnection = app.get('models.UserConnection');
@@ -566,23 +567,66 @@ module.exports = function (app) {
      */
     app.post('/api/auth/id', function (req, res, next) {
         var token = req.body.token; // Token to access the ID info service
+        var cert = req.headers['x-ssl-client-cert'];
 
-        if (!token) {
-            logger.warn('Missing required parameter "token"', req.path, req.headers);
+        if (!token && !cert) {
+            logger.warn('Missing required parameter "token" OR certificate in X-SSL-Client-Cert header. One must be provided!', req.path, req.headers);
 
-            return res.badRequest('Missing required parameter "token".');
+            return res.badRequest('Missing required parameter "token" OR certificate in X-SSL-Client-Cert header. One must be provided!');
         }
 
-        superagent
-            .get(config.services.idCard.serviceUrl)
-            .query({token: token})
-            .set('X-API-KEY', config.services.idCard.apiKey)
+        var checkCertificatePromise = null;
+
+        if (cert) {
+            var ddsClient = new DigiDocServiceClient(config.services.digiDoc.serviceWsdlUrl, config.services.digiDoc.serviceName, config.services.digiDoc.token);
+            checkCertificatePromise = ddsClient
+                .checkCertificate(cert, false)
+                .spread(function (checkCertificateResult) {
+                    var data = {
+                        status: checkCertificateResult.Status.$value
+                    };
+
+                    switch (data.status) { // GOOD, UNKNOWN, EXPIRED, SUSPENDED
+                        case 'GOOD':
+                            data.user = {
+                                pid: checkCertificateResult.UserIDCode.$value,
+                                firstName: checkCertificateResult.UserGivenname.$value,
+                                lastName: checkCertificateResult.UserSurname.$value,
+                                countryCode: checkCertificateResult.UserCountry.$value // UPPERCASE ISO-2 letter
+                            };
+                            break;
+                        case 'SUSPENDED':
+                        case 'EXPIRED':
+                        case 'UNKNOWN':
+                            // Not giving User data for such cases - you're not supposed to use it anyway
+                            logger.warn('Invalid certificate status', data.status);
+                            break;
+                        default:
+                            logger.error('Unexpected certificate status from DDS', data.status);
+                            res.internalServerError();
+
+                            return Promise.reject();
+                    }
+
+                    return data;
+                });
+        } else {
+            checkCertificatePromise = superagent
+                .get(config.services.idCard.serviceUrl)
+                .query({token: token})
+                .set('X-API-KEY', config.services.idCard.apiKey)
+                .then(function (res) {
+                    return res.body.data;
+                });
+        }
+
+        checkCertificatePromise
             .then(function (res) {
-                var status = res.body.data.status;
+                var status = res.status;
 
                 switch (status) { //GOOD, UNKNOWN, EXPIRED, SUSPENDED, REVOKED
                     case 'GOOD':
-                        return res.body.data.user;
+                        return res.user;
                     case 'SUSPENDED':
                         res.badRequest('User certificate is suspended.', 24);
 

@@ -43,10 +43,16 @@ var _loginId = function (agent, token, clientCert, expectedHttpCode, callback) {
     var a = agent
         .post(path)
         .set('Content-Type', 'application/json')
-        .set('X-SSL-Client-Cert', clientCert)
-        .send({token: token})
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
+
+    if (clientCert) {
+        a.set('X-SSL-Client-Cert', clientCert);
+    }
+
+    if (token) {
+        a.send({token: token});
+    }
 
     if (expectedHttpCode === 202 || expectedHttpCode === 203) {
         a.expect('set-cookie', /.*\.sid=.*; Path=\/api; Expires=.*; HttpOnly/);
@@ -419,6 +425,7 @@ module.exports._status = _status;
 var request = require('supertest');
 var app = require('../../app');
 var uuid = require('node-uuid');
+var fs = require('fs');
 
 var assert = require('chai').assert;
 var config = app.get('config');
@@ -557,8 +564,14 @@ suite('Auth', function () {
 
         suite('ID-card', function () {
 
-            test.skip('Success - client certificate in X-SSL-Client-Cert header', function (done) {
-                done();
+            test('Success - client certificate in X-SSL-Client-Cert header', function (done) {
+                var agent = request.agent(app);
+                var cert = fs.readFileSync('./test/resources/certificates/dds_good_igor_sign.pem', {encoding: 'utf8'}).replace(/\n/g, ''); //eslint-disable-line no-sync
+
+                _loginId(agent, null, cert, 200, function (err, res) {
+                    if (err) return done(err);
+                    done();
+                });
             });
 
             test('Fail - no token or client certificate in header', function (done) {
