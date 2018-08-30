@@ -7335,7 +7335,7 @@ module.exports = function (app) {
         return includedSql.join(' UNION ');
     };
 
-    var activitiesList = function (req, res, next, visibility) {
+    var activitiesListV1 = function (req, res, next, visibility) {
         var limitMax = 50;
         var limitDefault = 10;        
         var allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User'];
@@ -7939,11 +7939,547 @@ module.exports = function (app) {
             .catch(next);
     };
 
+    var parseActivitiesResults = function (activities) {
+        var returnList = [];
+        activities.forEach(function (activity) {
+            var returnActivity = _.cloneDeep(activity);
+         /*   var dataKeys = Object.keys(activity.data);
+            dataKeys.forEach(function (key) {
+                if (activity[key]) {
+                    returnActivity.data[key] = activity[key];
+                }
+            });*/
+            var extraFields = ['actor', 'object', 'origin', 'target'];
+
+            extraFields.forEach(function (field) {
+                var object = null;
+                switch (activity[field]['@type']) {
+                    case 'Topic':                
+                        object = Topic.build(activity[field]).toJSON();
+                        object['@type'] = activity[field]['@type'];
+                        object['creatorId'] = activity[field]['creatorId'];
+                        
+                        break;
+                    case 'Group':
+                        object = Group.build(activity[field]).toJSON();
+                        break;
+                    case 'User':
+                        object = User.build(activity[field]).toJSON();
+                        break;
+                    case 'VoteUserContainer':
+                        object = VoteUserContainer.build(activity[field]).toJSON();
+                        break;
+                    case 'TopicMemberUser':
+                        object = TopicMemberUser.build(activity[field]).toJSON();
+                        break;
+                    case 'TopicMemberGroup':
+                        object = TopicMemberGroup.build(activity[field]).toJSON();
+                        break;
+                    case 'GroupMember':
+                        object = GroupMember.build(activity[field]).toJSON();
+                        break;
+                    default:
+                }
+
+                if (object) {
+                    returnActivity.data[field] = object;
+                }
+            });
+
+            
+
+            delete returnActivity.actor;
+            delete returnActivity.object;
+            delete returnActivity.origin;
+            delete returnActivity.target;
+            
+            returnList.push(returnActivity);
+        });
+        
+        return returnList;
+    };
+
+    var activitiesList = function (req, res, next, visibility) {
+        var limitMax = 50;
+        var limitDefault = 10;        
+        var allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User'];
+        var userId;        
+    
+        if (req.user) {
+            userId = req.user.id;
+        }
+        var sourcePartnerId = req.query.sourcePartnerId;    
+        var page = parseInt(req.query.page, 10);
+        var offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
+        var limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+
+        var includeSql = buildActivityFeedIncludeString(req, visibility);
+        var queryFilters = req.query.filter || [];
+        if (queryFilters && !Array.isArray(queryFilters)) {
+            queryFilters = [queryFilters];
+        } 
+    
+        var filters = queryFilters.filter(function (item, key, input) {
+            return allowedFilters.indexOf(item) > -1 && (input.indexOf(item) === key);
+        });
+        
+        var filterBy = '';
+        if (filters.length) {
+            var filtersEscaped = filters.map(function (filter) {
+                return db.escape(filter);
+            });
+            filterBy = 'WHERE uac.data#>>\'{object, @type}\' IN (' + filtersEscaped.join(',') + ')';
+        }
+
+        if (page && page > 0) {
+            offset = page * limitDefault - limitDefault;
+            limit = limitDefault;
+        }
+    
+        if (limit > limitMax) limit = limitDefault;
+    
+        // All partners should see only Topics created by their site, but our own app sees all.
+        var wherePartnerTopics = '';
+        var wherePartnerGroups = '';
+        if (sourcePartnerId) {
+            wherePartnerTopics = ' AND t."sourcePartnerId" = :sourcePartnerId ';
+            wherePartnerGroups = ' AND g."sourcePartnerId" = :sourcePartnerId ';
+        }
+
+        var query = '\
+            CREATE OR REPLACE FUNCTION pg_temp.getPublicTopics() \
+                RETURNS TABLE("topicId" uuid) \
+                AS $$ \
+                    SELECT \
+                            t.id \
+                    FROM "Topics" t \
+                        LEFT JOIN "Users" c ON (c.id = t."creatorId") \
+                    WHERE \
+                        t.title IS NOT NULL \
+                        AND t.visibility = \'public\' \
+                        ' + wherePartnerTopics + ' \
+                    ORDER BY t."updatedAt" DESC \
+                ; $$ \
+            LANGUAGE SQL; \
+            \
+            CREATE OR REPLACE FUNCTION pg_temp.getPublicGroups() \
+                RETURNS TABLE("groupId" uuid) \
+                AS $$ \
+                    SELECT \
+                        g.id \
+                    FROM "Groups" g \
+                    WHERE g."visibility" = \'public\' \
+                        ' + wherePartnerGroups + ' \
+                    GROUP BY g.id \
+                    ORDER BY g."updatedAt" DESC, g.id \
+                ; $$ \
+            LANGUAGE SQL; \
+            \
+            CREATE OR REPLACE FUNCTION pg_temp.getUserTopics(uuid) \
+                RETURNS TABLE("topicId" uuid) \
+                AS $$ \
+                    SELECT \
+                            t.id \
+                    FROM "Topics" t \
+                        LEFT JOIN ( \
+                            SELECT \
+                                tmu."topicId", \
+                                tmu."userId", \
+                                tmu.level::text AS level \
+                            FROM "TopicMemberUsers" tmu \
+                            WHERE tmu."deletedAt" IS NULL \
+                        ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = $1) \
+                        LEFT JOIN ( \
+                            SELECT \
+                                tmg."topicId", \
+                                gm."userId", \
+                                MAX(tmg.level)::text AS level \
+                            FROM "TopicMemberGroups" tmg \
+                                LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
+                            WHERE tmg."deletedAt" IS NULL \
+                            AND gm."deletedAt" IS NULL \
+                            GROUP BY "topicId", "userId" \
+                        ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = $1) \
+                        LEFT JOIN "Users" c ON (c.id = t."creatorId") \
+                    WHERE \
+                        t.title IS NOT NULL \
+                        ' + wherePartnerTopics + ' \
+                        AND COALESCE(tmup.level, tmgp.level, \'none\')::"enum_TopicMemberUsers_level" > \'none\' \
+                    ORDER BY t."updatedAt" DESC \
+                ; $$ \
+            LANGUAGE SQL; \
+                \
+            CREATE OR REPLACE FUNCTION pg_temp.getUserGroups(uuid) \
+                RETURNS TABLE("groupId" uuid) \
+                AS $$ \
+                    SELECT \
+                        g.id \
+                    FROM "Groups" g \
+                        JOIN "GroupMembers" gm ON (gm."groupId" = g.id) \
+                        JOIN "Users" c ON (c.id = g."creatorId") \
+                        JOIN ( \
+                            SELECT "groupId", count("userId") AS "count" \
+                            FROM "GroupMembers" \
+                            WHERE "deletedAt" IS NULL \
+                            GROUP BY "groupId" \
+                        ) AS mc ON (mc."groupId" = g.id) \
+                        LEFT JOIN ( \
+                            SELECT \
+                                tmg."groupId", \
+                                count(tmg."topicId") AS "count" \
+                            FROM "TopicMemberGroups" tmg \
+                            WHERE tmg."deletedAt" IS NULL \
+                            GROUP BY tmg."groupId" \
+                        ) AS gtc ON (gtc."groupId" = g.id) \
+                        LEFT JOIN ( \
+                            SELECT \
+                                tmg."groupId", \
+                                tmg."topicId", \
+                                t.title \
+                            FROM "TopicMemberGroups" tmg \
+                                LEFT JOIN "Topics" t ON (t.id = tmg."topicId") \
+                            WHERE tmg."deletedAt" IS NULL \
+                            ORDER BY t."updatedAt" ASC \
+                        ) AS gt ON (gt."groupId" = g.id) \
+                    WHERE gm."deletedAt" is NULL \
+                        ' + wherePartnerGroups + ' \
+                        AND gm."userId" = $1 \
+                    GROUP BY g.id \
+                    ORDER BY g."updatedAt" DESC, g.id \
+                ; $$ \
+            LANGUAGE SQL; \
+                \
+            CREATE OR REPLACE FUNCTION pg_temp.getPublicTopicActivities() \
+                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
+                AS $$ \
+                    SELECT \
+                        a.id, \
+                        a.data, \
+                        a."createdAt", \
+                        a."updatedAt", \
+                        a."deletedAt" \
+                    FROM \
+                        "Activities" a, \
+                        pg_temp.getPublicTopics() ut \
+                        WHERE \
+                        ARRAY[ut."topicId"::text] <@ (a."topicIds") \
+                        ORDER BY a."updatedAt" DESC \
+                ; $$ \
+            LANGUAGE SQL; \
+            \
+            CREATE OR REPLACE FUNCTION pg_temp.getPublicGroupActivities() \
+                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
+                AS $$ \
+                    SELECT \
+                        a.id, \
+                        a.data, \
+                        a."createdAt", \
+                        a."updatedAt", \
+                        a."deletedAt" \
+                    FROM \
+                        "Activities" a, \
+                        pg_temp.getPublicGroups() ug \
+                        WHERE \
+                        ARRAY[ug."groupId"::text] <@ (a."groupIds") \
+                        ORDER BY a."updatedAt" DESC \
+                ; $$ \
+            LANGUAGE SQL; \
+            \
+            CREATE OR REPLACE FUNCTION pg_temp.getUserTopicActivities(uuid) \
+                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
+                AS $$ \
+                    SELECT \
+                        a.id, \
+                        a.data, \
+                        a."createdAt", \
+                        a."updatedAt", \
+                        a."deletedAt" \
+                    FROM \
+                        "Activities" a, \
+                        pg_temp.getUserTopics($1) ut \
+                        WHERE \
+                        ARRAY[ut."topicId"::text] <@ (a."topicIds") \
+                        ORDER BY a."updatedAt" DESC \
+                ; $$ \
+            LANGUAGE SQL; \
+            \
+            CREATE OR REPLACE FUNCTION pg_temp.getUserGroupActivities(uuid) \
+                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
+                AS $$ \
+                    SELECT \
+                        a.id, \
+                        a.data, \
+                        a."createdAt", \
+                        a."updatedAt", \
+                        a."deletedAt" \
+                    FROM \
+                        "Activities" a, \
+                        pg_temp.getUserGroups($1) ug \
+                        WHERE \
+                        ARRAY[ug."groupId"::text] <@ (a."groupIds") \
+                        ORDER BY a."updatedAt" DESC \
+                ; $$ \
+            LANGUAGE SQL; \
+            \
+            CREATE OR REPLACE FUNCTION  pg_temp.getUserActivities(uuid) \
+                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
+                AS $$ \
+                    SELECT \
+                        a.id, \
+                        a.data, \
+                        a."createdAt", \
+                        a."updatedAt", \
+                        a."deletedAt" \
+                    FROM \
+                        "Activities" a \
+                        WHERE \
+                        ARRAY[$1::text] <@ (a."userIds") \
+                        ORDER BY a."updatedAt" DESC \
+                ; $$ \
+            LANGUAGE SQL; \
+            \
+            CREATE OR REPLACE FUNCTION  pg_temp.getUserAsActorActivities(uuid) \
+                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
+                AS $$ \
+                    SELECT \
+                        a.id, \
+                        a.data, \
+                        a."createdAt", \
+                        a."updatedAt", \
+                        a."deletedAt" \
+                    FROM \
+                        "Activities" a \
+                        WHERE \
+                            a."actorType" = \'User\' AND a."actorId" = $1::text \
+                        ORDER BY a."updatedAt" DESC \
+                ; $$ \
+            LANGUAGE SQL; \
+            \
+            SELECT \
+                    ad.* \
+                FROM \
+                    ( \
+                    ' + includeSql + ' \
+                    ) uac \
+                JOIN ( \
+                    SELECT \
+                        a.id, \
+                        a.data, \
+                        a."createdAt", \
+                        a."updatedAt", \
+                        a."deletedAt", \
+                        u.id as "actor.id", \
+                        a.data#>>\'{actor, type}\' as "actor.type", \
+                        u.name as "actor.name", \
+                        u.company as "actor.company", \
+                        COALESCE(go.id, tobj.id, uo.id, NULL) AS "object.id", \
+                        COALESCE(go.name, tobj.title, uo.name, NULL) AS "object.name", \
+                        a.data#>>\'{object, @type}\' AS "object.@type", \
+                        COALESCE(go."creatorId", tobj."creatorId", NULL) AS "object.creatorId", \
+                        COALESCE(go."parentId", NULL) AS "object.parentId", \
+                        COALESCE(tobj.status, NULL) AS "object.status", \
+                        COALESCE(go.visibility::text, tobj.visibility::text, NULL) AS "object.visibility", \
+                        COALESCE(tobj."sourcePartnerId", go."sourcePartnerId", NULL) AS "object.sourcePartnerId", \
+                        COALESCE(tobj."sourcePartnerObjectId", NULL) AS "object.sourcePartnerObjectId", \
+                        COALESCE(tobj."tokenJoin", NULL) AS "object.tokenJoin", \
+                        COALESCE(tobj."padUrl", NULL) AS "object.padUrl", \
+                        COALESCE(tobj."endsAt", NULL) AS "object.endsAt", \
+                        COALESCE(tobj.hashtag, NULL) AS "object.hashtag", \
+                        COALESCE(go."createdAt"::text, tobj."createdAt"::text, tvco."createdAt"::text, NULL) AS "object.createdAt", \
+                        COALESCE(go."updatedAt"::text, tobj."updatedAt"::text, tvco."updatedAt"::text, NULL) AS "object.updatedAt", \
+                        COALESCE(go."deletedAt"::text, tobj."deletedAt"::text, tvco."deletedAt"::text, NULL) AS "object.deletedAt", \
+                        COALESCE(uo.company, NULL) AS "object.company", \
+                        COALESCE(tvco."userId", NULL) AS "object.userId", \
+                        COALESCE(tvco."voteId", NULL) AS "object.voteId", \
+                        COALESCE(tvco."topicId", NULL) AS "object.topicId", \
+                        COALESCE(tvco."topicTitle", NULL) AS "object.topicTitle", \
+                        COALESCE(origg.id, NULL) AS "origin.id", \
+                        COALESCE(origg.name, NULL) AS "origin.name", \
+                        a.data#>>\'{origin, @type}\' AS "origin.@type", \
+                        COALESCE(origg."creatorId", NULL) AS "origin.creatorId", \
+                        COALESCE(origg."parentId", NULL) AS "origin.parentId", \
+                        COALESCE(origg.visibility::text, NULL) AS "origin.visibility", \
+                        COALESCE(origg."sourcePartnerId", NULL) AS "origin.sourcePartnerId", \
+                        COALESCE(origg."createdAt"::text, tmuorig."createdAt"::text, gmuorig."createdAt"::text, tmgorig."createdAt"::text, NULL) AS "origin.createdAt", \
+                        COALESCE(origg."updatedAt"::text, tmuorig."updatedAt"::text, gmuorig."updatedAt"::text, tmgorig."updatedAt"::text, NULL) AS "origin.updatedAt", \
+                        COALESCE(origg."deletedAt"::text, tmuorig."deletedAt"::text, gmuorig."deletedAt"::text, tmgorig."deletedAt"::text, NULL) AS "origin.deletedAt", \
+                        COALESCE(tmuorig."level", tmgorig."level", gmuorig."level", NULL) AS "origin.level", \
+                        COALESCE(tmuorig."userId", gmuorig."userId", NULL) AS "origin.userId", \
+                        COALESCE(gmuorig."groupId", tmgorig."groupId", NULL) AS "origin.groupId", \
+                        COALESCE(tmuorig."topicId", tmgorig."topicId", NULL) AS "origin.topicId", \
+                        COALESCE(tmuorig."topicTitle", tmgorig."topicTitle", NULL) AS "origin.topicTitle", \
+                        COALESCE(gmuorig."groupName", tmgorig."topicTitle", NULL) AS "origin.groupName", \
+                        COALESCE(tmuorig."userName", gmuorig."userName", NULL) AS "origin.userName", \
+                        COALESCE(targg.id, targt.id, targtc.id, NULL) AS "target.id", \
+                        COALESCE(targg.name, targt.title, uo.name, NULL) AS "target.name", \
+                        COALESCE(targt.title, NULL) AS "target.title", \
+                        COALESCE(targtc.subject, NULL) AS "target.subject", \
+                        COALESCE(targtc.text, NULL) AS "target.text", \
+                        a.data#>>\'{target, @type}\' AS "target.@type", \
+                        COALESCE(targg."creatorId", targt."creatorId", targtc."creatorId", NULL) AS "target.creatorId", \
+                        COALESCE(targtc."topicId", NULL) AS "target.topicId", \
+                        COALESCE(targg."parentId", targtc."parentId", NULL) AS "target.parentId", \
+                        COALESCE(targtc."parentVersion", NULL) AS "target.parentVersion", \
+                        COALESCE(targt.status, NULL) AS "target.status", \
+                        COALESCE(targg.visibility::text, targt.visibility::text, NULL) AS "target.visibility", \
+                        COALESCE(targt."sourcePartnerId", targg."sourcePartnerId", NULL) AS "target.sourcePartnerId", \
+                        COALESCE(targt."sourcePartnerObjectId", NULL) AS "target.sourcePartnerObjectId", \
+                        COALESCE(targt."tokenJoin", NULL) AS "target.tokenJoin", \
+                        COALESCE(targt."padUrl", NULL) AS "target.padUrl", \
+                        COALESCE(targt."endsAt", NULL) AS "target.endsAt", \
+                        COALESCE(targt."hashtag", NULL) AS "target.hashtag", \
+                        COALESCE(targtc."deletedById", NULL) AS "target.deletedById", \
+                        COALESCE(targtc."deletedReasonType"::text, NULL) AS "target.deletedReasonType ", \
+                        COALESCE(targtc."deletedReasonText", NULL) AS "target.deletedReasonText", \
+                        COALESCE(targtc."deletedByReportId", NULL) AS "target.deletedByReportId", \
+                        COALESCE(targtc."edits", NULL) AS "target.edits", \
+                        COALESCE(targg."createdAt"::text, targt."createdAt"::text, targtc."createdAt"::text, NULL) AS "target.createdAt", \
+                        COALESCE(targg."updatedAt"::text, targt."updatedAt"::text, targtc."updatedAt"::text, NULL) AS "target.updatedAt", \
+                        COALESCE(targg."deletedAt"::text, targt."deletedAt"::text, targtc."deletedAt"::text, NULL) AS "target.deletedAt" \
+                        FROM  \
+                            "Activities" a \
+                        LEFT JOIN \
+                            "Users" u ON u.id::text = a.data#>>\'{actor, id}\' \
+                        LEFT JOIN \
+                            "Topics" tobj ON a.data#>>\'{object, @type}\' = \'Topic\' AND tobj.id::text = a.data#>>\'{object, id}\' \
+                        LEFT JOIN \
+                            "Groups" go ON a.data#>>\'{object, @type}\' = \'Group\' AND go.id::text = a.data#>>\'{object, id}\' \
+                        LEFT JOIN \
+                            "Users" uo ON a.data#>>\'{object, @type}\' = \'User\' AND uo.id::text = a.data#>>\'{object, id}\' \
+                        LEFT JOIN ( \
+                            SELECT \
+                                a.id AS "activityId", \
+                                jpr.*, \
+                                tv."topicId" AS "topicId", \
+                                t.title AS "topicTitle" \
+                            FROM "Activities" a \
+                            JOIN jsonb_to_record(a.data) AS jpr("@type" text, "userId" text, "voteId" text, "createdAt" text, "updatedAt" text, "deletedAt" text) ON a.id = a.id \
+                            JOIN "TopicVotes" tv ON tv."voteId"::text = data#>>\'{object, id}\' \
+                            JOIN "Topics" t ON t.id = tv."topicId" \
+                            WHERE a.data#>>\'{object, @type}\' = \'VoteUserContainer\' \
+                        ) tvco ON a.data#>>\'{object, @type}\' = \'VoteUserContainer\' AND tvco."activityId" = a.id \
+                        LEFT JOIN \
+                            "Groups" origg ON a.data#>>\'{origin, @type}\' = \'Group\' AND origg.id::text = a.data#>>\'{origin, id}\' \
+                        LEFT JOIN ( \
+                            SELECT \
+                                a.id AS "activityId", \
+                                jpr.*, \
+                                u.name AS "userName", \
+                                t.title AS "topicTitle" \
+                                FROM "Activities" a \
+                                JOIN jsonb_to_record(a.data) AS jpr("@type" text, "level" text, "userId" text, "topicId" text, "createdAt" text, "updatedAt" text, "deletedAt" text) ON a.id = a.id \
+                                JOIN "Users" u ON u.id::text = data#>>\'{origin, userId}\' \
+                                JOIN "Topics" t ON t.id::text = data#>>\'{origin, topicId}\' \
+                                WHERE a.data#>>\'{origin, @type}\' = \'TopicMemberUser\' \
+                        ) tmuorig ON a.data#>>\'{origin, @type}\' = \'TopicMemberUser\' AND tmuorig."activityId" = a.id \
+                        LEFT JOIN ( \
+                            SELECT \
+                                a.id AS "activityId", \
+                                jpr.*, \
+                                g.name AS "groupName", \
+                                t.title AS "topicTitle" \
+                                FROM "Activities" a \
+                                JOIN jsonb_to_record(a.data) AS jpr("@type" text, "level" text, "groupId" text, "topicId" text, "createdAt" text, "updatedAt" text, "deletedAt" text) ON a.id = a.id \
+                                JOIN "Groups" g ON g.id::text = data#>>\'{origin, groupId}\' \
+                                JOIN "Topics" t ON t.id::text = data#>>\'{origin, topicId}\' \
+                                WHERE a.data#>>\'{origin, @type}\' = \'TopicMemberGroup\' \
+                        ) tmgorig ON a.data#>>\'{origin, @type}\' = \'TopicMemberGroup\' AND tmuorig."activityId" = a.id \
+                        LEFT JOIN ( \
+                            SELECT \
+                                a.id AS "activityId", \
+                                jpr.*, \
+                                u.name AS "userName", \
+                                g.name AS "groupName" \
+                                FROM "Activities" a \
+                                JOIN jsonb_to_record(a.data) AS jpr("@type" text, "level" text, "userId" text, "groupId" text, "createdAt" text, "updatedAt" text, "deletedAt" text) ON a.id = a.id \
+                                JOIN "Users" u ON u.id::text = data#>>\'{origin, userId}\' \
+                                JOIN "Groups" g ON g.id::text = data#>>\'{origin, groupId}\' \
+                                WHERE a.data#>>\'{origin, @type}\' = \'GroupMember\' \
+                        ) gmuorig ON a.data#>>\'{origin, @type}\' = \'GroupMember\' AND tmuorig."activityId" = a.id \
+                        LEFT JOIN \
+                            "Groups" targg ON a.data#>>\'{target, @type}\' = \'Group\' AND targg.id::text = a.data#>>\'{target, id}\' \
+                        LEFT JOIN \
+                            "Topics" targt ON a.data#>>\'{target, @type}\' = \'Topic\' AND targt.id::text = a.data#>>\'{target, id}\' \
+                        LEFT JOIN ( \
+                            SELECT \
+                                a.id AS "activityId", \
+                                c.*, \
+                                tc."topicId" \
+                                FROM "Activities" a \
+                                JOIN "Comments" c ON a.data#>>\'{target, @type}\' = \'Comment\' AND c."id"::text = a.data#>>\'{target, id}\' \
+                                JOIN "TopicComments" tc ON tc."commentId" = c.id \
+                        ) targtc ON a.data#>>\'{target, @type}\' = \'Comment\' AND targtc."id"::text = a.data#>>\'{target, id}\' \
+                    ) ad ON ad.id = uac.id \
+                ' + filterBy + ' \
+                ORDER BY uac."updatedAt" DESC \
+                LIMIT :limit OFFSET :offset \
+            ;';
+
+        return db
+            .transaction(function (t) {
+                if (userId) {
+                    var activity = Activity.build({
+                        data: {
+                            offset: offset,
+                            limit: limit
+                        }
+                    });
+                }
+
+                return db
+                    .query(
+                        query,
+                        {
+                            replacements: {
+                                userId: userId,
+                                sourcePartnerId: sourcePartnerId,
+                                limit: limit,
+                                offset: offset
+                            },
+                            type: db.QueryTypes.SELECT,
+                            raw: true,
+                            nest: true,
+                            transaction: t
+                        }
+                    ).then(function (results) {
+                        if (!userId) {
+                            return results;
+                        }
+
+                        return cosActivities
+                            .viewActivityFeedActivity(
+                                activity,
+                                {
+                                    type: 'User',
+                                    id: req.user.id
+                                },
+                                req.method + ' ' + req.path,
+                                t
+                            )
+                            .then(function () {
+                                return results;
+                            });                        
+                    });
+            }).then(function (results) {
+                var finalResults = parseActivitiesResults(results);
+                return res.ok(finalResults);
+            })
+            .catch(next);
+    };
+
     app.get('/api/users/:userId/activities', loginCheck(['partner']), function (req, res, next) {
         return activitiesList(req, res, next);
     });
 
     app.get('/api/activities', function (req, res, next) {
         return activitiesList(req, res, next, 'public');
+    });
+
+    app.get('/api/v1/users/:userId/activities', loginCheck(['partner']), function (req, res, next) {
+        return activitiesListV1(req, res, next);
+    });
+
+    app.get('/api/v1/activities', function (req, res, next) {
+        return activitiesListV1(req, res, next, 'public');
     });
 };
