@@ -21,6 +21,8 @@ module.exports = function (app) {
     var urlLib = app.get('urlLib');
     var superagent = app.get('superagent');
     var Promise = app.get('Promise');
+    var DigiDocServiceClient = app.get('ddsClient');
+    var url = app.get('url');
 
     var User = app.get('models.User');
     var UserConnection = app.get('models.UserConnection');
@@ -562,27 +564,76 @@ module.exports = function (app) {
     /**
      * Authenticate using ID-card
      *
-     * NOTE: Requires proxy in front of the app to set "ssl_client_cert" header
+     * NOTE: Requires proxy in front of the app to set "X-SSL-Client-Cert" header
      */
     app.post('/api/auth/id', function (req, res, next) {
         var token = req.body.token; // Token to access the ID info service
+        var cert = req.headers['x-ssl-client-cert'];
 
-        if (!token) {
-            logger.warn('Missing required parameter "token"', req.path, req.headers);
+        if (config.services.idCard && cert) {
+            logger.error('X-SSL-Client-Cert header is not allowed when ID-card service is enabled. IF you trust your proxy, sending the X-SSL-Client-Cert, delete the services.idCard from your configuration.');
 
-            return res.badRequest('Missing required parameter "token".');
+            return res.badRequest('X-SSL-Client-Cert header is not allowed when ID-card proxy service is enabled.');
         }
 
-        superagent
-            .get(config.services.idCard.serviceUrl)
-            .query({token: token})
-            .set('X-API-KEY', config.services.idCard.apiKey)
+        if (!token && !cert) {
+            logger.warn('Missing required parameter "token" OR certificate in X-SSL-Client-Cert header. One must be provided!', req.path, req.headers);
+
+            return res.badRequest('Missing required parameter "token" OR certificate in X-SSL-Client-Cert header. One must be provided!');
+        }
+
+        var checkCertificatePromise = null;
+
+        if (cert) {
+            var ddsClient = new DigiDocServiceClient(config.services.digiDoc.serviceWsdlUrl, config.services.digiDoc.serviceName, config.services.digiDoc.token);
+            checkCertificatePromise = ddsClient
+                .checkCertificate(cert, false)
+                .spread(function (checkCertificateResult) {
+                    var data = {
+                        status: checkCertificateResult.Status.$value
+                    };
+
+                    switch (data.status) { // GOOD, UNKNOWN, EXPIRED, SUSPENDED
+                        case 'GOOD':
+                            data.user = {
+                                pid: checkCertificateResult.UserIDCode.$value,
+                                firstName: checkCertificateResult.UserGivenname.$value,
+                                lastName: checkCertificateResult.UserSurname.$value,
+                                countryCode: checkCertificateResult.UserCountry.$value // UPPERCASE ISO-2 letter
+                            };
+                            break;
+                        case 'SUSPENDED':
+                        case 'EXPIRED':
+                        case 'UNKNOWN':
+                            // Not giving User data for such cases - you're not supposed to use it anyway
+                            logger.warn('Invalid certificate status', data.status);
+                            break;
+                        default:
+                            logger.error('Unexpected certificate status from DDS', data.status);
+                            res.internalServerError();
+
+                            return Promise.reject();
+                    }
+
+                    return data;
+                });
+        } else {
+            checkCertificatePromise = superagent
+                .get(config.services.idCard.serviceUrl)
+                .query({token: token})
+                .set('X-API-KEY', config.services.idCard.apiKey)
+                .then(function (res) {
+                    return res.body.data;
+                });
+        }
+
+        checkCertificatePromise
             .then(function (res) {
-                var status = res.body.data.status;
+                var status = res.status;
 
                 switch (status) { //GOOD, UNKNOWN, EXPIRED, SUSPENDED, REVOKED
                     case 'GOOD':
-                        return res.body.data.user;
+                        return res.user;
                     case 'SUSPENDED':
                         res.badRequest('User certificate is suspended.', 24);
 
@@ -976,16 +1027,22 @@ module.exports = function (app) {
                     return res.status(400).send('Invalid partner configuration. Please contact system administrator.');
                 }
 
-                var re = new RegExp(partner.redirectUriRegexp, 'i');
+                var partnerUriRegexp = new RegExp(partner.redirectUriRegexp, 'i');
 
                 // Check referer IF it exists, not always true. May help in some XSRF scenarios.
-                if (referer && !re.test(referer) && referer.indexOf(urlLib.getFe()) !== 0 && referer.indexOf(urlLib.getApi()) !== 0) {
-                    logger.warn('Possible XSRF attempt! Referer header does not match expected partner URI scheme', referer, req.path, reqQuery, !re.test(referer), referer.indexOf(urlLib.getFe()) !== 0, referer.indexOf(urlLib.getApi()) !== 0);
+                if (referer && !partnerUriRegexp.test(referer)) {
+                    var refererHostname = url.parse(referer).hostname;
+                    var feHostname = url.parse(urlLib.getFe()).hostname;
+                    var apiHostname = url.parse(urlLib.getApi()).hostname;
 
-                    return res.status(400).send('Invalid referer. Referer header does not match expected partner URI scheme.');
+                    if (refererHostname !== feHostname && refererHostname !== apiHostname) {
+                        logger.warn('Possible XSRF attempt! Referer header does not match expected partner URI scheme', referer, req.path, reqQuery, !partnerUriRegexp.test(referer), refererHostname, apiHostname, feHostname);
+
+                        return res.status(400).send('Invalid referer. Referer header does not match expected partner URI scheme.');
+                    }
                 }
 
-                if (!redirectUri || !re.test(redirectUri)) {
+                if (!redirectUri || !partnerUriRegexp.test(redirectUri)) {
                     return res.status(400).send('Invalid or missing "redirect_uri" parameter value.');
                 }
 

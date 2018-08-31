@@ -43,7 +43,6 @@ if (app.get('env') === 'production' || app.get('env') === 'test') {
     app.set('trust proxy', true); // http://expressjs.com/guide/behind-proxies.html
 }
 
-
 app.use('/documentation', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 var prerender = require('prerender-node');
 prerender.set('prerenderServiceUrl', config.services.prerender.serviceUrl).set('prerenderToken', config.services.prerender.apiKey);

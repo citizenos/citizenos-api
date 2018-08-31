@@ -73,10 +73,6 @@
       "rejectUnauthorized": false,
       "apikey": "LUVORFBXdUhrb0RMLXhzekREcXpjR1NsU1BBeTZRWmJGRUR4blZpX3YzYjJRa3FZ"
     },
-    "idCard": {
-      "serviceUrl": "https://dev.id.citizenos.com:3002/info",
-      "apiKey": "ZWeCMMQSoIpOnavNnEo2daBjXbmG3PoEWgNnQ13EtZ9jF43gkInxok5fIioX"
-    },
     "smartId": {
       "hostname": "sid.demo.sk.ee",
       "apiPath": "/smart-id-rp/v1",
