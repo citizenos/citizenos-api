@@ -1310,7 +1310,6 @@ module.exports = function (app) {
 
                             return getVoteResults(vote.id)
                                 .then(function (voteResults) {
-                                    console.log(voteResults);
                                     var voteCount = _.max(voteResults, 'voteCount').voteCount;
                                     if (voteCount >= config.features.sendToParliament.voteCountMin) {
                                         isSendToParliament = true;
