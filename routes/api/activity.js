@@ -176,6 +176,212 @@ module.exports = function (app) {
                 JOIN "TopicComments" tc ON tc."commentId" = c.id \
         ) targtc ON a.data#>>\'{target, @type}\' = \'Comment\' AND targtc."id"::text = a.data#>>\'{target, id}\' \
     ';
+
+    var buildActivityFeedIncludeString = function (req, visibility) {
+        var queryInclude = req.query.include || [];
+        
+        if (queryInclude && !Array.isArray(queryInclude)) {
+            queryInclude = [queryInclude];
+        }
+        var allowedIncludeAuth = ['userTopics', 'userGroups', 'user', 'self'];
+        var allowedInclude = ['publicTopics', 'publicGroups'];
+        
+        var include = queryInclude.filter(function (item, key, input) {
+            if (visibility && visibility === 'public') {
+                return allowedInclude.indexOf(item) > -1 && (input.indexOf(item) === key);
+            } else {
+                return allowedIncludeAuth.indexOf(item) > -1 && (input.indexOf(item) === key);
+            }        
+        });
+
+        if (!include || !include.length) {
+            include = allowedIncludeAuth;
+            if (visibility === 'public') {
+                include = allowedInclude;
+            }
+        }
+
+        var includedSql = [];
+
+        if (req.user && req.user.id && (!visibility || visibility !== 'public')) {
+            var viewActivity = 'SELECT \
+                va.id, \
+                va.data, \
+                va."createdAt", \
+                va."updatedAt", \
+                va."deletedAt" \
+                FROM "Activities" va \
+                WHERE \
+                va."actorType" = \'User\' AND va."actorId" = :userId::text \
+                AND va.data@>\'{"type": "View"}\' \
+                AND va.data#>>\'{object, @type}\' = \'Activity\' \
+                ';
+            includedSql.push(viewActivity);
+        }
+    
+        include.forEach(function (item) {
+            switch (item) {
+                case 'user':
+                    includedSql.push('SELECT \
+                        ua.id, \
+                        ua.data, \
+                        ua."createdAt", \
+                        ua."updatedAt", \
+                        ua."deletedAt" \
+                    FROM \
+                        pg_temp.getUserActivities(:userId) ua \
+                    ');
+                    break;
+                case 'self':
+                    includedSql.push('SELECT \
+                        guaaa.id, \
+                        guaaa.data, \
+                        guaaa."createdAt", \
+                        guaaa."updatedAt", \
+                        guaaa."deletedAt" \
+                    FROM \
+                        pg_temp.getUserAsActorActivities(:userId) guaaa \
+                    ');
+                    break;
+                case 'userTopics':
+                    includedSql.push('SELECT \
+                        guta.id, \
+                        guta.data, \
+                        guta."createdAt", \
+                        guta."updatedAt", \
+                        guta."deletedAt" \
+                    FROM \
+                        pg_temp.getUserTopicActivities(:userId) guta \
+                    ');
+                    break;
+                case 'userGroups':
+                    includedSql.push('SELECT \
+                        guga.id, \
+                        guga.data, \
+                        guga."createdAt", \
+                        guga."updatedAt", \
+                        guga."deletedAt" \
+                    FROM \
+                        pg_temp.getUserGroupActivities(:userId) guga \
+                    ');
+                    break;
+                case 'publicTopics':
+                    includedSql.push('SELECT \
+                        guta.id, \
+                        guta.data, \
+                        guta."createdAt", \
+                        guta."updatedAt", \
+                        guta."deletedAt" \
+                    FROM \
+                        pg_temp.getPublicTopicActivities() guta \
+                    ');
+                    break;
+                case 'publicGroups':
+                    includedSql.push('SELECT \
+                        guga.id, \
+                        guga.data, \
+                        guga."createdAt", \
+                        guga."updatedAt", \
+                        guga."deletedAt" \
+                    FROM \
+                        pg_temp.getPublicGroupActivities() guga \
+                    ');
+                    break;
+                default:
+                // Do nothing
+            }
+        });
+
+        return includedSql.join(' UNION ');
+    };
+
+    var parseActivitiesResults = function (activities) {
+        var returnList = [];
+        activities.forEach(function (activity) {
+            var returnActivity = _.cloneDeep(activity);
+
+            if (activity.data.object[0] && activity.data.object[0]['@type'] === 'VoteList') {
+                returnActivity.data.actor = {
+                    name: 'User',
+                    type: 'User',
+                    company: null
+                };
+            } else {
+                returnActivity.data.actor = activity.actor;
+            }
+
+            var extraFields = ['object', 'origin', 'target'];
+            extraFields.forEach(function (field) {
+                var object = null;
+                switch (activity[field]['@type']) {
+                    case 'Topic':
+                        if (field !== 'origin') {
+                            object = Topic.build(activity[field]).toJSON();
+                            object['@type'] = activity[field]['@type'];
+                            object.creatorId = activity[field].creatorId;
+                            delete object.creator;
+                            delete object.description;
+                        }
+                        
+                        break;
+                    case 'Group':
+                        if (field !== 'origin') {
+                            object = Group.build(activity[field]).toJSON();
+                            object['@type'] = activity[field]['@type'];
+                            object.createdAt = activity[field].createdAt;
+                            object.creatorId = activity[field].creatorId;
+                            object.updatedAt = activity[field].updatedAt;
+                            object.deletedAt = activity[field].deletedAt;
+                            object.sourcePartnerId = activity[field].sourcePartnerId;
+                            delete object.creator;
+                        }
+                        break;
+                    case 'User':
+                        if (field !== 'origin') {
+                            object = User.build(activity[field]).toJSON();
+                            object['@type'] = activity[field]['@type'];
+                            delete object.language;
+                        }
+                        break;
+                    case 'VoteUserContainer':
+                        object = VoteUserContainer.build(activity[field]).toJSON();
+                        object['@type'] = activity[field]['@type'];
+                        break;
+                    case 'TopicMemberUser':
+                        object = TopicMemberUser.build(activity[field]).toJSON();
+                        object['@type'] = activity[field]['@type'];
+                        break;
+                    case 'TopicMemberGroup':
+                        object = TopicMemberGroup.build(activity[field]).toJSON();
+                        object['@type'] = activity[field]['@type'];
+                        break;
+                    case 'GroupMember':
+                        object = GroupMember.build(activity[field]).toJSON();
+                        object['@type'] = activity[field]['@type'];
+                        break;
+                    default:
+                }
+
+                if (object) {
+                    returnActivity.data[field] = object;
+                }
+            });
+
+            delete returnActivity.actor;
+            delete returnActivity.object;
+            delete returnActivity.origin;
+            delete returnActivity.target;
+            
+            returnList.push(returnActivity);
+        });
+        
+        _.sortBy(returnList, function (activity) {
+            return activity.updatedAt;
+        });
+
+        return returnList;
+    };
+    
     var topicActivitiesList = function (req, res, next, visibility) {
         var limitMax = 50;
         var limitDefault = 10;
@@ -520,211 +726,6 @@ module.exports = function (app) {
             .catch(next);
 
     });
-
-    var buildActivityFeedIncludeString = function (req, visibility) {
-        var queryInclude = req.query.include || [];
-        
-        if (queryInclude && !Array.isArray(queryInclude)) {
-            queryInclude = [queryInclude];
-        }
-        var allowedIncludeAuth = ['userTopics', 'userGroups', 'user', 'self'];
-        var allowedInclude = ['publicTopics', 'publicGroups'];
-        
-        var include = queryInclude.filter(function (item, key, input) {
-            if (visibility && visibility === 'public') {
-                return allowedInclude.indexOf(item) > -1 && (input.indexOf(item) === key);
-            } else {
-                return allowedIncludeAuth.indexOf(item) > -1 && (input.indexOf(item) === key);
-            }        
-        });
-
-        if (!include || !include.length) {
-            include = allowedIncludeAuth;
-            if (visibility === 'public') {
-                include = allowedInclude;
-            }
-        }
-
-        var includedSql = [];
-
-        if (req.user && req.user.id && (!visibility || visibility !== 'public')) {
-            var viewActivity = 'SELECT \
-                va.id, \
-                va.data, \
-                va."createdAt", \
-                va."updatedAt", \
-                va."deletedAt" \
-                FROM "Activities" va \
-                WHERE \
-                va."actorType" = \'User\' AND va."actorId" = :userId::text \
-                AND va.data@>\'{"type": "View"}\' \
-                AND va.data#>>\'{object, @type}\' = \'Activity\' \
-                ';
-            includedSql.push(viewActivity);
-        }
-    
-        include.forEach(function (item) {
-            switch (item) {
-                case 'user':
-                    includedSql.push('SELECT \
-                        ua.id, \
-                        ua.data, \
-                        ua."createdAt", \
-                        ua."updatedAt", \
-                        ua."deletedAt" \
-                    FROM \
-                        pg_temp.getUserActivities(:userId) ua \
-                    ');
-                    break;
-                case 'self':
-                    includedSql.push('SELECT \
-                        guaaa.id, \
-                        guaaa.data, \
-                        guaaa."createdAt", \
-                        guaaa."updatedAt", \
-                        guaaa."deletedAt" \
-                    FROM \
-                        pg_temp.getUserAsActorActivities(:userId) guaaa \
-                    ');
-                    break;
-                case 'userTopics':
-                    includedSql.push('SELECT \
-                        guta.id, \
-                        guta.data, \
-                        guta."createdAt", \
-                        guta."updatedAt", \
-                        guta."deletedAt" \
-                    FROM \
-                        pg_temp.getUserTopicActivities(:userId) guta \
-                    ');
-                    break;
-                case 'userGroups':
-                    includedSql.push('SELECT \
-                        guga.id, \
-                        guga.data, \
-                        guga."createdAt", \
-                        guga."updatedAt", \
-                        guga."deletedAt" \
-                    FROM \
-                        pg_temp.getUserGroupActivities(:userId) guga \
-                    ');
-                    break;
-                case 'publicTopics':
-                    includedSql.push('SELECT \
-                        guta.id, \
-                        guta.data, \
-                        guta."createdAt", \
-                        guta."updatedAt", \
-                        guta."deletedAt" \
-                    FROM \
-                        pg_temp.getPublicTopicActivities() guta \
-                    ');
-                    break;
-                case 'publicGroups':
-                    includedSql.push('SELECT \
-                        guga.id, \
-                        guga.data, \
-                        guga."createdAt", \
-                        guga."updatedAt", \
-                        guga."deletedAt" \
-                    FROM \
-                        pg_temp.getPublicGroupActivities() guga \
-                    ');
-                    break;
-                default:
-                // Do nothing
-            }
-        });
-
-        return includedSql.join(' UNION ');
-    };
-
-    var parseActivitiesResults = function (activities) {
-        var returnList = [];
-        activities.forEach(function (activity) {
-            var returnActivity = _.cloneDeep(activity);
-
-            if (activity.data.object[0] && activity.data.object[0]['@type'] === 'VoteList') {
-                returnActivity.data.actor = {
-                    name: 'User',
-                    type: 'User',
-                    company: null
-                };
-            } else {
-                returnActivity.data.actor = activity.actor;
-            }
-
-            var extraFields = ['object', 'origin', 'target'];
-            extraFields.forEach(function (field) {
-                var object = null;
-                switch (activity[field]['@type']) {
-                    case 'Topic':
-                        if (field !== 'origin') {
-                            object = Topic.build(activity[field]).toJSON();
-                            object['@type'] = activity[field]['@type'];
-                            object.creatorId = activity[field].creatorId;
-                            delete object.creator;
-                            delete object.description;
-                        }
-                        
-                        break;
-                    case 'Group':
-                        if (field !== 'origin') {
-                            object = Group.build(activity[field]).toJSON();
-                            object['@type'] = activity[field]['@type'];
-                            object.createdAt = activity[field].createdAt;
-                            object.creatorId = activity[field].creatorId;
-                            object.updatedAt = activity[field].updatedAt;
-                            object.deletedAt = activity[field].deletedAt;
-                            object.sourcePartnerId = activity[field].sourcePartnerId;
-                            delete object.creator;
-                        }
-                        break;
-                    case 'User':
-                        if (field !== 'origin') {
-                            object = User.build(activity[field]).toJSON();
-                            object['@type'] = activity[field]['@type'];
-                            delete object.language;
-                        }
-                        break;
-                    case 'VoteUserContainer':
-                        object = VoteUserContainer.build(activity[field]).toJSON();
-                        object['@type'] = activity[field]['@type'];
-                        break;
-                    case 'TopicMemberUser':
-                        object = TopicMemberUser.build(activity[field]).toJSON();
-                        object['@type'] = activity[field]['@type'];
-                        break;
-                    case 'TopicMemberGroup':
-                        object = TopicMemberGroup.build(activity[field]).toJSON();
-                        object['@type'] = activity[field]['@type'];
-                        break;
-                    case 'GroupMember':
-                        object = GroupMember.build(activity[field]).toJSON();
-                        object['@type'] = activity[field]['@type'];
-                        break;
-                    default:
-                }
-
-                if (object) {
-                    returnActivity.data[field] = object;
-                }
-            });
-
-            delete returnActivity.actor;
-            delete returnActivity.object;
-            delete returnActivity.origin;
-            delete returnActivity.target;
-            
-            returnList.push(returnActivity);
-        });
-        
-        _.sortBy(returnList, function (activity) {
-            return activity.updatedAt;
-        });
-
-        return returnList;
-    };
 
     var activitiesList = function (req, res, next, visibility) {
         var limitMax = 50;
