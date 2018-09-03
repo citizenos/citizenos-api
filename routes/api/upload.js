@@ -4,7 +4,6 @@ module.exports = function (app) {
 
     var config = app.get('config');
     var loginCheck = app.get('middleware.loginCheck');
-    var moment = app.get('moment');
 
     var AWS = require('aws-sdk');
     var uuid = app.get('uuid');
