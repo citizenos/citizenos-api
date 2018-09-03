@@ -84,9 +84,9 @@ module.exports = function (app) {
             }
         }
 
-        activityObject.topicIds = _.unique(activityObject.topicIds);
-        activityObject.groupIds = _.unique(activityObject.groupIds);
-        activityObject.userIds = _.unique(activityObject.userIds);
+        activityObject.topicIds = Array.from(new Set(activityObject.topicIds));
+        activityObject.groupIds = Array.from(new Set(activityObject.groupIds));
+        activityObject.userIds = Array.from(new Set(activityObject.userIds));
         activityObject.createdAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS ZZ');
         activityObject.updatedAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS ZZ');
 
@@ -135,7 +135,7 @@ module.exports = function (app) {
         if (Array.isArray(instance)) {
             object = [];
             instance.forEach(function (elem) {
-                var o = _.clone(elem.toJSON(), true);
+                var o = _.cloneDeep(elem.toJSON());
                 o['@type'] = elem.$modelOptions.name.singular;
                 object.push(o);
             });
@@ -663,7 +663,7 @@ module.exports = function (app) {
         if (Array.isArray(instance)) {
             object = [];
             instance.forEach(function (elem) {
-                var o = _.clone(elem.toJSON(), true);
+                var o = _.cloneDeep(elem.toJSON());
                 o['@type'] = elem.$modelOptions.name.singular;
                 object.push(o);
             });

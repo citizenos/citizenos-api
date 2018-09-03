@@ -461,9 +461,7 @@ function CosHtmlToDocx (html, title, resPath) {
                 var paragrpahProperties = [];
                 var d = _getItemDepth(texts[0].item, null, true);
                 _getListItemProperties(li, paragrpahProperties);
-                paragrpahProperties = _.uniq(paragrpahProperties, function (v) { 
-                    return v;
-                });
+                paragrpahProperties = _.uniq(paragrpahProperties);
                 var paragraphElement = {
                     paragraph: [],
                     texts: texts

@@ -576,7 +576,9 @@ module.exports = function (app) {
             }
         });
 
-        var validEmails = _.pluck(validEmailMembers, 'userId');
+        var validEmails = validEmailMembers.map(function (m) {
+            return m.userId;
+        });
 
         var usersCreatedPromise = Promise.resolve();
 

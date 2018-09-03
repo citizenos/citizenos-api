@@ -1310,6 +1310,7 @@ module.exports = function (app) {
 
                             return getVoteResults(vote.id)
                                 .then(function (voteResults) {
+                                    console.log(voteResults);
                                     var voteCount = _.max(voteResults, 'voteCount').voteCount;
                                     if (voteCount >= config.features.sendToParliament.voteCountMin) {
                                         isSendToParliament = true;
@@ -2175,7 +2176,10 @@ module.exports = function (app) {
             }
         });
 
-        var validEmails = _.pluck(validEmailMembers, 'userId');
+        var validEmails = validEmailMembers.map(function (m) {
+            return m.userId;
+        });
+
         // Find out which e-mails already exist
 
         return User
@@ -4607,8 +4611,8 @@ module.exports = function (app) {
 
         // We cannot allow too similar options, otherwise the options are not distinguishable in the signed file
         if (authType === Vote.AUTH_TYPES.hard) {
-            var voteOptionValues = _.pluck(voteOptions, 'value').map(function (value) {
-                return sanitizeFilename(value).toLowerCase();
+            var voteOptionValues = voteOptions.map(function (option) {
+                return sanitizeFilename(option.value).toLowerCase();
             });
 
             var uniqueValues = _.uniq(voteOptionValues);
@@ -5064,6 +5068,10 @@ module.exports = function (app) {
 
         var voteOptions = req.body.options;
 
+        var voteOptionIds = voteOptions.map(function (option) {
+            return option.optionId;
+        });
+
         return Vote
             .findOne({
                 where: {id: voteId},
@@ -5074,7 +5082,7 @@ module.exports = function (app) {
                     },
                     {
                         model: VoteOption,
-                        where: {id: _.pluck(voteOptions, 'optionId')},
+                        where: {id: voteOptionIds},
                         required: false
                     }
                 ]
@@ -5237,7 +5245,7 @@ module.exports = function (app) {
                             return Promise.reject();
                         case 301:
                             res.badRequest('User is not a Mobile-ID client. Please double check phone number and/or id code.', 21);
-                        
+
                             return Promise.reject();
                         case 302:
                             res.badRequest('User certificates are revoked or suspended.', 22);
@@ -7219,19 +7227,19 @@ module.exports = function (app) {
 
     var buildActivityFeedIncludeString = function (req, visibility) {
         var queryInclude = req.query.include || [];
-        
+
         if (queryInclude && !Array.isArray(queryInclude)) {
             queryInclude = [queryInclude];
         }
         var allowedIncludeAuth = ['userTopics', 'userGroups', 'user', 'self'];
         var allowedInclude = ['publicTopics', 'publicGroups'];
-        
+
         var include = queryInclude.filter(function (item, key, input) {
             if (visibility && visibility === 'public') {
                 return allowedInclude.indexOf(item) > -1 && (input.indexOf(item) === key);
             } else {
                 return allowedIncludeAuth.indexOf(item) > -1 && (input.indexOf(item) === key);
-            }        
+            }
         });
 
         if (!include || !include.length) {
@@ -7258,7 +7266,7 @@ module.exports = function (app) {
                 ';
             includedSql.push(viewActivity);
         }
-    
+
         include.forEach(function (item) {
             switch (item) {
                 case 'user':
@@ -7337,14 +7345,14 @@ module.exports = function (app) {
 
     var activitiesList = function (req, res, next, visibility) {
         var limitMax = 50;
-        var limitDefault = 10;        
+        var limitDefault = 10;
         var allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User'];
-        var userId;        
-    
+        var userId;
+
         if (req.user) {
             userId = req.user.id;
         }
-        var sourcePartnerId = req.query.sourcePartnerId;    
+        var sourcePartnerId = req.query.sourcePartnerId;
         var page = parseInt(req.query.page, 10);
         var offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         var limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
@@ -7353,12 +7361,12 @@ module.exports = function (app) {
         var queryFilters = req.query.filter || [];
         if (queryFilters && !Array.isArray(queryFilters)) {
             queryFilters = [queryFilters];
-        } 
-    
+        }
+
         var filters = queryFilters.filter(function (item, key, input) {
             return allowedFilters.indexOf(item) > -1 && (input.indexOf(item) === key);
         });
-        
+
         var filterBy = '';
         if (filters.length) {
             var filtersEscaped = filters.map(function (filter) {
@@ -7371,9 +7379,9 @@ module.exports = function (app) {
             offset = page * limitDefault - limitDefault;
             limit = limitDefault;
         }
-    
+
         if (limit > limitMax) limit = limitDefault;
-    
+
         // All partners should see only Topics created by their site, but our own app sees all.
         var wherePartnerTopics = '';
         var wherePartnerGroups = '';
@@ -7931,7 +7939,7 @@ module.exports = function (app) {
                             )
                             .then(function () {
                                 return results;
-                            });                        
+                            });
                     });
             }).then(function (results) {
                 return res.ok(results);
