@@ -6627,7 +6627,7 @@ module.exports = function (app) {
             .catch(next);
     });
 
-return {
-    hasPermission: hasPermission
-}
+    return {
+        hasPermission: hasPermission
+    };
 };
