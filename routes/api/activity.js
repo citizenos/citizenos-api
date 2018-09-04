@@ -36,73 +36,73 @@ module.exports = function (app) {
         a.data#>>\'{actor, type}\' as "actor.type", \
         u.name as "actor.name", \
         u.company as "actor.company", \
-        COALESCE(go.id, tobj.id, uo.id, NULL) AS "object.id", \
-        COALESCE(go.name, uo.name, NULL) AS "object.name", \
-        COALESCE(tobj.title, NULL) AS "object.title", \
+        COALESCE(go.id, tobj.id, uo.id) AS "object.id", \
+        COALESCE(go.name, uo.name) AS "object.name", \
+        COALESCE(tobj.title) AS "object.title", \
         a.data#>>\'{object, @type}\' AS "object.@type", \
-        COALESCE(go."creatorId", tobj."creatorId", NULL) AS "object.creatorId", \
-        COALESCE(go."parentId", NULL) AS "object.parentId", \
-        COALESCE(tobj.status, NULL) AS "object.status", \
-        COALESCE(go.visibility::text, tobj.visibility::text, NULL) AS "object.visibility", \
-        COALESCE(tobj."sourcePartnerId", go."sourcePartnerId", NULL) AS "object.sourcePartnerId", \
-        COALESCE(tobj."sourcePartnerObjectId", NULL) AS "object.sourcePartnerObjectId", \
-        COALESCE(tobj."categories", NULL) AS "object.categories", \
-        COALESCE(tobj."tokenJoin", NULL) AS "object.tokenJoin", \
-        COALESCE(tobj."padUrl", NULL) AS "object.padUrl", \
-        COALESCE(tobj."endsAt", NULL) AS "object.endsAt", \
-        COALESCE(tobj.hashtag, NULL) AS "object.hashtag", \
-        COALESCE(go."createdAt"::text, tobj."createdAt"::text, tvco."createdAt"::text, NULL) AS "object.createdAt", \
-        COALESCE(go."updatedAt"::text, tobj."updatedAt"::text, tvco."updatedAt"::text, NULL) AS "object.updatedAt", \
-        COALESCE(go."deletedAt"::text, tobj."deletedAt"::text, tvco."deletedAt"::text, NULL) AS "object.deletedAt", \
-        COALESCE(uo.company, NULL) AS "object.company", \
-        COALESCE(tvco."userId", NULL) AS "object.userId", \
-        COALESCE(tvco."voteId", NULL) AS "object.voteId", \
-        COALESCE(tvco."topicId", NULL) AS "object.topicId", \
-        COALESCE(tvco."topicTitle", NULL) AS "object.topicTitle", \
-        COALESCE(origg.id, NULL) AS "origin.id", \
-        COALESCE(origg.name, NULL) AS "origin.name", \
+        COALESCE(go."creatorId", tobj."creatorId") AS "object.creatorId", \
+        COALESCE(go."parentId") AS "object.parentId", \
+        COALESCE(tobj.status) AS "object.status", \
+        COALESCE(go.visibility::text, tobj.visibility::text) AS "object.visibility", \
+        COALESCE(tobj."sourcePartnerId", go."sourcePartnerId") AS "object.sourcePartnerId", \
+        COALESCE(tobj."sourcePartnerObjectId") AS "object.sourcePartnerObjectId", \
+        COALESCE(tobj."categories") AS "object.categories", \
+        COALESCE(tobj."tokenJoin") AS "object.tokenJoin", \
+        COALESCE(tobj."padUrl") AS "object.padUrl", \
+        COALESCE(tobj."endsAt") AS "object.endsAt", \
+        COALESCE(tobj.hashtag) AS "object.hashtag", \
+        COALESCE(go."createdAt"::text, tobj."createdAt"::text, tvco."createdAt"::text) AS "object.createdAt", \
+        COALESCE(go."updatedAt"::text, tobj."updatedAt"::text, tvco."updatedAt"::text) AS "object.updatedAt", \
+        COALESCE(go."deletedAt"::text, tobj."deletedAt"::text, tvco."deletedAt"::text) AS "object.deletedAt", \
+        COALESCE(uo.company) AS "object.company", \
+        COALESCE(tvco."userId") AS "object.userId", \
+        COALESCE(tvco."voteId") AS "object.voteId", \
+        COALESCE(tvco."topicId") AS "object.topicId", \
+        COALESCE(tvco."topicTitle") AS "object.topicTitle", \
+        COALESCE(origg.id) AS "origin.id", \
+        COALESCE(origg.name) AS "origin.name", \
         a.data#>>\'{origin, @type}\' AS "origin.@type", \
-        COALESCE(origg."creatorId", NULL) AS "origin.creatorId", \
-        COALESCE(origg."parentId", NULL) AS "origin.parentId", \
-        COALESCE(origg.visibility::text, NULL) AS "origin.visibility", \
-        COALESCE(origg."sourcePartnerId", NULL) AS "origin.sourcePartnerId", \
-        COALESCE(origg."createdAt"::text, tmuorig."createdAt"::text, gmuorig."createdAt"::text, tmgorig."createdAt"::text, NULL) AS "origin.createdAt", \
-        COALESCE(origg."updatedAt"::text, tmuorig."updatedAt"::text, gmuorig."updatedAt"::text, tmgorig."updatedAt"::text, NULL) AS "origin.updatedAt", \
-        COALESCE(origg."deletedAt"::text, tmuorig."deletedAt"::text, gmuorig."deletedAt"::text, tmgorig."deletedAt"::text, NULL) AS "origin.deletedAt", \
-        COALESCE(tmuorig."level", tmgorig."level", gmuorig."level", NULL) AS "origin.level", \
-        COALESCE(tmuorig."userId", gmuorig."userId", NULL) AS "origin.userId", \
-        COALESCE(gmuorig."groupId", tmgorig."groupId", NULL) AS "origin.groupId", \
-        COALESCE(tmuorig."topicId", tmgorig."topicId", NULL) AS "origin.topicId", \
-        COALESCE(tmuorig."topicTitle", tmgorig."topicTitle", NULL) AS "origin.topicTitle", \
-        COALESCE(gmuorig."groupName", tmgorig."topicTitle", NULL) AS "origin.groupName", \
-        COALESCE(tmuorig."userName", gmuorig."userName", NULL) AS "origin.userName", \
-        COALESCE(targg.id, targt.id, targtc.id, NULL) AS "target.id", \
-        COALESCE(targg.name, uo.name, NULL) AS "target.name", \
-        COALESCE(targt.title, NULL) AS "target.title", \
-        COALESCE(targtc.subject, NULL) AS "target.subject", \
-        COALESCE(targtc.text, NULL) AS "target.text", \
+        COALESCE(origg."creatorId") AS "origin.creatorId", \
+        COALESCE(origg."parentId") AS "origin.parentId", \
+        COALESCE(origg.visibility::text) AS "origin.visibility", \
+        COALESCE(origg."sourcePartnerId") AS "origin.sourcePartnerId", \
+        COALESCE(origg."createdAt"::text, tmuorig."createdAt"::text, gmuorig."createdAt"::text, tmgorig."createdAt"::text) AS "origin.createdAt", \
+        COALESCE(origg."updatedAt"::text, tmuorig."updatedAt"::text, gmuorig."updatedAt"::text, tmgorig."updatedAt"::text) AS "origin.updatedAt", \
+        COALESCE(origg."deletedAt"::text, tmuorig."deletedAt"::text, gmuorig."deletedAt"::text, tmgorig."deletedAt"::text) AS "origin.deletedAt", \
+        COALESCE(tmuorig."level", tmgorig."level", gmuorig."level") AS "origin.level", \
+        COALESCE(tmuorig."userId", gmuorig."userId") AS "origin.userId", \
+        COALESCE(gmuorig."groupId", tmgorig."groupId") AS "origin.groupId", \
+        COALESCE(tmuorig."topicId", tmgorig."topicId") AS "origin.topicId", \
+        COALESCE(tmuorig."topicTitle", tmgorig."topicTitle") AS "origin.topicTitle", \
+        COALESCE(gmuorig."groupName", tmgorig."topicTitle") AS "origin.groupName", \
+        COALESCE(tmuorig."userName", gmuorig."userName") AS "origin.userName", \
+        COALESCE(targg.id, targt.id, targtc.id) AS "target.id", \
+        COALESCE(targg.name, uo.name) AS "target.name", \
+        COALESCE(targt.title) AS "target.title", \
+        COALESCE(targtc.subject) AS "target.subject", \
+        COALESCE(targtc.text) AS "target.text", \
         a.data#>>\'{target, @type}\' AS "target.@type", \
-        COALESCE(targg."creatorId", targt."creatorId", targtc."creatorId", NULL) AS "target.creatorId", \
-        COALESCE(targtc."topicId", NULL) AS "target.topicId", \
-        COALESCE(targg."parentId", targtc."parentId", NULL) AS "target.parentId", \
-        COALESCE(targtc."parentVersion", NULL) AS "target.parentVersion", \
-        COALESCE(targt.status, NULL) AS "target.status", \
-        COALESCE(targg.visibility::text, targt.visibility::text, NULL) AS "target.visibility", \
-        COALESCE(targt."sourcePartnerId", targg."sourcePartnerId", NULL) AS "target.sourcePartnerId", \
-        COALESCE(targt."sourcePartnerObjectId", NULL) AS "target.sourcePartnerObjectId", \
-        COALESCE(targt."categories", NULL) AS "target.categories", \
-        COALESCE(targt."tokenJoin", NULL) AS "target.tokenJoin", \
-        COALESCE(targt."padUrl", NULL) AS "target.padUrl", \
-        COALESCE(targt."endsAt", NULL) AS "target.endsAt", \
-        COALESCE(targt."hashtag", NULL) AS "target.hashtag", \
-        COALESCE(targtc."deletedById", NULL) AS "target.deletedById", \
-        COALESCE(targtc."deletedReasonType"::text, NULL) AS "target.deletedReasonType ", \
-        COALESCE(targtc."deletedReasonText", NULL) AS "target.deletedReasonText", \
-        COALESCE(targtc."deletedByReportId", NULL) AS "target.deletedByReportId", \
-        COALESCE(targtc."edits", NULL) AS "target.edits", \
-        COALESCE(targg."createdAt"::text, targt."createdAt"::text, targtc."createdAt"::text, NULL) AS "target.createdAt", \
-        COALESCE(targg."updatedAt"::text, targt."updatedAt"::text, targtc."updatedAt"::text, NULL) AS "target.updatedAt", \
-        COALESCE(targg."deletedAt"::text, targt."deletedAt"::text, targtc."deletedAt"::text, NULL) AS "target.deletedAt" \
+        COALESCE(targg."creatorId", targt."creatorId", targtc."creatorId") AS "target.creatorId", \
+        COALESCE(targtc."topicId") AS "target.topicId", \
+        COALESCE(targg."parentId", targtc."parentId") AS "target.parentId", \
+        COALESCE(targtc."parentVersion") AS "target.parentVersion", \
+        COALESCE(targt.status) AS "target.status", \
+        COALESCE(targg.visibility::text, targt.visibility::text) AS "target.visibility", \
+        COALESCE(targt."sourcePartnerId", targg."sourcePartnerId") AS "target.sourcePartnerId", \
+        COALESCE(targt."sourcePartnerObjectId") AS "target.sourcePartnerObjectId", \
+        COALESCE(targt."categories") AS "target.categories", \
+        COALESCE(targt."tokenJoin") AS "target.tokenJoin", \
+        COALESCE(targt."padUrl") AS "target.padUrl", \
+        COALESCE(targt."endsAt") AS "target.endsAt", \
+        COALESCE(targt."hashtag") AS "target.hashtag", \
+        COALESCE(targtc."deletedById") AS "target.deletedById", \
+        COALESCE(targtc."deletedReasonType"::text) AS "target.deletedReasonType ", \
+        COALESCE(targtc."deletedReasonText") AS "target.deletedReasonText", \
+        COALESCE(targtc."deletedByReportId") AS "target.deletedByReportId", \
+        COALESCE(targtc."edits") AS "target.edits", \
+        COALESCE(targg."createdAt"::text, targt."createdAt"::text, targtc."createdAt"::text) AS "target.createdAt", \
+        COALESCE(targg."updatedAt"::text, targt."updatedAt"::text, targtc."updatedAt"::text) AS "target.updatedAt", \
+        COALESCE(targg."deletedAt"::text, targt."deletedAt"::text, targtc."deletedAt"::text) AS "target.deletedAt" \
         FROM  \
             "Activities" a \
         LEFT JOIN \
@@ -194,7 +194,6 @@ module.exports = function (app) {
                 return allowedIncludeAuth.indexOf(item) > -1 && (input.indexOf(item) === key);
             }        
         });
-
         if (!include || !include.length) {
             include = allowedIncludeAuth;
             if (visibility === 'public') {
