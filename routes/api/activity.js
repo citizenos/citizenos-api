@@ -314,55 +314,56 @@ module.exports = function (app) {
             var extraFields = ['object', 'origin', 'target'];
             extraFields.forEach(function (field) {
                 var object = null;
-                switch (activity[field]['@type']) {
-                    case 'Topic':
-                        if (field !== 'origin') {
-                            object = Topic.build(activity[field]).toJSON();
+                if (activity[field] && activity[field]['@type']) {
+                    switch (activity[field]['@type']) {
+                        case 'Topic':
+                            if (field !== 'origin') {
+                                object = Topic.build(activity[field]).toJSON();
+                                object['@type'] = activity[field]['@type'];
+                                object.creatorId = activity[field].creatorId;
+                                delete object.creator;
+                                delete object.description;
+                            }
+                            
+                            break;
+                        case 'Group':
+                            if (field !== 'origin') {
+                                object = Group.build(activity[field]).toJSON();
+                                object['@type'] = activity[field]['@type'];
+                                object.createdAt = activity[field].createdAt;
+                                object.creatorId = activity[field].creatorId;
+                                object.updatedAt = activity[field].updatedAt;
+                                object.deletedAt = activity[field].deletedAt;
+                                object.sourcePartnerId = activity[field].sourcePartnerId;
+                                delete object.creator;
+                            }
+                            break;
+                        case 'User':
+                            if (field !== 'origin') {
+                                object = User.build(activity[field]).toJSON();
+                                object['@type'] = activity[field]['@type'];
+                                delete object.language;
+                            }
+                            break;
+                        case 'VoteUserContainer':
+                            object = VoteUserContainer.build(activity[field]).toJSON();
                             object['@type'] = activity[field]['@type'];
-                            object.creatorId = activity[field].creatorId;
-                            delete object.creator;
-                            delete object.description;
-                        }
-                        
-                        break;
-                    case 'Group':
-                        if (field !== 'origin') {
-                            object = Group.build(activity[field]).toJSON();
+                            break;
+                        case 'TopicMemberUser':
+                            object = TopicMemberUser.build(activity[field]).toJSON();
                             object['@type'] = activity[field]['@type'];
-                            object.createdAt = activity[field].createdAt;
-                            object.creatorId = activity[field].creatorId;
-                            object.updatedAt = activity[field].updatedAt;
-                            object.deletedAt = activity[field].deletedAt;
-                            object.sourcePartnerId = activity[field].sourcePartnerId;
-                            delete object.creator;
-                        }
-                        break;
-                    case 'User':
-                        if (field !== 'origin') {
-                            object = User.build(activity[field]).toJSON();
+                            break;
+                        case 'TopicMemberGroup':
+                            object = TopicMemberGroup.build(activity[field]).toJSON();
                             object['@type'] = activity[field]['@type'];
-                            delete object.language;
-                        }
-                        break;
-                    case 'VoteUserContainer':
-                        object = VoteUserContainer.build(activity[field]).toJSON();
-                        object['@type'] = activity[field]['@type'];
-                        break;
-                    case 'TopicMemberUser':
-                        object = TopicMemberUser.build(activity[field]).toJSON();
-                        object['@type'] = activity[field]['@type'];
-                        break;
-                    case 'TopicMemberGroup':
-                        object = TopicMemberGroup.build(activity[field]).toJSON();
-                        object['@type'] = activity[field]['@type'];
-                        break;
-                    case 'GroupMember':
-                        object = GroupMember.build(activity[field]).toJSON();
-                        object['@type'] = activity[field]['@type'];
-                        break;
-                    default:
+                            break;
+                        case 'GroupMember':
+                            object = GroupMember.build(activity[field]).toJSON();
+                            object['@type'] = activity[field]['@type'];
+                            break;
+                        default:
+                    }
                 }
-
                 if (object) {
                     returnActivity.data[field] = object;
                 }
@@ -388,7 +389,7 @@ module.exports = function (app) {
         var limitDefault = 10;
         var topicId = req.params.topicId;
         var userId = null;
-        if (req.user) {
+        if (req.user && !visibility) {
             userId = req.user.id;
         }
         var offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
@@ -412,10 +413,11 @@ module.exports = function (app) {
                 .query(
                     '\
                     SELECT \
-                        a.* \
+                        ad.* \
                     FROM \
-                        "Activities" a, \
+                        "Activities" a \
                         JOIN "Topics" t ON t.id = :topicId \
+                        JOIN (' + activitiesWithDataJoin + ') ad ON ad."id" = a.id \
                         WHERE \
                         ' + visibilityCondition + ' \
                         ARRAY[:topicId] <@  a."topicIds" \
@@ -425,7 +427,6 @@ module.exports = function (app) {
                         a."actorType" = \'User\' \
                         AND \
                         a."actorId" = :userId \
-                        GROUP BY a.id, pdata, a."createdAt", a."updatedAt", a."deletedAt" \
                         ORDER BY a."updatedAt" DESC \
                         LIMIT :limit OFFSET :offset \
                     ;',
@@ -439,11 +440,12 @@ module.exports = function (app) {
                         },
                         type: db.QueryTypes.SELECT,
                         transaction: t,
+                        nest: true,
                         raw: true
                     }
                 )
                 .then(function (results) {
-                    if (userId) {
+                    if (userId && !visibility) {
                         return cosActivities
                             .viewActivityFeedActivity(
                                 activity,
@@ -455,7 +457,7 @@ module.exports = function (app) {
                                 t
                             )
                             .then(function () {
-                                return results;
+                                return parseActivitiesResults(results);
                             });
                     }
 
@@ -1068,7 +1070,7 @@ module.exports = function (app) {
         var limitDefault = 10;
         var groupId = req.params.groupId;
         var userId = null;
-        if (req.user) {
+        if (req.user && !visibility) {
             userId = req.user.id;
         }
         var offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
@@ -1106,7 +1108,6 @@ module.exports = function (app) {
                         a."actorType" = \'User\' \
                         AND \
                         a."actorId" = :userId \
-                        GROUP BY a.id, pdata, a."createdAt", a."updatedAt", a."deletedAt" \
                         ORDER BY a."updatedAt" DESC \
                         LIMIT :limit OFFSET :offset \
             ;', {
@@ -1119,10 +1120,11 @@ module.exports = function (app) {
                     },
                     type: db.QueryTypes.SELECT,
                     transaction: t,
+                    nest: true,
                     raw: true
                 })
                 .then(function (results) {
-                    if (userId) {
+                    if (userId && !visibility) {
                         return cosActivities
                             .viewActivityFeedActivity(
                                 activity,
@@ -1134,7 +1136,7 @@ module.exports = function (app) {
                                 t
                             )
                             .then(function () {
-                                return results;
+                                return parseActivitiesResults(results);
                             });
                     }
 
