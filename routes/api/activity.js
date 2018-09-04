@@ -10,6 +10,7 @@ module.exports = function (app) {
     var cosActivities = app.get('cosActivities');
     var loginCheck = app.get('middleware.loginCheck');
     var topicLib = require('./topic')(app);
+    var groupLib = require('./group')(app);
 
     var Activity = app.get('models.Activity');
     var Group = app.get('models.Group');
@@ -411,13 +412,10 @@ module.exports = function (app) {
                 .query(
                     '\
                     SELECT \
-                        ad.* \
+                        a.* \
                     FROM \
                         "Activities" a, \
-                        pg_temp.parseData(a.data) pdata \
                         JOIN "Topics" t ON t.id = :topicId \
-                        JOIN ( \
-                            ' + activitiesWithDataJoin + ') ad ON ad.id = a.id \
                         WHERE \
                         ' + visibilityCondition + ' \
                         ARRAY[:topicId] <@  a."topicIds" \
@@ -435,7 +433,6 @@ module.exports = function (app) {
                         replacements: {
                             topicId: topicId,
                             userId: userId,
-                            type: 'Topic',
                             visibility: visibility,
                             limit: limit,
                             offset: offset
@@ -462,7 +459,7 @@ module.exports = function (app) {
                             });
                     }
 
-                    return results;
+                    return parseActivitiesResults(results);
                 });
         });
     };
@@ -1060,5 +1057,109 @@ module.exports = function (app) {
 
     app.get('/api/activities', function (req, res, next) {
         return activitiesList(req, res, next, 'public');
+    });
+
+    /**
+     * Read (List) public Group Activities
+     */
+
+    var groupActivitiesList = function (req, res, next, visibility) {
+        var limitMax = 50;
+        var limitDefault = 10;
+        var groupId = req.params.groupId;
+        var userId = null;
+        if (req.user) {
+            userId = req.user.id;
+        }
+        var offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
+        var limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+        var visibilityCondition = '';
+        if (visibility) {
+            visibilityCondition = 'g.visibility = :visibility AND';
+        }
+
+        if (limit > limitMax) limit = limitDefault;
+
+        return db.transaction(function (t) {
+            var activity = Activity.build({
+                data: {
+                    offset: offset,
+                    limit: limit
+                }
+            });
+
+            return db
+                .query('\
+                    SELECT \
+                        ad.* \
+                    FROM \
+                        "Activities" a \
+                        JOIN "Groups" g ON g.id = :groupId \
+                        JOIN ( \
+                            ' + activitiesWithDataJoin + ') ad ON ad.id = a.id \
+                        WHERE \
+                        ' + visibilityCondition + ' \
+                        ARRAY[:groupId] <@  a."groupIds" \
+                        OR \
+                        a.data@>\'{"type": "View"}\' \
+                        AND \
+                        a."actorType" = \'User\' \
+                        AND \
+                        a."actorId" = :userId \
+                        GROUP BY a.id, pdata, a."createdAt", a."updatedAt", a."deletedAt" \
+                        ORDER BY a."updatedAt" DESC \
+                        LIMIT :limit OFFSET :offset \
+            ;', {
+                    replacements: {
+                        groupId: groupId,
+                        userId: userId,
+                        visibility: visibility,
+                        limit: limit,
+                        offset: offset
+                    },
+                    type: db.QueryTypes.SELECT,
+                    transaction: t,
+                    raw: true
+                })
+                .then(function (results) {
+                    if (userId) {
+                        return cosActivities
+                            .viewActivityFeedActivity(
+                                activity,
+                                {
+                                    type: 'User',
+                                    id: req.user.id
+                                },
+                                req.method + ' ' + req.path,
+                                t
+                            )
+                            .then(function () {
+                                return results;
+                            });
+                    }
+
+                    return parseActivitiesResults(results);
+                });
+        });
+    };
+
+    app.get('/api/groups/:groupId/activities', function (req, res, next) {
+        return groupActivitiesList(req, res, next, 'public')
+            .then(function (results) {
+                if (results && results.length && results[0]) {
+                    return res.ok(results);
+                } else {
+                    return res.notFound();
+                }
+            })
+            .catch(next);
+    });
+
+    app.get('/api/users/:userId/groups/:groupId/activities', loginCheck(['partner']), groupLib.hasPermission(GroupMember.LEVELS.read, true), function (req, res, next) {
+        return groupActivitiesList(req, res, next)
+            .then(function (results) {
+                return res.ok(results);
+            })
+            .catch(next);
     });
 };
