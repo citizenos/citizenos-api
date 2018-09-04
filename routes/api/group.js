@@ -17,7 +17,6 @@ module.exports = function (app) {
 
     var loginCheck = app.get('middleware.loginCheck');
 
-    var Activity = app.get('models.Activity');
     var Group = app.get('models.Group');
     var GroupMember = app.get('models.GroupMember');
     var User = app.get('models.User');
