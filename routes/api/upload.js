@@ -9,10 +9,17 @@ module.exports = function (app) {
     var uuid = app.get('uuid');
     var Promise = app.get('Promise');
 
+    var credentials = {
+        accessKeyId: config.storage.accessKeyId, 
+        secretAccessKey: config.storage.secretAccessKey
+    };
+
     /**
      * Sign upload
      */
+
     app.get('/api/users/:userId/upload/sign', loginCheck(['partner']), function (req, res, next) {
+        
         var filename = uuid.v4();
         var filetype = req.query.filetype;
         var folder = req.query.folder;
@@ -30,7 +37,7 @@ module.exports = function (app) {
             ACL: 'public-read'
         };
 
-        var s3 = new AWS.S3();
+        var s3 = new AWS.S3(credentials);
         s3.getSignedUrl('putObject', s3Params, function (err, data) {
             if (err) {
                 return next(err);
@@ -67,7 +74,7 @@ module.exports = function (app) {
             responseHeader += 'filename=' + downloadName;
         }
 
-        var s3 = new AWS.S3();
+        var s3 = new AWS.S3(credentials);
 
         var params = {
             Bucket: bucket,
