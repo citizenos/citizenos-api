@@ -27,13 +27,12 @@ module.exports = function (sequelize, DataTypes) {
             },
             partnerId: {
                 type: DataTypes.UUID,
-                allowNull: false,
+                allowNull: true,
                 comment: 'Which Partner moderator represents. One User can be a moderator of many Partners',
                 references: {
                     model: 'Partners',
                     key: 'id'
-                },
-                primaryKey: true
+                }
             }
         }
     );
