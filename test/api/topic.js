@@ -1691,9 +1691,11 @@ suite('Users', function () {
                 suite('Topic visibility = private', function () {
                     var agentCreator = request.agent(app);
                     var agentUser = request.agent(app);
+                    var agentUser2 = request.agent(app);
 
                     var creator;
                     var user;
+                    var user2;
                     var topic;
                     var group;
 
@@ -1706,12 +1708,16 @@ suite('Users', function () {
                                     },
                                     function (cb) {
                                         userLib.createUserAndLogin(agentUser, null, null, null, cb);
+                                    },
+                                    function (cb) {
+                                        userLib.createUserAndLogin(agentUser2, null, null, null, cb);
                                     }
                                 ]
                                 , function (err, results) {
                                     if (err) return done(err);
                                     creator = results[0];
                                     user = results[1];
+                                    user2 = results[2];
 
                                     async
                                         .parallel(
@@ -1893,6 +1899,31 @@ suite('Users', function () {
                             });
                     });
 
+                    test('Fail - Forbidden - User has Global Moderator permissions access to private topic', function (done) {
+                
+                        Moderator
+                            .create({
+                                userId: user2.id
+                            })
+                            .then(function () {
+                                _topicRead(agentUser2, user2.id, topic.id, null, 403, function (err, res) {
+                                    if (err) return done(err);
+                                    
+                                    var expectedResult = {
+                                        status:
+                                            {
+                                                code: 40300,
+                                                message: 'Insufficient permissions'
+                                            }
+                                    };
+                                    var resultMessage = res.body;
+                                    assert.deepEqual(resultMessage, expectedResult);
+
+                                    done();
+                                });
+                            });
+                    });
+
                     test('Fail - Forbidden - User membership was revoked from Group', function (done) {
                         groupLib.membersDelete(agentCreator, creator.id, group.id, user.id, function (err) {
                             if (err) return done(err);
@@ -2038,6 +2069,23 @@ suite('Users', function () {
                                         .end(done); // TODO: may want to check if body contains something to confirm it's the read only page
                                 });
                         });
+                    });
+
+                    test('Success - User has Global Moderator permissions', function (done) {
+                        Moderator
+                            .create({
+                                userId: user.id
+                            })
+                            .then(function () {
+                                topicRead(agentUser, user.id, topic.id, null, function (err, res) {
+                                    if (err) return done(err);
+
+                                    var topic = res.body.data;
+                                    assert.equal(topic.creator.email, creator.email);
+
+                                    done();
+                                });
+                            });
                     });
 
                 });
