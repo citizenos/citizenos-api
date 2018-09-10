@@ -16,6 +16,7 @@ module.exports = function (app) {
     var config = app.get('config');
     var util = app.get('util');
     var fs = app.get('fs');
+    var path = require('path');
     var moment = app.get('moment');
     var url = app.get('url');
     var jwt = app.get('jwt');
@@ -26,6 +27,10 @@ module.exports = function (app) {
     var TopicMember = app.get('models.TopicMember');
 
     var templateRoot = app.get('EMAIL_TEMPLATE_ROOT');
+    var templateRootLocal = app.get('EMAIL_TEMPLATE_ROOT_LOCAL');
+
+    var emailHeaderLogo = fs.existsSync(path.join(templateRootLocal, 'images/logo-email.png')) ? path.join(templateRootLocal, 'images/logo-email.png') : path.join(templateRoot, 'logo-email.png'); //eslint-disable-line no-sync
+
     var templateCache = {};
 
     /**
@@ -115,7 +120,7 @@ module.exports = function (app) {
                         images: [
                             {
                                 name: 'logo',
-                                file: templateRoot + '/images/logo-email.png'
+                                file: emailHeaderLogo
                             }
                         ],
                         //Placeholders
@@ -159,7 +164,7 @@ module.exports = function (app) {
                         images: [
                             {
                                 name: 'logo',
-                                file: templateRoot + '/images/logo-email.png'
+                                file: emailHeaderLogo
                             }
                         ],
                         social: config.email.social, // social.name maps to "from_name". I think this should be part of Campaign client config OR at least defaults can be set somewhere in client options
@@ -249,7 +254,7 @@ module.exports = function (app) {
                     if (!sourceSite) {
                         // Handle CitizenOS links
                         from = config.email.from;
-                        logoFile = templateRoot + '/images/logo-email.png';
+                        logoFile = emailHeaderLogo;
                         templateName = 'inviteTopic';
                         linkToApplication = urlLib.getFe();
                     } else {
@@ -413,7 +418,7 @@ module.exports = function (app) {
                             images: [
                                 {
                                     name: 'logo',
-                                    file: templateRoot + '/images/logo-email.png'
+                                    file: emailHeaderLogo
                                 }
                             ],
                             social: config.email.social, // social.name maps to "from_name". I think this should be part of Campaign client config OR at least defaults can be set somewhere in client options
@@ -503,7 +508,7 @@ module.exports = function (app) {
                             images: [
                                 {
                                     name: 'logo',
-                                    file: templateRoot + '/images/logo-email.png'
+                                    file: emailHeaderLogo
                                 }
                             ],
                             social: config.email.social, // social.name maps to "from_name". I think this should be part of Campaign client config OR at least defaults can be set somewhere in client options
@@ -684,7 +689,7 @@ module.exports = function (app) {
                                 images: [
                                     {
                                         name: 'logo',
-                                        file: templateRoot + '/images/logo-email.png'
+                                        file: emailHeaderLogo
                                     }
                                 ],
                                 //Placeholders
@@ -759,7 +764,7 @@ module.exports = function (app) {
                                     images: [
                                         {
                                             name: 'logo',
-                                            file: templateRoot + '/images/logo-email.png'
+                                            file: emailHeaderLogo
                                         }
                                     ],
                                     //Placeholders...

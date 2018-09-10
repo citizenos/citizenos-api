@@ -54,13 +54,15 @@ app.set('x-powered-by', false);
 var APP_ROOT = __dirname;
 var PUBLIC_ROOT = path.join(APP_ROOT, 'public');
 var FILE_ROOT = path.join(APP_ROOT, 'files');
-var TEMPLATE_ROOT = path.join(APP_ROOT, 'views'); // TODO: E-mails should belong here - https://trello.com/c/fB7Yl7sh/172-refactor-move-emails-to-templates
+var TEMPLATE_ROOT = path.join(APP_ROOT, 'views');
 var EMAIL_TEMPLATE_ROOT = path.join(APP_ROOT, 'views/emails');
+var EMAIL_TEMPLATE_ROOT_LOCAL = path.join(APP_ROOT, 'config/emails');
 
 app.set('APP_ROOT', APP_ROOT);
 app.set('PUBLIC_ROOT', PUBLIC_ROOT);
 app.set('FILE_ROOT', FILE_ROOT);
 app.set('EMAIL_TEMPLATE_ROOT', EMAIL_TEMPLATE_ROOT);
+app.set('EMAIL_TEMPLATE_ROOT_LOCAL', EMAIL_TEMPLATE_ROOT_LOCAL);
 
 //Set app view engine
 app.use(device.capture());
