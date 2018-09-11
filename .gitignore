@@ -12,4 +12,5 @@ Thumbs.db
 /.idea/*
 /logs/*.log*
 /config/local.*
+/config/emails/images/*
 /files/**/

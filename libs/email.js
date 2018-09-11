@@ -29,7 +29,11 @@ module.exports = function (app) {
     var templateRoot = app.get('EMAIL_TEMPLATE_ROOT');
     var templateRootLocal = app.get('EMAIL_TEMPLATE_ROOT_LOCAL');
 
-    var emailHeaderLogo = fs.existsSync(path.join(templateRootLocal, 'images/logo-email.png')) ? path.join(templateRootLocal, 'images/logo-email.png') : path.join(templateRoot, 'logo-email.png'); //eslint-disable-line no-sync
+    var emailHeaderLogo = path.join(templateRoot, 'images/logo-email.png');
+    if (fs.existsSync(path.join(templateRootLocal, 'images/logo-email.png'))) { //eslint-disable-line no-sync
+        emailHeaderLogo = path.join(templateRootLocal, 'images/logo-email.png');
+    }
+    logger.info('Using email header logo from', emailHeaderLogo);
 
     var templateCache = {};
 
