@@ -15,6 +15,12 @@ module.exports = function (sequelize, DataTypes) {
     var Moderator = sequelize.define(
         'Moderator',
         {
+            id: {
+                type: DataTypes.UUID,
+                primaryKey: true,
+                allowNull: false,
+                defaultValue: DataTypes.UUIDV4
+            },
             userId: {
                 type: DataTypes.UUID,
                 allowNull: false,
@@ -22,19 +28,39 @@ module.exports = function (sequelize, DataTypes) {
                 references: {
                     model: 'Users',
                     key: 'id'
-                },
-                primaryKey: true
+                }
             },
             partnerId: {
                 type: DataTypes.UUID,
-                allowNull: false,
+                allowNull: true,
                 comment: 'Which Partner moderator represents. One User can be a moderator of many Partners',
                 references: {
                     model: 'Partners',
                     key: 'id'
-                },
-                primaryKey: true
+                }
             }
+        },
+        {
+            indexes: [
+                {
+                    unique: true,
+                    fields: ['userId', 'partnerId'],
+                    where: {
+                        partnerId: {
+                            $not: null
+                        }
+                    }
+                },
+                {
+                    unique: true,
+                    fields: ['userId'],
+                    where: {
+                        partnerId: {
+                            $eq: null
+                        }
+                    }
+                }
+            ]
         }
     );
 

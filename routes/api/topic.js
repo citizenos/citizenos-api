@@ -255,10 +255,9 @@ module.exports = function (app) {
                         m."partnerId" \
                     FROM "Topics" t \
                     JOIN "Moderators" m \
-                        ON m."partnerId" = t."sourcePartnerId" \
+                        ON (m."partnerId" = t."sourcePartnerId" OR m."partnerId" IS NULL) \
                         AND m."userId" = :userId \
                     WHERE t.id = :topicId \
-                    AND t."sourcePartnerId" IS NOT NULL \
                     AND t."deletedAt" IS NULL \
                     AND m."deletedAt" IS NULL \
                     ;',
@@ -272,13 +271,12 @@ module.exports = function (app) {
                     }
                 )
                 .then(function (result) {
-
                     if (result && result[0]) {
                         var isUserModerator = result[0].userId === userId;
                         var isTopicModerator = result[0].topicId === topicId;
 
                         if (isUserModerator && isTopicModerator) {
-                            return resolve({isModerator: result[0].partnerId});
+                            return resolve({isModerator: result[0].partnerId ? result[0].partnerId : true});
                         }
                     }
 
@@ -2440,7 +2438,6 @@ module.exports = function (app) {
      */
     app.get('/api/users/:userId/topics/:topicId/members/users', loginCheck(['partner']), isModerator(), hasPermission(TopicMember.LEVELS.read), function (req, res, next) {
         var dataForModerator = '';
-
         if (req.user && req.user.moderator) {
             dataForModerator = '\
             tm.email, \

@@ -589,7 +589,8 @@ module.exports = function (app) {
                                 FROM "Moderators" m \
                                     JOIN "Users" u ON (u.id = m."userId") \
                                 WHERE u."email" IS NOT NULL \
-                                AND m."partnerId" = :partnerId \
+                                AND (m."partnerId" = :partnerId \
+                                OR m."partnerId" IS NULL) \
                             ',
                             {
                                 replacements: {
