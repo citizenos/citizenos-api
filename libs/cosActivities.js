@@ -79,7 +79,7 @@ module.exports = function (app) {
         if (activity.actor) {
             activityObject.actorType = activity.actor.type;
             activityObject.actorId = activity.actor.id;
-            if (activity.actor.type === 'User') {
+            if (activity.actor.type === 'User' || activity.actor.type === 'Moderator') {
                 activityObject.userIds.push(activity.actor.id);
             }
         }

@@ -4334,7 +4334,7 @@ module.exports = function (app) {
                                 .transaction(function (t) {
                                     return cosActivities
                                         .updateActivity(comment, topic, {
-                                            type: 'User',
+                                            type: 'Moderator',
                                             id: eventTokenData.userId
                                         }, null, req.method + ' ' + req.path, t)
                                         .then(function () {
@@ -4362,7 +4362,7 @@ module.exports = function (app) {
 
                                                     return cosActivities
                                                         .deleteActivity(comment, topic, {
-                                                            type: 'User',
+                                                            type: 'Moderator',
                                                             id: eventTokenData.userId
                                                         }, req.method + ' ' + req.path, t);
                                                 });
