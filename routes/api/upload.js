@@ -55,7 +55,7 @@ module.exports = function (app) {
     /**
      * Sign download
      */
-    app.get('/api/users/:userId/upload/signdownload', loginCheck(['partner']), function (req, res, next) {
+    app.get('/api/upload/signdownload', function (req, res, next) {
         var filename = req.query.filename;
         var filetype = req.query.filetype;
         var downloadName = req.query.downloadName;
