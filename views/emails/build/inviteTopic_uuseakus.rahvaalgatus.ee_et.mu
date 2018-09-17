@@ -11,7 +11,7 @@
                 <tbody>
                     <tr>
                         <td align="center" valign="middle" style="background-color: #004892; border-bottom: 1px solid #e1e1e1; " height="100">
-                            <img width="300" height="92" src="cid:logo" alt="logo" style="display:block;"  border="0"/>
+                            <img width="300" height="92" src="cid:logo.png" alt="logo" style="display:block;"  border="0"/>
                         </td>
                     </tr>
 

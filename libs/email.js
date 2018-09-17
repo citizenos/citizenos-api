@@ -29,6 +29,7 @@ module.exports = function (app) {
     var templateRoot = app.get('EMAIL_TEMPLATE_ROOT');
     var templateRootLocal = app.get('EMAIL_TEMPLATE_ROOT_LOCAL');
 
+    var emailHeaderLogoName = 'logo.png';
     var emailHeaderLogo = path.join(templateRoot, 'images/logo-email.png');
     if (fs.existsSync(path.join(templateRootLocal, 'images/logo-email.png'))) { //eslint-disable-line no-sync
         emailHeaderLogo = path.join(templateRootLocal, 'images/logo-email.png');
@@ -123,7 +124,7 @@ module.exports = function (app) {
                         social: config.email.social,
                         images: [
                             {
-                                name: 'logo',
+                                name: emailHeaderLogoName,
                                 file: emailHeaderLogo
                             }
                         ],
@@ -167,7 +168,7 @@ module.exports = function (app) {
                         to: user.email,
                         images: [
                             {
-                                name: 'logo',
+                                name: emailHeaderLogoName,
                                 file: emailHeaderLogo
                             }
                         ],
@@ -308,7 +309,7 @@ module.exports = function (app) {
                             to: user.email,
                             images: [
                                 {
-                                    name: 'logo',
+                                    name: emailHeaderLogoName,
                                     file: logoFile
                                 }
                             ],
@@ -421,7 +422,7 @@ module.exports = function (app) {
                             to: user.email,
                             images: [
                                 {
-                                    name: 'logo',
+                                    name: emailHeaderLogoName,
                                     file: emailHeaderLogo
                                 }
                             ],
@@ -511,7 +512,7 @@ module.exports = function (app) {
                             to: user.email,
                             images: [
                                 {
-                                    name: 'logo',
+                                    name: emailHeaderLogoName,
                                     file: emailHeaderLogo
                                 }
                             ],
@@ -694,7 +695,7 @@ module.exports = function (app) {
                                 social: config.email.social,
                                 images: [
                                     {
-                                        name: 'logo',
+                                        name: emailHeaderLogoName,
                                         file: emailHeaderLogo
                                     }
                                 ],
@@ -769,7 +770,7 @@ module.exports = function (app) {
                                     social: config.email.social,
                                     images: [
                                         {
-                                            name: 'logo',
+                                            name: emailHeaderLogoName,
                                             file: emailHeaderLogo
                                         }
                                     ],
@@ -845,7 +846,7 @@ module.exports = function (app) {
                     to: to,
                     images: [
                         {
-                            name: 'logo',
+                            name: emailHeaderLogoName,
                             file: logoFile
                         }
                     ],
@@ -879,7 +880,7 @@ module.exports = function (app) {
                     to: contact.email,
                     images: [
                         {
-                            name: 'logo',
+                            name: emailHeaderLogoName,
                             file: logoFile
                         }
                     ],
