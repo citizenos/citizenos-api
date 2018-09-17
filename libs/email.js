@@ -587,6 +587,7 @@ module.exports = function (app) {
                         .query(
                             ' \
                                 SELECT \
+                                    u.id, \
                                     u."email", \
                                     u."name", \
                                     u."language" \

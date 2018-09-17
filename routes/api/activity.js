@@ -36,6 +36,7 @@ module.exports = function (app) {
         a.data#>>\'{actor, type}\' as "actor.type", \
         u.name as "actor.name", \
         u.company as "actor.company", \
+        COALESCE(a.data#>>\'{actor, level}\') as "actor.level", \
         COALESCE(go.id, tobj.id, uo.id) AS "object.id", \
         COALESCE(go.name, uo.name) AS "object.name", \
         COALESCE(tobj.title) AS "object.title", \
@@ -59,16 +60,24 @@ module.exports = function (app) {
         COALESCE(tvco."voteId") AS "object.voteId", \
         COALESCE(tvco."topicId") AS "object.topicId", \
         COALESCE(tvco."topicTitle") AS "object.topicTitle", \
-        COALESCE(origg.id) AS "origin.id", \
+        COALESCE(torig.id, origg.id) AS "origin.id", \
         COALESCE(origg.name) AS "origin.name", \
+        COALESCE(torig.title) AS "origin.title", \
+        COALESCE(torig.status) AS "origin.status", \
+        COALESCE(torig.categories) AS "origin.categories", \
+        COALESCE(torig."tokenJoin") AS "origin.tokenJoin", \
+        COALESCE(torig."padUrl") AS "origin.padUrl", \
+        COALESCE(torig."endsAt") AS "origin.endsAt", \
+        COALESCE(torig.hashtag) AS "origin.hashtag", \
         a.data#>>\'{origin, @type}\' AS "origin.@type", \
-        COALESCE(origg."creatorId") AS "origin.creatorId", \
+        COALESCE(torig."creatorId", origg."creatorId") AS "origin.creatorId", \
         COALESCE(origg."parentId") AS "origin.parentId", \
-        COALESCE(origg.visibility::text) AS "origin.visibility", \
-        COALESCE(origg."sourcePartnerId") AS "origin.sourcePartnerId", \
-        COALESCE(origg."createdAt"::text, tmuorig."createdAt"::text, gmuorig."createdAt"::text, tmgorig."createdAt"::text) AS "origin.createdAt", \
-        COALESCE(origg."updatedAt"::text, tmuorig."updatedAt"::text, gmuorig."updatedAt"::text, tmgorig."updatedAt"::text) AS "origin.updatedAt", \
-        COALESCE(origg."deletedAt"::text, tmuorig."deletedAt"::text, gmuorig."deletedAt"::text, tmgorig."deletedAt"::text) AS "origin.deletedAt", \
+        COALESCE(torig.visibility::text, origg.visibility::text) AS "origin.visibility", \
+        COALESCE(torig."sourcePartnerId", origg."sourcePartnerId") AS "origin.sourcePartnerId", \
+        COALESCE(torig."sourcePartnerObjectId") AS "origin.sourcePartnerObjectId", \
+        COALESCE(torig."createdAt"::text, origg."createdAt"::text, tmuorig."createdAt"::text, gmuorig."createdAt"::text, tmgorig."createdAt"::text) AS "origin.createdAt", \
+        COALESCE(torig."updatedAt"::text, origg."updatedAt"::text, tmuorig."updatedAt"::text, gmuorig."updatedAt"::text, tmgorig."updatedAt"::text) AS "origin.updatedAt", \
+        COALESCE(torig."deletedAt"::text, origg."deletedAt"::text, tmuorig."deletedAt"::text, gmuorig."deletedAt"::text, tmgorig."deletedAt"::text) AS "origin.deletedAt", \
         COALESCE(tmuorig."level", tmgorig."level", gmuorig."level") AS "origin.level", \
         COALESCE(tmuorig."userId", gmuorig."userId") AS "origin.userId", \
         COALESCE(gmuorig."groupId", tmgorig."groupId") AS "origin.groupId", \
@@ -176,6 +185,8 @@ module.exports = function (app) {
                 JOIN "Comments" c ON a.data#>>\'{target, @type}\' = \'Comment\' AND c."id"::text = a.data#>>\'{target, id}\' \
                 JOIN "TopicComments" tc ON tc."commentId" = c.id \
         ) targtc ON a.data#>>\'{target, @type}\' = \'Comment\' AND targtc."id"::text = a.data#>>\'{target, id}\' \
+        LEFT JOIN \
+            "Topics" torig ON a.data#>>\'{origin, @type}\' = \'Topic\' AND torig.id::text = a.data#>>\'{origin, id}\' \
     ';
 
     var buildActivityFeedIncludeString = function (req, visibility) {
@@ -307,6 +318,9 @@ module.exports = function (app) {
                     company: null
                 };
             } else {
+                if (activity.actor && !activity.actor.level) {
+                    delete activity.actor.level;
+                }
                 returnActivity.data.actor = activity.actor;
             }
 
@@ -316,14 +330,11 @@ module.exports = function (app) {
                 if (activity[field] && activity[field]['@type']) {
                     switch (activity[field]['@type']) {
                         case 'Topic':
-                            if (field !== 'origin') {
-                                object = Topic.build(activity[field]).toJSON();
-                                object['@type'] = activity[field]['@type'];
-                                object.creatorId = activity[field].creatorId;
-                                delete object.creator;
-                                delete object.description;
-                            }
-                            
+                            object = Topic.build(activity[field]).toJSON();
+                            object['@type'] = activity[field]['@type'];
+                            object.creatorId = activity[field].creatorId;
+                            delete object.creator;
+                            delete object.description;                            
                             break;
                         case 'Group':
                             if (field !== 'origin') {
