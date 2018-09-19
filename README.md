@@ -75,6 +75,19 @@ Order of applying, further down the list overrides value from the sources above 
 
 * By default logs are in `./logs/app.log`
 
+
+### Issues
+
+#### FATAL ERROR: Committing semi space failed. Allocation failed - process out of memory
+
+Node.JS runs out of memory. This can be solved by tuning the garbage collection (GC) of Node.JS runtime via V8 options.
+
+* `--max-old-space-size` - Max size of the old generation (in Mbytes). By default it's 1.5GB. Set it to amount that is maximum that you want Node.JS process to allocate. Example: `node --max-old-space-size=250 ./bin/www`
+
+Reading:
+
+* All available V8 options - https://gist.github.com/sarupbanskota/a68e8148aa4cdc95e66a1b0e93df48ef
+
 ## Contributing
 
 ### Pull requests

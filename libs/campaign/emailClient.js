@@ -29,7 +29,7 @@ var emailClient = function (config) {
             provider = require('campaign-mailgun')(config.provider.options);
             break;
         case 'nodemailer':
-            var smtp = nodemailer.createTransport('SMTP', config.provider.options);
+            var smtp = nodemailer.createTransport(config.provider.options);
 
             provider = require('campaign-nodemailer')({
                 transport: smtp
