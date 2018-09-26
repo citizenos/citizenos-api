@@ -437,6 +437,8 @@ module.exports = function (app) {
                         a."actorType" = \'User\' \
                         AND \
                         a."actorId" = :userId \
+                        AND \
+                        a.data#>>\'{object, @type}\' = \'Activity\' \
                         ORDER BY a."updatedAt" DESC \
                         LIMIT :limit OFFSET :offset \
                     ;',
@@ -1118,6 +1120,8 @@ module.exports = function (app) {
                         a."actorType" = \'User\' \
                         AND \
                         a."actorId" = :userId \
+                        AND \
+                        a.data#>>\'{object, @type}\' = \'Activity\' \
                         ORDER BY a."updatedAt" DESC \
                         LIMIT :limit OFFSET :offset \
             ;', {
