@@ -17,7 +17,7 @@ var sequelize = function (uri, options, logger) {
     logger = logger || console;
 
     var defaultLoggingFunction = function (query) {
-        logger.info('DB QUERY.', query);
+        logger.debug('DB QUERY', query);
     };
 
     if (options.logging && typeof options.logging !== 'function') {
