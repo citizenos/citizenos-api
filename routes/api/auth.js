@@ -593,6 +593,14 @@ module.exports = function (app) {
                         status: checkCertificateResult.Status.$value
                     };
 
+                    // Check the certificate usage, see if it's meant for client authentication at all
+                    // https://www.ibm.com/support/knowledgecenter/en/SSKTMJ_9.0.1/admin/conf_keyusageextensionsandextendedkeyusage_r.html
+                    if (checkCertificateResult.EnhancedKeyUsage.$value.indexOf('TLS Web Client Authentication') < 0) {
+                        logger.error('Unexpected certificate enhanced key usage', checkCertificateResult.EnhancedKeyUsage, 'expecting TLS Web Client Authentication');
+
+                        return Promise.reject();
+                    }
+
                     switch (data.status) { // GOOD, UNKNOWN, EXPIRED, SUSPENDED
                         case 'GOOD':
                             data.user = {
