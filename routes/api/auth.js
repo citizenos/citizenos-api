@@ -86,7 +86,10 @@ module.exports = function (app) {
      * @returns {void}
      */
     var clearStateCookie = function (res, cookieName) {
-        res.clearCookie(cookieName, {path: '/api/auth/'});
+        res.clearCookie(cookieName, {
+            path: config.session.cookie.path,
+            domain: config.session.cookie.domain
+        });
     };
 
     var handleOpenIdErrorRedirect = function (res, redirectUri, error, errorDescription, state, errorUri) {
