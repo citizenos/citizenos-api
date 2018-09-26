@@ -26,7 +26,6 @@
     "secret": "Sup13rSecretStuffInTest",
     "cookie": {
       "httpOnly": true,
-      "secure": false,
       "maxAge": 1209600000,
       "domain": false
     }

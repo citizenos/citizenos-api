@@ -45,10 +45,9 @@ module.exports = function (app) {
     var setStateCookie = function (req, res, cookieName, allowOverwrite) {
         if (!req.cookies[cookieName] || allowOverwrite) {
             var stateCookieData = jwt.sign(req.query, config.session.privateKey, {algorithm: config.session.algorithm});
-            res.cookie(cookieName, stateCookieData, config.session.cookie);
+            res.cookie(cookieName, stateCookieData, Object.assign({secure: req.secure}, config.session.cookie);
         }
     };
-
 
     /**
      * Get state cookie
@@ -214,13 +213,14 @@ module.exports = function (app) {
     /**
      * Set the authorization cookie, can also be viewed as starting a session
      *
+     * @param {object} req Express request object
      * @param {object} res Express response object
      * @param {string} userId User id
      * @returns {cookie} data
      *
      * @see http://expressjs.com/en/4x/api.html#res
      */
-    var setAuthCookie = function (res, userId) {
+    var setAuthCookie = function (req, res, userId) {
         var authToken = jwt.sign({
             id: userId,
             scope: 'all'
@@ -228,7 +228,7 @@ module.exports = function (app) {
             expiresIn: config.session.cookie.maxAge,
             algorithm: config.session.algorithm
         });
-        res.cookie(config.session.name, authToken, config.session.cookie);
+        res.cookie(config.session.name, authToken, Object.assign({secure: req.secure}, config.session.cookie));
     };
 
     var clearSessionCookies = function (req, res) {
@@ -248,7 +248,7 @@ module.exports = function (app) {
                 return res.badRequest(err.message, err.code);
             }
 
-            setAuthCookie(res, user.id);
+            setAuthCookie(req, res, user.id);
 
             return res.ok(user);
         })(req, res);
@@ -297,7 +297,7 @@ module.exports = function (app) {
 
                     var user = result[1][0];
 
-                    setAuthCookie(res, user.id);
+                    setAuthCookie(req, res, user.id);
 
                     if (getStateCookie(req, COOKIE_NAME_OPENID_AUTH_STATE)) { // We are in the middle of OpenID authorization flow
                         return res.redirect(urlLib.getApi('/api/auth/openid/authorize'));
@@ -541,13 +541,13 @@ module.exports = function (app) {
                                             });
                                     });
                             }).then(function (user) {
-                                setAuthCookie(res, user.id);
+                                setAuthCookie(req, res, user.id);
 
                                 return res.ok(user.toJSON(), 3); // New user was created
                             });
                         } else {
                             var user = userConnectionInfo.User;
-                            setAuthCookie(res, user.id);
+                            setAuthCookie(req, res, user.id);
 
                             return res.ok(user.toJSON(), 2); // Existing User found and logged in
                         }
@@ -699,7 +699,7 @@ module.exports = function (app) {
                 var user = userInfo[0];
                 var created = userInfo[1];
 
-                setAuthCookie(res, user.id);
+                setAuthCookie(req, res, user.id);
                 if (created) {
                     return res.ok(user, 3); // New user was created
                 } else {
@@ -896,13 +896,13 @@ module.exports = function (app) {
                                             });
                                     });
                             }).then(function (user) {
-                                setAuthCookie(res, user.id);
+                                setAuthCookie(req, res, user.id);
 
                                 return res.ok(user.toJSON(), 3); // New user was created
                             });
                         } else {
                             var user = userConnectionInfo.User;
-                            setAuthCookie(res, user.id);
+                            setAuthCookie(req, res, user.id);
 
                             return res.ok(user.toJSON(), 2); // Existing User found and logged in
                         }
@@ -947,7 +947,7 @@ module.exports = function (app) {
             failureRedirect: urlLib.getFe('/account/login')
         }),
         function (req, res) {
-            setAuthCookie(res, req.user.id);
+            setAuthCookie(req, res, req.user.id);
             handleCallbackRedirect(req, res);
         }
     );
@@ -970,7 +970,7 @@ module.exports = function (app) {
             failureRedirect: urlLib.getFe('/account/login')
         }),
         function (req, res) {
-            setAuthCookie(res, req.user.id);
+            setAuthCookie(req, res, req.user.id);
             handleCallbackRedirect(req, res);
         }
     );
