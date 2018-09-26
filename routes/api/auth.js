@@ -45,7 +45,7 @@ module.exports = function (app) {
     var setStateCookie = function (req, res, cookieName, allowOverwrite) {
         if (!req.cookies[cookieName] || allowOverwrite) {
             var stateCookieData = jwt.sign(req.query, config.session.privateKey, {algorithm: config.session.algorithm});
-            res.cookie(cookieName, stateCookieData, Object.assign({secure: req.secure}, config.session.cookie);
+            res.cookie(cookieName, stateCookieData, Object.assign({secure: req.secure}, config.session.cookie));
         }
     };
 
