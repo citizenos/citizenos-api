@@ -560,14 +560,8 @@ module.exports = function (app) {
             .error(next);
     });
 
-
-    /**
-     * Authenticate using ID-card
-     *
-     * NOTE: Requires proxy in front of the app to set "X-SSL-Client-Cert" header
-     */
-    app.post('/api/auth/id', function (req, res, next) {
-        var token = req.body.token; // Token to access the ID info service
+    var idCardAuth = function (req, res, next) {
+        var token = req.query.token || req.body.token; // Token to access the ID info service
         var cert = req.headers['x-ssl-client-cert'];
 
         if (config.services.idCard && cert) {
@@ -717,8 +711,20 @@ module.exports = function (app) {
                 }
             })
             .catch(next);
-    });
+    };
 
+    /**
+     * Authenticate using ID-card
+     *
+     * NOTE: Requires proxy in front of the app to set "X-SSL-Client-Cert" header
+     *
+     * GET support due to the fact that FF does not send credentials for preflight requests.
+     *
+     * @see https://bugs.chromium.org/p/chromium/issues/detail?id=775438
+     * @see https://bugzilla.mozilla.org/show_bug.cgi?id=1019603
+     */
+    app.post('/api/auth/id', idCardAuth);
+    app.get('/api/auth/id', idCardAuth);
 
     /**
      * Start Mobiil-ID authentication
