@@ -1103,7 +1103,6 @@ module.exports = function (app) {
         var limit = req.query.limit || limitDefault;
         if (limit > limitMax) limit = limitDefault;
 
-        console.log('OP!');
         var where = {
             visibility: Group.VISIBILITY.public,
             name: {

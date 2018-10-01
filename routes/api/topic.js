@@ -4680,7 +4680,7 @@ module.exports = function (app) {
 
                                 return Promise
                                     .all(voteOptionPromises)
-                                    .then(function (results) {
+                                    .then(function () {
                                         return VoteOption
                                             .bulkCreate(
                                                 voteOptions,
