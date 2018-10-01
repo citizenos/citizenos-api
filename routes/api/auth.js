@@ -13,6 +13,7 @@ module.exports = function (app) {
     var config = app.get('config');
     var passport = app.get('passport');
     var db = app.get('db');
+    var Op = db.Op;
     var cosBdoc = app.get('cosBdoc');
     var cosActivities = app.get('cosActivities');
     var jwt = app.get('jwt');
@@ -504,7 +505,7 @@ module.exports = function (app) {
                     .findOne({
                         where: {
                             connectionId: {
-                                $in: [
+                                [Op.in]: [
                                     UserConnection.CONNECTION_IDS.esteid,
                                     UserConnection.CONNECTION_IDS.smartid
                                 ]
@@ -656,7 +657,7 @@ module.exports = function (app) {
                     .findOne({
                         where: {
                             connectionId: {
-                                $in: [
+                                [Op.in]: [
                                     UserConnection.CONNECTION_IDS.esteid,
                                     UserConnection.CONNECTION_IDS.smartid
                                 ]
@@ -859,7 +860,7 @@ module.exports = function (app) {
                     .findOne({
                         where: {
                             connectionId: {
-                                $in: [
+                                [Op.in]: [
                                     UserConnection.CONNECTION_IDS.esteid,
                                     UserConnection.CONNECTION_IDS.smartid
                                 ]

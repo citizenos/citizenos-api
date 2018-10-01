@@ -7,6 +7,7 @@
 module.exports = function (app) {
     var logger = app.get('logger');
     var db = app.get('db');
+    var Op = db.Op;
     var _ = app.get('lodash');
     var cosActivities = app.get('cosActivities');
     var validator = app.get('validator');
@@ -37,11 +38,11 @@ module.exports = function (app) {
             edit: 2,
             admin: 3
         };
+
         var minRequiredLevel = level;
 
-        return new Promise(function (resolve, reject) {
-            return db
-                .query('\
+        return db
+            .query('\
                     SELECT \
                         g.visibility = \'public\' AS "isPublic", \
                         gm."userId" AS "allowed", \
@@ -56,36 +57,35 @@ module.exports = function (app) {
                         AND gm."deletedAt" IS NULL \
                         AND g."deletedAt" IS NULL \
                     GROUP BY id, uid, level;', {
-                    replacements: {
-                        groupId: groupId,
-                        userId: userId,
-                        level: level
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true
-                })
-                .then(function (result) {
-                    if (result && result[0]) {
-                        var isPublic = result[0].isPublic;
-                        var isAllowed = result[0].allowed;
-                        var blevel = result[0].level;
+                replacements: {
+                    groupId: groupId,
+                    userId: userId,
+                    level: level
+                },
+                type: db.QueryTypes.SELECT,
+                raw: true
+            })
+            .then(function (result) {
+                if (result && result[0]) {
+                    var isPublic = result[0].isPublic;
+                    var isAllowed = result[0].allowed;
+                    var blevel = result[0].level;
 
-                        if (!allowSelf && (LEVELS[minRequiredLevel] > LEVELS[blevel])) {
-                            logger.warn('Access denied to topic due to member without permissions trying to delete user! ', 'userId:', userId);
+                    if (!allowSelf && (LEVELS[minRequiredLevel] > LEVELS[blevel])) {
+                        logger.warn('Access denied to topic due to member without permissions trying to delete user! ', 'userId:', userId);
 
-                            return reject();
-                        }
-                        if (isAllowed || (allowPublic && isPublic) || allowSelf) {
-                            return resolve();
-                        }
+                        return Promise.reject();
                     }
+                    if (isAllowed || (allowPublic && isPublic) || allowSelf) {
+                        return Promise.resolve();
+                    }
+                }
 
-                    return reject();
-                })
-                .catch(function (err) {
-                    return reject(err);
-                });
-        });
+                return Promise.reject();
+            })
+            .catch(function (err) {
+                return Promise.reject(err);
+            });
     };
     var hasPermission = function (level, allowPublic, allowSelf) {
         return function (req, res, next) {
@@ -145,9 +145,12 @@ module.exports = function (app) {
                     })
                     .then(function () {
                         return group.addMember( // Magic method by Sequelize - https://github.com/sequelize/sequelize/wiki/API-Reference-Associations#hasmanytarget-options
-                            req.user.id,
+                            req.user.id
+                            ,
                             {
-                                level: GroupMember.LEVELS.admin,
+                                through: {
+                                    level: GroupMember.LEVELS.admin
+                                },
                                 transaction: t
                             }
                         );
@@ -222,70 +225,73 @@ module.exports = function (app) {
 
                 return group
                     .validate()
-                    .then(function (err) {
-                        if (err) {
-                            return next(err);
-                        } else {
-                            return db
-                                .transaction(function (t) {
-                                    return cosActivities
-                                        .updateActivity(group, null, {
+                    .then(function (group) {
+                        return db
+                            .transaction(function (t) {
+                                return cosActivities
+                                    .updateActivity(
+                                        group,
+                                        null,
+                                        {
                                             type: 'User',
                                             id: req.user.id
-                                        }, null, req.method + ' ' + req.path, t)
-                                        .then(function () {
-                                            return db
-                                                .query(
-                                                    'WITH \
-                                                        updated AS ( \
-                                                            UPDATE \
-                                                                "Groups" SET \
-                                                                "name"= :groupName, \
-                                                                "updatedAt"=:timestamp \
-                                                                    WHERE "id" = :groupId \
-                                                                RETURNING * \
-                                                        ) \
-                                                        SELECT  \
-                                                            g.id, \
-                                                            g."parentId" AS "parent.id", \
-                                                            g.name, \
-                                                            g.visibility, \
-                                                            c.id as "creator.id", \
-                                                            c.email as "creator.email", \
-                                                            c.name as "creator.name", \
-                                                            c."createdAt" as "creator.createdAt", \
-                                                            mc.count as "members.count" \
-                                                        FROM updated g \
-                                                        LEFT JOIN \
-                                                            "Users" c ON (c.id = g."creatorId") \
-                                                                LEFT JOIN ( \
-                                                                    SELECT "groupId", count("userId") AS "count" \
-                                                                    FROM "GroupMembers" \
-                                                                    WHERE "deletedAt" IS NULL \
-                                                                    GROUP BY "groupId" \
-                                                                ) AS mc ON (mc."groupId" = g.id);'
-                                                    , {
-                                                        replacements: {
-                                                            timestamp: moment().format('YYYY-MM-DD HH:mm:ss.SSS ZZ'),
-                                                            groupId: req.params.groupId,
-                                                            groupName: req.body.name
-                                                        },
-                                                        type: db.QueryTypes.SELECT,
-                                                        raw: true,
-                                                        nest: true,
-                                                        transaction: t
-                                                    }
-                                                );
-                                        });
-                                }).then(function (result) {
-                                    if (result && result.length && result[0]) {
-                                        return res.ok(result[0]);
-                                    }
-
-                                    return next();
-                                })
-                                .catch(next);
+                                        },
+                                        null,
+                                        req.method + ' ' + req.path,
+                                        t
+                                    )
+                                    .then(function () {
+                                        return db
+                                            .query(
+                                                'WITH \
+                                                    updated AS ( \
+                                                        UPDATE \
+                                                            "Groups" SET \
+                                                            "name"= :groupName, \
+                                                            "updatedAt"=:timestamp \
+                                                                WHERE "id" = :groupId \
+                                                            RETURNING * \
+                                                    ) \
+                                                    SELECT  \
+                                                        g.id, \
+                                                        g."parentId" AS "parent.id", \
+                                                        g.name, \
+                                                        g.visibility, \
+                                                        c.id as "creator.id", \
+                                                        c.email as "creator.email", \
+                                                        c.name as "creator.name", \
+                                                        c."createdAt" as "creator.createdAt", \
+                                                        mc.count as "members.count" \
+                                                    FROM updated g \
+                                                    LEFT JOIN \
+                                                        "Users" c ON (c.id = g."creatorId") \
+                                                            LEFT JOIN ( \
+                                                                SELECT "groupId", count("userId") AS "count" \
+                                                                FROM "GroupMembers" \
+                                                                WHERE "deletedAt" IS NULL \
+                                                                GROUP BY "groupId" \
+                                                            ) AS mc ON (mc."groupId" = g.id);'
+                                                , {
+                                                    replacements: {
+                                                        timestamp: moment().format('YYYY-MM-DD HH:mm:ss.SSS ZZ'),
+                                                        groupId: req.params.groupId,
+                                                        groupName: req.body.name
+                                                    },
+                                                    type: db.QueryTypes.SELECT,
+                                                    raw: true,
+                                                    nest: true,
+                                                    transaction: t
+                                                }
+                                            );
+                                    });
+                            });
+                    })
+                    .then(function (result) {
+                        if (result && result.length && result[0]) {
+                            return res.ok(result[0]);
                         }
+
+                        return next();
                     });
             })
             .catch(next);
@@ -584,7 +590,9 @@ module.exports = function (app) {
         if (validEmails.length) {
             usersCreatedPromise = User
                 .findAll({
-                    where: {email: validEmails},
+                    where: {
+                        email: validEmails
+                    },
                     attributes: ['id', 'email']
                 })
                 .then(function (users) {
@@ -734,7 +742,8 @@ module.exports = function (app) {
         var groupId = req.params.groupId;
 
         db
-            .query('SELECT \
+            .query(
+                'SELECT \
                     u.id, \
                     u.name, \
                     u.company, \
@@ -743,11 +752,15 @@ module.exports = function (app) {
                 FROM "GroupMembers" gm \
                     JOIN "Users" u ON (u.id = gm."userId") \
                 WHERE gm."groupId" = :groupId \
-                AND gm."deletedAt" IS NULL', {
-                replacements: {groupId: groupId},
-                type: db.QueryTypes.SELECT,
-                raw: true
-            })
+                AND gm."deletedAt" IS NULL',
+                {
+                    replacements: {
+                        groupId: groupId
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true
+                }
+            )
             .then(function (members) {
                 return res.ok({
                     count: members.length,
@@ -1090,17 +1103,18 @@ module.exports = function (app) {
         var limit = req.query.limit || limitDefault;
         if (limit > limitMax) limit = limitDefault;
 
+        console.log('OP!');
         var where = {
             visibility: Group.VISIBILITY.public,
             name: {
-                not: null
+                [Op.not]: null
             }
         };
 
         var name = req.query.name;
         if (name) {
             where.name = {
-                $iLike: name
+                [Op.iLike]: name
             };
         }
 

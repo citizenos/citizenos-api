@@ -14,7 +14,7 @@ var hooks = require('../libs/sequelize/hooks');
  *
  * @see http://sequelizejs.com/docs/latest/models
  */
-const VoteOption = function (sequelize, DataTypes) {
+module.exports = function (sequelize, DataTypes) {
 
     var RESERVED_PREFIX = '__';
 
@@ -50,6 +50,20 @@ const VoteOption = function (sequelize, DataTypes) {
         }
     );
 
+    // Overrides the default toJSON() to avoid sensitive data from ending up in the output.
+    // Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
+    VoteOption.prototype.toJSON = function () {
+        // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
+        var data = {
+            id: this.dataValues.id,
+            value: this.dataValues.value,
+            voteCount: this.dataValues.voteCount, // HAX: added by certain queries
+            selected: this.dataValues.selected // HAX: added by certain queries
+        };
+
+        return data;
+    };
+
     /**
      * BeforeValidate hook
      *
@@ -63,19 +77,3 @@ const VoteOption = function (sequelize, DataTypes) {
 
     return VoteOption;
 };
-
-// Overrides the default toJSON() to avoid sensitive data from ending up in the output.
-// Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
-VoteOption.prototype.toJSON = function () {
-    // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
-    var data = {
-        id: this.dataValues.id,
-        value: this.dataValues.value,
-        voteCount: this.dataValues.voteCount, // HAX: added by certain queries
-        selected: this.dataValues.selected // HAX: added by certain queries
-    };
-
-    return data;
-};
-
-module.exports = VoteOption;

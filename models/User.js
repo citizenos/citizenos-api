@@ -14,7 +14,7 @@ var hooks = require('../libs/sequelize/hooks');
  *
  * @see http://sequelizejs.com/docs/latest/models
  */
-const User = function (sequelize, DataTypes) {
+module.exports = function (sequelize, DataTypes) {
 
     var SOURCES = {
         citizenos: 'citizenos',
@@ -136,6 +136,21 @@ const User = function (sequelize, DataTypes) {
         }
     );
 
+    // Overrides the default toJSON() to avoid sensitive data from ending up in the output.
+    // Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
+    User.prototype.toJSON = function () {
+        // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
+        var user = {
+            id: this.dataValues.id,
+            name: this.dataValues.name,
+            company: this.dataValues.company,
+            language: this.dataValues.language,
+            email: this.dataValues.email, //TODO: probably should take this out of the responses, is email sensitive? Seems a bit so as used for log-in.
+            imageUrl: this.dataValues.imageUrl
+        };
+
+        return user;
+    };
 
     /**
      * BeforeValidate hook
@@ -168,21 +183,3 @@ const User = function (sequelize, DataTypes) {
 
     return User;
 };
-
-// Overrides the default toJSON() to avoid sensitive data from ending up in the output.
-// Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
-User.prototype.toJSON = function () {
-    // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
-    var user = {
-        id: this.dataValues.id,
-        name: this.dataValues.name,
-        company: this.dataValues.company,
-        language: this.dataValues.language,
-        email: this.dataValues.email, //TODO: probably should take this out of the responses, is email sensitive? Seems a bit so as used for log-in.
-        imageUrl: this.dataValues.imageUrl
-    };
-
-    return user;
-};
-
-module.exports = User;

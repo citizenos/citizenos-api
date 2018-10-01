@@ -1509,7 +1509,10 @@ suite('Users', function () {
                         }
                     ];
                     topicVoteCreate(agent, user.id, topic.id, options, 1, 1, false, null, null, Vote.TYPES.regular, Vote.AUTH_TYPES.soft, function (err, res) {
-                        if (err) return done(err);
+                        if (err) {
+                            return done(err);
+                        }
+
                         var voteCreated = res.body.data;
                         topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.followUp, function (err) {
                             if (err) return done(err);
@@ -7005,8 +7008,8 @@ suite('Users', function () {
                     var expectedBody = {
                         status: {code: 40000},
                         errors: {
-                            name: 'name cannot be null',
-                            link: 'link cannot be null'
+                            name: 'Attachment.name cannot be null',
+                            link: 'Attachment.link cannot be null'
                         }
                     };
                     assert.deepEqual(res.body, expectedBody);

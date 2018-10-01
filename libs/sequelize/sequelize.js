@@ -28,6 +28,10 @@ var sequelize = function (uri, options, logger) {
         options.sync.logging = defaultLoggingFunction;
     }
 
+    if (options.operatorsAliases === 'undefined') {
+        options.operatorsAliases = Sequelize.Op;
+    }
+
     logger.info(
         'Sequelize connection configuration',
         process.env.NODE_ENV === 'development' ? uri : uri.replace(/\/\/.*:.*@/g, '//*****:*****@'),

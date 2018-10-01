@@ -136,12 +136,12 @@ module.exports = function (app) {
             object = [];
             instance.forEach(function (elem) {
                 var o = _.cloneDeep(elem.toJSON());
-                o['@type'] = elem.$modelOptions.name.singular;
+                o['@type'] = elem._modelOptions.name.singular;
                 object.push(o);
             });
         } else {
             object = instance.toJSON();
-            object['@type'] = instance.$modelOptions.name.singular;
+            object['@type'] = instance._modelOptions.name.singular;
 
         }
 
@@ -153,7 +153,7 @@ module.exports = function (app) {
 
         if (target) {
             var targetObject = target.toJSON();
-            targetObject['@type'] = target.$modelOptions.name.singular;
+            targetObject['@type'] = target._modelOptions.name.singular;
             activity.target = targetObject;
         }
 
@@ -193,7 +193,7 @@ module.exports = function (app) {
         });
 
         origin.description = null;
-        origin['@type'] = instance.$modelOptions.name.singular;
+        origin['@type'] = instance._modelOptions.name.singular;
 
         var activity = {
             type: Activity.TYPES.update,
@@ -205,7 +205,7 @@ module.exports = function (app) {
 
         if (target) {
             var targetObject = target.toJSON();
-            targetObject['@type'] = target.$modelOptions.name.singular;
+            targetObject['@type'] = target._modelOptions.name.singular;
             activity.target = targetObject;
         }
 
@@ -340,7 +340,7 @@ module.exports = function (app) {
             return Promise.resolve();
         }
 
-        origin['@type'] = instance.$modelOptions.name.singular;
+        origin['@type'] = instance._modelOptions.name.singular;
         var activity = {
             type: Activity.TYPES.update,
             object: origin,
@@ -351,7 +351,7 @@ module.exports = function (app) {
 
         if (target) {
             var targetObject = target.toJSON();
-            targetObject['@type'] = target.$modelOptions.name.singular;
+            targetObject['@type'] = target._modelOptions.name.singular;
             activity.target = targetObject;
         }
 
@@ -387,7 +387,7 @@ module.exports = function (app) {
         // }
         // }
         var object = instance.toJSON();
-        object['@type'] = instance.$modelOptions.name.singular;
+        object['@type'] = instance._modelOptions.name.singular;
 
         var activity = {
             type: Activity.TYPES.add,
@@ -397,13 +397,13 @@ module.exports = function (app) {
 
         if (origin) {
             var originObject = origin.toJSON();
-            originObject['@type'] = origin.$modelOptions.name.singular;
+            originObject['@type'] = origin._modelOptions.name.singular;
             activity.origin = originObject;
         }
 
         if (target) {
             var targetObject = target.toJSON();
-            targetObject['@type'] = target.$modelOptions.name.singular;
+            targetObject['@type'] = target._modelOptions.name.singular;
             activity.target = targetObject;
         }
 
@@ -431,7 +431,7 @@ module.exports = function (app) {
         // }
 
         var object = instance.toJSON();
-        object['@type'] = instance.$modelOptions.name.singular;
+        object['@type'] = instance._modelOptions.name.singular;
 
         var activity = {
             type: Activity.TYPES.delete,
@@ -441,7 +441,7 @@ module.exports = function (app) {
 
         if (origin) {
             var originObject = origin.toJSON();
-            originObject['@type'] = origin.$modelOptions.name.singular;
+            originObject['@type'] = origin._modelOptions.name.singular;
 
             activity.origin = originObject;
         }
@@ -470,7 +470,7 @@ module.exports = function (app) {
         // }
 
         var object = instance.toJSON();
-        object['@type'] = instance.$modelOptions.name.singular;
+        object['@type'] = instance._modelOptions.name.singular;
 
         var activity = {
             type: Activity.TYPES.leave,
@@ -501,7 +501,7 @@ module.exports = function (app) {
         // }
 
         var object = instance.toJSON();
-        object['@type'] = instance.$modelOptions.name.singular;
+        object['@type'] = instance._modelOptions.name.singular;
 
         var activity = {
             type: Activity.TYPES.view,
@@ -535,7 +535,7 @@ module.exports = function (app) {
         if (object.offset > 0) {
             return Promise.resolve();
         }
-        object['@type'] = instance.$modelOptions.name.singular;
+        object['@type'] = instance._modelOptions.name.singular;
 
         var activity = {
             type: Activity.TYPES.view,
@@ -622,7 +622,7 @@ module.exports = function (app) {
         // }
 
         var object = instance.toJSON();
-        object['@type'] = instance.$modelOptions.name.singular;
+        object['@type'] = instance._modelOptions.name.singular;
 
         var activity = {
             type: Activity.TYPES.join,
@@ -664,17 +664,17 @@ module.exports = function (app) {
             object = [];
             instance.forEach(function (elem) {
                 var o = _.cloneDeep(elem.toJSON());
-                o['@type'] = elem.$modelOptions.name.singular;
+                o['@type'] = elem._modelOptions.name.singular;
                 object.push(o);
             });
         } else {
             object = instance.toJSON();
-            object['@type'] = instance.$modelOptions.name.singular;
+            object['@type'] = instance._modelOptions.name.singular;
 
         }
 
         var replyTo = inReplyTo.toJSON();
-        replyTo['@type'] = inReplyTo.$modelOptions.name.singular;
+        replyTo['@type'] = inReplyTo._modelOptions.name.singular;
 
         var activity = {
             type: Activity.TYPES.create,
@@ -685,7 +685,7 @@ module.exports = function (app) {
 
         if (target) {
             var targetObject = target.toJSON();
-            targetObject['@type'] = target.$modelOptions.name.singular;
+            targetObject['@type'] = target._modelOptions.name.singular;
             activity.target = targetObject;
         }
 

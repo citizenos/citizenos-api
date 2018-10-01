@@ -290,7 +290,7 @@ suite('Users', function () {
 
                     var errors = res.body.errors;
                     assert.property(errors, 'name');
-                    assert.equal(errors.name, 'name cannot be null');
+                    assert.equal(errors.name, 'Group.name cannot be null');
 
                     done();
                 });
@@ -456,7 +456,7 @@ suite('Users', function () {
 
                     var expectedError = {
                         status: {code: 40000},
-                        errors: {name: 'name cannot be null'}
+                        errors: {name: 'Group.name cannot be null'}
                     };
                     assert.equal(res.status, 400);
                     assert.deepEqual(res.body, expectedError);
@@ -696,6 +696,7 @@ suite('Users', function () {
                     assert.equal(group2.creator.id, user.id);
                     assert.equal(group2.name, groupName2);
                     assert.isNull(group2.parentId);
+
                     groupsListUnauth(agent, null, null, null, null, null, function (err, res) {
                         if (err) {
                             return done(err);

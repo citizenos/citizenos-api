@@ -12,6 +12,8 @@
  */
 module.exports = function (sequelize, DataTypes) {
 
+    var Op = sequelize.Op;
+
     var Moderator = sequelize.define(
         'Moderator',
         {
@@ -47,7 +49,7 @@ module.exports = function (sequelize, DataTypes) {
                     fields: ['userId', 'partnerId'],
                     where: {
                         partnerId: {
-                            $not: null
+                            [Op.not]: null
                         }
                     }
                 },
@@ -56,7 +58,7 @@ module.exports = function (sequelize, DataTypes) {
                     fields: ['userId'],
                     where: {
                         partnerId: {
-                            $eq: null
+                            [Op.eq]: null
                         }
                     }
                 }

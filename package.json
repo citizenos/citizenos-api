@@ -59,7 +59,7 @@
     "passport-google-oauth2": "0.1.6",
     "passport-local": "1.0.0",
     "pem": "1.9.7",
-    "pg": "4.5.7",
+    "pg": "6.4.2",
     "pg-hstore": "2.3.2",
     "pg-query-stream": "0.7.0",
     "prerender-node": "2.4.0",

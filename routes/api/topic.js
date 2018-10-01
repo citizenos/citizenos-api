@@ -31,7 +31,6 @@ module.exports = function (app) {
     var loginCheck = app.get('middleware.loginCheck');
     var partnerParser = app.get('middleware.partnerParser');
 
-    
     var User = app.get('models.User');
     var UserConnection = app.get('models.UserConnection');
     var Group = app.get('models.Group');
@@ -877,7 +876,9 @@ module.exports = function (app) {
                                     .addMemberUser(// Magic method by Sequelize - https://github.com/sequelize/sequelize/wiki/API-Reference-Associations#hasmanytarget-options
                                         user.id,
                                         {
-                                            level: TopicMember.LEVELS.admin,
+                                            through: {
+                                                level: TopicMember.LEVELS.admin
+                                            },
                                             transaction: t
                                         }
                                     )
@@ -3545,10 +3546,11 @@ module.exports = function (app) {
 
             })
             .spread(function (tc, c) {
-                c[0].edits.forEach(function (edit) {
+                c[0][0].edits.forEach(function (edit) {
                     edit.createdAt = new Date(edit.createdAt).toJSON();
                 });
-                comment = Comment.build(c[0]);
+
+                comment = Comment.build(c[0][0]);
 
                 return res.created(comment.toJSON());
             })
@@ -4654,10 +4656,16 @@ module.exports = function (app) {
                         var voteOptionsCreated;
 
                         return cosActivities
-                            .createActivity(vote, null, {
-                                type: 'User',
-                                id: req.user.id
-                            }, req.method + ' ' + req.path, t)
+                            .createActivity(
+                                vote,
+                                null,
+                                {
+                                    type: 'User',
+                                    id: req.user.id
+                                },
+                                req.method + ' ' + req.path,
+                                t
+                            )
                             .then(function () {
                                 return vote
                                     .save({transaction: t});
@@ -4673,15 +4681,6 @@ module.exports = function (app) {
                                 return Promise
                                     .all(voteOptionPromises)
                                     .then(function (results) {
-                                        for (var i = 0; i < results.length; i++) {
-                                            if (results[i]) {
-                                                var err = results[i];
-                                                i = results.length;
-
-                                                return Promise.reject(err);
-                                            }
-                                        }
-
                                         return VoteOption
                                             .bulkCreate(
                                                 voteOptions,
@@ -4697,10 +4696,16 @@ module.exports = function (app) {
                                 voteOptionsCreated = options;
 
                                 return cosActivities
-                                    .createActivity(voteOptionsCreated, null, {
-                                        type: 'User',
-                                        id: req.user.id
-                                    }, req.method + ' ' + req.path, t)
+                                    .createActivity(
+                                        voteOptionsCreated,
+                                        null,
+                                        {
+                                            type: 'User',
+                                            id: req.user.id
+                                        },
+                                        req.method + ' ' + req.path,
+                                        t
+                                    )
                                     .then(function () {
                                         return TopicVote
                                             .create(
@@ -4711,10 +4716,16 @@ module.exports = function (app) {
                                                 {transaction: t}
                                             ).then(function () {
                                                 return cosActivities
-                                                    .createActivity(vote, topic, {
-                                                        type: 'User',
-                                                        id: req.user.id
-                                                    }, req.method + ' ' + req.path, t);
+                                                    .createActivity(
+                                                        vote,
+                                                        topic,
+                                                        {
+                                                            type: 'User',
+                                                            id: req.user.id
+                                                        },
+                                                        req.method + ' ' + req.path,
+                                                        t
+                                                    );
                                             });
                                     });
                             })
@@ -5238,7 +5249,7 @@ module.exports = function (app) {
                             return Promise.reject();
                         case 301:
                             res.badRequest('User is not a Mobile-ID client. Please double check phone number and/or id code.', 21);
-                        
+
                             return Promise.reject();
                         case 302:
                             res.badRequest('User certificates are revoked or suspended.', 22);

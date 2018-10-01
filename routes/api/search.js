@@ -16,6 +16,7 @@ module.exports = function (app) {
     var Group = app.get('models.Group');
     var Topic = app.get('models.Topic');
     var db = app.get('db');
+    var Op = db.Op;
 
     app.get('/api/search', loginCheck(['partner']), function (req, res, next) {
         var str = req.query.str; // Search string
@@ -312,7 +313,7 @@ module.exports = function (app) {
                             .findAndCountAll({
                                 where: {
                                     title: {
-                                        $ilike: '%' + str + '%'
+                                        [Op.iLike]: '%' + str + '%'
                                     },
                                     visibility: 'public'
                                 },
