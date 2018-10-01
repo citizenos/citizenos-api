@@ -15,7 +15,7 @@ var stringUtil = require('../libs/util');
  *
  * @see http://sequelizejs.com/docs/latest/models
  */
-module.exports = function (sequelize, DataTypes) {
+const Topic = function (sequelize, DataTypes) {
 
     // The order of the status properties is important - you can move from top down (inProgress->voting->followUp..)
     var STATUSES = {
@@ -173,52 +173,6 @@ module.exports = function (sequelize, DataTypes) {
             }
         },
         {
-            classMethods: {
-                generateTokenJoin: function () {
-                    return stringUtil.randomString();
-                }
-            },
-            instanceMethods: {
-                // Overrides the default toJSON() to avoid sensitive data from ending up in the output.
-                // Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
-                toJSON: function () {
-                    // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
-                    var data = {
-                        id: this.dataValues.id,
-                        title: this.dataValues.title,
-                        description: this.dataValues.description,
-                        status: this.dataValues.status,
-                        visibility: this.dataValues.visibility,
-                        tokenJoin: this.dataValues.tokenJoin,
-                        categories: this.dataValues.categories,
-                        padUrl: this.dataValues.padUrl,
-                        sourcePartnerId: this.dataValues.sourcePartnerId,
-                        sourcePartnerObjectId: this.dataValues.sourcePartnerObjectId,
-                        endsAt: this.dataValues.endsAt,
-                        hashtag: this.dataValues.hashtag,
-                        createdAt: this.dataValues.createdAt,
-                        updatedAt: this.dataValues.updatedAt
-                    };
-
-                    if (this.dataValues.creator) {
-                        data.creator = this.dataValues.creator;
-                    } else {
-                        data.creator = {};
-                        data.creator.id = this.dataValues.creatorId;
-                    }
-
-                    if (this.dataValues.memberGroups) {
-                        data.members = {
-                            groups: {
-                                count: this.dataValues.memberGroups.length,
-                                rows: this.dataValues.memberGroups
-                            }
-                        };
-                    }
-
-                    return data;
-                }
-            },
             indexes: [
                 {
                     fields: ['title', 'deletedAt'],
@@ -257,3 +211,50 @@ module.exports = function (sequelize, DataTypes) {
 
     return Topic;
 };
+
+// Class Method
+Topic.generateTokenJoin = function () {
+    return stringUtil.randomString();
+};
+
+// Overrides the default toJSON() to avoid sensitive data from ending up in the output.
+// Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
+Topic.prototype.toJSON = function () {
+    // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
+    var data = {
+        id: this.dataValues.id,
+        title: this.dataValues.title,
+        description: this.dataValues.description,
+        status: this.dataValues.status,
+        visibility: this.dataValues.visibility,
+        tokenJoin: this.dataValues.tokenJoin,
+        categories: this.dataValues.categories,
+        padUrl: this.dataValues.padUrl,
+        sourcePartnerId: this.dataValues.sourcePartnerId,
+        sourcePartnerObjectId: this.dataValues.sourcePartnerObjectId,
+        endsAt: this.dataValues.endsAt,
+        hashtag: this.dataValues.hashtag,
+        createdAt: this.dataValues.createdAt,
+        updatedAt: this.dataValues.updatedAt
+    };
+
+    if (this.dataValues.creator) {
+        data.creator = this.dataValues.creator;
+    } else {
+        data.creator = {};
+        data.creator.id = this.dataValues.creatorId;
+    }
+
+    if (this.dataValues.memberGroups) {
+        data.members = {
+            groups: {
+                count: this.dataValues.memberGroups.length,
+                rows: this.dataValues.memberGroups
+            }
+        };
+    }
+
+    return data;
+};
+
+module.exports = Topic;

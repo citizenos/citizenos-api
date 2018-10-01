@@ -64,7 +64,7 @@
     "pg-query-stream": "0.7.0",
     "prerender-node": "2.4.0",
     "sanitize-filename": "1.4.4",
-    "sequelize": "3.27.0",
+    "sequelize": "4.39.0",
     "soap": "0.9.4",
     "striptags": "2.1.1",
     "superagent": "3.8.3",

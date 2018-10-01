@@ -10,7 +10,7 @@
  *
  * @see http://sequelizejs.com/docs/latest/models
  */
-module.exports = function (sequelize, DataTypes) {
+const TopicEvent = function (sequelize, DataTypes) {
     var TITLE_LENGTH_MAX = 128; // Maximum length of "title"
 
     var TopicEvent = sequelize.define(
@@ -47,25 +47,24 @@ module.exports = function (sequelize, DataTypes) {
                 comment: 'Text of the Event.',
                 allowNull: false
             }
-        },
-        {
-            instanceMethods: {
-                // Overrides the default toJSON() to avoid sensitive data from ending up in the output.
-                // Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
-                toJSON: function () {
-                    // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
-                    var data = {
-                        id: this.dataValues.id,
-                        subject: this.dataValues.subject,
-                        text: this.dataValues.text,
-                        createdAt: this.dataValues.createdAt
-                    };
-
-                    return data;
-                }
-            }
         }
     );
 
     return TopicEvent;
 };
+
+// Overrides the default toJSON() to avoid sensitive data from ending up in the output.
+// Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
+TopicEvent.prototype.toJSON = function () {
+    // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
+    var data = {
+        id: this.dataValues.id,
+        subject: this.dataValues.subject,
+        text: this.dataValues.text,
+        createdAt: this.dataValues.createdAt
+    };
+
+    return data;
+};
+
+module.exports = TopicEvent;

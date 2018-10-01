@@ -12,7 +12,7 @@ var _ = require('lodash');
  *
  * @see http://sequelizejs.com/docs/latest/models
  */
-module.exports = function (sequelize, DataTypes) {
+const Group = function (sequelize, DataTypes) {
     var hooks = require('../libs/sequelize/hooks');
 
     var VISIBILITY = {
@@ -71,38 +71,6 @@ module.exports = function (sequelize, DataTypes) {
                     key: 'id'
                 }
             }
-        },
-        {
-            instanceMethods: {
-                // Overrides the default toJSON() to avoid sensitive data from ending up in the output.
-                // Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
-                toJSON: function () {
-                    // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
-                    var data = {
-                        id: this.dataValues.id,
-                        parentId: this.dataValues.parentId,
-                        name: this.dataValues.name,
-                        creator: this.dataValues.creator,
-                        visibility: this.dataValues.visibility
-                    };
-
-                    if (this.dataValues.creator) {
-                        data.creator = this.dataValues.creator;
-                    } else {
-                        data.creator = {};
-                        data.creator.id = this.dataValues.creatorId;
-                    }
-
-                    if (this.dataValues.members) {
-                        data.members = {
-                            count: this.dataValues.members.length,
-                            rows: this.dataValues.members
-                        };
-                    }
-
-                    return data;
-                }
-            }
         }
     );
 
@@ -118,3 +86,34 @@ module.exports = function (sequelize, DataTypes) {
 
     return Group;
 };
+
+// Overrides the default toJSON() to avoid sensitive data from ending up in the output.
+// Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
+Group.prototype.toJSON = function () {
+    // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
+    var data = {
+        id: this.dataValues.id,
+        parentId: this.dataValues.parentId,
+        name: this.dataValues.name,
+        creator: this.dataValues.creator,
+        visibility: this.dataValues.visibility
+    };
+
+    if (this.dataValues.creator) {
+        data.creator = this.dataValues.creator;
+    } else {
+        data.creator = {};
+        data.creator.id = this.dataValues.creatorId;
+    }
+
+    if (this.dataValues.members) {
+        data.members = {
+            count: this.dataValues.members.length,
+            rows: this.dataValues.members
+        };
+    }
+
+    return data;
+};
+
+module.exports = Group;

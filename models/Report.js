@@ -13,7 +13,7 @@ var hooks = require('../libs/sequelize/hooks');
  *
  * @see http://sequelizejs.com/docs/latest/models
  */
-module.exports = function (sequelize, DataTypes) {
+const Report = function (sequelize, DataTypes) {
 
     var TYPES = {
         abuse: 'abuse', // is abusive or insulting
@@ -64,30 +64,6 @@ module.exports = function (sequelize, DataTypes) {
                 comment: 'IP address of the reporter',
                 allowNull: false
             }
-        },
-        {
-            instanceMethods: {
-                // Overrides the default toJSON() to avoid sensitive data from ending up in the output.
-                // Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
-                toJSON: function () {
-                    // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
-                    var data = {
-                        id: this.dataValues.id,
-                        type: this.dataValues.type,
-                        text: this.dataValues.text,
-                        createdAt: this.dataValues.createdAt
-                    };
-
-                    if (this.dataValues.creator) {
-                        data.creator = this.dataValues.creator;
-                    } else {
-                        data.creator = {};
-                        data.creator.id = this.dataValues.creatorId;
-                    }
-
-                    return data;
-                }
-            }
         }
     );
 
@@ -104,3 +80,26 @@ module.exports = function (sequelize, DataTypes) {
 
     return Report;
 };
+
+// Overrides the default toJSON() to avoid sensitive data from ending up in the output.
+// Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
+Report.prototype.toJSON = function () {
+    // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
+    var data = {
+        id: this.dataValues.id,
+        type: this.dataValues.type,
+        text: this.dataValues.text,
+        createdAt: this.dataValues.createdAt
+    };
+
+    if (this.dataValues.creator) {
+        data.creator = this.dataValues.creator;
+    } else {
+        data.creator = {};
+        data.creator.id = this.dataValues.creatorId;
+    }
+
+    return data;
+};
+
+module.exports = Report;

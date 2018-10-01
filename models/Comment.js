@@ -13,7 +13,7 @@ var hooks = require('../libs/sequelize/hooks');
  *
  * @see http://sequelizejs.com/docs/latest/models
  */
-module.exports = function (sequelize, DataTypes) {
+const Comment = function (sequelize, DataTypes) {
     var TYPES = {
         pro: 'pro',
         con: 'con',
@@ -127,59 +127,6 @@ module.exports = function (sequelize, DataTypes) {
                 comment: 'Comment versions in JSONB array',
                 allowNull: true
             }
-        },
-        {
-            instanceMethods: {
-                // Overrides the default toJSON() to avoid sensitive data from ending up in the output.
-                // Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
-                toJSON: function () {
-                    // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
-
-                    var data = {
-                        id: this.dataValues.id,
-                        type: this.dataValues.type,
-                        subject: this.dataValues.subject,
-                        text: this.dataValues.text,
-                        edits: this.dataValues.edits,
-                        createdAt: this.dataValues.createdAt,
-                        updatedAt: this.dataValues.updatedAt,
-                        deletedAt: this.dataValues.deletedAt,
-                        deletedReasonType: this.dataValues.deletedReasonType,
-                        deletedReasonText: this.dataValues.deletedReasonText
-                    };
-
-                    if (this.dataValues.creator) {
-                        data.creator = this.dataValues.creator;
-                    } else {
-                        data.creator = {};
-                        data.creator.id = this.dataValues.creatorId;
-                    }
-
-                    if (this.dataValues.deletedBy) {
-                        data.deletedBy = this.dataValues.deletedBy;
-                    } else {
-                        data.deletedBy = {};
-                        data.deletedBy.id = this.dataValues.deletedById;
-                    }
-
-                    if (this.dataValues.report) {
-                        data.report = this.dataValues.report;
-                    } else {
-                        data.report = {};
-                        data.report.id = this.dataValues.deletedByReportId;
-                    }
-
-                    if (this.dataValues.parent) {
-                        data.parent = this.dataValues.parent;
-                    } else {
-                        data.parent = {};
-                        data.parent.id = this.dataValues.parentId;
-                        data.parent.version = this.dataValues.parentVersion;
-                    }
-
-                    return data;
-                }
-            }
         }
     );
 
@@ -202,3 +149,55 @@ module.exports = function (sequelize, DataTypes) {
 
     return Comment;
 };
+
+// Overrides the default toJSON() to avoid sensitive data from ending up in the output.
+// Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
+Comment.prototype.toJSON = function () {
+    // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
+
+    var data = {
+        id: this.dataValues.id,
+        type: this.dataValues.type,
+        subject: this.dataValues.subject,
+        text: this.dataValues.text,
+        edits: this.dataValues.edits,
+        createdAt: this.dataValues.createdAt,
+        updatedAt: this.dataValues.updatedAt,
+        deletedAt: this.dataValues.deletedAt,
+        deletedReasonType: this.dataValues.deletedReasonType,
+        deletedReasonText: this.dataValues.deletedReasonText
+    };
+
+    if (this.dataValues.creator) {
+        data.creator = this.dataValues.creator;
+    } else {
+        data.creator = {};
+        data.creator.id = this.dataValues.creatorId;
+    }
+
+    if (this.dataValues.deletedBy) {
+        data.deletedBy = this.dataValues.deletedBy;
+    } else {
+        data.deletedBy = {};
+        data.deletedBy.id = this.dataValues.deletedById;
+    }
+
+    if (this.dataValues.report) {
+        data.report = this.dataValues.report;
+    } else {
+        data.report = {};
+        data.report.id = this.dataValues.deletedByReportId;
+    }
+
+    if (this.dataValues.parent) {
+        data.parent = this.dataValues.parent;
+    } else {
+        data.parent = {};
+        data.parent.id = this.dataValues.parentId;
+        data.parent.version = this.dataValues.parentVersion;
+    }
+
+    return data;
+};
+
+module.exports = Comment;

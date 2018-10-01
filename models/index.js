@@ -187,19 +187,17 @@ module.exports = function (app) {
         foreignKey: 'topicId'
     });
 
-    Topic.hasOne(TopicVote, {
-        foreignKey: 'topicId'
-    });
-
     // Topic can have many Votes - that is Topic Vote, mini-Vote..
     Topic.belongsToMany(Vote, {
         through: TopicVote,
+        as: 'TopicVotes',
         foreignKey: 'topicId',
         constraints: true
     });
 
     Vote.belongsToMany(Topic, {
         through: TopicVote,
+        as: 'VoteTopics',
         foreignKey: 'voteId',
         constraints: true
     });

@@ -1118,14 +1118,18 @@ module.exports = function (app) {
                                 var accessTokenHash = cryptoLib.getAtHash(accessToken, 'sha' + config.session.algorithm.match(/[0-9]*$/)[0]);
 
                                 // ID Token - http://openid.net/specs/openid-connect-implicit-1_0.html#IDToken
-                                var idToken = jwt.sign({
-                                    iss: urlLib.getApi(), // issuer
-                                    sub: req.user.id, // subject
-                                    aud: clientId, // audience
-                                    exp: parseInt(new Date().getTime() / 1000 + (5 * 60 * 1000), 10), // expires - 5 minutes from now
-                                    nonce: nonce,
-                                    at_hash: accessTokenHash
-                                }, config.session.privateKey, {algorithm: config.session.algorithm});
+                                var idToken = jwt.sign(
+                                    {
+                                        iss: urlLib.getApi(), // issuer
+                                        sub: req.user.id, // subject
+                                        aud: clientId, // audience
+                                        exp: parseInt(new Date().getTime() / 1000 + (5 * 60 * 1000), 10), // expires - 5 minutes from now
+                                        nonce: nonce,
+                                        at_hash: accessTokenHash
+                                    },
+                                    config.session.privateKey,
+                                    {algorithm: config.session.algorithm}
+                                );
 
                                 var params = {
                                     access_token: accessToken,
