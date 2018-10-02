@@ -1170,7 +1170,7 @@ var jwt = app.get('jwt');
 var moment = app.get('moment');
 var validator = app.get('validator');
 
-var shared = require('../utils/shared')(app);
+var shared = require('../utils/shared');
 var userLib = require('./lib/user')(app);
 var groupLib = require('./group');
 var authLib = require('./auth');
@@ -1201,11 +1201,15 @@ var VoteDelegation = app.get('models.VoteDelegation');
 suite('Users', function () {
 
     suiteSetup(function (done) {
-        process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
         shared
             .syncDb()
-            .then(done)
-            .catch(done);
+            .finally(done);
+    });
+
+    suiteTeardown(function (done) {
+        shared
+            .closeDb()
+            .finally(done);
     });
 
     // API - /api/users/:userId/topics*
@@ -1903,7 +1907,7 @@ suite('Users', function () {
                     });
 
                     test('Fail - Forbidden - User has Global Moderator permissions access to private topic', function (done) {
-                
+
                         Moderator
                             .create({
                                 userId: user2.id
@@ -1911,13 +1915,12 @@ suite('Users', function () {
                             .then(function () {
                                 _topicRead(agentUser2, user2.id, topic.id, null, 403, function (err, res) {
                                     if (err) return done(err);
-                                    
+
                                     var expectedResult = {
-                                        status:
-                                            {
-                                                code: 40300,
-                                                message: 'Insufficient permissions'
-                                            }
+                                        status: {
+                                            code: 40300,
+                                            message: 'Insufficient permissions'
+                                        }
                                     };
                                     var resultMessage = res.body;
                                     assert.deepEqual(resultMessage, expectedResult);
@@ -2712,7 +2715,7 @@ suite('Users', function () {
                     assert.equal(comment.subject, subject);
                     assert.equal(comment.text, text);
                     assert.equal(comment.creator.id, creator.id);
-                    
+
                     topicCommentCreate(agentCreator, creator.id, topic.id, null, null, Comment.TYPES.con, subject, text, function (err, res) {
                         if (err) return done(err);
 
@@ -7204,11 +7207,15 @@ suite('Users', function () {
 suite('Topics', function () {
 
     suiteSetup(function (done) {
-        process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
         shared
             .syncDb()
-            .then(done)
-            .catch(done);
+            .finally(done);
+    });
+
+    suiteTeardown(function (done) {
+        shared
+            .closeDb()
+            .finally(done);
     });
 
     suite('Read', function () {

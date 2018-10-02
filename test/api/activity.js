@@ -55,7 +55,7 @@ var request = require('supertest');
 var app = require('../../app');
 
 var async = app.get('async');
-var shared = require('../utils/shared')(app);
+var shared = require('../utils/shared');
 var userLib = require('./lib/user')(app);
 var topicLib = require('./topic');
 var Partner = app.get('models.Partner');
@@ -67,11 +67,15 @@ var TopicMember = app.get('models.TopicMember');
 suite('Users', function () {
 
     suiteSetup(function (done) {
-        process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
         shared
             .syncDb()
-            .then(done)
-            .catch(done);
+            .finally(done);
+    });
+
+    suiteTeardown(function (done) {
+        shared
+            .closeDb()
+            .finally(done);
     });
 
     // API - /api/users/:userId/activities*

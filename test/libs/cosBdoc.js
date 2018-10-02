@@ -11,7 +11,7 @@ suite('cosBdoc', function () {
     var cosBdoc = app.get('cosBdoc');
     var util = app.get('util');
     var _ = app.get('lodash');
-    var shared = require('../utils/shared')(app);
+    var shared = require('../utils/shared');
 
     var Topic = app.get('models.Topic');
     var Vote = app.get('models.Vote');
@@ -32,8 +32,13 @@ suite('cosBdoc', function () {
     suiteSetup(function (done) {
         shared
             .syncDb()
-            .then(done)
-            .catch(done);
+            .finally(done);
+    });
+
+    suiteTeardown(function (done) {
+        shared
+            .closeDb()
+            .finally(done);
     });
 
     // FIXME: Proper test

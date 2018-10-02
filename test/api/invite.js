@@ -4,7 +4,7 @@ var request = require('supertest');
 var app = require('../../app');
 
 var auth = require('./auth');
-var shared = require('../utils/shared')(app);
+var shared = require('../utils/shared');
 var userLib = require('./lib/user')(app);
 
 var urlLib = app.get('urlLib');
@@ -16,8 +16,13 @@ suite('Invite', function () {
     suiteSetup(function (done) {
         shared
             .syncDb()
-            .then(done)
-            .catch(done);
+            .finally(done);
+    });
+
+    suiteTeardown(function (done) {
+        shared
+            .closeDb()
+            .finally(done);
     });
 
     suite('View', function () {

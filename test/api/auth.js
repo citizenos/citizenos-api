@@ -433,7 +433,7 @@ var jwt = app.get('jwt');
 var urlLib = app.get('urlLib');
 var objectEncrypter = app.get('objectEncrypter');
 
-var shared = require('../utils/shared')(app);
+var shared = require('../utils/shared');
 var userLib = require('./lib/user')(app);
 
 var User = app.get('models.User');
@@ -446,8 +446,13 @@ suite('Auth', function () {
     suiteSetup(function (done) {
         shared
             .syncDb()
-            .then(done)
-            .catch(done);
+            .finally(done);
+    });
+
+    suiteTeardown(function (done) {
+        shared
+            .closeDb()
+            .finally(done);
     });
 
     suite('Login', function () {

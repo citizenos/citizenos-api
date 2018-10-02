@@ -90,7 +90,7 @@ var app = require('../../app');
 var assert = require('chai').assert;
 var cryptoLib = app.get('cryptoLib');
 
-var shared = require('../utils/shared')(app);
+var shared = require('../utils/shared');
 var userLib = require('./lib/user')(app);
 var auth = require('./auth');
 
@@ -104,8 +104,13 @@ suite('User', function () {
     suiteSetup(function (done) {
         shared
             .syncDb()
-            .then(done)
-            .catch(done);
+            .finally(done);
+    });
+
+    suiteTeardown(function (done) {
+        shared
+            .closeDb()
+            .finally(done);
     });
 
     suite('Update', function () {

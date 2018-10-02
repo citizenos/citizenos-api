@@ -4,7 +4,7 @@ var assert = require('chai').assert;
 var request = require('supertest');
 var app = require('../../app');
 
-var shared = require('../utils/shared')(app);
+var shared = require('../utils/shared');
 var userLib = require('./lib/user')(app);
 var topicLib = require('./topic');
 
@@ -33,8 +33,13 @@ suite('Partners', function () {
     suiteSetup(function (done) {
         shared
             .syncDb()
-            .then(done)
-            .catch(done);
+            .finally(done);
+    });
+
+    suiteTeardown(function (done) {
+        shared
+            .closeDb()
+            .finally(done);
     });
 
     suite('Topics', function () {
