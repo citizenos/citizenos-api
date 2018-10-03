@@ -50,6 +50,12 @@ module.exports = function (sequelize, DataTypes) {
         }
     );
 
+    TopicEvent.associate = function (models) {
+        TopicEvent.belongsTo(models.Topic, {
+            foreignKey: 'topicId'
+        });
+    };
+
     // Overrides the default toJSON() to avoid sensitive data from ending up in the output.
     // Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
     TopicEvent.prototype.toJSON = function () {

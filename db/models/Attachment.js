@@ -69,5 +69,22 @@ module.exports = function (sequelize, DataTypes) {
         }
     );
 
+    Attachment.associate = function (models) {
+        Attachment.belongsTo(models.User, {
+            foreignKey: {
+                fieldName: 'creatorId',
+                allowNull: false
+            },
+            as: 'creator'
+        });
+
+        // TODO: funky association for cascade delete and right attachmentId reference
+        Attachment.belongsToMany(models.Topic, {
+            through: models.TopicAttachment,
+            foreignKey: 'attachmentId',
+            constraints: true
+        });
+    };
+
     return Attachment;
 };

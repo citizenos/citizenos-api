@@ -74,6 +74,34 @@ module.exports = function (sequelize, DataTypes) {
         }
     );
 
+    Group.associate = function (models) {
+        // Group can have many Members
+        Group.belongsToMany(models.User, {
+            through: models.GroupMember,
+            foreignKey: 'groupId',
+            as: {
+                singular: 'member',
+                plural: 'members'
+            },
+            constraints: true
+        });
+
+        // Every Group is created by a User whom we call "the Creator"
+        Group.belongsTo(models.User, {
+            foreignKey: {
+                fieldName: 'creatorId',
+                allowNull: false
+            },
+            as: 'creator'
+        });
+
+        Group.belongsToMany(models.Topic, {
+            through: models.TopicMemberGroup,
+            foreignKey: 'groupId',
+            constraints: true
+        });
+    };
+
     // Overrides the default toJSON() to avoid sensitive data from ending up in the output.
     // Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
     Group.prototype.toJSON = function () {

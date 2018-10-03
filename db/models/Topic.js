@@ -195,6 +195,62 @@ module.exports = function (sequelize, DataTypes) {
         }
     );
 
+    Topic.associate = function (models) {
+        // Every Topic is created by a User whom we call "the Creator"
+        Topic.belongsTo(models.User, {
+            foreignKey: {
+                fieldName: 'creatorId',
+                allowNull: false
+            },
+            as: 'creator'
+        });
+
+        // Topic can have many Users as Members (collaborators)
+        Topic.belongsToMany(models.User, {
+            through: models.TopicMemberUser,
+            foreignKey: 'topicId',
+            as: {
+                singular: 'memberUser',
+                plural: 'memberUsers'
+            },
+            constraints: true
+        });
+
+        // Topic can have many Groups as Members
+        Topic.belongsToMany(models.Group, {
+            through: models.TopicMemberGroup,
+            foreignKey: 'topicId',
+            as: {
+                singular: 'memberGroup',
+                plural: 'memberGroups'
+            },
+            constraints: true
+        });
+
+        Topic.belongsToMany(models.Comment, {
+            through: models.TopicComment,
+            foreignKey: 'topicId',
+            constraints: true
+        });
+
+        Topic.belongsToMany(models.Attachment, {
+            through: models.TopicAttachment,
+            foreignKey: 'topicId',
+            constraints: true
+        });
+
+        Topic.hasMany(models.TopicEvent, {
+            foreignKey: 'topicId'
+        });
+
+        // Topic can have many Votes - that is Topic Vote, mini-Vote..
+        Topic.belongsToMany(models.Vote, {
+            through: models.TopicVote,
+            foreignKey: 'topicId',
+            constraints: true
+        });
+    };
+
     // Class Method
     Topic.generateTokenJoin = function () {
         return stringUtil.randomString();

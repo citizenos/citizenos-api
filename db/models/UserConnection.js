@@ -59,6 +59,12 @@ module.exports = function (sequelize, DataTypes) {
         }
     );
 
+    UserConnection.associate = function (models) {
+        UserConnection.belongsTo(models.User, {
+            foreignKey: 'userId'
+        });
+    };
+
     UserConnection.CONNECTION_IDS = CONNECTION_IDS;
 
     return UserConnection;

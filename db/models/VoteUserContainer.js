@@ -46,5 +46,12 @@ module.exports = function (sequelize, DataTypes) {
         }
     );
 
+    VoteUserContainer.associate = function (models) {
+        VoteUserContainer.hasMany(models.UserConnection, {
+            foreignKey: 'userId',
+            constraints: false
+        });
+    };
+
     return VoteUserContainer;
 };

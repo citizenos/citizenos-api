@@ -130,6 +130,21 @@ module.exports = function (sequelize, DataTypes) {
         }
     );
 
+    Comment.associate = function (models) {
+        Comment.belongsToMany(models.Report, {
+            through: models.CommentReport,
+            foreignKey: 'commentId',
+            constraints: true
+        });
+
+        // TODO: funky association for cascade delete and right commentId reference
+        Comment.belongsToMany(models.Topic, {
+            through: models.TopicComment,
+            foreignKey: 'commentId',
+            constraints: true
+        });
+    };
+
     // Overrides the default toJSON() to avoid sensitive data from ending up in the output.
     // Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
     Comment.prototype.toJSON = function () {

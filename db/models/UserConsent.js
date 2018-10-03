@@ -40,5 +40,11 @@ module.exports = function (sequelize, DataTypes) {
         }
     );
 
+    UserConsent.associate = function (models) {
+        UserConsent.belongsTo(models.User, {
+            foreignKey: 'userId'
+        });
+    };
+
     return UserConsent;
 };

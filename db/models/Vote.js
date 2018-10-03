@@ -97,6 +97,30 @@ module.exports = function (sequelize, DataTypes) {
         }
     );
 
+    Vote.associate = function (models) {
+        Vote.belongsToMany(models.Topic, {
+            through: models.TopicVote,
+            foreignKey: 'voteId',
+            constraints: true
+        });
+
+        Vote.hasMany(models.VoteOption, {
+            foreignKey: 'voteId'
+        });
+
+        Vote.hasMany(models.VoteContainerFile, {
+            foreignKey: 'voteId'
+        });
+
+        Vote.hasMany(models.VoteUserContainer, {
+            foreignKey: 'voteId'
+        });
+
+        Vote.hasMany(models.VoteDelegation, {
+            foreignKey: 'voteId'
+        });
+    };
+
     // Overrides the default toJSON() to avoid sensitive data from ending up in the output.
     // Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
     Vote.prototype.toJSON = function () {

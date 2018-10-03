@@ -47,5 +47,11 @@ module.exports = function (sequelize, DataTypes) {
         }
     );
 
+    VoteDelegation.associate = function (models) {
+        VoteDelegation.belongsTo(models.User, {
+            foreignKey: 'toUserId'
+        });
+    };
+
     return VoteDelegation;
 };

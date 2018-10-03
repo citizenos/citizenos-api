@@ -37,5 +37,11 @@ module.exports = function (sequelize, DataTypes) {
         }
     );
 
+    Partner.associate = function (models) {
+        Partner.hasMany(models.UserConsent, {
+            foreignKey: 'partnerId'
+        });
+    };
+
     return Partner;
 };
