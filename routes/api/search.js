@@ -14,7 +14,7 @@ module.exports = function (app) {
     var Op = db.Op;
 
     var loginCheck = app.get('middleware.loginCheck');
-    
+
     var User = models.User;
     var Group = models.Group;
     var Topic = models.Topic;
@@ -24,14 +24,31 @@ module.exports = function (app) {
 
         var findUserPromise = User
             .findAll({
-                where: ['name ILIKE ? OR email ILIKE ?', str + '%', str + '%'],
+                where: {
+                    [Op.or]: [
+                        {
+                            name: {
+                                [Op.iLike]: '%' + str + '%'
+                            }
+                        },
+                        {
+                            email: {
+                                [Op.iLike]: str + '%'
+                            }
+                        }
+                    ]
+                },
                 attributes: ['id', 'name', 'company', 'imageUrl'],
                 limit: 10
             });
 
         var findGroupPromise = Group
             .findAll({
-                where: ['name ILIKE ?', str + '%'],
+                where: {
+                    name: {
+                        [Op.iLike]: str + '%'
+                    }
+                },
                 attributes: ['id', 'name'],
                 limit: 10
             });
@@ -316,7 +333,7 @@ module.exports = function (app) {
                                     title: {
                                         [Op.iLike]: '%' + str + '%'
                                     },
-                                    visibility: 'public'
+                                    visibility: Topic.VISIBILITY.public
                                 },
                                 attributes: ['id', 'title', 'status', 'visibility', 'hashtag', 'categories', 'endsAt', 'createdAt'],
                                 limit: limit,
@@ -333,7 +350,18 @@ module.exports = function (app) {
                     } else if (model === 'group') {
                         var publicGroupPromise = Group
                             .findAll({
-                                where: ['name ILIKE ? AND visibility=\'public\'', str + '%'],
+                                where: {
+                                    [Op.and]: [
+                                        {
+                                            name: {
+                                                [Op.iLike]: str + '%'
+                                            }
+                                        },
+                                        {
+                                            visibility: Topic.VISIBILITY.public
+                                        }
+                                    ]
+                                },
                                 attributes: ['id', 'name'],
                                 limit: limit,
                                 offset: offset
@@ -348,7 +376,20 @@ module.exports = function (app) {
                     } else if (model === 'user') {
                         var publicUserPromise = User
                             .findAndCountAll({
-                                where: ['name ILIKE ? OR email ILIKE ?', str + '%', str + '%'],
+                                where: {
+                                    [Op.or]: [
+                                        {
+                                            name: {
+                                                [Op.iLike]: str + '%'
+                                            }
+                                        },
+                                        {
+                                            email: {
+                                                [Op.iLike]: str + '%'
+                                            }
+                                        }
+                                    ]
+                                },
                                 attributes: ['id', 'name', 'company', 'imageUrl'],
                                 limit: limit,
                                 offset: offset
