@@ -4052,12 +4052,12 @@ suite('Users', function () {
                                                 group = res.body.data;
                                                 var groupMember = {
                                                     userId: groupMemberUser.id,
-                                                    level: GroupMemberGroup.LEVELS.read
+                                                    level: GroupMember.LEVELS.read
                                                 };
 
                                                 member = {
                                                     groupId: group.id,
-                                                    level: TopicMemberGroup.LEVELS.read
+                                                    level: GroupMember.LEVELS.read
                                                 };
 
                                                 groupLib.membersCreate(agent, user.id, group.id, groupMember, function (err) {
