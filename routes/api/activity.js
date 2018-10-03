@@ -1,26 +1,26 @@
 'use strict';
 
 /**
- * Activity API-s 
+ * Activity API-s
  */
 
 module.exports = function (app) {
-    var db = app.get('db');
+    var models = app.get('models');
+    var db = models.sequelize;
     var _ = app.get('lodash');
     var cosActivities = app.get('cosActivities');
     var loginCheck = app.get('middleware.loginCheck');
     var topicLib = require('./topic')(app);
     var groupLib = require('./group')(app);
 
-    var Activity = app.get('models.Activity');
-    var Group = app.get('models.Group');
-    var User = app.get('models.User');
-    var Topic = app.get('models.Topic');
-    var GroupMember = app.get('models.GroupMember');
-    var TopicMember = app.get('models.TopicMember');
-    var TopicMemberUser = app.get('models.TopicMemberUser');
-    var TopicMemberGroup = app.get('models.TopicMemberGroup');
-    var VoteUserContainer = app.get('models.VoteUserContainer');
+    var Activity = models.Activity;
+    var Group = models.Group;
+    var User = models.User;
+    var Topic = models.Topic;
+    var GroupMember = models.GroupMember;
+    var TopicMemberUser = models.TopicMemberUser;
+    var TopicMemberGroup = models.TopicMemberGroup;
+    var VoteUserContainer = models.VoteUserContainer;
 
     /**
      * Read (List) public Topic Activities
@@ -191,19 +191,19 @@ module.exports = function (app) {
 
     var buildActivityFeedIncludeString = function (req, visibility) {
         var queryInclude = req.query.include || [];
-        
+
         if (queryInclude && !Array.isArray(queryInclude)) {
             queryInclude = [queryInclude];
         }
         var allowedIncludeAuth = ['userTopics', 'userGroups', 'user', 'self'];
         var allowedInclude = ['publicTopics', 'publicGroups'];
-        
+
         var include = queryInclude.filter(function (item, key, input) {
             if (visibility && visibility === 'public') {
                 return allowedInclude.indexOf(item) > -1 && (input.indexOf(item) === key);
             } else {
                 return allowedIncludeAuth.indexOf(item) > -1 && (input.indexOf(item) === key);
-            }        
+            }
         });
         if (!include || !include.length) {
             include = allowedIncludeAuth;
@@ -229,7 +229,7 @@ module.exports = function (app) {
                 ';
             includedSql.push(viewActivity);
         }
-    
+
         include.forEach(function (item) {
             switch (item) {
                 case 'user':
@@ -334,7 +334,7 @@ module.exports = function (app) {
                             object['@type'] = activity[field]['@type'];
                             object.creatorId = activity[field].creatorId;
                             delete object.creator;
-                            delete object.description;                            
+                            delete object.description;
                             break;
                         case 'Group':
                             if (field !== 'origin') {
@@ -383,17 +383,17 @@ module.exports = function (app) {
             delete returnActivity.object;
             delete returnActivity.origin;
             delete returnActivity.target;
-            
+
             returnList.push(returnActivity);
         });
-        
+
         _.sortBy(returnList, function (activity) {
             return activity.updatedAt;
         });
 
         return returnList;
     };
-    
+
     var topicActivitiesList = function (req, res, next, visibility) {
         var limitMax = 50;
         var limitDefault = 10;
@@ -490,7 +490,7 @@ module.exports = function (app) {
             .catch(next);
     });
 
-    app.get('/api/users/:userId/topics/:topicId/activities', loginCheck(['partner']), topicLib.hasPermission(TopicMember.LEVELS.read, true), function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId/activities', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), function (req, res, next) {
         return topicActivitiesList(req, res, next)
             .then(function (results) {
                 return res.ok(results);
@@ -740,14 +740,14 @@ module.exports = function (app) {
 
     var activitiesList = function (req, res, next, visibility) {
         var limitMax = 50;
-        var limitDefault = 10;        
+        var limitDefault = 10;
         var allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User'];
-        var userId;        
-    
+        var userId;
+
         if (req.user) {
             userId = req.user.id;
         }
-        var sourcePartnerId = req.query.sourcePartnerId;    
+        var sourcePartnerId = req.query.sourcePartnerId;
         var page = parseInt(req.query.page, 10);
         var offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         var limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
@@ -756,12 +756,12 @@ module.exports = function (app) {
         var queryFilters = req.query.filter || [];
         if (queryFilters && !Array.isArray(queryFilters)) {
             queryFilters = [queryFilters];
-        } 
-    
+        }
+
         var filters = queryFilters.filter(function (item, key, input) {
             return allowedFilters.indexOf(item) > -1 && (input.indexOf(item) === key);
         });
-        
+
         var where = '';
 
         if (filters.length) {
@@ -770,7 +770,7 @@ module.exports = function (app) {
             });
             where += 'uac.data#>>\'{object, @type}\' IN (' + filtersEscaped.join(',') + ')';
         }
-        
+
         if (where) {
             where = 'WHERE ' + where;
         }
@@ -779,9 +779,9 @@ module.exports = function (app) {
             offset = page * limitDefault - limitDefault;
             limit = limitDefault;
         }
-    
+
         if (limit > limitMax) limit = limitDefault;
-    
+
         // All partners should see only Topics created by their site, but our own app sees all.
         var wherePartnerTopics = '';
         var wherePartnerGroups = '';
@@ -1055,7 +1055,7 @@ module.exports = function (app) {
                             )
                             .then(function () {
                                 return results;
-                            });                        
+                            });
                     });
             }).then(function (results) {
                 var finalResults = parseActivitiesResults(results);

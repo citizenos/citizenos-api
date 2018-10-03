@@ -9,14 +9,15 @@
  */
 module.exports = function (app) {
     var Promise = app.get('Promise');
+    var models = app.get('models');
+    var db = models.sequelize;
+    var Op = db.Op;
 
     var loginCheck = app.get('middleware.loginCheck');
-
-    var User = app.get('models.User');
-    var Group = app.get('models.Group');
-    var Topic = app.get('models.Topic');
-    var db = app.get('db');
-    var Op = db.Op;
+    
+    var User = models.User;
+    var Group = models.Group;
+    var Topic = models.Topic;
 
     app.get('/api/search', loginCheck(['partner']), function (req, res, next) {
         var str = req.query.str; // Search string

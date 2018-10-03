@@ -1150,7 +1150,6 @@ module.exports.topicCommentCreate = topicCommentCreate;
 module.exports.topicMemberGroupsCreate = topicMemberGroupsCreate;
 module.exports.topicMemberUsersCreate = topicMemberUsersCreate;
 
-
 var chai = require('chai');
 chai.use(require('chai-datetime'));
 chai.use(require('chai-shallow-deep-equal'));
@@ -1159,7 +1158,8 @@ var request = require('supertest');
 var app = require('../../app');
 
 var config = app.get('config');
-var db = app.get('db');
+var models = app.get('models');
+var db = models.sequelize;
 var _ = app.get('lodash');
 var cosUtil = app.get('util');
 var async = app.get('async');
@@ -1175,27 +1175,26 @@ var userLib = require('./lib/user')(app);
 var groupLib = require('./group');
 var authLib = require('./auth');
 
-var User = app.get('models.User');
-var UserConnection = app.get('models.UserConnection');
+var User = models.User;
+var UserConnection = models.UserConnection;
 
-var Partner = app.get('models.Partner');
+var Partner = models.Partner;
 
-var Moderator = app.get('models.Moderator');
+var Moderator = models.Moderator;
 
-var GroupMember = app.get('models.GroupMember');
+var GroupMember = models.GroupMember;
 
-var Topic = app.get('models.Topic');
-var TopicMember = app.get('models.TopicMember');
-var TopicMemberUser = app.get('models.TopicMemberUser');
-var TopicMemberGroup = app.get('models.TopicMemberGroup');
+var Topic = models.Topic;
+var TopicMemberUser = models.TopicMemberUser;
+var TopicMemberGroup = models.TopicMemberGroup;
 
-var Comment = app.get('models.Comment');
+var Comment = models.Comment;
 
-var Report = app.get('models.Report');
+var Report = models.Report;
 
-var Vote = app.get('models.Vote');
-var VoteOption = app.get('models.VoteOption');
-var VoteDelegation = app.get('models.VoteDelegation');
+var Vote = models.Vote;
+var VoteOption = models.VoteOption;
+var VoteDelegation = models.VoteDelegation;
 
 // API - /api/users*
 suite('Users', function () {
@@ -1429,7 +1428,7 @@ suite('Users', function () {
                     delete expectedTopic.creator.language; // Language is not returned by Topic read, we don't need it
 
                     expectedTopic.permission = {
-                        level: TopicMember.LEVELS.admin
+                        level: TopicMemberUser.LEVELS.admin
                     };
 
                     // The difference from create result is that there is no voteId
@@ -1479,7 +1478,7 @@ suite('Users', function () {
                         delete expectedTopic.creator.imageUrl; // Image url is not returned by Topic read, we don't need it
                         delete expectedTopic.creator.language; // Language is not returned by Topic read, we don't need it
                         expectedTopic.permission = {
-                            level: TopicMember.LEVELS.admin
+                            level: TopicMemberUser.LEVELS.admin
                         };
 
                         // The difference from create result is that there is no voteId
@@ -1545,7 +1544,7 @@ suite('Users', function () {
                                     delete expectedTopic.creator.imageUrl; // Image url is not returned by Topic read, we don't need it
                                     delete expectedTopic.creator.language; // Language is not returned by Topic read, we don't need it
                                     expectedTopic.permission = {
-                                        level: TopicMember.LEVELS.admin
+                                        level: TopicMemberUser.LEVELS.admin
                                     };
                                     topicVoteRead(agent, user.id, topic.id, voteCreated.id, function (err, res) {
                                         if (err) return done(err);
@@ -1744,7 +1743,7 @@ suite('Users', function () {
                                                 // Add Group to Topic members and User to that Group
                                                 var memberGroup = {
                                                     groupId: group.id,
-                                                    level: TopicMember.LEVELS.read
+                                                    level: TopicMemberGroup.LEVELS.read
                                                 };
 
                                                 var memberUser = {
@@ -1807,7 +1806,7 @@ suite('Users', function () {
 
                             var topicMemberUser = {
                                 userId: user.id,
-                                level: TopicMember.LEVELS.edit
+                                level: TopicMemberUser.LEVELS.edit
                             };
 
                             topicMemberUsersCreate(agentCreator, creator.id, topic.id, topicMemberUser, function (err) {
@@ -1838,7 +1837,7 @@ suite('Users', function () {
                     test('Success - User has ADMIN access directly and READ via Group', function (done) {
                         var topicMemberUser = {
                             userId: user.id,
-                            level: TopicMember.LEVELS.admin
+                            level: TopicMemberUser.LEVELS.admin
                         };
                         topicMemberUsersCreate(agentCreator, creator.id, topic.id, topicMemberUser, function (err) {
                             if (err) return done(err);
@@ -2253,7 +2252,7 @@ suite('Users', function () {
                                                         [
                                                             {
                                                                 userId: user2.id,
-                                                                level: TopicMember.LEVELS.read
+                                                                level: TopicMemberUser.LEVELS.read
                                                             }
                                                         ],
                                                         function (err) {
@@ -2673,7 +2672,7 @@ suite('Users', function () {
                                         // Add Group to Topic members and User to that Group
                                         var topicMemberGroup = {
                                             groupId: group.id,
-                                            level: TopicMember.LEVELS.edit
+                                            level: TopicMemberGroup.LEVELS.edit
                                         };
 
                                         var groupMemberUser = {
@@ -2753,7 +2752,7 @@ suite('Users', function () {
                             assert.equal(members.groups.count, 1);
 
                             var permission = topicRead.permission;
-                            assert.equal(permission.level, TopicMember.LEVELS.admin);
+                            assert.equal(permission.level, TopicMemberUser.LEVELS.admin);
 
                             var comments = topicRead.comments;
                             assert.equal(comments.count, 2);
@@ -3191,7 +3190,7 @@ suite('Users', function () {
 
                         var permission = topicRead.permission;
 
-                        assert.equal(permission.level, TopicMember.LEVELS.edit);
+                        assert.equal(permission.level, TopicMemberUser.LEVELS.edit);
 
                         done();
                     });
@@ -3200,7 +3199,7 @@ suite('Users', function () {
                 test('Success - User permission overrides Group - has "admin"', function (done) {
                     var topicMemberUser = {
                         userId: user.id,
-                        level: TopicMember.LEVELS.admin
+                        level: TopicMemberUser.LEVELS.admin
                     };
 
                     topicMemberUsersCreate(agentCreator, creator.id, topic.id, topicMemberUser, function (err) {
@@ -3220,7 +3219,7 @@ suite('Users', function () {
 
                             var permission = topicRead.permission;
 
-                            assert.equal(permission.level, TopicMember.LEVELS.admin);
+                            assert.equal(permission.level, TopicMemberUser.LEVELS.admin);
 
                             done();
                         });
@@ -3231,7 +3230,7 @@ suite('Users', function () {
                 test('Success - User permission overrides Group permission - has "none" thus no Topics listed', function (done) {
                     var topicMemberUser = {
                         userId: user.id,
-                        level: TopicMember.LEVELS.none
+                        level: TopicMemberUser.LEVELS.none
                     };
 
                     topicMemberUsersCreate(agentCreator, creator.id, topic.id, topicMemberUser, function (err) {
@@ -3272,7 +3271,7 @@ suite('Users', function () {
                 test('Success - User granted direct "admin" access to Topic and then removed from Group which gave "edit" access - has "admin"', function (done) {
                     var topicMemberUser = {
                         userId: user.id,
-                        level: TopicMember.LEVELS.admin
+                        level: TopicMemberUser.LEVELS.admin
                     };
 
                     topicMemberUsersCreate(agentCreator, creator.id, topic.id, topicMemberUser, function (err) {
@@ -3295,7 +3294,7 @@ suite('Users', function () {
 
                                 var permission = topicRead.permission;
 
-                                assert.equal(permission.level, TopicMember.LEVELS.admin);
+                                assert.equal(permission.level, TopicMemberUser.LEVELS.admin);
 
                                 done();
                             });
@@ -3324,8 +3323,8 @@ suite('Users', function () {
 
                 var topic;
                 var topicMemberUser;
-                var topicMemberUserLevel = TopicMember.LEVELS.edit;
-                var topicMemberGroupLevel = TopicMember.LEVELS.read;
+                var topicMemberUserLevel = TopicMemberUser.LEVELS.edit;
+                var topicMemberGroupLevel = TopicMemberGroup.LEVELS.read;
 
                 suiteSetup(function (done) {
                     async
@@ -3454,7 +3453,7 @@ suite('Users', function () {
                         var groupRes = _.find(groups.rows, {id: group.id});
                         assert.equal(groupRes.name, group.name);
                         assert.equal(groupRes.level, topicMemberGroupLevel);
-                        assert.equal(groupRes.permission.level, TopicMember.LEVELS.admin);
+                        assert.equal(groupRes.permission.level, TopicMemberGroup.LEVELS.admin);
 
                         var group2Res = _.find(groups.rows, {id: group2.id});
                         assert.isNull(group2Res.name);
@@ -3470,7 +3469,7 @@ suite('Users', function () {
                         var memberUsers = [];
 
                         for (var i = 0; i < users.rows.length; i++) {
-                            if (users.rows[i].level === TopicMember.LEVELS.admin) {
+                            if (users.rows[i].level === TopicMemberUser.LEVELS.admin) {
                                 adminUser = users.rows[i];
                             } else {
                                 memberUsers.push(users.rows[i]);
@@ -3479,7 +3478,7 @@ suite('Users', function () {
                         assert.equal(adminUser.id, user.id);
                         assert.property(adminUser, 'name');
                         assert.notProperty(adminUser, 'email');
-                        assert.equal(adminUser.level, TopicMember.LEVELS.admin);
+                        assert.equal(adminUser.level, TopicMemberUser.LEVELS.admin);
 
                         var topicMemberUserReturned = 0;
                         memberUsers.forEach(function (memberUser) {
@@ -3570,7 +3569,7 @@ suite('Users', function () {
                             member = res;
                             memberToAdd = {
                                 userId: member.id,
-                                level: TopicMember.LEVELS.read
+                                level: TopicMemberUser.LEVELS.read
                             };
 
                             userLib.createUserAndLogin(agent, null, null, null, function (err, res) {
@@ -3609,7 +3608,7 @@ suite('Users', function () {
                             if (err) return done(err);
 
                             // Change level
-                            memberToAdd.level = TopicMember.LEVELS.admin;
+                            memberToAdd.level = TopicMemberUser.LEVELS.admin;
 
                             topicMemberUsersCreate(agent, user.id, topic.id, memberToAdd, function (err) {
                                 if (err) return done(err);
@@ -3634,7 +3633,7 @@ suite('Users', function () {
                     test('Success - add existing User as member with e-mail address', function (done) {
                         var memberToAdd = {
                             userId: member.email,
-                            level: TopicMember.LEVELS.read
+                            level: TopicMemberUser.LEVELS.read
                         };
 
                         topicMemberUsersCreate(agent, user.id, topic.id, memberToAdd, function (err) {
@@ -3655,7 +3654,7 @@ suite('Users', function () {
                     test('Success - add non-existent e-mail as member with language', function (done) {
                         var memberToAdd = {
                             userId: 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1_notexists@test.com',
-                            level: TopicMember.LEVELS.read,
+                            level: TopicMemberUser.LEVELS.read,
                             language: 'et'
                         };
 
@@ -3689,11 +3688,11 @@ suite('Users', function () {
                         var membersToAdd = [
                             {
                                 userId: member.id,
-                                level: TopicMember.LEVELS.read
+                                level: TopicMemberUser.LEVELS.read
                             },
                             {
                                 userId: 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1_notexists2@test.com',
-                                level: TopicMember.LEVELS.read
+                                level: TopicMemberUser.LEVELS.read
                             }
                         ];
 
@@ -3772,7 +3771,7 @@ suite('Users', function () {
 
                                     var memberToAdd = {
                                         userId: member.id,
-                                        level: TopicMember.LEVELS.read
+                                        level: TopicMemberUser.LEVELS.read
                                     };
 
                                     topicMemberUsersCreate(agent, user.id, topic.id, memberToAdd, function (err) {
@@ -3786,7 +3785,7 @@ suite('Users', function () {
                     });
 
                     test('Success - update member User', function (done) {
-                        var newLevel = TopicMember.LEVELS.admin;
+                        var newLevel = TopicMemberUser.LEVELS.admin;
 
                         topicMemberUsersUpdate(agent, user.id, topic.id, member.id, newLevel, function (err) {
                             if (err) return done(err);
@@ -3800,7 +3799,7 @@ suite('Users', function () {
                                 })
                                 .then(function (tm) {
                                     assert.equal(tm.userId, member.id);
-                                    assert.equal(tm.level, TopicMember.LEVELS.admin);
+                                    assert.equal(tm.level, TopicMemberUser.LEVELS.admin);
 
                                     done();
                                 })
@@ -3813,7 +3812,7 @@ suite('Users', function () {
                         userLib.createUserAndLogin(agent, null, null, null, function (err, u) {
                             if (err) return done(err);
 
-                            _topicMemberUsersUpdate(agent, u.id, topic.id, member.id, TopicMember.LEVELS.admin, 403, function (err) {
+                            _topicMemberUsersUpdate(agent, u.id, topic.id, member.id, TopicMemberUser.LEVELS.admin, 403, function (err) {
                                 if (err) return done(err);
 
                                 done();
@@ -3857,7 +3856,7 @@ suite('Users', function () {
 
                                     var memberToAdd = {
                                         userId: member.id,
-                                        level: TopicMember.LEVELS.read
+                                        level: TopicMemberUser.LEVELS.read
                                     };
 
                                     topicMemberUsersCreate(agent, user.id, topic.id, memberToAdd, function (err) {
@@ -3923,7 +3922,7 @@ suite('Users', function () {
                             memberUser = res;
                             var memberToAdd = {
                                 userId: memberUser.id,
-                                level: TopicMember.LEVELS.read
+                                level: TopicMemberUser.LEVELS.read
                             };
 
                             topicMemberUsersCreate(agent, user.id, topic.id, memberToAdd, function (err) {
@@ -3932,12 +3931,12 @@ suite('Users', function () {
                                 _topicMemberUsersDelete(userWithInsufficientPermissionsAgent, memberToAdd.id, topic.id, member.id, 403, function (err) {
                                     if (err) return done(err);
 
-                                    var newLevel = TopicMember.LEVELS.admin;
+                                    var newLevel = TopicMemberUser.LEVELS.admin;
 
                                     topicMemberUsersUpdate(agent, user.id, topic.id, memberUser.id, newLevel, function (err) {
                                         if (err) return done(err);
 
-                                        topicMemberUsersUpdate(userWithInsufficientPermissionsAgent, memberUser.id, topic.id, user.id, TopicMember.LEVELS.read, function (err) {
+                                        topicMemberUsersUpdate(userWithInsufficientPermissionsAgent, memberUser.id, topic.id, user.id, TopicMemberUser.LEVELS.read, function (err) {
                                             if (err) return done(err);
 
                                             topicMemberUsersDelete(userWithInsufficientPermissionsAgent, memberToAdd.id, topic.id, user.id, function (err) {
@@ -3977,7 +3976,7 @@ suite('Users', function () {
 
                             var memberToAdd = {
                                 userId: res.id,
-                                level: TopicMember.LEVELS.read
+                                level: TopicMemberUser.LEVELS.read
                             };
 
                             topicMemberUsersCreate(agent, user.id, topic.id, memberToAdd, function (err) {
@@ -4044,7 +4043,7 @@ suite('Users', function () {
                                             group2 = res.body.data;
                                             member2 = {
                                                 groupId: group2.id,
-                                                level: TopicMember.LEVELS.read
+                                                level: TopicMemberGroup.LEVELS.read
                                             };
 
                                             groupLib.create(agent, user.id, groupName, null, null, function (err, res) {
@@ -4053,12 +4052,12 @@ suite('Users', function () {
                                                 group = res.body.data;
                                                 var groupMember = {
                                                     userId: groupMemberUser.id,
-                                                    level: GroupMember.LEVELS.read
+                                                    level: GroupMemberGroup.LEVELS.read
                                                 };
 
                                                 member = {
                                                     groupId: group.id,
-                                                    level: TopicMember.LEVELS.read
+                                                    level: TopicMemberGroup.LEVELS.read
                                                 };
 
                                                 groupLib.membersCreate(agent, user.id, group.id, groupMember, function (err) {
@@ -4098,7 +4097,7 @@ suite('Users', function () {
                             if (err) return done(err);
 
                             //Change level
-                            member.level = TopicMember.LEVELS.admin;
+                            member.level = TopicMemberGroup.LEVELS.admin;
 
                             topicMemberGroupsCreate(agent, user.id, topic.id, member, function (err) {
                                 if (err) return done(err);
@@ -4195,7 +4194,7 @@ suite('Users', function () {
 
                                     var members = {
                                         groupId: group.id,
-                                        level: TopicMember.LEVELS.read
+                                        level: TopicMemberGroup.LEVELS.read
                                     };
 
                                     topicMemberGroupsCreate(agent, user.id, topic.id, members, function (err) {
@@ -4209,7 +4208,7 @@ suite('Users', function () {
                     });
 
                     test('Success - update member Group', function (done) {
-                        var newLevel = TopicMember.LEVELS.admin;
+                        var newLevel = TopicMemberGroup.LEVELS.admin;
 
                         topicMemberGroupsUpdate(agent, user.id, topic.id, group.id, newLevel, function (err) {
                             if (err) return done(err);
@@ -4223,7 +4222,7 @@ suite('Users', function () {
                                 })
                                 .then(function (tm) {
                                     assert.equal(tm.groupId, group.id);
-                                    assert.equal(tm.level, TopicMember.LEVELS.admin);
+                                    assert.equal(tm.level, TopicMemberGroup.LEVELS.admin);
                                     done();
                                 })
                                 .catch(done);
@@ -4235,7 +4234,7 @@ suite('Users', function () {
                         userLib.createUserAndLogin(agent, null, null, null, function (err, u) {
                             if (err) return done(err);
 
-                            _topicMemberGroupsUpdate(agent, u.id, topic.id, group.id, TopicMember.LEVELS.admin, 403, function (err) {
+                            _topicMemberGroupsUpdate(agent, u.id, topic.id, group.id, TopicMemberGroup.LEVELS.admin, 403, function (err) {
                                 if (err) return done(err);
 
                                 done();
@@ -4270,7 +4269,7 @@ suite('Users', function () {
 
                                     var members = {
                                         groupId: group.id,
-                                        level: TopicMember.LEVELS.read
+                                        level: TopicMemberGroup.LEVELS.read
                                     };
 
                                     topicMemberGroupsCreate(agent, user.id, topic.id, members, function (err) {
@@ -4383,7 +4382,7 @@ suite('Users', function () {
                         if (err) return done(err);
 
                         var topicRead = res.body.data;
-                        assert.equal(topicRead.permission.level, TopicMember.LEVELS.read);
+                        assert.equal(topicRead.permission.level, TopicMemberUser.LEVELS.read);
 
                         done();
                     });
@@ -4986,27 +4985,27 @@ suite('Users', function () {
                                             var members = [
                                                 {
                                                     userId: toUser1.id,
-                                                    level: TopicMember.LEVELS.read
+                                                    level: TopicMemberUser.LEVELS.read
                                                 },
                                                 {
                                                     userId: toUser2.id,
-                                                    level: TopicMember.LEVELS.read
+                                                    level: TopicMemberUser.LEVELS.read
                                                 },
                                                 {
                                                     userId: toUser3.id,
-                                                    level: TopicMember.LEVELS.read
+                                                    level: TopicMemberUser.LEVELS.read
                                                 },
                                                 {
                                                     userId: toUser4.id,
-                                                    level: TopicMember.LEVELS.read
+                                                    level: TopicMemberUser.LEVELS.read
                                                 },
                                                 {
                                                     userId: toUser5.id,
-                                                    level: TopicMember.LEVELS.read
+                                                    level: TopicMemberUser.LEVELS.read
                                                 },
                                                 {
                                                     userId: toUser6.id,
-                                                    level: TopicMember.LEVELS.read
+                                                    level: TopicMemberUser.LEVELS.read
                                                 }
                                             ];
                                             topicMemberUsersCreate(agent, user.id, topic.id, members, cb);
@@ -5056,7 +5055,7 @@ suite('Users', function () {
                                         userToDelegate = u;
                                         var member = {
                                             userId: u.id,
-                                            level: TopicMember.LEVELS.read
+                                            level: TopicMemberUser.LEVELS.read
                                         };
                                         topicMemberUsersCreate(agent, user.id, topic.id, member, cb);
                                     }
@@ -5257,7 +5256,7 @@ suite('Users', function () {
                                             var members = [
                                                 {
                                                     userId: toUser1.id,
-                                                    level: TopicMember.LEVELS.read
+                                                    level: TopicMemberUser.LEVELS.read
                                                 }
                                             ];
                                             topicMemberUsersCreate(agent, user.id, topic.id, members, cb);
@@ -7259,7 +7258,7 @@ suite('Topics', function () {
                         var topicReadUnauth = results[1].body;
 
                         // The only difference between auth and unauth is the permission, thus modify it in expected response.
-                        topicRead.data.permission.level = TopicMember.LEVELS.none;
+                        topicRead.data.permission.level = TopicMemberUser.LEVELS.none;
                         assert.notProperty(topicRead.data, 'events');
 
                         delete topicRead.data.tokenJoin; // Unauth read of Topic should not give out token!
@@ -7304,7 +7303,7 @@ suite('Topics', function () {
                                 var topicReadUnauth = results[1].body;
 
                                 // The only difference between auth and unauth is the permission, thus modify it in expected response.
-                                topicRead.data.permission.level = TopicMember.LEVELS.none;
+                                topicRead.data.permission.level = TopicMemberUser.LEVELS.none;
 
                                 delete topicRead.data.tokenJoin; // Unauth read of Topic should not give out token!
 
@@ -7352,7 +7351,7 @@ suite('Topics', function () {
 
                                 assert.equal(topicRead.data.status, Topic.STATUSES.followUp);
                                 // The only difference between auth and unauth is the permission, thus modify it in expected response.
-                                topicRead.data.permission.level = TopicMember.LEVELS.none;
+                                topicRead.data.permission.level = TopicMemberUser.LEVELS.none;
 
                                 delete topicRead.data.tokenJoin; // Unauth read of Topic should not give out token!
 
@@ -7406,7 +7405,7 @@ suite('Topics', function () {
 
                                 assert.equal(topicRead.data.status, Topic.STATUSES.followUp);
                                 // The only difference between auth and unauth is the permission, thus modify it in expected response.
-                                topicRead.data.permission.level = TopicMember.LEVELS.none;
+                                topicRead.data.permission.level = TopicMemberUser.LEVELS.none;
 
                                 delete topicRead.data.tokenJoin; // Unauth read of Topic should not give out token!
 

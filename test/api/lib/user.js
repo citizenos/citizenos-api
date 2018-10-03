@@ -6,8 +6,9 @@
 
 module.exports = function (app) {
     var auth = require('../auth');
+    var models = app.get('models');
 
-    var User = app.get('models.User');
+    var User = models.User;
 
     /**
      * Create a user

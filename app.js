@@ -7,7 +7,7 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var cors = require('cors');
 var log4js = require('log4js');
-var db = require('./db/models');
+var models = require('./db/models');
 var QueryStream = require('pg-query-stream');
 var morgan = require('morgan');
 var lodash = require('lodash');
@@ -137,11 +137,8 @@ app.set('SevenZip', SevenZip);
 mu.root = TEMPLATE_ROOT;
 app.set('mu', mu);
 
-app.set('db', db);
+app.set('models', models);
 app.set('QueryStream', QueryStream);
-
-// Register models
-require('./db/index')(app);
 
 app.set('cosActivities', require('./libs/cosActivities')(app));
 app.set('urlLib', require('./libs/url')(config));

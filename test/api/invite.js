@@ -2,6 +2,7 @@
 
 var request = require('supertest');
 var app = require('../../app');
+var models = app.get('models');
 
 var auth = require('./auth');
 var shared = require('../utils/shared');
@@ -9,7 +10,7 @@ var userLib = require('./lib/user')(app);
 
 var urlLib = app.get('urlLib');
 
-var User = app.get('models.User');
+var User = models.User;
 
 suite('Invite', function () {
 

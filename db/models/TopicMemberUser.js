@@ -33,11 +33,15 @@ module.exports = function (sequelize, DataTypes) {
         }
     }, TopicMember.attributes);
 
-    return sequelize.define('TopicMemberUser', attributes, {
+    var TopicMemberUser = sequelize.define('TopicMemberUser', attributes, {
         indexes: [
             {
                 fields: ['topicId', 'userId']
             }
         ]
     });
+
+    TopicMemberUser.LEVELS = TopicMember.LEVELS;
+
+    return TopicMemberUser;
 };

@@ -3,12 +3,14 @@
 var diff = require('json-patch-gen');
 
 module.exports = function (app) {
-    var Activity = app.get('models.Activity');
     var Promise = app.get('Promise');
     var _ = app.get('lodash');
-    var db = app.get('db');
+    var models = app.get('models');
+    var db = models.sequelize;
     var uuid = app.get('uuid');
     var moment = app.get('moment');
+
+    var Activity = models.Activity;
 
     var _saveActivity = function (activity, transaction) { //eslint-disable-line complexity
         var activityObject = {

@@ -4,7 +4,8 @@ suite('cosBdoc', function () {
     var assert = require('chai').assert;
 
     var app = require('../../app');
-    var db = app.get('db');
+    var models = app.get('models');
+    var db = models.sequelize;
     var logger = app.get('logger');
     var Promise = app.get('Promise');
     var fs = app.get('fs');
@@ -13,14 +14,14 @@ suite('cosBdoc', function () {
     var _ = app.get('lodash');
     var shared = require('../utils/shared');
 
-    var Topic = app.get('models.Topic');
-    var Vote = app.get('models.Vote');
-    var TopicVote = app.get('models.TopicVote');
-    var VoteOption = app.get('models.VoteOption');
-    var VoteList = app.get('models.VoteList');
-    var VoteUserContainer = app.get('models.VoteUserContainer');
-    var User = app.get('models.User');
-    var UserConnection = app.get('models.UserConnection');
+    var Topic = models.Topic;
+    var Vote = models.Vote;
+    var TopicVote = models.TopicVote;
+    var VoteOption = models.VoteOption;
+    var VoteList = models.VoteList;
+    var VoteUserContainer = models.VoteUserContainer;
+    var User = models.User;
+    var UserConnection = models.UserConnection;
 
     var topic;
     var vote;

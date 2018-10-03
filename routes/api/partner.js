@@ -1,8 +1,9 @@
 'use strict';
 
 module.exports = function (app) {
-
-    var Topic = app.get('models.Topic');
+    var models = app.get('models');
+    
+    var Topic = models.Topic;
 
     /**
      * Get Partner Topic mapping

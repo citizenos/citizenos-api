@@ -20,7 +20,8 @@ module.exports = function (app) {
     var config = app.get('config');
     var DigiDocServiceClient = app.get('ddsClient');
     var stream = app.get('stream');
-    var db = app.get('db');
+    var models = app.get('models');
+    var db = models.sequelize;
     var QueryStream = app.get('QueryStream');
     var fastCsv = app.get('fastCsv');
     var Bdoc = app.get('Bdoc');
@@ -28,8 +29,8 @@ module.exports = function (app) {
     var CosHtmlToDocx = app.get('cosHtmlToDocx');
     var archiver = require('archiver');
 
-    var VoteContainerFile = app.get('models.VoteContainerFile');
-    var UserConnection = app.get('models.UserConnection');
+    var VoteContainerFile = models.VoteContainerFile;
+    var UserConnection = models.UserConnection;
 
     var FILE_CREATE_MODE = '0760';
 

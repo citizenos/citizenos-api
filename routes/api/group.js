@@ -6,7 +6,8 @@
 
 module.exports = function (app) {
     var logger = app.get('logger');
-    var db = app.get('db');
+    var models = app.get('models');
+    var db = models.sequelize;
     var Op = db.Op;
     var _ = app.get('lodash');
     var cosActivities = app.get('cosActivities');
@@ -18,9 +19,9 @@ module.exports = function (app) {
 
     var loginCheck = app.get('middleware.loginCheck');
 
-    var Group = app.get('models.Group');
-    var GroupMember = app.get('models.GroupMember');
-    var User = app.get('models.User');
+    var Group = models.Group;
+    var GroupMember = models.GroupMember;
+    var User = models.User;
 
     /**
      * Check if User has sufficient privileges to access the Object.

@@ -194,6 +194,7 @@ module.exports.membersDelete = groupMembersDelete;
 var assert = require('chai').assert;
 var request = require('supertest');
 var app = require('../../app');
+var models = app.get('models');
 
 var async = app.get('async');
 
@@ -201,12 +202,10 @@ var shared = require('../utils/shared');
 var userLib = require('./lib/user')(app);
 var topicLib = require('./topic');
 
-var User = app.get('models.User');
-
-var Group = app.get('models.Group');
-var GroupMember = app.get('models.GroupMember');
-
-var TopicMember = app.get('models.TopicMember');
+var User = models.User;
+var Group = models.Group;
+var GroupMember = models.GroupMember;
+var TopicMemberUser = models.TopicMemberUser;
 
 suite('Users', function () {
 
@@ -634,7 +633,7 @@ suite('Users', function () {
 
                                             var memberGroup = {
                                                 groupId: group.id,
-                                                level: TopicMember.LEVELS.read
+                                                level: TopicMemberUser.LEVELS.read
                                             };
 
                                             topicLib.topicMemberGroupsCreate(agent, user.id, topic.id, memberGroup, function (err) {
@@ -1438,7 +1437,7 @@ suite('Users', function () {
 
                                     var memberGroup = {
                                         groupId: group.id,
-                                        level: TopicMember.LEVELS.edit
+                                        level: TopicMemberUser.LEVELS.edit
                                     };
 
                                     topicLib.topicMemberGroupsCreate(agent, creator.id, topicCreated.id, memberGroup, done);
@@ -1467,8 +1466,8 @@ suite('Users', function () {
                             delete creatorExpected.language;
                             assert.deepEqual(groupMemberTopic.creator, creatorExpected);
 
-                            assert.equal(groupMemberTopic.permission.level, TopicMember.LEVELS.admin);
-                            assert.equal(groupMemberTopic.permission.levelGroup, TopicMember.LEVELS.edit);
+                            assert.equal(groupMemberTopic.permission.level, TopicMemberUser.LEVELS.admin);
+                            assert.equal(groupMemberTopic.permission.levelGroup, TopicMemberUser.LEVELS.edit);
 
                             done();
                         });
@@ -1551,7 +1550,7 @@ suite('Users', function () {
 
                             var memberGroup = {
                                 groupId: group.id,
-                                level: TopicMember.LEVELS.read
+                                level: TopicMemberUser.LEVELS.read
                             };
 
                             topicLib.topicMemberGroupsCreate(agent, member.id, topic.id, memberGroup, function (err) {

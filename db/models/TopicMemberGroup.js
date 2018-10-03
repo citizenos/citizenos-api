@@ -33,7 +33,7 @@ module.exports = function (sequelize, DataTypes) {
         }
     }, TopicMember.attributes);
 
-    return sequelize.define('TopicMemberGroup', attributes, {
+    var TopicMemberGroup = sequelize.define('TopicMemberGroup', attributes, {
         indexes: [
             {
                 fields: ['groupId']
@@ -43,4 +43,8 @@ module.exports = function (sequelize, DataTypes) {
             }
         ]
     });
+
+    TopicMemberGroup.LEVELS = TopicMember.LEVELS;
+
+    return TopicMemberGroup;
 };

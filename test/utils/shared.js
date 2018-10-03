@@ -9,11 +9,11 @@
 var app = require('../../app');
 var logger = app.get('logger');
 var Promise = app.get('Promise');
+var db = app.get('models').sequelize;
 
 var syncDb = function () {
     if (process.env.FORCE_DB_SYNC == true && app.get('env') !== 'production') { // eslint-disable-line no-process-env, eqeqeq
-        return app
-            .get('db')
+        return db
             .sync({
                 logging: function (msg) {
                     logger.info(msg);
@@ -36,9 +36,9 @@ var closeDb = function () {
     // So I have 2 options: this hack or in suiteSetup each test sets a new Sequelize connection and kills it later. Right now it's the hack.
     if (!interval) {
         interval = setInterval(function () {
-            if (app.get('db').connectionManager.pool._allObjects.size === 0) {
+            if (db.connectionManager.pool._allObjects.size === 0) {
                 clearInterval(interval);
-                app.get('db')
+                db
                     .close()
                     .then(function () {
                         logger.info('DB connection force closed from shared.closeDb as the pool was empty.');

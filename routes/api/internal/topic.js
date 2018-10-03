@@ -5,11 +5,13 @@
  */
 
 module.exports = function (app) {
-    var db = app.get('db');
+    var models = app.get('models');
+    var db = models.sequelize;
+    
     var authApiKey = app.get('middleware.authApiKey');
 
-    var Topic = app.get('models.Topic');
-    var TopicMember = app.get('models.TopicMember');
+    var Topic = models.Topic;
+    var TopicMemberUser = models.TopicMemberUser;
 
     /**
      * Get Topic permissions for a User
@@ -64,13 +66,13 @@ module.exports = function (app) {
                         var permissions = results[0];
 
                         // If it's a public topic, allow anyone to read.
-                        if ((permissions.level === TopicMember.LEVELS.none && permissions.isPublic) || permissions.status !== Topic.STATUSES.inProgress) {
-                            permissions.level = TopicMember.LEVELS.read;
+                        if ((permissions.level === TopicMemberUser.LEVELS.none && permissions.isPublic) || permissions.status !== Topic.STATUSES.inProgress) {
+                            permissions.level = TopicMemberUser.LEVELS.read;
                         }
 
                         return res.ok(permissions);
                     } else {
-                        return res.ok({level: TopicMember.LEVELS.none});
+                        return res.ok({level: TopicMemberUser.LEVELS.none});
                     }
                 })
                 .catch(next);
@@ -83,10 +85,10 @@ module.exports = function (app) {
                     }
                 })
                 .then(function (count) {
-                    var level = TopicMember.LEVELS.none;
+                    var level = TopicMemberUser.LEVELS.none;
 
                     if (count) {
-                        level = TopicMember.LEVELS.read;
+                        level = TopicMemberUser.LEVELS.read;
                     }
 
                     return res.ok({level: level});

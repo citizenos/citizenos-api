@@ -11,8 +11,9 @@ module.exports = function (app) {
     var logger = app.get('logger');
     var Promise = app.get('Promise');
     var _ = app.get('lodash');
+    var models = app.get('models');
 
-    var Partner = app.get('models.Partner');
+    var Partner = models.Partner;
 
     // Local cache for the Partner config
     var partners;

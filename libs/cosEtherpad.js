@@ -11,7 +11,8 @@
 module.exports = function (app) {
     var etherpadClient = app.get('etherpadClient');
     var Promise = app.get('Promise');
-    var db = app.get('db');
+    var models = app.get('models');
+    var db = models.sequelize;
     var config = app.get('config');
     var logger = app.get('logger');
     var jwt = app.get('jwt');
@@ -22,7 +23,7 @@ module.exports = function (app) {
     var path = require('path');
     var translations = require('./translations')(path.resolve('./views/etherpad/languages'));
 
-    var Topic = app.get('models.Topic');
+    var Topic = models.Topic;
 
     /**
      * Create a Topic in Etherpad system.

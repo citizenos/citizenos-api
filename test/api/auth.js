@@ -424,6 +424,7 @@ module.exports._status = _status;
 
 var request = require('supertest');
 var app = require('../../app');
+var models = app.get('models');
 var uuid = require('node-uuid');
 var fs = require('fs');
 
@@ -436,10 +437,10 @@ var objectEncrypter = app.get('objectEncrypter');
 var shared = require('../utils/shared');
 var userLib = require('./lib/user')(app);
 
-var User = app.get('models.User');
-var UserConnection = app.get('models.UserConnection');
-var UserConsent = app.get('models.UserConsent');
-var Partner = app.get('models.Partner');
+var User = models.User;
+var UserConnection = models.UserConnection;
+var UserConsent = models.UserConsent;
+var Partner = models.Partner;
 
 suite('Auth', function () {
 

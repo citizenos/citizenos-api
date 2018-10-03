@@ -8,7 +8,7 @@
 
 module.exports = function (app) {
 
-    var db = app.get('db');
+    var db = app.get('models').sequelize;
 
     app.get('/api/stats', function (req, res, next) {
         db

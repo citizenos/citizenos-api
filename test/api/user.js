@@ -86,6 +86,8 @@ var userConsentDelete = function (agent, userId, partnerId, callback) {
 
 var request = require('supertest');
 var app = require('../../app');
+var models = app.get('models');
+var uuid = require('node-uuid');
 
 var assert = require('chai').assert;
 var cryptoLib = app.get('cryptoLib');
@@ -94,10 +96,8 @@ var shared = require('../utils/shared');
 var userLib = require('./lib/user')(app);
 var auth = require('./auth');
 
-var User = app.get('models.User');
-var Partner = app.get('models.Partner');
-
-var uuid = require('node-uuid');
+var User = models.User;
+var Partner = models.Partner;
 
 suite('User', function () {
 

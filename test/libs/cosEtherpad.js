@@ -11,11 +11,12 @@ suite('cosEtherpad', function () {
     var url = require('url');
 
     var app = require('../../app');
+    var models = app.get('models');
     var config = app.get('config');
     var cosEtherpad = app.get('cosEtherpad');
     var jwt = app.get('jwt');
 
-    var Topic = app.get('models.Topic');
+    var Topic = models.Topic;
 
     suite('createTopic', function () {
 

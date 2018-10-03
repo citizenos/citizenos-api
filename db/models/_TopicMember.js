@@ -12,17 +12,15 @@
  */
 
 var _ = require('lodash');
-
-var LEVELS = {
+const LEVELS = {
     none: 'none', // Enables to override inherited permissions.
     read: 'read',
     edit: 'edit',
     admin: 'admin'
 };
 
-module.exports.LEVELS = LEVELS;
-
 module.exports.model = function (sequelize, DataTypes) {
+
 
     var TopicMember = {
         attributes: {
@@ -45,6 +43,8 @@ module.exports.model = function (sequelize, DataTypes) {
             }
         }
     };
+
+    TopicMember.LEVELS = LEVELS;
 
     return TopicMember;
 };

@@ -1,12 +1,14 @@
 'use strict';
 
 module.exports = function (app) {
+    var models = app.get('models');
+    var db = models.sequelize;
+
     var loginCheck = app.get('middleware.loginCheck');
     var cosActivities = app.get('cosActivities');
-    var db = app.get('db');
-
-    var User = app.get('models.User');
-    var UserConsent = app.get('models.UserConsent');
+    
+    var User = models.User;
+    var UserConsent = models.UserConsent;
 
     /**
      * Update User info

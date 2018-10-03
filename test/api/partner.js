@@ -3,13 +3,14 @@
 var assert = require('chai').assert;
 var request = require('supertest');
 var app = require('../../app');
+var models = app.get('models');
 
 var shared = require('../utils/shared');
 var userLib = require('./lib/user')(app);
 var topicLib = require('./topic');
 
-var Topic = app.get('models.Topic');
-var Partner = app.get('models.Partner');
+var Topic = models.Topic;
+var Partner = models.Partner;
 
 var _partnerTopicRead = function (agent, partnerId, sourcePartnerObjectId, expectedHttpCode, callback) {
     var path = '/api/partners/:partnerId/topics/:sourcePartnerObjectId'

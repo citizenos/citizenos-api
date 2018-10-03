@@ -1,7 +1,7 @@
 'use strict';
 
 var app = require('../../../app');
-var db = app.get('db');
+var db = app.get('models').sequelize;
 var QueryStream = require('pg-query-stream');
 var assert = require('chai').assert;
 

@@ -2,11 +2,12 @@
 
 var request = require('supertest');
 var app = require('../../../app');
+var models = app.get('models');
 var assert = require('chai').assert;
 var userLib = require('../../api/lib/user')(app);
 
-var Moderator = app.get('models.Moderator');
-var Partner = app.get('models.Partner');
+var Moderator = models.Moderator;
+var Partner = models.Partner;
 
 suite('Moderator', function () {
     var agent;

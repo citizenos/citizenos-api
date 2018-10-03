@@ -22,10 +22,11 @@ module.exports = function (app) {
     var validator = app.get('validator');
     var emailLib = app.get('email');
     var cryptoLib = app.get('cryptoLib');
-    var db = app.get('db');
+    var models = app.get('models');
+    var db = models.sequelize;
 
-    var User = app.get('models.User');
-    var UserConnection = app.get('models.UserConnection');
+    var User = models.User;
+    var UserConnection = models.UserConnection;
 
     var _init = function () {
         passport.serializeUser(function (user, done) { // Serialize data into session (req.user)

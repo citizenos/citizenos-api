@@ -8,7 +8,8 @@
 module.exports = function (app) {
     var config = app.get('config');
     var logger = app.get('logger');
-    var db = app.get('db');
+    var models = app.get('models');
+    var db = models.sequelize;
     var _ = app.get('lodash');
     var validator = app.get('validator');
     var util = app.get('util');
@@ -31,32 +32,31 @@ module.exports = function (app) {
     var loginCheck = app.get('middleware.loginCheck');
     var partnerParser = app.get('middleware.partnerParser');
 
-    var User = app.get('models.User');
-    var UserConnection = app.get('models.UserConnection');
-    var Group = app.get('models.Group');
+    var User = models.User;
+    var UserConnection = models.UserConnection;
+    var Group = models.Group;
 
-    var Topic = app.get('models.Topic');
-    var TopicMember = app.get('models.TopicMember'); // Parent "Model"
-    var TopicMemberUser = app.get('models.TopicMemberUser');
-    var TopicMemberGroup = app.get('models.TopicMemberGroup');
+    var Topic = models.Topic;
+    var TopicMemberUser = models.TopicMemberUser;
+    var TopicMemberGroup = models.TopicMemberGroup;
 
-    var Report = app.get('models.Report');
+    var Report = models.Report;
 
-    var Comment = app.get('models.Comment');
-    var CommentVote = app.get('models.CommentVote');
-    var CommentReport = app.get('models.CommentReport');
+    var Comment = models.Comment;
+    var CommentVote = models.CommentVote;
+    var CommentReport = models.CommentReport;
 
-    var Vote = app.get('models.Vote');
-    var VoteOption = app.get('models.VoteOption');
-    var VoteUserContainer = app.get('models.VoteUserContainer');
-    var VoteList = app.get('models.VoteList');
-    var VoteDelegation = app.get('models.VoteDelegation');
+    var Vote = models.Vote;
+    var VoteOption = models.VoteOption;
+    var VoteUserContainer = models.VoteUserContainer;
+    var VoteList = models.VoteList;
+    var VoteDelegation = models.VoteDelegation;
 
-    var TopicComment = app.get('models.TopicComment');
-    var TopicEvent = app.get('models.TopicEvent');
-    var TopicVote = app.get('models.TopicVote');
-    var TopicAttachment = app.get('models.TopicAttachment');
-    var Attachment = app.get('models.Attachment');
+    var TopicComment = models.TopicComment;
+    var TopicEvent = models.TopicEvent;
+    var TopicVote = models.TopicVote;
+    var TopicAttachment = models.TopicAttachment;
+    var Attachment = models.Attachment;
 
     var _hasPermission = function (topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelf, partnerId) {
         var LEVELS = {
@@ -172,7 +172,7 @@ module.exports = function (app) {
     /**
      * Check if User has sufficient privileges to access the Object.
      *
-     * @param {string} level One of TopicMember.LEVELS
+     * @param {string} level One of TopicMemberUser.LEVELS
      * @param {boolean} [allowPublic=false] Allow access to Topic with "public" visibility.
      * @param {string[]} [topicStatusesAllowed=null] Allow access to Topic which is in one of the allowed statuses. IF null, then any status is OK
      * @param {boolean} [allowSelf=false] Allow access when caller does action to is own user
@@ -877,7 +877,7 @@ module.exports = function (app) {
                                         user.id,
                                         {
                                             through: {
-                                                level: TopicMember.LEVELS.admin
+                                                level: TopicMemberUser.LEVELS.admin
                                             },
                                             transaction: t
                                         }
@@ -915,7 +915,7 @@ module.exports = function (app) {
                 }
             })
             .then(function () {
-                var level = TopicMember.LEVELS.admin;
+                var level = TopicMemberUser.LEVELS.admin;
 
                 topic.padUrl = cosEtherpad.getUserAccessUrl(topic, user.id, user.name, user.language, req.locals.partner);
 
@@ -940,7 +940,7 @@ module.exports = function (app) {
     /**
      * Read a Topic
      */
-    app.get('/api/users/:userId/topics/:topicId', loginCheck(['partner']), partnerParser, hasPermission(TopicMember.LEVELS.read, true), isModerator(), function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId', loginCheck(['partner']), partnerParser, hasPermission(TopicMemberUser.LEVELS.read, true), isModerator(), function (req, res, next) {
         var include = req.query.include;
         var join = '';
         var returncolumns = '';
@@ -1137,8 +1137,8 @@ module.exports = function (app) {
                 topic.padUrl = cosEtherpad.getUserAccessUrl(topic, topic.user.id, topic.user.name, topic.user.language, req.locals.partner);
                 topic.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
 
-                if (topic.visibility === Topic.VISIBILITY.public && topic.permission.level === TopicMember.LEVELS.none) {
-                    topic.permission.level = TopicMember.LEVELS.read;
+                if (topic.visibility === Topic.VISIBILITY.public && topic.permission.level === TopicMemberUser.LEVELS.none) {
+                    topic.permission.level = TopicMemberUser.LEVELS.read;
                 }
                 // Remove the user info from output, was only needed for padUrl generation
                 delete topic.user;
@@ -1460,7 +1460,7 @@ module.exports = function (app) {
     /**
      * Update Topic info
      */
-    app.put('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.edit), function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit), function (req, res, next) {
         _topicUpdate(req, res, next)
             .then(function () {
                 return res.ok();
@@ -1468,7 +1468,7 @@ module.exports = function (app) {
             .catch(next);
     });
 
-    app.patch('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.edit), function (req, res, next) {
+    app.patch('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit), function (req, res, next) {
         _topicUpdate(req, res, next)
             .then(function () {
                 return res.noContent();
@@ -1483,7 +1483,7 @@ module.exports = function (app) {
      *
      * @see https://trello.com/c/ezqHssSL/124-refactoring-put-tokenjoin-to-be-part-of-put-topics-topicid
      */
-    app.put('/api/users/:userId/topics/:topicId/tokenJoin', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.admin), function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/tokenJoin', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), function (req, res, next) {
 
         return Topic
             .findOne({
@@ -1522,7 +1522,7 @@ module.exports = function (app) {
     /**
      * Delete Topic
      */
-    app.delete('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.admin), function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), function (req, res, next) {
         Topic
             .findById(req.params.topicId)
             .then(function (topic) {
@@ -2147,7 +2147,7 @@ module.exports = function (app) {
      * You can add User with e-mail or User id.
      * If e-mail does not exist, User is created in the DB with NULL password.
      */
-    app.post('/api/users/:userId/topics/:topicId/members/users', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.admin), partnerParser, function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/members/users', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), partnerParser, function (req, res, next) {
         //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
 
         var members = req.body;
@@ -2261,7 +2261,7 @@ module.exports = function (app) {
                                 userId: member.userId
                             },
                             defaults: {
-                                level: member.level || TopicMember.LEVELS.read
+                                level: member.level || TopicMemberUser.LEVELS.read
                             }
                         });
                 });
@@ -2310,7 +2310,7 @@ module.exports = function (app) {
     /**
      * Get all members of the Topic
      */
-    app.get('/api/users/:userId/topics/:topicId/members', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.read), function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId/members', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), function (req, res, next) {
         var response = {
             groups: {
                 count: 0,
@@ -2437,7 +2437,7 @@ module.exports = function (app) {
     /**
      * Get all member Users of the Topic
      */
-    app.get('/api/users/:userId/topics/:topicId/members/users', loginCheck(['partner']), isModerator(), hasPermission(TopicMember.LEVELS.read), function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId/members/users', loginCheck(['partner']), isModerator(), hasPermission(TopicMemberUser.LEVELS.read), function (req, res, next) {
         var dataForModerator = '';
         if (req.user && req.user.moderator) {
             dataForModerator = '\
@@ -2555,7 +2555,7 @@ module.exports = function (app) {
     /**
      * Get all member Groups of the Topic
      */
-    app.get('/api/users/:userId/topics/:topicId/members/groups', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.read), function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId/members/groups', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), function (req, res, next) {
         db
             .query(
                 '\
@@ -2671,7 +2671,7 @@ module.exports = function (app) {
      * Create new member Groups to a Topic
      */
 
-    app.post('/api/users/:userId/topics/:topicId/members/groups', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.admin), function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/members/groups', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), function (req, res, next) {
         var members = req.body;
         var topicId = req.params.topicId;
 
@@ -2701,7 +2701,7 @@ module.exports = function (app) {
                                             groupId: member.groupId
                                         },
                                         defaults: {
-                                            level: member.level || TopicMember.LEVELS.read
+                                            level: member.level || TopicMemberUser.LEVELS.read
                                         },
                                         transaction: t
                                     });
@@ -2771,7 +2771,7 @@ module.exports = function (app) {
     /**
      * Update User membership information
      */
-    app.put('/api/users/:userId/topics/:topicId/members/users/:memberId', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.admin), function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/members/users/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), function (req, res, next) {
         var newLevel = req.body.level;
         var memberId = req.params.memberId;
         var topicId = req.params.topicId;
@@ -2781,7 +2781,7 @@ module.exports = function (app) {
             .findAll({
                 where: {
                     topicId: topicId,
-                    level: TopicMember.LEVELS.admin
+                    level: TopicMemberUser.LEVELS.admin
                 },
                 attributes: ['userId'],
                 raw: true
@@ -2844,7 +2844,7 @@ module.exports = function (app) {
     /**
      * Update Group membership information
      */
-    app.put('/api/users/:userId/topics/:topicId/members/groups/:memberId', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.admin), function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/members/groups/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), function (req, res, next) {
         var newLevel = req.body.level;
         var memberId = req.params.memberId;
         var topicId = req.params.topicId;
@@ -2902,7 +2902,7 @@ module.exports = function (app) {
     /**
      * Delete User membership information
      */
-    app.delete('/api/users/:userId/topics/:topicId/members/users/:memberId', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.admin, null, null, true), function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/members/users/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, null, true), function (req, res, next) {
         var topicId = req.params.topicId;
         var memberId = req.params.memberId;
 
@@ -2910,7 +2910,7 @@ module.exports = function (app) {
             .findAll({
                 where: {
                     topicId: topicId,
-                    level: TopicMember.LEVELS.admin
+                    level: TopicMemberUser.LEVELS.admin
                 },
                 attributes: ['userId'],
                 raw: true
@@ -3043,7 +3043,7 @@ module.exports = function (app) {
     /**
      * Delete Group membership information
      */
-    app.delete('/api/users/:userId/topics/:topicId/members/groups/:memberId', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.admin), function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/members/groups/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), function (req, res, next) {
         var topicId = req.params.topicId;
         var memberId = req.params.memberId;
 
@@ -3190,7 +3190,7 @@ module.exports = function (app) {
                                 userId: userId
                             },
                             defaults: {
-                                level: TopicMember.LEVELS.read
+                                level: TopicMemberUser.LEVELS.read
                             },
                             transaction: t
                         })
@@ -3209,7 +3209,7 @@ module.exports = function (app) {
                                                 {
                                                     type: 'User',
                                                     id: user.id,
-                                                    level: TopicMember.LEVELS.read
+                                                    level: TopicMemberUser.LEVELS.read
                                                 },
                                                 req.method + ' ' + req.path,
                                                 t
@@ -3234,7 +3234,7 @@ module.exports = function (app) {
      * Add Topic Attachment
      */
 
-    app.post('/api/users/:userId/topics/:topicId/attachments', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.edit), function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/attachments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit), function (req, res, next) {
         var topicId = req.params.topicId;
         var name = req.body.name;
         var type = req.body.type;
@@ -3306,7 +3306,7 @@ module.exports = function (app) {
             .catch(next);
     });
 
-    app.put('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.edit), function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit), function (req, res, next) {
         var newName = req.body.name;
 
         var updateAttachment = {};
@@ -3351,7 +3351,7 @@ module.exports = function (app) {
     /**
      * Delete Topic Attachment
      */
-    app.delete('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.edit, false, null, true), function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, null, true), function (req, res, next) {
 
         Attachment
             .findOne({
@@ -3419,13 +3419,13 @@ module.exports = function (app) {
             .catch(next);
     };
 
-    app.get('/api/users/:userId/topics/:topicId/attachments', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.read, true), topicAttachmentsList);
+    app.get('/api/users/:userId/topics/:topicId/attachments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), topicAttachmentsList);
     app.get('/api/topics/:topicId/attachments', hasVisibility(Topic.VISIBILITY.public), topicAttachmentsList);
 
     /**
      * Create Topic Comment
      */
-    app.post('/api/users/:userId/topics/:topicId/comments', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.read, true), function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/comments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), function (req, res, next) {
         var type = req.body.type;
         var parentId = req.body.parentId;
         var parentVersion = req.body.parentVersion;
@@ -3970,8 +3970,8 @@ module.exports = function (app) {
     /**
      * Read (List) Topic Comments
      */
-    app.get('/api/users/:userId/topics/:topicId/comments', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.read, true), isModerator(), topicCommentsList);
-    app.get('/api/v2/users/:userId/topics/:topicId/comments', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.read, true), isModerator(), topicCommentsList2);
+    app.get('/api/users/:userId/topics/:topicId/comments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), isModerator(), topicCommentsList);
+    app.get('/api/v2/users/:userId/topics/:topicId/comments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), isModerator(), topicCommentsList2);
 
 
     /**
@@ -3983,7 +3983,7 @@ module.exports = function (app) {
     /**
      * Delete Topic Comment
      */
-    app.delete('/api/users/:userId/topics/:topicId/comments/:commentId', loginCheck(['partner']), isCommentCreator(), hasPermission(TopicMember.LEVELS.admin, false, null, true));
+    app.delete('/api/users/:userId/topics/:topicId/comments/:commentId', loginCheck(['partner']), isCommentCreator(), hasPermission(TopicMemberUser.LEVELS.admin, false, null, true));
     //WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition
     //NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
     app.delete('/api/users/:userId/topics/:topicId/comments/:commentId', function (req, res, next) {
@@ -4494,7 +4494,7 @@ module.exports = function (app) {
     /**
      * Read (List) Topic Mentions
      */
-    app.get('/api/users/:userId/topics/:topicId/mentions', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.read, true), topicMentionsList);
+    app.get('/api/users/:userId/topics/:topicId/mentions', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), topicMentionsList);
 
 
     /**
@@ -4505,7 +4505,7 @@ module.exports = function (app) {
     /**
      * Create a Comment Vote
      */
-    app.post('/api/topics/:topicId/comments/:commentId/votes', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.read, true), function (req, res, next) {
+    app.post('/api/topics/:topicId/comments/:commentId/votes', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), function (req, res, next) {
         var value = parseInt(req.body.value, 10);
 
         Comment
@@ -4598,7 +4598,7 @@ module.exports = function (app) {
     /**
      * Create a Vote
      */
-    app.post('/api/users/:userId/topics/:topicId/votes', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.admin, null, [Topic.STATUSES.inProgress]), function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/votes', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress]), function (req, res, next) {
         var voteOptions = req.body.options;
 
         if (!voteOptions || !Array.isArray(voteOptions) || voteOptions.length < 2) {
@@ -4766,7 +4766,7 @@ module.exports = function (app) {
     /**
      * Read a Vote
      */
-    app.get('/api/users/:userId/topics/:topicId/votes/:voteId', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.read, true), function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId/votes/:voteId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), function (req, res, next) {
         var topicId = req.params.topicId;
         var voteId = req.params.voteId;
         var userId = req.user.id;
@@ -4937,7 +4937,7 @@ module.exports = function (app) {
                     };
                 }
 
-                if (req.locals.topic.permissions.level === TopicMember.LEVELS.admin && [Topic.STATUSES.followUp, Topic.STATUSES.closed].indexOf(req.locals.topic.status) > -1) {
+                if (req.locals.topic.permissions.level === TopicMemberUser.LEVELS.admin && [Topic.STATUSES.followUp, Topic.STATUSES.closed].indexOf(req.locals.topic.status) > -1) {
                     if (!voteInfo.dataValues.downloads) {
                         voteInfo.dataValues.downloads = {};
                     }
@@ -4962,7 +4962,7 @@ module.exports = function (app) {
     /**
      * Update a Vote
      */
-    app.put('/api/users/:userId/topics/:topicId/votes/:voteId', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.admin), function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/votes/:voteId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), function (req, res, next) {
         var topicId = req.params.topicId;
         var voteId = req.params.voteId;
 
@@ -5484,7 +5484,7 @@ module.exports = function (app) {
      * TODO: Should simplify all of this routes code. It's a mess cause I decided to keep one endpoint for all of the voting. Maybe it's a better idea to move authType===hard to separate endpont
      * TODO: create an alias /api/topics/:topicId/votes/:voteId for un-authenticated signing? I's weird to call /users/self when user has not logged in...
      */
-    app.post('/api/users/:userId/topics/:topicId/votes/:voteId', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.read, true, [Topic.STATUSES.voting]), function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/votes/:voteId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.voting]), function (req, res, next) {
         handleTopicVotePreconditions(req, res)
             .then(function (vote) {
                 if (vote.authType === Vote.AUTH_TYPES.soft) {
@@ -5704,7 +5704,7 @@ module.exports = function (app) {
      *
      * Complete the ID-card signing flow started by calling POST /api/users/:userId/topics/:topicId/votes/:voteId
      */
-    app.post('/api/users/:userId/topics/:topicId/votes/:voteId/sign', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.read, true, [Topic.STATUSES.voting]), handleTopicVoteSign);
+    app.post('/api/users/:userId/topics/:topicId/votes/:voteId/sign', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.voting]), handleTopicVoteSign);
 
 
     var handleTopicVoteStatus = function (req, res, next) {
@@ -5975,7 +5975,7 @@ module.exports = function (app) {
      *
      * Initially designed only for Mobile-ID signing. The signing is to be started by calling POST /api/users/:userId/topics/:topicId/votes/:voteId.
      */
-    app.get('/api/users/:userId/topics/:topicId/votes/:voteId/status', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.read, true, [Topic.STATUSES.voting]), handleTopicVoteStatus);
+    app.get('/api/users/:userId/topics/:topicId/votes/:voteId/status', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.voting]), handleTopicVoteStatus);
 
 
     /**
@@ -6268,7 +6268,7 @@ module.exports = function (app) {
     /**
      * Delegate a Vote
      */
-    app.post('/api/users/:userId/topics/:topicId/votes/:voteId/delegations', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.read, null, [Topic.STATUSES.voting]), function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/votes/:voteId/delegations', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.voting]), function (req, res, next) {
         var topicId = req.params.topicId;
         var voteId = req.params.voteId;
 
@@ -6278,7 +6278,7 @@ module.exports = function (app) {
             return res.badRequest('Cannot delegate to self.');
         }
 
-        return _hasPermission(topicId, toUserId, TopicMember.LEVELS.read, false, null, null, req.user.partnerId)
+        return _hasPermission(topicId, toUserId, TopicMemberUser.LEVELS.read, false, null, null, req.user.partnerId)
             .then(
                 function () {
                     return Vote
@@ -6416,7 +6416,7 @@ module.exports = function (app) {
     /**
      * Delete Vote delegation
      */
-    app.delete('/api/users/:userId/topics/:topicId/votes/:voteId/delegations', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.read, null, [Topic.STATUSES.voting]), function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/votes/:voteId/delegations', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.voting]), function (req, res, next) {
         var topicId = req.params.topicId;
         var voteId = req.params.voteId;
         var userId = req.user.id;
@@ -6529,7 +6529,7 @@ module.exports = function (app) {
     };
 
     /** Create an Event **/
-    app.post('/api/users/:userId/topics/:topicId/events', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.admin, null, [Topic.STATUSES.followUp, Topic.STATUSES.closed]), topicEventsCreate);
+    app.post('/api/users/:userId/topics/:topicId/events', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.followUp, Topic.STATUSES.closed]), topicEventsCreate);
 
 
     /**
@@ -6588,7 +6588,7 @@ module.exports = function (app) {
 
 
     /** List Events **/
-    app.get('/api/users/:userId/topics/:topicId/events', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.read, true, [Topic.STATUSES.followUp, Topic.STATUSES.closed]), topicEventsList);
+    app.get('/api/users/:userId/topics/:topicId/events', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.followUp, Topic.STATUSES.closed]), topicEventsList);
 
 
     /**
@@ -6600,7 +6600,7 @@ module.exports = function (app) {
     /**
      * Delete event
      */
-    app.delete('/api/users/:userId/topics/:topicId/events/:eventId', loginCheck(['partner']), hasPermission(TopicMember.LEVELS.admin, null, [Topic.STATUSES.followUp]), function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/events/:eventId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.followUp]), function (req, res, next) {
         var topicId = req.params.topicId;
         var eventId = req.params.eventId;
 

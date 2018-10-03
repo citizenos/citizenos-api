@@ -8,12 +8,13 @@
  */
 
 module.exports = function (app) {
-
+    var models = app.get('models');
     var Promise = app.get('Promise');
-    var User = app.get('models.User');
-    var UserConnection = app.get('models.UserConnection');
     var config = app.get('config');
     var urlLib = app.get('urlLib');
+
+    var User = models.User;
+    var UserConnection = models.UserConnection;
 
     /**
      * View the invite

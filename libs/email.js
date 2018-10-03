@@ -9,7 +9,8 @@
 module.exports = function (app) {
     var emailClient = app.get('emailClient');
     var logger = app.get('logger');
-    var db = app.get('db');
+    var models = app.get('models');
+    var db = models.sequelize;
     var Promise = app.get('Promise');
     var urlLib = app.get('urlLib');
     var _ = app.get('lodash');
@@ -21,10 +22,10 @@ module.exports = function (app) {
     var url = app.get('url');
     var jwt = app.get('jwt');
 
-    var User = app.get('models.User');
-    var Topic = app.get('models.Topic');
-    var Group = app.get('models.Group');
-    var TopicMember = app.get('models.TopicMember');
+    var User = models.User;
+    var Topic = models.Topic;
+    var Group = models.Group;
+    var TopicMemberUser = models.TopicMemberUser;
 
     var templateRoot = app.get('EMAIL_TEMPLATE_ROOT');
     var templateRootLocal = app.get('EMAIL_TEMPLATE_ROOT_LOCAL');
@@ -664,7 +665,7 @@ module.exports = function (app) {
                             {
                                 replacements: {
                                     topicId: commentInfo.topic.id,
-                                    level: TopicMember.LEVELS.admin
+                                    level: TopicMemberUser.LEVELS.admin
                                 },
                                 type: db.QueryTypes.SELECT,
                                 raw: true,

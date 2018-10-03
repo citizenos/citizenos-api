@@ -53,14 +53,16 @@ chai.use(require('chai-shallow-deep-equal'));
 var assert = chai.assert;
 var request = require('supertest');
 var app = require('../../app');
+var models = app.get('models');
 
 var async = app.get('async');
 var shared = require('../utils/shared');
 var userLib = require('./lib/user')(app);
 var topicLib = require('./topic');
-var Partner = app.get('models.Partner');
-var Topic = app.get('models.Topic');
-var TopicMember = app.get('models.TopicMember');
+
+var Partner = models.Partner;
+var Topic = models.Topic;
+var TopicMemberUser = models.TopicMemberUser;
 
 
 // API - /api/users*
@@ -206,7 +208,7 @@ suite('Activities', function () {
                                         [
                                             {
                                                 userId: user2.id,
-                                                level: TopicMember.LEVELS.read
+                                                level: TopicMemberUser.LEVELS.read
                                             }
                                         ],
                                         function (err) {
@@ -384,7 +386,7 @@ suite('Activities', function () {
                                         [
                                             {
                                                 userId: user2.id,
-                                                level: TopicMember.LEVELS.read
+                                                level: TopicMemberUser.LEVELS.read
                                             }
                                         ],
                                         function (err) {

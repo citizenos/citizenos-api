@@ -12,7 +12,8 @@ module.exports = function (app) {
     var util = app.get('util');
     var config = app.get('config');
     var passport = app.get('passport');
-    var db = app.get('db');
+    var models = app.get('models');
+    var db = models.sequelize;
     var Op = db.Op;
     var cosBdoc = app.get('cosBdoc');
     var cosActivities = app.get('cosActivities');
@@ -25,10 +26,10 @@ module.exports = function (app) {
     var DigiDocServiceClient = app.get('ddsClient');
     var url = app.get('url');
 
-    var User = app.get('models.User');
-    var UserConnection = app.get('models.UserConnection');
-    var UserConsent = app.get('models.UserConsent');
-    var Partner = app.get('models.Partner');
+    var User = models.User;
+    var UserConnection = models.UserConnection;
+    var UserConsent = models.UserConsent;
+    var Partner = models.Partner;
 
     var COOKIE_NAME_OPENID_AUTH_STATE = 'cos.authStateOpenId';
     var COOKIE_NAME_COS_AUTH_STATE = 'cos.authState';
