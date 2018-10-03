@@ -136,6 +136,28 @@ module.exports = function (sequelize, DataTypes) {
         }
     );
 
+    User.associate = function (models) {
+        User.hasMany(models.UserConnection, {
+            foreignKey: 'userId'
+        });
+
+        User.hasMany(models.UserConsent, {
+            foreignKey: 'userId'
+        });
+
+        User.belongsToMany(models.Group, {
+            through: models.GroupMember,
+            foreignKey: 'userId',
+            constraints: true
+        });
+
+        User.belongsToMany(models.Topic, {
+            through: models.TopicMemberUser,
+            foreignKey: 'userId',
+            constraints: true
+        });
+    };
+
     // Overrides the default toJSON() to avoid sensitive data from ending up in the output.
     // Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
     User.prototype.toJSON = function () {

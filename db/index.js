@@ -4,58 +4,55 @@ module.exports = function (app) {
     var sequelize = app.get('db');
     var path = require('path');
 
-    var Activity = sequelize.import(path.join(__dirname, 'Activity'));
+    const MODEL_BASE_PATH = path.join(__dirname, '/models');
 
-    var User = sequelize.import(path.join(__dirname, 'User'));
-    var UserConnection = sequelize.import(path.join(__dirname, 'UserConnection'));
-    var UserConsent = sequelize.import(path.join(__dirname, 'UserConsent'));
+    var Activity = sequelize.import(path.join(MODEL_BASE_PATH, 'Activity'));
 
-    var Partner = sequelize.import(path.join(__dirname, 'Partner'));
+    var User = sequelize.import(path.join(MODEL_BASE_PATH, 'User'));
+    var UserConnection = sequelize.import(path.join(MODEL_BASE_PATH, 'UserConnection'));
+    var UserConsent = sequelize.import(path.join(MODEL_BASE_PATH, 'UserConsent'));
 
-    var Moderator = sequelize.import(path.join(__dirname, 'Moderator'));
+    var Partner = sequelize.import(path.join(MODEL_BASE_PATH, 'Partner'));
 
-    var Group = sequelize.import(path.join(__dirname, 'Group'));
-    var GroupMember = sequelize.import(path.join(__dirname, 'GroupMember'));
+    var Moderator = sequelize.import(path.join(MODEL_BASE_PATH, 'Moderator'));
 
-    var Report = sequelize.import(path.join(__dirname, 'Report'));
+    var Group = sequelize.import(path.join(MODEL_BASE_PATH, 'Group'));
+    var GroupMember = sequelize.import(path.join(MODEL_BASE_PATH, 'GroupMember'));
 
-    var Comment = sequelize.import(path.join(__dirname, 'Comment'));
-    var CommentReport = sequelize.import(path.join(__dirname, 'CommentReport'));
-    var CommentVote = sequelize.import(path.join(__dirname, 'CommentVote'));
+    var Report = sequelize.import(path.join(MODEL_BASE_PATH, 'Report'));
 
-    var Topic = sequelize.import(path.join(__dirname, 'Topic'));
+    var Comment = sequelize.import(path.join(MODEL_BASE_PATH, 'Comment'));
+    var CommentReport = sequelize.import(path.join(MODEL_BASE_PATH, 'CommentReport'));
+    var CommentVote = sequelize.import(path.join(MODEL_BASE_PATH, 'CommentVote'));
 
-    var TopicMember = require(path.join(__dirname, 'TopicMember')); //TODO: Somehow define inheritance here not in the child Model
-    var TopicMemberUser = sequelize.import(path.join(__dirname, 'TopicMemberUser')); // extends TopicMember inside
-    var TopicMemberGroup = sequelize.import(path.join(__dirname, 'TopicMemberGroup')); // extends TopicMember inside
+    var Topic = sequelize.import(path.join(MODEL_BASE_PATH, 'Topic'));
 
-    var TopicComment = sequelize.import(path.join(__dirname, 'TopicComment'));
+    var TopicMember = require(path.join(MODEL_BASE_PATH, 'TopicMember')); //TODO: Somehow define inheritance here not in the child Model
+    var TopicMemberUser = sequelize.import(path.join(MODEL_BASE_PATH, 'TopicMemberUser')); // extends TopicMember inside
+    var TopicMemberGroup = sequelize.import(path.join(MODEL_BASE_PATH, 'TopicMemberGroup')); // extends TopicMember inside
 
-    var Attachment = sequelize.import(path.join(__dirname, 'Attachment'));
-    var TopicAttachment = sequelize.import(path.join(__dirname, 'TopicAttachment'));
+    var TopicComment = sequelize.import(path.join(MODEL_BASE_PATH, 'TopicComment'));
 
-    var TopicEvent = sequelize.import(path.join(__dirname, 'TopicEvent'));
+    var Attachment = sequelize.import(path.join(MODEL_BASE_PATH, 'Attachment'));
+    var TopicAttachment = sequelize.import(path.join(MODEL_BASE_PATH, 'TopicAttachment'));
 
-    var TopicVote = sequelize.import(path.join(__dirname, 'TopicVote'));
+    var TopicEvent = sequelize.import(path.join(MODEL_BASE_PATH, 'TopicEvent'));
 
-    var Vote = sequelize.import(path.join(__dirname, 'Vote'));
-    var VoteOption = sequelize.import(path.join(__dirname, 'VoteOption'));
-    var VoteContainerFile = sequelize.import(path.join(__dirname, 'VoteContainerFile'));
-    var VoteUserContainer = sequelize.import(path.join(__dirname, 'VoteUserContainer'));
-    var VoteDelegation = sequelize.import(path.join(__dirname, 'VoteDelegation'));
-    var VoteList = sequelize.import(path.join(__dirname, 'VoteList'));
+    var TopicVote = sequelize.import(path.join(MODEL_BASE_PATH, 'TopicVote'));
 
-    User.hasMany(UserConnection, {
-        foreignKey: 'userId'
-    });
+    var Vote = sequelize.import(path.join(MODEL_BASE_PATH, 'Vote'));
+    var VoteOption = sequelize.import(path.join(MODEL_BASE_PATH, 'VoteOption'));
+    var VoteContainerFile = sequelize.import(path.join(MODEL_BASE_PATH, 'VoteContainerFile'));
+    var VoteUserContainer = sequelize.import(path.join(MODEL_BASE_PATH, 'VoteUserContainer'));
+    var VoteDelegation = sequelize.import(path.join(MODEL_BASE_PATH, 'VoteDelegation'));
+    var VoteList = sequelize.import(path.join(MODEL_BASE_PATH, 'VoteList'));
+
+
 
     UserConnection.belongsTo(User, {
         foreignKey: 'userId'
     });
 
-    User.hasMany(UserConsent, {
-        foreignKey: 'userId'
-    });
 
     UserConsent.belongsTo(User, {
         foreignKey: 'userId'
@@ -75,11 +72,7 @@ module.exports = function (app) {
         },
         constraints: true
     });
-    User.belongsToMany(Group, {
-        through: GroupMember,
-        foreignKey: 'userId',
-        constraints: true
-    });
+
 
     // Every Group is created by a User whom we call "the Creator"
     Group.belongsTo(User, {
@@ -118,11 +111,7 @@ module.exports = function (app) {
         as: 'creator'
     });
 
-    User.belongsToMany(Topic, {
-        through: TopicMemberUser,
-        foreignKey: 'userId',
-        constraints: true
-    });
+
 
     // Topic can have many Groups as Members
     Topic.belongsToMany(Group, {

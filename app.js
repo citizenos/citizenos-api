@@ -142,7 +142,7 @@ app.set('db', dbConnection);
 app.set('QueryStream', QueryStream);
 
 // Register models
-require('./models/index')(app);
+require('./db/index')(app);
 
 app.set('cosActivities', require('./libs/cosActivities')(app));
 app.set('urlLib', require('./libs/url')(config));
