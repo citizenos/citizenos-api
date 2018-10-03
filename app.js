@@ -7,7 +7,7 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var cors = require('cors');
 var log4js = require('log4js');
-var db = require('./libs/sequelize/sequelize');
+var db = require('./db/models');
 var QueryStream = require('pg-query-stream');
 var morgan = require('morgan');
 var lodash = require('lodash');
@@ -137,8 +137,7 @@ app.set('SevenZip', SevenZip);
 mu.root = TEMPLATE_ROOT;
 app.set('mu', mu);
 
-var dbConnection = db(config.db.uri, config.db.options, logger);
-app.set('db', dbConnection);
+app.set('db', db);
 app.set('QueryStream', QueryStream);
 
 // Register models

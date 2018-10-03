@@ -13,7 +13,7 @@ var _ = require('lodash');
  * @see http://sequelizejs.com/docs/latest/models
  */
 module.exports = function (sequelize, DataTypes) {
-    var hooks = require('../libs/sequelize/hooks');
+    var hooks = require('../../libs/sequelize/hooks');
 
     var VISIBILITY = {
         public: 'public', // Everyone has read-only on the Group.  Pops up in the searches..

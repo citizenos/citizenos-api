@@ -43,9 +43,6 @@ module.exports.model = function (sequelize, DataTypes) {
                 defaultValue: LEVELS.read,
                 comment: 'User membership level.'
             }
-        },
-        options: {
-            // Can have hooks and stuff here.. - http://sequelizejs.com/docs/latest/models#expansion-of-models
         }
     };
 

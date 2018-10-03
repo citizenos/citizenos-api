@@ -1,7 +1,7 @@
 'use strict';
 
 var _ = require('lodash');
-var hooks = require('../libs/sequelize/hooks');
+var hooks = require('../../libs/sequelize/hooks');
 
 /**
  * Report

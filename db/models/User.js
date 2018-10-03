@@ -1,8 +1,8 @@
 'use strict';
 
 var _ = require('lodash');
-var cryptoLib = require('../libs/crypto');
-var hooks = require('../libs/sequelize/hooks');
+var cryptoLib = require('../../libs/crypto');
+var hooks = require('../../libs/sequelize/hooks');
 
 /**
  * User

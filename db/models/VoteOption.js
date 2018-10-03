@@ -1,6 +1,6 @@
 'use strict';
 
-var hooks = require('../libs/sequelize/hooks');
+var hooks = require('../../libs/sequelize/hooks');
 
 /**
  * VoteOption

@@ -17,7 +17,7 @@ var _ = require('lodash');
 module.exports = function (sequelize, DataTypes) {
 
     // Parent model for this model
-    var TopicMember = require('./TopicMember').model(sequelize, DataTypes);
+    var TopicMember = require('./_TopicMember').model(sequelize, DataTypes);
 
     // NOTE: TopicMemberUser extends TopicMember
     var attributes = _.extend({
