@@ -4,7 +4,7 @@
     "fe": "CITIZENOS_URL_FE"
   },
   "db": {
-    "uri": "DATABASE_URL",
+    "url": "DATABASE_URL",
     "options": {
       "pool": {
         "max": "DATABASE_OPTIONS_POOL_MAX"
