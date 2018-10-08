@@ -32,12 +32,12 @@ if (dbOptions.operatorsAliases === 'undefined') {
 
 logger.info(
     'Sequelize connection configuration',
-    process.env.NODE_ENV === 'development' ? config.db.uri : config.db.uri.replace(/\/\/.*:.*@/g, '//*****:*****@'),
+    process.env.NODE_ENV === 'development' ? config.db.url : config.db.url.replace(/\/\/.*:.*@/g, '//*****:*****@'),
     dbOptions
 );
 
 // Create a connection and test it, the test is brutal but it's Fail Fast (tm)
-const sequelize = new Sequelize(config.db.uri, dbOptions);
+const sequelize = new Sequelize(config.db.url, dbOptions);
 
 sequelize
     .authenticate()

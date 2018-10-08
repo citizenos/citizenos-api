@@ -4,7 +4,7 @@
     "fe": "https://app.citizenos.com"
   },
   "db": {
-    "uri": "postgres://citizenos:citizenos@localhost:5432/citizenos",
+    "url": "postgres://citizenos:citizenos@localhost:5432/citizenos",
     "options": {
       "logging": true,
       "benchmark": true,

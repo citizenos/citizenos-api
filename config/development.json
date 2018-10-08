@@ -4,7 +4,7 @@
     "fe": "https://dev.citizenos.com:3001"
   },
   "db": {
-    "uri": "postgres://citizenos:citizenos@localhost:5432/citizenos",
+    "url": "postgres://citizenos:citizenos@localhost:5432/citizenos",
     "options": {
       "logging": true,
       "sync": {

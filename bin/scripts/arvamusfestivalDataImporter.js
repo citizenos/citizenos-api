@@ -13,7 +13,7 @@ var log4js = require('log4js');
 log4js.configure(config.logging.log4js);
 var logger = log4js.getLogger(path.basename(__filename));
 
-var db = require('../../libs/sequelize/sequelize')(config.db.uri, config.db.options, logger);
+var db = require('../../libs/sequelize/sequelize')(config.db.url, config.db.options, logger);
 
 var Topic = db.import('../../models/Topic');
 var Partner = db.import('../../models/Partner');
