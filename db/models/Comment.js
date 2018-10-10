@@ -50,7 +50,9 @@ module.exports = function (sequelize, DataTypes) {
                 references: {
                     model: 'Comments',
                     key: 'id'
-                }
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
             },
             parentVersion: {
                 type: DataTypes.BIGINT,
@@ -85,7 +87,9 @@ module.exports = function (sequelize, DataTypes) {
                 references: {
                     model: 'Users',
                     key: 'id'
-                }
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
             },
             deletedById: {
                 type: DataTypes.UUID,
@@ -94,7 +98,9 @@ module.exports = function (sequelize, DataTypes) {
                 references: {
                     model: 'Users',
                     key: 'id'
-                }
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
             },
             deletedReasonType: {
                 type: DataTypes.ENUM,
@@ -120,7 +126,9 @@ module.exports = function (sequelize, DataTypes) {
                 references: {
                     model: 'Reports',
                     key: 'id'
-                }
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
             },
             edits: {
                 type: DataTypes.JSONB,

@@ -21,7 +21,7 @@ module.exports = function (sequelize, DataTypes) {
                 type: DataTypes.UUID,
                 primaryKey: true,
                 allowNull: false,
-                defaultValue: DataTypes.UUIDV4
+                defaultValue: sequelize.literal('(md5(((random())::text || (clock_timestamp())::text)))::uuid') // Generate ID on the DB side for now as there is no admin interface and Moderators are created manually
             },
             userId: {
                 type: DataTypes.UUID,
@@ -30,7 +30,9 @@ module.exports = function (sequelize, DataTypes) {
                 references: {
                     model: 'Users',
                     key: 'id'
-                }
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
             },
             partnerId: {
                 type: DataTypes.UUID,
@@ -39,7 +41,9 @@ module.exports = function (sequelize, DataTypes) {
                 references: {
                     model: 'Partners',
                     key: 'id'
-                }
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
             }
         },
         {

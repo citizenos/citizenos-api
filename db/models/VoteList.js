@@ -25,7 +25,9 @@ module.exports = function (sequelize, DataTypes) {
                 references: {
                     model: 'Votes',
                     key: 'id'
-                }
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
             },
             userId: {
                 type: DataTypes.UUID,
@@ -34,7 +36,9 @@ module.exports = function (sequelize, DataTypes) {
                 references: {
                     model: 'Users',
                     key: 'id'
-                }
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
             },
             optionId: {
                 type: DataTypes.UUID,
@@ -43,7 +47,9 @@ module.exports = function (sequelize, DataTypes) {
                 references: {
                     model: 'VoteOptions',
                     key: 'id'
-                }
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
             },
             optionGroupId: {
                 type: DataTypes.STRING(8),

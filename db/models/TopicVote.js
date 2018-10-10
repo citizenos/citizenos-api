@@ -22,7 +22,8 @@ module.exports = function (sequelize, DataTypes) {
                 references: {
                     model: 'Topics',
                     key: 'id'
-                }
+                },
+                primaryKey: true
             },
             voteId: {
                 type: DataTypes.UUID,
@@ -31,7 +32,8 @@ module.exports = function (sequelize, DataTypes) {
                 references: {
                     model: 'Votes',
                     key: 'id'
-                }
+                },
+                primaryKey: true
             }
         },
         {

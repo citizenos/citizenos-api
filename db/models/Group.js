@@ -53,7 +53,9 @@ module.exports = function (sequelize, DataTypes) {
                 references: {
                     model: 'Users',
                     key: 'id'
-                }
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
             },
             visibility: {
                 type: DataTypes.ENUM,
@@ -69,7 +71,9 @@ module.exports = function (sequelize, DataTypes) {
                 references: {
                     model: 'Partners',
                     key: 'id'
-                }
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
             }
         }
     );

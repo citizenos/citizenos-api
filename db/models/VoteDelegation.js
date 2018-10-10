@@ -23,6 +23,8 @@ module.exports = function (sequelize, DataTypes) {
                     model: 'Votes',
                     key: 'id'
                 },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE',
                 unique: 'oneUserDelegationPerVote'
             },
             toUserId: {
@@ -32,7 +34,9 @@ module.exports = function (sequelize, DataTypes) {
                 references: {
                     model: 'Users',
                     key: 'id'
-                }
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
             },
             byUserId: {
                 type: DataTypes.UUID,
@@ -42,6 +46,8 @@ module.exports = function (sequelize, DataTypes) {
                     model: 'Users',
                     key: 'id'
                 },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE',
                 unique: 'oneUserDelegationPerVote'
             }
         }

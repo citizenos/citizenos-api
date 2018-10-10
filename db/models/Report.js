@@ -57,7 +57,9 @@ module.exports = function (sequelize, DataTypes) {
                 references: {
                     model: 'Users',
                     key: 'id'
-                }
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
             },
             creatorIp: {
                 type: DataTypes.STRING(45), // No specific DataType in Sequelize so STRING(45) supports IPv6 and IPv4 notations

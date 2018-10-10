@@ -106,7 +106,8 @@ module.exports = function (sequelize, DataTypes) {
                             throw new Error(util.format('Maximum of %d categories allowed.', CATEGORIES_COUNT_MAX));
                         }
                     }
-                }
+                },
+                allowNull: true
             },
             sourcePartnerId: {
                 type: DataTypes.UUID,
@@ -115,7 +116,9 @@ module.exports = function (sequelize, DataTypes) {
                 references: {
                     model: 'Partners',
                     key: 'id'
-                }
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
             },
             sourcePartnerObjectId: {
                 type: DataTypes.STRING,
@@ -129,7 +132,9 @@ module.exports = function (sequelize, DataTypes) {
                 references: {
                     model: 'Users',
                     key: 'id'
-                }
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
             },
             tokenJoin: {
                 type: DataTypes.STRING(8),

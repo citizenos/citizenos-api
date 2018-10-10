@@ -26,6 +26,8 @@ module.exports = function (sequelize, DataTypes) {
                     model: 'Users',
                     key: 'id'
                 },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE',
                 primaryKey: true
             },
             voteId: {
@@ -36,6 +38,8 @@ module.exports = function (sequelize, DataTypes) {
                     model: 'Votes',
                     key: 'id'
                 },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE',
                 primaryKey: true
             },
             container: {

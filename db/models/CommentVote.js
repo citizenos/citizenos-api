@@ -23,6 +23,8 @@ module.exports = function (sequelize, DataTypes) {
                     model: 'Comments',
                     key: 'id'
                 },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE',
                 primaryKey: true
             },
             creatorId: {
@@ -33,6 +35,8 @@ module.exports = function (sequelize, DataTypes) {
                     model: 'Users',
                     key: 'id'
                 },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE',
                 primaryKey: true
             },
             value: {
