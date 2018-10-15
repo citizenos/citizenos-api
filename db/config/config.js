@@ -6,7 +6,7 @@
 const config = require('config').util.loadFileConfigs('./config');
 
 module.exports = {
-    development: config.db,
-    test: config.db,
-    production: config.db
+    development: Object.assign({url: config.db.url}, config.db.options),
+    test: Object.assign({url: config.db.url}, config.db.options),
+    production: Object.assign({url: config.db.url}, config.db.options)
 };
