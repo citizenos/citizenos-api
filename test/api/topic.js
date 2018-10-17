@@ -1613,6 +1613,21 @@ suite('Users', function () {
                         });
                     });
 
+                    teardown(function (done) {
+                        UserConnection
+                            .destroy({
+                                where: {
+                                    connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                    connectionUserId: ['11412090004']
+                                },
+                                force: true
+                            })
+                            .then(function () {
+                                done();
+                            })
+                            .catch(done);
+                    });
+
                     test('Success', function (done) {
 
                         var phoneNumber = '+37200000766';
@@ -5882,21 +5897,6 @@ suite('Users', function () {
                         var vote;
 
                         setup(function (done) {
-                            UserConnection
-                                .destroy({
-                                    where: {
-                                        connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                        connectionUserId: ['11412090004', '51001091072'] // Remove the good user so that test would run multiple times. Also other tests use same numbers
-                                    },
-                                    force: true
-                                })
-                                .then(function () {
-                                    done();
-                                })
-                                .catch(done);
-                        });
-
-                        setup(function (done) {
 
                             var options = [
                                 {
@@ -5923,6 +5923,21 @@ suite('Users', function () {
                                     done();
                                 });
                             });
+                        });
+
+                        teardown(function (done) {
+                            UserConnection
+                                .destroy({
+                                    where: {
+                                        connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                        connectionUserId: ['11412090004']
+                                    },
+                                    force: true
+                                })
+                                .then(function () {
+                                    done();
+                                })
+                                .catch(done);
                         });
 
                         test('Success - Estonian mobile number and PID', function (done) {
