@@ -1629,6 +1629,7 @@ suite('Users', function () {
                     });
 
                     test('Success', function (done) {
+                        console.log('test');
 
                         var phoneNumber = '+37200000766';
                         var pid = '11412090004';
@@ -1640,6 +1641,7 @@ suite('Users', function () {
                         ];
 
                         topicVoteVote(voteAgent, creator.id, voteTopic.id, vote.id, voteList, null, pid, phoneNumber, function (err, res) {
+                            console.log('res', res);
                             if (err) return done(err);
 
                             var response = res.body;
@@ -5776,6 +5778,21 @@ suite('Users', function () {
                                     );
                             });
 
+                            teardown(function (done) {
+                                UserConnection
+                                    .destroy({
+                                        where: {
+                                            connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                            connectionUserId: ['37101010021']
+                                        },
+                                        force: true
+                                    })
+                                    .then(function () {
+                                        done();
+                                    })
+                                    .catch(done);
+                            });
+
                             test('Success', function (done) {
                                 var voteList = [
                                     {
@@ -5783,7 +5800,6 @@ suite('Users', function () {
                                     }
                                 ];
 
-                                //FIXME: Will not run twice, as same certificate cannot be used by 2 different users
                                 var certificate = fs.readFileSync('./test/resources/certificates/dds_good_igor_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
                                 topicVoteVote(agent, user.id, topic.id, vote.id, voteList, certificate, null, null, function (err, res) {
                                     if (err) return done(err);
@@ -5807,7 +5823,6 @@ suite('Users', function () {
                                     }
                                 ];
 
-                                //FIXME: Will not run twice, as same certificate cannot be used by 2 different users
                                 var certificate = fs.readFileSync('./test/resources/certificates/dds_good_igor_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
                                 topicVoteVoteUnauth(reqAgent, topic2.id, vote2.id, voteList, certificate, null, null, function (err, res) {
                                     if (err) return done(err);
