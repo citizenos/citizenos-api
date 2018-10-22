@@ -586,6 +586,21 @@ suite('Auth', function () {
 
             suite('Init', function () {
 
+                teardown(function (done) {
+                    UserConnection
+                        .destroy({
+                            where: {
+                                connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                connectionUserId: ['11412090004']
+                            },
+                            force: true
+                        })
+                        .then(function () {
+                            done();
+                        })
+                        .catch(done);
+                });
+
                 test('Success - 20001 - Estonian mobile number and PID', function (done) {
                     this.timeout(5000); //eslint-disable-line no-invalid-this
 
@@ -781,12 +796,12 @@ suite('Auth', function () {
                 var pid = '11412090004';
 
                 suite('New User', function () {
-                    suiteSetup(function (done) {
+                    teardown(function (done) {
                         UserConnection
                             .destroy({
                                 where: {
                                     connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId: [pid] // Remove the good user so that test would run multiple times. Also other tests use same numbers
+                                    connectionUserId: ['11412090004']
                                 },
                                 force: true
                             })
@@ -895,6 +910,21 @@ suite('Auth', function () {
                                     })
                                     .catch(done);
                             });
+                    });
+
+                    teardown(function (done) {
+                        UserConnection
+                            .destroy({
+                                where: {
+                                    connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                    connectionUserId: ['11412090004']
+                                },
+                                force: true
+                            })
+                            .then(function () {
+                                done();
+                            })
+                            .catch(done);
                     });
 
                     test('Success - 20002 - existing User', function (done) {

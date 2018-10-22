@@ -1614,6 +1614,7 @@ suite('Users', function () {
                     });
 
                     teardown(function (done) {
+                        console.log('teardown');
                         UserConnection
                             .destroy({
                                 where: {
@@ -1629,8 +1630,6 @@ suite('Users', function () {
                     });
 
                     test('Success', function (done) {
-                        console.log('test');
-
                         var phoneNumber = '+37200000766';
                         var pid = '11412090004';
 
@@ -1641,7 +1640,6 @@ suite('Users', function () {
                         ];
 
                         topicVoteVote(voteAgent, creator.id, voteTopic.id, vote.id, voteList, null, pid, phoneNumber, function (err, res) {
-                            console.log('res', res);
                             if (err) return done(err);
 
                             var response = res.body;
