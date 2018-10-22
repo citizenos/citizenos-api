@@ -1614,7 +1614,6 @@ suite('Users', function () {
                     });
 
                     teardown(function (done) {
-                        console.log('teardown');
                         UserConnection
                             .destroy({
                                 where: {
