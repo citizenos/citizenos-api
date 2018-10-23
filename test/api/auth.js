@@ -569,6 +569,20 @@ suite('Auth', function () {
         });
 
         suite('ID-card', function () {
+            teardown(function (done) {
+                UserConnection
+                    .destroy({
+                        where: {
+                            connectionId: UserConnection.CONNECTION_IDS.esteid,
+                            connectionUserId: ['37101010021']
+                        },
+                        force: true
+                    })
+                    .then(function () {
+                        done();
+                    })
+                    .catch(done);
+            });
 
             test('Success - client certificate in X-SSL-Client-Cert header', function (done) {
                 var agent = request.agent(app);

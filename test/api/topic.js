@@ -2489,7 +2489,7 @@ suite('Users', function () {
                         var expectedBody = {
                             status: {
                                 code: 40010,
-                                message: 'Not enough votes to send to Parliament.'
+                                message: 'Not enough votes to send to Parliament. Votes required - '  + config.features.sendToParliament.voteCountMin
                             }
                         };
 
