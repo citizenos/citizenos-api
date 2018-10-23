@@ -1319,7 +1319,7 @@ module.exports = function (app) {
 
                                         return Promise.resolve([topic, vote]);
                                     } else {
-                                        res.badRequest('Not enough votes to send to Parliament.', 10);
+                                        res.badRequest('Not enough votes to send to Parliament. Votes required - ' + config.features.sendToParliament.voteCountMin, 10);
 
                                         return Promise.reject();
                                     }
