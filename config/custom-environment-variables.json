@@ -63,5 +63,10 @@
     "accessKeyId": "AWS_ACCESS_KEY_ID",
     "secretAccessKey": "AWS_SECRET_ACCESS_KEY",
     "bucket": "AWS_S3_BUCKET_NAME"
+  },
+  "features": {
+    "sendToParliament": {
+      "voteCountMin": "CITIZENOS_FEATURES_SENDTOPARLIAMENT_VOTECOUNTMIN"
+    }
   }
 }
