@@ -337,16 +337,14 @@ module.exports = function (app) {
                             delete object.description;
                             break;
                         case 'Group':
-                            if (field !== 'origin') {
-                                object = Group.build(activity[field]).toJSON();
-                                object['@type'] = activity[field]['@type'];
-                                object.createdAt = activity[field].createdAt;
-                                object.creatorId = activity[field].creatorId;
-                                object.updatedAt = activity[field].updatedAt;
-                                object.deletedAt = activity[field].deletedAt;
-                                object.sourcePartnerId = activity[field].sourcePartnerId;
-                                delete object.creator;
-                            }
+                            object = Group.build(activity[field]).toJSON();
+                            object['@type'] = activity[field]['@type'];
+                            object.createdAt = activity[field].createdAt;
+                            object.creatorId = activity[field].creatorId;
+                            object.updatedAt = activity[field].updatedAt;
+                            object.deletedAt = activity[field].deletedAt;
+                            object.sourcePartnerId = activity[field].sourcePartnerId;
+                            delete object.creator;
                             break;
                         case 'User':
                             if (field !== 'origin') {
