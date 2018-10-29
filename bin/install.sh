@@ -44,7 +44,7 @@ echo -e "\nInstall Postgres database - https://www.postgresql.org/docs/manuals/"
 sudo apt-get -y install postgresql postgresql-contrib
 
 echo -e "\n Create Postgres DB for CitizenOS API. User 'citizenos' with password 'citizenos'"
-sudo su -c "createdb citizenos" postgres
+sudo su -c "DATABASE_URL=postgres://citizenos:citizenos@localhost:5432/citizenos npm run dbcreate" postgres
 sudo su -c "psql -c \"CREATE USER citizenos WITH PASSWORD 'citizenos'\"" postgres
 sudo su -c "psql -c \"GRANT ALL PRIVILEGES ON DATABASE citizenos TO citizenos\"" postgres
 
