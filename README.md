@@ -102,6 +102,10 @@ Google+ API is not enabled. Enable Google+ API at https://console.developers.goo
 * All pull requests to `master` branch
 * Live site runs on `prod` branch
 
+### DB changes
+
+DB changes require migrations, please read https://github.com/citizenos/citizenos-api/wiki/DB-Migrations
+
 ## Improvement ideas
 
 * Support different authentication and signing methods so that anyone could add their country specifics. That takes us to modular architecture where ideally I would like to add new methods by installing a module and configuring it.
