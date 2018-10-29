@@ -88,6 +88,11 @@ Reading:
 
 * All available V8 options - https://gist.github.com/sarupbanskota/a68e8148aa4cdc95e66a1b0e93df48ef
 
+#### Endpoint GET "/api/auth/google/callback" failed miserably. Status: undefined Stack: InternalOAuthError: failed to fetch user profile
+
+Google+ API is not enabled. Enable Google+ API at https://console.developers.google.com/apis/library/plus.googleapis.com by clicking "ENABLE".
+
+
 ## Contributing
 
 ### Pull requests
