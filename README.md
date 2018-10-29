@@ -36,13 +36,15 @@
 * Install dependencies - `npm install`
 * Add to dev.api.citizenos.com to your hosts file - `sudo -- sh -c -e "echo '127.0.0.1 dev.api.citizenos.com' >> /etc/hosts"`
 * Create the DB:
-    * **NOTE:** Do not use this in production, you may want different privileges! 
     ```
-    sudo su -c "createdb citizenos" postgres
+    sudo su -c "DATABASE_URL=postgres://citizenos:citizenos@localhost:5432/citizenos npm run dbcreate" postgres
+    ```
+* Create DB user:
+    * **NOTE:** DO NOT use this in production, you may want different privileges! 
+    ```
     sudo su -c "psql -c \"CREATE USER citizenos WITH PASSWORD 'citizenos'\"" postgres
     sudo su -c "psql -c \"GRANT ALL PRIVILEGES ON DATABASE citizenos TO citizenos\"" postgres
     ```
-    * Create the DB structure - `npm run createdb` - this test should pass, if it does not or it hangs, you should consult the `./logs/app.log`
       
 ### Configuration
 
