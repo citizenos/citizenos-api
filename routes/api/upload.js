@@ -174,8 +174,6 @@ module.exports = function (app) {
                 req.unpipe(busboy);
                 drainStream(req);
                 busboy.removeAllListeners();
-
-                return;
             };
             var uploadResult;
             var newFileName = uuid.v4();
