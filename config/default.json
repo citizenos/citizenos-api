@@ -160,8 +160,14 @@
     }
   },
   "storage": {
+    "type": "S3",
     "accessKeyId": "AWS_ACCESS_KEY_ID",
     "secretAccessKey": "AWS_SECRET_ACCESS_KEY",
-    "bucket": "AWS_S3_BUCKET_NAME"
+    "bucket": "AWS_S3_BUCKET_NAME",
+    "region": "AWS_S3_REGION",
+    "allowedFileTypes": ["txt", "pdf", "doc", "docx", "ddoc", "bdoc", "odf", "odt", "jpg", "jpeg", "img", "png", "rtf", "xls", "xlsx", "ppt", "pptx", "pps", "xlt"],
+    "maxFileSize": "STORAGE_MAX_FILE_SIZE",
+    "baseFolder": "STORAGE_BASE_FOLDER",
+    "baseURL": "STORAGE_BASE_URL"
   }
 }
