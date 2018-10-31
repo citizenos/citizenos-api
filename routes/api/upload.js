@@ -138,14 +138,16 @@ module.exports = function (app) {
     };
 
     app.post('/api/users/:userId/upload', function (req, res, next) {
-        
-        logger.debug('UPLOAD_POST', req.params);
-        
-        var subFolder = req.params.padId || '/'; // topic ID
+        var appDir = __dirname.replace('/routes/api', '/public/uploads');
+
+        var baseFolder = config.storage.baseFolder || appDir;
+        var baseURL = config.storage.baseURL || (config.url.api + '/uploads/');
+
+        var subFolder = req.params.padId || ''; // topic ID
         var imageUpload = new StreamUpload({
-            extensions: config.storage.fileTypes,
+            extensions: config.storage.allowedFileTypes,
             maxSize: config.storage.maxFileSize,
-            baseFolder: config.storage.baseFolder || __dirname,
+            baseFolder: baseFolder,
             storage: config.storage
         });
         var storageConfig = config.storage;
@@ -158,14 +160,14 @@ module.exports = function (app) {
                     }
                 });
             } catch (error) {
-                logger.info('UPLOAD ERROR', error);
+                logger.error('UPLOAD ERROR', error);
 
                 return next(error);
             }
             
             var isDone;
             var done = function (error) {
-                logger.info('UPLOAD ERROR', error);
+                logger.error('UPLOAD ERROR', error);
 
                 if (isDone) return;
                 isDone = true;
@@ -178,12 +180,17 @@ module.exports = function (app) {
             var uploadResult;
             var newFileName = uuid.v4();
             var accessPath = '';
+            busboy.on('field', function (fieldname, data) {
+                if (fieldname === 'folder') {
+                    subFolder = data;
+                }
+            });
+
             busboy.on('file', function (fieldname, file, filename, encoding, mimetype) {
                 var savedFilename = path.join(subFolder, newFileName + path.extname(filename));
-                
                 if (!config.storage.type || config.storage.type === 'local') {
-                    accessPath = url.resolve(config.storage.baseURL, savedFilename);
-                    savedFilename = path.join(config.storage.baseFolder, savedFilename);                    
+                    accessPath = url.resolve(baseURL, savedFilename);
+                    savedFilename = path.join(baseFolder, savedFilename);                    
                 }
                 file.on('limit', function () {
                     var error = new Error('File is too large');
@@ -210,7 +217,7 @@ module.exports = function (app) {
                             if (accessPath) {
                                 data = accessPath;
                             }
-
+                            
                             return res.status(201).json(data);
                         })
                         .catch(function (err) {

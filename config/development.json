@@ -35,9 +35,7 @@
         "dev\\.citizenos\\.com(:[0-9]{2,4})?$",
         "rahvaalgatus\\.ee(:[0-9]{2,4})?$",
         "citizenospartner\\.ee(:[0-9]{2,4})?$"
-      ],
-      "allowedHeaders": ["Content-Type", "Authorization", "Content-Length", "X-Requested-With", "Content-Disposition"],
-      "credentials": true
+      ]
     },
     "key": "superSecretAPIkeySentInXApiKeyHeader"
   },
@@ -115,10 +113,14 @@
     }
   },
   "storage": {
-    "type": "local",
+    "type": "s3",
+    "accessKeyId": "AKIAJZJDXAAXKKKVGN7A",
+    "secretAccessKey": "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",
+    "region": "eu-west-1",
+    "bucket": "costestbucket",
     "allowedFileTypes": ["txt", "pdf", "doc", "docx", "ddoc", "bdoc", "odf", "odt", "jpg", "jpeg", "img", "png", "rtf", "xls", "xlsx", "ppt", "pptx", "pps", "xlt"],
     "maxFileSize": 50000,
-    "baseFolder": "",
-    "baseURL": "/"
+    "baseFolder": null,
+    "baseURL": null
   }
 }

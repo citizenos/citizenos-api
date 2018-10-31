@@ -14,3 +14,4 @@ Thumbs.db
 /config/local.*
 /config/emails/images/*
 /files/**/
+/public/uploads
