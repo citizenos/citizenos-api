@@ -8,6 +8,11 @@ module.exports = function (app) {
     var AWS = require('aws-sdk');
     var uuid = app.get('uuid');
     var Promise = app.get('Promise');
+    var Busboy = app.get('busboy');
+    var StreamUpload = app.get('stream_upload');
+    var path = require('path');
+    var url = require('url');
+    var logger = app.get('logger');
 
     var credentials = {
         accessKeyId: config.storage.accessKeyId, 
@@ -128,4 +133,97 @@ module.exports = function (app) {
             .catch(next);
     });
 
+    var drainStream = function (stream) {
+        stream.on('readable', stream.read.bind(stream));
+    };
+
+    app.post('/api/users/:userId/upload', function (req, res, next) {
+        
+        logger.debug('UPLOAD_POST', req.params);
+        
+        var subFolder = req.params.padId || '/'; // topic ID
+        var imageUpload = new StreamUpload({
+            extensions: config.storage.fileTypes,
+            maxSize: config.storage.maxFileSize,
+            baseFolder: config.storage.baseFolder || __dirname,
+            storage: config.storage
+        });
+        var storageConfig = config.storage;
+        if (storageConfig) {
+            try {
+                var busboy = new Busboy({
+                    headers: req.headers,
+                    limits: {
+                        fileSize: config.maxFileSize
+                    }
+                });
+            } catch (error) {
+                logger.info('UPLOAD ERROR', error);
+
+                return next(error);
+            }
+            
+            var isDone;
+            var done = function (error) {
+                logger.info('UPLOAD ERROR', error);
+
+                if (isDone) return;
+                isDone = true;
+                
+                res.status(error.statusCode || 500).json(error);
+                req.unpipe(busboy);
+                drainStream(req);
+                busboy.removeAllListeners();
+
+                return;
+            };
+            var uploadResult;
+            var newFileName = uuid.v4();
+            var accessPath = '';
+            busboy.on('file', function (fieldname, file, filename, encoding, mimetype) {
+                var savedFilename = path.join(subFolder, newFileName + path.extname(filename));
+                
+                if (!config.storage.type || config.storage.type === 'local') {
+                    accessPath = url.resolve(config.storage.baseURL, savedFilename);
+                    savedFilename = path.join(config.storage.baseFolder, savedFilename);                    
+                }
+                file.on('limit', function () {
+                    var error = new Error('File is too large');
+                    error.type = 'fileSize';
+                    error.statusCode = 403;
+                    busboy.emit('error', error);
+                    imageUpload.deletePartials();
+                });
+                file.on('error', function (error) {
+                    busboy.emit('error', error);
+                });
+
+                uploadResult = imageUpload
+                    .upload(file, {type: mimetype, filename: savedFilename});
+                
+            });
+
+            busboy.on('error', done);
+            busboy.on('finish', function () {
+                if (uploadResult) {
+                    uploadResult
+                        .then(function (data) {
+                            
+                            if (accessPath) {
+                                data = accessPath;
+                            }
+
+                            return res.status(201).json(data);
+                        })
+                        .catch(function (err) {
+                            return res.status(500).json(err);
+                        });
+                }
+                
+            });
+            req.pipe(busboy);
+        }
+
+        
+    });
 };

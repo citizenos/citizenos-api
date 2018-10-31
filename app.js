@@ -35,6 +35,8 @@ var device = require('express-device');
 var SevenZip = require('node-7z');
 var swaggerUi = require('swagger-ui-express');
 var swaggerDocument = require('./swagger.json');
+var Busboy = require('busboy');
+var StreamUpload = require('stream_upload');
 var app = express();
 
 // Express settings
@@ -133,6 +135,8 @@ app.set('hashtagCache', hashtagCache);
 app.set('encoder', new Entities());
 app.set('striptags', striptags);
 app.set('SevenZip', SevenZip);
+app.set('busboy', Busboy);
+app.set('stream_upload', StreamUpload);
 
 mu.root = TEMPLATE_ROOT;
 app.set('mu', mu);
