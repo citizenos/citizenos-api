@@ -190,7 +190,7 @@ module.exports = function (app) {
                 var savedFilename = path.join(subFolder, newFileName + path.extname(filename));
                 if (!config.storage.type || config.storage.type === 'local') {
                     accessPath = url.resolve(baseURL, savedFilename);
-                    savedFilename = path.join(baseFolder, savedFilename);                    
+                    savedFilename = path.join(baseFolder, savedFilename);
                 }
                 file.on('limit', function () {
                     var error = new Error('File is too large');
