@@ -6,6 +6,7 @@ const Sequelize = require('sequelize');
 const basename = path.basename(__filename);
 const config = require('config').util.loadFileConfigs('./config');
 const db = {};
+const URL = require('url').URL;
 
 
 // Set up DB logging
@@ -30,14 +31,26 @@ if (dbOptions.operatorsAliases === 'undefined') {
     dbOptions.operatorsAliases = Sequelize.Op;
 }
 
+var dbUrlSanitized = process.env.NODE_ENV === 'development' ? config.db.url : config.db.url.replace(/\/\/.*:.*@/g, '//*****:*****@');
+
 logger.info(
     'Sequelize connection configuration',
-    process.env.NODE_ENV === 'development' ? config.db.url : config.db.url.replace(/\/\/.*:.*@/g, '//*****:*****@'),
+    dbUrlSanitized,
     dbOptions
 );
 
 // Create a connection and test it, the test is brutal but it's Fail Fast (tm)
-const sequelize = new Sequelize(config.db.url, dbOptions);
+// The try/catch is to support password and peer authentication at the same time
+// For peer authentication, the "url" must be the DB name, "options.host" the path to unix domain socket (pg default: /var/run/postgresql)
+try {
+    var parsedUrl = new URL(config.db.url);
+    var username = parsedUrl.username;
+    var password = parsedUrl.password;
+} catch (e) {
+    logger.warn('Parsing of DB url ' + dbUrlSanitized + ' failed, assuming usage of sockets for authentication. You must configure "url" to DB name and "options.host" to be the path to the socket (pg default: /var/run/postgresql)');
+}
+
+const sequelize = new Sequelize(config.db.url, username, password, dbOptions);
 
 sequelize
     .authenticate()

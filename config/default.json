@@ -6,6 +6,7 @@
   "db": {
     "url": "postgres://citizenos:citizenos@localhost:5432/citizenos",
     "options": {
+      "dialect": "postgres",
       "logging": true,
       "benchmark": true,
       "sync": {
