@@ -75,7 +75,7 @@ module.exports = function (app) {
                 if (topicId) {
                     objectUrl = urlLib.getFe('/topics/:topicId', {topicId: topicId});
                 } else if (groupId) {
-                    objectUrl = urlLib.getFe('/groups');
+                    objectUrl = urlLib.getFe('/my/groups');
                 }
 
                 if (userLoggedIn) { // Logged in
