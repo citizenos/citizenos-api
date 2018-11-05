@@ -59,6 +59,8 @@ Order of applying, further down the list overrides value from the sources above 
 * `local.json` - Your local configuration that you create your self. This file is for YOUR SPECIFIC overrides, the file is in .gitignore so you don't accidentally commit it.
 * ENV - configuration values defined in environment variables. What can be overwritten there, can be read from `custom-environment-variables.json`
 
+Examples of Citizen OS API configuration: https://github.com/citizenos/citizenos-api/wiki/Configuration
+
 ### Running
 
 * Start the app - `npm start`
