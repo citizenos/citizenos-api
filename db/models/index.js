@@ -6,6 +6,7 @@ const Sequelize = require('sequelize');
 const basename = path.basename(__filename);
 const config = require('config').util.loadFileConfigs('./config');
 const db = {};
+const _ = require('lodash');
 
 // Set up DB logging
 const log4js = require('log4js');
@@ -29,7 +30,7 @@ if (dbOptions.operatorsAliases === 'undefined') {
     dbOptions.operatorsAliases = Sequelize.Op;
 }
 
-var dbConfSanitized = JSON.parse(JSON.stringify(config.db));
+var dbConfSanitized = _.cloneDeep(config.db);
 if (process.env.NODE_ENV !== 'development') {
     dbConfSanitized.url = dbConfSanitized.url ? dbConfSanitized.url.replace(/\/\/.*:.*@/g, '//*****:*****@') : dbConfSanitized.url;
     dbConfSanitized.options.username = dbConfSanitized.options.username ? '*******' : dbConfSanitized.options.username;
