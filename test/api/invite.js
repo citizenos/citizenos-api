@@ -114,7 +114,7 @@ suite('Invite', function () {
                         return done(err);
                     }
 
-                    var expectedLocation = urlLib.getFe('/my/groups');
+                    var expectedLocation = urlLib.getFe('/my/groups/:groupId', {groupId: groupId});
 
                     agent
                         .get(path)
