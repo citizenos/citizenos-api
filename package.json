@@ -5,7 +5,7 @@
   "license": "Apache-2.0",
   "main": "./bin/www",
   "scripts": {
-    "start": "NODE_ENV=test node ./bin/www",
+    "start": "NODE_ENV=development node ./bin/www",
     "debug": "node --expose-gc --debug ./bin/www",
     "test": "NODE_ENV=test FORCE_DB_SYNC=0 NODE_TLS_REJECT_UNAUTHORIZED=0 ./node_modules/.bin/mocha --expose-gc --async-only --check-leaks --trace-deprecation --reporter spec --no-exit --recursive --ui tdd test/",
     "dbcreate": "echo ${DATABASE_URL?\"ERROR: Need to set DATABASE_URL environment variable!\"} && createdb -E utf8 \"${DATABASE_URL##*/}\" && psql -f db/config/database.sql \"$DATABASE_URL\"",
