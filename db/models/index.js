@@ -6,8 +6,6 @@ const Sequelize = require('sequelize');
 const basename = path.basename(__filename);
 const config = require('config').util.loadFileConfigs('./config');
 const db = {};
-const URL = require('url').URL;
-
 
 // Set up DB logging
 const log4js = require('log4js');
