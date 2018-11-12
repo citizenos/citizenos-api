@@ -943,6 +943,8 @@ module.exports = function (app) {
                         return connectionManager
                             .getConnection()
                             .then(function (connection) {
+                                logger.debug('_getFinalBdoc', 'Run query stream for User vote containers');
+
                                 return new Promise(function (resolve, reject) {
                                     var query = new QueryStream(
                                         '\
@@ -959,6 +961,8 @@ module.exports = function (app) {
                                     var stream = connection.query(query);
 
                                     stream.on('data', function (data) {
+                                        logger.debug('_getFinalBdoc', 'Add data', data.length);
+
                                         var pid = data.connectionUserId;
                                         var userbdocContainer = data.container;
 
@@ -966,6 +970,8 @@ module.exports = function (app) {
                                             name: USER_BDOC_FILE.name.replace(':pid', pid),
                                             mimeType: USER_BDOC_FILE.mimeType
                                         });
+
+                                        logger.debug('_getFinalBdoc', 'Added data', data.length);
 
                                         // I can read 10000 lines from PG in 2 seconds, but Archiver cannot write as much.
                                         // Pause the PG read stream so we don't flood Archiver queue with tasks it cannot fulfill.
@@ -975,6 +981,8 @@ module.exports = function (app) {
 
                                     // FYI: Listening to 'drain' on file stream is way faster+memory efficient than listening on Archivers 'entry'
                                     finalBdocFileStream.on('drain', function () {
+                                        logger.debug('_getFinalBdoc', 'finalBdocFileStream drain. Resuming DB read...');
+
                                         // Resume PG stream once the Archiver has completed writing
                                         stream.resume();
                                     });
