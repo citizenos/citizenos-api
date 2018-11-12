@@ -961,7 +961,7 @@ module.exports = function (app) {
                                     var stream = connection.query(query);
 
                                     stream.on('data', function (data) {
-                                        logger.debug('_getFinalBdoc', 'Add data', data.length);
+                                        logger.debug('_getFinalBdoc', 'Add data', data.container.length);
 
                                         var pid = data.connectionUserId;
                                         var userbdocContainer = data.container;
@@ -971,7 +971,7 @@ module.exports = function (app) {
                                             mimeType: USER_BDOC_FILE.mimeType
                                         });
 
-                                        logger.debug('_getFinalBdoc', 'Added data', data.length);
+                                        logger.debug('_getFinalBdoc', 'Added data', data.container.length);
 
                                         // I can read 10000 lines from PG in 2 seconds, but Archiver cannot write as much.
                                         // Pause the PG read stream so we don't flood Archiver queue with tasks it cannot fulfill.
