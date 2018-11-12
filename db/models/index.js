@@ -10,6 +10,9 @@ const _ = require('lodash');
 
 // Set up DB logging
 const log4js = require('log4js');
+if (typeof config.logging === 'string') {
+    config.logging = JSON.parse(config.logging); // Support JSON string from ENV
+}
 log4js.configure(config.logging.log4js);
 const logger = log4js.getLogger(process.env.NOTE_ENV);
 
