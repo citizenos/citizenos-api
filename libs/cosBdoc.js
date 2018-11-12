@@ -902,17 +902,19 @@ module.exports = function (app) {
         return fs
             .accessAsync(finalDocDownloadPath, fs.R_OK)
             .then(function () {
-                logger.info('Cache hit for final BDOC file', finalBdocPath);
+                logger.info('_getFinalBdoc', 'Cache hit for final BDOC file', finalDocDownloadPath);
 
-                return fs.createReadStream(finalBdocPath);
+                return fs.createReadStream(finalDocDownloadPath);
             }, function () {
-                logger.info('Cache miss for final BDOC file', finalBdocPath);
+                logger.info('_getFinalBdoc', 'Cache miss for final BDOC file', finalDocDownloadPath);
 
                 return fsExtra
                     .mkdirsAsync(voteFileDir)
                     .then(function () {
                         finalBdocFileStream = fs.createWriteStream(finalBdocPath);
                         finalBdoc = new Bdoc(finalBdocFileStream);
+
+                        logger.debug('_getFinalBdoc', 'Vote file dir created', voteFileDir);
 
                         return VoteContainerFile
                             .findAll({
@@ -926,12 +928,16 @@ module.exports = function (app) {
                         var mimeType = voteContainerFile.mimeType;
                         var content = voteContainerFile.content;
 
+                        logger.debug('_getFinalBdoc', 'Adding file to final BDOC', fileName, mimeType, content.length);
+
                         return finalBdoc.append(content, {
                             name: fileName,
                             mimeType: mimeType
                         });
                     })
                     .then(function () {
+                        logger.debug('_getFinalBdoc', 'Adding User votes to final BDOC');
+
                         var connectionManager = db.connectionManager;
 
                         return connectionManager
@@ -976,11 +982,15 @@ module.exports = function (app) {
                                     stream.on('error', function (err) {
                                         connectionManager.releaseConnection(connection);
 
+                                        logger.error('_getFinalBdoc', 'Adding files to final BDOC FAILED', err);
+
                                         return reject(err);
                                     });
 
                                     stream.on('end', function () {
                                         connectionManager.releaseConnection(connection);
+
+                                        logger.debug('_getFinalBdoc', 'Adding files to final BDOC ENDED');
 
                                         return resolve();
                                     });
@@ -988,6 +998,8 @@ module.exports = function (app) {
                             });
                     })
                     .then(function () {
+                        logger.debug('_getFinalBdoc', 'Generating vote CSV');
+
                         var connectionManager = db.connectionManager;
 
                         return connectionManager
@@ -1048,13 +1060,17 @@ module.exports = function (app) {
                                     csvStream.write(voteResult);
                                 });
 
-                                stream.on('error', function () {
+                                stream.on('error', function (err) {
+                                    logger.error('_getFinalBdoc', 'Generating vote CSV FAILED', err);
+
                                     csvStream.end();
                                     finalBdoc.finalize();
                                     connectionManager.releaseConnection(connection);
                                 });
 
                                 stream.on('end', function () {
+                                    logger.debug('_getFinalBdoc', 'Generating vote CSV succeeded');
+
                                     csvStream.end();
                                     finalBdoc.finalize();
                                     connectionManager.releaseConnection(connection);
@@ -1065,23 +1081,32 @@ module.exports = function (app) {
                     })
                     .then(function () {
                         if (wrap) {
+                            logger.debug('_getFinalBdoc', 'Wrapping final BDOC');
+
                             // Wrap the BDOC in 7Zip
                             var zip = new SevenZip();
 
                             return zip
                                 .add(finalZipPath, [finalBdocPath])
                                 .then(function () {
+                                    logger.debug('_getFinalBdoc', 'Wrapping final BDOC succeeded', finalZipPath);
+
                                     return finalZipPath;
                                 });
                         } else {
+                            logger.debug('_getFinalBdoc', 'Not wrapping final BDOC', finalBdocPath);
+
                             return finalBdocPath;
                         }
                     })
                     .then(function (docPath) {
+                        logger.debug('_getFinalBdoc', 'Final BDOC generated successfully', docPath);
+
                         return fs.createReadStream(docPath);
                     })
                     .catch(function (err) {
                         logger.error('Failed to generate final BDOC', err);
+
                         // Clean up zip file that was created as it may be corrupted, best effort removing the file
                         fs.unlink(finalBdocPath);
                         fs.unlink(finalZipPath);
