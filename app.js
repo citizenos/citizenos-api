@@ -70,6 +70,9 @@ app.set('EMAIL_TEMPLATE_ROOT_LOCAL', EMAIL_TEMPLATE_ROOT_LOCAL);
 app.use(device.capture());
 
 // Init "services"
+if (typeof config.logging === 'string') {
+    config.logging = JSON.parse(config.logging); // Support JSON string from ENV
+}
 log4js.configure(config.logging.log4js);
 var logger = log4js.getLogger(app.settings.env);
 app.set('logger', logger);
