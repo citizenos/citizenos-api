@@ -49,6 +49,7 @@
     }
   },
   "email": "CITIZENOS_EMAIL",
+  "logging": "CITIZENOS_LOGGING",
   "passport": {
     "google": {
       "clientId": "CITIZENOS_PASSPORT_GOOGLE_CLIENTID",
