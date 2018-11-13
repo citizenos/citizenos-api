@@ -970,27 +970,18 @@ module.exports = function (app) {
                                             name: USER_BDOC_FILE.name.replace(':pid', pid),
                                             mimeType: USER_BDOC_FILE.mimeType
                                         });
-
-                                        logger.debug('_getFinalBdoc', 'Added data', data.container.length);
-
-                                        // I can read 10000 lines from PG in 2 seconds, but Archiver cannot write as much.
-                                        // Pause the PG read stream so we don't flood Archiver queue with tasks it cannot fulfill.
-                                        // Archiver would collect inside it's own queue, using a lot of memory and at high load, whe GC runs, it will be come specially slow as GC is expensive.
-                                        stream.pause();
                                     });
 
-                                    // FYI: Listening to 'drain' on file stream is way faster+memory efficient than listening on Archivers 'entry'
-                                    finalBdocFileStream.on('drain', function () {
-                                        logger.debug('_getFinalBdoc', 'finalBdocFileStream drain. Resuming DB read...');
+                                    finalBdocFileStream.on('error', function (err) {
+                                        logger.error('_getFinalBdoc', 'Adding files to final BDOC FAILED', err);
 
-                                        // Resume PG stream once the Archiver has completed writing
-                                        stream.resume();
+                                        return reject(err);
                                     });
 
                                     stream.on('error', function (err) {
                                         connectionManager.releaseConnection(connection);
 
-                                        logger.error('_getFinalBdoc', 'Adding files to final BDOC FAILED', err);
+                                        logger.error('_getFinalBdoc', 'Reading PG query stream failed', err);
 
                                         return reject(err);
                                     });
