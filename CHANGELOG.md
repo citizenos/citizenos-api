@@ -1,3 +1,7 @@
+## 13.11.2018 1.1.0
+
+* API to report a Topic
+
 ## 12.11.2018 
 
 * Support configuration of logging with `CITIZENOS_LOGGING` environment variable.

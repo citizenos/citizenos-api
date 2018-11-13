@@ -393,6 +393,26 @@ var topicMembersGroupsList = function (agent, userId, topicId, callback) {
     _topicMembersGroupsList(agent, userId, topicId, 200, callback);
 };
 
+var _topicReportCreate = function (agent, topicId, type, text, expectedHttpCode, callback) {
+    var path = '/api/topics/:topicId/reports'
+        .replace(':topicId', topicId);
+
+    agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .send({
+            type: type,
+            text: text
+        })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var topicReportCreate = function (agent, topicId, type, text, callback) {
+    _topicReportCreate(agent, topicId, type, text, 200, callback);
+};
+
 var _topicCommentCreate = function (agent, userId, topicId, parentId, parentVersion, type, subject, text, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/comments'
         .replace(':userId', userId)
@@ -7955,6 +7975,50 @@ suite('Topics', function () {
 
     });
 
+    // API - /api/users/:userId/topics/:topicId/reports
+    suite('Reports', function () {
+
+        suite('Create', function () {
+            var agent = request.agent(app);
+            var userReporter;
+            var topic;
+
+            suiteSetup(function (done) {
+                userLib.createUserAndLogin(agent, null, null, null, function (err, res) {
+                    if (err) return done(err);
+
+                    userReporter = res;
+
+                    topicCreate(agent, userReporter.id, null, null, null, null, null, function (err, res) {
+                        if (err) return done(err);
+
+                        topic = res.body.data;
+
+                        done();
+                    });
+                });
+            });
+
+            test('Success', function (done) {
+                var reportType = Report.TYPES.hate;
+                var reportText = 'Reports Create test';
+
+                topicReportCreate(agent, topic.id, reportType, reportText, function (err, res) {
+                    var reportResult = res.body.data;
+
+                    assert.isTrue(validator.isUUID(reportResult.id, 4));
+                    assert.equal(reportResult.type, reportType);
+                    assert.equal(reportResult.text, reportText);
+                    assert.property(reportResult, 'createdAt');
+                    assert.equal(reportResult.creator.id, userReporter.id);
+
+                    done();
+                });
+            });
+
+        });
+    });
+
     suite('Comments', function () {
 
         suite('List', function () {
@@ -9249,7 +9313,6 @@ suite('Topics', function () {
             });
 
         });
-
     });
 
     suite('Votes', function () {
