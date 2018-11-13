@@ -8004,6 +8004,8 @@ suite('Topics', function () {
                 var reportText = 'Reports Create test';
 
                 topicReportCreate(agent, topic.id, reportType, reportText, function (err, res) {
+                    if (err) return done(err);
+
                     var reportResult = res.body.data;
 
                     assert.isTrue(validator.isUUID(reportResult.id, 4));
