@@ -52,7 +52,7 @@ module.exports = function (app) {
                     return Promise.resolve(html);
                 } else {
                     var stream = mu.compileAndRender(
-                        'etherpad/default.mu.html',
+                        'etherpad/default.html',
                         {
                             title: lang.PLACEHOLDER_TITLE,
                             description: lang.PLACEHOLDER_TOPIC_TEXT

@@ -170,7 +170,7 @@ app.set('smartId', smartId);
 if (typeof config.email === 'string') {
     config.email = JSON.parse(config.email); // Support JSON string from ENV
 }
-config.email.layout = config.email.layout || path.join(EMAIL_TEMPLATE_ROOT, 'layouts/default.mu.html');
+config.email.layout = config.email.layout || path.join(EMAIL_TEMPLATE_ROOT, 'layouts/default.html');
 app.set('emailClient', require('./libs/campaign/emailClient')(config.email));
 app.set('email', require('./libs/email')(app));
 

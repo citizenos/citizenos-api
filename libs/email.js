@@ -54,7 +54,7 @@ module.exports = function (app) {
     var resolveTemplate = function (template, language) {
         language = language ? language.toLowerCase() : 'en';
 
-        var pathTemplate = ':templateRoot/build/:template_:language.mu.html'
+        var pathTemplate = ':templateRoot/build/:template_:language.html'
             .replace(':templateRoot', templateRoot)
             .replace(':template', template)
             .replace(':language', language);
