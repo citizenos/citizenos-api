@@ -15,12 +15,12 @@
   },
   "REPORT_COMMENT": {
     "REPORT_TYPE": {
-      "ABUSE": "Is abusive or insulting",
-      "OBSCENE": "Contains obscene language",
-      "SPAM": "Contains spam or is unrelated to topic",
-      "HATE": "Contains hate speech",
-      "NETIQUETTE": "Infringes (n)etiquette",
-      "DUPLICATE": "Is a duplicate"
+      "ABUSE": "Является оскорбительным или обидным",
+      "OBSCENE": "Содержит нецензурную брань",
+      "SPAM": "Содержит спам или не имеет отношения к теме",
+      "HATE": "Содержит враждебные высказывания",
+      "NETIQUETTE": "Нарушает (н)этикет",
+      "DUPLICATE": "Является дубликатом"
     }
   },
   "REPORT_COMMENT_CREATOR": {
