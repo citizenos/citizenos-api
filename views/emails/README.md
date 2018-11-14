@@ -5,6 +5,7 @@ We use Mustache templates.
 The structure:
 
 * `./*.html` - Mu HTML template files with specific emails contents.
+* `./source.json` - Non-layout related translations. That is e-mail subjects and reusable variables.
 * `layouts` - Common layout (headers, footers..) for emails. At the point of writing we had only 1 layout which all of the emails use.
 * `languages` - Localization files.
 * `images` - Images.
