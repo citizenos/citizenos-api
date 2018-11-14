@@ -26,7 +26,7 @@
 
                                                     <tr>
                                                         <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                                                            <p style="font-family: georgia, serif;font-size:19px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Tere,  {{toUser.name}}!</p>
+                                                            <p style="font-family: georgia, serif;font-size:19px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Hi, {{toUser.name}}!</p>
                                                         </td>
                                                     </tr>
 
