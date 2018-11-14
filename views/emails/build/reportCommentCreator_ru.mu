@@ -79,7 +79,7 @@
                 <tbody>
                     <tr>
                         <td align="center" height="70" style="border-collapse: collapse" valign="middle">
-                            <p style="font-family: arial, helvetica, sans-serif;font-size:12px;background-color: #f6f6f6; color:#828282;">Узнайте больше <a href="{{linkToApplication}}" target="_blank" style=" color:#828282; text-decoration:underline;">{{linkToApplication}}</a></p>
+                            <p style="font-family: arial, helvetica, sans-serif;font-size:12px;background-color: #f6f6f6; color:#828282;">Learn more on <a href="{{linkToApplication}}" target="_blank" style=" color:#828282; text-decoration:underline;">{{linkToApplication}}</a></p>
                         </td>
                     </tr>
                 </tbody>
