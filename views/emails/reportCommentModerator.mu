@@ -27,32 +27,36 @@
 
                                                     <tr>
                                                         <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                                                            <p style="font-family: georgia, serif;font-size:19px; font-weight:bold;background-color: #FFFFFF; color:#252525;">{{{REPORT_COMMENT_MODERATOR.TITLE}}}</p>
+                                                            <p style="font-family: georgia, serif;font-size:19px; font-weight:bold;background-color: #FFFFFF; color:#252525;">A comment has been reported as inappropriate by the community</p>
                                                         </td>
                                                     </tr>
 
                                                     <tr>
                                                         <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                                                            <p style="font-family: georgia, serif;font-size:17px; font-weight:bold;background-color: #FFFFFF; color:#252525;">{{{REPORT_COMMENT_MODERATOR.SECTION_COMMENT.TITLE}}}</p>
-                                                            {{{REPORT_COMMENT_MODERATOR.SECTION_COMMENT.COMMENT_SUBJECT}}}
-                                                            <p style="font-family: georgia, serif;font-size:17px; font-weight:bold;background-color: #FFFFFF; color:#707070; font-style: italic">{{{REPORT_COMMENT_MODERATOR.SECTION_COMMENT.COMMENT_TEXT}}}</p>
+                                                            <p style="font-family: georgia, serif;font-size:17px; font-weight:bold;background-color: #FFFFFF; color:#252525;">User wrote:</p>
+                                                            {{#comment.subject}}
+<p style="font-family: georgia, serif;font-size:17px; font-weight:bold;background-color: #FFFFFF; color:#707070; font-style: italic">"{{comment.subject}}"</p>
+{{/comment.subject}}
+                                                            <p style="font-family: georgia, serif;font-size:17px; font-weight:bold;background-color: #FFFFFF; color:#707070; font-style: italic">"{{comment.text}}"</p>
                                                         </td>
                                                     </tr>
 
                                                     <tr>
                                                         <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                                                            <p style="font-family: georgia, serif;font-size:17px; font-weight:bold;background-color: #FFFFFF; color:#252525;">{{{REPORT_COMMENT_MODERATOR.SECTION_REPORT.TITLE}}}</p>
-                                                            <p style="font-family: georgia, serif;font-size:17px; font-weight:bold;background-color: #FFFFFF; color:#252525; font-style: italic">{{{REPORT_COMMENT_MODERATOR.SECTION_REPORT.REPORT_TYPE}}}</p>
-                                                            {{{REPORT_COMMENT_MODERATOR.SECTION_REPORT.REPORT_TEXT}}}
+                                                            <p style="font-family: georgia, serif;font-size:17px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Community reported it:</p>
+                                                            <p style="font-family: georgia, serif;font-size:17px; font-weight:bold;background-color: #FFFFFF; color:#252525; font-style: italic">{{report.type}}</p>
+                                                            {{#report.text}}
+<p style="font-family: georgia, serif;font-size:17px; font-weight:bold;background-color: #FFFFFF; color:#707070; font-style: italic">"{{report.text}}"</p>
+{{/report.text}}
                                                         </td>
                                                     </tr>
 
                                                     <tr>
                                                         <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                                                            <p style="font-family: georgia, serif;font-size:17px; font-weight:bold;background-color: #FFFFFF; color:#252525;">{{{REPORT_COMMENT_MODERATOR.SECTION_ACTIONS.TITLE}}}</p>
+                                                            <p style="font-family: georgia, serif;font-size:17px; font-weight:bold;background-color: #FFFFFF; color:#252525;">You can:</p>
                                                             <ul>
-                                                                <li style="font-family: georgia, serif;font-size:17px; font-weight: bold; font-style: italic ;background-color: #FFFFFF; color:#0680fc; margin-bottom: 17px;">{{{REPORT_COMMENT_MODERATOR.SECTION_ACTIONS.MODERATE}}}</li>
-                                                                <li style="font-family: georgia, serif;font-size:17px; font-weight: bold; background-color: #FFFFFF; color:#252525; margin-bottom: 17px;">{{{REPORT_COMMENT_CREATOR.SECTION_ACTIONS.DO_NOTHING}}}</li>
+                                                                <li style="font-family: georgia, serif;font-size:17px; font-weight: bold; font-style: italic ;background-color: #FFFFFF; color:#0680fc; margin-bottom: 17px;"><a href="{{linkModerate}}">Moderate this comment</a> - {{#isUserNotified}}User notified{{/isUserNotified}}{{^isUserNotified}}User NOT notified{{/isUserNotified}}</li>
+                                                                <li style="font-family: georgia, serif;font-size:17px; font-weight: bold; background-color: #FFFFFF; color:#252525; margin-bottom: 17px;">Leave it as it is, but community moderators may still decide to hide it from the default views.</li>
                                                             </ul>
                                                         </td>
                                                     </tr>
@@ -76,7 +80,7 @@
                 <tbody>
                     <tr>
                         <td align="center" height="70" style="border-collapse: collapse" valign="middle">
-                            <p style="font-family: arial, helvetica, sans-serif;font-size:12px;background-color: #f6f6f6; color:#828282;">{{{GENERAL.FOOTER}}}</p>
+                            <p style="font-family: arial, helvetica, sans-serif;font-size:12px;background-color: #f6f6f6; color:#828282;">Learn more on <a href="{{linkToApplication}}" target="_blank" style=" color:#828282; text-decoration:underline;">{{linkToApplication}}</a></p>
                         </td>
                     </tr>
                 </tbody>
