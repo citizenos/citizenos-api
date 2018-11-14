@@ -1,3 +1,7 @@
 files:
   - source: /views/emails/*.html
     translation: /views/emails/build/%file_name%_%two_letters_code%.%file_extension%
+  - source: /views/emails/source.json
+    translation: /views/emails/languages/%two_letters_code%.%file_extension%
+  - source: /views/etherpad/*.html
+    translation: /views/etherpad/build/%file_name%_%two_letters_code%.%file_extension%
