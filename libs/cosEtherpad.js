@@ -56,7 +56,6 @@ module.exports = function (app) {
                 }
             })
             .then(function (padHtml) {
-                console.log('padHTML', padHtml);
                 return etherpadClient.setHTMLAsync({
                     padID: topicId,
                     html: padHtml
