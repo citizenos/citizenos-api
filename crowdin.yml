@@ -1,4 +1,4 @@
 files:
   - source: /views/emails/*.mu
     translation: /views/emails/build/%file_name%_%two_letters_code%.%file_extension%
-  - type: html
+    type: html
