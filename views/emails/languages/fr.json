@@ -1,17 +1,17 @@
 {
   "ACCOUNT_VERIFICATION": {
-    "SUBJECT": "Активируйте свой аккаунт CitizenOS"
+    "SUBJECT": "Activate your CitizenOS account"
   },
   "INVITE_GROUP": {
-    "SUBJECT": "Пользователь {{fromUser.name}} приглашает Вас присоединиться к нашей группе “{{group.name}}” в приложении CitizenOS "
+    "SUBJECT": "{{fromUser.name}} is inviting you to join our group “{{group.name}}” on CitizenOS"
   },
   "INVITE_TOPIC": {
-    "SUBJECT": "Пользователь {{fromUser.name}} приглашает Вас принять совместные решения",
-    "SUBJECT_rahvaalgatus_ee": "Пользователь rahvaalgatus.ee {{fromUser.name}} приглашает Вас участвовать в обсуждении / обращении",
+    "SUBJECT": "{{fromUser.name}} is inviting you to make a collaborative decision",
+    "SUBJECT_rahvaalgatus_ee": "{{fromUser.name}}, user of rahvaalgatus.ee invites you to co-create a discussion/initiative",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Восстановить пароль своего аккаунта CitizenOS"
+    "SUBJECT": "Reset your CitizenOS account password"
   },
   "REPORT_COMMENT": {
     "REPORT_TYPE": {
@@ -30,6 +30,6 @@
     "SUBJECT": "A comment has been reported as inappropriate by the community"
   },
   "GOVERNMENT_NOTIFICATION": {
-    "SUBJECT": "NOT NEEDED"
+    "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   }
 }
