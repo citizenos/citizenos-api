@@ -35,25 +35,25 @@ module.exports = function (app) {
     var FILE_CREATE_MODE = '0760';
 
     var TOPIC_FILE = {
-        template: 'bdoc/document.mu',
+        template: 'bdoc/document.mu.html',
         name: 'document.docx',
         mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     };
 
     var METAINFO_FILE = {
-        template: 'bdoc/metainfo.mu',
+        template: 'bdoc/metainfo.mu.html',
         name: '__metainfo.html',
         mimeType: 'text/html'
     };
 
     var VOTE_OPTION_FILE = {
-        template: 'bdoc/voteOption.mu',
+        template: 'bdoc/voteOption.mu.html',
         name: ':value.html', // ":value" is a placeholder to replace with sanitized file name
         mimeType: 'text/html'
     };
 
     var USERINFO_FILE = {
-        template: 'bdoc/userinfo.mu',
+        template: 'bdoc/userinfo.mu.html',
         name: '__userinfo.html',
         mimeType: 'text/html'
     };
