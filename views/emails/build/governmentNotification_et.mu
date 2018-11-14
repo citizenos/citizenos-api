@@ -71,9 +71,9 @@
                                                     </p>
                                                     <ul style="font-family: arial, helvetica, sans-serif;font-size:14px;background-color: #FFFFFF; color:#252525; text-align: left;">
                                                         <li><isikukood>.bdoc - kodaniku allkirjaga dokument.</li>
-<li>document.docx - kõigi poolt allkirjastatud dokument ehk algatuse sisu.</li>
-<li>votes.csv - CSV fail kõigi häältega.</li><li>Yes.html, No.html - hääletuse valikuvariandi. "No" tähistab hääle tühistamist.</li>
-<li>mimetype, META-INF - BDOC formaadi poolt nõutud failid.</li>
+                                                        <li>document.docx - kõigi poolt allkirjastatud dokument ehk algatuse sisu.</li>
+                                                        <li>votes.csv - CSV fail kõigi häältega.</li><li>Yes.html, No.html - hääletuse valikuvariandi. "No" tähistab hääle tühistamist.</li>
+                                                        <li>mimetype, META-INF - BDOC formaadi poolt nõutud failid.</li>
                                                     </ul>
                                                     <p>
                                                         {{#linkAddEvent}}<a href="{{linkAddEvent}}" style="font-family: arial, helvetica, sans-serif;font-size:14px; line-height:40px; width:60%; display:inline-block; background-color: #004892; color: #fff;"><span style="color: #fff; font-weight: bold;">Sisesta otsus või täiendus</span></a>{{/linkAddEvent}}
@@ -88,8 +88,8 @@
                                                     </p>
                                                     <p style="font-family: arial, helvetica, sans-serif;font-size:14px;background-color: #FFFFFF; color:#252525;">
                                                         Rahvaalgatus.ee meeskond<br/><br/>
-info@rahvaalgatus.ee<br/>
-6938330
+                                                        info@rahvaalgatus.ee<br/>
+                                                        6938330
                                                     </p>
                                                 </td>
                                             </tr>
