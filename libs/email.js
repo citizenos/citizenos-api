@@ -52,16 +52,16 @@ module.exports = function (app) {
      * @private
      */
     var resolveTemplate = function (template, language) {
-        language = language ? language.toLowerCase() : 'en';
+        var lang = language ? language.toLowerCase() : 'en';
 
         var pathTemplate = ':templateRoot/build/:template_:language.html'
             .replace(':templateRoot', templateRoot)
             .replace(':template', template)
-            .replace(':language', language);
+            .replace(':language', lang);
 
         var pathTranslations = ':templateRoot/languages/:language.json'
             .replace(':templateRoot', templateRoot)
-            .replace(':language', language);
+            .replace(':language', lang);
 
         var templateObj = {
             body: null,
