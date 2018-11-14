@@ -48,10 +48,15 @@ module.exports = function (app) {
                 if (html) {
                     return Promise.resolve(html);
                 } else {
-                    return fs.readFileAsync(path.join(TEMPLATE_ROOT, 'etherpad/build/default_' + lang + '.html'));
+                    return fs
+                        .readFileAsync(path.join(TEMPLATE_ROOT, 'etherpad/build/default_' + lang + '.html'))
+                        .then(function (buffer) {
+                            return buffer.toString();
+                        });
                 }
             })
             .then(function (padHtml) {
+                console.log('padHTML', padHtml);
                 return etherpadClient.setHTMLAsync({
                     padID: topicId,
                     html: padHtml
