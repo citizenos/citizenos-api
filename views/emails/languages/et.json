@@ -1,9 +1,9 @@
 {
   "ACCOUNT_VERIFICATION": {
-    "SUBJECT": "Aktiveeri oma CitizenOS konto"
+    "SUBJECT": "Aktiveeri oma Citizen OS konto"
   },
   "INVITE_GROUP": {
-    "SUBJECT": "{{fromUser.name}} kutsub Sind liituma meie grupiga “{{group.name}}” CitizenOS rakenduses"
+    "SUBJECT": "{{fromUser.name}} kutsub Sind liituma meie grupiga “{{group.name}}” Citizen OS rakenduses"
   },
   "INVITE_TOPIC": {
     "SUBJECT": "{{fromUser.name}} kutsub Sind tegema ühiseid otsuseid",
@@ -11,7 +11,7 @@
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Taasta oma CitizenOS konto parool"
+    "SUBJECT": "Taasta oma Citizen OS konto parool"
   },
   "REPORT_COMMENT": {
     "REPORT_TYPE": {

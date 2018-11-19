@@ -3,7 +3,7 @@
     "SUBJECT": "Activate your CitizenOS account"
   },
   "INVITE_GROUP": {
-    "SUBJECT": "{{fromUser.name}} is inviting you to join our group “{{group.name}}” on CitizenOS"
+    "SUBJECT": "{{fromUser.name}} is inviting you to join our group “{{group.name}}” on Citizen OS"
   },
   "INVITE_TOPIC": {
     "SUBJECT": "{{fromUser.name}} is inviting you to make a collaborative decision",
