@@ -461,7 +461,7 @@ module.exports = function (app) {
      * @param {string} fromUserId From User ID
      * @param {string} groupId Group ID
      *
-     * @returns {void}
+     * @returns {Promise} Promise
      *
      * @private
      */
@@ -500,7 +500,7 @@ module.exports = function (app) {
             }
         });
 
-        Promise
+        return Promise
             .all([toUsersPromise, fromUserPromise, groupPromise])
             .then(function (results) {
                 var toUsers = results[0];
@@ -508,7 +508,8 @@ module.exports = function (app) {
                 var group = results[2].toJSON();
 
                 if (toUsers && toUsers.length) {
-                    // TODO: We can gain in performance if we group Users with the same language
+                    var promisesToResolve = [];
+
                     _.forEach(toUsers, function (user) {
                         var template = resolveTemplate('inviteGroup', user.language);
                         // TODO: could use Mu here...
@@ -516,7 +517,7 @@ module.exports = function (app) {
                             .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
                             .replace('{{group.name}}', util.escapeHtml(group.name));
 
-                        emailClient.sendString(template.body, {
+                        var userEmailPromise = emailClient.sendStringAsync(template.body, {
                             subject: subject,
                             to: user.email,
                             images: [
@@ -538,14 +539,16 @@ module.exports = function (app) {
                             provider: {
                                 merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
                             }
-                        }, _defaultCallback);
+                        });
+
+                        promisesToResolve.push(userEmailPromise);
                     });
                 } else {
                     logger.info('No Group member User invite emails to be sent as filtering resulted in empty e-mail address list.');
-                }
-            }, _defaultCallback)
-            .catch(_defaultCallback);
 
+                    return Promise.resolve();
+                }
+            });
     };
 
 

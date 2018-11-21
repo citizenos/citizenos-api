@@ -559,7 +559,7 @@ module.exports = function (app) {
      *
      * TODO: Remove first route definition after NEW FE deploy - https://trello.com/c/JutjiDeX/574-new-fe-post-deploy-actions
      */
-    app.post(['/api/users/:userId/groups/:groupId/members', '/api/users/:userId/groups/:groupId/members/users'], loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, null), function (req, res) {
+    app.post(['/api/users/:userId/groups/:groupId/members', '/api/users/:userId/groups/:groupId/members/users'], loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, null), function (req, res, next) {
         var members = req.body;
         var groupId = req.params.groupId;
 
@@ -723,15 +723,14 @@ module.exports = function (app) {
                                     }
                                 });
 
-                                emailLib.sendGroupInvite(userIdsToInvite, req.user.id, groupId);
-
-                                return res.created();
+                                return emailLib.sendGroupInvite(userIdsToInvite, req.user.id, groupId);
                             });
                     });
             })
-            .catch(function (err) {
-                logger.error('Adding Users with e-mail failed.', err);
-            });
+            .then(function () {
+                return res.created();
+            })
+            .catch(next);
     });
 
     /**
