@@ -835,22 +835,24 @@ module.exports = function (app) {
      * @private
      */
     var _sendToParliament = function (topic, contact, linkDownloadBdocFinal, linkDownloadBdocFinalExpiryDate, linkAddEvent) {
-        return new Promise(function (resolve, reject) {
-            if (!topic || !contact || !linkDownloadBdocFinal || !linkDownloadBdocFinalExpiryDate || !linkAddEvent) {
-                reject(new Error('Missing one or more required parameters'));
-            }
+        if (!topic || !contact || !linkDownloadBdocFinal || !linkDownloadBdocFinalExpiryDate || !linkAddEvent) {
+            throw new Error('Missing one or more required parameters');
+        }
 
-            var template = resolveTemplate('governmentNotification', 'et'); // Estonian Gov only accepts et
-            var linkToApplication = config.features.sendToParliament.urlPrefix;
+        var template = resolveTemplate('toParliament', 'et'); // Estonian Gov only accepts et
+        var linkToApplication = config.features.sendToParliament.urlPrefix;
 
-            var from = config.features.sendToParliament.from;
-            var to = config.features.sendToParliament.to;
-            var subject = template.translations.GOVERNMENT_NOTIFICATION.SUBJECT.replace('{{topic.title}}', util.escapeHtml(topic.title));
-            var linkViewTopic = linkToApplication + '/initiatives/:topicId'.replace(':topicId', topic.id);
-            var logoFile = templateRoot + '/images/logo-email_rahvaalgatus.ee.png';
+        var from = config.features.sendToParliament.from;
+        var to = config.features.sendToParliament.to;
+        var subject = template.translations.TO_PARLIAMENT.SUBJECT.replace('{{topic.title}}', util.escapeHtml(topic.title));
+        var linkViewTopic = linkToApplication + '/initiatives/:topicId'.replace(':topicId', topic.id);
+        var logoFile = templateRoot + '/images/logo-email_rahvaalgatus.ee.png';
 
-            // Email to Parliament - fire and forget
-            emailClient.sendString(
+        var promisesToResolve = [];
+
+        // Email to Parliament
+        var emailToParliamentPromise = emailClient
+            .sendStringAsync(
                 template.body,
                 {
                     from: from,
@@ -874,17 +876,22 @@ module.exports = function (app) {
                     provider: {
                         merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
                     }
-                },
-                function (err) {
-                    if (err) {
-                        logger.error('Sending Parliament e-mail failed', topic.id, err);
-                    }
-                    logger.info('Sending Parliament e-mail succeeded', topic.id);
                 }
-            );
+            )
+            .then(function () {
+                logger.info('Sending Parliament e-mail succeeded', topic.id);
+            })
+            .catch(function (err) {
+                logger.error('Sending Parliament e-mail failed', topic.id, err);
 
-            // Email to Topic creator - fire and forget
-            emailClient.sendString(
+                return Promise.reject(err);
+            });
+
+        promisesToResolve.push(emailToParliamentPromise);
+
+        // Email to Topic creator
+        var emailToTopicCreatorPromise = emailClient
+            .sendStringAsync(
                 template.body,
                 {
                     from: from,
@@ -908,17 +915,20 @@ module.exports = function (app) {
                     provider: {
                         merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
                     }
-                },
-                function (err) {
-                    if (err) {
-                        return logger.error('Sending Parliament e-mail to creator failed', topic.id, err);
-                    }
-                    logger.info('Sending Parliament e-mail to creator succeeded', topic.id);
                 }
-            );
+            )
+            .then(function () {
+                logger.info('Sending Parliament e-mail to creator succeeded', topic.id);
+            })
+            .catch(function (err) {
+                logger.error('Sending Parliament e-mail to creator failed', topic.id, err);
 
-            return resolve();
-        });
+                return Promise.reject(err);
+            });
+
+        promisesToResolve.push(emailToTopicCreatorPromise);
+
+        return Promise.all(promisesToResolve);
     };
 
     return {

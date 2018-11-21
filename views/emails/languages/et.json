@@ -29,7 +29,7 @@
   "REPORT_COMMENT_MODERATOR": {
     "SUBJECT": "Kasutajad on teavitanud ebasobivast kommentaarist"
   },
-  "GOVERNMENT_NOTIFICATION": {
+  "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   }
 }

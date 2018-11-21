@@ -1443,13 +1443,13 @@ module.exports = function (app) {
                             var linkAddEvent = config.features.sendToParliament.urlPrefix + '/initiatives/:topicId/events/new'.replace(':topicId', topicId);
                             linkAddEvent += '?' + querystring.stringify({token: tokenAddEvent});
 
-                            // TODO: Now it's a fire and forget. Should send the e-mails reliable way - a queue watching activity feed etc.
                             var downloadUriBdocFinal = getBdocURL({
                                 topicId: topicId,
                                 voteId: vote.id,
                                 type: 'goverment'
                             });
-                            emailLib.sendToParliament(topic, contact, downloadUriBdocFinal, linkDownloadBdocFinalExpiryDate, linkAddEvent);
+
+                            return emailLib.sendToParliament(topic, contact, downloadUriBdocFinal, linkDownloadBdocFinalExpiryDate, linkAddEvent);
                         }
 
                         return Promise.resolve();
