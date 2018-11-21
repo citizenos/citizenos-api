@@ -381,10 +381,12 @@ module.exports = function (app) {
                 user.passwordResetCode = true; // Model will generate new code
 
                 return user
-                    .save({fields: ['passwordResetCode']})
+                    .save({fields: ['passwordResetCode']});
+            })
+            .then(function (user) {
+                return emailLib
+                    .sendPasswordReset(user.email, user.passwordResetCode)
                     .then(function () {
-                        emailLib.sendPasswordReset(user.email, user.passwordResetCode);
-
                         return res.ok('Success! Please check your email :email to complete your password recovery.'.replace(':email', user.email));
                     });
             })

@@ -151,24 +151,25 @@ module.exports = function (app) {
      *
      * @param {(string|Array)} to To e-mail(s)
      * @param {string} passwordResetCode Account password reset code
-     * @param {function} [callback] (err, res)
      *
-     * @returns {void}
+     * @returns {Promise} Promise
      *
      * @private
      */
-    var _sendPasswordReset = function (to, passwordResetCode, callback) {
-        User
+    var _sendPasswordReset = function (to, passwordResetCode) {
+        return User
             .findAll({
                 where: {
                     email: to
                 }
             })
             .then(function (users) {
+                var promisesToResolve = [];
+
                 _.forEach(users, function (user) {
                     var template = resolveTemplate('passwordReset', user.language);
 
-                    emailClient.sendString(template.body, {
+                    var userEmailPromise = emailClient.sendStringAsync(template.body, {
                         subject: template.translations.PASSWORD_RESET.SUBJECT,
                         to: user.email,
                         images: [
@@ -185,10 +186,13 @@ module.exports = function (app) {
                         provider: {
                             merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
                         }
-                    }, callback || _defaultCallback);
+                    });
+
+                    promisesToResolve.push(userEmailPromise);
                 });
-            })
-            .catch(callback || _defaultCallback);
+
+                return Promise.all(promisesToResolve);
+            });
     };
 
     /**
