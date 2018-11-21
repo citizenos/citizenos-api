@@ -205,12 +205,20 @@ module.exports = function (app) {
                     };
 
                     var token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
-                    emailLib.sendVerification(user.email, user.emailVerificationCode, token);
 
-                    return res.ok('Check your email ' + user.email + ' to verify your account.', user.toJSON());
+                    return emailLib
+                        .sendAccountVerification(user.email, user.emailVerificationCode, token)
+                        .then(function () {
+                            return user;
+                        });
                 } else {
-                    return res.badRequest({email: 'The email address is already in use.'}, 1);
+                    res.badRequest({email: 'The email address is already in use.'}, 1);
+
+                    return Promise.reject();
                 }
+            })
+            .then(function (user) {
+                return res.ok('Check your email ' + user.email + ' to verify your account.', user.toJSON());
             })
             .catch(next);
     });

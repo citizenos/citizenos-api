@@ -98,28 +98,29 @@ module.exports = function (app) {
      *
      * @param {string|Array} to To e-mail(s)
      * @param {string} emailVerificationCode Account verification code
-     * @param {string} token JWT token representing the state
-     * @param {function} [callback] (err, res)
+     * @param {string} [token] JWT token representing the state
      *
-     * @returns {void}
+     * @returns {Promise} Promise
      *
      * @private
      */
-    var _sendVerification = function (to, emailVerificationCode, token, callback) {
-        User
+    var _sendAccountVerification = function (to, emailVerificationCode, token) {
+        return User
             .findAll({
                 where: {
                     email: to
                 }
             })
             .then(function (users) {
+                var promisesToResolve = [];
+
                 _.forEach(users, function (user) {
                     var templateObject = resolveTemplate('accountVerification', user.language);
 
                     var linkVerify = urlLib.getApi('/api/auth/verify/:code', {code: emailVerificationCode}, {token: token});
 
                     // https://github.com/bevacqua/campaign#email-sending-option
-                    emailClient.sendString(templateObject.body, {
+                    var userEmailPromise = emailClient.sendStringAsync(templateObject.body, {
                         subject: templateObject.translations.ACCOUNT_VERIFICATION.SUBJECT,
                         to: user.email,
                         social: config.email.social,
@@ -136,10 +137,13 @@ module.exports = function (app) {
                         provider: {
                             merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
                         }
-                    }, callback || _defaultCallback);
+                    });
+
+                    promisesToResolve.push(userEmailPromise);
                 });
-            })
-            .catch(callback || _defaultCallback);
+
+                return Promise.all(promisesToResolve);
+            });
     };
 
     /**
@@ -911,7 +915,7 @@ module.exports = function (app) {
     };
 
     return {
-        sendVerification: _sendVerification,
+        sendAccountVerification: _sendAccountVerification,
         sendPasswordReset: _sendPasswordReset,
         sendTopicInvite: _sendTopicInvite,
         sendTopicGroupInvite: _sendTopicGroupInvite,
