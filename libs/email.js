@@ -98,28 +98,29 @@ module.exports = function (app) {
      *
      * @param {string|Array} to To e-mail(s)
      * @param {string} emailVerificationCode Account verification code
-     * @param {string} token JWT token representing the state
-     * @param {function} [callback] (err, res)
+     * @param {string} [token] JWT token representing the state
      *
-     * @returns {void}
+     * @returns {Promise} Promise
      *
      * @private
      */
-    var _sendVerification = function (to, emailVerificationCode, token, callback) {
-        User
+    var _sendAccountVerification = function (to, emailVerificationCode, token) {
+        return User
             .findAll({
                 where: {
                     email: to
                 }
             })
             .then(function (users) {
+                var promisesToResolve = [];
+
                 _.forEach(users, function (user) {
                     var templateObject = resolveTemplate('accountVerification', user.language);
 
                     var linkVerify = urlLib.getApi('/api/auth/verify/:code', {code: emailVerificationCode}, {token: token});
 
                     // https://github.com/bevacqua/campaign#email-sending-option
-                    emailClient.sendString(templateObject.body, {
+                    var userEmailPromise = emailClient.sendStringAsync(templateObject.body, {
                         subject: templateObject.translations.ACCOUNT_VERIFICATION.SUBJECT,
                         to: user.email,
                         social: config.email.social,
@@ -136,10 +137,13 @@ module.exports = function (app) {
                         provider: {
                             merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
                         }
-                    }, callback || _defaultCallback);
+                    });
+
+                    promisesToResolve.push(userEmailPromise);
                 });
-            })
-            .catch(callback || _defaultCallback);
+
+                return Promise.all(promisesToResolve);
+            });
     };
 
     /**
@@ -147,24 +151,25 @@ module.exports = function (app) {
      *
      * @param {(string|Array)} to To e-mail(s)
      * @param {string} passwordResetCode Account password reset code
-     * @param {function} [callback] (err, res)
      *
-     * @returns {void}
+     * @returns {Promise} Promise
      *
      * @private
      */
-    var _sendPasswordReset = function (to, passwordResetCode, callback) {
-        User
+    var _sendPasswordReset = function (to, passwordResetCode) {
+        return User
             .findAll({
                 where: {
                     email: to
                 }
             })
             .then(function (users) {
+                var promisesToResolve = [];
+
                 _.forEach(users, function (user) {
                     var template = resolveTemplate('passwordReset', user.language);
 
-                    emailClient.sendString(template.body, {
+                    var userEmailPromise = emailClient.sendStringAsync(template.body, {
                         subject: template.translations.PASSWORD_RESET.SUBJECT,
                         to: user.email,
                         images: [
@@ -181,10 +186,13 @@ module.exports = function (app) {
                         provider: {
                             merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
                         }
-                    }, callback || _defaultCallback);
+                    });
+
+                    promisesToResolve.push(userEmailPromise);
                 });
-            })
-            .catch(callback || _defaultCallback);
+
+                return Promise.all(promisesToResolve);
+            });
     };
 
     /**
@@ -453,7 +461,7 @@ module.exports = function (app) {
      * @param {string} fromUserId From User ID
      * @param {string} groupId Group ID
      *
-     * @returns {void}
+     * @returns {Promise} Promise
      *
      * @private
      */
@@ -492,7 +500,7 @@ module.exports = function (app) {
             }
         });
 
-        Promise
+        return Promise
             .all([toUsersPromise, fromUserPromise, groupPromise])
             .then(function (results) {
                 var toUsers = results[0];
@@ -500,7 +508,8 @@ module.exports = function (app) {
                 var group = results[2].toJSON();
 
                 if (toUsers && toUsers.length) {
-                    // TODO: We can gain in performance if we group Users with the same language
+                    var promisesToResolve = [];
+
                     _.forEach(toUsers, function (user) {
                         var template = resolveTemplate('inviteGroup', user.language);
                         // TODO: could use Mu here...
@@ -508,7 +517,7 @@ module.exports = function (app) {
                             .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
                             .replace('{{group.name}}', util.escapeHtml(group.name));
 
-                        emailClient.sendString(template.body, {
+                        var userEmailPromise = emailClient.sendStringAsync(template.body, {
                             subject: subject,
                             to: user.email,
                             images: [
@@ -530,14 +539,16 @@ module.exports = function (app) {
                             provider: {
                                 merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
                             }
-                        }, _defaultCallback);
+                        });
+
+                        promisesToResolve.push(userEmailPromise);
                     });
                 } else {
                     logger.info('No Group member User invite emails to be sent as filtering resulted in empty e-mail address list.');
-                }
-            }, _defaultCallback)
-            .catch(_defaultCallback);
 
+                    return Promise.resolve();
+                }
+            });
     };
 
 
@@ -824,22 +835,24 @@ module.exports = function (app) {
      * @private
      */
     var _sendToParliament = function (topic, contact, linkDownloadBdocFinal, linkDownloadBdocFinalExpiryDate, linkAddEvent) {
-        return new Promise(function (resolve, reject) {
-            if (!topic || !contact || !linkDownloadBdocFinal || !linkDownloadBdocFinalExpiryDate || !linkAddEvent) {
-                reject(new Error('Missing one or more required parameters'));
-            }
+        if (!topic || !contact || !linkDownloadBdocFinal || !linkDownloadBdocFinalExpiryDate || !linkAddEvent) {
+            throw new Error('Missing one or more required parameters');
+        }
 
-            var template = resolveTemplate('governmentNotification', 'et'); // Estonian Gov only accepts et
-            var linkToApplication = config.features.sendToParliament.urlPrefix;
+        var template = resolveTemplate('toParliament', 'et'); // Estonian Gov only accepts et
+        var linkToApplication = config.features.sendToParliament.urlPrefix;
 
-            var from = config.features.sendToParliament.from;
-            var to = config.features.sendToParliament.to;
-            var subject = template.translations.GOVERNMENT_NOTIFICATION.SUBJECT.replace('{{topic.title}}', util.escapeHtml(topic.title));
-            var linkViewTopic = linkToApplication + '/initiatives/:topicId'.replace(':topicId', topic.id);
-            var logoFile = templateRoot + '/images/logo-email_rahvaalgatus.ee.png';
+        var from = config.features.sendToParliament.from;
+        var to = config.features.sendToParliament.to;
+        var subject = template.translations.TO_PARLIAMENT.SUBJECT.replace('{{topic.title}}', util.escapeHtml(topic.title));
+        var linkViewTopic = linkToApplication + '/initiatives/:topicId'.replace(':topicId', topic.id);
+        var logoFile = templateRoot + '/images/logo-email_rahvaalgatus.ee.png';
 
-            // Email to Parliament - fire and forget
-            emailClient.sendString(
+        var promisesToResolve = [];
+
+        // Email to Parliament
+        var emailToParliamentPromise = emailClient
+            .sendStringAsync(
                 template.body,
                 {
                     from: from,
@@ -863,17 +876,22 @@ module.exports = function (app) {
                     provider: {
                         merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
                     }
-                },
-                function (err) {
-                    if (err) {
-                        logger.error('Sending Parliament e-mail failed', topic.id, err);
-                    }
-                    logger.info('Sending Parliament e-mail succeeded', topic.id);
                 }
-            );
+            )
+            .then(function () {
+                logger.info('Sending Parliament e-mail succeeded', topic.id);
+            })
+            .catch(function (err) {
+                logger.error('Sending Parliament e-mail failed', topic.id, err);
 
-            // Email to Topic creator - fire and forget
-            emailClient.sendString(
+                return Promise.reject(err);
+            });
+
+        promisesToResolve.push(emailToParliamentPromise);
+
+        // Email to Topic creator
+        var emailToTopicCreatorPromise = emailClient
+            .sendStringAsync(
                 template.body,
                 {
                     from: from,
@@ -897,21 +915,24 @@ module.exports = function (app) {
                     provider: {
                         merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
                     }
-                },
-                function (err) {
-                    if (err) {
-                        return logger.error('Sending Parliament e-mail to creator failed', topic.id, err);
-                    }
-                    logger.info('Sending Parliament e-mail to creator succeeded', topic.id);
                 }
-            );
+            )
+            .then(function () {
+                logger.info('Sending Parliament e-mail to creator succeeded', topic.id);
+            })
+            .catch(function (err) {
+                logger.error('Sending Parliament e-mail to creator failed', topic.id, err);
 
-            return resolve();
-        });
+                return Promise.reject(err);
+            });
+
+        promisesToResolve.push(emailToTopicCreatorPromise);
+
+        return Promise.all(promisesToResolve);
     };
 
     return {
-        sendVerification: _sendVerification,
+        sendAccountVerification: _sendAccountVerification,
         sendPasswordReset: _sendPasswordReset,
         sendTopicInvite: _sendTopicInvite,
         sendTopicGroupInvite: _sendTopicGroupInvite,

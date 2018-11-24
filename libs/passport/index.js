@@ -238,7 +238,7 @@ module.exports = function (app) {
                         }
 
                         if (!user.emailIsVerified) {
-                            emailLib.sendVerification(user.email, user.emailVerificationCode);
+                            emailLib.sendAccountVerification(user.email, user.emailVerificationCode);
 
                             return done({
                                 message: 'The account verification has not been completed. Please check your e-mail.',

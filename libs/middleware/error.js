@@ -22,8 +22,7 @@ function cosErrorHandler (err, req, res, next) { //eslint-disable-line no-unused
         req.method,
         '"' + req.path + '"',
         'failed miserably.',
-        'Status:', err.status,
-        'Stack:', err.stack
+        err
     );
 
     var status = 500;
