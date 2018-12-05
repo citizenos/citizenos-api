@@ -1,6 +1,6 @@
 {
   "ACCOUNT_VERIFICATION": {
-    "SUBJECT": "Activate your CitizenOS account"
+    "SUBJECT": "Activate your Citizen OS account"
   },
   "INVITE_GROUP": {
     "SUBJECT": "{{fromUser.name}} is inviting you to join our group “{{group.name}}” on Citizen OS"
