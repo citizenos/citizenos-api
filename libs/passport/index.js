@@ -238,12 +238,14 @@ module.exports = function (app) {
                         }
 
                         if (!user.emailIsVerified) {
-                            emailLib.sendAccountVerification(user.email, user.emailVerificationCode);
-
-                            return done({
-                                message: 'The account verification has not been completed. Please check your e-mail.',
-                                code: 2
-                            }, false);
+                            return emailLib
+                                .sendAccountVerification(user.email, user.emailVerificationCode)
+                                .then(function () {
+                                    return done({
+                                        message: 'The account verification has not been completed. Please check your e-mail.',
+                                        code: 2
+                                    }, false);
+                                });
                         }
 
                         if (user.password === cryptoLib.getHash(password, 'sha256')) {
