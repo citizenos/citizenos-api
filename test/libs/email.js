@@ -36,12 +36,15 @@ suite('Email', function () {
         test('Fail - missing or invalid parameters', function (done) {
             emailLib
                 .sendToParliament(null, null, null, null, null)
-                .then(function () {
-                    throw new Error('Should not succeed!');
-                }, function (err) {
-                    assert.equal(err.message, 'Missing one or more required parameters');
-                    done();
-                });
+                .then(
+                    function () {
+                        throw new Error('Should not succeed!');
+                    },
+                    function (err) {
+                        assert.equal(err.message, 'Missing one or more required parameters');
+                        done();
+                    }
+                );
         });
 
     });

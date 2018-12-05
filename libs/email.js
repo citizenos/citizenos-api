@@ -836,7 +836,7 @@ module.exports = function (app) {
      */
     var _sendToParliament = function (topic, contact, linkDownloadBdocFinal, linkDownloadBdocFinalExpiryDate, linkAddEvent) {
         if (!topic || !contact || !linkDownloadBdocFinal || !linkDownloadBdocFinalExpiryDate || !linkAddEvent) {
-            throw new Error('Missing one or more required parameters');
+            return Promise.reject(new Error('Missing one or more required parameters'));
         }
 
         var template = resolveTemplate('toParliament', 'et'); // Estonian Gov only accepts et
