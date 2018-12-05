@@ -3,10 +3,10 @@
     "SUBJECT": "Активируйте свой аккаунт Citizen OS"
   },
   "INVITE_GROUP": {
-    "SUBJECT": "Пользователь {{fromUser.name}} приглашает Вас присоединиться к нашей группе “{{group.name}}” в приложении Citizen OS "
+    "SUBJECT": "Пользователь {{fromUser.name}} приглашает Вас присоединиться к нашей группе “{{group.name}}” в приложении Citizen OS"
   },
   "INVITE_TOPIC": {
-    "SUBJECT": "Пользователь {{fromUser.name}} приглашает Вас принять совместные решения",
+    "SUBJECT": "Пользователь {{fromUser.name}} приглашает Вас принять совместное решение",
     "SUBJECT_rahvaalgatus_ee": "Пользователь rahvaalgatus.ee {{fromUser.name}} приглашает Вас участвовать в обсуждении / обращении",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust"
   },
@@ -24,10 +24,10 @@
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Your comment has been reported as inappropriate by the community"
+    "SUBJECT": "Ваш комментарий был помечен, как неуместный"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "A comment has been reported as inappropriate by the community"
+    "SUBJECT": "Kомментарий был помечен, как неуместный"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
