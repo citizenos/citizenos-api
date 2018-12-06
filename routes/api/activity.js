@@ -409,6 +409,25 @@ module.exports = function (app) {
 
         if (limit > limitMax) limit = limitDefault;
 
+        var allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User', 'VoteList'];
+        var queryFilters = req.query.filter || [];
+        if (queryFilters && !Array.isArray(queryFilters)) {
+            queryFilters = [queryFilters];
+        }
+
+        var filters = queryFilters.filter(function (item, key, input) {
+            return allowedFilters.indexOf(item) > -1 && (input.indexOf(item) === key);
+        });
+
+        var filterSql = '';
+
+        if (filters.length) {
+            var filtersEscaped = filters.map(function (filter) {
+                return db.escape(filter);
+            });
+            filterSql += 'AND a.data#>>\'{object, @type}\' IN (' + filtersEscaped.join(',') + ') OR a.data#>>\'{object, 0, @type}\' IN (' + filtersEscaped.join(',') + ') ';
+        }
+
         return db.transaction(function (t) {
             var activity = Activity.build({
                 data: {
@@ -429,6 +448,7 @@ module.exports = function (app) {
                         WHERE \
                         ' + visibilityCondition + ' \
                         ARRAY[:topicId] <@  a."topicIds" \
+                        ' + filterSql + ' \
                         OR \
                         a.data@>\'{"type": "View"}\' \
                         AND \
@@ -739,7 +759,7 @@ module.exports = function (app) {
     var activitiesList = function (req, res, next, visibility) {
         var limitMax = 50;
         var limitDefault = 10;
-        var allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User'];
+        var allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User', 'VoteList'];
         var userId;
 
         if (req.user) {
@@ -766,7 +786,7 @@ module.exports = function (app) {
             var filtersEscaped = filters.map(function (filter) {
                 return db.escape(filter);
             });
-            where += 'uac.data#>>\'{object, @type}\' IN (' + filtersEscaped.join(',') + ')';
+            where += 'uac.data#>>\'{object, @type}\' IN (' + filtersEscaped.join(',') + ') OR uac.data#>>\'{object, 0, @type}\' IN (' + filtersEscaped.join(',') + ') ';
         }
 
         if (where) {
