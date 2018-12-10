@@ -205,12 +205,20 @@ module.exports = function (app) {
                     };
 
                     var token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
-                    emailLib.sendVerification(user.email, user.emailVerificationCode, token);
 
-                    return res.ok('Check your email ' + user.email + ' to verify your account.', user.toJSON());
+                    return emailLib
+                        .sendAccountVerification(user.email, user.emailVerificationCode, token)
+                        .then(function () {
+                            return user;
+                        });
                 } else {
-                    return res.badRequest({email: 'The email address is already in use.'}, 1);
+                    res.badRequest({email: 'The email address is already in use.'}, 1);
+
+                    return Promise.reject();
                 }
+            })
+            .then(function (user) {
+                return res.ok('Check your email ' + user.email + ' to verify your account.', user.toJSON());
             })
             .catch(next);
     });
@@ -373,10 +381,12 @@ module.exports = function (app) {
                 user.passwordResetCode = true; // Model will generate new code
 
                 return user
-                    .save({fields: ['passwordResetCode']})
+                    .save({fields: ['passwordResetCode']});
+            })
+            .then(function (user) {
+                return emailLib
+                    .sendPasswordReset(user.email, user.passwordResetCode)
                     .then(function () {
-                        emailLib.sendPasswordReset(user.email, user.passwordResetCode);
-
                         return res.ok('Success! Please check your email :email to complete your password recovery.'.replace(':email', user.email));
                     });
             })

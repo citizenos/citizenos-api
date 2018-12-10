@@ -63,6 +63,7 @@ var EMAIL_TEMPLATE_ROOT_LOCAL = path.join(APP_ROOT, 'config/emails');
 app.set('APP_ROOT', APP_ROOT);
 app.set('PUBLIC_ROOT', PUBLIC_ROOT);
 app.set('FILE_ROOT', FILE_ROOT);
+app.set('TEMPLATE_ROOT', TEMPLATE_ROOT);
 app.set('EMAIL_TEMPLATE_ROOT', EMAIL_TEMPLATE_ROOT);
 app.set('EMAIL_TEMPLATE_ROOT_LOCAL', EMAIL_TEMPLATE_ROOT_LOCAL);
 
@@ -170,7 +171,7 @@ app.set('smartId', smartId);
 if (typeof config.email === 'string') {
     config.email = JSON.parse(config.email); // Support JSON string from ENV
 }
-config.email.layout = config.email.layout || path.join(EMAIL_TEMPLATE_ROOT, 'layouts/default.mu');
+config.email.layout = config.email.layout || path.join(EMAIL_TEMPLATE_ROOT, 'layouts/default.html');
 app.set('emailClient', require('./libs/campaign/emailClient')(config.email));
 app.set('email', require('./libs/email')(app));
 

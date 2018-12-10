@@ -1443,13 +1443,13 @@ module.exports = function (app) {
                             var linkAddEvent = config.features.sendToParliament.urlPrefix + '/initiatives/:topicId/events/new'.replace(':topicId', topicId);
                             linkAddEvent += '?' + querystring.stringify({token: tokenAddEvent});
 
-                            // TODO: Now it's a fire and forget. Should send the e-mails reliable way - a queue watching activity feed etc.
                             var downloadUriBdocFinal = getBdocURL({
                                 topicId: topicId,
                                 voteId: vote.id,
                                 type: 'goverment'
                             });
-                            emailLib.sendToParliament(topic, contact, downloadUriBdocFinal, linkDownloadBdocFinalExpiryDate, linkAddEvent);
+
+                            return emailLib.sendToParliament(topic, contact, downloadUriBdocFinal, linkDownloadBdocFinalExpiryDate, linkAddEvent);
                         }
 
                         return Promise.resolve();
@@ -2271,7 +2271,7 @@ module.exports = function (app) {
                         return promise.reflect();
                     }))
                     .then(function (results) {
-                        Topic
+                        return Topic
                             .findOne({
                                 where: {
                                     id: topicId
@@ -2297,10 +2297,11 @@ module.exports = function (app) {
                                     }
                                 });
 
-                                emailLib.sendTopicInvite(userIdsToInvite, req.user.id, topicId, req.locals.partner);
-
-                                return res.created();
+                                return emailLib.sendTopicInvite(userIdsToInvite, req.user.id, topicId, req.locals.partner);
                             });
+                    })
+                    .then(function () {
+                        return res.created();
                     });
             })
             .catch(next);
@@ -2745,7 +2746,7 @@ module.exports = function (app) {
                                             return Promise
                                                 .all(memberGroupActivities)
                                                 .then(function () {
-                                                    emailLib.sendTopicGroupInvite(groupIdsToInvite, req.user.id, topicId);
+                                                    return emailLib.sendTopicGroupInvite(groupIdsToInvite, req.user.id, topicId);
                                                 });
                                         });
                                 });
@@ -4168,9 +4169,11 @@ module.exports = function (app) {
                     });
             })
             .then(function (report) {
-                emailLib.sendCommentReport(commentId, report); // Fire and forget
-
-                return res.ok(report);
+                return emailLib
+                    .sendCommentReport(commentId, report)
+                    .then(function () {
+                        return res.ok(report);
+                    });
             })
             .catch(next);
     };
