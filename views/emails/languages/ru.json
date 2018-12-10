@@ -1,0 +1,35 @@
+{
+  "ACCOUNT_VERIFICATION": {
+    "SUBJECT": "Активируйте свой аккаунт Citizen OS"
+  },
+  "INVITE_GROUP": {
+    "SUBJECT": "Пользователь {{fromUser.name}} приглашает Вас присоединиться к нашей группе “{{group.name}}” в приложении Citizen OS"
+  },
+  "INVITE_TOPIC": {
+    "SUBJECT": "Пользователь {{fromUser.name}} приглашает Вас принять совместное решение",
+    "SUBJECT_rahvaalgatus_ee": "Пользователь rahvaalgatus.ee {{fromUser.name}} приглашает Вас участвовать в обсуждении / обращении",
+    "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust"
+  },
+  "PASSWORD_RESET": {
+    "SUBJECT": "Восстановить пароль своего аккаунта Citizen OS"
+  },
+  "REPORT_COMMENT": {
+    "REPORT_TYPE": {
+      "ABUSE": "Является оскорбительным или обидным",
+      "OBSCENE": "Содержит нецензурную брань",
+      "SPAM": "Содержит спам или не имеет отношения к теме",
+      "HATE": "Содержит враждебные высказывания",
+      "NETIQUETTE": "Нарушает (н)этикет",
+      "DUPLICATE": "Является дубликатом"
+    }
+  },
+  "REPORT_COMMENT_CREATOR": {
+    "SUBJECT": "Ваш комментарий был помечен, как неуместный"
+  },
+  "REPORT_COMMENT_MODERATOR": {
+    "SUBJECT": "Kомментарий был помечен, как неуместный"
+  },
+  "TO_PARLIAMENT": {
+    "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
+  }
+}
