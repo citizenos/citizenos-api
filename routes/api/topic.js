@@ -1585,6 +1585,10 @@ module.exports = function (app) {
 
         var visibility = req.query.visibility;
         var creatorId = req.query.creatorId;
+        var statuses = req.query.statuses;
+        if (statuses && !Array.isArray(statuses)) {
+            statuses = [statuses];
+        }
 
         var voteResultsPromise = false;
         var join = '';
@@ -1645,6 +1649,10 @@ module.exports = function (app) {
 
         if (visibility) {
             where += ' AND t.visibility=:visibility ';
+        }
+
+        if (statuses && statuses.length) {
+            where += ' AND t.status IN (:statuses)';
         }
 
         if (creatorId) {
@@ -1798,6 +1806,7 @@ module.exports = function (app) {
                         userId: userId,
                         partnerId: partnerId,
                         visibility: visibility,
+                        statuses: statuses,
                         creatorId: creatorId
                     },
                     type: db.QueryTypes.SELECT,

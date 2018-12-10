@@ -1,3 +1,7 @@
+## 11.12.2018
+
+* Update GET /api/users/:userId/topics endpoint to filter results by status
+
 ## 10.12.2018
 
 * E-mail system changes to be able to localise e-mails with Crowdin - https://github.com/citizenos/citizenos-api/issues/41
