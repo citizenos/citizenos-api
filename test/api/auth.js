@@ -605,7 +605,7 @@ suite('Auth', function () {
                         .destroy({
                             where: {
                                 connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                connectionUserId: ['11412090004']
+                                connectionUserId: ['60001019906']
                             },
                             force: true
                         })
@@ -619,7 +619,7 @@ suite('Auth', function () {
                     this.timeout(5000); //eslint-disable-line no-invalid-this
 
                     var phoneNumber = '+37200000766';
-                    var pid = '11412090004';
+                    var pid = '60001019906';
 
                     UserConnection
                         .destroy({
@@ -648,9 +648,9 @@ suite('Auth', function () {
 
                                 assert.property(loginMobileFlowData, 'sesscode');
                                 assert.deepEqual(loginMobileFlowData.personalInfo, {
-                                    pid: '11412090004',
+                                    pid: '60001019906',
                                     firstName: 'MARY ÄNN',
-                                    lastName: 'O’CONNEŽ-ŠUSLIK',
+                                    lastName: 'O’CONNEŽ-ŠUSLIK TESTNUMBER',
                                     countryCode: 'EE'
                                 });
 
@@ -807,7 +807,7 @@ suite('Auth', function () {
 
             suite('Status', function () {
                 var phoneNumber = '+37200000766';
-                var pid = '11412090004';
+                var pid = '60001019906';
 
                 suite('New User', function () {
                     teardown(function (done) {
@@ -815,7 +815,7 @@ suite('Auth', function () {
                             .destroy({
                                 where: {
                                     connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId: ['11412090004']
+                                    connectionUserId: ['60001019906']
                                 },
                                 force: true
                             })
@@ -869,7 +869,7 @@ suite('Auth', function () {
 
                                                     // Makes sure login succeeded AND consistency between /auth/status and /auth/mobile/status endpoints
                                                     assert.deepEqual(res.body.data, userInfoFromMobiilIdStatusResponse);
-                                                    assert.equal(userInfoFromMobiilIdStatusResponse.name, 'Mary Änn O’Connež-Šuslik'); // Special check for encoding issues
+                                                    assert.equal(userInfoFromMobiilIdStatusResponse.name, 'Mary Änn O’Connež-Šuslik Testnumber'); // Special check for encoding issues
 
                                                     return done();
                                                 });
@@ -931,7 +931,7 @@ suite('Auth', function () {
                             .destroy({
                                 where: {
                                     connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId: ['11412090004']
+                                    connectionUserId: ['60001019906']
                                 },
                                 force: true
                             })

@@ -1,6 +1,10 @@
+## 13.12.2018
+
+* Update Mobiil-ID test numbers
+
 ## 11.12.2018
 
-* Update GET /api/users/:userId/topics endpoint to filter results by status
+* Update GET /api/users/:userId/topics endpoint to filter results by status https://github.com/citizenos/citizenos-fe/issues/122
 
 ## 10.12.2018
 

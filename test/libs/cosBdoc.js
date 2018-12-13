@@ -102,7 +102,7 @@ suite('cosBdoc', function () {
 
         test('Success - PEM', function (done) {
 
-            var pid = '11412090004';
+            var pid = '60001019906';
             var phoneNumber = '+37200000766';
             var returnCertData = 'sign';
 
@@ -115,9 +115,9 @@ suite('cosBdoc', function () {
                 .spread(function (status, personalInfo) {
                     assert.equal(status, 'GOOD');
                     assert.deepEqual(personalInfo, {
-                        pid: '11412090004',
+                        pid: '60001019906',
                         firstName: 'MARY ÄNN',
-                        lastName: 'O’CONNEŽ-ŠUSLIK',
+                        lastName: 'O’CONNEŽ-ŠUSLIK TESTNUMBER',
                         countryCode: 'EE'
                     });
 
@@ -131,7 +131,7 @@ suite('cosBdoc', function () {
     suite('getMobileCertificate', function () {
 
         test('Success', function (done) {
-            var pid = '11412090004';
+            var pid = '60001019906';
             var phoneNumber = '+37200000766';
             var returnCertData = 'both';
 
