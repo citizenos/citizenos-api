@@ -57,6 +57,7 @@ module.exports = function (app) {
     var TopicVote = models.TopicVote;
     var TopicAttachment = models.TopicAttachment;
     var Attachment = models.Attachment;
+    var TopicFavourite = models.TopicFavourite;
 
     var _hasPermission = function (topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelf, partnerId) {
         var LEVELS = {
@@ -6628,7 +6629,7 @@ module.exports = function (app) {
                 return db
                     .transaction(function (t) {
                         return cosActivities
-                            .createActivity(event, event.Topic, {
+                            .deleteActivity(event, event.Topic, {
                                 type: 'User',
                                 id: req.user.id
                             }, req.method + ' ' + req.path, t)
@@ -6644,6 +6645,107 @@ module.exports = function (app) {
                             });
                     });
 
+            })
+            .then(function () {
+                return res.ok();
+            })
+            .catch(next);
+    });
+
+    app.post('/api/users/:userId/topics/:topicId/favourites', loginCheck(['partner']), function (req, res, next) {
+        var userId = req.user.id;
+        var topicId = req.params.topicId;
+
+        return db.transaction(function (t) {
+            return TopicFavourite
+                .findOrCreate({
+                    where: {
+                        topicId: topicId,
+                        userId: userId
+                    },
+                    transaction: t
+                })
+                .spread(function (topicFavourite, created) {
+                    if (created) {
+                        return Topic
+                            .findOne({
+                                where: {
+                                    id: topicId
+                                }
+                            })
+                            .then(function (topic) {
+                                topic.description = null;
+
+                                return cosActivities
+                                    .addActivity(
+                                        topic,
+                                        {
+                                            type: 'User',
+                                            id: userId
+                                        },
+                                        null,
+                                        topicFavourite,
+                                        req.method + ' ' + req.path,
+                                        t
+                                    );  
+                            });
+                    }
+                });
+        })
+            .then(function () {
+                return res.ok();
+            })
+            .catch(next);
+    });
+
+    app.delete('/api/users/:userId/topics/:topicId/favourites', loginCheck(['partner']), function (req, res, next) {
+        var userId = req.user.id;
+        var topicId = req.params.topicId;
+
+        TopicFavourite
+            .findOne({
+                where: {
+                    userId: userId,
+                    topicId: topicId
+                }
+            })
+            .then(function (topicFavourite) {
+                if (topicFavourite) {
+                    return db
+                        .transaction(function (t) {
+                            return Topic
+                                .findOne({
+                                    where: {
+                                        id: topicId
+                                    }
+                                })
+                                .then(function (topic) {
+                                    topic.description = null;
+
+                                    return cosActivities
+                                        .deleteActivity(
+                                            topicFavourite, 
+                                            topic, 
+                                            {
+                                                type: 'User',
+                                                id: req.user.id
+                                            },
+                                            req.method + ' ' + req.path,
+                                            t
+                                        )
+                                        .then(function () {
+                                            return TopicFavourite
+                                                .destroy({
+                                                    where: {
+                                                        userId: userId,
+                                                        topicId: topicId
+                                                    },
+                                                    transaction: t
+                                                });
+                                        });
+                                });
+                        });
+                }
             })
             .then(function () {
                 return res.ok();

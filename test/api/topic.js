@@ -1127,6 +1127,38 @@ var topicCommentVotesCreate = function (agent, topicId, commentId, value, callba
     _topicCommentVotesCreate(agent, topicId, commentId, value, 200, callback);
 };
 
+var _topicFavouriteCreate = function (agent, userId, topicId, expectedHttpCode, callback) {
+    var path = '/api/users/:userId/topics/:topicId/favourites'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId);
+    
+    agent
+        .post(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var topicFavouriteCreate = function (agent, userId, topicId, callback) {
+    _topicFavouriteCreate(agent, userId, topicId, 200, callback);
+};
+
+var _topicFavouriteDelete = function (agent, userId, topicId, expectedHttpCode, callback) {
+    var path = '/api/users/:userId/topics/:topicId/favourites'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId);
+    
+    agent
+        .delete(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var topicFavouriteDelete = function (agent, userId, topicId, callback) {
+    _topicFavouriteDelete(agent, userId, topicId, 200, callback);
+};
+
 var _parsePadUrl = function (padUrl) {
     var matches = padUrl.match(/(https?:\/\/[^/]*)(.*)/);
 
@@ -9998,5 +10030,96 @@ suite('Topics', function () {
 
         });
 
+    });
+
+    suite('Favourites', function () {
+
+        suite('Create', function () {            
+            var agent = request.agent(app);
+
+            var user;
+            var topic;
+
+            setup(function (done) {
+                userLib.createUserAndLogin(agent, null, null, null, function (err, res) {
+                    if (err) return done(err);
+                    user = res;
+
+                    topicCreate(agent, user.id, 'public', null, null, null, null, function (err, res) {
+                        if (err) return done(err);
+
+                        topic = res.body.data;
+
+                        done();
+                    });
+                });
+            });
+
+            test('Success', function (done) {
+                topicFavouriteCreate(agent, user.id, topic.id, function (err, res) {
+                    if (err) return done(err);
+                    
+                    var expectedBody = {
+                        status: {
+                            code: 20000
+                        }
+                    };
+
+                    assert.deepEqual(res.body, expectedBody);
+
+                    done();
+                });
+            });
+        });
+
+        suite('Delete', function () {            
+            var agent = request.agent(app);
+
+            var user;
+            var topic;
+
+            setup(function (done) {
+                userLib.createUserAndLogin(agent, null, null, null, function (err, res) {
+                    if (err) return done(err);
+                    user = res;
+
+                    topicCreate(agent, user.id, 'public', null, null, null, null, function (err, res) {
+                        if (err) return done(err);
+
+                        topic = res.body.data;
+
+                        done();
+                    });
+                });
+            });
+
+            test('Success', function (done) {
+                topicFavouriteCreate(agent, user.id, topic.id, function (err, res) {
+                    if (err) return done(err);
+                    
+                    var expectedBody = {
+                        status: {
+                            code: 20000
+                        }
+                    };
+
+                    assert.deepEqual(res.body, expectedBody);
+
+                    topicFavouriteDelete(agent, user.id, topic.id, function (err, res) {
+                        if (err) return done(err);
+                        
+                        var expectedBody = {
+                            status: {
+                                code: 20000
+                            }
+                        };
+    
+                        assert.deepEqual(res.body, expectedBody);
+    
+                        done();
+                    });
+                });                
+            });
+        });
     });
 });
