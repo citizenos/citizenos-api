@@ -1651,7 +1651,7 @@ suite('Users', function () {
                             .destroy({
                                 where: {
                                     connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId: ['11412090004']
+                                    connectionUserId: ['60001019906']
                                 },
                                 force: true
                             })
@@ -1663,7 +1663,7 @@ suite('Users', function () {
 
                     test('Success', function (done) {
                         var phoneNumber = '+37200000766';
-                        var pid = '11412090004';
+                        var pid = '60001019906';
 
                         var voteList = [
                             {
@@ -6138,7 +6138,7 @@ suite('Users', function () {
                                 .destroy({
                                     where: {
                                         connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                        connectionUserId: ['11412090004']
+                                        connectionUserId: ['60001019906']
                                     },
                                     force: true
                                 })
@@ -6150,7 +6150,7 @@ suite('Users', function () {
 
                         test('Success - Estonian mobile number and PID', function (done) {
                             var phoneNumber = '+37200000766';
-                            var pid = '11412090004';
+                            var pid = '60001019906';
 
                             var voteList = [
                                 {
@@ -6173,7 +6173,7 @@ suite('Users', function () {
                             this.timeout(24000); //eslint-disable-line no-invalid-this
 
                             var phoneNumber = '+37200000766';
-                            var pid = '11412090004';
+                            var pid = '60001019906';
 
                             var voteList = [
                                 {
@@ -6401,7 +6401,7 @@ suite('Users', function () {
 
                         test('Fail - 40030 - Personal ID already connected to another user account.', function (done) {
                             var phoneNumber = '+37200000766';
-                            var pid = '11412090004';
+                            var pid = '60001019906';
 
                             var voteList = [
                                 {

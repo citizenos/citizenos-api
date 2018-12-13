@@ -81,7 +81,7 @@ suite('DDS Client', function () {
     });
 
     test('GetMobileCertificate', function (done) {
-        var iDCode = '11412090004';
+        var iDCode = '60001019906';
         var phoneNo = '+37200000766';
         var returnCertData = 'sign';
 
