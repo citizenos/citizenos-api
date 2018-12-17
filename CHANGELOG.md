@@ -1,3 +1,7 @@
+## 2018-12-17
+
+* Generate new and thus invalidate existing password reset code on successful reset - https://github.com/citizenos/citizenos-api/issues/68 
+
 ## 2018-12-13
 
 * Update Mobiil-ID test numbers
