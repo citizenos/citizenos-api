@@ -3,7 +3,7 @@ module.exports = {
   up: (queryInterface, Sequelize) => {
     return queryInterface.createTable('TopicFavourites', {
       topicId: {
-        type: DataTypes.UUID,
+        type: Sequelize.UUID,
         allowNull: false,
         comment: 'To what Topic this Favourite belongs to.',
         references: {
@@ -13,7 +13,7 @@ module.exports = {
         primaryKey: true
       },
       userId: {
-        type: DataTypes.UUID,
+        type: Sequelize.UUID,
         allowNull: false,
         comment: 'Which User this Favourite belongs to.',
         references: {
@@ -21,15 +21,9 @@ module.exports = {
             key: 'id'
         },
         primaryKey: true
-      },
-      createdAt: {
-        allowNull: false,
-        type: Sequelize.DATE
-      },
-      updatedAt: {
-        allowNull: false,
-        type: Sequelize.DATE
       }
+    }, {
+      timestamps: false
     });
   },
   down: (queryInterface, Sequelize) => {

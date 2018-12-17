@@ -159,6 +159,10 @@ module.exports = function (app) {
                                         WHEN COALESCE(tmup.level, tmgp.level, \'none\') = \'admin\' THEN t."tokenJoin" \
                                         ELSE NULL \
                                      END as "tokenJoin", \
+                                     CASE \
+                                        WHEN tf."topicId" = t.id THEN true \
+                                        ELSE false \
+                                     END as "favourite", \
                                      t.categories, \
                                      t."endsAt", \
                                      t."createdAt", \
@@ -211,8 +215,9 @@ module.exports = function (app) {
                                     ) AS mgc ON (mgc."topicId" = t.id) \
                                     LEFT JOIN "TopicVotes" tv \
                                         ON (tv."topicId" = t.id) \
+                                    LEFT JOIN "TopicFavourites" tf ON tf."topicId" = t.id AND tf."userId" = :userId \
                                 WHERE ' + myTopicWhere + ' \
-                                GROUP BY t.id, tmup.level, tmgp.level, muc.count, mgc.count, tv."voteId" \
+                                GROUP BY t.id, tmup.level, tmgp.level, muc.count, mgc.count, tv."voteId", tf."topicId" \
                                 ORDER BY t.title ASC \
                                 LIMIT :limit \
                                 OFFSET :offset \

@@ -1,3 +1,10 @@
+## 2018-12-18
+
+* Add possibility to set topics as favourites, new table is added. New API enpoints:
+    `POST /api/users/:userId/topics/:topicId/favourites` - to add topic as favourite
+    `DELETE /api/users/:userId/topics/:topicId/favourites` - to remove topic from favourites
+    All authorized endpoints, returning topics data, will also have favourite boolean value
+
 ## 2018-12-17
 
 * Generate new and thus invalidate existing password reset code on successful reset - https://github.com/citizenos/citizenos-api/issues/68 
