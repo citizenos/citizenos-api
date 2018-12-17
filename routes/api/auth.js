@@ -415,8 +415,9 @@ module.exports = function (app) {
                 }
 
                 user.password = password; // Hash is created by the model hooks
+                user.passwordResetCode = true; // Model will generate new code so that old code cannot be used again - https://github.com/citizenos/citizenos-api/issues/68
 
-                return user.save({fields: ['password']});
+                return user.save({fields: ['password', 'passwordResetCode']});
             })
             .then(function () {
                 //TODO: Logout all existing sessions for the User!

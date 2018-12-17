@@ -1874,7 +1874,18 @@ suite('Auth', function () {
 
                             assert.equal(email, res.body.data.email);
 
-                            return done();
+                            return User
+                                .find({
+                                    where: {
+                                        email: email
+                                    }
+                                })
+                                .then(function (user) {
+                                    // A new password reset code was to be generated - https://github.com/citizenos/citizenos-api/issues/68
+                                    assert.notEqual(user.passwordResetCode, passwordResetCode);
+
+                                    return done();
+                                });
                         });
                     });
                 });
