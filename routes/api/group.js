@@ -981,7 +981,9 @@ module.exports = function (app) {
                     LEFT JOIN "TopicFavourites" tf ON tf."topicId" = t.id AND tf."userId" = :userId \
                 WHERE gt."groupId" = :groupId \
                     AND gt."deletedAt" IS NULL \
-                    AND t."deletedAt" IS NULL;'
+                    AND t."deletedAt" IS NULL \
+                ORDER BY "favourite" DESC \
+                    ;'
                 ,
                 {
                     replacements: {
@@ -1081,6 +1083,7 @@ module.exports = function (app) {
                     AND gt."deletedAt" IS NULL \
                     AND t."deletedAt" IS NULL \
                     AND COALESCE(tmup.level, tmgp.level, \'none\')::"enum_TopicMemberUsers_level" > \'none\' \
+                ORDER BY "favourite" DESC \
                     ; \
                 ',
                 {

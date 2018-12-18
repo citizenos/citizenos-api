@@ -1666,7 +1666,7 @@ module.exports = function (app) {
         if (favourite) {
             where += 'AND tf."topicId" = t.id AND tf."userId" = :userId';
         }
-        
+
         if (creatorId) {
             if (creatorId === userId) {
                 where += ' AND c.id =:creatorId ';
@@ -1812,7 +1812,7 @@ module.exports = function (app) {
                     LEFT JOIN "TopicFavourites" tf ON tf."topicId" = t.id AND tf."userId" = :userId \
                     ' + join + ' \
                 WHERE ' + where + ' \
-                ORDER BY "order" ASC, t."updatedAt" DESC \
+                ORDER BY "favourite" DESC, "order" ASC, t."updatedAt" DESC \
             ;';
 
         var topicsPromise = db
