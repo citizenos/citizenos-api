@@ -1,3 +1,7 @@
+## 2018-12-18
+
+* Fix issue where missing e-mail addresses would fail adding Topics to a Group. Regression from 2018-12-10.
+
 ## 2018-12-17
 
 * Generate new and thus invalidate existing password reset code on successful reset - https://github.com/citizenos/citizenos-api/issues/68 
