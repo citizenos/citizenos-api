@@ -924,6 +924,10 @@ module.exports = function (app) {
                     t.status, \
                     t.categories, \
                     t."endsAt", \
+                    CASE \
+                        WHEN tf."topicId" = t.id THEN true \
+                        ELSE false \
+                    END as "favourite", \
                     t.hashtag, \
                     t."updatedAt", \
                     t."createdAt", \
@@ -974,6 +978,7 @@ module.exports = function (app) {
                         WHERE "deletedAt" IS NULL \
                         GROUP BY "topicId" \
                     ) AS mgc ON (mgc."topicId" = t.id) \
+                    LEFT JOIN "TopicFavourites" tf ON tf."topicId" = t.id AND tf."userId" = :userId \
                 WHERE gt."groupId" = :groupId \
                     AND gt."deletedAt" IS NULL \
                     AND t."deletedAt" IS NULL;'
@@ -1011,6 +1016,10 @@ module.exports = function (app) {
                     t.status, \
                     t.categories, \
                     t."endsAt", \
+                    CASE \
+                        WHEN tf."topicId" = t.id THEN true \
+                        ELSE false \
+                    END as "favourite", \
                     t.hashtag, \
                     t."updatedAt", \
                     t."createdAt", \
@@ -1067,6 +1076,7 @@ module.exports = function (app) {
                         WHERE "deletedAt" IS NULL \
                         GROUP BY "topicId" \
                     ) AS mgc ON (mgc."topicId" = t.id) \
+                    LEFT JOIN "TopicFavourites" tf ON tf."topicId" = t.id AND tf."userId" = :userId \
                 WHERE gt."groupId" = :groupId \
                     AND gt."deletedAt" IS NULL \
                     AND t."deletedAt" IS NULL \

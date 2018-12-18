@@ -1127,6 +1127,38 @@ var topicCommentVotesCreate = function (agent, topicId, commentId, value, callba
     _topicCommentVotesCreate(agent, topicId, commentId, value, 200, callback);
 };
 
+var _topicFavouriteCreate = function (agent, userId, topicId, expectedHttpCode, callback) {
+    var path = '/api/users/:userId/topics/:topicId/favourites'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId);
+    
+    agent
+        .post(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var topicFavouriteCreate = function (agent, userId, topicId, callback) {
+    _topicFavouriteCreate(agent, userId, topicId, 200, callback);
+};
+
+var _topicFavouriteDelete = function (agent, userId, topicId, expectedHttpCode, callback) {
+    var path = '/api/users/:userId/topics/:topicId/favourites'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId);
+    
+    agent
+        .delete(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var topicFavouriteDelete = function (agent, userId, topicId, callback) {
+    _topicFavouriteDelete(agent, userId, topicId, 200, callback);
+};
+
 var _parsePadUrl = function (padUrl) {
     var matches = padUrl.match(/(https?:\/\/[^/]*)(.*)/);
 
@@ -4545,6 +4577,7 @@ suite('Users', function () {
                     if (err) return done(err);
 
                     delete topic.permission;
+                    delete topic.favourite;
                     topic.padUrl = topic.padUrl.split('?')[0]; // Pad url will not have JWT token as the user gets read-only by default
 
                     var expectedResult = {
@@ -7453,6 +7486,7 @@ suite('Topics', function () {
                         assert.notProperty(topicRead.data, 'events');
 
                         delete topicRead.data.tokenJoin; // Unauth read of Topic should not give out token!
+                        delete topicRead.data.favourite; // Unauth read of Topic should not give out favourite tag value!
 
                         // Also, padUrl will not have authorization token
                         topicRead.data.padUrl = topicRead.data.padUrl.split('?')[0];
@@ -7497,6 +7531,7 @@ suite('Topics', function () {
                                 topicRead.data.permission.level = TopicMemberUser.LEVELS.none;
 
                                 delete topicRead.data.tokenJoin; // Unauth read of Topic should not give out token!
+                                delete topicRead.data.favourite; // Unauth read of Topic should not give out favourite tag value!
 
                                 // Also, padUrl will not have authorization token
                                 topicRead.data.padUrl = topicRead.data.padUrl.split('?')[0];
@@ -7545,6 +7580,7 @@ suite('Topics', function () {
                                 topicRead.data.permission.level = TopicMemberUser.LEVELS.none;
 
                                 delete topicRead.data.tokenJoin; // Unauth read of Topic should not give out token!
+                                delete topicRead.data.favourite; // Unauth read of Topic should not give out favourite tag value!
 
                                 // Also, padUrl will not have authorization token
                                 topicRead.data.padUrl = topicRead.data.padUrl.split('?')[0];
@@ -7599,6 +7635,7 @@ suite('Topics', function () {
                                 topicRead.data.permission.level = TopicMemberUser.LEVELS.none;
 
                                 delete topicRead.data.tokenJoin; // Unauth read of Topic should not give out token!
+                                delete topicRead.data.favourite; // Unauth read of Topic should not give out favourite tag value!
 
                                 // Also, padUrl will not have authorization token
                                 topicRead.data.padUrl = topicRead.data.padUrl.split('?')[0];
@@ -9998,5 +10035,96 @@ suite('Topics', function () {
 
         });
 
+    });
+
+    suite('Favourites', function () {
+
+        suite('Create', function () {            
+            var agent = request.agent(app);
+
+            var user;
+            var topic;
+
+            setup(function (done) {
+                userLib.createUserAndLogin(agent, null, null, null, function (err, res) {
+                    if (err) return done(err);
+                    user = res;
+
+                    topicCreate(agent, user.id, 'public', null, null, null, null, function (err, res) {
+                        if (err) return done(err);
+
+                        topic = res.body.data;
+
+                        done();
+                    });
+                });
+            });
+
+            test('Success', function (done) {
+                topicFavouriteCreate(agent, user.id, topic.id, function (err, res) {
+                    if (err) return done(err);
+                    
+                    var expectedBody = {
+                        status: {
+                            code: 20000
+                        }
+                    };
+
+                    assert.deepEqual(res.body, expectedBody);
+
+                    done();
+                });
+            });
+        });
+
+        suite('Delete', function () {            
+            var agent = request.agent(app);
+
+            var user;
+            var topic;
+
+            setup(function (done) {
+                userLib.createUserAndLogin(agent, null, null, null, function (err, res) {
+                    if (err) return done(err);
+                    user = res;
+
+                    topicCreate(agent, user.id, 'public', null, null, null, null, function (err, res) {
+                        if (err) return done(err);
+
+                        topic = res.body.data;
+
+                        done();
+                    });
+                });
+            });
+
+            test('Success', function (done) {
+                topicFavouriteCreate(agent, user.id, topic.id, function (err, res) {
+                    if (err) return done(err);
+                    
+                    var expectedBody = {
+                        status: {
+                            code: 20000
+                        }
+                    };
+
+                    assert.deepEqual(res.body, expectedBody);
+
+                    topicFavouriteDelete(agent, user.id, topic.id, function (err, res) {
+                        if (err) return done(err);
+                        
+                        var expectedBody = {
+                            status: {
+                                code: 20000
+                            }
+                        };
+    
+                        assert.deepEqual(res.body, expectedBody);
+    
+                        done();
+                    });
+                });                
+            });
+        });
     });
 });

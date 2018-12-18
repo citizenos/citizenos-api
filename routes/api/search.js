@@ -90,7 +90,20 @@ module.exports = function (app) {
         var page = parseInt(req.query.page, 10) ? parseInt(req.query.page, 10) : 1;
         var offset = (page * limit) - limit;
         var params = Object.keys(req.query);
+        var statuses;
+        var queryStatuses = req.query.statuses;
+        var favourite = req.query.favourite;
 
+        if (queryStatuses) {
+            if (!Array.isArray(queryStatuses)) {
+                queryStatuses = [queryStatuses];
+            }
+            
+            statuses = queryStatuses.filter(function (status) {
+                return Object.keys(Topic.STATUSES).indexOf(status) > -1;
+            });
+        }
+        
         if (include && !Array.isArray(include)) {
             include = [include];
         } else if (!include) {
@@ -145,6 +158,14 @@ module.exports = function (app) {
                             myTopicWhere += ' AND t."sourcePartnerId" = :partnerId ';
                         }
 
+                        if (statuses && statuses.length) {
+                            myTopicWhere += ' AND t.status IN (:statuses)';
+                        }
+                
+                        if (favourite) {
+                            myTopicWhere += 'AND tf."topicId" = t.id AND tf."userId" = :userId';
+                        }
+
                         // TODO: NOT THE MOST EFFICIENT QUERY IN THE WORLD, tune it when time.
                         // TODO: That casting to "enum_TopicMemberUsers_level". Sequelize does not support naming enums, through inheritance I have 2 enums that are the same but with different name thus different type in PG. Feature request - https://github.com/sequelize/sequelize/issues/2577
                         var myTopicQuery = '\
@@ -159,6 +180,10 @@ module.exports = function (app) {
                                         WHEN COALESCE(tmup.level, tmgp.level, \'none\') = \'admin\' THEN t."tokenJoin" \
                                         ELSE NULL \
                                      END as "tokenJoin", \
+                                     CASE \
+                                        WHEN tf."topicId" = t.id THEN true \
+                                        ELSE false \
+                                     END as "favourite", \
                                      t.categories, \
                                      t."endsAt", \
                                      t."createdAt", \
@@ -211,8 +236,9 @@ module.exports = function (app) {
                                     ) AS mgc ON (mgc."topicId" = t.id) \
                                     LEFT JOIN "TopicVotes" tv \
                                         ON (tv."topicId" = t.id) \
+                                    LEFT JOIN "TopicFavourites" tf ON tf."topicId" = t.id AND tf."userId" = :userId \
                                 WHERE ' + myTopicWhere + ' \
-                                GROUP BY t.id, tmup.level, tmgp.level, muc.count, mgc.count, tv."voteId" \
+                                GROUP BY t.id, tmup.level, tmgp.level, muc.count, mgc.count, tv."voteId", tf."topicId" \
                                 ORDER BY t.title ASC \
                                 LIMIT :limit \
                                 OFFSET :offset \
@@ -225,6 +251,7 @@ module.exports = function (app) {
                                     replacements: {
                                         userId: userId,
                                         partnerId: partnerId,
+                                        statuses: statuses,
                                         str: '%' + str + '%',
                                         level: level,
                                         limit: limit,
@@ -343,7 +370,8 @@ module.exports = function (app) {
                             .then(function (result) {
                                 return {
                                     context: 'public',
-                                    topics: result
+                                    topics: result,
+                                    status: statuses
                                 };
                             });
                         searchPromises.push(publicTopicPromise);
