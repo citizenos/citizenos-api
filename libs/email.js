@@ -274,59 +274,61 @@ module.exports = function (app) {
 
                     //TODO: we can win performance if we collect together all Users with same language and send these with 1 request to mail provider
                     _.forEach(toUsers, function (user) {
-                        var template = resolveTemplate(templateName, user.language);
+                        if (user.email) {
+                            var template = resolveTemplate(templateName, user.language);
 
-                        // TODO: Ideally needed only in test, we need to rethink partner template handling...
-                        if (!template && sourceSite) { // Fall back to top level domain template if subdomain template is missing (initially written for uuseakus.rahvaalgatus.ee and rahvaalgatus.ee
-                            sourceSite = sourceSite.match(/[^.]*\.[^.]*$/)[0];
-                            from = 'info@' + sourceSite;
-                            template = resolveTemplate('inviteTopic_' + sourceSite, user.language);
-                        }
-
-                        var subject;
-                        var linkViewTopic;
-
-                        // Handle Partner links
-                        if (!sourceSite) {
-                            // TODO: could use Mu here...
-                            subject = template.translations.INVITE_TOPIC.SUBJECT
-                                .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name));
-                            linkViewTopic = urlLib.getApi('/api/invite/view', null, {
-                                email: user.email,
-                                topicId: topic.id
-                            });
-                        } else {
-                            // TODO: could use Mu here...
-                            subject = template.translations.INVITE_TOPIC['SUBJECT_' + sourceSite.replace(/\./g, '_')] // Cant use '.' in translation key as it defines nesting
-                                .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name));
-                            linkViewTopic = linkToApplication + '/topics/:topicId'.replace(':topicId', topic.id);
-                        }
-
-                        // In case Topic has no title, just show the full url.
-                        topic.title = topic.title ? topic.title : linkViewTopic;
-
-                        var emailPromise = emailClient.sendStringAsync(template.body, {
-                            from: from,
-                            subject: subject,
-                            to: user.email,
-                            images: [
-                                {
-                                    name: emailHeaderLogoName,
-                                    file: logoFile
-                                }
-                            ],
-                            social: config.email.social, // social.name maps to "from_name". I think this should be part of Campaign client config OR at least defaults can be set somewhere in client options
-                            toUser: user,
-                            fromUser: fromUser,
-                            topic: topic,
-                            linkViewTopic: linkViewTopic,
-                            linkToApplication: linkToApplication,
-                            provider: {
-                                merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
+                            // TODO: Ideally needed only in test, we need to rethink partner template handling...
+                            if (!template && sourceSite) { // Fall back to top level domain template if subdomain template is missing (initially written for uuseakus.rahvaalgatus.ee and rahvaalgatus.ee
+                                sourceSite = sourceSite.match(/[^.]*\.[^.]*$/)[0];
+                                from = 'info@' + sourceSite;
+                                template = resolveTemplate('inviteTopic_' + sourceSite, user.language);
                             }
-                        });
 
-                        promisesToResolve.push(emailPromise);
+                            var subject;
+                            var linkViewTopic;
+
+                            // Handle Partner links
+                            if (!sourceSite) {
+                                // TODO: could use Mu here...
+                                subject = template.translations.INVITE_TOPIC.SUBJECT
+                                    .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name));
+                                linkViewTopic = urlLib.getApi('/api/invite/view', null, {
+                                    email: user.email,
+                                    topicId: topic.id
+                                });
+                            } else {
+                                // TODO: could use Mu here...
+                                subject = template.translations.INVITE_TOPIC['SUBJECT_' + sourceSite.replace(/\./g, '_')] // Cant use '.' in translation key as it defines nesting
+                                    .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name));
+                                linkViewTopic = linkToApplication + '/topics/:topicId'.replace(':topicId', topic.id);
+                            }
+
+                            // In case Topic has no title, just show the full url.
+                            topic.title = topic.title ? topic.title : linkViewTopic;
+
+                            var emailPromise = emailClient.sendStringAsync(template.body, {
+                                from: from,
+                                subject: subject,
+                                to: user.email,
+                                images: [
+                                    {
+                                        name: emailHeaderLogoName,
+                                        file: logoFile
+                                    }
+                                ],
+                                social: config.email.social, // social.name maps to "from_name". I think this should be part of Campaign client config OR at least defaults can be set somewhere in client options
+                                toUser: user,
+                                fromUser: fromUser,
+                                topic: topic,
+                                linkViewTopic: linkViewTopic,
+                                linkToApplication: linkToApplication,
+                                provider: {
+                                    merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
+                                }
+                            });
+
+                            promisesToResolve.push(emailPromise);
+                        }
                     });
 
                     return Promise.all(promisesToResolve);
@@ -410,40 +412,42 @@ module.exports = function (app) {
 
                     // TODO: We can gain in performance if we group Users with same language code
                     _.forEach(toUsers, function (user) {
-                        var template = resolveTemplate('inviteTopic', user.language);
-                        // TODO: Could use Mu here....
-                        var subject = template.translations.INVITE_TOPIC.SUBJECT
-                            .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name));
+                        if (user.email) {
+                            var template = resolveTemplate('inviteTopic', user.language);
+                            // TODO: Could use Mu here....
+                            var subject = template.translations.INVITE_TOPIC.SUBJECT
+                                .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name));
 
-                        var linkViewTopic = urlLib.getApi('/api/invite/view', null, {
-                            email: user.email,
-                            topicId: topic.id
-                        });
+                            var linkViewTopic = urlLib.getApi('/api/invite/view', null, {
+                                email: user.email,
+                                topicId: topic.id
+                            });
 
-                        // In case Topic has no title, just show the full url.
-                        topic.title = topic.title ? topic.title : linkViewTopic;
+                            // In case Topic has no title, just show the full url.
+                            topic.title = topic.title ? topic.title : linkViewTopic;
 
-                        var sendEmailPromise = emailClient.sendStringAsync(template.body, {
-                            subject: subject,
-                            to: user.email,
-                            images: [
-                                {
-                                    name: emailHeaderLogoName,
-                                    file: emailHeaderLogo
+                            var sendEmailPromise = emailClient.sendStringAsync(template.body, {
+                                subject: subject,
+                                to: user.email,
+                                images: [
+                                    {
+                                        name: emailHeaderLogoName,
+                                        file: emailHeaderLogo
+                                    }
+                                ],
+                                social: config.email.social, // social.name maps to "from_name". I think this should be part of Campaign client config OR at least defaults can be set somewhere in client options
+                                toUser: user,
+                                fromUser: fromUser,
+                                topic: topic,
+                                linkViewTopic: linkViewTopic,
+                                linkToApplication: urlLib.getFe(),
+                                provider: {
+                                    merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
                                 }
-                            ],
-                            social: config.email.social, // social.name maps to "from_name". I think this should be part of Campaign client config OR at least defaults can be set somewhere in client options
-                            toUser: user,
-                            fromUser: fromUser,
-                            topic: topic,
-                            linkViewTopic: linkViewTopic,
-                            linkToApplication: urlLib.getFe(),
-                            provider: {
-                                merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
-                            }
-                        });
+                            });
 
-                        promisesToResolve.push(sendEmailPromise);
+                            promisesToResolve.push(sendEmailPromise);
+                        }
                     });
 
                     return Promise.all(promisesToResolve);
@@ -511,37 +515,39 @@ module.exports = function (app) {
                     var promisesToResolve = [];
 
                     _.forEach(toUsers, function (user) {
-                        var template = resolveTemplate('inviteGroup', user.language);
-                        // TODO: could use Mu here...
-                        var subject = template.translations.INVITE_GROUP.SUBJECT
-                            .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
-                            .replace('{{group.name}}', util.escapeHtml(group.name));
+                        if (user.email) {
+                            var template = resolveTemplate('inviteGroup', user.language);
+                            // TODO: could use Mu here...
+                            var subject = template.translations.INVITE_GROUP.SUBJECT
+                                .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
+                                .replace('{{group.name}}', util.escapeHtml(group.name));
 
-                        var userEmailPromise = emailClient.sendStringAsync(template.body, {
-                            subject: subject,
-                            to: user.email,
-                            images: [
-                                {
-                                    name: emailHeaderLogoName,
-                                    file: emailHeaderLogo
+                            var userEmailPromise = emailClient.sendStringAsync(template.body, {
+                                subject: subject,
+                                to: user.email,
+                                images: [
+                                    {
+                                        name: emailHeaderLogoName,
+                                        file: emailHeaderLogo
+                                    }
+                                ],
+                                social: config.email.social, // social.name maps to "from_name". I think this should be part of Campaign client config OR at least defaults can be set somewhere in client options
+                                //Placeholders..
+                                toUser: user,
+                                fromUser: fromUser,
+                                group: group,
+                                linkViewGroup: urlLib.getApi('/api/invite/view', null, {
+                                    email: user.email,
+                                    groupId: group.id
+                                }),
+                                linkToApplication: urlLib.getFe(),
+                                provider: {
+                                    merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
                                 }
-                            ],
-                            social: config.email.social, // social.name maps to "from_name". I think this should be part of Campaign client config OR at least defaults can be set somewhere in client options
-                            //Placeholders..
-                            toUser: user,
-                            fromUser: fromUser,
-                            group: group,
-                            linkViewGroup: urlLib.getApi('/api/invite/view', null, {
-                                email: user.email,
-                                groupId: group.id
-                            }),
-                            linkToApplication: urlLib.getFe(),
-                            provider: {
-                                merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
-                            }
-                        });
+                            });
 
-                        promisesToResolve.push(userEmailPromise);
+                            promisesToResolve.push(userEmailPromise);
+                        }
                     });
                 } else {
                     logger.info('No Group member User invite emails to be sent as filtering resulted in empty e-mail address list.');
@@ -739,55 +745,57 @@ module.exports = function (app) {
                     );
 
                     moderators.forEach(function (moderator) {
-                        var templateObject = resolveTemplate('reportCommentModerator', moderator.language);
-                        var token = jwt.sign(
-                            {
-                                paths: [
-                                    'POST_/api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
-                                        .replace(':topicId', commentInfo.topic.id)
-                                        .replace(':commentId', commentInfo.comment.id)
-                                        .replace(':reportId', report.id),
-                                    'GET_/api/topics/:topicId/comments/:commentId/reports/:reportId'
-                                        .replace(':topicId', commentInfo.topic.id)
-                                        .replace(':commentId', commentInfo.comment.id)
-                                        .replace(':reportId', report.id)
-                                ],
-                                userId: moderator.id
-                            },
-                            config.session.privateKey,
-                            {
-                                algorithm: config.session.algorithm
-                            }
-                        );
-
-                        var promiseModeratorEmail = emailClient.sendStringAsync(
-                            templateObject.body,
-                            {
-                                subject: templateObject.translations.REPORT_COMMENT_MODERATOR.SUBJECT,
-                                to: moderator.email,
-                                social: config.email.social,
-                                images: [
-                                    {
-                                        name: emailHeaderLogoName,
-                                        file: emailHeaderLogo
-                                    }
-                                ],
-                                //Placeholders...
-                                comment: commentInfo.comment,
-                                report: {
-                                    type: templateObject.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
-                                    text: report.text
+                        if (moderator.email) {
+                            var templateObject = resolveTemplate('reportCommentModerator', moderator.language);
+                            var token = jwt.sign(
+                                {
+                                    paths: [
+                                        'POST_/api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
+                                            .replace(':topicId', commentInfo.topic.id)
+                                            .replace(':commentId', commentInfo.comment.id)
+                                            .replace(':reportId', report.id),
+                                        'GET_/api/topics/:topicId/comments/:commentId/reports/:reportId'
+                                            .replace(':topicId', commentInfo.topic.id)
+                                            .replace(':commentId', commentInfo.comment.id)
+                                            .replace(':reportId', report.id)
+                                    ],
+                                    userId: moderator.id
                                 },
-                                linkModerate: linkModerate + '?token=' + encodeURIComponent(token),
-                                isUserNotified: commentCreatorInformed,
-                                linkToApplication: urlLib.getFe(),
-                                provider: {
-                                    merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
+                                config.session.privateKey,
+                                {
+                                    algorithm: config.session.algorithm
                                 }
-                            }
-                        );
+                            );
 
-                        promisesToResolve.push(promiseModeratorEmail);
+                            var promiseModeratorEmail = emailClient.sendStringAsync(
+                                templateObject.body,
+                                {
+                                    subject: templateObject.translations.REPORT_COMMENT_MODERATOR.SUBJECT,
+                                    to: moderator.email,
+                                    social: config.email.social,
+                                    images: [
+                                        {
+                                            name: emailHeaderLogoName,
+                                            file: emailHeaderLogo
+                                        }
+                                    ],
+                                    //Placeholders...
+                                    comment: commentInfo.comment,
+                                    report: {
+                                        type: templateObject.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
+                                        text: report.text
+                                    },
+                                    linkModerate: linkModerate + '?token=' + encodeURIComponent(token),
+                                    isUserNotified: commentCreatorInformed,
+                                    linkToApplication: urlLib.getFe(),
+                                    provider: {
+                                        merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
+                                    }
+                                }
+                            );
+
+                            promisesToResolve.push(promiseModeratorEmail);
+                        }
                     });
                 }
 
