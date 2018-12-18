@@ -90,7 +90,20 @@ module.exports = function (app) {
         var page = parseInt(req.query.page, 10) ? parseInt(req.query.page, 10) : 1;
         var offset = (page * limit) - limit;
         var params = Object.keys(req.query);
+        var statuses;
+        var queryStatuses = req.query.statuses;
+        var favourite = req.query.favourite;
 
+        if (queryStatuses) {
+            if (!Array.isArray(queryStatuses)) {
+                queryStatuses = [queryStatuses];
+            }
+            
+            statuses = queryStatuses.filter(function (status) {
+                return Object.keys(Topic.STATUSES).indexOf(status) > -1;
+            });
+        }
+        
         if (include && !Array.isArray(include)) {
             include = [include];
         } else if (!include) {
@@ -143,6 +156,14 @@ module.exports = function (app) {
                         // All partners should see only Topics created by their site, but our own app sees all.
                         if (partnerId) {
                             myTopicWhere += ' AND t."sourcePartnerId" = :partnerId ';
+                        }
+
+                        if (statuses && statuses.length) {
+                            myTopicWhere += ' AND t.status IN (:statuses)';
+                        }
+                
+                        if (favourite) {
+                            myTopicWhere += 'AND tf."topicId" = t.id AND tf."userId" = :userId';
                         }
 
                         // TODO: NOT THE MOST EFFICIENT QUERY IN THE WORLD, tune it when time.
@@ -230,6 +251,7 @@ module.exports = function (app) {
                                     replacements: {
                                         userId: userId,
                                         partnerId: partnerId,
+                                        statuses: statuses,
                                         str: '%' + str + '%',
                                         level: level,
                                         limit: limit,
@@ -348,7 +370,8 @@ module.exports = function (app) {
                             .then(function (result) {
                                 return {
                                     context: 'public',
-                                    topics: result
+                                    topics: result,
+                                    status: statuses
                                 };
                             });
                         searchPromises.push(publicTopicPromise);

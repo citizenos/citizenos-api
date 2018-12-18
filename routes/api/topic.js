@@ -928,7 +928,7 @@ module.exports = function (app) {
                 } else {
                     resObject.sourcePartnerId = null;
                 }
-                
+
                 resObject.favourite = false;
                 resObject.permission = { // TODO: should be plural?
                     level: level
@@ -1593,6 +1593,7 @@ module.exports = function (app) {
         var visibility = req.query.visibility;
         var creatorId = req.query.creatorId;
         var statuses = req.query.statuses;
+        var favourite = req.query.favourite;
         if (statuses && !Array.isArray(statuses)) {
             statuses = [statuses];
         }
@@ -1662,6 +1663,10 @@ module.exports = function (app) {
             where += ' AND t.status IN (:statuses)';
         }
 
+        if (favourite) {
+            where += 'AND tf."topicId" = t.id AND tf."userId" = :userId';
+        }
+        
         if (creatorId) {
             if (creatorId === userId) {
                 where += ' AND c.id =:creatorId ';
