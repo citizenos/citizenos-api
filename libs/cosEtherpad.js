@@ -16,14 +16,14 @@ module.exports = function (app) {
     var config = app.get('config');
     var logger = app.get('logger');
     var jwt = app.get('jwt');
-    var mu = app.get('mu');
-    var util = app.get('util');
     var encoder = app.get('encoder');
     var cosActivities = app.get('cosActivities');
     var path = require('path');
-    var translations = require('./translations')(path.resolve('./views/etherpad/languages'));
+    var fs = app.get('fs');
 
     var Topic = models.Topic;
+
+    const TEMPLATE_ROOT = app.get('TEMPLATE_ROOT');
 
     /**
      * Create a Topic in Etherpad system.
@@ -40,10 +40,7 @@ module.exports = function (app) {
      * @private
      */
     var _createTopic = function (topicId, language, html) {
-        var lang = translations[language];
-        if (!lang) {
-            lang = translations.en;
-        }
+        var lang = language ? language : 'en';
 
         return etherpadClient
             .createPadAsync({padID: topicId})
@@ -51,15 +48,11 @@ module.exports = function (app) {
                 if (html) {
                     return Promise.resolve(html);
                 } else {
-                    var stream = mu.compileAndRender(
-                        'etherpad/default.mu',
-                        {
-                            title: lang.PLACEHOLDER_TITLE,
-                            description: lang.PLACEHOLDER_TOPIC_TEXT
-                        }
-                    );
-
-                    return util.streamToString(stream);
+                    return fs
+                        .readFileAsync(path.join(TEMPLATE_ROOT, 'etherpad/build/default_' + lang + '.html'))
+                        .then(function (buffer) {
+                            return buffer.toString();
+                        });
                 }
             })
             .then(function (padHtml) {

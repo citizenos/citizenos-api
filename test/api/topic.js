@@ -172,7 +172,7 @@ var topicDelete = function (agent, userId, topicId, callback) {
     _topicDelete(agent, userId, topicId, 200, callback);
 };
 
-var _topicList = function (agent, userId, include, visibility, creatorId, expectedHttpCode, callback) {
+var _topicList = function (agent, userId, include, visibility, statuses, creatorId, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics'.replace(':userId', userId);
 
     agent
@@ -181,6 +181,7 @@ var _topicList = function (agent, userId, include, visibility, creatorId, expect
         .query({
             include: include,
             visibility: visibility,
+            statuses: statuses,
             creatorId: creatorId
         })
         .expect(expectedHttpCode)
@@ -188,8 +189,8 @@ var _topicList = function (agent, userId, include, visibility, creatorId, expect
         .end(callback);
 };
 
-var topicList = function (agent, userId, include, visibility, creatorId, callback) {
-    _topicList(agent, userId, include, visibility, creatorId, 200, callback);
+var topicList = function (agent, userId, include, visibility, statuses, creatorId, callback) {
+    _topicList(agent, userId, include, visibility, statuses, creatorId, 200, callback);
 };
 
 var _topicsListUnauth = function (agent, statuses, categories, orderBy, offset, limit, sourcePartnerId, include, expectedHttpCode, callback) {
@@ -1638,7 +1639,7 @@ suite('Users', function () {
                             .destroy({
                                 where: {
                                     connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId: ['11412090004']
+                                    connectionUserId: ['60001019906']
                                 },
                                 force: true
                             })
@@ -1650,7 +1651,7 @@ suite('Users', function () {
 
                     test('Success', function (done) {
                         var phoneNumber = '+37200000766';
-                        var pid = '11412090004';
+                        var pid = '60001019906';
 
                         var voteList = [
                             {
@@ -2760,7 +2761,7 @@ suite('Users', function () {
                         assert.equal(comment2.text, text);
                         assert.equal(comment2.creator.id, creator.id);
 
-                        topicList(agentCreator, creator.id, null, null, null, function (err, res) {
+                        topicList(agentCreator, creator.id, null, null, null, null, function (err, res) {
                             if (err) return done(err);
 
                             var list = res.body.data;
@@ -2831,7 +2832,7 @@ suite('Users', function () {
                                 topicDelete(agentUser, user.id, deletedTopic.id, function (err) {
                                     if (err) return done(err);
 
-                                    topicList(agentUser, user.id, null, null, null, function (err, res) {
+                                    topicList(agentUser, user.id, null, null, null, null, function (err, res) {
                                         if (err) return done(err);
 
                                         var list = res.body.data;
@@ -2879,7 +2880,7 @@ suite('Users', function () {
                             }
                         )
                         .then(function () {
-                            topicList(agentUser, user.id, null, Topic.VISIBILITY.private, null, function (err, res) {
+                            topicList(agentUser, user.id, null, Topic.VISIBILITY.private, null, null, function (err, res) {
                                 if (err) return done(err);
 
                                 var list = res.body.data;
@@ -2918,7 +2919,7 @@ suite('Users', function () {
                             }
                         )
                         .then(function () {
-                            topicList(agentUser, user.id, null, Topic.VISIBILITY.public, null, function (err, res) {
+                            topicList(agentUser, user.id, null, Topic.VISIBILITY.public, null, null, function (err, res) {
                                 if (err) return done(err);
 
                                 var list = res.body.data;
@@ -2957,7 +2958,7 @@ suite('Users', function () {
                             }
                         )
                         .then(function () {
-                            topicList(agentCreator, creator.id, null, null, creator.id, function (err, res) {
+                            topicList(agentCreator, creator.id, null, null, null, creator.id, function (err, res) {
                                 if (err) return done(err);
 
                                 var list = res.body.data;
@@ -2967,6 +2968,169 @@ suite('Users', function () {
                                 rows.forEach(function (topicItem) {
                                     assert.equal(topicItem.creator.id, creator.id);
                                     assert.notEqual(topicItem.creator.id, user.id);
+                                });
+                                done();
+                            });
+                        });
+                });
+            });
+
+            test('Success - status inProgress', function (done) {
+                topicCreate(agentUser, user.id, null, null, null, null, null, function (err, res) {
+                    if (err) return done(err);
+
+                    var publicTopic = res.body.data;
+
+                    // Add title & description in DB. NULL title topics are not to be returned.
+                    var title = 'Public Topic';
+                    var description = 'Public topic desc';
+
+                    Topic
+                        .update(
+                            {
+                                title: title,
+                                description: description
+                            },
+                            {
+                                where: {
+                                    id: publicTopic.id
+                                }
+                            }
+                        )
+                        .then(function () {
+                            topicList(agentUser, user.id, null, null, 'inProgress', null, function (err, res) {
+                                if (err) return done(err);
+
+                                var list = res.body.data;
+                                assert.equal(list.count, 2);
+                                var rows = list.rows;
+
+                                rows.forEach(function (topicItem) {
+                                    assert.equal(topicItem.status, Topic.STATUSES.inProgress);
+                                    assert.equal(topicItem.deletedAt, null);
+                                });
+                                done();
+                            });
+                        });
+                });
+            });
+
+            test('Success - status voting', function (done) {
+                topicCreate(agentUser, user.id, null, null, null, null, null, function (err, res) {
+                    if (err) return done(err);
+
+                    var publicTopic = res.body.data;
+
+                    // Add title & description in DB. NULL title topics are not to be returned.
+                    var title = 'Public Topic';
+                    var description = 'Public topic desc';
+
+                    Topic
+                        .update(
+                            {
+                                title: title,
+                                description: description,
+                                status: Topic.STATUSES.voting
+                            },
+                            {
+                                where: {
+                                    id: publicTopic.id
+                                }
+                            }
+                        )
+                        .then(function () {
+                            topicList(agentUser, user.id, null, null, 'voting', null, function (err, res) {
+                                if (err) return done(err);
+
+                                var list = res.body.data;
+                                assert.equal(list.count, 1);
+                                var rows = list.rows;
+
+                                rows.forEach(function (topicItem) {
+                                    assert.equal(topicItem.status, Topic.STATUSES.voting);
+                                    assert.equal(topicItem.deletedAt, null);
+                                });
+                                done();
+                            });
+                        });
+                });
+            });
+
+            test('Success - status followUp', function (done) {
+                topicCreate(agentUser, user.id, null, null, null, null, null, function (err, res) {
+                    if (err) return done(err);
+
+                    var publicTopic = res.body.data;
+
+                    // Add title & description in DB. NULL title topics are not to be returned.
+                    var title = 'Public Topic';
+                    var description = 'Public topic desc';
+
+                    Topic
+                        .update(
+                            {
+                                title: title,
+                                description: description,
+                                status: Topic.STATUSES.followUp
+                            },
+                            {
+                                where: {
+                                    id: publicTopic.id
+                                }
+                            }
+                        )
+                        .then(function () {
+                            topicList(agentUser, user.id, null, null, 'followUp', null, function (err, res) {
+                                if (err) return done(err);
+
+                                var list = res.body.data;
+                                assert.equal(list.count, 1);
+                                var rows = list.rows;
+
+                                rows.forEach(function (topicItem) {
+                                    assert.equal(topicItem.status, Topic.STATUSES.followUp);
+                                    assert.equal(topicItem.deletedAt, null);
+                                });
+                                done();
+                            });
+                        });
+                });
+            });
+
+            test('Success - status closed', function (done) {
+                topicCreate(agentUser, user.id, null, null, null, null, null, function (err, res) {
+                    if (err) return done(err);
+
+                    var publicTopic = res.body.data;
+
+                    // Add title & description in DB. NULL title topics are not to be returned.
+                    var title = 'Public Topic';
+                    var description = 'Public topic desc';
+
+                    Topic
+                        .update(
+                            {
+                                title: title,
+                                description: description,
+                                status: Topic.STATUSES.closed
+                            },
+                            {
+                                where: {
+                                    id: publicTopic.id
+                                }
+                            }
+                        )
+                        .then(function () {
+                            topicList(agentUser, user.id, null, null, 'closed', null, function (err, res) {
+                                if (err) return done(err);
+
+                                var list = res.body.data;
+                                assert.equal(list.count, 1);
+                                var rows = list.rows;
+
+                                rows.forEach(function (topicItem) {
+                                    assert.equal(topicItem.status, Topic.STATUSES.closed);
+                                    assert.equal(topicItem.deletedAt, null);
                                 });
                                 done();
                             });
@@ -3050,7 +3214,7 @@ suite('Users', function () {
                 });
 
                 test('Success - include vote', function (done) {
-                    topicList(agent, user.id, ['vote'], null, null, function (err, res) {
+                    topicList(agent, user.id, ['vote'], null, null, null, function (err, res) {
                         if (err) return done(err);
 
                         var list = res.body.data.rows;
@@ -3067,7 +3231,7 @@ suite('Users', function () {
                             }
                         });
 
-                        topicList(agent, user.id, null, null, null, function (err, res) {
+                        topicList(agent, user.id, null, null, null, null, function (err, res) {
                             if (err) return done(err);
 
                             var list2 = res.body.data.rows;
@@ -3108,7 +3272,7 @@ suite('Users', function () {
                             assert.equal(event.text, text);
                             assert.property(event, 'createdAt');
                             assert.property(event, 'id');
-                            topicList(agent, user.id, ['event'], null, null, function (err, res) {
+                            topicList(agent, user.id, ['event'], null, null, null, function (err, res) {
                                 if (err) return done(err);
 
                                 var list = res.body.data.rows;
@@ -3122,7 +3286,7 @@ suite('Users', function () {
                                     }
                                 });
 
-                                topicList(agent, user.id, null, null, null, function (err, res) {
+                                topicList(agent, user.id, null, null, null, null, function (err, res) {
                                     if (err) return done(err);
 
                                     var list2 = res.body.data.rows;
@@ -3165,7 +3329,7 @@ suite('Users', function () {
                             assert.equal(event.text, text);
                             assert.property(event, 'createdAt');
                             assert.property(event, 'id');
-                            topicList(agent, user.id, ['vote', 'event'], null, null, function (err, res) {
+                            topicList(agent, user.id, ['vote', 'event'], null, null, null, function (err, res) {
                                 if (err) return done(err);
 
                                 var list = res.body.data.rows;
@@ -3180,7 +3344,7 @@ suite('Users', function () {
                                     }
                                 });
 
-                                topicList(agent, user.id, null, null, null, function (err, res) {
+                                topicList(agent, user.id, null, null, null, null, function (err, res) {
                                     if (err) return done(err);
 
                                     var list2 = res.body.data.rows;
@@ -3211,7 +3375,7 @@ suite('Users', function () {
             suite('Levels', function () {
 
                 test('Success - User has "edit" via Group', function (done) {
-                    topicList(agentUser, user.id, null, null, null, function (err, res) {
+                    topicList(agentUser, user.id, null, null, null, null, function (err, res) {
                         if (err) return done(err);
                         var topicList = res.body.data;
 
@@ -3239,7 +3403,7 @@ suite('Users', function () {
                     topicMemberUsersCreate(agentCreator, creator.id, topic.id, topicMemberUser, function (err) {
                         if (err) return done(err);
 
-                        topicList(agentUser, user.id, null, null, null, function (err, res) {
+                        topicList(agentUser, user.id, null, null, null, null, function (err, res) {
                             if (err) return done(err);
 
                             var topicList = res.body.data;
@@ -3270,7 +3434,7 @@ suite('Users', function () {
                     topicMemberUsersCreate(agentCreator, creator.id, topic.id, topicMemberUser, function (err) {
                         if (err) return done(err);
 
-                        topicList(agentUser, user.id, null, null, null, function (err, res) {
+                        topicList(agentUser, user.id, null, null, null, null, function (err, res) {
                             if (err) return done(err);
 
                             var topicList = res.body.data;
@@ -3288,7 +3452,7 @@ suite('Users', function () {
                     groupLib.membersDelete(agentCreator, creator.id, group.id, user.id, function (err) {
                         if (err) return done(err);
 
-                        topicList(agentUser, user.id, null, null, null, function (err, res) {
+                        topicList(agentUser, user.id, null, null, null, null, function (err, res) {
                             if (err) return done(err);
 
                             var topicList = res.body.data;
@@ -3314,7 +3478,7 @@ suite('Users', function () {
                         groupLib.membersDelete(agentCreator, creator.id, group.id, user.id, function (err) {
                             if (err) return done(err);
 
-                            topicList(agentUser, user.id, null, null, null, function (err, res) {
+                            topicList(agentUser, user.id, null, null, null, null, function (err, res) {
                                 if (err) return done(err);
 
                                 var topicList = res.body.data;
@@ -5962,7 +6126,7 @@ suite('Users', function () {
                                 .destroy({
                                     where: {
                                         connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                        connectionUserId: ['11412090004']
+                                        connectionUserId: ['60001019906']
                                     },
                                     force: true
                                 })
@@ -5974,7 +6138,7 @@ suite('Users', function () {
 
                         test('Success - Estonian mobile number and PID', function (done) {
                             var phoneNumber = '+37200000766';
-                            var pid = '11412090004';
+                            var pid = '60001019906';
 
                             var voteList = [
                                 {
@@ -5997,7 +6161,7 @@ suite('Users', function () {
                             this.timeout(24000); //eslint-disable-line no-invalid-this
 
                             var phoneNumber = '+37200000766';
-                            var pid = '11412090004';
+                            var pid = '60001019906';
 
                             var voteList = [
                                 {
@@ -6225,7 +6389,7 @@ suite('Users', function () {
 
                         test('Fail - 40030 - Personal ID already connected to another user account.', function (done) {
                             var phoneNumber = '+37200000766';
-                            var pid = '11412090004';
+                            var pid = '60001019906';
 
                             var voteList = [
                                 {

@@ -1,1 +1,0 @@
-<!DOCTYPE HTML><html><body><h1>{{title}}</h1><br>{{{description}}}<br></body></html>

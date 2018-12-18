@@ -1,0 +1,35 @@
+{
+  "ACCOUNT_VERIFICATION": {
+    "SUBJECT": "Mengaktifkan akun Citizen OS"
+  },
+  "INVITE_GROUP": {
+    "SUBJECT": "{{fromUser.name}} mengundang Anda untuk bergabung dengan kelompoknya \"{{group.name}}\" dalam Citizen OS"
+  },
+  "INVITE_TOPIC": {
+    "SUBJECT": "{{fromUser.name}} adalah mengundang Anda untuk membuat keputusan secara kolaboratif",
+    "SUBJECT_rahvaalgatus_ee": "{{fromUser.name}}, user of rahvaalgatus.ee invites you to co-create a discussion/initiative",
+    "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust"
+  },
+  "PASSWORD_RESET": {
+    "SUBJECT": "Atur ulang kata sandi akun Anda"
+  },
+  "REPORT_COMMENT": {
+    "REPORT_TYPE": {
+      "ABUSE": "Bersifat kasar atau menghina",
+      "OBSCENE": "Mengandung bahasa tidak senonoh",
+      "SPAM": "Mengandung spam atau tidak berhubungan dengan topik",
+      "HATE": "Mengandung ujaran kebencian",
+      "NETIQUETTE": "Melanggar etika",
+      "DUPLICATE": "Merupakan duplikat"
+    }
+  },
+  "REPORT_COMMENT_CREATOR": {
+    "SUBJECT": "Komentar Anda telah dilaporkan sebagai hal yang tidak pantas oleh masyarakat"
+  },
+  "REPORT_COMMENT_MODERATOR": {
+    "SUBJECT": "Sebuah komentar telah dilaporkan sebagai hal yang tidak pantas oleh masyarakat"
+  },
+  "TO_PARLIAMENT": {
+    "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
+  }
+}

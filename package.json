@@ -94,7 +94,6 @@
     "grunt-eslint": "20.1.0",
     "grunt-exec": "3.0.0",
     "grunt-markdown-toc": "0.0.2",
-    "grunt-mustache-render": "1.9.2",
     "grunt-plantuml": "0.2.3",
     "husky": "0.14.3",
     "mocha": "2.2.5",
