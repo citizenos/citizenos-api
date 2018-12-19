@@ -6735,7 +6735,8 @@ module.exports = function (app) {
         var userId = req.user.id;
         var topicId = req.params.topicId;
 
-        db.transaction(function (t) {
+        db
+            .transaction(function (t) {
                 return TopicFavourite
                     .findOrCreate({
                         where: {
