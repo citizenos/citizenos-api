@@ -9377,7 +9377,7 @@ suite('Topics', function () {
                     var token = jwt.sign(
                         {
                             paths: [
-                                'POST_/api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
+                                'POST /api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
                                     .replace(':topicId', topic.id)
                                     .replace(':commentId', comment.id)
                                     .replace(':reportId', report.id)
@@ -9466,7 +9466,7 @@ suite('Topics', function () {
                                 var token = jwt.sign(
                                     {
                                         paths: [
-                                            'POST_/api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
+                                            'POST /api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
                                                 .replace(':topicId', topic.id)
                                                 .replace(':commentId', comment.id)
                                                 .replace(':reportId', report.id)

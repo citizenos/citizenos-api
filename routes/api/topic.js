@@ -3450,6 +3450,69 @@ module.exports = function (app) {
     app.get('/api/users/:userId/topics/:topicId/attachments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), topicAttachmentsList);
     app.get('/api/topics/:topicId/attachments', hasVisibility(Topic.VISIBILITY.public), topicAttachmentsList);
 
+    var topicReportsCreate = function (req, res, next) {
+        var topicId = req.params.topicId;
+
+        db
+            .transaction(function (t) {
+                return Report
+                    .create(
+                        {
+                            type: req.body.type,
+                            text: req.body.text,
+                            creatorId: req.user.id,
+                            creatorIp: req.ip
+                        },
+                        {
+                            transaction: t
+                        }
+                    )
+                    .then(function (report) {
+                        // FIXME: Topic report create activity!
+                        return TopicReport
+                            .create(
+                                {
+                                    topicId: topicId,
+                                    reportId: report.id
+                                },
+                                {
+                                    transaction: t
+                                }
+                            )
+                            .then(function () {
+                                return report;
+                            });
+                    });
+            })
+            .then(function (report) {
+                //FIXME: Send TopicReport e-mail - emailLib.sendCommentReport(commentId, report); // Fire and forget
+
+                return res.ok(report);
+            })
+            .catch(next);
+    };
+
+    app.post(['/api/users/:userId/topics/:topicId/reports', '/api/topics/:topicId/reports'], loginCheck(['partner']), topicReportsCreate);
+
+    /**
+     * Read Topic Report
+     */
+    app.get(['/api/topics/:topicId/reports/:reportId', '/api/users/:userId/topics/:topicId/reports/:reportId'], function (req, res, next) {
+        //FIXME Implement
+        return res.notImplemented();
+    });
+
+    /**
+     * Moderate a Topic
+     */
+    app.post('/api/topics/:topicId/comments/:commentId/reports/:reportId/moderate', function (req, res, next) {
+        var reportType = req.body.type; // Delete reason type which is provided in case deleted/hidden by moderator due to a user report
+        var reportText = req.body.text; // Free text with reason why the comment was deleted/hidden
+
+        // FIXME: Implement
+        return res.notImplemented();
+    });
+
     /**
      * Create Topic Comment
      */
@@ -3995,57 +4058,11 @@ module.exports = function (app) {
             .catch(next);
     };
 
-    var topicReportsCreate = function (req, res, next) {
-        var topicId = req.params.topicId;
-
-        db
-            .transaction(function (t) {
-                return Report
-                    .create(
-                        {
-                            type: req.body.type,
-                            text: req.body.text,
-                            creatorId: req.user.id,
-                            creatorIp: req.ip
-                        },
-                        {
-                            transaction: t
-                        }
-                    )
-                    .then(function (report) {
-                        // FIXME: Topic report create activity!
-                        return TopicReport
-                            .create(
-                                {
-                                    topicId: topicId,
-                                    reportId: report.id
-                                },
-                                {
-                                    transaction: t
-                                }
-                            )
-                            .then(function () {
-                                return report;
-                            });
-                    });
-            })
-            .then(function (report) {
-                //FIXME: Send TopicReport e-mail - emailLib.sendCommentReport(commentId, report); // Fire and forget
-
-                return res.ok(report);
-            })
-            .catch(next);
-    };
-
-    app.post(['/api/users/:userId/topics/:topicId/reports', '/api/topics/:topicId/reports'], loginCheck(['partner']), topicReportsCreate);
-
-
     /**
      * Read (List) Topic Comments
      */
     app.get('/api/users/:userId/topics/:topicId/comments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), isModerator(), topicCommentsList);
     app.get('/api/v2/users/:userId/topics/:topicId/comments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), isModerator(), topicCommentsList2);
-
 
     /**
      * Read (List) public Topic Comments
@@ -4254,7 +4271,7 @@ module.exports = function (app) {
 
 
     /**
-     * Read Report
+     * Read Comment (Argument) report
      */
     app.get(['/api/topics/:topicId/comments/:commentId/reports/:reportId', '/api/users/:userId/topics/:topicId/comments/:commentId/reports/:reportId'], function (req, res, next) {
         if (!req.headers || !req.headers.authorization) {
@@ -6718,42 +6735,42 @@ module.exports = function (app) {
         var userId = req.user.id;
         var topicId = req.params.topicId;
 
-        return db.transaction(function (t) {
-            return TopicFavourite
-                .findOrCreate({
-                    where: {
-                        topicId: topicId,
-                        userId: userId
-                    },
-                    transaction: t
-                })
-                .spread(function (topicFavourite, created) {
-                    if (created) {
-                        return Topic
-                            .findOne({
-                                where: {
-                                    id: topicId
-                                }
-                            })
-                            .then(function (topic) {
-                                topic.description = null;
+        db.transaction(function (t) {
+                return TopicFavourite
+                    .findOrCreate({
+                        where: {
+                            topicId: topicId,
+                            userId: userId
+                        },
+                        transaction: t
+                    })
+                    .spread(function (topicFavourite, created) {
+                        if (created) {
+                            return Topic
+                                .findOne({
+                                    where: {
+                                        id: topicId
+                                    }
+                                })
+                                .then(function (topic) {
+                                    topic.description = null;
 
-                                return cosActivities
-                                    .addActivity(
-                                        topic,
-                                        {
-                                            type: 'User',
-                                            id: userId
-                                        },
-                                        null,
-                                        topicFavourite,
-                                        req.method + ' ' + req.path,
-                                        t
-                                    );  
-                            });
-                    }
-                });
-        })
+                                    return cosActivities
+                                        .addActivity(
+                                            topic,
+                                            {
+                                                type: 'User',
+                                                id: userId
+                                            },
+                                            null,
+                                            topicFavourite,
+                                            req.method + ' ' + req.path,
+                                            t
+                                        );
+                                });
+                        }
+                    });
+            })
             .then(function () {
                 return res.ok();
             })
@@ -6786,8 +6803,8 @@ module.exports = function (app) {
 
                                     return cosActivities
                                         .deleteActivity(
-                                            topicFavourite, 
-                                            topic, 
+                                            topicFavourite,
+                                            topic,
                                             {
                                                 type: 'User',
                                                 id: req.user.id

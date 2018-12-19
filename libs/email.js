@@ -750,11 +750,11 @@ module.exports = function (app) {
                             var token = jwt.sign(
                                 {
                                     paths: [
-                                        'POST_/api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
+                                        'POST /api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
                                             .replace(':topicId', commentInfo.topic.id)
                                             .replace(':commentId', commentInfo.comment.id)
                                             .replace(':reportId', report.id),
-                                        'GET_/api/topics/:topicId/comments/:commentId/reports/:reportId'
+                                        'GET /api/topics/:topicId/comments/:commentId/reports/:reportId'
                                             .replace(':topicId', commentInfo.topic.id)
                                             .replace(':commentId', commentInfo.comment.id)
                                             .replace(':reportId', report.id)
