@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "CitizenOS API endpoints and descriptions",
     "title": "CitizenOS API",
     "termsOfService": "https://app.citizenos.com/en/topics/7abdd244-d45b-40d3-997c-a6290d4e972c",
@@ -49,6 +49,10 @@
     {
       "name": "events",
       "description": "Topic Events endpoints"
+    },
+    {
+      "name": "favourites",
+      "description": "Favourites endpoints"
     },
     {
       "name": "activities",
@@ -4595,6 +4599,86 @@
         }
       }
     },
+    "/api/users/:userId/topics/:topicId/favourites": {
+      "post": {
+        "tags": ["favourites"],
+        "summary": "Add Topic as favourite",
+        "description": "Add Topic as favourite",
+        "operationId": "addTopicFavourite",
+        "security": [
+          {
+            "oAuth2": [
+              "read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in user id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "favourites"
+        ],
+        "summary": "Remove Topic from Favourites",
+        "description": "Remove Topic from Favourites",
+        "operationId": "removeTopicFavourites",
+        "security": [
+          {
+            "oAuth2": [
+              "read"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in user id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "topic id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          }
+        }
+      }
+    },
     "/api/topics/:topicId/activities": {
       "get": {
         "tags": [
@@ -6964,7 +7048,8 @@
           "tokenJoin": {
             "type": "string",
             "nullable": true,
-            "maxLength": 8
+            "maxLength": 8,
+            "description": "This value is only returned by authorized endpoints"
           },
           "padUrl": {
             "type": "string",
@@ -6973,6 +7058,11 @@
           "endsAt": {
             "type": "string",
             "example": "2018-08-06T04:11:41.568Z"
+          },
+          "favourite": {
+            "type": "boolean",
+            "example": "true",
+            "description": "This value is only returned by authorized endpoints"
           },
           "hashtag": {
             "type": "string",

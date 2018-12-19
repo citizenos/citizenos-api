@@ -1,6 +1,12 @@
 ## 2018-12-18
 
 * Fix issue where missing e-mail addresses would fail adding Topics to a Group. Regression from 2018-12-10.
+* Add possibility to set topics as favourites, new table is added. New API enpoints:
+    `POST /api/users/:userId/topics/:topicId/favourites` - to add topic as favourite
+    `DELETE /api/users/:userId/topics/:topicId/favourites` - to remove topic from favourites
+    All authorized endpoints, returning topics data, will also have favourite boolean value
+* Update GET /api/users/:userId/topics endpoint to filter results by favourites https://github.com/citizenos/citizenos-fe/issues/122
+* Update GET /api/v2/search endpoint to support topic filtering by status and favourites
 
 ## 2018-12-17
 

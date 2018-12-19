@@ -58,6 +58,7 @@ module.exports = function (app) {
     var TopicVote = models.TopicVote;
     var TopicAttachment = models.TopicAttachment;
     var Attachment = models.Attachment;
+    var TopicFavourite = models.TopicFavourite;
 
     var _hasPermission = function (topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelf, partnerId) {
         var LEVELS = {
@@ -929,6 +930,7 @@ module.exports = function (app) {
                     resObject.sourcePartnerId = null;
                 }
 
+                resObject.favourite = false;
                 resObject.permission = { // TODO: should be plural?
                     level: level
                 };
@@ -1016,6 +1018,10 @@ module.exports = function (app) {
                         WHEN COALESCE(tmup.level, tmgp.level, \'none\') = \'admin\' THEN t."tokenJoin" \
                         ELSE NULL \
                         END as "tokenJoin", \
+                        CASE \
+                        WHEN tf."topicId" = t.id THEN true \
+                        ELSE false \
+                        END as "favourite", \
                         t.categories, \
                         t."endsAt", \
                         t."padUrl", \
@@ -1111,6 +1117,7 @@ module.exports = function (app) {
                         LEFT JOIN "Votes" v \
                                 ON v.id = tv."voteId" \
                     ) AS tv ON (tv."topicId" = t.id) \
+                    LEFT JOIN "TopicFavourites" tf ON tf."topicId" = t.id AND tf."userId" = :userId \
                     ' + join + ' \
                 WHERE t.id = :topicId \
                     AND t."deletedAt" IS NULL \
@@ -1587,6 +1594,7 @@ module.exports = function (app) {
         var visibility = req.query.visibility;
         var creatorId = req.query.creatorId;
         var statuses = req.query.statuses;
+        var favourite = req.query.favourite;
         if (statuses && !Array.isArray(statuses)) {
             statuses = [statuses];
         }
@@ -1656,6 +1664,10 @@ module.exports = function (app) {
             where += ' AND t.status IN (:statuses)';
         }
 
+        if (favourite) {
+            where += 'AND tf."topicId" = t.id AND tf."userId" = :userId';
+        }
+
         if (creatorId) {
             if (creatorId === userId) {
                 where += ' AND c.id =:creatorId ';
@@ -1678,6 +1690,10 @@ module.exports = function (app) {
                         WHEN COALESCE(tmup.level, tmgp.level, \'none\') = \'admin\' THEN t."tokenJoin" \
                         ELSE NULL \
                      END as "tokenJoin", \
+                     CASE \
+                        WHEN tf."topicId" = t.id THEN true \
+                        ELSE false \
+                     END as "favourite", \
                      t.categories, \
                      t."sourcePartnerId", \
                      t."sourcePartnerObjectId", \
@@ -1794,9 +1810,10 @@ module.exports = function (app) {
                                 ) AS tcc \
                             GROUP BY tcc."topicId" \
                     ) AS com ON (com."topicId" = t.id) \
+                    LEFT JOIN "TopicFavourites" tf ON tf."topicId" = t.id AND tf."userId" = :userId \
                     ' + join + ' \
                 WHERE ' + where + ' \
-                ORDER BY "order" ASC, t."updatedAt" DESC \
+                ORDER BY "favourite" DESC, "order" ASC, t."updatedAt" DESC \
             ;';
 
         var topicsPromise = db
@@ -6674,7 +6691,7 @@ module.exports = function (app) {
                 return db
                     .transaction(function (t) {
                         return cosActivities
-                            .createActivity(event, event.Topic, {
+                            .deleteActivity(event, event.Topic, {
                                 type: 'User',
                                 id: req.user.id
                             }, req.method + ' ' + req.path, t)
@@ -6690,6 +6707,107 @@ module.exports = function (app) {
                             });
                     });
 
+            })
+            .then(function () {
+                return res.ok();
+            })
+            .catch(next);
+    });
+
+    app.post('/api/users/:userId/topics/:topicId/favourites', loginCheck(['partner']), function (req, res, next) {
+        var userId = req.user.id;
+        var topicId = req.params.topicId;
+
+        return db.transaction(function (t) {
+            return TopicFavourite
+                .findOrCreate({
+                    where: {
+                        topicId: topicId,
+                        userId: userId
+                    },
+                    transaction: t
+                })
+                .spread(function (topicFavourite, created) {
+                    if (created) {
+                        return Topic
+                            .findOne({
+                                where: {
+                                    id: topicId
+                                }
+                            })
+                            .then(function (topic) {
+                                topic.description = null;
+
+                                return cosActivities
+                                    .addActivity(
+                                        topic,
+                                        {
+                                            type: 'User',
+                                            id: userId
+                                        },
+                                        null,
+                                        topicFavourite,
+                                        req.method + ' ' + req.path,
+                                        t
+                                    );  
+                            });
+                    }
+                });
+        })
+            .then(function () {
+                return res.ok();
+            })
+            .catch(next);
+    });
+
+    app.delete('/api/users/:userId/topics/:topicId/favourites', loginCheck(['partner']), function (req, res, next) {
+        var userId = req.user.id;
+        var topicId = req.params.topicId;
+
+        TopicFavourite
+            .findOne({
+                where: {
+                    userId: userId,
+                    topicId: topicId
+                }
+            })
+            .then(function (topicFavourite) {
+                if (topicFavourite) {
+                    return db
+                        .transaction(function (t) {
+                            return Topic
+                                .findOne({
+                                    where: {
+                                        id: topicId
+                                    }
+                                })
+                                .then(function (topic) {
+                                    topic.description = null;
+
+                                    return cosActivities
+                                        .deleteActivity(
+                                            topicFavourite, 
+                                            topic, 
+                                            {
+                                                type: 'User',
+                                                id: req.user.id
+                                            },
+                                            req.method + ' ' + req.path,
+                                            t
+                                        )
+                                        .then(function () {
+                                            return TopicFavourite
+                                                .destroy({
+                                                    where: {
+                                                        userId: userId,
+                                                        topicId: topicId
+                                                    },
+                                                    transaction: t
+                                                });
+                                        });
+                                });
+                        });
+                }
             })
             .then(function () {
                 return res.ok();
