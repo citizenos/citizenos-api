@@ -925,9 +925,9 @@ module.exports = function (app) {
                     t.categories, \
                     t."endsAt", \
                     CASE \
-                        WHEN tf."topicId" = t.id THEN true \
+                        WHEN tp."topicId" = t.id THEN true \
                         ELSE false \
-                    END as "favourite", \
+                    END as "pinned", \
                     t.hashtag, \
                     t."updatedAt", \
                     t."createdAt", \
@@ -978,11 +978,11 @@ module.exports = function (app) {
                         WHERE "deletedAt" IS NULL \
                         GROUP BY "topicId" \
                     ) AS mgc ON (mgc."topicId" = t.id) \
-                    LEFT JOIN "TopicFavourites" tf ON tf."topicId" = t.id AND tf."userId" = :userId \
+                    LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId \
                 WHERE gt."groupId" = :groupId \
                     AND gt."deletedAt" IS NULL \
                     AND t."deletedAt" IS NULL \
-                ORDER BY "favourite" DESC \
+                ORDER BY "pinned" DESC \
                     ;'
                 ,
                 {
@@ -1019,9 +1019,9 @@ module.exports = function (app) {
                     t.categories, \
                     t."endsAt", \
                     CASE \
-                        WHEN tf."topicId" = t.id THEN true \
+                        WHEN tp."topicId" = t.id THEN true \
                         ELSE false \
-                    END as "favourite", \
+                    END as "pinned", \
                     t.hashtag, \
                     t."updatedAt", \
                     t."createdAt", \
@@ -1078,12 +1078,12 @@ module.exports = function (app) {
                         WHERE "deletedAt" IS NULL \
                         GROUP BY "topicId" \
                     ) AS mgc ON (mgc."topicId" = t.id) \
-                    LEFT JOIN "TopicFavourites" tf ON tf."topicId" = t.id AND tf."userId" = :userId \
+                    LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId \
                 WHERE gt."groupId" = :groupId \
                     AND gt."deletedAt" IS NULL \
                     AND t."deletedAt" IS NULL \
                     AND COALESCE(tmup.level, tmgp.level, \'none\')::"enum_TopicMemberUsers_level" > \'none\' \
-                ORDER BY "favourite" DESC \
+                ORDER BY "pinned" DESC \
                     ; \
                 ',
                 {

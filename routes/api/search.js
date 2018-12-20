@@ -92,7 +92,7 @@ module.exports = function (app) {
         var params = Object.keys(req.query);
         var statuses;
         var queryStatuses = req.query.statuses;
-        var favourite = req.query.favourite;
+        var pinned = req.query.pinned;
 
         if (queryStatuses) {
             if (!Array.isArray(queryStatuses)) {
@@ -162,8 +162,8 @@ module.exports = function (app) {
                             myTopicWhere += ' AND t.status IN (:statuses)';
                         }
                 
-                        if (favourite) {
-                            myTopicWhere += 'AND tf."topicId" = t.id AND tf."userId" = :userId';
+                        if (pinned) {
+                            myTopicWhere += 'AND tp."topicId" = t.id AND tp."userId" = :userId';
                         }
 
                         // TODO: NOT THE MOST EFFICIENT QUERY IN THE WORLD, tune it when time.
@@ -181,9 +181,9 @@ module.exports = function (app) {
                                         ELSE NULL \
                                      END as "tokenJoin", \
                                      CASE \
-                                        WHEN tf."topicId" = t.id THEN true \
+                                        WHEN tp."topicId" = t.id THEN true \
                                         ELSE false \
-                                     END as "favourite", \
+                                     END as "pinned", \
                                      t.categories, \
                                      t."endsAt", \
                                      t."createdAt", \
@@ -236,7 +236,7 @@ module.exports = function (app) {
                                     ) AS mgc ON (mgc."topicId" = t.id) \
                                     LEFT JOIN "TopicVotes" tv \
                                         ON (tv."topicId" = t.id) \
-                                    LEFT JOIN "TopicFavourites" tf ON tf."topicId" = t.id AND tf."userId" = :userId \
+                                    LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId \
                                 WHERE ' + myTopicWhere + ' \
                                 GROUP BY t.id, tmup.level, tmgp.level, muc.count, mgc.count, tv."voteId", tf."topicId" \
                                 ORDER BY t.title ASC \

@@ -1128,7 +1128,7 @@ var topicCommentVotesCreate = function (agent, topicId, commentId, value, callba
 };
 
 var _topicFavouriteCreate = function (agent, userId, topicId, expectedHttpCode, callback) {
-    var path = '/api/users/:userId/topics/:topicId/favourites'
+    var path = '/api/users/:userId/topics/:topicId/pin'
         .replace(':userId', userId)
         .replace(':topicId', topicId);
     
@@ -1144,7 +1144,7 @@ var topicFavouriteCreate = function (agent, userId, topicId, callback) {
 };
 
 var _topicFavouriteDelete = function (agent, userId, topicId, expectedHttpCode, callback) {
-    var path = '/api/users/:userId/topics/:topicId/favourites'
+    var path = '/api/users/:userId/topics/:topicId/pin'
         .replace(':userId', userId)
         .replace(':topicId', topicId);
     
@@ -4577,7 +4577,7 @@ suite('Users', function () {
                     if (err) return done(err);
 
                     delete topic.permission;
-                    delete topic.favourite;
+                    delete topic.pinned;
                     topic.padUrl = topic.padUrl.split('?')[0]; // Pad url will not have JWT token as the user gets read-only by default
 
                     var expectedResult = {
@@ -7486,7 +7486,7 @@ suite('Topics', function () {
                         assert.notProperty(topicRead.data, 'events');
 
                         delete topicRead.data.tokenJoin; // Unauth read of Topic should not give out token!
-                        delete topicRead.data.favourite; // Unauth read of Topic should not give out favourite tag value!
+                        delete topicRead.data.pinned; // Unauth read of Topic should not give out pinned tag value!
 
                         // Also, padUrl will not have authorization token
                         topicRead.data.padUrl = topicRead.data.padUrl.split('?')[0];
@@ -7531,7 +7531,7 @@ suite('Topics', function () {
                                 topicRead.data.permission.level = TopicMemberUser.LEVELS.none;
 
                                 delete topicRead.data.tokenJoin; // Unauth read of Topic should not give out token!
-                                delete topicRead.data.favourite; // Unauth read of Topic should not give out favourite tag value!
+                                delete topicRead.data.pinned; // Unauth read of Topic should not give out pinned tag value!
 
                                 // Also, padUrl will not have authorization token
                                 topicRead.data.padUrl = topicRead.data.padUrl.split('?')[0];
@@ -7580,7 +7580,7 @@ suite('Topics', function () {
                                 topicRead.data.permission.level = TopicMemberUser.LEVELS.none;
 
                                 delete topicRead.data.tokenJoin; // Unauth read of Topic should not give out token!
-                                delete topicRead.data.favourite; // Unauth read of Topic should not give out favourite tag value!
+                                delete topicRead.data.pinned; // Unauth read of Topic should not give out pinned tag value!
 
                                 // Also, padUrl will not have authorization token
                                 topicRead.data.padUrl = topicRead.data.padUrl.split('?')[0];
@@ -7635,7 +7635,7 @@ suite('Topics', function () {
                                 topicRead.data.permission.level = TopicMemberUser.LEVELS.none;
 
                                 delete topicRead.data.tokenJoin; // Unauth read of Topic should not give out token!
-                                delete topicRead.data.favourite; // Unauth read of Topic should not give out favourite tag value!
+                                delete topicRead.data.pinned; // Unauth read of Topic should not give out pinned tag value!
 
                                 // Also, padUrl will not have authorization token
                                 topicRead.data.padUrl = topicRead.data.padUrl.split('?')[0];
@@ -10037,7 +10037,7 @@ suite('Topics', function () {
 
     });
 
-    suite('Favourites', function () {
+    suite('Pin', function () {
 
         suite('Create', function () {            
             var agent = request.agent(app);

@@ -51,8 +51,8 @@
       "description": "Topic Events endpoints"
     },
     {
-      "name": "favourites",
-      "description": "Favourites endpoints"
+      "name": "pinned",
+      "description": "Pinned endpoints"
     },
     {
       "name": "activities",
@@ -4599,12 +4599,12 @@
         }
       }
     },
-    "/api/users/:userId/topics/:topicId/favourites": {
+    "/api/users/:userId/topics/:topicId/pin": {
       "post": {
-        "tags": ["favourites"],
-        "summary": "Add Topic as favourite",
-        "description": "Add Topic as favourite",
-        "operationId": "addTopicFavourite",
+        "tags": ["pinned"],
+        "summary": "Add Topic as pinned",
+        "description": "Add Topic as pinned",
+        "operationId": "pinTopic",
         "security": [
           {
             "oAuth2": [
@@ -4640,11 +4640,11 @@
       },
       "delete": {
         "tags": [
-          "favourites"
+          "pinned"
         ],
-        "summary": "Remove Topic from Favourites",
-        "description": "Remove Topic from Favourites",
-        "operationId": "removeTopicFavourites",
+        "summary": "Remove Topic from Pinned",
+        "description": "Remove Topic from Pinned",
+        "operationId": "removeTopicPin",
         "security": [
           {
             "oAuth2": [
@@ -7059,7 +7059,7 @@
             "type": "string",
             "example": "2018-08-06T04:11:41.568Z"
           },
-          "favourite": {
+          "pinned": {
             "type": "boolean",
             "example": "true",
             "description": "This value is only returned by authorized endpoints"
