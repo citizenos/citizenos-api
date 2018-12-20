@@ -238,7 +238,7 @@ module.exports = function (app) {
                                         ON (tv."topicId" = t.id) \
                                     LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId \
                                 WHERE ' + myTopicWhere + ' \
-                                GROUP BY t.id, tmup.level, tmgp.level, muc.count, mgc.count, tv."voteId", tf."topicId" \
+                                GROUP BY t.id, tmup.level, tmgp.level, muc.count, mgc.count, tv."voteId", tp."topicId" \
                                 ORDER BY t.title ASC \
                                 LIMIT :limit \
                                 OFFSET :offset \
