@@ -28,6 +28,9 @@ module.exports = function (app) {
     var hashtagCache = app.get('hashtagCache');
     var moment = app.get('moment');
     var encoder = app.get('encoder');
+    var fs = app.get('fs');
+    var URL = require('url');
+    var https = require('https');
 
     var loginCheck = app.get('middleware.loginCheck');
     var partnerParser = app.get('middleware.partnerParser');
@@ -3449,6 +3452,50 @@ module.exports = function (app) {
     app.get('/api/users/:userId/topics/:topicId/attachments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), topicAttachmentsList);
     app.get('/api/topics/:topicId/attachments', hasVisibility(Topic.VISIBILITY.public), topicAttachmentsList);
 
+    var readAttachment = function (req, res, next) {
+        Attachment
+            .findOne({
+                where: {
+                    id: req.params.attachmentId
+                }
+            })
+            .then(function (attachment) {
+                if (attachment && attachment.source === Attachment.SOURCES.upload && req.query.download) {
+                    var fileUrl = URL.parse(attachment.link);
+                    var filename = attachment.name;
+
+                    if (!filename.split('.').pop()) {
+                        filename += '.' + attachment.type;
+                    }
+
+                    var options = {
+                        hostname: fileUrl.hostname,
+                        path: fileUrl.path,
+                        port: 3003,
+                        method: 'GET'
+                    };
+
+                    if (app.get('env') === 'development') {
+                        options.rejectUnauthorized = false;
+                    }
+
+                    var externalReq = https.request(options, function (externalRes) {
+                        res.setHeader('content-disposition', 'attachment; filename=' + filename);
+                        externalRes.pipe(res);
+                    });
+
+                    externalReq.on('error', function (err) {
+                        next(err);
+                    });
+                    externalReq.end();
+                } else {
+                    res.ok(attachment.toJSON());
+                }
+            });
+    };
+
+    app.get('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), readAttachment);
+    app.get('/api/topics/:topicId/attachments/:attachmentId', hasVisibility(Topic.VISIBILITY.public), readAttachment);
     /**
      * Create Topic Comment
      */

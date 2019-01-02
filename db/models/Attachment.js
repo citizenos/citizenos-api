@@ -88,5 +88,7 @@ module.exports = function (sequelize, DataTypes) {
         });
     };
 
+    Attachment.SOURCES = SOURCES;
+    
     return Attachment;
 };
