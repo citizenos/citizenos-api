@@ -28,7 +28,6 @@ module.exports = function (app) {
     var hashtagCache = app.get('hashtagCache');
     var moment = app.get('moment');
     var encoder = app.get('encoder');
-    var fs = app.get('fs');
     var URL = require('url');
     var https = require('https');
 
@@ -3453,6 +3452,8 @@ module.exports = function (app) {
     app.get('/api/topics/:topicId/attachments', hasVisibility(Topic.VISIBILITY.public), topicAttachmentsList);
 
     var readAttachment = function (req, res, next) {
+
+        
         Attachment
             .findOne({
                 where: {
@@ -3460,11 +3461,11 @@ module.exports = function (app) {
                 }
             })
             .then(function (attachment) {
-                if (attachment && attachment.source === Attachment.SOURCES.upload && req.query.download) {
+                if (attachment && attachment.source === Attachment.SOURCES.upload && req.query.download) {                    
                     var fileUrl = URL.parse(attachment.link);
                     var filename = attachment.name;
 
-                    if (!filename.split('.').pop()) {
+                    if (filename.split('.').length <= 1) {
                         filename += '.' + attachment.type;
                     }
 
@@ -3475,7 +3476,7 @@ module.exports = function (app) {
                         method: 'GET'
                     };
 
-                    if (app.get('env') === 'development') {
+                    if (app.get('env') === 'development' || app.get('env') === 'test') {
                         options.rejectUnauthorized = false;
                     }
 
@@ -3487,6 +3488,7 @@ module.exports = function (app) {
                     externalReq.on('error', function (err) {
                         next(err);
                     });
+
                     externalReq.end();
                 } else {
                     res.ok(attachment.toJSON());
@@ -3496,6 +3498,7 @@ module.exports = function (app) {
 
     app.get('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), readAttachment);
     app.get('/api/topics/:topicId/attachments/:attachmentId', hasVisibility(Topic.VISIBILITY.public), readAttachment);
+
     /**
      * Create Topic Comment
      */
