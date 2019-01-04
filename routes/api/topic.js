@@ -3461,7 +3461,7 @@ module.exports = function (app) {
                 }
             })
             .then(function (attachment) {
-                if (attachment && attachment.source === Attachment.SOURCES.upload && req.query.download) {                    
+                if (attachment && attachment.source === Attachment.SOURCES.upload && req.query.download) {
                     var fileUrl = URL.parse(attachment.link);
                     var filename = attachment.name;
 
@@ -3472,24 +3472,19 @@ module.exports = function (app) {
                     var options = {
                         hostname: fileUrl.hostname,
                         path: fileUrl.path,
-                        port: 3003,
-                        method: 'GET'
+                        port: fileUrl.port
                     };
 
                     if (app.get('env') === 'development' || app.get('env') === 'test') {
                         options.rejectUnauthorized = false;
                     }
 
-                    var externalReq = https.request(options, function (externalRes) {
+                    https.get(options, function (externalRes) {
                         res.setHeader('content-disposition', 'attachment; filename=' + filename);
                         externalRes.pipe(res);
-                    });
-
-                    externalReq.on('error', function (err) {
+                    }).on('error', function (err) {
                         next(err);
-                    });
-
-                    externalReq.end();
+                    }).end();
                 } else {
                     res.ok(attachment.toJSON());
                 }

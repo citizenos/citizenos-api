@@ -1,3 +1,9 @@
+## 2019-01-04
+
+* Add endpoints to read attachment json or download uploaded attachment file with proper filename by adding query parameter `?download=true`
+    `GET /api/users/:userId/topics/:topicId/attachments/:attachmentId`
+    `GET /api/topics/:topicId/attachments/:attachmentId`
+
 ## 2018-12-18
 
 * Fix issue where missing e-mail addresses would fail adding Topics to a Group. Regression from 2018-12-10.
