@@ -154,6 +154,7 @@ app.set('util', require('./libs/util'));
 app.set('ddsClient', require('./libs/ddsClient'));
 app.set('cosBdoc', require('./libs/cosBdoc')(app));
 app.set('cosEtherpad', require('./libs/cosEtherpad')(app));
+app.set('cosJwt', require('./libs/cosJwt')(app));
 
 //Config smartId 
 var smartId = require('./libs/cosSmartId')(app);
