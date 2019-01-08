@@ -5,7 +5,7 @@
  *
  * @param {Object} app Express app
  *
- * @returns {Object}
+ * @returns {Function} Function
  */
 module.exports = function (app) {
 
@@ -23,16 +23,20 @@ module.exports = function (app) {
     /**
      * Get restricted use token
      *
-     * @param {Object} payload Payload object to sign, note that "scope" property is reserved and will throw an error!
+     * @param {Object} payload Payload object to sign, note that "audience" property is reserved and will throw an error!
      * @param {Array|String} audience Array of allowed audiences (usage scopes, paths with methods). For ex:  ["POST /api/new/stuff", "GET /api/foo/bar"]. Audience is originally part of the jwt.sign options, but bringing it out separately as it is required by all tokens we issue.
-     * @param {Object} options jwt.sign options like expiresIn etc (https://github.com/auth0/node-jsonwebtoken/tree/cb33aabc432408ed7f3826c2f5b5930313b63f1e)
+     * @param {Object} [options] jwt.sign options like expiresIn etc (https://github.com/auth0/node-jsonwebtoken/tree/cb33aabc432408ed7f3826c2f5b5930313b63f1e)
      *
      * @private
      *
      * @returns {Promise} Promise
      */
     var _getTokenRestrictedUse = function (payload, audience, options) {
-        if (!audience) {
+        if (!payload) {
+            throw new Error('Missing required parameter "payload"');
+        }
+
+        if (!audience || !audience.length) {
             throw new Error('Missing required parameter "audience". Please specify scope to which the usage is restricted!');
         }
 
@@ -49,8 +53,8 @@ module.exports = function (app) {
             }
         });
 
-
-        return new Promise(function (resolve, reject) {
+        return new Promise(function (resolve) {
+            // Interesting, jwt.sign (5.7.0) has no err object in the callback, the first argument is always the result. Code That Never Fails (tm)
             jwt.sign(payload, config.session.privateKey, effectiveOptions, function (token) {
                 return resolve(token);
             });
@@ -62,7 +66,7 @@ module.exports = function (app) {
      *
      * @param {string} token JWT token
      * @param {string} audience Audience that is required. The format is "METHOD PATH". For example "POST /api/new/stuff". Audience is originally part of the jwt.verify options, but bringing it out separately as it is required by all tokens we issue.
-     * @param {Object} options jwt.verify options.
+     * @param {Object} [options] jwt.verify options.
      *
      * @private
      *
