@@ -647,6 +647,74 @@ var topicAttachmentUpdate = function (agent, userId, topicId, attachmentId, name
     _topicAttachmentUpdate(agent, userId, topicId, attachmentId, name, 200, callback);
 };
 
+var _topicAttachmentRead = function (agent, userId, topicId, attachmentId, expectedHttpCode, callback) {
+    var path = '/api/users/:userId/topics/:topicId/attachments/:attachmentId'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':attachmentId', attachmentId);
+
+    agent
+        .get(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+    
+};
+
+var topicAttachmentRead = function (agent, userId, topicId, attachmentId, callback) {
+    _topicAttachmentRead(agent, userId, topicId, attachmentId, 200, callback);
+};
+
+var _topicAttachmentReadUnauth = function (agent, topicId, attachmentId, expectedHttpCode, callback) {
+    var path = '/api/topics/:topicId/attachments/:attachmentId'
+        .replace(':topicId', topicId)
+        .replace(':attachmentId', attachmentId);
+
+    agent
+        .get(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var topicAttachmentReadUnauth = function (agent, topicId, attachmentId, callback) {
+    _topicAttachmentReadUnauth(agent, topicId, attachmentId, 200, callback);
+};
+
+var _topicAttachmentDownload = function (agent, userId, topicId, attachmentId, expectedHttpCode, callback) {
+    var path = '/api/users/:userId/topics/:topicId/attachments/:attachmentId'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':attachmentId', attachmentId);
+    
+    agent
+        .get(path)
+        .query({download: true})
+        .then(callback);
+    
+};
+//TODO: Missing test to use it?
+var topicAttachmentDownload = function (agent, userId, topicId, attachmentId, callback) { //eslint-disable-line no-unused-vars
+    _topicAttachmentDownload(agent, userId, topicId, attachmentId, 200, callback);
+};
+
+var _topicAttachmentDownloadUnauth = function (agent, topicId, attachmentId, expectedHttpCode, callback) {
+    var path = '/api/topics/:topicId/attachments/:attachmentId'
+        .replace(':topicId', topicId)
+        .replace(':attachmentId', attachmentId);
+    
+    agent
+        .get(path)
+        .query({download: true})
+        .then(callback);
+    
+};
+
+//TODO: Missing test to use it?
+var topicAttachmentDownloadUnauth = function (agent, topicId, attachmentId, callback) { //eslint-disable-line no-unused-vars
+    _topicAttachmentDownloadUnauth(agent, topicId, attachmentId, 200, callback);
+};
+
 var _topicAttachmentDelete = function (agent, userId, topicId, attachmentId, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/attachments/:attachmentId'
         .replace(':userId', userId)
@@ -1148,7 +1216,7 @@ var topicCommentVotesCreate = function (agent, topicId, commentId, value, callba
 };
 
 var _topicFavouriteCreate = function (agent, userId, topicId, expectedHttpCode, callback) {
-    var path = '/api/users/:userId/topics/:topicId/favourites'
+    var path = '/api/users/:userId/topics/:topicId/pin'
         .replace(':userId', userId)
         .replace(':topicId', topicId);
     
@@ -1164,7 +1232,7 @@ var topicFavouriteCreate = function (agent, userId, topicId, callback) {
 };
 
 var _topicFavouriteDelete = function (agent, userId, topicId, expectedHttpCode, callback) {
-    var path = '/api/users/:userId/topics/:topicId/favourites'
+    var path = '/api/users/:userId/topics/:topicId/pin'
         .replace(':userId', userId)
         .replace(':topicId', topicId);
     
@@ -4597,7 +4665,7 @@ suite('Users', function () {
                     if (err) return done(err);
 
                     delete topic.permission;
-                    delete topic.favourite;
+                    delete topic.pinned;
                     topic.padUrl = topic.padUrl.split('?')[0]; // Pad url will not have JWT token as the user gets read-only by default
 
                     var expectedResult = {
@@ -7199,18 +7267,35 @@ suite('Users', function () {
         // API - /api/users/:userId/topics/:topicId/attachments
         suite('Attachments', function () {
             var creatorAgent = request.agent(app);
+            var agent = request.agent(app);
             var creator;
             var topic;
+            var topic2;
 
             setup(function (done) {
                 userLib.createUserAndLogin(creatorAgent, null, null, null, function (err, res) {
                     if (err) return done(err);
                     creator = res;
-                    topicCreate(creatorAgent, creator.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
-                        if (err) return done(err);
-                        topic = res.body.data;
-                        done();
-                    });
+                    
+                    async
+                        .parallel(
+                            [
+                                function (cb) {
+                                    topicCreate(creatorAgent, creator.id, Topic.VISIBILITY.public, null, null, null, null, cb);
+                                },
+                                function (cb) {
+                                    topicCreate(creatorAgent, creator.id, Topic.VISIBILITY.private, null, null, null, null, cb);
+                                }
+                            ],
+                            function (err, result) {
+                                if (err) return done(err);
+
+                                topic = result[0].body.data;
+                                topic2 = result[1].body.data;
+
+                                done();
+                            }
+                        );
                 });
             });
 
@@ -7236,6 +7321,132 @@ suite('Users', function () {
                     assert.equal(attachment.size, expectedAttachment.size);
                     assert.equal(attachment.creatorId, creator.id);
                     done();
+                });
+            });
+
+            test('Read attachment - Success', function (done) {
+                var expectedAttachment = {
+                    name: 'testfilename.doc',
+                    source: 'upload',
+                    link: 'http://example.com/testfilename.doc',
+                    type: '.doc',
+                    size: 1000,
+                    creatorId: creator.id
+                };
+
+                topicAttachmentAdd(creatorAgent, creator.id, topic.id, expectedAttachment.name, expectedAttachment.link, expectedAttachment.source, expectedAttachment.type, expectedAttachment.size, function (err, res) {
+                    if (err) return done(err);
+
+                    var attachment = res.body.data;
+
+                    assert.property(attachment, 'id');
+                    assert.property(attachment, 'createdAt');
+                    assert.equal(attachment.name, expectedAttachment.name);
+                    assert.equal(attachment.link, expectedAttachment.link);
+                    assert.equal(attachment.source, expectedAttachment.source);
+                    assert.equal(attachment.type, expectedAttachment.type);
+                    assert.equal(attachment.size, expectedAttachment.size);
+                    assert.equal(attachment.creatorId, creator.id);
+
+                    topicAttachmentRead(creatorAgent, creator.id, topic.id, attachment.id, function (err, res) {
+                        if (err) return done(err);
+
+                        var readAttachment = res.body.data;
+
+                        assert.equal(readAttachment.id, attachment.id);
+                        assert.equal(readAttachment.createdAt, attachment.createdAt);
+                        assert.equal(readAttachment.name, attachment.name);
+                        assert.equal(readAttachment.link, attachment.link);
+                        assert.equal(readAttachment.source, attachment.source);
+                        assert.equal(readAttachment.type, attachment.type);
+                        assert.equal(readAttachment.size, attachment.size);
+                        assert.equal(readAttachment.creatorId, attachment.creatorId);
+                        done();
+                    });
+                });
+            });
+
+            test('Read attachment unauth- Success', function (done) {
+                var expectedAttachment = {
+                    name: 'testfilename.doc',
+                    source: 'upload',
+                    link: 'http://example.com/testfilename.doc',
+                    type: '.doc',
+                    size: 1000,
+                    creatorId: creator.id
+                };
+
+                topicAttachmentAdd(creatorAgent, creator.id, topic.id, expectedAttachment.name, expectedAttachment.link, expectedAttachment.source, expectedAttachment.type, expectedAttachment.size, function (err, res) {
+                    if (err) return done(err);
+
+                    var attachment = res.body.data;
+
+                    assert.property(attachment, 'id');
+                    assert.property(attachment, 'createdAt');
+                    assert.equal(attachment.name, expectedAttachment.name);
+                    assert.equal(attachment.link, expectedAttachment.link);
+                    assert.equal(attachment.source, expectedAttachment.source);
+                    assert.equal(attachment.type, expectedAttachment.type);
+                    assert.equal(attachment.size, expectedAttachment.size);
+                    assert.equal(attachment.creatorId, creator.id);
+
+                    topicAttachmentReadUnauth(agent, topic.id, attachment.id, function (err, res) {
+                        if (err) return done(err);
+
+                        var readAttachment = res.body.data;
+
+                        assert.equal(readAttachment.id, attachment.id);
+                        assert.equal(readAttachment.createdAt, attachment.createdAt);
+                        assert.equal(readAttachment.name, attachment.name);
+                        assert.equal(readAttachment.link, attachment.link);
+                        assert.equal(readAttachment.source, attachment.source);
+                        assert.equal(readAttachment.type, attachment.type);
+                        assert.equal(readAttachment.size, attachment.size);
+                        assert.equal(readAttachment.creatorId, attachment.creatorId);
+                        done();
+                    });
+                });
+            });
+
+            test('Read attachment unauth- Fail', function (done) {
+                var expectedAttachment = {
+                    name: 'testfilename.doc',
+                    source: 'upload',
+                    link: 'http://example.com/testfilename.doc',
+                    type: '.doc',
+                    size: 1000,
+                    creatorId: creator.id
+                };
+
+                topicAttachmentAdd(creatorAgent, creator.id, topic2.id, expectedAttachment.name, expectedAttachment.link, expectedAttachment.source, expectedAttachment.type, expectedAttachment.size, function (err, res) {
+                    if (err) return done(err);
+
+                    var attachment = res.body.data;
+
+                    assert.property(attachment, 'id');
+                    assert.property(attachment, 'createdAt');
+                    assert.equal(attachment.name, expectedAttachment.name);
+                    assert.equal(attachment.link, expectedAttachment.link);
+                    assert.equal(attachment.source, expectedAttachment.source);
+                    assert.equal(attachment.type, expectedAttachment.type);
+                    assert.equal(attachment.size, expectedAttachment.size);
+                    assert.equal(attachment.creatorId, creator.id);
+
+                    _topicAttachmentReadUnauth(agent, topic2.id, attachment.id, 404, function (err, res) {
+                        if (err) return done(err);
+
+                        var expectedResponse = {
+                            status: {
+                                code: 40400,
+                                message: 'Not Found'
+                            }
+                        };
+                        
+                        var result = res.body;
+
+                        assert.deepEqual(result, expectedResponse);
+                        done();
+                    });
                 });
             });
 
@@ -7506,7 +7717,7 @@ suite('Topics', function () {
                         assert.notProperty(topicRead.data, 'events');
 
                         delete topicRead.data.tokenJoin; // Unauth read of Topic should not give out token!
-                        delete topicRead.data.favourite; // Unauth read of Topic should not give out favourite tag value!
+                        delete topicRead.data.pinned; // Unauth read of Topic should not give out pinned tag value!
 
                         // Also, padUrl will not have authorization token
                         topicRead.data.padUrl = topicRead.data.padUrl.split('?')[0];
@@ -7551,7 +7762,7 @@ suite('Topics', function () {
                                 topicRead.data.permission.level = TopicMemberUser.LEVELS.none;
 
                                 delete topicRead.data.tokenJoin; // Unauth read of Topic should not give out token!
-                                delete topicRead.data.favourite; // Unauth read of Topic should not give out favourite tag value!
+                                delete topicRead.data.pinned; // Unauth read of Topic should not give out pinned tag value!
 
                                 // Also, padUrl will not have authorization token
                                 topicRead.data.padUrl = topicRead.data.padUrl.split('?')[0];
@@ -7600,7 +7811,7 @@ suite('Topics', function () {
                                 topicRead.data.permission.level = TopicMemberUser.LEVELS.none;
 
                                 delete topicRead.data.tokenJoin; // Unauth read of Topic should not give out token!
-                                delete topicRead.data.favourite; // Unauth read of Topic should not give out favourite tag value!
+                                delete topicRead.data.pinned; // Unauth read of Topic should not give out pinned tag value!
 
                                 // Also, padUrl will not have authorization token
                                 topicRead.data.padUrl = topicRead.data.padUrl.split('?')[0];
@@ -7655,7 +7866,7 @@ suite('Topics', function () {
                                 topicRead.data.permission.level = TopicMemberUser.LEVELS.none;
 
                                 delete topicRead.data.tokenJoin; // Unauth read of Topic should not give out token!
-                                delete topicRead.data.favourite; // Unauth read of Topic should not give out favourite tag value!
+                                delete topicRead.data.pinned; // Unauth read of Topic should not give out pinned tag value!
 
                                 // Also, padUrl will not have authorization token
                                 topicRead.data.padUrl = topicRead.data.padUrl.split('?')[0];
@@ -10102,7 +10313,7 @@ suite('Topics', function () {
 
     });
 
-    suite('Favourites', function () {
+    suite('Pin', function () {
 
         suite('Create', function () {            
             var agent = request.agent(app);

@@ -12,13 +12,13 @@
  */
 module.exports = function (sequelize, DataTypes) {
 
-    var TopicFavourite = sequelize.define(
-        'TopicFavourite',
+    var TopicPin = sequelize.define(
+        'TopicPin',
         {
             topicId: {
                 type: DataTypes.UUID,
                 allowNull: false,
-                comment: 'To what Topic this Favourite belongs to.',
+                comment: 'To what Topic this Pin belongs to.',
                 references: {
                     model: 'Topics',
                     key: 'id'
@@ -28,7 +28,7 @@ module.exports = function (sequelize, DataTypes) {
             userId: {
                 type: DataTypes.UUID,
                 allowNull: false,
-                comment: 'Which User this Favourite belongs to.',
+                comment: 'Which User this Pin belongs to.',
                 references: {
                     model: 'Users',
                     key: 'id'
@@ -41,5 +41,5 @@ module.exports = function (sequelize, DataTypes) {
         }
     );
 
-    return TopicFavourite;
+    return TopicPin;
 };

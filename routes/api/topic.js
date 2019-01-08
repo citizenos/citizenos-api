@@ -28,6 +28,8 @@ module.exports = function (app) {
     var hashtagCache = app.get('hashtagCache');
     var moment = app.get('moment');
     var encoder = app.get('encoder');
+    var URL = require('url');
+    var https = require('https');
 
     var loginCheck = app.get('middleware.loginCheck');
     var partnerParser = app.get('middleware.partnerParser');
@@ -58,7 +60,7 @@ module.exports = function (app) {
     var TopicVote = models.TopicVote;
     var TopicAttachment = models.TopicAttachment;
     var Attachment = models.Attachment;
-    var TopicFavourite = models.TopicFavourite;
+    var TopicPin = models.TopicPin;
 
     var _hasPermission = function (topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelf, partnerId) {
         var LEVELS = {
@@ -930,7 +932,7 @@ module.exports = function (app) {
                     resObject.sourcePartnerId = null;
                 }
 
-                resObject.favourite = false;
+                resObject.pinned = false;
                 resObject.permission = { // TODO: should be plural?
                     level: level
                 };
@@ -1019,9 +1021,9 @@ module.exports = function (app) {
                         ELSE NULL \
                         END as "tokenJoin", \
                         CASE \
-                        WHEN tf."topicId" = t.id THEN true \
+                        WHEN tp."topicId" = t.id THEN true \
                         ELSE false \
-                        END as "favourite", \
+                        END as "pinned", \
                         t.categories, \
                         t."endsAt", \
                         t."padUrl", \
@@ -1117,7 +1119,7 @@ module.exports = function (app) {
                         LEFT JOIN "Votes" v \
                                 ON v.id = tv."voteId" \
                     ) AS tv ON (tv."topicId" = t.id) \
-                    LEFT JOIN "TopicFavourites" tf ON tf."topicId" = t.id AND tf."userId" = :userId \
+                    LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId \
                     ' + join + ' \
                 WHERE t.id = :topicId \
                     AND t."deletedAt" IS NULL \
@@ -1594,7 +1596,7 @@ module.exports = function (app) {
         var visibility = req.query.visibility;
         var creatorId = req.query.creatorId;
         var statuses = req.query.statuses;
-        var favourite = req.query.favourite;
+        var pinned = req.query.pinned;
         if (statuses && !Array.isArray(statuses)) {
             statuses = [statuses];
         }
@@ -1664,8 +1666,8 @@ module.exports = function (app) {
             where += ' AND t.status IN (:statuses)';
         }
 
-        if (favourite) {
-            where += 'AND tf."topicId" = t.id AND tf."userId" = :userId';
+        if (pinned) {
+            where += 'AND tp."topicId" = t.id AND tp."userId" = :userId';
         }
 
         if (creatorId) {
@@ -1691,9 +1693,9 @@ module.exports = function (app) {
                         ELSE NULL \
                      END as "tokenJoin", \
                      CASE \
-                        WHEN tf."topicId" = t.id THEN true \
+                        WHEN tp."topicId" = t.id THEN true \
                         ELSE false \
-                     END as "favourite", \
+                     END as "pinned", \
                      t.categories, \
                      t."sourcePartnerId", \
                      t."sourcePartnerObjectId", \
@@ -1810,10 +1812,10 @@ module.exports = function (app) {
                                 ) AS tcc \
                             GROUP BY tcc."topicId" \
                     ) AS com ON (com."topicId" = t.id) \
-                    LEFT JOIN "TopicFavourites" tf ON tf."topicId" = t.id AND tf."userId" = :userId \
+                    LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId \
                     ' + join + ' \
                 WHERE ' + where + ' \
-                ORDER BY "favourite" DESC, "order" ASC, t."updatedAt" DESC \
+                ORDER BY "pinned" DESC, "order" ASC, t."updatedAt" DESC \
             ;';
 
         var topicsPromise = db
@@ -3450,6 +3452,49 @@ module.exports = function (app) {
     app.get('/api/users/:userId/topics/:topicId/attachments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), topicAttachmentsList);
     app.get('/api/topics/:topicId/attachments', hasVisibility(Topic.VISIBILITY.public), topicAttachmentsList);
 
+    var readAttachment = function (req, res, next) {
+
+
+        Attachment
+            .findOne({
+                where: {
+                    id: req.params.attachmentId
+                }
+            })
+            .then(function (attachment) {
+                if (attachment && attachment.source === Attachment.SOURCES.upload && req.query.download) {
+                    var fileUrl = URL.parse(attachment.link);
+                    var filename = attachment.name;
+
+                    if (filename.split('.').length <= 1) {
+                        filename += '.' + attachment.type;
+                    }
+
+                    var options = {
+                        hostname: fileUrl.hostname,
+                        path: fileUrl.path,
+                        port: fileUrl.port
+                    };
+
+                    if (app.get('env') === 'development' || app.get('env') === 'test') {
+                        options.rejectUnauthorized = false;
+                    }
+
+                    https.get(options, function (externalRes) {
+                        res.setHeader('content-disposition', 'attachment; filename=' + filename);
+                        externalRes.pipe(res);
+                    }).on('error', function (err) {
+                        next(err);
+                    }).end();
+                } else {
+                    res.ok(attachment.toJSON());
+                }
+            });
+    };
+
+    app.get('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), readAttachment);
+    app.get('/api/topics/:topicId/attachments/:attachmentId', hasVisibility(Topic.VISIBILITY.public), readAttachment);
+
     var topicReportsCreate = function (req, res, next) {
         var topicId = req.params.topicId;
 
@@ -3505,7 +3550,7 @@ module.exports = function (app) {
     /**
      * Moderate a Topic
      */
-    app.post('/api/topics/:topicId/comments/:commentId/reports/:reportId/moderate', function (req, res, next) {
+    app.post('/api/topics/:topicId/reports/:reportId/moderate', function (req, res, next) {
         var reportType = req.body.type; // Delete reason type which is provided in case deleted/hidden by moderator due to a user report
         var reportText = req.body.text; // Free text with reason why the comment was deleted/hidden
 
@@ -4064,6 +4109,7 @@ module.exports = function (app) {
     app.get('/api/users/:userId/topics/:topicId/comments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), isModerator(), topicCommentsList);
     app.get('/api/v2/users/:userId/topics/:topicId/comments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), isModerator(), topicCommentsList2);
 
+
     /**
      * Read (List) public Topic Comments
      */
@@ -4271,7 +4317,7 @@ module.exports = function (app) {
 
 
     /**
-     * Read Comment (Argument) report
+     * Read Report
      */
     app.get(['/api/topics/:topicId/comments/:commentId/reports/:reportId', '/api/users/:userId/topics/:topicId/comments/:commentId/reports/:reportId'], function (req, res, next) {
         if (!req.headers || !req.headers.authorization) {
@@ -4356,7 +4402,7 @@ module.exports = function (app) {
                 }
             }
 
-            if (!eventTokenData || !eventTokenData.paths || eventTokenData.paths.indexOf(req.method + '_' + req.path) < 0) {
+            if (!eventTokenData || !eventTokenData.paths || eventTokenData.paths.indexOf(req.method + ' ' + req.path) < 0) {
                 logger.warn('Invalid token used to access path', req.method + '_' + req.path, '. Token was issued for path', eventTokenData.paths);
 
                 return res.unauthorised('Invalid JWT token');
@@ -6731,13 +6777,13 @@ module.exports = function (app) {
             .catch(next);
     });
 
-    app.post('/api/users/:userId/topics/:topicId/favourites', loginCheck(['partner']), function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/pin', loginCheck(['partner']), function (req, res, next) {
         var userId = req.user.id;
         var topicId = req.params.topicId;
 
-        db
+        return db
             .transaction(function (t) {
-                return TopicFavourite
+                return TopicPin
                     .findOrCreate({
                         where: {
                             topicId: topicId,
@@ -6745,7 +6791,7 @@ module.exports = function (app) {
                         },
                         transaction: t
                     })
-                    .spread(function (topicFavourite, created) {
+                    .spread(function (topicPin, created) {
                         if (created) {
                             return Topic
                                 .findOne({
@@ -6764,7 +6810,7 @@ module.exports = function (app) {
                                                 id: userId
                                             },
                                             null,
-                                            topicFavourite,
+                                            topicPin,
                                             req.method + ' ' + req.path,
                                             t
                                         );
@@ -6778,19 +6824,19 @@ module.exports = function (app) {
             .catch(next);
     });
 
-    app.delete('/api/users/:userId/topics/:topicId/favourites', loginCheck(['partner']), function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/pin', loginCheck(['partner']), function (req, res, next) {
         var userId = req.user.id;
         var topicId = req.params.topicId;
 
-        TopicFavourite
+        TopicPin
             .findOne({
                 where: {
                     userId: userId,
                     topicId: topicId
                 }
             })
-            .then(function (topicFavourite) {
-                if (topicFavourite) {
+            .then(function (topicPin) {
+                if (topicPin) {
                     return db
                         .transaction(function (t) {
                             return Topic
@@ -6804,7 +6850,7 @@ module.exports = function (app) {
 
                                     return cosActivities
                                         .deleteActivity(
-                                            topicFavourite,
+                                            topicPin,
                                             topic,
                                             {
                                                 type: 'User',
@@ -6814,7 +6860,7 @@ module.exports = function (app) {
                                             t
                                         )
                                         .then(function () {
-                                            return TopicFavourite
+                                            return TopicPin
                                                 .destroy({
                                                     where: {
                                                         userId: userId,

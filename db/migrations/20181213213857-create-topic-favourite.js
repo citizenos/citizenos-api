@@ -2,11 +2,11 @@
 
 module.exports = {
     up: (queryInterface, Sequelize) => {
-        return queryInterface.createTable('TopicFavourites', {
+        return queryInterface.createTable('TopicPins', {
             topicId: {
                 type: Sequelize.UUID,
                 allowNull: false,
-                comment: 'To what Topic this Favourite belongs to.',
+                comment: 'To what Topic this Pin belongs to.',
                 references: {
                     model: 'Topics',
                     key: 'id'
@@ -16,7 +16,7 @@ module.exports = {
             userId: {
                 type: Sequelize.UUID,
                 allowNull: false,
-                comment: 'Which User this Favourite belongs to.',
+                comment: 'Which User this Pin belongs to.',
                 references: {
                     model: 'Users',
                     key: 'id'
@@ -28,6 +28,6 @@ module.exports = {
         });
     },
     down: (queryInterface) => {
-        return queryInterface.dropTable('TopicFavourites');
+        return queryInterface.dropTable('TopicPins');
     }
 };
