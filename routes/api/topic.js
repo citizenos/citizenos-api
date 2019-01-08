@@ -3554,18 +3554,22 @@ module.exports = function (app) {
                                             transaction: t
                                         })
                                         .then(function (parentComment) {
-                                            return cosActivities
-                                                .replyActivity(
-                                                    comment,
-                                                    parentComment,
-                                                    topic,
-                                                    {
-                                                        type: 'User',
-                                                        id: req.user.id
-                                                    }
-                                                    , req.method + ' ' + req.path,
-                                                    t
-                                                );
+                                            if (parentComment) {                                                    
+                                                return cosActivities
+                                                    .replyActivity(
+                                                        comment,
+                                                        parentComment,
+                                                        topic,
+                                                        {
+                                                            type: 'User',
+                                                            id: req.user.id
+                                                        }
+                                                        , req.method + ' ' + req.path,
+                                                        t
+                                                    );
+                                            }
+
+                                            return Promise.reject(new Error(404));
                                         });
                                 } else {
                                     return cosActivities
@@ -3626,7 +3630,12 @@ module.exports = function (app) {
 
                 return res.created(comment.toJSON());
             })
-            .catch(next);
+            .catch(function (err) {
+                if (err.message === '404') {
+                    return res.notFound();
+                }
+                next(err);
+            });
     });
 
     var topicCommentsList = function (req, res, next) {
@@ -4194,28 +4203,32 @@ module.exports = function (app) {
     var topicCommentsReportsCreate = function (req, res, next) {
         var commentId = req.params.commentId;
 
-        db
-            .transaction(function (t) {
-                return Report
-                    .create(
-                        {
-                            type: req.body.type,
-                            text: req.body.text,
-                            creatorId: req.user.id,
-                            creatorIp: req.ip
-                        },
-                        {
-                            transaction: t
-                        }
-                    )
-                    .then(function (report) {
-                        return Comment
-                            .findOne({
-                                where: {
-                                    id: commentId
+        return Comment
+            .findOne({
+                where: {
+                    id: commentId
+                }
+            })
+            .then(function (comment) {
+                if (!comment) {
+                    return comment;
+                }
+
+                return db
+                    .transaction(function (t) {
+                        return Report
+                            .create(
+                                {
+                                    type: req.body.type,
+                                    text: req.body.text,
+                                    creatorId: req.user.id,
+                                    creatorIp: req.ip
+                                },
+                                {
+                                    transaction: t
                                 }
-                            })
-                            .then(function (comment) {
+                            )
+                            .then(function (report) {
                                 return cosActivities
                                     .addActivity(report, {
                                         type: 'User',
@@ -4240,6 +4253,10 @@ module.exports = function (app) {
                     });
             })
             .then(function (report) {
+                if (!report) {
+                    return res.notFound();
+                }
+
                 return emailLib
                     .sendCommentReport(commentId, report)
                     .then(function () {
@@ -4589,6 +4606,10 @@ module.exports = function (app) {
                 }
             })
             .then(function (comment) {
+                if (!comment) {
+                    return comment;
+                }
+
                 return db
                     .transaction(function (t) {
                         return CommentVote
@@ -4663,6 +4684,10 @@ module.exports = function (app) {
                     });
             })
             .then(function (results) {
+                if (!results) {
+                    return res.notFound();
+                }
+                
                 return res.ok(results[0]);
             })
             .catch(next);
