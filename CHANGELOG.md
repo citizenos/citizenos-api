@@ -1,3 +1,7 @@
+## 2019-01-09
+
+* Update topic argument reply, vote, report endpoints to return 404 when performing actions on deleted arguments/replies
+
 ## 2019-01-04
 
 * Add endpoints to read attachment json or download uploaded attachment file with proper filename by adding query parameter `?download=true`
