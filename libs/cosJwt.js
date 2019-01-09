@@ -29,7 +29,7 @@ module.exports = function (app) {
      *
      * @private
      *
-     * @returns {Promise} Promise
+     * @returns {String} String Token
      */
     var _getTokenRestrictedUse = function (payload, audience, options) {
         if (!payload) {
@@ -53,12 +53,7 @@ module.exports = function (app) {
             }
         });
 
-        return new Promise(function (resolve) {
-            // Interesting, jwt.sign (5.7.0) has no err object in the callback, the first argument is always the result. Code That Never Fails (tm)
-            jwt.sign(payload, config.session.privateKey, effectiveOptions, function (token) {
-                return resolve(token);
-            });
-        });
+        return jwt.sign(payload, config.session.privateKey, effectiveOptions);
     };
 
     /**
@@ -70,23 +65,14 @@ module.exports = function (app) {
      *
      * @private
      *
-     * @returns {Promise} Promise
+     * @returns {Object} Decoded JWT token
      */
     var _verifyTokenRestrictedUse = function (token, audience, options) {
         var effectiveOptions = Object.assign({}, TOKEN_OPTIONS_VERIFY_DEFAULTS, options);
         effectiveOptions.audience = audience;
 
-        return new Promise(function (resolve, reject) {
-            jwt.verify(token, config.session.publicKey, effectiveOptions, function (err, payload) {
-                if (err) {
-                    return reject(err);
-                }
-
-                return resolve(payload);
-            });
-        });
+        return jwt.verify(token, config.session.publicKey, effectiveOptions);
     };
-
 
     return {
         getTokenRestrictedUse: _getTokenRestrictedUse,

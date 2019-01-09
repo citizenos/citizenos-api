@@ -22,6 +22,7 @@ module.exports = function (app) {
     var cryptoLib = app.get('cryptoLib');
     var cosEtherpad = app.get('cosEtherpad');
     var jwt = app.get('jwt');
+    var cosJwt = app.get('cosJwt');
     var querystring = app.get('querystring');
     var objectEncrypter = app.get('objectEncrypter');
     var twitter = app.get('twitter');
@@ -32,6 +33,7 @@ module.exports = function (app) {
     var https = require('https');
 
     var loginCheck = app.get('middleware.loginCheck');
+    var authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
     var partnerParser = app.get('middleware.partnerParser');
 
     var User = models.User;
@@ -467,39 +469,42 @@ module.exports = function (app) {
         var voteId = params.voteId;
         var type = params.type;
 
-        var expiresIn = '1d';
-        var signOptions = {};
+        var path;
+        var tokenPayload = {};
+        var tokenOptions = {
+            expiresIn: '1d'
+        };
 
         if (type === 'user') {
-            signOptions.path = '/api/users/self/topics/:topicId/votes/:voteId/downloads/bdocs/user';
+            path = '/api/users/self/topics/:topicId/votes/:voteId/downloads/bdocs/user';
         }
+
         if (type === 'final') {
-            signOptions.path = '/api/users/self/topics/:topicId/votes/:voteId/downloads/bdocs/final';
+            path = '/api/users/self/topics/:topicId/votes/:voteId/downloads/bdocs/final';
         }
 
         if (type === 'goverment') {
-            expiresIn = '30d';
-            signOptions.path = '/api/topics/:topicId/votes/:voteId/downloads/bdocs/final';
-        }
-        if (userId) {
-            signOptions.userId = userId;
+            tokenOptions.expiresIn = '30d';
+            path = '/api/topics/:topicId/votes/:voteId/downloads/bdocs/final';
         }
 
-        signOptions.path = signOptions.path
+        if (userId) {
+            tokenPayload.userId = userId;
+        }
+
+        path = path
             .replace(':topicId', topicId)
             .replace(':voteId', voteId);
-        var urlOptions = {};
 
-        urlOptions.token = jwt.sign(signOptions, config.session.privateKey, {
-            expiresIn: expiresIn,
-            algorithm: config.session.algorithm
-        });
+        var urlOptions = {
+            token: cosJwt.getTokenRestrictedUse(tokenPayload, 'GET ' + path, tokenOptions)
+        };
 
         if (type === 'goverment') {
             urlOptions.accept = 'application/x-7z-compressed';
         }
 
-        return urlLib.getApi(signOptions.path, null, urlOptions);
+        return urlLib.getApi(path, null, urlOptions);
     };
 
     var getZipURL = function (params) {
@@ -1437,21 +1442,15 @@ module.exports = function (app) {
                         if (isSendToParliament) {
                             logger.info('Sending to Parliament', req.method, req.path);
 
+                            // TODO: This should be and stay in sync with the expiry set by getBdocURL
                             var downloadTokenExpiryDays = 30;
-
-                            // Path is in the token so that the token could not be used for any other path
-
                             var linkDownloadBdocFinalExpiryDate = new Date(new Date().getTime() + downloadTokenExpiryDays * 24 * 60 * 60 * 1000);
 
                             var pathAddEvent = '/api/topics/:topicId/events' // COS API url for adding events with token
                                 .replace(':topicId', topicId);
 
-                            var tokenAddEvent = jwt.sign({path: pathAddEvent}, config.session.privateKey, {
-                                algorithm: config.session.algorithm
-                            });
-
                             var linkAddEvent = config.features.sendToParliament.urlPrefix + '/initiatives/:topicId/events/new'.replace(':topicId', topicId);
-                            linkAddEvent += '?' + querystring.stringify({token: tokenAddEvent});
+                            linkAddEvent += '?' + querystring.stringify({token: cosJwt.getTokenRestrictedUse({}, 'POST ' + pathAddEvent)});
 
                             var downloadUriBdocFinal = getBdocURL({
                                 topicId: topicId,
@@ -4319,203 +4318,151 @@ module.exports = function (app) {
     /**
      * Read Report
      */
-    app.get(['/api/topics/:topicId/comments/:commentId/reports/:reportId', '/api/users/:userId/topics/:topicId/comments/:commentId/reports/:reportId'], function (req, res, next) {
-        if (!req.headers || !req.headers.authorization) {
-            return res.unauthorised();
-        }
-
-        var token = req.headers.authorization.split(' ')[1];
-
-        jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]}, function (err, eventTokenData) {
-            if (err) {
-                if (err.name === 'TokenExpiredError') {
-                    logger.info('loginCheck - JWT token has expired', req.method, req.path, err);
-
-                    return res.unauthorised('JWT token has expired');
-                } else {
-                    logger.warn('loginCheck - JWT error', req.method, req.path, req.headers, err);
-
-                    return res.unauthorised('Invalid JWT token');
+    app.get(['/api/topics/:topicId/comments/:commentId/reports/:reportId', '/api/users/:userId/topics/:topicId/comments/:commentId/reports/:reportId'], authTokenRestrictedUse, function (req, res, next) {
+        db
+            .query(
+                '\
+                    SELECT \
+                        r."id", \
+                        r."type", \
+                        r."text", \
+                        r."createdAt", \
+                        c."id" as "comment.id", \
+                        c.subject as "comment.subject", \
+                        c."text" as "comment.text" \
+                    FROM "Reports" r \
+                    LEFT JOIN "CommentReports" cr ON (cr."reportId" = r.id) \
+                    LEFT JOIN "Comments" c ON (c.id = cr."commentId") \
+                    WHERE r.id = :reportId \
+                    AND c.id = :commentId \
+                    AND r."deletedAt" IS NULL \
+                ;',
+                {
+                    replacements: {
+                        commentId: req.params.commentId,
+                        reportId: req.params.reportId
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
                 }
-            }
+            )
+            .then(function (results) {
+                var commentReport = results[0];
 
-            if (!eventTokenData || !eventTokenData.paths || eventTokenData.paths.indexOf(req.method + '_' + req.path) < 0) {
-                logger.warn('Invalid token used to access path', req.method + '_' + req.path, '. Token was issued for paths', eventTokenData.paths);
-
-                return res.unauthorised('Invalid JWT token');
-            }
-
-            db
-                .query(
-                    '\
-                        SELECT \
-                            r."id", \
-                            r."type", \
-                            r."text", \
-                            r."createdAt", \
-                            c."id" as "comment.id", \
-                            c.subject as "comment.subject", \
-                            c."text" as "comment.text" \
-                        FROM "Reports" r \
-                        LEFT JOIN "CommentReports" cr ON (cr."reportId" = r.id) \
-                        LEFT JOIN "Comments" c ON (c.id = cr."commentId") \
-                        WHERE r.id = :reportId \
-                        AND c.id = :commentId \
-                        AND r."deletedAt" IS NULL \
-                    ;',
-                    {
-                        replacements: {
-                            commentId: req.params.commentId,
-                            reportId: req.params.reportId
-                        },
-                        type: db.QueryTypes.SELECT,
-                        raw: true,
-                        nest: true
-                    }
-                )
-                .then(function (results) {
-                    var commentReport = results[0];
-
-                    return res.ok(commentReport);
-                })
-                .catch(next);
-        });
+                return res.ok(commentReport);
+            })
+            .catch(next);
     });
 
-    app.post('/api/topics/:topicId/comments/:commentId/reports/:reportId/moderate', function (req, res, next) {
-        if (!req.headers || !req.headers.authorization) {
-            return res.unauthorised();
+    app.post('/api/topics/:topicId/comments/:commentId/reports/:reportId/moderate', authTokenRestrictedUse, function (req, res, next) {
+        var eventTokenData = req.locals.tokenDecoded;
+        var type = req.body.type;
+
+        if (!type) {
+            return res.badRequest({type: 'Property type is required'});
         }
 
-        var token = req.headers.authorization.split(' ')[1];
-
-        jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]}, function (err, eventTokenData) {
-            if (err) {
-                if (err.name === 'TokenExpiredError') {
-                    logger.info('loginCheck - JWT token has expired', req.method, req.path, err);
-
-                    return res.unauthorised('JWT token has expired');
-                } else {
-                    logger.warn('loginCheck - JWT error', req.method, req.path, req.headers, err);
-
-                    return res.unauthorised('Invalid JWT token');
+        db
+            .query(
+                '\
+                    SELECT \
+                        c."id" as "comment.id", \
+                        c."updatedAt" as "comment.updatedAt", \
+                        r."id" as "report.id", \
+                        r."createdAt" as "report.createdAt" \
+                    FROM "CommentReports" cr \
+                    LEFT JOIN "Reports" r ON (r.id = cr."reportId") \
+                    LEFT JOIN "Comments" c ON (c.id = cr."commentId") \
+                    WHERE cr."commentId" = :commentId AND cr."reportId" = :reportId \
+                    AND c."deletedAt" IS NULL \
+                    AND r."deletedAt" IS NULL \
+                ;',
+                {
+                    replacements: {
+                        commentId: req.params.commentId,
+                        reportId: req.params.reportId
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
                 }
-            }
+            )
+            .then(function (results) {
+                var commentReport = results[0];
 
-            if (!eventTokenData || !eventTokenData.paths || eventTokenData.paths.indexOf(req.method + ' ' + req.path) < 0) {
-                logger.warn('Invalid token used to access path', req.method + '_' + req.path, '. Token was issued for path', eventTokenData.paths);
+                if (!commentReport) {
+                    return res.notFound();
+                }
 
-                return res.unauthorised('Invalid JWT token');
-            }
+                var comment = commentReport.comment;
+                var report = commentReport.report;
 
-            var type = req.body.type;
+                // If Comment has been updated since the Report was made, deny moderation cause the text may have changed.
+                if (comment.updatedAt.getTime() > report.createdAt.getTime()) {
+                    return res.badRequest('Report has become invalid cause comment has been updated after the report', 10);
+                }
 
-            if (!type) {
-                return res.badRequest({type: 'Property type is required'});
-            }
-
-            db
-                .query(
-                    '\
-                        SELECT \
-                            c."id" as "comment.id", \
-                            c."updatedAt" as "comment.updatedAt", \
-                            r."id" as "report.id", \
-                            r."createdAt" as "report.createdAt" \
-                        FROM "CommentReports" cr \
-                        LEFT JOIN "Reports" r ON (r.id = cr."reportId") \
-                        LEFT JOIN "Comments" c ON (c.id = cr."commentId") \
-                        WHERE cr."commentId" = :commentId AND cr."reportId" = :reportId \
-                        AND c."deletedAt" IS NULL \
-                        AND r."deletedAt" IS NULL \
-                    ;',
-                    {
-                        replacements: {
-                            commentId: req.params.commentId,
-                            reportId: req.params.reportId
+                Comment
+                    .findOne({
+                        where: {
+                            id: comment.id
                         },
-                        type: db.QueryTypes.SELECT,
-                        raw: true,
-                        nest: true
-                    }
-                )
-                .then(function (results) {
-                    var commentReport = results[0];
+                        include: [Topic]
+                    })
+                    .then(function (comment) {
+                        var topic = comment.dataValues.Topics[0];
+                        delete comment.dataValues.Topics;
+                        comment.deletedById = eventTokenData.userId;
+                        comment.deletedAt = db.fn('NOW');
+                        comment.deletedReasonType = req.body.type;
+                        comment.deletedReasonText = req.body.text;
+                        comment.deletedByReportId = report.id;
 
-                    if (!commentReport) {
-                        return res.notFound();
-                    }
-
-                    var comment = commentReport.comment;
-                    var report = commentReport.report;
-
-                    // If Comment has been updated since the Report was made, deny moderation cause the text may have changed.
-                    if (comment.updatedAt.getTime() > report.createdAt.getTime()) {
-                        return res.badRequest('Report has become invalid cause comment has been updated after the report', 10);
-                    }
-
-                    Comment
-                        .findOne({
-                            where: {
-                                id: comment.id
-                            },
-                            include: [Topic]
-                        })
-                        .then(function (comment) {
-                            var topic = comment.dataValues.Topics[0];
-                            delete comment.dataValues.Topics;
-                            comment.deletedById = eventTokenData.userId;
-                            comment.deletedAt = db.fn('NOW');
-                            comment.deletedReasonType = req.body.type;
-                            comment.deletedReasonText = req.body.text;
-                            comment.deletedByReportId = report.id;
-
-                            return db
-                                .transaction(function (t) {
-                                    return cosActivities
-                                        .updateActivity(comment, topic, {
-                                            type: 'Moderator',
-                                            id: eventTokenData.userId
-                                        }, null, req.method + ' ' + req.path, t)
-                                        .then(function () {
-                                            return Comment
-                                                .update(
-                                                    {
-                                                        deletedById: eventTokenData.userId,
-                                                        deletedAt: db.fn('NOW'),
-                                                        deletedReasonType: req.body.type,
-                                                        deletedReasonText: req.body.text,
-                                                        deletedByReportId: report.id
+                        return db
+                            .transaction(function (t) {
+                                return cosActivities
+                                    .updateActivity(comment, topic, {
+                                        type: 'Moderator',
+                                        id: eventTokenData.userId
+                                    }, null, req.method + ' ' + req.path, t)
+                                    .then(function () {
+                                        return Comment
+                                            .update(
+                                                {
+                                                    deletedById: eventTokenData.userId,
+                                                    deletedAt: db.fn('NOW'),
+                                                    deletedReasonType: req.body.type,
+                                                    deletedReasonText: req.body.text,
+                                                    deletedByReportId: report.id
+                                                },
+                                                {
+                                                    where: {
+                                                        id: comment.id
                                                     },
-                                                    {
-                                                        where: {
-                                                            id: comment.id
-                                                        },
-                                                        returning: true
-                                                    },
-                                                    {
-                                                        transaction: t
-                                                    }
-                                                )
-                                                .spread(function (updated, comment) {
-                                                    comment = Comment.build(comment.dataValues);
+                                                    returning: true
+                                                },
+                                                {
+                                                    transaction: t
+                                                }
+                                            )
+                                            .spread(function (updated, comment) {
+                                                comment = Comment.build(comment.dataValues);
 
-                                                    return cosActivities
-                                                        .deleteActivity(comment, topic, {
-                                                            type: 'Moderator',
-                                                            id: eventTokenData.userId
-                                                        }, req.method + ' ' + req.path, t);
-                                                });
-                                        });
-                                });
-                        })
-                        .then(function () {
-                            return res.ok();
-                        });
-                })
-                .catch(next);
-        });
-
+                                                return cosActivities
+                                                    .deleteActivity(comment, topic, {
+                                                        type: 'Moderator',
+                                                        id: eventTokenData.userId
+                                                    }, req.method + ' ' + req.path, t);
+                                            });
+                                    });
+                            });
+                    })
+                    .then(function () {
+                        return res.ok();
+                    });
+            })
+            .catch(next);
     });
 
     var topicMentionsList = function (req, res, next) {
@@ -6170,37 +6117,10 @@ module.exports = function (app) {
      *
      * TODO: Deprecate /api/users/:userId/topics/:topicId/votes/:voteId/downloads/bdocs/user
      */
-    app.get(['/api/users/:userId/topics/:topicId/votes/:voteId/downloads/bdocs/user', '/api/topics/:topicId/votes/:voteId/downloads/bdocs/user'], function (req, res, next) {
+    app.get(['/api/users/:userId/topics/:topicId/votes/:voteId/downloads/bdocs/user', '/api/topics/:topicId/votes/:voteId/downloads/bdocs/user'], authTokenRestrictedUse, function (req, res, next) {
         var voteId = req.params.voteId;
-        var token = req.query.token;
-
-        if (!token) {
-            return res.badRequest('Missing required parameter "token"');
-        }
-
-        var downloadTokenData;
-
-        try {
-            downloadTokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
-        } catch (err) {
-            if (err.name === 'TokenExpiredError') {
-                logger.info('loginCheck - JWT token has expired', req.method, req.path, err);
-
-                return res.unauthorised('JWT token has expired');
-            } else {
-                logger.warn('loginCheck - JWT error', req.method, req.path, req.headers, err);
-
-                return res.unauthorised('Invalid JWT token');
-            }
-        }
-
+        var downloadTokenData = req.locals.tokenDecoded;
         var userId = downloadTokenData.userId;
-
-        if (req.path !== downloadTokenData.path) {
-            logger.warn('Invalid token used to access path', req.path, '. Token was issued for path', downloadTokenData.path);
-
-            return res.unauthorised('Invalid JWT token');
-        }
 
         //TODO: Make use of streaming once Sequelize supports it - https://github.com/sequelize/sequelize/issues/2454
         VoteUserContainer
@@ -6243,32 +6163,6 @@ module.exports = function (app) {
     var topicDownloadBdocFinal = function (req, res, next) {
         var topicId = req.params.topicId;
         var voteId = req.params.voteId;
-
-        var token = req.query.token;
-
-        if (!token) {
-            return res.badRequest('Missing required parameter "token"');
-        }
-
-        try {
-            var downloadTokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
-        } catch (err) {
-            if (err.name === 'TokenExpiredError') {
-                logger.info('loginCheck - JWT token has expired', req.method, req.path, err);
-
-                return res.unauthorised('JWT token has expired');
-            } else {
-                logger.warn('loginCheck - JWT error', req.method, req.path, req.headers, err);
-
-                return res.unauthorised('Invalid JWT token');
-            }
-        }
-
-        if (req.path !== downloadTokenData.path) {
-            logger.warn('Invalid token used to access path', req.path, '. Token was issued for path', downloadTokenData.path);
-
-            return res.unauthorised('Invalid JWT token');
-        }
 
         Topic
             .findOne({
@@ -6321,32 +6215,6 @@ module.exports = function (app) {
         var topicId = req.params.topicId;
         var voteId = req.params.voteId;
 
-        var token = req.query.token;
-
-        if (!token) {
-            return res.badRequest('Missing required parameter "token"');
-        }
-
-        try {
-            var downloadTokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
-        } catch (err) {
-            if (err.name === 'TokenExpiredError') {
-                logger.info('loginCheck - JWT token has expired', req.method, req.path, err);
-
-                return res.unauthorised('JWT token has expired');
-            } else {
-                logger.warn('loginCheck - JWT error', req.method, req.path, req.headers, err);
-
-                return res.unauthorised('Invalid JWT token');
-            }
-        }
-
-        if (req.path !== downloadTokenData.path) {
-            logger.warn('Invalid token used to access path', req.path, '. Token was issued for path', downloadTokenData.path);
-
-            return res.unauthorised('Invalid JWT token');
-        }
-
         Topic
             .findOne({
                 where: {
@@ -6390,17 +6258,15 @@ module.exports = function (app) {
      *
      * @deprecated Use GET /api/topics/:topicId/votes/:voteId/downloads/bdocs/final instead
      */
-    app.get('/api/users/:userId/topics/:topicId/votes/:voteId/downloads/bdocs/final', topicDownloadBdocFinal);
-    app.get('/api/users/:userId/topics/:topicId/votes/:voteId/downloads/zip/final', topicDownloadZipFinal);
+    app.get('/api/users/:userId/topics/:topicId/votes/:voteId/downloads/bdocs/final', authTokenRestrictedUse, topicDownloadBdocFinal);
+    app.get('/api/users/:userId/topics/:topicId/votes/:voteId/downloads/zip/final', authTokenRestrictedUse, topicDownloadZipFinal);
 
 
     /**
      * Download final vote BDOC container
-     *
-     * TODO: Create middleware for path token checking!
      */
-    app.get('/api/topics/:topicId/votes/:voteId/downloads/bdocs/final', topicDownloadBdocFinal);
-    app.get('/api/topics/:topicId/votes/:voteId/downloads/zip/final', topicDownloadZipFinal);
+    app.get('/api/topics/:topicId/votes/:voteId/downloads/bdocs/final', authTokenRestrictedUse, topicDownloadBdocFinal);
+    app.get('/api/topics/:topicId/votes/:voteId/downloads/zip/final', authTokenRestrictedUse, topicDownloadZipFinal);
 
 
     /**
@@ -6673,36 +6539,7 @@ module.exports = function (app) {
     /**
      * Create an Event with a token issued to a 3rd party
      */
-    app.post('/api/topics/:topicId/events', function (req, res, next) {
-        if (!req.headers || !req.headers.authorization) {
-            return res.unauthorised();
-        }
-
-        var token = req.headers.authorization.split(' ')[1];
-
-        jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]}, function (err, eventTokenData) {
-            if (err) {
-                if (err.name === 'TokenExpiredError') {
-                    logger.info('loginCheck - JWT token has expired', req.method, req.path, err);
-
-                    return res.unauthorised('JWT token has expired');
-                } else {
-                    logger.warn('loginCheck - JWT error', req.method, req.path, req.headers, err);
-
-                    return res.unauthorised('Invalid JWT token');
-                }
-            }
-
-            if (!eventTokenData || eventTokenData.path !== req.path) {
-                logger.warn('Invalid token used to access path', req.path, '. Token was issued for path', eventTokenData.path);
-
-                return res.unauthorised('Invalid JWT token');
-            }
-
-            topicEventsCreate(req, res, next);
-        });
-
-    });
+    app.post('/api/topics/:topicId/events', authTokenRestrictedUse, topicEventsCreate);
 
 
     var topicEventsList = function (req, res, next) {

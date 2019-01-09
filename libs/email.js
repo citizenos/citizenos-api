@@ -21,6 +21,7 @@ module.exports = function (app) {
     var moment = app.get('moment');
     var url = app.get('url');
     var jwt = app.get('jwt');
+    var cosJwt = app.get('cosJwt');
 
     var User = models.User;
     var Topic = models.Topic;
@@ -747,24 +748,21 @@ module.exports = function (app) {
                     moderators.forEach(function (moderator) {
                         if (moderator.email) {
                             var templateObject = resolveTemplate('reportCommentModerator', moderator.language);
-                            var token = jwt.sign(
+
+                            var token = cosJwt.getTokenRestrictedUse(
                                 {
-                                    paths: [
-                                        'POST /api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
-                                            .replace(':topicId', commentInfo.topic.id)
-                                            .replace(':commentId', commentInfo.comment.id)
-                                            .replace(':reportId', report.id),
-                                        'GET /api/topics/:topicId/comments/:commentId/reports/:reportId'
-                                            .replace(':topicId', commentInfo.topic.id)
-                                            .replace(':commentId', commentInfo.comment.id)
-                                            .replace(':reportId', report.id)
-                                    ],
                                     userId: moderator.id
                                 },
-                                config.session.privateKey,
-                                {
-                                    algorithm: config.session.algorithm
-                                }
+                                [
+                                    'POST /api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
+                                        .replace(':topicId', commentInfo.topic.id)
+                                        .replace(':commentId', commentInfo.comment.id)
+                                        .replace(':reportId', report.id),
+                                    'GET /api/topics/:topicId/comments/:commentId/reports/:reportId'
+                                        .replace(':topicId', commentInfo.topic.id)
+                                        .replace(':commentId', commentInfo.comment.id)
+                                        .replace(':reportId', report.id)
+                                ]
                             );
 
                             var promiseModeratorEmail = emailClient.sendStringAsync(

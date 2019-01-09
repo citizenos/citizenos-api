@@ -239,6 +239,7 @@ app.use(/^\/api\/.*/, require('./libs/middleware/authTokenParser'));
 app.use(/^\/api\/auth\/.*/, passport.initialize());
 app.set('middleware.loginCheck', require('./libs/middleware/loginCheck'));
 app.set('middleware.authApiKey', require('./libs/middleware/authApiKey'));
+app.set('middleware.authTokenRestrictedUse', require('./libs/middleware/authTokenRestrictedUse'));
 app.set('middleware.partnerParser', require('./libs/middleware/partnerParser')(app));
 app.set('middleware.uuidValidator', require('./libs/middleware/uuidValidator')(app));
 
