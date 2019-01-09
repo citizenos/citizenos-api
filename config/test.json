@@ -120,7 +120,7 @@
     "sendToParliament": {
       "voteCountMin": 2,
       "urlPrefix": "http://next.rahvaalgatus.ee",
-      "from": "Rahvaalgatus TEST <test_info@rahvaalgatus.ee>",
+      "from": "CitizeOS Test <test-no-reply@sandbox47712213e9284dc8bc56953e3333e458.mailgun.org>",
       "to": [
         "riigikogu@riigikogu_test.ee",
         "info@rahvaalgatus_test.ee",
