@@ -61,7 +61,7 @@
     "object-encrypter": "0.1.2",
     "passport": "0.2.1",
     "passport-facebook": "2.1.1",
-    "passport-google-oauth2": "0.1.6",
+    "passport-google-oauth20": "1.0.0",
     "passport-local": "1.0.0",
     "pem": "1.9.7",
     "pg": "6.4.2",

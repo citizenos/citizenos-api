@@ -11,7 +11,7 @@
 
 module.exports = function (app) {
     var passport = app.get('passport');
-    var GoogleStrategy = require('passport-google-oauth2').Strategy;
+    var GoogleStrategy = require('passport-google-oauth20').Strategy;
     var FacebookStrategy = require('passport-facebook').Strategy;
     var LocalStrategy = require('passport-local').Strategy;
 
@@ -39,13 +39,22 @@ module.exports = function (app) {
                 clientID: config.passport.google.clientId,
                 clientSecret: config.passport.google.clientSecret,
                 callbackURL: urlLib.getApi(config.passport.google.callbackUrl),
+                userProfileURL: 'https://www.googleapis.com/oauth2/v3/userinfo',
                 passReqToCallback: true // http://passportjs.org/guide/authorize/#association_in_verify_callback
             },
             function (req, accessToken, refreshToken, profile, done) {
                 logger.debug('Google responded with profile: ', profile);
 
                 var email = profile.email;
-                var displayName = profile.displayName || util.emailToDisplayName(email);
+                if (!email && profile.emails.length) {
+                    if (profile.emails[0]) {
+                        email = profile.emails[0].value;
+                    }
+                }
+                var displayName = profile.displayName;
+                if (!displayName) {
+                    displayName = util.emailToDisplayName(email);
+                }
                 var sourceId = profile.id;
                 var imageUrl = null;
                 if (profile.photos && profile.photos.length) {
