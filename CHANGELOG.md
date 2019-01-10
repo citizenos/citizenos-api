@@ -1,3 +1,7 @@
+## 2019-01-11
+
+* Swap out passport-google-oauth2 to official passport-google-oauth20. Changed configuration and updated result parsing https://github.com/citizenos/citizenos-api/issues/72
+
 ## 2019-01-09
 
 * Update topic argument reply, vote, report endpoints to return 404 when performing actions on deleted arguments/replies
