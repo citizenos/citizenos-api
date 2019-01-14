@@ -73,7 +73,8 @@
   },
   "features": {
     "sendToParliament": {
-      "voteCountMin": "CITIZENOS_FEATURES_SENDTOPARLIAMENT_VOTECOUNTMIN"
+      "voteCountMin": "CITIZENOS_FEATURES_SENDTOPARLIAMENT_VOTECOUNTMIN",
+      "from": "CITIZENOS_FEATURES_SENDTOPARLIAMENT_FROM"
     }
   }
 }

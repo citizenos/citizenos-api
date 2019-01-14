@@ -658,7 +658,7 @@ var _topicAttachmentRead = function (agent, userId, topicId, attachmentId, expec
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/)
         .end(callback);
-    
+
 };
 
 var topicAttachmentRead = function (agent, userId, topicId, attachmentId, callback) {
@@ -686,12 +686,12 @@ var _topicAttachmentDownload = function (agent, userId, topicId, attachmentId, e
         .replace(':userId', userId)
         .replace(':topicId', topicId)
         .replace(':attachmentId', attachmentId);
-    
+
     agent
         .get(path)
         .query({download: true})
         .then(callback);
-    
+
 };
 //TODO: Missing test to use it?
 var topicAttachmentDownload = function (agent, userId, topicId, attachmentId, callback) { //eslint-disable-line no-unused-vars
@@ -702,12 +702,12 @@ var _topicAttachmentDownloadUnauth = function (agent, topicId, attachmentId, exp
     var path = '/api/topics/:topicId/attachments/:attachmentId'
         .replace(':topicId', topicId)
         .replace(':attachmentId', attachmentId);
-    
+
     agent
         .get(path)
         .query({download: true})
         .then(callback);
-    
+
 };
 
 //TODO: Missing test to use it?
@@ -1794,6 +1794,7 @@ suite('Users', function () {
                                             var token = bdocUri.slice(bdocUri.indexOf('token=') + 6);
                                             var tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
                                             assert.equal(tokenData.userId, creator.id);
+
                                             assert.equal(tokenData.path, bdocpathExpected);
                                             topicVoteRead(voteAgent, creator.id, voteTopic.id, vote.id, function (err, res) {
                                                 if (err) return done(err);
@@ -7275,7 +7276,7 @@ suite('Users', function () {
                 userLib.createUserAndLogin(creatorAgent, null, null, null, function (err, res) {
                     if (err) return done(err);
                     creator = res;
-                    
+
                     async
                         .parallel(
                             [
@@ -7440,7 +7441,7 @@ suite('Users', function () {
                                 message: 'Not Found'
                             }
                         };
-                        
+
                         var result = res.body;
 
                         assert.deepEqual(result, expectedResponse);
@@ -8384,52 +8385,6 @@ suite('Topics', function () {
 
         });
 
-    });
-
-    // API - /api/users/:userId/topics/:topicId/reports
-    suite('Reports', function () {
-
-        suite('Create', function () {
-            var agent = request.agent(app);
-            var userReporter;
-            var topic;
-
-            suiteSetup(function (done) {
-                userLib.createUserAndLogin(agent, null, null, null, function (err, res) {
-                    if (err) return done(err);
-
-                    userReporter = res;
-
-                    topicCreate(agent, userReporter.id, null, null, null, null, null, function (err, res) {
-                        if (err) return done(err);
-
-                        topic = res.body.data;
-
-                        done();
-                    });
-                });
-            });
-
-            test('Success', function (done) {
-                var reportType = Report.TYPES.hate;
-                var reportText = 'Reports Create test';
-
-                topicReportCreate(agent, topic.id, reportType, reportText, function (err, res) {
-                    if (err) return done(err);
-
-                    var reportResult = res.body.data;
-
-                    assert.isTrue(validator.isUUID(reportResult.id, 4));
-                    assert.equal(reportResult.type, reportType);
-                    assert.equal(reportResult.text, reportText);
-                    assert.property(reportResult, 'createdAt');
-                    assert.equal(reportResult.creator.id, userReporter.id);
-
-                    done();
-                });
-            });
-
-        });
     });
 
     suite('Comments', function () {
@@ -9587,7 +9542,7 @@ suite('Topics', function () {
                     var token = jwt.sign(
                         {
                             paths: [
-                                'POST /api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
+                                'POST_/api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
                                     .replace(':topicId', topic.id)
                                     .replace(':commentId', comment.id)
                                     .replace(':reportId', report.id)
@@ -9676,7 +9631,7 @@ suite('Topics', function () {
                                 var token = jwt.sign(
                                     {
                                         paths: [
-                                            'POST /api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
+                                            'POST_/api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
                                                 .replace(':topicId', topic.id)
                                                 .replace(':commentId', comment.id)
                                                 .replace(':reportId', report.id)
@@ -9726,6 +9681,7 @@ suite('Topics', function () {
             });
 
         });
+
     });
 
     suite('Votes', function () {

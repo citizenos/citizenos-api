@@ -1,3 +1,11 @@
+## 2019-01-11
+
+* Swap out passport-google-oauth2 to official passport-google-oauth20. Changed configuration and updated result parsing https://github.com/citizenos/citizenos-api/issues/72
+
+## 2019-01-09
+
+* Update topic argument reply, vote, report endpoints to return 404 when performing actions on deleted arguments/replies
+
 ## 2019-01-04
 
 * Add endpoints to read attachment json or download uploaded attachment file with proper filename by adding query parameter `?download=true`
@@ -33,7 +41,7 @@
 
 ## 2018-12-06
 
-* Update /api/activities and /api/users/self/activities endpoints to support filter "VoteList", add filter option to /api/topics/:topicId/activities and /api/users/self/topics/:topicId/activities endpoint - https://github.com/citizenos/citizenos-api/issues/7
+* Update /api/acitivities and /api/users/self/activities endpoints to support filter "VoteList", add filter option to /api/topics/:topicId/activities and /api/users/self/topics/:topicId/activities endpoint - https://github.com/citizenos/citizenos-api/issues/7
 
 ## 2018-11-12
 
