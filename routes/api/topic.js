@@ -5365,6 +5365,18 @@ module.exports = function (app) {
                             res.badRequest('User certificates are revoked or suspended.', 22);
 
                             return Promise.reject();
+                        case 303:
+                            res.badRequest('User certificate is not activated.', 23);
+
+                            return Promise.reject();
+                        case 304:
+                            res.badRequest('User certificate is suspended.', 24);
+
+                            return Promise.reject();
+                        case 305:
+                            res.badRequest('User certificate is expired.', 25);
+
+                            return Promise.reject();
                         default:
                             logger.error('Unhandled DDS status code', certInfo.statusCode);
                             res.internalServerError();
