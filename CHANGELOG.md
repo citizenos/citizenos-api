@@ -1,3 +1,7 @@
+## 2019-01-14
+
+* Unify restricted use token generation and validation - https://github.com/citizenos/citizenos-api/issues/70
+
 ## 2019-01-11
 
 * Swap out passport-google-oauth2 to official passport-google-oauth20. Changed configuration and updated result parsing https://github.com/citizenos/citizenos-api/issues/72
