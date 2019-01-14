@@ -7,6 +7,7 @@ suite('cosJwt', function () {
     var app = require('../../app');
     var cosJwt = app.get('cosJwt');
     var jwt = app.get('jwt');
+    var config = app.get('config');
 
     suiteTeardown(function (done) {
         shared
@@ -23,6 +24,55 @@ suite('cosJwt', function () {
 
         assert.equal(decoded.foo, testPayload.foo);
         assert.deepEqual(decoded.aud, [testAudience]);
+
+        done();
+    });
+
+    test('Success - legacy token "path" string without a method. Example: "/foo/bar"', function (done) {
+        var testAudience = 'GET /foo/bar';
+        var testAudienceLegacy = testAudience.split(' ')[1];
+
+        var testPayload = {
+            foo: 'bar',
+            path: testAudienceLegacy
+        };
+
+        var token = jwt.sign(
+            testPayload,
+            config.session.privateKey,
+            {
+                algorithm: config.session.algorithm
+            }
+        );
+
+        var decoded = cosJwt.verifyTokenRestrictedUse(token, testAudience);
+
+        assert.equal(decoded.foo, testPayload.foo);
+        assert.deepEqual(decoded.path, testAudienceLegacy);
+
+        done();
+    });
+
+    test('Success - legacy token "paths" array without a method. Example: "[\'GET_/foo/bar\']"', function (done) {
+        var testAudience = 'GET /api/foo/bar';
+        var testAudienceLegacy = testAudience.replace(' ', '_');
+        var testPayload = {
+            foo: 'bar',
+            paths: [testAudienceLegacy]
+        };
+
+        var token = jwt.sign(
+            testPayload,
+            config.session.privateKey,
+            {
+                algorithm: config.session.algorithm
+            }
+        );
+
+        var decoded = cosJwt.verifyTokenRestrictedUse(token, testAudience);
+
+        assert.equal(decoded.foo, testPayload.foo);
+        assert.deepEqual(decoded.paths, [testAudienceLegacy]);
 
         done();
     });
@@ -100,6 +150,32 @@ suite('cosJwt', function () {
         } catch (err) {
             assert.instanceOf(err, jwt.JsonWebTokenError);
             assert.equal(err.message, 'jwt audience invalid. expected: ' + testInvalidAudience);
+
+            done();
+        }
+    });
+
+    test('Fail - missing audience (scope)', function (done) {
+        var testAudience = 'GET /foo/bar';
+        var testPayload = {
+            foo: 'bar'
+        };
+
+        var token = jwt.sign(
+            testPayload,
+            config.session.privateKey,
+            {
+                algorithm: config.session.algorithm
+            }
+        );
+
+        try {
+            cosJwt.verifyTokenRestrictedUse(token, testAudience);
+
+            return done(new Error('Should fail due to invalid audience!'));
+        } catch (err) {
+            assert.instanceOf(err, jwt.JsonWebTokenError);
+            assert.equal(err.message, 'jwt audience missing. expected: ' + testAudience);
 
             done();
         }

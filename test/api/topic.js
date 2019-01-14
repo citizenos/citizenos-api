@@ -1219,7 +1219,7 @@ var _topicFavouriteCreate = function (agent, userId, topicId, expectedHttpCode, 
     var path = '/api/users/:userId/topics/:topicId/pin'
         .replace(':userId', userId)
         .replace(':topicId', topicId);
-    
+
     agent
         .post(path)
         .expect(expectedHttpCode)
@@ -1235,7 +1235,7 @@ var _topicFavouriteDelete = function (agent, userId, topicId, expectedHttpCode, 
     var path = '/api/users/:userId/topics/:topicId/pin'
         .replace(':userId', userId)
         .replace(':topicId', topicId);
-    
+
     agent
         .delete(path)
         .expect(expectedHttpCode)
@@ -1288,6 +1288,7 @@ var fs = app.get('fs');
 var etherpadClient = app.get('etherpadClient');
 var cosEtherpad = app.get('cosEtherpad');
 var jwt = app.get('jwt');
+var cosJwt = app.get('cosJwt');
 var moment = app.get('moment');
 var validator = app.get('validator');
 
@@ -9380,7 +9381,44 @@ suite('Topics', function () {
                         );
                 });
 
-                test('Success', function (done) {
+                test('Success - token with audience', function (done) {
+                    var token = cosJwt.getTokenRestrictedUse(
+                        {
+                            userId: userModerator.id
+                        },
+                        [
+                            'GET /api/topics/:topicId/comments/:commentId/reports/:reportId'
+                                .replace(':topicId', topic.id)
+                                .replace(':commentId', comment.id)
+                                .replace(':reportId', report.id)
+                        ]
+                    );
+
+                    topicCommentReportRead(request.agent(app), topic.id, comment.id, report.id, token, function (err, res) {
+                        if (err) return done(err);
+
+                        var expectedResult = {
+                            status: {code: 20000},
+                            data: {
+                                id: report.id,
+                                type: report.type,
+                                text: report.text,
+                                createdAt: report.createdAt,
+                                comment: {
+                                    subject: comment.subject,
+                                    text: comment.text,
+                                    id: comment.id
+                                }
+                            }
+                        };
+
+                        assert.deepEqual(res.body, expectedResult);
+
+                        done();
+                    });
+                });
+
+                test('Success - legacy token with "paths"', function (done) {
                     var token = jwt.sign(
                         {
                             paths: [
@@ -9424,6 +9462,24 @@ suite('Topics', function () {
 
                 test('Fail - 40100 - Invalid token', function (done) {
                     var token = {};
+                    _topicCommentReportRead(request.agent(app), topic.id, comment.id, report.id, token, 401, done);
+                });
+
+                test('Fail - 40100 - invalid token - without audience', function (done) {
+                    var token = jwt.sign(
+                        {},
+                        config.session.privateKey,
+                        {
+                            algorithm: config.session.algorithm
+                        }
+                    );
+
+                    _topicCommentReportRead(request.agent(app), topic.id, comment.id, report.id, token, 401, done);
+                });
+
+                test('Fail - 40100 - invalid token - invalid audience', function (done) {
+                    var token = cosJwt.getTokenRestrictedUse({}, 'GET /foo/bar');
+
                     _topicCommentReportRead(request.agent(app), topic.id, comment.id, report.id, token, 401, done);
                 });
 
@@ -10270,7 +10326,7 @@ suite('Topics', function () {
 
     suite('Pin', function () {
 
-        suite('Create', function () {            
+        suite('Create', function () {
             var agent = request.agent(app);
 
             var user;
@@ -10294,7 +10350,7 @@ suite('Topics', function () {
             test('Success', function (done) {
                 topicFavouriteCreate(agent, user.id, topic.id, function (err, res) {
                     if (err) return done(err);
-                    
+
                     var expectedBody = {
                         status: {
                             code: 20000
@@ -10308,7 +10364,7 @@ suite('Topics', function () {
             });
         });
 
-        suite('Delete', function () {            
+        suite('Delete', function () {
             var agent = request.agent(app);
 
             var user;
@@ -10332,7 +10388,7 @@ suite('Topics', function () {
             test('Success', function (done) {
                 topicFavouriteCreate(agent, user.id, topic.id, function (err, res) {
                     if (err) return done(err);
-                    
+
                     var expectedBody = {
                         status: {
                             code: 20000
@@ -10343,18 +10399,18 @@ suite('Topics', function () {
 
                     topicFavouriteDelete(agent, user.id, topic.id, function (err, res) {
                         if (err) return done(err);
-                        
+
                         var expectedBody = {
                             status: {
                                 code: 20000
                             }
                         };
-    
+
                         assert.deepEqual(res.body, expectedBody);
-    
+
                         done();
                     });
-                });                
+                });
             });
         });
     });
