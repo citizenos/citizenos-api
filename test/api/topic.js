@@ -394,26 +394,6 @@ var topicMembersGroupsList = function (agent, userId, topicId, callback) {
     _topicMembersGroupsList(agent, userId, topicId, 200, callback);
 };
 
-var _topicReportCreate = function (agent, topicId, type, text, expectedHttpCode, callback) {
-    var path = '/api/topics/:topicId/reports'
-        .replace(':topicId', topicId);
-
-    agent
-        .post(path)
-        .set('Content-Type', 'application/json')
-        .send({
-            type: type,
-            text: text
-        })
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
-};
-
-var topicReportCreate = function (agent, topicId, type, text, callback) {
-    _topicReportCreate(agent, topicId, type, text, 200, callback);
-};
-
 var _topicCommentCreate = function (agent, userId, topicId, parentId, parentVersion, type, subject, text, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/comments'
         .replace(':userId', userId)

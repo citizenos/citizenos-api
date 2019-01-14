@@ -43,7 +43,6 @@ module.exports = function (app) {
     var Topic = models.Topic;
     var TopicMemberUser = models.TopicMemberUser;
     var TopicMemberGroup = models.TopicMemberGroup;
-    var TopicReport = models.TopicReport;
 
     var Report = models.Report;
 
@@ -3493,69 +3492,6 @@ module.exports = function (app) {
 
     app.get('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), readAttachment);
     app.get('/api/topics/:topicId/attachments/:attachmentId', hasVisibility(Topic.VISIBILITY.public), readAttachment);
-
-    var topicReportsCreate = function (req, res, next) {
-        var topicId = req.params.topicId;
-
-        db
-            .transaction(function (t) {
-                return Report
-                    .create(
-                        {
-                            type: req.body.type,
-                            text: req.body.text,
-                            creatorId: req.user.id,
-                            creatorIp: req.ip
-                        },
-                        {
-                            transaction: t
-                        }
-                    )
-                    .then(function (report) {
-                        // FIXME: Topic report create activity!
-                        return TopicReport
-                            .create(
-                                {
-                                    topicId: topicId,
-                                    reportId: report.id
-                                },
-                                {
-                                    transaction: t
-                                }
-                            )
-                            .then(function () {
-                                return report;
-                            });
-                    });
-            })
-            .then(function (report) {
-                //FIXME: Send TopicReport e-mail - emailLib.sendCommentReport(commentId, report); // Fire and forget
-
-                return res.ok(report);
-            })
-            .catch(next);
-    };
-
-    app.post(['/api/users/:userId/topics/:topicId/reports', '/api/topics/:topicId/reports'], loginCheck(['partner']), topicReportsCreate);
-
-    /**
-     * Read Topic Report
-     */
-    app.get(['/api/topics/:topicId/reports/:reportId', '/api/users/:userId/topics/:topicId/reports/:reportId'], function (req, res, next) {
-        //FIXME Implement
-        return res.notImplemented();
-    });
-
-    /**
-     * Moderate a Topic
-     */
-    app.post('/api/topics/:topicId/reports/:reportId/moderate', function (req, res, next) {
-        var reportType = req.body.type; // Delete reason type which is provided in case deleted/hidden by moderator due to a user report
-        var reportText = req.body.text; // Free text with reason why the comment was deleted/hidden
-
-        // FIXME: Implement
-        return res.notImplemented();
-    });
 
     /**
      * Create Topic Comment
