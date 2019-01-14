@@ -1794,8 +1794,8 @@ suite('Users', function () {
                                             var token = bdocUri.slice(bdocUri.indexOf('token=') + 6);
                                             var tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
                                             assert.equal(tokenData.userId, creator.id);
+                                            assert.equal(tokenData.aud[0], 'GET ' + bdocpathExpected);
 
-                                            assert.equal(tokenData.path, bdocpathExpected);
                                             topicVoteRead(voteAgent, creator.id, voteTopic.id, vote.id, function (err, res) {
                                                 if (err) return done(err);
 
