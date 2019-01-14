@@ -18,7 +18,6 @@
  */
 module.exports = function (req, res, next) {
     var app = req.app;
-    var config = app.get('config');
     var logger = app.get('logger');
     var jwt = app.get('jwt');
     var cosJwt = app.get('cosJwt');

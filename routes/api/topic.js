@@ -6154,37 +6154,10 @@ module.exports = function (app) {
      *
      * TODO: Deprecate /api/users/:userId/topics/:topicId/votes/:voteId/downloads/bdocs/user
      */
-    app.get(['/api/users/:userId/topics/:topicId/votes/:voteId/downloads/bdocs/user', '/api/topics/:topicId/votes/:voteId/downloads/bdocs/user'], function (req, res, next) {
+    app.get(['/api/users/:userId/topics/:topicId/votes/:voteId/downloads/bdocs/user', '/api/topics/:topicId/votes/:voteId/downloads/bdocs/user'], authTokenRestrictedUse, function (req, res, next) {
         var voteId = req.params.voteId;
-        var token = req.query.token;
-
-        if (!token) {
-            return res.badRequest('Missing required parameter "token"');
-        }
-
-        var downloadTokenData;
-
-        try {
-            downloadTokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
-        } catch (err) {
-            if (err.name === 'TokenExpiredError') {
-                logger.info('loginCheck - JWT token has expired', req.method, req.path, err);
-
-                return res.unauthorised('JWT token has expired');
-            } else {
-                logger.warn('loginCheck - JWT error', req.method, req.path, req.headers, err);
-
-                return res.unauthorised('Invalid JWT token');
-            }
-        }
-
+        var downloadTokenData = req.locals.tokenDecoded;
         var userId = downloadTokenData.userId;
-
-        if (req.path !== downloadTokenData.path) {
-            logger.warn('Invalid token used to access path', req.path, '. Token was issued for path', downloadTokenData.path);
-
-            return res.unauthorised('Invalid JWT token');
-        }
 
         //TODO: Make use of streaming once Sequelize supports it - https://github.com/sequelize/sequelize/issues/2454
         VoteUserContainer
@@ -6203,9 +6176,10 @@ module.exports = function (app) {
 
                 var container = voteUserContainer.dataValues.container;
                 delete voteUserContainer.dataValues.container;
+
                 var actor = {type: 'User'};
-                if (req.user && req.user.id) {
-                    actor.id = req.user.id;
+                if (userId) {
+                    actor.id = userId;
                 }
 
                 return cosActivities
@@ -6227,32 +6201,6 @@ module.exports = function (app) {
     var topicDownloadBdocFinal = function (req, res, next) {
         var topicId = req.params.topicId;
         var voteId = req.params.voteId;
-
-        var token = req.query.token;
-
-        if (!token) {
-            return res.badRequest('Missing required parameter "token"');
-        }
-
-        try {
-            var downloadTokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
-        } catch (err) {
-            if (err.name === 'TokenExpiredError') {
-                logger.info('loginCheck - JWT token has expired', req.method, req.path, err);
-
-                return res.unauthorised('JWT token has expired');
-            } else {
-                logger.warn('loginCheck - JWT error', req.method, req.path, req.headers, err);
-
-                return res.unauthorised('Invalid JWT token');
-            }
-        }
-
-        if (req.path !== downloadTokenData.path) {
-            logger.warn('Invalid token used to access path', req.path, '. Token was issued for path', downloadTokenData.path);
-
-            return res.unauthorised('Invalid JWT token');
-        }
 
         Topic
             .findOne({

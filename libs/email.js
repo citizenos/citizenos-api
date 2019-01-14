@@ -20,7 +20,6 @@ module.exports = function (app) {
     var path = require('path');
     var moment = app.get('moment');
     var url = app.get('url');
-    var jwt = app.get('jwt');
     var cosJwt = app.get('cosJwt');
 
     var User = models.User;
