@@ -6303,11 +6303,11 @@ suite('Users', function () {
 
                                                 var bdocUri = statusresponse.data.bdocUri;
 
+                                                // Check for a valid token
                                                 var token = bdocUri.slice(bdocUri.indexOf('token=') + 6);
-                                                var tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
-                                                assert.equal(tokenData.userId, user.id);
+                                                var tokenData = cosJwt.verifyTokenRestrictedUse(token, 'GET ' + bdocpathExpected);
 
-                                                assert.equal(tokenData.path, bdocpathExpected);
+                                                assert.equal(tokenData.userId, user.id);
 
                                                 done();
                                             }
