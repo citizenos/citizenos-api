@@ -31,11 +31,16 @@ module.exports = function (app) {
     var templateRootLocal = app.get('EMAIL_TEMPLATE_ROOT_LOCAL');
 
     var emailHeaderLogoName = 'logo.png';
+    var emailFooterLogoName = 'logo_footer.png';
     var emailHeaderLogo = path.join(templateRoot, 'images/logo-email.png');
+    var emailFooterLogo = path.join(templateRoot, 'images/logo-email-small.png');
     if (fs.existsSync(path.join(templateRootLocal, 'images/logo-email.png'))) { //eslint-disable-line no-sync
         emailHeaderLogo = path.join(templateRootLocal, 'images/logo-email.png');
     }
     logger.info('Using email header logo from', emailHeaderLogo);
+
+    var linkToPlatform = config.email.linkToPlatform || urlLib.getFe();
+    var linkToPrivacyPolicy = config.email.linkToPrivacyPolicy;
 
     var templateCache = {};
 
@@ -120,12 +125,18 @@ module.exports = function (app) {
                             {
                                 name: emailHeaderLogoName,
                                 file: emailHeaderLogo
+                            },
+                            {
+                                name: emailFooterLogoName,
+                                file: emailFooterLogo
                             }
                         ],
                         //Placeholders
                         toUser: user,
                         linkVerify: linkVerify,
                         linkToApplication: urlLib.getFe(),
+                        linkToPlatform: linkToPlatform,
+                        linkToPrivacyPolicy: linkToPrivacyPolicy,
                         provider: {
                             merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
                         }
@@ -168,6 +179,10 @@ module.exports = function (app) {
                             {
                                 name: emailHeaderLogoName,
                                 file: emailHeaderLogo
+                            },
+                            {
+                                name: emailFooterLogoName,
+                                file: emailFooterLogo
                             }
                         ],
                         social: config.email.social, // social.name maps to "from_name". I think this should be part of Campaign client config OR at least defaults can be set somewhere in client options
@@ -175,6 +190,8 @@ module.exports = function (app) {
                         toUser: user,
                         linkReset: urlLib.getFe('/account/password/reset/:passwordResetCode', {passwordResetCode: passwordResetCode}, {email: user.email}),
                         linkToApplication: urlLib.getFe(),
+                        linkToPlatform: linkToPlatform,
+                        linkToPrivacyPolicy: linkToPrivacyPolicy,
                         provider: {
                             merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
                         }
@@ -314,6 +331,10 @@ module.exports = function (app) {
                                     {
                                         name: emailHeaderLogoName,
                                         file: logoFile
+                                    },
+                                    {
+                                        name: emailFooterLogoName,
+                                        file: emailFooterLogo
                                     }
                                 ],
                                 social: config.email.social, // social.name maps to "from_name". I think this should be part of Campaign client config OR at least defaults can be set somewhere in client options
@@ -322,6 +343,8 @@ module.exports = function (app) {
                                 topic: topic,
                                 linkViewTopic: linkViewTopic,
                                 linkToApplication: linkToApplication,
+                                linkToPlatform: linkToPlatform,
+                                linkToPrivacyPolicy: linkToPrivacyPolicy,
                                 provider: {
                                     merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
                                 }
@@ -433,6 +456,10 @@ module.exports = function (app) {
                                     {
                                         name: emailHeaderLogoName,
                                         file: emailHeaderLogo
+                                    },
+                                    {
+                                        name: emailFooterLogoName,
+                                        file: emailFooterLogo
                                     }
                                 ],
                                 social: config.email.social, // social.name maps to "from_name". I think this should be part of Campaign client config OR at least defaults can be set somewhere in client options
@@ -441,6 +468,8 @@ module.exports = function (app) {
                                 topic: topic,
                                 linkViewTopic: linkViewTopic,
                                 linkToApplication: urlLib.getFe(),
+                                linkToPlatform: linkToPlatform,
+                                linkToPrivacyPolicy: linkToPrivacyPolicy,
                                 provider: {
                                     merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
                                 }
@@ -529,6 +558,10 @@ module.exports = function (app) {
                                     {
                                         name: emailHeaderLogoName,
                                         file: emailHeaderLogo
+                                    },
+                                    {
+                                        name: emailFooterLogoName,
+                                        file: emailFooterLogo
                                     }
                                 ],
                                 social: config.email.social, // social.name maps to "from_name". I think this should be part of Campaign client config OR at least defaults can be set somewhere in client options
@@ -541,6 +574,8 @@ module.exports = function (app) {
                                     groupId: group.id
                                 }),
                                 linkToApplication: urlLib.getFe(),
+                                linkToPlatform: linkToPlatform,
+                                linkToPrivacyPolicy: linkToPrivacyPolicy,
                                 provider: {
                                     merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
                                 }
@@ -713,6 +748,10 @@ module.exports = function (app) {
                                 {
                                     name: emailHeaderLogoName,
                                     file: emailHeaderLogo
+                                },
+                                {
+                                    name: emailFooterLogoName,
+                                    file: emailFooterLogo
                                 }
                             ],
                             //Placeholders
@@ -846,6 +885,10 @@ module.exports = function (app) {
                         {
                             name: emailHeaderLogoName,
                             file: logoFile
+                        },
+                        {
+                            name: emailFooterLogoName,
+                            file: emailFooterLogo
                         }
                     ],
                     social: config.email.social, // social.name maps to "from_name". I think this should be part of Campaign client config OR at least defaults can be set somewhere in client options
@@ -885,6 +928,10 @@ module.exports = function (app) {
                         {
                             name: emailHeaderLogoName,
                             file: logoFile
+                        },
+                        {
+                            name: emailFooterLogoName,
+                            file: emailFooterLogo
                         }
                     ],
                     social: config.email.social, // social.name maps to "from_name". I think this should be part of Campaign client config OR at least defaults can be set somewhere in client options
