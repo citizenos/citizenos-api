@@ -7755,7 +7755,6 @@ suite('Users', function () {
 
                 var userCreator;
                 var userModerator;
-                var userReporter;
 
                 var topic;
                 var report;
@@ -7799,9 +7798,6 @@ suite('Users', function () {
                 });
 
                 test('Success', function (done) {
-                    var reportType = Report.TYPES.hate;
-                    var reportText = 'Topic hate speech report test';
-
                     var token = cosJwt.getTokenRestrictedUse(
                         {
                             id: userModerator.id
