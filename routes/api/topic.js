@@ -3541,9 +3541,41 @@ module.exports = function (app) {
     /**
      * Read Topic Report
      */
-    app.get(['/api/topics/:topicId/reports/:reportId', '/api/users/:userId/topics/:topicId/reports/:reportId'], function (req, res, next) {
-        //FIXME Implement
-        return res.notImplemented();
+    app.get(['/api/topics/:topicId/reports/:reportId', '/api/users/:userId/topics/:topicId/reports/:reportId'], authTokenRestrictedUse, function (req, res, next) {
+        db
+            .query(
+                '\
+                    SELECT \
+                        r."id", \
+                        r."type", \
+                        r."text", \
+                        r."createdAt", \
+                        t."id" as "topic.id", \
+                        t.title as "topic.title", \
+                        t."description" as "topic.description" \
+                    FROM "Reports" r \
+                    LEFT JOIN "TopicReports" tr ON (tr."reportId" = r.id) \
+                    LEFT JOIN "Topics" t ON (t.id = tr."topicId") \
+                    WHERE r.id = :reportId \
+                    AND t.id = :topicId \
+                    AND r."deletedAt" IS NULL \
+                ;',
+                {
+                    replacements: {
+                        topicId: req.params.topicId,
+                        reportId: req.params.reportId
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            )
+            .then(function (results) {
+                var topicReport = results[0];
+
+                return res.ok(topicReport);
+            })
+            .catch(next);
     });
 
     /**

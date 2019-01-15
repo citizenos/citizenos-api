@@ -414,6 +414,23 @@ var topicReportCreate = function (agent, topicId, type, text, callback) {
     _topicReportCreate(agent, topicId, type, text, 200, callback);
 };
 
+var _topicReportRead = function (agent, topicId, reportId, token, expectedHttpCode, callback) {
+    var path = '/api/topics/:topicId/reports/:reportId'
+        .replace(':topicId', topicId)
+        .replace(':reportId', reportId);
+
+    agent
+        .get(path)
+        .set('Authorization', 'Bearer ' + token)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var topicReportRead = function (agent, topicId, reportId, token, callback) {
+    _topicReportRead(agent, topicId, reportId, token, 200, callback);
+};
+
 var _topicCommentCreate = function (agent, userId, topicId, parentId, parentVersion, type, subject, text, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/comments'
         .replace(':userId', userId)
@@ -7662,14 +7679,11 @@ suite('Users', function () {
             suite('Create', function () {
                 var agentCreator = request.agent(app);
                 var agentReporter = request.agent(app);
-                var agentModerator = request.agent(app);
 
                 var emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
                 var emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
-                var emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
 
                 var userCreator;
-                var userModerator;
                 var userReporter;
 
                 var topic;
@@ -7682,9 +7696,6 @@ suite('Users', function () {
                                     userLib.createUserAndLogin(agentCreator, emailCreator, null, null, cb);
                                 },
                                 function (cb) {
-                                    userLib.createUser(agentModerator, emailModerator, null, null, cb);
-                                },
-                                function (cb) {
                                     userLib.createUserAndLogin(agentReporter, emailReporter, null, null, cb);
                                 }
                             ]
@@ -7692,8 +7703,7 @@ suite('Users', function () {
                                 if (err) return done(err);
 
                                 userCreator = results[0];
-                                userModerator = results[1];
-                                userReporter = results[2];
+                                userReporter = results[1];
 
                                 topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
                                     if (err) return done(err);
@@ -7727,6 +7737,108 @@ suite('Users', function () {
 
             });
 
+            suite('Read', function () {
+                var agentCreator = request.agent(app);
+                var agentReporter = request.agent(app);
+                var agentModerator = request.agent(app);
+
+                var emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                var emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                var emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+
+                var topicTitle = 'Topic report test';
+                var topicDescription = '<!DOCTYPE HTML><html><body><h1>Topic report test</h1><br>Topic report test desc<br><br></body></html>'
+                    .replace(':topicTitle', topicTitle);
+
+                var reportType = Report.TYPES.hate;
+                var reportText = 'Topic hate speech report test';
+
+                var userCreator;
+                var userModerator;
+                var userReporter;
+
+                var topic;
+                var report;
+
+                suiteSetup(function (done) {
+                    async
+                        .parallel(
+                            [
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentCreator, emailCreator, null, null, cb);
+                                },
+                                function (cb) {
+                                    userLib.createUser(agentModerator, emailModerator, null, null, cb);
+                                },
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentReporter, emailReporter, null, null, cb);
+                                }
+                            ]
+                            , function (err, results) {
+                                if (err) return done(err);
+
+                                userCreator = results[0];
+                                userModerator = results[1];
+                                userReporter = results[2];
+
+                                topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null, function (err, res) {
+                                    if (err) return done(err);
+
+                                    topic = res.body.data;
+
+                                    topicReportCreate(agentReporter, topic.id, reportType, reportText, function (err, res) {
+                                        if (err) return done(err);
+
+                                        report = res.body.data;
+
+                                        done();
+                                    });
+                                });
+                            }
+                        );
+                });
+
+                test('Success', function (done) {
+                    var reportType = Report.TYPES.hate;
+                    var reportText = 'Topic hate speech report test';
+
+                    var token = cosJwt.getTokenRestrictedUse(
+                        {
+                            id: userModerator.id
+                        },
+                        [
+                            'GET /api/topics/:topicId/reports/:reportId'
+                                .replace(':topicId', topic.id)
+                                .replace(':reportId', report.id),
+                            'GET /api/users/:userId/topics/:topicId/reports/:reportId'
+                                .replace(':topicId', topic.id)
+                                .replace(':reportId', report.id),
+                            'POST /api/topics/:topicId/reports/:reportId/moderate'
+                                .replace(':topicId', topic.id)
+                                .replace(':reportId', report.id)
+                        ]
+                    );
+
+                    topicReportRead(agentReporter, topic.id, report.id, token, function (err, res) {
+                        if (err) return done(err);
+
+                        var reportResult = res.body.data;
+
+                        assert.equal(reportResult.id, report.id);
+                        assert.equal(reportResult.type, report.type);
+                        assert.equal(reportResult.text, report.text);
+                        assert.equal(reportResult.createdAt, report.createdAt);
+
+                        var reportResultTopic = reportResult.topic;
+
+                        assert.equal(reportResultTopic.id, topic.id);
+                        assert.equal(reportResultTopic.title, topicTitle);
+                        assert.equal(reportResultTopic.description, '<!DOCTYPE HTML><html><body><h1>Topic report test</h1><br>Topic report test desc<br><br><br></body></html>'); // DOH, whatever you do Etherpad adds extra <br>
+
+                        done();
+                    });
+                });
+            });
         });
     });
 });
