@@ -3571,6 +3571,10 @@ module.exports = function (app) {
                 }
             )
             .then(function (results) {
+                if (!results || !results.length) {
+                    return res.notFound();
+                }
+
                 var topicReport = results[0];
 
                 return res.ok(topicReport);
@@ -4404,6 +4408,10 @@ module.exports = function (app) {
                 }
             )
             .then(function (results) {
+                if (!results || !results.length) {
+                    return res.notFound();
+                }
+
                 var commentReport = results[0];
 
                 return res.ok(commentReport);

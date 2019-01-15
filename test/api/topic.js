@@ -7755,6 +7755,7 @@ suite('Users', function () {
 
                 var userCreator;
                 var userModerator;
+                var userReporter;
 
                 var topic;
                 var report;
