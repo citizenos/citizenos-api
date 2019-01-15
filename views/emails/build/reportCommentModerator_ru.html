@@ -27,36 +27,36 @@
 
                                                     <tr>
                                                         <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                                                            <p style="font-family: georgia, serif;font-size:19px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Kомментарий был помечен пользователями, как неуместный</p>
+                                                            <p style="font-family: Open Sans,sans-serif;font-size:20px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Kомментарий был помечен пользователями, как неуместный</p>
                                                         </td>
                                                     </tr>
 
                                                     <tr>
                                                         <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                                                            <p style="font-family: georgia, serif;font-size:17px; font-weight:bold;background-color: #FFFFFF; color:#252525;">User wrote:</p>
+                                                            <p style="font-family: Open Sans,sans-serif;font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#252525;">User wrote:</p>
                                                             {{#comment.subject}}
-                                                            <p style="font-family: georgia, serif;font-size:17px; font-weight:bold;background-color: #FFFFFF; color:#707070; font-style: italic">"{{comment.subject}}"</p>
+                                                            <p style="font-family: Open Sans,sans-serif;font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#707070; font-style: italic">"{{comment.subject}}"</p>
                                                             {{/comment.subject}}
-                                                            <p style="font-family: georgia, serif;font-size:17px; font-weight:bold;background-color: #FFFFFF; color:#707070; font-style: italic">"{{comment.text}}"</p>
+                                                            <p style="font-family: Open Sans,sans-serif;font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#707070; font-style: italic">"{{comment.text}}"</p>
                                                         </td>
                                                     </tr>
 
                                                     <tr>
                                                         <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                                                            <p style="font-family: georgia, serif;font-size:17px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Community reported it:</p>
-                                                            <p style="font-family: georgia, serif;font-size:17px; font-weight:bold;background-color: #FFFFFF; color:#252525; font-style: italic">{{report.type}}</p>
+                                                            <p style="font-family: Open Sans,sans-serif;font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Community reported it:</p>
+                                                            <p style="font-family: Open Sans,sans-serif;font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#252525; font-style: italic">{{report.type}}</p>
                                                             {{#report.text}}
-                                                            <p style="font-family: georgia, serif;font-size:17px; font-weight:bold;background-color: #FFFFFF; color:#707070; font-style: italic">"{{report.text}}"</p>
+                                                            <p style="font-family: Open Sans,sans-serif;font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#707070; font-style: italic">"{{report.text}}"</p>
                                                             {{/report.text}}
                                                         </td>
                                                     </tr>
 
                                                     <tr>
                                                         <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                                                            <p style="font-family: georgia, serif;font-size:17px; font-weight:bold;background-color: #FFFFFF; color:#252525;">You can:</p>
+                                                            <p style="font-family: Open Sans,sans-serif;font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#252525;">You can:</p>
                                                             <ul>
-                                                                <li style="font-family: georgia, serif;font-size:17px; font-weight: bold; font-style: italic ;background-color: #FFFFFF; color:#0680fc; margin-bottom: 17px;"><a href="{{linkModerate}}">Moderate this comment</a> - {{#isUserNotified}}User notified{{/isUserNotified}}{{^isUserNotified}}User NOT notified{{/isUserNotified}}</li>
-                                                                <li style="font-family: georgia, serif;font-size:17px; font-weight: bold; background-color: #FFFFFF; color:#252525; margin-bottom: 17px;">Leave it as it is, but community moderators may still decide to hide it from the default views.</li>
+                                                                <li style="font-family: Open Sans,sans-serif;font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#0680fc; margin-bottom: 17px;"><a href="{{linkModerate}}">Moderate this comment</a> - {{#isUserNotified}}User notified{{/isUserNotified}}{{^isUserNotified}}User NOT notified{{/isUserNotified}}</li>
+                                                                <li style="font-family: Open Sans,sans-serif;font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#252525; margin-bottom: 17px;">Leave it as it is, but community moderators may still decide to hide it from the default views.</li>
                                                             </ul>
                                                         </td>
                                                     </tr>
@@ -75,12 +75,31 @@
     </tr>
 
     <tr>
-        <td align="center" valign="top"  height="70">
-            <table border="0" cellpadding="0" cellspacing="0" id="templateFooter" style="background-color: #f6f6f6;margin: 0;padding: 0;" width="600">
+        <td align="center" valign="top" height="60">
+            <table style="background-color: #F5F5F5;" width="600">
                 <tbody>
                     <tr>
-                        <td align="center" height="70" style="border-collapse: collapse" valign="middle">
-                            <p style="font-family: arial, helvetica, sans-serif;font-size:12px;background-color: #f6f6f6; color:#828282;">Узнайте больше на <a href="{{linkToApplication}}" target="_blank" style=" color:#828282; text-decoration:underline;">{{linkToApplication}}</a></p>
+                        <td>
+                            <table>
+                                <tbody>
+                                    <tr>
+                                        <td style="font-family:Open Sans,sans-serif; padding-left: 15px;"><a href="{{linkToPlatform}}" target="_blank" style="font-family: Open Sans,sans-serif; font-size:13px;">Link to platform</a></td>
+                                        <td style="font-family:Open Sans,sans-serif; padding-left: 15px;"><a href="{{linkToPrivacyPolicy}}" target="_blank" style="color:#0680FC; text-decoration: none; font-family: Open Sans,sans-serif; font-size:13px;">Privacy Policy</a></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </td>
+                        <td align="right" valign="middle" height="60">
+                            <a href="https://citizenos.com" target="_blank" style="color: black; text-decoration: none;">
+                                <table>
+                                    <tbody>
+                                        <tr>
+                                            <td style="font-family:Open Sans,sans-serif; font-size: 13px;">Empowered by</td>
+                                            <td><img width="97" height="18" src="cid:logo_footer.png" alt="logo" style="display:block;"  border="0"/></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </a>
                         </td>
                     </tr>
                 </tbody>
