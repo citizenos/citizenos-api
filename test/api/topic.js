@@ -6722,7 +6722,7 @@ suite('Users', function () {
 
             });
 
-            suite('Edit', function () {
+            suite('Update', function () {
                 var agent2 = request.agent(app);
                 var agent3 = request.agent(app);
 
@@ -7654,6 +7654,79 @@ suite('Users', function () {
                     });
                 });
             });
+        });
+
+        // API - /api/users/:userId/topics/:topicId/reports
+        suite('Reports', function () {
+
+            suite('Create', function () {
+                var agentCreator = request.agent(app);
+                var agentReporter = request.agent(app);
+                var agentModerator = request.agent(app);
+
+                var emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                var emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                var emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+
+                var userCreator;
+                var userModerator;
+                var userReporter;
+
+                var topic;
+
+                suiteSetup(function (done) {
+                    async
+                        .parallel(
+                            [
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentCreator, emailCreator, null, null, cb);
+                                },
+                                function (cb) {
+                                    userLib.createUser(agentModerator, emailModerator, null, null, cb);
+                                },
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentReporter, emailReporter, null, null, cb);
+                                }
+                            ]
+                            , function (err, results) {
+                                if (err) return done(err);
+
+                                userCreator = results[0];
+                                userModerator = results[1];
+                                userReporter = results[2];
+
+                                topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
+                                    if (err) return done(err);
+
+                                    topic = res.body.data;
+
+                                    done();
+                                });
+                            }
+                        );
+                });
+
+                test('Success', function (done) {
+                    var reportType = Report.TYPES.hate;
+                    var reportText = 'Topic hate speech report test';
+
+                    topicReportCreate(agentReporter, topic.id, reportType, reportText, function (err, res) {
+                        if (err) return done(err);
+
+                        var reportResult = res.body.data;
+
+                        assert.isTrue(validator.isUUID(reportResult.id, 4));
+                        assert.equal(reportResult.type, reportType);
+                        assert.equal(reportResult.text, reportText);
+                        assert.property(reportResult, 'createdAt');
+                        assert.equal(reportResult.creator.id, userReporter.id);
+
+                        done();
+                    });
+                });
+
+            });
+
         });
     });
 });

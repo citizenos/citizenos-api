@@ -4293,10 +4293,17 @@ module.exports = function (app) {
                             )
                             .then(function (report) {
                                 return cosActivities
-                                    .addActivity(report, {
-                                        type: 'User',
-                                        id: req.user.id
-                                    }, null, comment, req.method + ' ' + req.path, t)
+                                    .addActivity(
+                                        report,
+                                        {
+                                            type: 'User',
+                                            id: req.user.id
+                                        },
+                                        null,
+                                        comment,
+                                        req.method + ' ' + req.path,
+                                        t
+                                    )
                                     .then(function () {
                                         return CommentReport
                                             .create(
