@@ -1,3 +1,24 @@
+## 2019-01-16
+
+* Update email layout so partner emails could be modified from config `"email": {"styles": {
+      "headerBackgroundColor": "#252525",
+      "logoWidth": 237,
+      "logoHeight": 43     
+    },
+    "partnerStyles": {
+      "partner1.com": {
+        "headerBackgroundColor": "#004892",
+        "logoWidth": 360,
+        "logoHeight": 51   
+      },
+      "partner2.eu": {
+        "headerBackgroundColor": "#004892",
+        "logoWidth": 300,
+        "logoHeight": 91   
+      }
+    }}` 
+    related to changes in https://github.com/citizenos/citizenos-api/issues/26 and https://github.com/citizenos/citizenos-api/issues/6
+
 ## 2019-01-14
 
 * Unify restricted use token generation and validation - https://github.com/citizenos/citizenos-api/issues/70
