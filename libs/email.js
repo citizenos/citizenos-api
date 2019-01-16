@@ -41,6 +41,14 @@ module.exports = function (app) {
 
     var linkToPlatform = config.email.linkToPlatform || urlLib.getFe();
     var linkToPrivacyPolicy = config.email.linkToPrivacyPolicy;
+    var linkedData = {
+        footerLinks: {
+            linkToPlatform: linkToPlatform,
+            linkToPrivacyPolicy: linkToPrivacyPolicy
+        }
+    };
+    var styles = config.email.styles;
+    var partnerStyles = config.email.partnerStyles;
 
     var templateCache = {};
 
@@ -113,7 +121,7 @@ module.exports = function (app) {
 
                 _.forEach(users, function (user) {
                     var templateObject = resolveTemplate('accountVerification', user.language);
-
+                    linkedData.translations = templateObject.translations;
                     var linkVerify = urlLib.getApi('/api/auth/verify/:code', {code: emailVerificationCode}, {token: token});
 
                     // https://github.com/bevacqua/campaign#email-sending-option
@@ -139,7 +147,9 @@ module.exports = function (app) {
                         linkToPrivacyPolicy: linkToPrivacyPolicy,
                         provider: {
                             merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
-                        }
+                        },
+                        styles: styles,
+                        linkedData: linkedData
                     });
 
                     promisesToResolve.push(userEmailPromise);
@@ -171,7 +181,7 @@ module.exports = function (app) {
 
                 _.forEach(users, function (user) {
                     var template = resolveTemplate('passwordReset', user.language);
-
+                    linkedData.translations = template.translations;
                     var userEmailPromise = emailClient.sendStringAsync(template.body, {
                         subject: template.translations.PASSWORD_RESET.SUBJECT,
                         to: user.email,
@@ -194,7 +204,9 @@ module.exports = function (app) {
                         linkToPrivacyPolicy: linkToPrivacyPolicy,
                         provider: {
                             merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
-                        }
+                        },
+                        styles: styles,
+                        linkedData: linkedData
                     });
 
                     promisesToResolve.push(userEmailPromise);
@@ -230,7 +242,7 @@ module.exports = function (app) {
 
             return Promise.resolve();
         }
-
+        var customStyles = styles;
         var toUsersPromise = User.findAll({
             where: {
                 id: toUserIds
@@ -287,6 +299,7 @@ module.exports = function (app) {
                         logoFile = templateRoot + '/images/logo-email_' + sourceSite + '.png';
                         templateName = 'inviteTopic_' + sourceSite;
                         linkToApplication = partner.website;
+                        customStyles = partnerStyles[sourceSite];
                     }
 
                     //TODO: we can win performance if we collect together all Users with same language and send these with 1 request to mail provider
@@ -323,6 +336,8 @@ module.exports = function (app) {
                             // In case Topic has no title, just show the full url.
                             topic.title = topic.title ? topic.title : linkViewTopic;
 
+                            linkedData.translations = template.translations;
+
                             var emailPromise = emailClient.sendStringAsync(template.body, {
                                 from: from,
                                 subject: subject,
@@ -347,7 +362,9 @@ module.exports = function (app) {
                                 linkToPrivacyPolicy: linkToPrivacyPolicy,
                                 provider: {
                                     merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
-                                }
+                                },
+                                styles: customStyles,
+                                linkedData: linkedData
                             });
 
                             promisesToResolve.push(emailPromise);
@@ -437,6 +454,7 @@ module.exports = function (app) {
                     _.forEach(toUsers, function (user) {
                         if (user.email) {
                             var template = resolveTemplate('inviteTopic', user.language);
+                            linkedData.translations = template.translations;
                             // TODO: Could use Mu here....
                             var subject = template.translations.INVITE_TOPIC.SUBJECT
                                 .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name));
@@ -472,7 +490,9 @@ module.exports = function (app) {
                                 linkToPrivacyPolicy: linkToPrivacyPolicy,
                                 provider: {
                                     merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
-                                }
+                                },
+                                styles: styles,
+                                linkedData: linkedData
                             });
 
                             promisesToResolve.push(sendEmailPromise);
@@ -546,6 +566,7 @@ module.exports = function (app) {
                     _.forEach(toUsers, function (user) {
                         if (user.email) {
                             var template = resolveTemplate('inviteGroup', user.language);
+                            linkedData.translations = template.translations;
                             // TODO: could use Mu here...
                             var subject = template.translations.INVITE_GROUP.SUBJECT
                                 .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
@@ -574,11 +595,11 @@ module.exports = function (app) {
                                     groupId: group.id
                                 }),
                                 linkToApplication: urlLib.getFe(),
-                                linkToPlatform: linkToPlatform,
-                                linkToPrivacyPolicy: linkToPrivacyPolicy,
                                 provider: {
                                     merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
-                                }
+                                },
+                                styles: styles,
+                                linkedData: linkedData
                             });
 
                             promisesToResolve.push(userEmailPromise);
@@ -735,7 +756,7 @@ module.exports = function (app) {
                 var commentCreatorInformed = true;
                 if (commentInfo.comment.creator.email) {
                     var templateObject = resolveTemplate('reportCommentCreator', commentInfo.comment.creator.language);
-
+                    linkedData.translations = templateObject.translations;
                     var linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: commentInfo.topic.id});
 
                     var promiseCreatorEmail = emailClient.sendStringAsync(
@@ -762,11 +783,11 @@ module.exports = function (app) {
                             },
                             linkViewTopic: linkViewTopic,
                             linkToApplication: urlLib.getFe(),
-                            linkToPlatform: linkToPlatform,
-                            linkToPrivacyPolicy: linkToPrivacyPolicy,
                             provider: {
                                 merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
-                            }
+                            },
+                            styles: styles,
+                            linkedData: linkedData
                         }
                     );
                     promisesToResolve.push(promiseCreatorEmail);
@@ -834,7 +855,8 @@ module.exports = function (app) {
                                     linkToPrivacyPolicy: linkToPrivacyPolicy,
                                     provider: {
                                         merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
-                                    }
+                                    },
+                                    styles: styles
                                 }
                             );
 
@@ -868,6 +890,7 @@ module.exports = function (app) {
         }
 
         var template = resolveTemplate('toParliament', 'et'); // Estonian Gov only accepts et
+        linkedData.translations = template.translations;
         var linkToApplication = config.features.sendToParliament.urlPrefix;
 
         var from = config.features.sendToParliament.from;
@@ -877,6 +900,11 @@ module.exports = function (app) {
         var logoFile = templateRoot + '/images/logo-email_rahvaalgatus.ee.png';
 
         var promisesToResolve = [];
+        var customStyles = {
+            headerBackgroundColor: '#252525',
+            logoWidth: 360,
+            logoHeight: 51
+        };
 
         // Email to Parliament
         var emailToParliamentPromise = emailClient
@@ -909,7 +937,9 @@ module.exports = function (app) {
                     contact: contact,
                     provider: {
                         merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
-                    }
+                    },
+                    styles: customStyles,
+                    linkedData: linkedData
                 }
             )
             .then(function () {
@@ -954,7 +984,9 @@ module.exports = function (app) {
                     contact: contact,
                     provider: {
                         merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
-                    }
+                    },
+                    styles: customStyles,
+                    linkedData: linkedData
                 }
             )
             .then(function () {
