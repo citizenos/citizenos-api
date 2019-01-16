@@ -1,4 +1,8 @@
 {
+  "LAYOUT": {
+    "LINK_TO_PLATFORM": "Link to platform",
+    "LINK_PRIVACY_POLICY": "Privacy Policy"
+  },
   "ACCOUNT_VERIFICATION": {
     "SUBJECT": "Activate your CitizenOS account"
   },
