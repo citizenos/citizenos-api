@@ -3,36 +3,36 @@
 
         <tr>
             <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Noto-Serif;font-size:20px; font-weight:bold;background-color: #FFFFFF; color:#252525;">A comment has been reported as inappropriate by the community</p>
+                <p style="font-family: Noto-Serif;font-size:20px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Коментар беше пријавен како несоодветен од страна на заедницата</p>
             </td>
         </tr>
 
         <tr>
             <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#252525;">User wrote:</p>
+                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#252525;">Корисникот напиша:</p>
                 {{#comment.subject}}
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#707070; font-style: italic">"{{comment.subject}}"</p>
+                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#707070; font-style: italic">„{{comment.subject}}“</p>
                 {{/comment.subject}}
-                <p style="font-family: Open Sans,sans-serif;font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#707070; font-style: italic">"{{comment.text}}"</p>
+                <p style="font-family: Open Sans,sans-serif;font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#707070; font-style: italic">„{{comment.text}}“</p>
             </td>
         </tr>
 
         <tr>
             <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Community reported it:</p>
+                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Заедницата го пријави:</p>
                 <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#252525; font-style: italic">{{report.type}}</p>
                 {{#report.text}}
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#707070; font-style: italic">"{{report.text}}"</p>
+                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#707070; font-style: italic">„{{report.text}}“</p>
                 {{/report.text}}
             </td>
         </tr>
 
         <tr>
             <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Open Sans,sans-serif;font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#252525;">You can:</p>
+                <p style="font-family: Open Sans,sans-serif;font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Вие можете:</p>
                 <ul>
-                    <li style="font-family: Open Sans,sans-serif;font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#0680fc; margin-bottom: 17px;"><a href="{{linkModerate}}">Moderate this comment</a> - {{#isUserNotified}}User notified{{/isUserNotified}}{{^isUserNotified}}User NOT notified{{/isUserNotified}}</li>
-                    <li style="font-family: Open Sans,sans-serif;font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#252525; margin-bottom: 17px;">Leave it as it is, but community moderators may still decide to hide it from the default views.</li>
+                    <li style="font-family: Open Sans,sans-serif;font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#0680fc; margin-bottom: 17px;"><a href="{{linkModerate}}">Да го модерирате овој коментар</a> - {{#isUserNotified}}Корисникот е известен{{/isUserNotified}}{{^isUserNotified}}Корисникот НЕ е известен{{/isUserNotified}}</li>
+                    <li style="font-family: Open Sans,sans-serif;font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#252525; margin-bottom: 17px;">Да го оставите како што е, но модераторите на заедницата можат да одлучат да го отстранат од поглед на другите корисници.</li>
                 </ul>
             </td>
         </tr>
