@@ -175,7 +175,8 @@
         "riigikogu@riigikogu.ee",
         "info@rahvaalgatus.ee",
         "citizenos@citizenos.com"
-      ]
+      ],
+      "sendContainerDownloadLinkToCreator": true
     }
   },
   "storage": {

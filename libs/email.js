@@ -974,8 +974,8 @@ module.exports = function (app) {
                     social: config.email.social, // social.name maps to "from_name". I think this should be part of Campaign client config OR at least defaults can be set somewhere in client options
                     //Placeholders..
                     linkViewTopic: linkViewTopic,
-                    linkDownloadBdocFinal: linkDownloadBdocFinal,
-                    linkDownloadBdocFinalExpiryDate: moment(linkDownloadBdocFinalExpiryDate).locale('et').format('LL'),
+                    linkDownloadBdocFinal: config.features.sendToParliament.sendContainerDownloadLinkToCreator ? linkDownloadBdocFinal : null,
+                    linkDownloadBdocFinalExpiryDate: config.features.sendToParliament.sendContainerDownloadLinkToCreator ? moment(linkDownloadBdocFinalExpiryDate).locale('et').format('LL') : null,
                     linkAddEvent: null,
                     linkToApplication: linkToApplication,
                     linkToPlatform: linkToPlatform,
