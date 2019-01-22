@@ -22,12 +22,61 @@ module.exports = function (sequelize, DataTypes) {
         topicId: {
             type: DataTypes.UUID,
             allowNull: false,
-            comment: 'Id if the Topic which the Report belongs to.',
             references: {
                 model: 'Topics',
                 key: 'id'
             },
-            primaryKey: true
+            primaryKey: true,
+            comment: 'Id if the Topic which the Report belongs to.'
+        },
+        moderatedById: {
+            type: DataTypes.UUID,
+            allowNull: true,
+            references: {
+                model: 'Users',
+                key: 'id'
+            },
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE',
+            comment: 'User ID of the person who moderated the Topic on report. That is, a Moderator agreed that Report is valid.'
+        },
+        moderatedAt: {
+            type: DataTypes.DATE,
+            comment: 'Time when the Topic was Moderated',
+            allowNull: true
+        },
+        moderatedReasonType: {
+            type: DataTypes.ENUM,
+            values: _.values(Report.TYPES),
+            allowNull: true,
+            comment: 'Moderation reason - verbal abuse, obscene content, hate speech etc..'
+        },
+        moderatedReasonText: {
+            type: DataTypes.STRING(2048),
+            allowNull: true,
+            validate: {
+                len: {
+                    args: [1, 2048],
+                    msg: 'Text can be 1 to 2048 characters long.'
+                }
+            },
+            comment: 'Additional comment for the report to provide more details on the Moderator acton.'
+        },
+        resolvedById: {
+            type: DataTypes.UUID,
+            allowNull: true,
+            references: {
+                model: 'Users',
+                key: 'id'
+            },
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE',
+            comment: 'User ID of the person who considered the issue to be resolved thus making the report outdated.'
+        },
+        resolvedAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            comment: 'Time when the Report was marked as resolved.'
         }
     }, Report.attributes);
 
