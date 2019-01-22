@@ -1,6 +1,7 @@
 ## 2019-01-22
 
 * Parliament e-mails - configuration `config.features.sendToParliament.sendContainerDownloadLinkToCreator` to choose if BDOC link is sent to Topic creator or not in Parliament e-mails. 
+* Update `db/config/database.sql` to be up to date. Was supposed to be updated with changes on 2018-12-18.
 
 ## 2019-01-16
 

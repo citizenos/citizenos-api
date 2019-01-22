@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 9.6.10
--- Dumped by pg_dump version 9.6.10
+-- Dumped from database version 10.5 (Ubuntu 10.5-2.pgdg14.04+1)
+-- Dumped by pg_dump version 10.6 (Ubuntu 10.6-1.pgdg16.04+1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -27,6 +27,20 @@ CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
 --
 
 COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
+
+
+--
+-- Name: pg_stat_statements; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION pg_stat_statements; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION pg_stat_statements IS 'track execution statistics of all SQL statements executed';
 
 
 --
@@ -191,6 +205,15 @@ CREATE TYPE public."enum_Votes_type" AS ENUM (
 );
 
 
+--
+-- Name: ueberdb_insert_or_update(character varying, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.ueberdb_insert_or_update(character varying, text) RETURNS void
+    LANGUAGE plpgsql
+    AS $_$ BEGIN   IF EXISTS( SELECT * FROM store WHERE key = $1 ) THEN     UPDATE store SET value = $2 WHERE key = $1;   ELSE     INSERT INTO store(key,value) VALUES( $1, $2 );   END IF;   RETURN; END; $_$;
+
+
 SET default_tablespace = '';
 
 SET default_with_oids = false;
@@ -202,14 +225,14 @@ SET default_with_oids = false;
 CREATE TABLE public."Activities" (
     id uuid NOT NULL,
     data jsonb NOT NULL,
+    "createdAt" timestamp with time zone NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL,
+    "deletedAt" timestamp with time zone,
     "actorType" text,
     "actorId" text,
     "topicIds" text[] DEFAULT ARRAY[]::text[],
     "groupIds" text[] DEFAULT ARRAY[]::text[],
-    "userIds" text[] DEFAULT ARRAY[]::text[],
-    "createdAt" timestamp with time zone NOT NULL,
-    "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone
+    "userIds" text[] DEFAULT ARRAY[]::text[]
 );
 
 
@@ -263,18 +286,18 @@ CREATE TABLE public."Comments" (
     id uuid NOT NULL,
     type public."enum_Comments_type" NOT NULL,
     "parentId" uuid NOT NULL,
-    "parentVersion" bigint DEFAULT 0 NOT NULL,
     subject character varying(128),
     text character varying(2048) NOT NULL,
     "creatorId" uuid NOT NULL,
+    "createdAt" timestamp with time zone NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL,
+    "deletedAt" timestamp with time zone,
     "deletedById" uuid,
     "deletedReasonType" public."enum_Comments_deletedReasonType",
     "deletedReasonText" character varying(2048),
     "deletedByReportId" uuid,
     edits jsonb,
-    "createdAt" timestamp with time zone NOT NULL,
-    "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone
+    "parentVersion" bigint DEFAULT 0 NOT NULL
 );
 
 
@@ -301,11 +324,11 @@ CREATE TABLE public."Groups" (
     "parentId" uuid,
     name character varying(255) NOT NULL,
     "creatorId" uuid NOT NULL,
-    visibility public."enum_Groups_visibility" DEFAULT 'private'::public."enum_Groups_visibility" NOT NULL,
-    "sourcePartnerId" uuid,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone
+    "deletedAt" timestamp with time zone,
+    visibility public."enum_Groups_visibility" DEFAULT 'private'::public."enum_Groups_visibility" NOT NULL,
+    "sourcePartnerId" uuid
 );
 
 
@@ -314,12 +337,12 @@ CREATE TABLE public."Groups" (
 --
 
 CREATE TABLE public."Moderators" (
-    id uuid DEFAULT (md5(((random())::text || (clock_timestamp())::text)))::uuid NOT NULL,
     "userId" uuid NOT NULL,
     "partnerId" uuid,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone
+    "deletedAt" timestamp with time zone,
+    id uuid DEFAULT (md5(((random())::text || (clock_timestamp())::text)))::uuid NOT NULL
 );
 
 
@@ -426,6 +449,16 @@ CREATE TABLE public."TopicMemberUsers" (
 
 
 --
+-- Name: TopicPins; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."TopicPins" (
+    "topicId" uuid NOT NULL,
+    "userId" uuid NOT NULL
+);
+
+
+--
 -- Name: TopicVotes; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -448,17 +481,17 @@ CREATE TABLE public."Topics" (
     description text,
     status public."enum_Topics_status" DEFAULT 'inProgress'::public."enum_Topics_status" NOT NULL,
     visibility public."enum_Topics_visibility" DEFAULT 'private'::public."enum_Topics_visibility" NOT NULL,
-    categories character varying(255)[] DEFAULT (ARRAY[]::character varying[])::character varying(255)[],
-    "sourcePartnerId" uuid,
-    "sourcePartnerObjectId" character varying(255),
     "creatorId" uuid NOT NULL,
+    "createdAt" timestamp with time zone NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL,
+    "deletedAt" timestamp with time zone,
+    categories character varying(255)[] DEFAULT (ARRAY[]::character varying[])::character varying(255)[],
     "tokenJoin" character varying(8) NOT NULL,
     "padUrl" character varying(255) NOT NULL,
     "endsAt" timestamp with time zone,
+    "sourcePartnerId" uuid,
     hashtag character varying(60) DEFAULT NULL::character varying,
-    "createdAt" timestamp with time zone NOT NULL,
-    "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone
+    "sourcePartnerObjectId" character varying(255)
 );
 
 
@@ -498,18 +531,18 @@ CREATE TABLE public."Users" (
     id uuid NOT NULL,
     name character varying(255),
     company character varying(255),
-    language character varying(5) DEFAULT 'en'::character varying,
     email character varying(254),
     password character varying(64),
     "passwordResetCode" uuid,
     "emailIsVerified" boolean DEFAULT false NOT NULL,
     "emailVerificationCode" uuid NOT NULL,
-    source public."enum_Users_source" NOT NULL,
-    "sourceId" character varying(255),
-    "imageUrl" character varying(255),
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone
+    "deletedAt" timestamp with time zone,
+    language character varying(5) DEFAULT 'en'::character varying,
+    source public."enum_Users_source" NOT NULL,
+    "sourceId" character varying(255),
+    "imageUrl" character varying(255)
 );
 
 
@@ -638,10 +671,20 @@ CREATE TABLE public."Votes" (
     "endsAt" timestamp with time zone,
     description character varying(255) DEFAULT NULL::character varying,
     type public."enum_Votes_type" DEFAULT 'regular'::public."enum_Votes_type" NOT NULL,
-    "authType" public."enum_Votes_authType" DEFAULT 'soft'::public."enum_Votes_authType" NOT NULL,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone
+    "deletedAt" timestamp with time zone,
+    "authType" public."enum_Votes_authType" DEFAULT 'soft'::public."enum_Votes_authType" NOT NULL
+);
+
+
+--
+-- Name: store; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.store (
+    key character varying(100) NOT NULL,
+    value text NOT NULL
 );
 
 
@@ -769,6 +812,14 @@ ALTER TABLE ONLY public."TopicComments"
 
 ALTER TABLE ONLY public."TopicEvents"
     ADD CONSTRAINT "TopicEvents_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: TopicPins TopicFavourites_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicPins"
+    ADD CONSTRAINT "TopicFavourites_pkey" PRIMARY KEY ("topicId", "userId");
 
 
 --
@@ -913,6 +964,14 @@ ALTER TABLE ONLY public."VoteUserContainers"
 
 ALTER TABLE ONLY public."Votes"
     ADD CONSTRAINT "Votes_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: store store_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.store
+    ADD CONSTRAINT store_pkey PRIMARY KEY (key);
 
 
 --
@@ -1189,6 +1248,22 @@ ALTER TABLE ONLY public."TopicEvents"
 
 
 --
+-- Name: TopicPins TopicFavourites_topicId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicPins"
+    ADD CONSTRAINT "TopicFavourites_topicId_fkey" FOREIGN KEY ("topicId") REFERENCES public."Topics"(id);
+
+
+--
+-- Name: TopicPins TopicFavourites_userId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicPins"
+    ADD CONSTRAINT "TopicFavourites_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."Users"(id);
+
+
+--
 -- Name: TopicMemberGroups TopicMemberGroups_groupId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1361,4 +1436,5 @@ ALTER TABLE ONLY public."VoteUserContainers"
 --
 
 COPY public."SequelizeMeta" (name) FROM stdin;
+20181213213857-create-topic-favourite.js
 \.
