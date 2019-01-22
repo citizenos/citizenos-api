@@ -1,0 +1,39 @@
+{
+  "LAYOUT": {
+    "LINK_TO_PLATFORM": "Линк до платформата",
+    "LINK_PRIVACY_POLICY": "Политика на приватност"
+  },
+  "ACCOUNT_VERIFICATION": {
+    "SUBJECT": "Активирајте го Вашиот Citizen OS налог"
+  },
+  "INVITE_GROUP": {
+    "SUBJECT": "{{fromUser.name}} Ве поканува да се приклучите на групата „{{group.name}}“ на Citizen OS"
+  },
+  "INVITE_TOPIC": {
+    "SUBJECT": "{{fromUser.name}} Ве поканува да направите колаборативна одлука",
+    "SUBJECT_rahvaalgatus_ee": "{{fromUser.name}}, user of rahvaalgatus.ee invites you to co-create a discussion/initiative",
+    "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust"
+  },
+  "PASSWORD_RESET": {
+    "SUBJECT": "Обновете ја Вашата Citizen OS лозинка"
+  },
+  "REPORT_COMMENT": {
+    "REPORT_TYPE": {
+      "ABUSE": "Е нападен или навредлив",
+      "OBSCENE": "Користи нецензуриран јазик",
+      "SPAM": "Содржи спам или зборува надвор од темата",
+      "HATE": "Содржи говор на омраза",
+      "NETIQUETTE": "Прекршува (н)етикет",
+      "DUPLICATE": "Е дупликат"
+    }
+  },
+  "REPORT_COMMENT_CREATOR": {
+    "SUBJECT": "Вашиот коментар беше пријавен како несоодветен од страна на заедницата"
+  },
+  "REPORT_COMMENT_MODERATOR": {
+    "SUBJECT": "Коментар беше пријавен како несоодветен од страна на заедницата"
+  },
+  "TO_PARLIAMENT": {
+    "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
+  }
+}

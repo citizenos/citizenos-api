@@ -26,7 +26,7 @@ module.exports = function (app) {
      * Read (List) public Topic Activities
      */
 
-    var activitiesWithDataJoin = 'SELECT \
+    var activitiesWithDataJoin = 'SELECT DISTINCT \
         a.id, \
         a.data, \
         a."createdAt", \

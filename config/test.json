@@ -125,7 +125,8 @@
         "riigikogu@riigikogu_test.ee",
         "info@rahvaalgatus_test.ee",
         "citizenos@citizenos_test.com"
-      ]
+      ],
+      "sendContainerDownloadLinkToCreator": true
     }
   },
   "storage": {

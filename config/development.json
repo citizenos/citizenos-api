@@ -109,7 +109,8 @@
       "from": "Rahvaalgatus TEST <test_info@rahvaalgatus.ee>",
       "to": [
         "riigikogu_@riigikogu.test.ee"
-      ]
+      ],
+      "sendContainerDownloadLinkToCreator": true
     }
   },
   "storage": {

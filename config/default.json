@@ -91,7 +91,25 @@
       }
     },
     "from": "CitizenOS <no-reply@citizenos.com>",
-    "trap": false
+    "linkToPrivacyPolicy": "https://app.citizenos.com/en/topics/7abdd244-d45b-40d3-997c-a6290d4e972c",
+    "trap": false,
+    "styles": {
+      "headerBackgroundColor": "#252525",
+      "logoWidth": 237,
+      "logoHeight": 43     
+    },
+    "partnerStyles": {
+      "rahvaalgatus.ee": {
+        "headerBackgroundColor": "#004892",
+        "logoWidth": 360,
+        "logoHeight": 51   
+      },
+      "uuseakus.rahvaalgatus.ee": {
+        "headerBackgroundColor": "#004892",
+        "logoWidth": 300,
+        "logoHeight": 91   
+      }
+    }
   },
   "services": {
     "digiDoc": {
@@ -157,7 +175,8 @@
         "riigikogu@riigikogu.ee",
         "info@rahvaalgatus.ee",
         "citizenos@citizenos.com"
-      ]
+      ],
+      "sendContainerDownloadLinkToCreator": true
     }
   },
   "storage": {
