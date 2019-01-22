@@ -1,23 +1,33 @@
+## 2019-01-22
+
+* Parliament e-mails - configuration `config.features.sendToParliament.sendContainerDownloadLinkToCreator` to choose if BDOC link is sent to Topic creator or not in Parliament e-mails. 
+
 ## 2019-01-16
 
-* Update email layout so partner emails could be modified from config `"email": {"styles": {
-      "headerBackgroundColor": "#252525",
-      "logoWidth": 237,
-      "logoHeight": 43     
-    },
-    "partnerStyles": {
-      "partner1.com": {
-        "headerBackgroundColor": "#004892",
-        "logoWidth": 360,
-        "logoHeight": 51   
-      },
-      "partner2.eu": {
-        "headerBackgroundColor": "#004892",
-        "logoWidth": 300,
-        "logoHeight": 91   
-      }
-    }}` 
-    related to changes in https://github.com/citizenos/citizenos-api/issues/26 and https://github.com/citizenos/citizenos-api/issues/6
+* Update email layout so partner emails could be modified from config. Related to https://github.com/citizenos/citizenos-api/issues/26 and https://github.com/citizenos/citizenos-api/issues/6. 
+```
+{
+    "email":{
+        "styles":{
+            "headerBackgroundColor":"#252525",
+            "logoWidth":237,
+            "logoHeight":43
+        },
+        "partnerStyles":{
+            "partner1.com":{
+                "headerBackgroundColor":"#004892",
+                "logoWidth":360,
+                "logoHeight":51
+            },
+            "partner2.eu":{
+                "headerBackgroundColor":"#004892",
+                "logoWidth":300,
+                "logoHeight":91
+            }
+        }
+    }
+}
+```
 
 ## 2019-01-14
 
