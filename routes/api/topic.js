@@ -3499,9 +3499,10 @@ module.exports = function (app) {
 
         db
             .transaction(function (t) {
-                return Report
+                return TopicReport
                     .create(
                         {
+                            topicId: topicId,
                             type: req.body.type,
                             text: req.body.text,
                             creatorId: req.user.id,
@@ -3510,27 +3511,11 @@ module.exports = function (app) {
                         {
                             transaction: t
                         }
-                    )
-                    .then(function (report) {
-                        // FIXME: Topic report create activity!
-                        return TopicReport
-                            .create(
-                                {
-                                    topicId: topicId,
-                                    reportId: report.id
-                                },
-                                {
-                                    transaction: t
-                                }
-                            )
-                            .then(function () {
-                                return report;
-                            });
-                    });
+                    );
             })
             .then(function (report) {
                 //FIXME: Send TopicReport e-mail - emailLib.sendCommentReport(commentId, report); // Fire and forget
-
+                // FIXME: Topic report create activity!
                 return res.ok(report);
             })
             .catch(next);
@@ -3546,24 +3531,23 @@ module.exports = function (app) {
             .query(
                 '\
                     SELECT \
-                        r."id", \
-                        r."type", \
-                        r."text", \
-                        r."createdAt", \
+                        tr."id", \
+                        tr."type", \
+                        tr."text", \
+                        tr."createdAt", \
                         t."id" as "topic.id", \
                         t.title as "topic.title", \
                         t."description" as "topic.description" \
-                    FROM "Reports" r \
-                    LEFT JOIN "TopicReports" tr ON (tr."reportId" = r.id) \
+                    FROM "TopicReports" tr \
                     LEFT JOIN "Topics" t ON (t.id = tr."topicId") \
-                    WHERE r.id = :reportId \
+                    WHERE tr.id = :id \
                     AND t.id = :topicId \
-                    AND r."deletedAt" IS NULL \
+                    AND tr."deletedAt" IS NULL \
                 ;',
                 {
                     replacements: {
                         topicId: req.params.topicId,
-                        reportId: req.params.reportId
+                        id: req.params.reportId
                     },
                     type: db.QueryTypes.SELECT,
                     raw: true,
@@ -3585,7 +3569,7 @@ module.exports = function (app) {
     /**
      * Moderate a Topic
      */
-    app.post('/api/topics/:topicId/reports/:reportId/moderate', function (req, res, next) {
+    app.post('/api/topics/:topicId/reports/:reportId/moderate', authTokenRestrictedUse, function (req, res, next) {
         var reportType = req.body.type; // Delete reason type which is provided in case deleted/hidden by moderator due to a user report
         var reportText = req.body.text; // Free text with reason why the comment was deleted/hidden
 
