@@ -1,6 +1,7 @@
 ## 2019-01-22
 
-* Parliament e-mails - configuration `config.features.sendToParliament.sendContainerDownloadLinkToCreator` to choose if BDOC link is sent to Topic creator or not in Parliament e-mails. 
+* Parliament e-mails - configuration `config.features.sendToParliament.sendContainerDownloadLinkToCreator` to choose if BDOC link is sent to Topic creator or not in Parliament e-mails.
+* Make users verify e-mail address if they update it in their profile https://github.com/citizenos/citizenos-api/issues/54
 
 ## 2019-01-16
 

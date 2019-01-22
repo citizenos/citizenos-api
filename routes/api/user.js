@@ -5,7 +5,11 @@ module.exports = function (app) {
     var db = models.sequelize;
 
     var loginCheck = app.get('middleware.loginCheck');
+    var emailLib = app.get('email');
+    var config = app.get('config');
     var cosActivities = app.get('cosActivities');
+    var urlLib = app.get('urlLib');
+    var jwt = app.get('jwt');
     
     var User = models.User;
     var UserConsent = models.UserConsent;
@@ -19,22 +23,50 @@ module.exports = function (app) {
         if (!req.user.partnerId) { // Allow only our own app change the password
             fields.push('password');
         }
+        var updateEmail = false;
 
         User
-            .update(
-                req.body,
-                {
-                    where: {
-                        id: req.user.id
-                    },
-                    fields: fields,
-                    limit: 1,
-                    returning: true
+            .findOne({
+                where: {
+                    id: req.user.id
                 }
-            )
+            })
+            .then(function (user) {
+                if (req.body.email && req.body.email !== user.email) {
+                    updateEmail = true;
+                    fields.push('emailIsVerified');
+                    req.body.emailIsVerified = false;
+                }
+
+                return User
+                    .update(
+                        req.body,
+                        {
+                            where: {
+                                id: req.user.id
+                            },
+                            fields: fields,
+                            limit: 1,
+                            returning: true
+                        }
+                    );
+                    
+            })
             .then(function (results) {
+                var user = results[1][0].toJSON();
+                if (updateEmail) {
+                    var tokenData = {
+                        redirectSuccess: urlLib.getFe() // TODO: Misleading naming, would like to use "redirectUri" (OpenID convention) instead, but needs RAA.ee to update codebase.
+                    };
+
+                    var token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
+
+                    emailLib
+                        .sendAccountVerification(user.email, user.emailVerificationCode, token);
+                }
+
                 // Results array where 1-st element is number of rows modified and 2-nd is array of modified rows
-                return res.ok(results[1][0].toJSON());
+                return res.ok(user);
             })
             .catch(next);
     });
