@@ -1,11 +1,11 @@
 files:
-  - source: /views/emails/build/*_en.html
+  - source: /views/emails/*.html
     ignore:
       - /views/emails/governmentNotification*
       - /views/emails/inviteTopic_rahvaalgatus.ee*
-      - '/views/emails/inviteTopic_uuseakus.rahvaalgatus,ee*'
+      - /views/emails/inviteTopic_uuseakus.rahvaalgatus.ee*
     translation: /views/emails/build/%file_name%_%two_letters_code%.%file_extension%
   - source: /views/emails/languages/en.json
     translation: /views/emails/languages/%two_letters_code%.%file_extension%
-  - source: /views/etherpad/build/*_en.html
+  - source: /views/etherpad/*.html
     translation: /views/etherpad/build/%file_name%_%two_letters_code%.%file_extension%
