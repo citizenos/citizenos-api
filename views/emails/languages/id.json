@@ -35,5 +35,8 @@
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
+  },
+  "NEW_KEY_TEST": {
+    "TEST": "1-2-3"
   }
 }
