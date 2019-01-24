@@ -3572,6 +3572,7 @@ module.exports = function (app) {
     app.post('/api/topics/:topicId/reports/:reportId/moderate', authTokenRestrictedUse, function (req, res, next) {
         var reportType = req.body.type; // Delete reason type which is provided in case deleted/hidden by moderator due to a user report
         var reportText = req.body.text; // Free text with reason why the comment was deleted/hidden
+        var moderatorTokenData = req.locals.tokenDecoded;
 
         // FIXME: Implement
         return res.notImplemented();

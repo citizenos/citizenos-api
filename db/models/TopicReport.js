@@ -60,7 +60,7 @@ module.exports = function (sequelize, DataTypes) {
                     msg: 'Text can be 1 to 2048 characters long.'
                 }
             },
-            comment: 'Additional comment for the report to provide more details on the Moderator acton.'
+            comment: 'Additional comment for the Report to provide more details on the Moderator acton.'
         },
         resolvedById: {
             type: DataTypes.UUID,
