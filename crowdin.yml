@@ -5,7 +5,7 @@ files:
       - /views/emails/inviteTopic_rahvaalgatus.ee.html
       - /views/emails/inviteTopic_uuseakus.rahvaalgatus.ee.html
     translation: /views/emails/build/%file_name%_%two_letters_code%.%file_extension%
-  - source: /views/emails/languages/en.json
+  - source: /views/emails/source.json
     translation: /views/emails/languages/%two_letters_code%.%file_extension%
   - source: /views/etherpad/*.html
     translation: /views/etherpad/build/%file_name%_%two_letters_code%.%file_extension%
