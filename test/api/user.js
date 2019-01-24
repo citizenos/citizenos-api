@@ -134,14 +134,13 @@ suite('User', function () {
             });
         });
 
-        test('Success - change name & email & password', function (done) {
+        test('Success - change name & password', function (done) {
             var nameNew = 'New Name';
-            var emailNew = 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@test.com';
             var passwordNew = 'aaAA123';
 
-            userUpdate(agent, user.id, nameNew, emailNew, passwordNew, null, function () {
+            userUpdate(agent, user.id, nameNew, null, passwordNew, null, function () {
                 auth.logout(agent, function () {
-                    auth.login(agent, emailNew, passwordNew, function (err) {
+                    auth.login(agent, email, passwordNew, function (err) {
                         if (err) {
                             return done(err);
                         }
@@ -152,7 +151,7 @@ suite('User', function () {
                             })
                             .then(function (u) {
                                 assert.property(u, 'id');
-                                assert.equal(u.email, emailNew);
+                                assert.equal(u.email, email);
                                 assert.equal(u.password, cryptoLib.getHash(passwordNew, 'sha256'));
                                 assert.equal(u.name, nameNew);
 
@@ -160,6 +159,55 @@ suite('User', function () {
                             })
                             .catch(done);
                     });
+                });
+            });
+        });
+
+        test('Success - change name & email & password', function (done) {
+            var nameNew = 'New Name';
+            var emailNew = 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@test.com';
+            var passwordNew = 'aaAA123';
+
+            userUpdate(agent, user.id, nameNew, emailNew, passwordNew, null, function () {
+                auth.logout(agent, function () {
+                    User
+                        .find({
+                            where: {id: user.id}
+                        })
+                        .then(function (u) {
+                            assert.equal(u.emailIsVerified, false);
+                            User
+                                .update(
+                                    {emailIsVerified: true},
+                                    {
+                                        where: {
+                                            id: user.id
+                                        },
+                                        limit: 1
+                                    }
+                                )
+                                .then(function () {
+                                    auth.login(agent, emailNew, passwordNew, function (err) {
+                                        if (err) {
+                                            return done(err);
+                                        }
+                
+                                        User
+                                            .find({
+                                                where: {id: user.id}
+                                            })
+                                            .then(function (u) {
+                                                assert.property(u, 'id');
+                                                assert.equal(u.email, emailNew);
+                                                assert.equal(u.password, cryptoLib.getHash(passwordNew, 'sha256'));
+                                                assert.equal(u.name, nameNew);
+                
+                                                done();
+                                            })
+                                            .catch(done);
+                                    });
+                                });                    
+                        });
                 });
             });
         });
