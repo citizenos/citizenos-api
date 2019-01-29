@@ -60,6 +60,9 @@
       "clientSecret": "CITIZENOS_PASSPORT_FACEBOOK_CLIENTSECRET"
     }
   },
+  "attachments": {
+    "limit": "ATTACHMENTS_LIMIT"
+  },
   "storage": {
     "type": "S3",
     "accessKeyId": "AWS_ACCESS_KEY_ID",

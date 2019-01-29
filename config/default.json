@@ -179,6 +179,9 @@
       "sendContainerDownloadLinkToCreator": true
     }
   },
+  "attachments": {
+    "limit": 10
+  },
   "storage": {
     "type": "S3",
     "accessKeyId": "AWS_ACCESS_KEY_ID",

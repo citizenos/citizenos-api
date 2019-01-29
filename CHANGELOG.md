@@ -1,3 +1,7 @@
+## 2019-01-29
+
+* Set attachments limit from config https://github.com/citizenos/citizenos-fe/issues/181
+
 ## 2019-01-22
 
 * Parliament e-mails - configuration `config.features.sendToParliament.sendContainerDownloadLinkToCreator` to choose if BDOC link is sent to Topic creator or not in Parliament e-mails. 
