@@ -3270,7 +3270,7 @@ module.exports = function (app) {
         var size = req.body.size;
         var link = req.body.link;
 
-        var attachmentLimit = 5;
+        var attachmentLimit = config.attachments.limit || 5;
 
         Topic
             .findOne({
