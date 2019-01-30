@@ -1,3 +1,7 @@
+## 2019-01-30
+
+* Optimize activity feed queries to get better speed and memory usage https://github.com/citizenos/citizenos-api/issues/28
+
 ## 2019-01-29
 
 * Set attachments limit from config https://github.com/citizenos/citizenos-fe/issues/181

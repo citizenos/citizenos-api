@@ -22,6 +22,7 @@ module.exports = function (app) {
     var validator = app.get('validator');
     var emailLib = app.get('email');
     var cryptoLib = app.get('cryptoLib');
+    var cosActivities = app.get('cosActivities');
     var models = app.get('models');
     var db = models.sequelize;
 
@@ -89,29 +90,46 @@ module.exports = function (app) {
                                         transaction: t
                                     })
                                     .spread(function (user, created) {
+                                        var activityPromise = [];
                                         if (created) {
                                             logger.info('Created a new user with Google', user.id);
+                                            
+                                            activityPromise.push(cosActivities.createActivity(user, null, {
+                                                type: 'User',
+                                                id: user.id
+                                            }, req.method + ' ' + req.path, t));
                                         }
 
-                                        return UserConnection
-                                            .create(
-                                                {
-                                                    userId: user.id,
-                                                    connectionId: UserConnection.CONNECTION_IDS.google,
-                                                    connectionUserId: sourceId,
-                                                    connectionData: profile
-                                                },
-                                                {transaction: t}
-                                            )
+                                        return Promise
+                                            .all(activityPromise)
                                             .then(function () {
-                                                if (!user.imageUrl) {
-                                                    logger.info('Updating User profile image from social network');
-                                                    user.imageUrl = imageUrl; // Update existing Users image url in case there is none (for case where User is created via CitizenOS but logs in with social)
+                                                return UserConnection
+                                                    .create(
+                                                        {
+                                                            userId: user.id,
+                                                            connectionId: UserConnection.CONNECTION_IDS.google,
+                                                            connectionUserId: sourceId,
+                                                            connectionData: profile
+                                                        },
+                                                        {transaction: t}
+                                                    )
+                                                    .then(function (uc) {
 
-                                                    return [user.save(), created];
-                                                }
+                                                        return cosActivities.addActivity(uc, {
+                                                            type: 'User',
+                                                            id: user.id
+                                                        }, null, user, req.method + ' ' + req.path, t);
+                                                    })
+                                                    .then(function () {
+                                                        if (!user.imageUrl) {
+                                                            logger.info('Updating User profile image from social network');
+                                                            user.imageUrl = imageUrl; // Update existing Users image url in case there is none (for case where User is created via CitizenOS but logs in with social)
 
-                                                return [user, created];
+                                                            return [user.save(), created];
+                                                        }
+
+                                                        return [user, created];
+                                                    });
                                             });
                                     });
                             });
@@ -179,31 +197,46 @@ module.exports = function (app) {
                                         transaction: t
                                     })
                                     .spread(function (user, created) {
+                                        var activityPromise = [];
                                         if (created) {
                                             logger.info('Created a new user with Google', user.id);
+                                            
+                                            activityPromise.push(cosActivities.createActivity(user, null, {
+                                                type: 'User',
+                                                id: user.id
+                                            }, 'GET ' + config.passport.facebook.callbackUrl, t));
                                         }
 
-                                        return UserConnection
-                                            .create(
-                                                {
-                                                    userId: user.id,
-                                                    connectionId: UserConnection.CONNECTION_IDS.facebook,
-                                                    connectionUserId: sourceId,
-                                                    connectionData: profile
-                                                },
-                                                {
-                                                    transaction: t
-                                                }
-                                            )
+                                        return Promise
+                                            .all(activityPromise)
                                             .then(function () {
-                                                if (!user.imageUrl) {
-                                                    logger.info('Updating User profile image from social network');
-                                                    user.imageUrl = imageUrl; // Update existing Users image url in case there is none (for case where User is created via CitizenOS but logs in with social)
+                                                return UserConnection
+                                                    .create(
+                                                        {
+                                                            userId: user.id,
+                                                            connectionId: UserConnection.CONNECTION_IDS.facebook,
+                                                            connectionUserId: sourceId,
+                                                            connectionData: profile
+                                                        },
+                                                        {transaction: t}
+                                                    )
+                                                    .then(function (uc) {
 
-                                                    return [user.save(), created];
-                                                }
+                                                        return cosActivities.addActivity(uc, {
+                                                            type: 'User',
+                                                            id: user.id
+                                                        }, null, user, 'GET ' + config.passport.facebook.callbackUrl, t);
+                                                    })
+                                                    .then(function () {
+                                                        if (!user.imageUrl) {
+                                                            logger.info('Updating User profile image from social network');
+                                                            user.imageUrl = imageUrl; // Update existing Users image url in case there is none (for case where User is created via CitizenOS but logs in with social)
 
-                                                return [user, created];
+                                                            return [user.save(), created];
+                                                        }
+
+                                                        return [user, created];
+                                                    });
                                             });
                                     });
                             });
