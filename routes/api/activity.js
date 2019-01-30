@@ -64,13 +64,13 @@ module.exports = function (app) {
         FROM \
             "Activities" a \
         LEFT JOIN \
-            (SELECT \'User\' AS "type", u.id, u.name, u.company FROM "Users" u) u ON u.id::text = a.data#>>\'{actor, id}\' \
+            (SELECT \'User\' AS "type", u.id, u.name, u.company FROM "Users" u) u ON a.data#>>\'{actor, type}\' = \'User\' AND u.id::text = a.data#>>\'{actor, id}\' \
         LEFT JOIN \
-            "Topics" tobj ON a.data#>>\'{object, @type}\' = \'Topic\' AND tobj.id::text = a.data#>>\'{object, id}\' \
+            (SELECT \'Topic\' AS "@type", t.* FROM "Topics" t) tobj ON a.data#>>\'{object, @type}\' = \'Topic\' AND tobj.id::text = a.data#>>\'{object, id}\' \
         LEFT JOIN \
-            "Groups" go ON a.data#>>\'{object, @type}\' = \'Group\' AND go.id::text = a.data#>>\'{object, id}\' \
+            (SELECT \'Group\' AS "@type", g.* FROM "Groups" g) go ON a.data#>>\'{object, @type}\' = \'Group\' AND go.id::text = a.data#>>\'{object, id}\' \
         LEFT JOIN \
-            (SELECT \'Users\' as "@type", id, name, company FROM "Users") uo ON a.data#>>\'{object, @type}\' = \'User\' AND uo.id::text = a.data#>>\'{object, id}\' \
+            (SELECT \'User\' as "@type", id, name, company FROM "Users") uo ON a.data#>>\'{object, @type}\' = \'User\' AND uo.id::text = a.data#>>\'{object, id}\' \
         LEFT JOIN ( \
             SELECT \
             a.id AS "activityId", \
@@ -84,7 +84,7 @@ module.exports = function (app) {
                 WHERE a.data#>>\'{object, @type}\' = \'VoteUserContainer\' \
             ) tvco ON a.data#>>\'{object, @type}\' = \'VoteUserContainer\' AND tvco."activityId" = a.id \
         LEFT JOIN \
-            "Groups" origg ON a.data#>>\'{origin, @type}\' = \'Group\' AND origg.id::text = a.data#>>\'{origin, id}\' \
+            (SELECT \'Group\' as "@type", g.* FROM "Groups" g) origg ON a.data#>>\'{origin, @type}\' = \'Group\' AND origg.id::text = a.data#>>\'{origin, id}\' \
         LEFT JOIN ( \
             SELECT \
                 a.id AS "activityId", \
@@ -122,12 +122,13 @@ module.exports = function (app) {
             WHERE a.data#>>\'{origin, @type}\' = \'GroupMember\' \
         ) gmuorig ON a.data#>>\'{origin, @type}\' = \'GroupMember\' AND tmuorig."activityId" = a.id \
         LEFT JOIN \
-            "Groups" targg ON a.data#>>\'{target, @type}\' = \'Group\' AND targg.id::text = a.data#>>\'{target, id}\' \
+            (SELECT \'Group\' AS "@type", g.* FROM "Groups" g) targg ON a.data#>>\'{target, @type}\' = \'Group\' AND targg.id::text = a.data#>>\'{target, id}\' \
         LEFT JOIN\
-            "Topics" targt ON a.data#>>\'{target, @type}\' = \'Topic\' AND targt.id::text = a.data#>>\'{target, id}\' \
+            (SELECT \'Topic\' AS "@type", t.* FROM "Topics" t) targt ON a.data#>>\'{target, @type}\' = \'Topic\' AND targt.id::text = a.data#>>\'{target, id}\' \
         LEFT JOIN ( \
             SELECT \
                 a.id AS "activityId", \
+                \'Comment\' AS "@type", \
                 c.*, \
                 tc."topicId" \
             FROM "Activities" a \
@@ -172,7 +173,8 @@ module.exports = function (app) {
                 va.id, \
                 va.data, \
                 va."createdAt", \
-                va."updatedAt" \
+                va."updatedAt", \
+                va."deletedAt" \
                 FROM "Activities" va \
                 WHERE \
                 va."actorType" = \'User\' AND va."actorId" = :userId::text \
@@ -189,7 +191,8 @@ module.exports = function (app) {
                         ua.id, \
                         ua.data, \
                         ua."createdAt", \
-                        ua."updatedAt" \
+                        ua."updatedAt", \
+                        ua."deletedAt" \
                     FROM \
                         pg_temp.getUserActivities(:userId) ua \
                     ');
@@ -199,7 +202,8 @@ module.exports = function (app) {
                         guaaa.id, \
                         guaaa.data, \
                         guaaa."createdAt", \
-                        guaaa."updatedAt" \
+                        guaaa."updatedAt", \
+                        guaaa."deletedAt" \
                     FROM \
                         pg_temp.getUserAsActorActivities(:userId) guaaa \
                     ');
@@ -209,7 +213,8 @@ module.exports = function (app) {
                         guta.id, \
                         guta.data, \
                         guta."createdAt", \
-                        guta."updatedAt" \
+                        guta."updatedAt", \
+                        guta."deletedAt" \
                     FROM \
                         pg_temp.getUserTopicActivities(:userId) guta \
                     ');
@@ -219,7 +224,8 @@ module.exports = function (app) {
                         guga.id, \
                         guga.data, \
                         guga."createdAt", \
-                        guga."updatedAt" \
+                        guga."updatedAt", \
+                        guga."deletedAt" \
                     FROM \
                         pg_temp.getUserGroupActivities(:userId) guga \
                     ');
@@ -229,7 +235,8 @@ module.exports = function (app) {
                         guta.id, \
                         guta.data, \
                         guta."createdAt", \
-                        guta."updatedAt" \
+                        guta."updatedAt", \
+                        guta."deletedAt" \
                     FROM \
                         pg_temp.getPublicTopicActivities() guta \
                     ');
@@ -239,7 +246,8 @@ module.exports = function (app) {
                         guga.id, \
                         guga.data, \
                         guga."createdAt", \
-                        guga."updatedAt" \
+                        guga."updatedAt", \
+                        guga."deletedAt" \
                     FROM \
                         pg_temp.getPublicGroupActivities() guga \
                     ');
@@ -249,7 +257,7 @@ module.exports = function (app) {
             }
         });
 
-        return includedSql.join(' UNION ALL ');
+        return includedSql.join(' UNION ');
     };
 
     var parseActivitiesResults = function (activities) {
@@ -555,12 +563,14 @@ module.exports = function (app) {
             LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION pg_temp.getUserTopicActivities(uuid) \
-                RETURNS TABLE ("id" uuid, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone) \
+                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
                 AS $$ \
                     SELECT \
                         a.id, \
+                        a.data, \
                         a."createdAt", \
-                        a."updatedAt" \
+                        a."updatedAt", \
+                        a."deletedAt" \
                     FROM \
                         "Activities" a, \
                         pg_temp.getUserTopics($1) ut \
@@ -571,12 +581,14 @@ module.exports = function (app) {
             LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION pg_temp.getUserGroupActivities(uuid) \
-                RETURNS TABLE ("id" uuid, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone) \
+                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
                 AS $$ \
                     SELECT \
                         a.id, \
+                        a.data, \
                         a."createdAt", \
-                        a."updatedAt" \
+                        a."updatedAt", \
+                        a."deletedAt" \
                     FROM \
                         "Activities" a, \
                         pg_temp.getUserGroups($1) ug \
@@ -587,12 +599,14 @@ module.exports = function (app) {
             LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION  pg_temp.getUserActivities(uuid) \
-                RETURNS TABLE ("id" uuid, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone) \
+                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
                 AS $$ \
                     SELECT \
                         a.id, \
+                        a.data, \
                         a."createdAt", \
-                        a."updatedAt" \
+                        a."updatedAt", \
+                        a."deletedAt" \
                     FROM \
                         "Activities" a \
                         WHERE \
@@ -602,12 +616,14 @@ module.exports = function (app) {
             LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION  pg_temp.getUserAsActorActivities(uuid) \
-                RETURNS TABLE ("id" uuid, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone) \
+                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
                 AS $$ \
                     SELECT \
                         a.id, \
+                        a.data, \
                         a."createdAt", \
-                        a."updatedAt" \
+                        a."updatedAt", \
+                        a."deletedAt" \
                     FROM \
                         "Activities" a \
                         WHERE \
@@ -622,37 +638,47 @@ module.exports = function (app) {
                     ( \
                         SELECT \
                             ua.id, \
+                            ua.data, \
                             ua."createdAt", \
-                            ua."updatedAt" \
+                            ua."updatedAt", \
+                            ua."deletedAt" \
                         FROM \
                             pg_temp.getUserActivities(:userId) ua \
                         UNION \
                         SELECT \
                             guta.id, \
+                            guta.data, \
                             guta."createdAt", \
-                            guta."updatedAt" \
+                            guta."updatedAt", \
+                            guta."deletedAt" \
                         FROM \
                             pg_temp.getUserTopicActivities(:userId) guta \
                         UNION \
                         SELECT \
                             guga.id, \
+                            guga.data, \
                             guga."createdAt", \
-                            guga."updatedAt" \
+                            guga."updatedAt", \
+                            guga."deletedAt" \
                         FROM \
                             pg_temp.getUserGroupActivities(:userId) guga \
                         UNION \
                         SELECT \
                             guaaa.id, \
+                            guaaa.data, \
                             guaaa."createdAt", \
-                            guaaa."updatedAt" \
+                            guaaa."updatedAt", \
+                            guaaa."deletedAt" \
                         FROM \
                             pg_temp.getUserAsActorActivities(:userId) guaaa \
                     ) uac \
             JOIN (\
                 SELECT \
                     va.id, \
+                    va.data, \
                     va."createdAt", \
-                    va."updatedAt" \
+                    va."updatedAt", \
+                    va."deletedAt" \
                 FROM "Activities" va \
                 WHERE \
                     va."actorType" = \'User\' AND va."actorId" = :userId::text \
@@ -843,13 +869,14 @@ module.exports = function (app) {
             LANGUAGE SQL IMMUTABLE; \
                 \
             CREATE OR REPLACE FUNCTION pg_temp.getPublicTopicActivities() \
-                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone) \
+                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
                 AS $$ \
                     SELECT \
                         a.id, \
                         a.data, \
                         a."createdAt", \
-                        a."updatedAt" \
+                        a."updatedAt", \
+                        a."deletedAt" \
                     FROM \
                         "Activities" a, \
                         pg_temp.getPublicTopics() ut \
@@ -859,13 +886,14 @@ module.exports = function (app) {
             LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION pg_temp.getPublicGroupActivities() \
-                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone) \
+                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
                 AS $$ \
                     SELECT \
                         a.id, \
                         a.data, \
                         a."createdAt", \
-                        a."updatedAt" \
+                        a."updatedAt", \
+                        a."deletedAt" \
                     FROM \
                         "Activities" a, \
                         pg_temp.getPublicGroups() ug \
@@ -875,13 +903,14 @@ module.exports = function (app) {
             LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION pg_temp.getUserTopicActivities(uuid) \
-                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone) \
+                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
                 AS $$ \
                     SELECT \
                         a.id, \
                         a.data, \
                         a."createdAt", \
-                        a."updatedAt" \
+                        a."updatedAt", \
+                        a."deletedAt" \
                     FROM \
                         "Activities" a, \
                         pg_temp.getUserTopics($1) ut \
@@ -891,13 +920,14 @@ module.exports = function (app) {
             LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION pg_temp.getUserGroupActivities(uuid) \
-            RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone) \
+                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
                 AS $$ \
                     SELECT \
                         a.id, \
                         a.data, \
                         a."createdAt", \
-                        a."updatedAt" \
+                        a."updatedAt", \
+                        a."deletedAt" \
                     FROM \
                         "Activities" a, \
                         pg_temp.getUserGroups($1) ug \
@@ -907,13 +937,14 @@ module.exports = function (app) {
             LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION  pg_temp.getUserActivities(uuid) \
-                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone) \
+                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
                 AS $$ \
                     SELECT \
                         a.id, \
                         a.data, \
                         a."createdAt", \
-                        a."updatedAt" \
+                        a."updatedAt", \
+                        a."deletedAt" \
                     FROM \
                         "Activities" a \
                         WHERE \
@@ -922,13 +953,14 @@ module.exports = function (app) {
             LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION  pg_temp.getUserAsActorActivities(uuid) \
-            RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone) \
+                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
                 AS $$ \
                     SELECT \
                         a.id, \
                         a.data, \
                         a."createdAt", \
-                        a."updatedAt" \
+                        a."updatedAt", \
+                        a."deletedAt" \
                     FROM \
                         "Activities" a \
                         WHERE \
@@ -945,7 +977,7 @@ module.exports = function (app) {
                     ORDER BY "updatedAt" DESC \
                     LIMIT :limit OFFSET :offset \
                 ) uac \
-                JOIN pg_temp.getActivityData(uac.id) ad ON ad."id" = uac.id \
+            JOIN pg_temp.getActivityData(uac.id) ad ON ad."id" = uac.id \
                 ORDER BY ad."updatedAt" DESC \
             ;';
 
