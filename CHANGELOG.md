@@ -1,3 +1,8 @@
+## 2019-01-31
+
+* Fixed title character counting and changed title character limit from 100 to 1000 in db using migration
+* Title length configurable but not over 1000 characters as in db https://github.com/citizenos/citizenos-api/issues/2
+
 ## 2019-01-30
 
 * Optimize activity feed queries to get better speed and memory usage https://github.com/citizenos/citizenos-api/issues/28

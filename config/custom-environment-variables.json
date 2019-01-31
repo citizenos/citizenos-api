@@ -11,6 +11,9 @@
       }
     }
   },
+  "topic": {
+    "titleLengthMax": "TITLE_LENGTH_MAX"
+  },
   "session": {
     "privateKey": "CITIZENOS_SESSION_PRIVATEKEY",
     "publicKey": "CITIZENOS_SESSION_PUBLICKEY",

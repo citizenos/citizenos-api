@@ -93,9 +93,8 @@ suite('cosEtherpad', function () {
         });
 
         test('Success - single line without tags, which is longer than allowed title - substring and add ... as last 3 characters', function (done) {
-            var str = 'Topic content hereTopic content hereTopic content hereTopic content hereTopic content hereTopic content hereTopic content here';
+            var str = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed at nibh luctus, accumsan magna at, maximus nulla. Maecenas maximus arcu augue, eu tempor massa egestas in. Cras pharetra dolor ac bibendum sodales. Pellentesque eget lectus justo. In malesuada lacus ut finibus mollis. In id metus ut mi facilisis faucibus. Curabitur id augue viverra, pharetra nunc in, tincidunt ipsum. Quisque euismod, sem sed dictum lacinia, est turpis scelerisque velit, eu interdum enim nunc et lacus. Praesent mattis viverra massa, ut interdum ante fermentum ut. Praesent accumsan odio ligula, nec bibendum arcu vestibulum aliquet. Mauris magna augue, laoreet cursus elit sit amet, egestas auctor metus. Nam ut vehicula neque, vel molestie tellus. Proin aliquam nulla ac libero semper, eu semper libero maximus. Maecenas at metus posuere, vestibulum urna non, congue ligula. Nam ut augue tellus. Ut sed facilisis neque. Donec vulputate vestibulum porttitor. Integer venenatis mi sed tellus ornare, non mattis mauris volutpat.';
             var expected = str.substr(0, Topic.TITLE_LENGTH_MAX - 4) + '...';
-
             assert.equal(cosEtherpad.getTopicTitleFromPadContent(str), expected);
             done();
         });
