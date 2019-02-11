@@ -1,7 +1,21 @@
+## 2019-01-31
+
+* Fixed title character counting and changed title character limit from 100 to 1000 in db using migration
+* Title length configurable but not over 1000 characters as in db https://github.com/citizenos/citizenos-api/issues/2
+
+## 2019-01-30
+
+* Optimize activity feed queries to get better speed and memory usage https://github.com/citizenos/citizenos-api/issues/28
+
+## 2019-01-29
+
+* Set attachments limit from config https://github.com/citizenos/citizenos-fe/issues/181
+
 ## 2019-01-22
 
 * Parliament e-mails - configuration `config.features.sendToParliament.sendContainerDownloadLinkToCreator` to choose if BDOC link is sent to Topic creator or not in Parliament e-mails. 
 * Update `db/config/database.sql` to be up to date. Was supposed to be updated with changes on 2018-12-18.
+* Make users verify e-mail address if they update it in their profile https://github.com/citizenos/citizenos-api/issues/54
 
 ## 2019-01-16
 

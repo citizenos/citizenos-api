@@ -11,6 +11,9 @@
       }
     }
   },
+  "topic": {
+    "titleLengthMax": "TITLE_LENGTH_MAX"
+  },
   "session": {
     "privateKey": "CITIZENOS_SESSION_PRIVATEKEY",
     "publicKey": "CITIZENOS_SESSION_PUBLICKEY",
@@ -59,6 +62,9 @@
       "clientId": "CITIZENOS_PASSPORT_FACEBOOK_CLIENTID",
       "clientSecret": "CITIZENOS_PASSPORT_FACEBOOK_CLIENTSECRET"
     }
+  },
+  "attachments": {
+    "limit": "ATTACHMENTS_LIMIT"
   },
   "storage": {
     "type": "S3",

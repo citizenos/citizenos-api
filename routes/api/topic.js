@@ -1364,21 +1364,6 @@ module.exports = function (app) {
                     .transaction(function (t) {
                         var promisesToResolve = [];
 
-                        var topicActivityPromise = cosActivities
-                            .updateActivity(
-                                topic,
-                                null,
-                                {
-                                    type: 'User',
-                                    id: req.user.id
-                                },
-                                null,
-                                req.method + ' ' + req.path,
-                                t
-                            );
-
-                        promisesToResolve.push(topicActivityPromise);
-
                         var topicUpdatePromise = topic
                             .update(
                                 req.body,
@@ -1394,7 +1379,22 @@ module.exports = function (app) {
                             );
 
                         promisesToResolve.push(topicUpdatePromise);
+                        
+                        var topicActivityPromise = cosActivities
+                            .updateActivity(
+                                topic,
+                                null,
+                                {
+                                    type: 'User',
+                                    id: req.user.id
+                                },
+                                null,
+                                req.method + ' ' + req.path,
+                                t
+                            );
 
+                        promisesToResolve.push(topicActivityPromise);
+                        
                         if (isBackToVoting) {
                             promisesToResolve.push(cosBdoc.deleteFinalBdoc(topicId, vote.id));
 
@@ -3271,7 +3271,7 @@ module.exports = function (app) {
         var size = req.body.size;
         var link = req.body.link;
 
-        var attachmentLimit = 5;
+        var attachmentLimit = config.attachments.limit || 5;
 
         Topic
             .findOne({

@@ -26,127 +26,76 @@ module.exports = function (app) {
      * Read (List) public Topic Activities
      */
 
-    var activitiesWithDataJoin = 'SELECT DISTINCT \
+    var activitiesDataFunction = ' \
+    CREATE OR REPLACE FUNCTION pg_temp.getActivityData(uuid) \
+        RETURNS TABLE (id uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone, actor jsonb, object jsonb, origin jsonb, target jsonb) \
+        AS $$ \
+        SELECT DISTINCT \
         a.id, \
         a.data, \
         a."createdAt", \
         a."updatedAt", \
         a."deletedAt", \
-        u.id as "actor.id", \
-        a.data#>>\'{actor, type}\' as "actor.type", \
-        u.name as "actor.name", \
-        u.company as "actor.company", \
-        COALESCE(a.data#>>\'{actor, level}\') as "actor.level", \
-        COALESCE(go.id, tobj.id, uo.id) AS "object.id", \
-        COALESCE(go.name, uo.name) AS "object.name", \
-        COALESCE(tobj.title) AS "object.title", \
-        a.data#>>\'{object, @type}\' AS "object.@type", \
-        COALESCE(go."creatorId", tobj."creatorId") AS "object.creatorId", \
-        COALESCE(go."parentId") AS "object.parentId", \
-        COALESCE(tobj.status) AS "object.status", \
-        COALESCE(go.visibility::text, tobj.visibility::text) AS "object.visibility", \
-        COALESCE(tobj."sourcePartnerId", go."sourcePartnerId") AS "object.sourcePartnerId", \
-        COALESCE(tobj."sourcePartnerObjectId") AS "object.sourcePartnerObjectId", \
-        COALESCE(tobj."categories") AS "object.categories", \
-        COALESCE(tobj."tokenJoin") AS "object.tokenJoin", \
-        COALESCE(tobj."padUrl") AS "object.padUrl", \
-        COALESCE(tobj."endsAt") AS "object.endsAt", \
-        COALESCE(tobj.hashtag) AS "object.hashtag", \
-        COALESCE(go."createdAt"::text, tobj."createdAt"::text, tvco."createdAt"::text) AS "object.createdAt", \
-        COALESCE(go."updatedAt"::text, tobj."updatedAt"::text, tvco."updatedAt"::text) AS "object.updatedAt", \
-        COALESCE(go."deletedAt"::text, tobj."deletedAt"::text, tvco."deletedAt"::text) AS "object.deletedAt", \
-        COALESCE(uo.company) AS "object.company", \
-        COALESCE(tvco."userId") AS "object.userId", \
-        COALESCE(tvco."voteId") AS "object.voteId", \
-        COALESCE(tvco."topicId") AS "object.topicId", \
-        COALESCE(tvco."topicTitle") AS "object.topicTitle", \
-        COALESCE(torig.id, origg.id) AS "origin.id", \
-        COALESCE(origg.name) AS "origin.name", \
-        COALESCE(torig.title) AS "origin.title", \
-        COALESCE(torig.status) AS "origin.status", \
-        COALESCE(torig.categories) AS "origin.categories", \
-        COALESCE(torig."tokenJoin") AS "origin.tokenJoin", \
-        COALESCE(torig."padUrl") AS "origin.padUrl", \
-        COALESCE(torig."endsAt") AS "origin.endsAt", \
-        COALESCE(torig.hashtag) AS "origin.hashtag", \
-        a.data#>>\'{origin, @type}\' AS "origin.@type", \
-        COALESCE(torig."creatorId", origg."creatorId") AS "origin.creatorId", \
-        COALESCE(origg."parentId") AS "origin.parentId", \
-        COALESCE(torig.visibility::text, origg.visibility::text) AS "origin.visibility", \
-        COALESCE(torig."sourcePartnerId", origg."sourcePartnerId") AS "origin.sourcePartnerId", \
-        COALESCE(torig."sourcePartnerObjectId") AS "origin.sourcePartnerObjectId", \
-        COALESCE(torig."createdAt"::text, origg."createdAt"::text, tmuorig."createdAt"::text, gmuorig."createdAt"::text, tmgorig."createdAt"::text) AS "origin.createdAt", \
-        COALESCE(torig."updatedAt"::text, origg."updatedAt"::text, tmuorig."updatedAt"::text, gmuorig."updatedAt"::text, tmgorig."updatedAt"::text) AS "origin.updatedAt", \
-        COALESCE(torig."deletedAt"::text, origg."deletedAt"::text, tmuorig."deletedAt"::text, gmuorig."deletedAt"::text, tmgorig."deletedAt"::text) AS "origin.deletedAt", \
-        COALESCE(tmuorig."level", tmgorig."level", gmuorig."level") AS "origin.level", \
-        COALESCE(tmuorig."userId", gmuorig."userId") AS "origin.userId", \
-        COALESCE(gmuorig."groupId", tmgorig."groupId") AS "origin.groupId", \
-        COALESCE(tmuorig."topicId", tmgorig."topicId") AS "origin.topicId", \
-        COALESCE(tmuorig."topicTitle", tmgorig."topicTitle") AS "origin.topicTitle", \
-        COALESCE(gmuorig."groupName", tmgorig."topicTitle") AS "origin.groupName", \
-        COALESCE(tmuorig."userName", gmuorig."userName") AS "origin.userName", \
-        COALESCE(targg.id, targt.id, targtc.id) AS "target.id", \
-        COALESCE(targg.name, uo.name) AS "target.name", \
-        COALESCE(targt.title) AS "target.title", \
-        COALESCE(targtc.subject) AS "target.subject", \
-        COALESCE(targtc.text) AS "target.text", \
-        a.data#>>\'{target, @type}\' AS "target.@type", \
-        COALESCE(targg."creatorId", targt."creatorId", targtc."creatorId") AS "target.creatorId", \
-        COALESCE(targtc."topicId") AS "target.topicId", \
-        COALESCE(targg."parentId", targtc."parentId") AS "target.parentId", \
-        COALESCE(targtc."parentVersion") AS "target.parentVersion", \
-        COALESCE(targt.status) AS "target.status", \
-        COALESCE(targg.visibility::text, targt.visibility::text) AS "target.visibility", \
-        COALESCE(targt."sourcePartnerId", targg."sourcePartnerId") AS "target.sourcePartnerId", \
-        COALESCE(targt."sourcePartnerObjectId") AS "target.sourcePartnerObjectId", \
-        COALESCE(targt."categories") AS "target.categories", \
-        COALESCE(targt."tokenJoin") AS "target.tokenJoin", \
-        COALESCE(targt."padUrl") AS "target.padUrl", \
-        COALESCE(targt."endsAt") AS "target.endsAt", \
-        COALESCE(targt."hashtag") AS "target.hashtag", \
-        COALESCE(targtc."deletedById") AS "target.deletedById", \
-        COALESCE(targtc."deletedReasonType"::text) AS "target.deletedReasonType ", \
-        COALESCE(targtc."deletedReasonText") AS "target.deletedReasonText", \
-        COALESCE(targtc."deletedByReportId") AS "target.deletedByReportId", \
-        COALESCE(targtc."edits") AS "target.edits", \
-        COALESCE(targg."createdAt"::text, targt."createdAt"::text, targtc."createdAt"::text) AS "target.createdAt", \
-        COALESCE(targg."updatedAt"::text, targt."updatedAt"::text, targtc."updatedAt"::text) AS "target.updatedAt", \
-        COALESCE(targg."deletedAt"::text, targt."deletedAt"::text, targtc."deletedAt"::text) AS "target.deletedAt" \
-        FROM  \
+        CASE \
+            WHEN u.id IS NOT NULL THEN to_jsonb(u.*) \
+            ELSE NULL \
+        END AS actor, \
+        CASE \
+            WHEN uo.id IS NOT NULL THEN to_jsonb(uo.*) \
+            WHEN go.id IS NOT NULL THEN to_jsonb(go.*) \
+            WHEN tobj.id IS NOT NULL THEN to_jsonb(tobj.*) \
+            WHEN tvco."voteId" IS NOT NULL THEN to_jsonb(tvco.*) \
+            ELSE NULL \
+        END AS object, \
+        CASE \
+            WHEN torig.id IS NOT NULL THEN to_jsonb(torig.*) \
+            WHEN origg.id IS NOT NULL THEN to_jsonb(origg.*) \
+            WHEN tmuorig."topicId" IS NOT NULL THEN to_jsonb(tmuorig.*) \
+            WHEN gmuorig."userId" IS NOT NULL THEN to_jsonb(gmuorig.*) \
+            WHEN tmgorig."groupId" IS NOT NULL THEN to_jsonb(tmgorig.*) \
+            ELSE NULL \
+        END AS origin, \
+        CASE \
+            WHEN targg.id IS NOT NULL THEN to_jsonb(targg.*) \
+            WHEN targt.id IS NOT NULL THEN to_jsonb(targt.*) \
+            WHEN targtc.id IS NOT NULL THEN to_jsonb(targtc.*) \
+            ELSE NULL \
+        END AS target \
+        FROM \
             "Activities" a \
         LEFT JOIN \
-            "Users" u ON u.id::text = a.data#>>\'{actor, id}\' \
+            (SELECT \'User\' AS "type", u.id, u.name, u.company FROM "Users" u) u ON (a.data#>>\'{actor, type}\' = \'User\' OR a.data#>>\'{actor, type}\' = \'Moderator\') AND u.id::text = a.data#>>\'{actor, id}\' \
         LEFT JOIN \
-            "Topics" tobj ON a.data#>>\'{object, @type}\' = \'Topic\' AND tobj.id::text = a.data#>>\'{object, id}\' \
+            (SELECT \'Topic\' AS "@type", t.* FROM "Topics" t) tobj ON a.data#>>\'{object, @type}\' = \'Topic\' AND tobj.id::text = a.data#>>\'{object, id}\' \
         LEFT JOIN \
-            "Groups" go ON a.data#>>\'{object, @type}\' = \'Group\' AND go.id::text = a.data#>>\'{object, id}\' \
+            (SELECT \'Group\' AS "@type", g.* FROM "Groups" g) go ON a.data#>>\'{object, @type}\' = \'Group\' AND go.id::text = a.data#>>\'{object, id}\' \
         LEFT JOIN \
-            "Users" uo ON a.data#>>\'{object, @type}\' = \'User\' AND uo.id::text = a.data#>>\'{object, id}\' \
+            (SELECT \'User\' as "@type", id, name, company FROM "Users") uo ON a.data#>>\'{object, @type}\' = \'User\' AND uo.id::text = a.data#>>\'{object, id}\' \
         LEFT JOIN ( \
             SELECT \
-                a.id AS "activityId", \
-                jpr.*, \
-                tv."topicId" AS "topicId", \
-                t.title AS "topicTitle" \
-            FROM "Activities" a \
-            JOIN jsonb_to_record(a.data) AS jpr("@type" text, "userId" text, "voteId" text, "createdAt" text, "updatedAt" text, "deletedAt" text) ON a.id = a.id \
-            JOIN "TopicVotes" tv ON tv."voteId"::text = data#>>\'{object, id}\' \
-            JOIN "Topics" t ON t.id = tv."topicId" \
-            WHERE a.data#>>\'{object, @type}\' = \'VoteUserContainer\' \
-        ) tvco ON a.data#>>\'{object, @type}\' = \'VoteUserContainer\' AND tvco."activityId" = a.id \
+            a.id AS "activityId", \
+            jpr.*, \
+            tv."topicId" AS "topicId", \
+            t.title AS "topicTitle" \
+                FROM "Activities" a \
+                JOIN jsonb_to_record(a.data) AS jpr("@type" text, "userId" text, "voteId" text, "createdAt" text, "updatedAt" text, "deletedAt" text) ON a.id = a.id \
+                JOIN "TopicVotes" tv ON tv."voteId"::text = data#>>\'{object, id}\' \
+                JOIN "Topics" t ON t.id = tv."topicId" \
+                WHERE a.data#>>\'{object, @type}\' = \'VoteUserContainer\' \
+            ) tvco ON a.data#>>\'{object, @type}\' = \'VoteUserContainer\' AND tvco."activityId" = a.id \
         LEFT JOIN \
-            "Groups" origg ON a.data#>>\'{origin, @type}\' = \'Group\' AND origg.id::text = a.data#>>\'{origin, id}\' \
+            (SELECT \'Group\' as "@type", g.* FROM "Groups" g) origg ON a.data#>>\'{origin, @type}\' = \'Group\' AND origg.id::text = a.data#>>\'{origin, id}\' \
         LEFT JOIN ( \
             SELECT \
                 a.id AS "activityId", \
                 jpr.*, \
                 u.name AS "userName", \
                 t.title AS "topicTitle" \
-                FROM "Activities" a \
-                JOIN jsonb_to_record(a.data) AS jpr("@type" text, "level" text, "userId" text, "topicId" text, "createdAt" text, "updatedAt" text, "deletedAt" text) ON a.id = a.id \
-                JOIN "Users" u ON u.id::text = data#>>\'{origin, userId}\' \
-                JOIN "Topics" t ON t.id::text = data#>>\'{origin, topicId}\' \
-                WHERE a.data#>>\'{origin, @type}\' = \'TopicMemberUser\' \
+            FROM "Activities" a \
+            JOIN jsonb_to_record(a.data) AS jpr("@type" text, "level" text, "userId" text, "topicId" text, "createdAt" text, "updatedAt" text, "deletedAt" text) ON a.id = a.id \
+            JOIN "Users" u ON u.id::text = data#>>\'{origin, userId}\' \
+            JOIN "Topics" t ON t.id::text = data#>>\'{origin, topicId}\' \
+            WHERE a.data#>>\'{origin, @type}\' = \'TopicMemberUser\' \
         ) tmuorig ON a.data#>>\'{origin, @type}\' = \'TopicMemberUser\' AND tmuorig."activityId" = a.id \
         LEFT JOIN ( \
             SELECT \
@@ -154,11 +103,11 @@ module.exports = function (app) {
                 jpr.*, \
                 g.name AS "groupName", \
                 t.title AS "topicTitle" \
-                FROM "Activities" a \
-                JOIN jsonb_to_record(a.data) AS jpr("@type" text, "level" text, "groupId" text, "topicId" text, "createdAt" text, "updatedAt" text, "deletedAt" text) ON a.id = a.id \
-                JOIN "Groups" g ON g.id::text = data#>>\'{origin, groupId}\' \
-                JOIN "Topics" t ON t.id::text = data#>>\'{origin, topicId}\' \
-                WHERE a.data#>>\'{origin, @type}\' = \'TopicMemberGroup\' \
+            FROM "Activities" a \
+            JOIN jsonb_to_record(a.data) AS jpr("@type" text, "level" text, "groupId" text, "topicId" text, "createdAt" text, "updatedAt" text, "deletedAt" text) ON a.id = a.id \
+            JOIN "Groups" g ON g.id::text = data#>>\'{origin, groupId}\' \
+            JOIN "Topics" t ON t.id::text = data#>>\'{origin, topicId}\' \
+            WHERE a.data#>>\'{origin, @type}\' = \'TopicMemberGroup\' \
         ) tmgorig ON a.data#>>\'{origin, @type}\' = \'TopicMemberGroup\' AND tmuorig."activityId" = a.id \
         LEFT JOIN ( \
             SELECT \
@@ -166,27 +115,32 @@ module.exports = function (app) {
                 jpr.*, \
                 u.name AS "userName", \
                 g.name AS "groupName" \
-                FROM "Activities" a \
-                JOIN jsonb_to_record(a.data) AS jpr("@type" text, "level" text, "userId" text, "groupId" text, "createdAt" text, "updatedAt" text, "deletedAt" text) ON a.id = a.id \
-                JOIN "Users" u ON u.id::text = data#>>\'{origin, userId}\' \
-                JOIN "Groups" g ON g.id::text = data#>>\'{origin, groupId}\' \
-                WHERE a.data#>>\'{origin, @type}\' = \'GroupMember\' \
+            FROM "Activities" a \
+            JOIN jsonb_to_record(a.data) AS jpr("@type" text, "level" text, "userId" text, "groupId" text, "createdAt" text, "updatedAt" text, "deletedAt" text) ON a.id = a.id \
+            JOIN "Users" u ON u.id::text = data#>>\'{origin, userId}\' \
+            JOIN "Groups" g ON g.id::text = data#>>\'{origin, groupId}\' \
+            WHERE a.data#>>\'{origin, @type}\' = \'GroupMember\' \
         ) gmuorig ON a.data#>>\'{origin, @type}\' = \'GroupMember\' AND tmuorig."activityId" = a.id \
         LEFT JOIN \
-            "Groups" targg ON a.data#>>\'{target, @type}\' = \'Group\' AND targg.id::text = a.data#>>\'{target, id}\' \
-        LEFT JOIN \
-            "Topics" targt ON a.data#>>\'{target, @type}\' = \'Topic\' AND targt.id::text = a.data#>>\'{target, id}\' \
+            (SELECT \'Group\' AS "@type", g.* FROM "Groups" g) targg ON a.data#>>\'{target, @type}\' = \'Group\' AND targg.id::text = a.data#>>\'{target, id}\' \
+        LEFT JOIN\
+            (SELECT \'Topic\' AS "@type", t.* FROM "Topics" t) targt ON a.data#>>\'{target, @type}\' = \'Topic\' AND targt.id::text = a.data#>>\'{target, id}\' \
         LEFT JOIN ( \
             SELECT \
                 a.id AS "activityId", \
+                \'Comment\' AS "@type", \
                 c.*, \
                 tc."topicId" \
-                FROM "Activities" a \
-                JOIN "Comments" c ON a.data#>>\'{target, @type}\' = \'Comment\' AND c."id"::text = a.data#>>\'{target, id}\' \
-                JOIN "TopicComments" tc ON tc."commentId" = c.id \
+            FROM "Activities" a \
+            JOIN "Comments" c ON a.data#>>\'{target, @type}\' = \'Comment\' AND c."id"::text = a.data#>>\'{target, id}\' \
+            JOIN "TopicComments" tc ON tc."commentId" = c.id \
         ) targtc ON a.data#>>\'{target, @type}\' = \'Comment\' AND targtc."id"::text = a.data#>>\'{target, id}\' \
         LEFT JOIN \
             "Topics" torig ON a.data#>>\'{origin, @type}\' = \'Topic\' AND torig.id::text = a.data#>>\'{origin, id}\' \
+    WHERE a.id = $1 \
+    LIMIT 1 \
+    ;$$ \
+    LANGUAGE SQL IMMUTABLE ;\
     ';
 
     var buildActivityFeedIncludeString = function (req, visibility) {
@@ -318,8 +272,11 @@ module.exports = function (app) {
                     company: null
                 };
             } else {
-                if (activity.actor && !activity.actor.level) {
-                    delete activity.actor.level;
+                if (activity.data.actor && activity.data.actor.level) {
+                    activity.actor.level = activity.data.actor.level;
+                }
+                if (returnActivity.data.actor && returnActivity.data.actor.type === 'Moderator') {
+                    activity.actor.type = returnActivity.data.actor.type;
                 }
                 returnActivity.data.actor = activity.actor;
             }
@@ -439,12 +396,15 @@ module.exports = function (app) {
             return db
                 .query(
                     '\
+                    ' + activitiesDataFunction + ' \
                     SELECT \
                         ad.* \
                     FROM \
+                    (SELECT \
+                        a.id \
+                        FROM \
                         "Activities" a \
                         JOIN "Topics" t ON t.id = :topicId \
-                        JOIN (' + activitiesWithDataJoin + ') ad ON ad."id" = a.id \
                         WHERE \
                         ' + visibilityCondition + ' \
                         ARRAY[:topicId] <@  a."topicIds" \
@@ -458,7 +418,9 @@ module.exports = function (app) {
                         AND \
                         a.data#>>\'{object, @type}\' = \'Activity\' \
                         ORDER BY a."updatedAt" DESC \
-                        LIMIT :limit OFFSET :offset \
+                        LIMIT :limit OFFSET :offset) a \
+                    JOIN pg_temp.getActivityData(a.id) ad ON ad."id" = a.id \
+                    ORDER BY ad."updatedAt" DESC \
                     ;',
                     {
                         replacements: {
@@ -561,7 +523,7 @@ module.exports = function (app) {
                         AND COALESCE(tmup.level, tmgp.level, \'none\')::"enum_TopicMemberUsers_level" > \'none\' \
                     ORDER BY t."updatedAt" DESC \
                 ; $$ \
-            LANGUAGE SQL; \
+            LANGUAGE SQL IMMUTABLE ; \
                 \
             CREATE OR REPLACE FUNCTION pg_temp.getUserGroups(uuid) \
                 RETURNS TABLE("groupId" uuid) \
@@ -601,7 +563,7 @@ module.exports = function (app) {
                     GROUP BY g.id \
                     ORDER BY g."updatedAt" DESC, g.id \
                 ; $$ \
-            LANGUAGE SQL; \
+            LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION pg_temp.getUserTopicActivities(uuid) \
                 RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
@@ -619,7 +581,7 @@ module.exports = function (app) {
                         ARRAY[ut."topicId"::text] <@ (a."topicIds") \
                         ORDER BY a."updatedAt" DESC \
                 ; $$ \
-            LANGUAGE SQL; \
+            LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION pg_temp.getUserGroupActivities(uuid) \
                 RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
@@ -637,7 +599,7 @@ module.exports = function (app) {
                         ARRAY[ug."groupId"::text] <@ (a."groupIds") \
                         ORDER BY a."updatedAt" DESC \
                 ; $$ \
-            LANGUAGE SQL; \
+            LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION  pg_temp.getUserActivities(uuid) \
                 RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
@@ -654,7 +616,7 @@ module.exports = function (app) {
                         ARRAY[$1::text] <@ (a."userIds") \
                         ORDER BY a."updatedAt" DESC \
                 ; $$ \
-            LANGUAGE SQL; \
+            LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION  pg_temp.getUserAsActorActivities(uuid) \
                 RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
@@ -671,7 +633,7 @@ module.exports = function (app) {
                             a."actorType" = \'User\' AND a."actorId" = $1::text \
                         ORDER BY a."updatedAt" DESC \
                 ; $$ \
-            LANGUAGE SQL; \
+            LANGUAGE SQL IMMUTABLE; \
             \
             SELECT \
                     COUNT(uac.id) AS count \
@@ -786,7 +748,7 @@ module.exports = function (app) {
             var filtersEscaped = filters.map(function (filter) {
                 return db.escape(filter);
             });
-            where += 'uac.data#>>\'{object, @type}\' IN (' + filtersEscaped.join(',') + ') OR uac.data#>>\'{object, 0, @type}\' IN (' + filtersEscaped.join(',') + ') ';
+            where += 'a.data#>>\'{object, @type}\' IN (' + filtersEscaped.join(',') + ') OR a.data#>>\'{object, 0, @type}\' IN (' + filtersEscaped.join(',') + ') ';
         }
 
         if (where) {
@@ -809,6 +771,7 @@ module.exports = function (app) {
         }
 
         var query = '\
+            ' + activitiesDataFunction + '\
             CREATE OR REPLACE FUNCTION pg_temp.getPublicTopics() \
                 RETURNS TABLE("topicId" uuid) \
                 AS $$ \
@@ -820,9 +783,8 @@ module.exports = function (app) {
                         t.title IS NOT NULL \
                         AND t.visibility = \'public\' \
                         ' + wherePartnerTopics + ' \
-                    ORDER BY t."updatedAt" DESC \
                 ; $$ \
-            LANGUAGE SQL; \
+            LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION pg_temp.getPublicGroups() \
                 RETURNS TABLE("groupId" uuid) \
@@ -833,9 +795,8 @@ module.exports = function (app) {
                     WHERE g."visibility" = \'public\' \
                         ' + wherePartnerGroups + ' \
                     GROUP BY g.id \
-                    ORDER BY g."updatedAt" DESC, g.id \
                 ; $$ \
-            LANGUAGE SQL; \
+            LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION pg_temp.getUserTopics(uuid) \
                 RETURNS TABLE("topicId" uuid) \
@@ -869,7 +830,7 @@ module.exports = function (app) {
                         AND COALESCE(tmup.level, tmgp.level, \'none\')::"enum_TopicMemberUsers_level" > \'none\' \
                     ORDER BY t."updatedAt" DESC \
                 ; $$ \
-            LANGUAGE SQL; \
+            LANGUAGE SQL IMMUTABLE; \
                 \
             CREATE OR REPLACE FUNCTION pg_temp.getUserGroups(uuid) \
                 RETURNS TABLE("groupId" uuid) \
@@ -907,9 +868,8 @@ module.exports = function (app) {
                         ' + wherePartnerGroups + ' \
                         AND gm."userId" = $1 \
                     GROUP BY g.id \
-                    ORDER BY g."updatedAt" DESC, g.id \
                 ; $$ \
-            LANGUAGE SQL; \
+            LANGUAGE SQL IMMUTABLE; \
                 \
             CREATE OR REPLACE FUNCTION pg_temp.getPublicTopicActivities() \
                 RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
@@ -925,9 +885,8 @@ module.exports = function (app) {
                         pg_temp.getPublicTopics() ut \
                         WHERE \
                         ARRAY[ut."topicId"::text] <@ (a."topicIds") \
-                        ORDER BY a."updatedAt" DESC \
                 ; $$ \
-            LANGUAGE SQL; \
+            LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION pg_temp.getPublicGroupActivities() \
                 RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
@@ -943,9 +902,8 @@ module.exports = function (app) {
                         pg_temp.getPublicGroups() ug \
                         WHERE \
                         ARRAY[ug."groupId"::text] <@ (a."groupIds") \
-                        ORDER BY a."updatedAt" DESC \
                 ; $$ \
-            LANGUAGE SQL; \
+            LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION pg_temp.getUserTopicActivities(uuid) \
                 RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
@@ -961,9 +919,8 @@ module.exports = function (app) {
                         pg_temp.getUserTopics($1) ut \
                         WHERE \
                         ARRAY[ut."topicId"::text] <@ (a."topicIds") \
-                        ORDER BY a."updatedAt" DESC \
                 ; $$ \
-            LANGUAGE SQL; \
+            LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION pg_temp.getUserGroupActivities(uuid) \
                 RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
@@ -979,9 +936,8 @@ module.exports = function (app) {
                         pg_temp.getUserGroups($1) ug \
                         WHERE \
                         ARRAY[ug."groupId"::text] <@ (a."groupIds") \
-                        ORDER BY a."updatedAt" DESC \
                 ; $$ \
-            LANGUAGE SQL; \
+            LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION  pg_temp.getUserActivities(uuid) \
                 RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
@@ -996,9 +952,8 @@ module.exports = function (app) {
                         "Activities" a \
                         WHERE \
                         ARRAY[$1::text] <@ (a."userIds") \
-                        ORDER BY a."updatedAt" DESC \
                 ; $$ \
-            LANGUAGE SQL; \
+            LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION  pg_temp.getUserAsActorActivities(uuid) \
                 RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
@@ -1013,21 +968,23 @@ module.exports = function (app) {
                         "Activities" a \
                         WHERE \
                             a."actorType" = \'User\' AND a."actorId" = $1::text \
-                        ORDER BY a."updatedAt" DESC \
                 ; $$ \
-            LANGUAGE SQL; \
+            LANGUAGE SQL IMMUTABLE; \
             \
             SELECT \
-                    ad.* \
-                FROM \
+                ad.* \
+            FROM \
+                ( \
+                    SELECT a.* FROM \
                     ( \
                     ' + includeSql + ' \
-                    ) uac \
-                JOIN ( \
-                    ' + activitiesWithDataJoin + ') ad ON ad.id = uac.id \
-                ' + where + ' \
-                ORDER BY uac."updatedAt" DESC \
-                LIMIT :limit OFFSET :offset \
+                    ) a \
+                    ' + where + ' \
+                    ORDER BY a."updatedAt" DESC \
+                    LIMIT :limit OFFSET :offset \
+                ) uac \
+            JOIN pg_temp.getActivityData(uac.id) ad ON ad."id" = uac.id \
+                ORDER BY ad."updatedAt" DESC \
             ;';
 
         return db
@@ -1122,13 +1079,15 @@ module.exports = function (app) {
 
             return db
                 .query('\
+                ' + activitiesDataFunction + '\
                     SELECT \
                         ad.* \
                     FROM \
+                    ( \
+                        SELECT a.id \
+                        FROM \
                         "Activities" a \
                         JOIN "Groups" g ON g.id = :groupId \
-                        JOIN ( \
-                            ' + activitiesWithDataJoin + ') ad ON ad.id = a.id \
                         WHERE \
                         ' + visibilityCondition + ' \
                         ARRAY[:groupId] <@  a."groupIds" \
@@ -1142,6 +1101,9 @@ module.exports = function (app) {
                         a.data#>>\'{object, @type}\' = \'Activity\' \
                         ORDER BY a."updatedAt" DESC \
                         LIMIT :limit OFFSET :offset \
+                    ) \
+                    JOIN pg_temp.getActivityData(a.id) ON ad.id = a.id \
+                    ORDER BY ad."updatedAt" DESC \
             ;', {
                     replacements: {
                         groupId: groupId,

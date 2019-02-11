@@ -191,22 +191,22 @@ module.exports = function (app) {
      */
     var _getTopicTitleFromPadContent = function (str) {
         var title;
-        var headingMatch = str.match(/<h[1-6]>([^<]+)<\/h[1-6]>/i);
+        var headingMatch = str.match(/(?!<h[1-6]><\/h[1-6]>)<h[1-6]>(.+?)<\/h[1-6]>/i);
         if (headingMatch && headingMatch.length > 0) {
             title = headingMatch[1];
         } else {
-            title = str.substr(0, 255);
+            title = str.substr(0, 2550);
         }
 
         // Remove all HTML tags
         title = title.replace(/<[^>]*>/gm, '');
+        
+        // Etherpad has HTML encoded everything, we want it stored not encoded
+        title = encoder.decode(title);
 
         if (title.length > Topic.TITLE_LENGTH_MAX) {
             title = title.substr(0, Topic.TITLE_LENGTH_MAX - 1 - 3) + '...';
         }
-
-        // Etherpad has HTML encoded everything, we want it stored not encoded
-        title = encoder.decode(title);
 
         // Replace all whitespace characters with ' '
         title = title.replace(/[​\s]+/g, ' '); //eslint-disable-line no-irregular-whitespace

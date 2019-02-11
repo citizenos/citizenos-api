@@ -4,6 +4,7 @@ var _ = require('lodash');
 var hooks = require('../../libs/sequelize/hooks');
 var util = require('util');
 var stringUtil = require('../../libs/util');
+var config = require('config');
 
 /**
  * Topic
@@ -49,7 +50,10 @@ module.exports = function (sequelize, DataTypes) {
     };
 
     var CATEGORIES_COUNT_MAX = 3; // Maximum of 3 categories allowed at the time.
-    var TITLE_LENGTH_MAX = 100; // Maximum length of "title"
+    var TITLE_LENGTH_MAX = config.topic.titleLengthMax; // Maximum length of "title"
+    if (!parseInt(TITLE_LENGTH_MAX, 10) || TITLE_LENGTH_MAX > 1000) {
+        TITLE_LENGTH_MAX = 1000;
+    }
     var HASHTAG_BYTES_LENGTH_MAX = 59; //Maximum bytelenght of twitter hashtag in search API.
 
     var Op = sequelize.Op;
