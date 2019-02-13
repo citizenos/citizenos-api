@@ -15,7 +15,7 @@
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Восстановить пароль своего аккаунта Citizen OS"
+    "SUBJECT": "Восстановить пароль своей учетной записи Citizen OS"
   },
   "REPORT_COMMENT": {
     "REPORT_TYPE": {
@@ -28,7 +28,7 @@
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Ваш комментарий был помечен, как неуместный"
+    "SUBJECT": "Ваш комментарий был помечен сообществом, как неуместный"
   },
   "REPORT_COMMENT_MODERATOR": {
     "SUBJECT": "Kомментарий был помечен, как неуместный"
