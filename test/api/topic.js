@@ -431,6 +431,28 @@ var topicReportRead = function (agent, topicId, reportId, token, callback) {
     _topicReportRead(agent, topicId, reportId, token, 200, callback);
 };
 
+var _topicReportModerate = function (agent, topicId, reportId, token, type, text, expectedHttpCode, callback) {
+    var path = '/api/topics/:topicId/reports/:reportId/moderate'
+        .replace(':topicId', topicId)
+        .replace(':reportId', reportId);
+
+    agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .set('Authorization', 'Bearer ' + token)
+        .send({
+            type: type,
+            text: text
+        })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var topicReportModerate = function (agent, topicId, reportId, token, type, text, callback) {
+    _topicReportModerate(agent, topicId, reportId, token, type, text, 200, callback);
+};
+
 var _topicCommentCreate = function (agent, userId, topicId, parentId, parentVersion, type, subject, text, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/comments'
         .replace(':userId', userId)
@@ -7826,6 +7848,12 @@ suite('Users', function () {
                         assert.equal(reportResult.text, report.text);
                         assert.equal(reportResult.createdAt, report.createdAt);
 
+                        assert.isNotNull(reportResult.moderator);
+                        assert.property(reportResult.moderator, 'id');
+
+                        assert.property(reportResult, 'moderatedReasonText');
+                        assert.property(reportResult, 'moderatedReasonType');
+
                         var reportResultTopic = reportResult.topic;
 
                         assert.equal(reportResultTopic.id, topic.id);
@@ -7833,6 +7861,107 @@ suite('Users', function () {
                         assert.equal(reportResultTopic.description, '<!DOCTYPE HTML><html><body><h1>Topic report test</h1><br>Topic report test desc<br><br><br></body></html>'); // DOH, whatever you do Etherpad adds extra <br>
 
                         done();
+                    });
+                });
+            });
+
+            suite('Moderate', function () {
+                var agentCreator = request.agent(app);
+                var agentReporter = request.agent(app);
+                var agentModerator = request.agent(app);
+
+                var emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                var emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                var emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+
+                var topicTitle = 'Topic report test';
+                var topicDescription = '<!DOCTYPE HTML><html><body><h1>Topic report test</h1><br>Topic report test desc<br><br></body></html>'
+                    .replace(':topicTitle', topicTitle);
+
+                var reportType = Report.TYPES.hate;
+                var reportText = 'Topic hate speech report test';
+
+                var userCreator;
+                var userModerator;
+                var userReporter;
+
+                var topic;
+                var report;
+
+                suiteSetup(function (done) {
+                    async
+                        .parallel(
+                            [
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentCreator, emailCreator, null, null, cb);
+                                },
+                                function (cb) {
+                                    userLib.createUser(agentModerator, emailModerator, null, null, cb);
+                                },
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentReporter, emailReporter, null, null, cb);
+                                }
+                            ]
+                            , function (err, results) {
+                                if (err) return done(err);
+
+                                userCreator = results[0];
+                                userModerator = results[1];
+                                userReporter = results[2];
+
+                                topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null, function (err, res) {
+                                    if (err) return done(err);
+
+                                    topic = res.body.data;
+
+                                    topicReportCreate(agentReporter, topic.id, reportType, reportText, function (err, res) {
+                                        if (err) return done(err);
+
+                                        report = res.body.data;
+
+                                        done();
+                                    });
+                                });
+                            }
+                        );
+                });
+
+                test('Success', function (done) {
+                    var token = cosJwt.getTokenRestrictedUse(
+                        {
+                            id: userModerator.id
+                        },
+                        [
+                            'GET /api/topics/:topicId/reports/:reportId'
+                                .replace(':topicId', topic.id)
+                                .replace(':reportId', report.id),
+                            'GET /api/users/:userId/topics/:topicId/reports/:reportId'
+                                .replace(':topicId', topic.id)
+                                .replace(':reportId', report.id),
+                            'POST /api/topics/:topicId/reports/:reportId/moderate'
+                                .replace(':topicId', topic.id)
+                                .replace(':reportId', report.id)
+                        ]
+                    );
+
+                    var type = Report.TYPES.spam;
+                    var text = 'Test: contains spam.';
+
+                    topicReportModerate(agentReporter, topic.id, report.id, token, type, text, function (err, res) {
+                        if (err) return done(err);
+
+                        var moderateResult = res.body.data;
+
+                        topicReportRead(agentReporter, topic.id, report.id, token, function (err, res) {
+                            if (err) return done(err);
+
+                            var reportReadResult = res.body.data;
+                            delete reportReadResult.topic; // No Topic info returned in moderation result
+
+                            assert.deepEqual(moderateResult, reportReadResult);
+
+                            return done();
+                        });
                     });
                 });
             });

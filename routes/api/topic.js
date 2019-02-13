@@ -1379,7 +1379,7 @@ module.exports = function (app) {
                             );
 
                         promisesToResolve.push(topicUpdatePromise);
-                        
+
                         var topicActivityPromise = cosActivities
                             .updateActivity(
                                 topic,
@@ -1394,7 +1394,7 @@ module.exports = function (app) {
                             );
 
                         promisesToResolve.push(topicActivityPromise);
-                        
+
                         if (isBackToVoting) {
                             promisesToResolve.push(cosBdoc.deleteFinalBdoc(topicId, vote.id));
 
@@ -3535,9 +3535,15 @@ module.exports = function (app) {
                         tr."type", \
                         tr."text", \
                         tr."createdAt", \
+                        tr."creatorId" as "creator.id", \
+                        tr."moderatedById" as "moderator.id", \
+                        tr."moderatedReasonText", \
+                        tr."moderatedReasonType", \
+                        tr."moderatedAt", \
                         t."id" as "topic.id", \
-                        t.title as "topic.title", \
-                        t."description" as "topic.description" \
+                        t."title" as "topic.title", \
+                        t."description" as "topic.description", \
+                        t."updatedAt" as "topic.updatedAt" \
                     FROM "TopicReports" tr \
                     LEFT JOIN "Topics" t ON (t.id = tr."topicId") \
                     WHERE tr.id = :id \
@@ -3570,12 +3576,86 @@ module.exports = function (app) {
      * Moderate a Topic
      */
     app.post('/api/topics/:topicId/reports/:reportId/moderate', authTokenRestrictedUse, function (req, res, next) {
-        var reportType = req.body.type; // Delete reason type which is provided in case deleted/hidden by moderator due to a user report
-        var reportText = req.body.text; // Free text with reason why the comment was deleted/hidden
+        var moderatedReasonType = req.body.type; // Delete reason type which is provided in case deleted/hidden by moderator due to a user report
+        var moderatedReasonText = req.body.text; // Free text with reason why the comment was deleted/hidden
         var moderatorTokenData = req.locals.tokenDecoded;
 
-        // FIXME: Implement
-        return res.notImplemented();
+        db
+            .query(
+                '\
+                    SELECT \
+                        t."id" as "topic.id", \
+                        t."updatedAt" as "topic.updatedAt", \
+                        tr."id" as "report.id", \
+                        tr."createdAt" as "report.createdAt", \
+                        tr."resolvedById" as "report.resolvedById", \
+                        tr."moderatedById" as "report.moderatedById" \
+                    FROM "TopicReports" tr \
+                    LEFT JOIN "Topics" t ON (t.id = tr."topicId") \
+                    WHERE tr."topicId" = :topicId AND tr."id" = :reportId \
+                    AND t."deletedAt" IS NULL \
+                    AND tr."deletedAt" IS NULL \
+                ;',
+                {
+                    replacements: {
+                        topicId: req.params.topicId,
+                        reportId: req.params.reportId
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            )
+            .then(function (results) {
+                var topicReport = results[0];
+
+                if (!topicReport) {
+                    return res.notFound();
+                }
+
+                var topic = topicReport.topic;
+                var report = topicReport.report;
+
+                // If Topic has been updated since the Report was made, deny moderation cause the text may have changed.
+                if (topic.updatedAt.getTime() > report.createdAt.getTime()) {
+                    return res.badRequest('Report has become invalid cause Topic has been updated after the report', 10);
+                }
+
+                if (report.resolvedById) {
+                    return res.badRequest('Report has become invalid cause the report has been already resolved', 11);
+                }
+
+                if (report.moderatedById) {
+                    return res.badRequest('Report has become invalid cause the report has been already moderated', 12);
+                }
+
+                return db
+                    .transaction(function (t) {
+                        // FIXME: Activity!
+                        return TopicReport
+                            .update(
+                                {
+                                    moderatedById: moderatorTokenData.id,
+                                    moderatedAt: db.fn('NOW'),
+                                    moderatedReasonType: moderatedReasonType,
+                                    moderatedReasonText: moderatedReasonText
+                                },
+                                {
+                                    where: {
+                                        id: report.id
+                                    },
+                                    returning: true // FIXME: When activities come a long, we need to return
+                                },
+                                {
+                                    transaction: t
+                                }
+                            );
+                    });
+            })
+            .then(function (topicReport) {
+                return res.ok(topicReport[1][0]);
+            })
+            .catch(next);
     });
 
     /**
@@ -4452,7 +4532,7 @@ module.exports = function (app) {
                     return res.badRequest('Report has become invalid cause comment has been updated after the report', 10);
                 }
 
-                Comment
+                return Comment
                     .findOne({
                         where: {
                             id: comment.id

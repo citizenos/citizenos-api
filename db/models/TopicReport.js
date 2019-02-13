@@ -87,7 +87,17 @@ module.exports = function (sequelize, DataTypes) {
     TopicReport.prototype.toJSON = function () {
         var data = Report.prototype.toJSON.call(this); // Call parents "toJSON"
 
-        // TODO add TopicReport specific whitelist here
+        // TopicReport specific white list here
+        if (this.dataValues.moderator) {
+            data.moderator = this.dataValues.moderator;
+        } else {
+            data.moderator = {};
+            data.moderator.id = this.dataValues.moderatedById;
+        }
+
+        data.moderatedReasonText = this.dataValues.moderatedReasonText;
+        data.moderatedReasonType = this.dataValues.moderatedReasonType;
+        data.moderatedAt = this.dataValues.moderatedAt;
 
         return data;
     };
