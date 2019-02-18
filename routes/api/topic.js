@@ -3521,6 +3521,9 @@ module.exports = function (app) {
             .catch(next);
     };
 
+    /**
+     * Report a Topic
+     */
     app.post(['/api/users/:userId/topics/:topicId/reports', '/api/topics/:topicId/reports'], loginCheck(['partner']), topicReportsCreate);
 
     /**
@@ -3573,7 +3576,7 @@ module.exports = function (app) {
     });
 
     /**
-     * Moderate a Topic
+     * Moderate a Topic - moderator approves a report, thus applying restrictions to the Topic
      */
     app.post('/api/topics/:topicId/reports/:reportId/moderate', authTokenRestrictedUse, function (req, res, next) {
         var moderatedReasonType = req.body.type; // Delete reason type which is provided in case deleted/hidden by moderator due to a user report
@@ -3656,6 +3659,16 @@ module.exports = function (app) {
                 return res.ok(topicReport[1][0]);
             })
             .catch(next);
+    });
+
+    /** Send a Topic report for review - User let's Moderators know that the violations have been corrected **/
+    app.post(['/api/users/:userId/:topicId/reports/:reportId/review', '/api/topics/:topicId/reports/:reportId/review'], loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read),  function (req, res, next) {
+        return res.notImplemented();
+    });
+
+    /** Resolve a Topic report - mark the Topic report as fixed, thus lifting restrictions on the Topic **/
+    app.post('/api/topics/:topicId/reports/:reportId/resolve', authTokenRestrictedUse,  function (req, res, next) {
+        return res.notImplemented();
     });
 
     /**
