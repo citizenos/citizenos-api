@@ -8087,6 +8087,10 @@ suite('Users', function () {
                         done();
                     });
                 });
+
+                test('Fail - 403 - Unauthorized, restricted to Users with access', function (done) {
+                    _topicReportsReview(agentReporter, userReporter.id, topic.id, 403, done);
+                });
             });
 
         });
