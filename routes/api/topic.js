@@ -3524,7 +3524,7 @@ module.exports = function (app) {
     /**
      * Report a Topic
      */
-    app.post(['/api/users/:userId/topics/:topicId/reports', '/api/topics/:topicId/reports'], loginCheck(['partner']), topicReportsCreate);
+    app.post(['/api/users/:userId/topics/:topicId/reports', '/api/topics/:topicId/reports'], loginCheck(['partner']), hasVisibility(Topic.VISIBILITY.public), topicReportsCreate);
 
     /**
      * Read Topic Report
@@ -3662,7 +3662,8 @@ module.exports = function (app) {
     });
 
     /** Send a Topic report for review - User let's Moderators know that the violations have been corrected **/
-    app.post(['/api/users/:userId/:topicId/reports/:reportId/review', '/api/topics/:topicId/reports/:reportId/review'], loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read),  function (req, res, next) {
+    app.post(['/api/users/:userId/:topicId/reports/review', '/api/topics/:topicId/reports/review'], loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read),  function (req, res, next) {
+        // FIXME: Send e-mails to Moderators to review the Topic
         return res.notImplemented();
     });
 

@@ -453,6 +453,23 @@ var topicReportModerate = function (agent, topicId, reportId, token, type, text,
     _topicReportModerate(agent, topicId, reportId, token, type, text, 200, callback);
 };
 
+var _topicReportReview = function (agent, userId, topicId, expectedHttpCode, callback) {
+    var path = '/api/users/:userId/topics/:topicId/reports/review'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId);
+
+    agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var topicReportReview = function (agent, topicId, callback) {
+    _topicReportReview(agent, topicId, 200, callback);
+};
+
 var _topicCommentCreate = function (agent, userId, topicId, parentId, parentVersion, type, subject, text, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/comments'
         .replace(':userId', userId)
@@ -7757,6 +7774,26 @@ suite('Users', function () {
                     });
                 });
 
+
+                test('Fail - 40400 - Cant report a private Topic', function (done) {
+                    var reportType = Report.TYPES.hate;
+                    var reportText = 'Topic hate speech report for private Topic test';
+
+                    topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.private, null, null, null, null, function (err, res) {
+                        if (err) return done(err);
+
+                        topic = res.body.data;
+
+                        _topicReportCreate(agentReporter, topic.id, reportType, reportText, 404, function (err, res) {
+                            if (err) return done(err);
+
+                            var reportResult = res.body.data;
+
+                            done();
+                        });
+                    });
+                });
+
             });
 
             suite('Read', function () {
@@ -7965,6 +8002,7 @@ suite('Users', function () {
                     });
                 });
             });
+
         });
     });
 });
