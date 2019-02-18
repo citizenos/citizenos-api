@@ -453,8 +453,8 @@ var topicReportModerate = function (agent, topicId, reportId, token, type, text,
     _topicReportModerate(agent, topicId, reportId, token, type, text, 200, callback);
 };
 
-var _topicReportReview = function (agent, userId, topicId, expectedHttpCode, callback) {
-    var path = '/api/users/:userId/topics/:topicId/reports/review'
+var _topicReportsReview = function (agent, userId, topicId, expectedHttpCode, callback) {
+    var path = '/api/users/:userId/:topicId/reports/review'
         .replace(':userId', userId)
         .replace(':topicId', topicId);
 
@@ -466,8 +466,8 @@ var _topicReportReview = function (agent, userId, topicId, expectedHttpCode, cal
         .end(callback);
 };
 
-var topicReportReview = function (agent, topicId, callback) {
-    _topicReportReview(agent, topicId, 200, callback);
+var topicReportsReview = function (agent, userId, topicId, callback) {
+    _topicReportsReview(agent, userId, topicId, 200, callback);
 };
 
 var _topicCommentCreate = function (agent, userId, topicId, parentId, parentVersion, type, subject, text, expectedHttpCode, callback) {
@@ -7775,7 +7775,7 @@ suite('Users', function () {
                 });
 
 
-                test('Fail - 40400 - Cant report a private Topic', function (done) {
+                test('Fail - 40400 - Can\'t report a private Topic', function (done) {
                     var reportType = Report.TYPES.hate;
                     var reportText = 'Topic hate speech report for private Topic test';
 
@@ -7784,13 +7784,7 @@ suite('Users', function () {
 
                         topic = res.body.data;
 
-                        _topicReportCreate(agentReporter, topic.id, reportType, reportText, 404, function (err, res) {
-                            if (err) return done(err);
-
-                            var reportResult = res.body.data;
-
-                            done();
-                        });
+                        _topicReportCreate(agentReporter, topic.id, reportType, reportText, 404, done);
                     });
                 });
 
@@ -7999,6 +7993,98 @@ suite('Users', function () {
 
                             return done();
                         });
+                    });
+                });
+            });
+
+            suite('Review', function () {
+                var agentCreator = request.agent(app);
+                var agentReporter = request.agent(app);
+                var agentModerator = request.agent(app);
+
+                var emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                var emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                var emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+
+                var topicTitle = 'Topic report test';
+                var topicDescription = '<!DOCTYPE HTML><html><body><h1>Topic report test</h1><br>Topic report test desc<br><br></body></html>'
+                    .replace(':topicTitle', topicTitle);
+
+                var reportType = Report.TYPES.hate;
+                var reportText = 'Topic hate speech report test';
+
+                var userCreator;
+                var userModerator;
+                var userReporter;
+
+                var topic;
+                var report;
+
+                suiteSetup(function (done) {
+                    async
+                        .parallel(
+                            [
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentCreator, emailCreator, null, null, cb);
+                                },
+                                function (cb) {
+                                    userLib.createUser(agentModerator, emailModerator, null, null, cb);
+                                },
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentReporter, emailReporter, null, null, cb);
+                                }
+                            ]
+                            , function (err, results) {
+                                if (err) return done(err);
+
+                                userCreator = results[0];
+                                userModerator = results[1];
+                                userReporter = results[2];
+
+                                topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null, function (err, res) {
+                                    if (err) return done(err);
+
+                                    topic = res.body.data;
+
+                                    topicReportCreate(agentReporter, topic.id, reportType, reportText, function (err, res) {
+                                        if (err) return done(err);
+
+                                        report = res.body.data;
+
+                                        var token = cosJwt.getTokenRestrictedUse(
+                                            {
+                                                id: userModerator.id
+                                            },
+                                            [
+                                                'GET /api/topics/:topicId/reports/:reportId'
+                                                    .replace(':topicId', topic.id)
+                                                    .replace(':reportId', report.id),
+                                                'GET /api/users/:userId/topics/:topicId/reports/:reportId'
+                                                    .replace(':topicId', topic.id)
+                                                    .replace(':reportId', report.id),
+                                                'POST /api/topics/:topicId/reports/:reportId/moderate'
+                                                    .replace(':topicId', topic.id)
+                                                    .replace(':reportId', report.id)
+                                            ]
+                                        );
+
+                                        var type = Report.TYPES.spam;
+                                        var text = 'Test: contains spam.';
+
+                                        topicReportModerate(agentReporter, topic.id, report.id, token, type, text, done);
+                                    });
+                                });
+                            }
+                        );
+                });
+
+                test('Success', function (done) {
+                    topicReportsReview(agentCreator, userCreator.id, topic.id, function (err, res) {
+                        if (err) {
+                            return done(err);
+                        }
+
+                        done();
                     });
                 });
             });
