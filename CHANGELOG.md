@@ -1,3 +1,9 @@
+## 2019-02-19
+
+* Updated old `/api/topics/:topicId/comments` and `/api/users/:userId/topics/:topicId/comments` and depreacted `/api/v2/topics/:topicId/comments` and `/api/v2/users/:userId/topics/:topicId/comments`
+* Added offset and limit options to `/api/topics/:topicId/comments` and `/api/users/:userId/topics/:topicId/comments` endpoints and return data includes ```count: {pro: 1, con: 2, total: 3}```
+* Updated tests
+
 ## 2019-01-31
 
 * Fixed title character counting and changed title character limit from 100 to 1000 in db using migration
