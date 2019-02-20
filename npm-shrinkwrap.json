@@ -1892,9 +1892,9 @@
       "resolved": "https://registry.npmjs.org/locate-path/-/locate-path-2.0.0.tgz"
     },
     "lodash": {
-      "version": "4.17.10",
-      "from": "lodash@4.17.10",
-      "resolved": "https://registry.npmjs.org/lodash/-/lodash-4.17.10.tgz"
+      "version": "4.17.11",
+      "from": "lodash@4.17.11",
+      "resolved": "https://registry.npmjs.org/lodash/-/lodash-4.17.11.tgz"
     },
     "lodash._baseassign": {
       "version": "3.2.0",
