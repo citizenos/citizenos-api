@@ -2488,7 +2488,7 @@ module.exports = function (app) {
                     ' + dataForModerator + ' \
                     tmg."groupId" as "group.id", \
                     CASE \
-                        WHEN gmu.level IS NOT NULL THEN g.name \
+                        WHEN gmu.level IS NOT NULL THEN tmg.name \
                         ELSE NULL \
                     END as "group.name", \
                     tmg."level"::text as "group.level" \
@@ -2525,14 +2525,16 @@ module.exports = function (app) {
                     ORDER BY id, tm.priority, tm."level"::"enum_TopicMemberUsers_level" DESC \
                 ) tm \
                 LEFT JOIN "TopicMemberUsers" tmu ON (tmu."userId" = tm.id AND tmu."topicId" = :topicId) \
-                LEFT JOIN "GroupMembers" gm ON (gm."userId" = tm.id) \
-                LEFT JOIN "TopicMemberGroups" tmg ON tmg."topicId" = :topicId AND tmg."groupId" = gm."groupId" \
-                LEFT JOIN "Groups" g ON g.id = tmg."groupId" \
+                LEFT JOIN ( \
+                    SELECT gm."userId", tmg."groupId", tmg."topicId", tmg.level, g.name \
+                    FROM "GroupMembers" gm \
+                    LEFT JOIN "TopicMemberGroups" tmg ON tmg."groupId" = gm."groupId" \
+                    LEFT JOIN "Groups" g ON g.id = tmg."groupId" AND g."deletedAt" IS NULL \
+                    WHERE gm."deletedAt" IS NULL \
+                    AND tmg."deletedAt" IS NULL \
+                ) tmg ON tmg."topicId" = :topicId AND (tmg."userId" = tm.id) \
                 LEFT JOIN "GroupMembers" gmu ON (gmu."groupId" = tmg."groupId" AND gmu."userId" = :userId) \
                 LEFT JOIN "UserConnections" uc ON (uc."userId" = tm.id AND uc."connectionId" = \'esteid\') \
-                WHERE tmg."deletedAt" IS NULL \
-                AND gm."deletedAt" IS NULL \
-                AND g."deletedAt" IS NULL \
                 ORDER BY tm.name ASC \
                 ;',
                 {

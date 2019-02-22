@@ -1,3 +1,7 @@
+## 2019-02-22
+
+* Fix `GET /api/users/:userId/topics/:topicId/members/users` not returning all member users https://github.com/citizenos/citizenos-api/issues/117
+
 ## 2019-02-19
 
 * Updated old `/api/topics/:topicId/comments` and `/api/users/:userId/topics/:topicId/comments` and depreacted `/api/v2/topics/:topicId/comments` and `/api/v2/users/:userId/topics/:topicId/comments`
