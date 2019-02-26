@@ -3664,14 +3664,35 @@ module.exports = function (app) {
     });
 
     /** Send a Topic report for review - User let's Moderators know that the violations have been corrected **/
-    app.post(['/api/users/:userId/:topicId/reports/review', '/api/topics/:topicId/reports/review'], loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read),  function (req, res, next) {
+    app.post(['/api/users/:userId/:topicId/reports/review', '/api/topics/:topicId/reports/review'], loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), function (req, res, next) {
         // FIXME: Send e-mails to Moderators to review the Topic
         return res.notImplemented();
     });
 
-    /** Resolve a Topic report - mark the Topic report as fixed, thus lifting restrictions on the Topic **/
-    app.post('/api/topics/:topicId/reports/resolve', authTokenRestrictedUse,  function (req, res, next) {
-        return res.notImplemented();
+    /**
+     * Resolve a Topic report - mark the Topic report as fixed, thus lifting restrictions on the Topic
+     * We don't require /reports/review request to be sent to enable Moderators to act proactively
+     */
+    app.post('/api/topics/:topicId/reports/resolve', authTokenRestrictedUse, function (req, res, next) {
+        var topicId = req.params.topicId;
+        var moderatorTokenData = req.locals.tokenDecoded;
+
+        // FIXME: Do we want to send e-mail to interested parties that the restrictions have been lifted?
+        TopicReport
+            .update(
+                {
+                    resolvedById: moderatorTokenData.id,
+                    resolvedAt: db.fn('NOW')
+                },
+                {
+                    where: {
+                        topicId: topicId
+                    }
+                }
+            )
+            .then(function () {
+                return res.ok();
+            });
     });
 
     /**
@@ -4144,7 +4165,7 @@ module.exports = function (app) {
                     delete comment.countPro;
                     delete comment.countCon;
                 });
-                
+
                 return res.ok({
                     count: {
                         pro: countPro,
