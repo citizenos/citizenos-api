@@ -2489,7 +2489,7 @@ module.exports = function (app) {
                     ' + dataForModerator + ' \
                     tmg."groupId" as "group.id", \
                     CASE \
-                        WHEN gmu.level IS NOT NULL THEN g.name \
+                        WHEN gmu.level IS NOT NULL THEN tmg.name \
                         ELSE NULL \
                     END as "group.name", \
                     tmg."level"::text as "group.level" \
@@ -2526,14 +2526,16 @@ module.exports = function (app) {
                     ORDER BY id, tm.priority, tm."level"::"enum_TopicMemberUsers_level" DESC \
                 ) tm \
                 LEFT JOIN "TopicMemberUsers" tmu ON (tmu."userId" = tm.id AND tmu."topicId" = :topicId) \
-                LEFT JOIN "GroupMembers" gm ON (gm."userId" = tm.id) \
-                LEFT JOIN "TopicMemberGroups" tmg ON tmg."topicId" = :topicId AND tmg."groupId" = gm."groupId" \
-                LEFT JOIN "Groups" g ON g.id = tmg."groupId" \
+                LEFT JOIN ( \
+                    SELECT gm."userId", tmg."groupId", tmg."topicId", tmg.level, g.name \
+                    FROM "GroupMembers" gm \
+                    LEFT JOIN "TopicMemberGroups" tmg ON tmg."groupId" = gm."groupId" \
+                    LEFT JOIN "Groups" g ON g.id = tmg."groupId" AND g."deletedAt" IS NULL \
+                    WHERE gm."deletedAt" IS NULL \
+                    AND tmg."deletedAt" IS NULL \
+                ) tmg ON tmg."topicId" = :topicId AND (tmg."userId" = tm.id) \
                 LEFT JOIN "GroupMembers" gmu ON (gmu."groupId" = tmg."groupId" AND gmu."userId" = :userId) \
                 LEFT JOIN "UserConnections" uc ON (uc."userId" = tm.id AND uc."connectionId" = \'esteid\') \
-                WHERE tmg."deletedAt" IS NULL \
-                AND gm."deletedAt" IS NULL \
-                AND g."deletedAt" IS NULL \
                 ORDER BY tm.name ASC \
                 ;',
                 {
@@ -3827,120 +3829,6 @@ module.exports = function (app) {
         var orderByReplies = '"createdAt" ASC';
         var dataForModerator = '';
         if (req.user && req.user.moderator) {
-            dataForModerator = ' \
-            u.email AS "creator.email", \
-            uc."connectionData"::jsonb->>\'pid\' as "creator.pid", \
-            uc."connectionData"::jsonb->>\'phoneNumber\' as "creator.phoneNumber", \
-            ';
-        }
-
-        switch (req.query.orderBy) {
-            case orderByValues.rating:
-                orderByComments = '"votes.up.count" DESC, "votes.up.count" ASC, "createdAt" DESC';
-                orderByReplies = '"votes.up.count" DESC, "votes.up.count" ASC, "createdAt" ASC';
-                break;
-            case orderByValues.popularity:
-                orderByComments = '"votes.count" DESC, "createdAt" DESC';
-                orderByReplies = '"votes.count" DESC, "createdAt" ASC';
-                break;
-            default:
-            // Do nothing
-        }
-
-        db
-            .query(
-                ' \
-                WITH topicComments AS ( \
-                    SELECT \
-                        c.id, \
-                        c.type, \
-                        c.subject, \
-                        c.text, \
-                        c.edits, \
-                        c."createdAt", \
-                        c."deletedAt", \
-                        c."parentId" AS "parent.id", \
-                        c."parentVersion" AS "parent.version", \
-                        u.id as "creator.id", \
-                        u.name as "creator.name", \
-                        ' + dataForModerator + ' \
-                        u.company as "creator.company", \
-                        COALESCE(cvu.sum, 0) as "votes.up.count", \
-                        COALESCE(cvd.sum, 0) as "votes.down.count", \
-                        COALESCE(cvu.sum, 0) + COALESCE(cvd.sum, 0) as "votes.count" \
-                    FROM "TopicComments" tc \
-                        LEFT JOIN "Comments" c ON (c.id = tc."commentId") \
-                        LEFT JOIN "Users" u ON (u.id = c."creatorId") \
-                        LEFT JOIN "UserConnections" uc ON (uc."userId" = u.id AND uc."connectionId" = \'esteid\') \
-                        LEFT JOIN ( \
-                            SELECT SUM(value), "commentId" FROM "CommentVotes" WHERE value > 0 GROUP BY "commentId" \
-                        ) cvu ON (cvu."commentId" = c.id) \
-                        LEFT JOIN ( \
-                            SELECT SUM(ABS(value)), "commentId" FROM "CommentVotes" WHERE value < 0 GROUP BY "commentId" \
-                        ) cvd ON (cvd."commentId" = c.id) \
-                    WHERE tc."topicId" = :topicId \
-                    AND uc."deletedAt" IS NULL \
-                    AND c."deletedAt" IS NULL \
-                ) \
-                ( \
-                    SELECT \
-                        * \
-                    FROM topicComments \
-                    WHERE "parent.id" = id \
-                    ORDER BY ' + orderByComments + ' \
-                ) \
-                UNION ALL \
-                ( \
-                    SELECT \
-                        * \
-                    FROM topicComments \
-                    WHERE "parent.id" !=id \
-                    ORDER BY ' + orderByReplies + ' \
-                ) \
-                ',
-                {
-                    replacements: {
-                        topicId: req.params.topicId
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true,
-                    nest: true
-                }
-            )
-            .then(function (comments) {
-                var parentComments = _.filter(comments, function (c) {
-                    return c.parent.id === c.id;
-                });
-                _.forEach(parentComments, function (p) {
-                    var replies = _.filter(comments, function (r) {
-                        return r.parent.id === p.id && r.id !== r.parent.id;
-                    });
-
-                    p.replies = {
-                        count: replies.length,
-                        rows: replies
-                    };
-                });
-
-                return res.ok({
-                    count: parentComments.length,
-                    rows: parentComments
-                });
-            })
-            .catch(next);
-    };
-
-    var topicCommentsList2 = function (req, res, next) {
-        var orderByValues = {
-            rating: 'rating',
-            popularity: 'popularity',
-            date: 'date'
-        };
-
-        var orderByComments = '"createdAt" DESC';
-        var orderByReplies = '"createdAt" ASC';
-        var dataForModerator = '';
-        if (req.user && req.user.moderator) {
             dataForModerator = '\
             , \'email\', u.email \
             , \'pid\', uc."connectionData"::jsonb->>\'pid\' \
@@ -4179,6 +4067,8 @@ module.exports = function (app) {
                 \
                 SELECT \
                     ct.id, \
+                    COALESCE (ctp.count, 0) AS "countPro", \
+                    COALESCE (ctc.count, 0) AS "countCon", \
                     ct.type, \
                     ct.parent, \
                     ct.subject, \
@@ -4198,8 +4088,32 @@ module.exports = function (app) {
                     "TopicComments" tc \
                     JOIN "Comments" c ON c.id = tc."commentId" AND c.id = c."parentId" \
                     JOIN pg_temp.getCommentTree(tc."commentId") ct ON ct.id = ct.id \
+                    LEFT JOIN ( \
+                        SELECT \
+                            tc."topicId", \
+                            c.type, \
+                            COUNT(c.type) AS count \
+                            FROM "TopicComments" tc \
+                            JOIN "Comments" c ON c.id = tc."commentId" AND c.id=c."parentId" \
+                            WHERE tc."topicId" = :topicId \
+                            AND c.type=\'pro\' \
+                            GROUP BY tc."topicId", c.type \
+                    ) ctp ON ctp."topicId" = tc."topicId" \
+                    LEFT JOIN ( \
+                        SELECT \
+                            tc."topicId", \
+                            c.type, \
+                            COUNT(c.type) AS count \
+                            FROM "TopicComments" tc \
+                            JOIN "Comments" c ON c.id = tc."commentId" AND c.id=c."parentId" \
+                            WHERE tc."topicId" = :topicId \
+                            AND c.type=\'con\' \
+                            GROUP BY tc."topicId", c.type \
+                    ) ctc ON ctc."topicId" = tc."topicId" \
                 WHERE tc."topicId" = :topicId \
                 ORDER BY ' + orderByComments + ' \
+                LIMIT :limit \
+                OFFSET :offset \
                 ;\
         ';
 
@@ -4209,8 +4123,9 @@ module.exports = function (app) {
                 {
                     replacements: {
                         topicId: req.params.topicId,
-                        dateFormat: 'YYYY-MM-DDThh24:mi:ss.msZ'
-
+                        dateFormat: 'YYYY-MM-DDThh24:mi:ss.msZ',
+                        limit: req.query.limit || 15,
+                        offset: req.query.offset || 0
                     },
                     type: db.QueryTypes.SELECT,
                     raw: true,
@@ -4218,8 +4133,24 @@ module.exports = function (app) {
                 }
             )
             .then(function (comments) {
+                var countPro = 0;
+                var countCon = 0;
+
+                if (comments.length) {
+                    countPro = comments[0].countPro;
+                    countCon = comments[0].countCon;
+                }
+                comments.forEach(function (comment) {
+                    delete comment.countPro;
+                    delete comment.countCon;
+                });
+                
                 return res.ok({
-                    count: comments.length,
+                    count: {
+                        pro: countPro,
+                        con: countCon,
+                        total: countCon + countPro
+                    },
                     rows: comments
                 });
             })
@@ -4230,14 +4161,11 @@ module.exports = function (app) {
      * Read (List) Topic Comments
      */
     app.get('/api/users/:userId/topics/:topicId/comments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), isModerator(), topicCommentsList);
-    app.get('/api/v2/users/:userId/topics/:topicId/comments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), isModerator(), topicCommentsList2);
-
 
     /**
      * Read (List) public Topic Comments
      */
     app.get('/api/topics/:topicId/comments', hasVisibility(Topic.VISIBILITY.public), isModerator(), topicCommentsList);
-    app.get('/api/v2/topics/:topicId/comments', hasVisibility(Topic.VISIBILITY.public), isModerator(), topicCommentsList2);
 
     /**
      * Delete Topic Comment

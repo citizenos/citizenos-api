@@ -517,68 +517,37 @@ var topicCommentEdit = function (agent, userId, topicId, commentId, subject, tex
     _topicCommentEdit(agent, userId, topicId, commentId, subject, text, type, 200, callback);
 };
 
-var _topicCommentList = function (agent, userId, topicId, expectedHttpCode, callback) {
+var _topicCommentList = function (agent, userId, topicId, orderBy, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/comments'
         .replace(':userId', userId)
         .replace(':topicId', topicId);
 
     agent
         .get(path)
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
-};
-
-var topicCommentList = function (agent, userId, topicId, callback) {
-    _topicCommentList(agent, userId, topicId, 200, callback);
-};
-
-var _topicCommentListV2 = function (agent, userId, topicId, orderBy, expectedHttpCode, callback) {
-    var path = '/api/v2/users/:userId/topics/:topicId/comments'
-        .replace(':userId', userId)
-        .replace(':topicId', topicId);
-
-    agent
-        .get(path)
         .query({orderBy: orderBy})
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/)
         .end(callback);
 };
 
-var topicCommentListV2 = function (agent, userId, topicId, orderBy, callback) {
-    _topicCommentListV2(agent, userId, topicId, orderBy, 200, callback);
+var topicCommentList = function (agent, userId, topicId, orderBy, callback) {
+    _topicCommentList(agent, userId, topicId, orderBy, 200, callback);
 };
 
-var _topicCommentListUnauth = function (agent, topicId, expectedHttpCode, callback) {
+var _topicCommentListUnauth = function (agent, topicId, orderBy, expectedHttpCode, callback) {
     var path = '/api/topics/:topicId/comments'
         .replace(':topicId', topicId);
 
     agent
         .get(path)
         .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
-};
-
-var topicCommentListUnauth = function (agent, topicId, callback) {
-    _topicCommentListUnauth(agent, topicId, 200, callback);
-};
-
-var _topicCommentListUnauthV2 = function (agent, topicId, orderBy, expectedHttpCode, callback) {
-    var path = '/api/v2/topics/:topicId/comments'
-        .replace(':topicId', topicId);
-
-    agent
-        .get(path)
-        .expect(expectedHttpCode)
         .query({orderBy: orderBy})
         .expect('Content-Type', /json/)
         .end(callback);
 };
 
-var topicCommentListUnauthV2 = function (agent, topicId, orderBy, callback) {
-    _topicCommentListUnauthV2(agent, topicId, orderBy, 200, callback);
+var topicCommentListUnauth = function (agent, topicId, orderBy, callback) {
+    _topicCommentListUnauth(agent, topicId, orderBy, 200, callback);
 };
 
 var _topicCommentDelete = function (agent, userId, topicId, commentId, expectedHttpCode, callback) {
@@ -6730,7 +6699,6 @@ suite('Users', function () {
                         assert.equal(comment.creator.id, user.id);
 
                         var commentReplyText = 'Child comment';
-
                         topicCommentCreate(agent, user.id, topic.id, comment.id, comment.edits.length - 1, null, null, commentReplyText, function (err, res) {
                             if (err) return done(err);
 
@@ -6742,7 +6710,6 @@ suite('Users', function () {
                             assert.equal(commentReply.text, commentReplyText);
                             assert.equal(commentReply.creator.id, user.id);
                             assert.equal(commentReply.parent.id, comment.id);
-
                             done();
                         });
                     });
@@ -6827,7 +6794,7 @@ suite('Users', function () {
 
                             var status = res.body.status;
                             assert.equal(status.code, 20000);
-                            topicCommentListV2(agent3, user3.id, topic.id, 'date', function (err, res) {
+                            topicCommentList(agent3, user3.id, topic.id, 'date', function (err, res) {
                                 if (err) return done(err);
 
                                 var commentEdited = res.body.data.rows[0];
@@ -6913,7 +6880,7 @@ suite('Users', function () {
                 });
 
                 test('Success', function (done) {
-                    topicCommentList(agent, user.id, topic.id, function (err, res) {
+                    topicCommentList(agent, user.id, topic.id, null, function (err, res) {
                         if (err) return done(err);
 
                         var list = res.body.data;
@@ -6924,7 +6891,7 @@ suite('Users', function () {
                         delete creatorExpected.imageUrl; // Image url is not returned as it's not needed for now
                         delete creatorExpected.language; // Language is not returned
 
-                        assert.equal(list.count, 2);
+                        assert.equal(list.count.total, 2);
                         assert.equal(comments.length, 2);
 
                         // Comment 1
@@ -6956,7 +6923,7 @@ suite('Users', function () {
                 });
 
                 test('Success v2', function (done) {
-                    topicCommentListV2(agent, user.id, topic.id, 'rating', function (err, res) {
+                    topicCommentList(agent, user.id, topic.id, 'rating', function (err, res) {
                         if (err) return done(err);
 
                         var list = res.body.data;
@@ -6967,7 +6934,7 @@ suite('Users', function () {
                         delete creatorExpected.imageUrl; // Image url is not returned as it's not needed for now
                         delete creatorExpected.language; // Language is not returned
 
-                        assert.equal(list.count, 2);
+                        assert.equal(list.count.total, 2);
                         assert.equal(comments.length, 2);
 
                         // Comment 1
@@ -7007,7 +6974,7 @@ suite('Users', function () {
                             function (err) {
                                 if (err) return done(err);
 
-                                topicCommentList(agent, user.id, topic.id, function (err, res) {
+                                topicCommentList(agent, user.id, topic.id, null, function (err, res) {
                                     if (err) return done(err);
 
                                     var list = res.body.data;
@@ -7018,7 +6985,7 @@ suite('Users', function () {
                                     delete creatorExpected.imageUrl; // Image url is not returned, as it's not needed for now
                                     delete creatorExpected.language; // Language is not returned
 
-                                    assert.equal(list.count, 2);
+                                    assert.equal(list.count.total, 2);
                                     assert.equal(comments.length, 2);
 
                                     // Comment 1
@@ -7109,7 +7076,7 @@ suite('Users', function () {
                                 });
                         })
                         .then(function () {
-                            topicCommentList(agent, user.id, topic.id, function (err, res) {
+                            topicCommentList(agent, user.id, topic.id, null, function (err, res) {
                                 if (err) return done(err);
 
                                 var replyText11 = 'R1.1';
@@ -7125,7 +7092,7 @@ suite('Users', function () {
                                 delete creatorExpected.imageUrl; // Image url is not returned, as it's not needed for now
                                 delete creatorExpected.language; // Language is not returned
 
-                                assert.equal(list.count, 2);
+                                assert.equal(list.count.total, 2);
                                 assert.equal(comments.length, 2);
 
                                 // Comment 1
@@ -7230,12 +7197,13 @@ suite('Users', function () {
                     topicCommentDelete(agent, user.id, topic.id, comment.id, function (err) {
                         if (err) return done(err);
 
-                        topicCommentList(agent, user.id, topic.id, function (err, res) {
+                        topicCommentList(agent, user.id, topic.id, null, function (err, res) {
                             if (err) return done(err);
 
                             var comments = res.body.data;
-                            assert.equal(comments.count, 0);
-                            assert.equal(comments.rows.length, 0);
+                            assert.equal(comments.count.total, 1);
+                            assert.equal(comments.rows.length, 1);
+                            assert.isNotNull(comments.rows[0].deletedAt);
 
                             done();
                         });
@@ -9114,10 +9082,10 @@ suite('Topics', function () {
                             .parallel(
                                 [
                                     function (cb) {
-                                        topicCommentList(creatorAgent, creator.id, topic.id, cb);
+                                        topicCommentList(creatorAgent, creator.id, topic.id, null, cb);
                                     },
                                     function (cb) {
-                                        topicCommentListUnauth(userAgent, topic.id, cb);
+                                        topicCommentListUnauth(userAgent, topic.id, null, cb);
                                     }
                                 ],
                                 function (err, results) {
@@ -9146,10 +9114,10 @@ suite('Topics', function () {
                         .parallel(
                             [
                                 function (cb) {
-                                    topicCommentList(creatorAgent, creator.id, topic.id, cb);
+                                    topicCommentList(creatorAgent, creator.id, topic.id, null, cb);
                                 },
                                 function (cb) {
-                                    topicCommentListUnauth(userAgent, topic.id, cb);
+                                    topicCommentListUnauth(userAgent, topic.id, null, cb);
                                 }
                             ],
                             function (err, results) {
@@ -9215,12 +9183,16 @@ suite('Topics', function () {
                     count: 3,
                     rows: [reply1, reply2, reply3]
                 };
-                topicCommentListUnauthV2(userAgent, topic.id, 'date', function (err, res) {
+                topicCommentListUnauth(userAgent, topic.id, 'date', function (err, res) {
                     if (err) return done(err);
                     var data = res.body.data;
                     var expectedResult = {
                         rows: [comment3, comment2, comment1],
-                        count: 3
+                        count: {
+                            total: 3,
+                            pro: 2,
+                            con: 1
+                        }
                     };
                     assert.shallowDeepEqual(data, expectedResult);
                     done();
@@ -9277,12 +9249,16 @@ suite('Topics', function () {
                     count: 3,
                     rows: [reply3, reply1, reply2]
                 };
-                topicCommentListV2(creatorAgent, creator.id, topic.id, 'rating', function (err, res) {
+                topicCommentList(creatorAgent, creator.id, topic.id, 'rating', function (err, res) {
                     if (err) return done(err);
                     var data = res.body.data;
                     var expectedResult = {
                         rows: [comment2, comment3, comment1],
-                        count: 3
+                        count: {
+                            total: 3,
+                            pro: 2,
+                            con: 1
+                        }
                     };
                     assert.shallowDeepEqual(data, expectedResult);
                     done();
@@ -9339,12 +9315,16 @@ suite('Topics', function () {
                     count: 3,
                     rows: [reply2, reply3, reply1]
                 };
-                topicCommentListV2(creatorAgent, creator.id, topic.id, 'popularity', function (err, res) {
+                topicCommentList(creatorAgent, creator.id, topic.id, 'popularity', function (err, res) {
                     if (err) return done(err);
                     var data = res.body.data;
                     var expectedResult = {
                         rows: [comment2, comment1, comment3],
-                        count: 3
+                        count: {
+                            total: 3,
+                            pro: 2,
+                            con: 1
+                        }
                     };
                     assert.shallowDeepEqual(data, expectedResult);
                     done();
@@ -9420,13 +9400,17 @@ suite('Topics', function () {
                             });
                     })
                     .then(function () {
-                        topicCommentListV2(creatorAgent, creator.id, topic.id, 'date', function (err, res) {
+                        topicCommentList(creatorAgent, creator.id, topic.id, 'date', function (err, res) {
                             if (err) return done(err);
 
                             var data = res.body.data;
                             var expectedResult = {
                                 rows: [comment3, comment2, comment1],
-                                count: 3
+                                count: {
+                                    total: 3,
+                                    pro: 2,
+                                    con: 1
+                                }
                             };
 
                             assert.shallowDeepEqual(data, expectedResult);
@@ -9451,7 +9435,7 @@ suite('Topics', function () {
 
                     var topic = res.body.data;
 
-                    _topicCommentListUnauth(userAgent, topic.id, 404, function (err) {
+                    _topicCommentListUnauth(userAgent, topic.id, null, 404, function (err) {
                         if (err) return done(err);
 
                         done();
