@@ -490,6 +490,23 @@ var _topicCommentCreate = function (agent, userId, topicId, parentId, parentVers
         .end(callback);
 };
 
+var _topicReportsResolve = function (agent, topicId, token, expectedHttpCode, callback) {
+    var path = '/api/topics/:topicId/reports/resolve'
+        .replace(':topicId', topicId);
+
+    agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .set('Authorization', 'Bearer ' + token)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var topicReportsResolve = function (agent, topicId, token, callback) {
+    _topicReportsResolve(agent, topicId, token, 200, callback);
+};
+
 var topicCommentCreate = function (agent, userId, topicId, parentId, parentVersion, type, subject, text, callback) {
     _topicCommentCreate(agent, userId, topicId, parentId, parentVersion, type, subject, text, 201, callback);
 };
@@ -8061,6 +8078,101 @@ suite('Users', function () {
                 });
             });
 
+            suite('Resolve', function () {
+                var agentCreator = request.agent(app);
+                var agentReporter = request.agent(app);
+                var agentModerator = request.agent(app);
+
+                var emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                var emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                var emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+
+                var topicTitle = 'Topic report test';
+                var topicDescription = '<!DOCTYPE HTML><html><body><h1>Topic report test</h1><br>Topic report test desc<br><br></body></html>'
+                    .replace(':topicTitle', topicTitle);
+
+                var reportType = Report.TYPES.hate;
+                var reportText = 'Topic hate speech report test';
+
+                var userCreator;
+                var userModerator;
+                var userReporter;
+
+                var topic;
+                var report;
+
+                suiteSetup(function (done) {
+                    async
+                        .parallel(
+                            [
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentCreator, emailCreator, null, null, cb);
+                                },
+                                function (cb) {
+                                    userLib.createUser(agentModerator, emailModerator, null, null, cb);
+                                },
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentReporter, emailReporter, null, null, cb);
+                                }
+                            ]
+                            , function (err, results) {
+                                if (err) return done(err);
+
+                                userCreator = results[0];
+                                userModerator = results[1];
+                                userReporter = results[2];
+
+                                topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null, function (err, res) {
+                                    if (err) return done(err);
+
+                                    topic = res.body.data;
+
+                                    topicReportCreate(agentReporter, topic.id, reportType, reportText, function (err, res) {
+                                        if (err) return done(err);
+
+                                        report = res.body.data;
+
+                                        var token = cosJwt.getTokenRestrictedUse(
+                                            {
+                                                id: userModerator.id
+                                            },
+                                            [
+                                                'POST /api/topics/:topicId/reports/:reportId/moderate'
+                                                    .replace(':topicId', topic.id)
+                                                    .replace(':reportId', report.id)
+                                            ]
+                                        );
+
+                                        var type = Report.TYPES.spam;
+                                        var text = 'Test: contains spam.';
+
+                                        topicReportModerate(agentReporter, topic.id, report.id, token, type, text, done);
+                                    });
+                                });
+                            }
+                        );
+                });
+
+                test('Success', function (done) {
+                    var token = cosJwt.getTokenRestrictedUse(
+                        {
+                            id: userModerator.id
+                        },
+                        [
+                            'POST /api/topics/:topicId/reports/resolve'
+                                .replace(':topicId', topic.id)
+                        ]
+                    );
+
+                    topicReportsResolve(agentCreator, topic.id, token, function (err, res) {
+                        if (err) {
+                            return done(err);
+                        }
+
+                        done();
+                    });
+                });
+            });
         });
     });
 });

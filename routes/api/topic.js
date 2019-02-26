@@ -3670,7 +3670,7 @@ module.exports = function (app) {
     });
 
     /** Resolve a Topic report - mark the Topic report as fixed, thus lifting restrictions on the Topic **/
-    app.post('/api/topics/:topicId/reports/:reportId/resolve', authTokenRestrictedUse,  function (req, res, next) {
+    app.post('/api/topics/:topicId/reports/resolve', authTokenRestrictedUse,  function (req, res, next) {
         return res.notImplemented();
     });
 
