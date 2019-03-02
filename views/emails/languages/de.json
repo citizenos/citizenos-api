@@ -19,19 +19,19 @@
   },
   "REPORT_COMMENT": {
     "REPORT_TYPE": {
-      "ABUSE": "Is abusive or insulting",
-      "OBSCENE": "Contains obscene language",
-      "SPAM": "Contains spam or is unrelated to topic",
-      "HATE": "Contains hate speech",
-      "NETIQUETTE": "Infringes (n)etiquette",
-      "DUPLICATE": "Is a duplicate"
+      "ABUSE": "Beschimpfung oder Beleidigung",
+      "OBSCENE": "Enthält obszönen Inhalt",
+      "SPAM": "Enthält Spam oder ist nicht sachbezogen",
+      "HATE": "Enthält Volksverhetzenden Inhalt",
+      "NETIQUETTE": "Verstößt gegen die (N)etikette",
+      "DUPLICATE": "Ist ein Duplikat"
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Your comment has been reported as inappropriate by the community"
+    "SUBJECT": "Ihr Kommentar wurde von der Gemeinschaft als unangemessen gemeldet"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "A comment has been reported as inappropriate by the community"
+    "SUBJECT": "Ihr Kommentar wurde von der Gemeinschaft als unangemessen gemeldet"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
