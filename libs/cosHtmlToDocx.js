@@ -87,7 +87,7 @@ var getFileNameFromPath = function (path) {
         return null;
     }
     if (path.indexOf('data') === 0) {
-        var name = path.split(';base64,').pop().substr(0, 7);
+        var name = path.split(';base64,').pop().substr(0, 7).replace(/\//g, '_');
         var extension = path.split(';base64,')[0].split('/')[1];
 
         return name + '.' + extension;
