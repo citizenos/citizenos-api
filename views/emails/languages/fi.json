@@ -10,7 +10,7 @@
     "SUBJECT": "{{fromUser.name}} is inviting you to join our group “{{group.name}}” on Citizen OS"
   },
   "INVITE_TOPIC": {
-    "SUBJECT": "{{fromUser.name}} is inviting you to make a collaborative decision",
+    "SUBJECT": "{{fromUser.name}} kutsuu sinut tekemään päätöksen yhteistyössä",
     "SUBJECT_rahvaalgatus_ee": "{{fromUser.name}}, user of rahvaalgatus.ee invites you to co-create a discussion/initiative",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust"
   },
@@ -22,16 +22,16 @@
       "ABUSE": "Is abusive or insulting",
       "OBSCENE": "Contains obscene language",
       "SPAM": "Contains spam or is unrelated to topic",
-      "HATE": "Contains hate speech",
+      "HATE": "Sisältää vihapuhetta",
       "NETIQUETTE": "Infringes (n)etiquette",
-      "DUPLICATE": "Is a duplicate"
+      "DUPLICATE": "On kaksoiskappale"
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Your comment has been reported as inappropriate by the community"
+    "SUBJECT": "Yhteisö on ilmoittanut kommenttisi olevan sopimaton"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "A comment has been reported as inappropriate by the community"
+    "SUBJECT": "Yhteisö on ilmoittanut kommentin olevan sopimaton"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
