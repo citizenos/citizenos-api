@@ -1,37 +1,37 @@
 {
   "LAYOUT": {
-    "LINK_TO_PLATFORM": "Link to platform",
-    "LINK_PRIVACY_POLICY": "Privacy Policy"
+    "LINK_TO_PLATFORM": "Alustan linkki",
+    "LINK_PRIVACY_POLICY": "Yksityisyyskäytännöt"
   },
   "ACCOUNT_VERIFICATION": {
-    "SUBJECT": "Activate your Citizen OS account"
+    "SUBJECT": "Aktivoi Citizen OS -tilisi"
   },
   "INVITE_GROUP": {
-    "SUBJECT": "{{fromUser.name}} is inviting you to join our group “{{group.name}}” on Citizen OS"
+    "SUBJECT": "{{fromUser.name}} kutsuu sinut liittymään ryhmäämme ”{{group.name}}” Citizen OS:ssa"
   },
   "INVITE_TOPIC": {
-    "SUBJECT": "{{fromUser.name}} is inviting you to make a collaborative decision",
+    "SUBJECT": "{{fromUser.name}} kutsuu sinut tekemään päätöksen yhteistyössä",
     "SUBJECT_rahvaalgatus_ee": "{{fromUser.name}}, user of rahvaalgatus.ee invites you to co-create a discussion/initiative",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Reset your Citizen OS account password"
+    "SUBJECT": "Nollaa Citizen OS -tilisi salasana"
   },
   "REPORT_COMMENT": {
     "REPORT_TYPE": {
-      "ABUSE": "Is abusive or insulting",
-      "OBSCENE": "Contains obscene language",
-      "SPAM": "Contains spam or is unrelated to topic",
-      "HATE": "Contains hate speech",
-      "NETIQUETTE": "Infringes (n)etiquette",
-      "DUPLICATE": "Is a duplicate"
+      "ABUSE": "On loukkaava tai herjaava",
+      "OBSCENE": "Sisältää karkeaa kielenkäyttöä",
+      "SPAM": "Sisältää roskaviestin tai ei liity aiheeseen",
+      "HATE": "Sisältää vihapuhetta",
+      "NETIQUETTE": "Rikkoo (n)etikettiä",
+      "DUPLICATE": "On kaksoiskappale"
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Your comment has been reported as inappropriate by the community"
+    "SUBJECT": "Yhteisö on ilmoittanut kommenttisi olevan sopimaton"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "A comment has been reported as inappropriate by the community"
+    "SUBJECT": "Yhteisö on ilmoittanut kommentin olevan sopimaton"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""

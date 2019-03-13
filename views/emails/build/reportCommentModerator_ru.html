@@ -3,13 +3,13 @@
 
         <tr>
             <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Noto-Serif;font-size:20px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Kомментарий был помечен пользователями, как неуместный</p>
+                <p style="font-family: Noto-Serif;font-size:20px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Kомментарий был помечен пользователем сообщества, как неуместный</p>
             </td>
         </tr>
 
         <tr>
             <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#252525;">User wrote:</p>
+                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#252525;">Пользователь написал(а):</p>
                 {{#comment.subject}}
                 <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#707070; font-style: italic">"{{comment.subject}}"</p>
                 {{/comment.subject}}
@@ -19,7 +19,7 @@
 
         <tr>
             <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Community reported it:</p>
+                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Причина по мнению пользователя сообщества:</p>
                 <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#252525; font-style: italic">{{report.type}}</p>
                 {{#report.text}}
                 <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#707070; font-style: italic">"{{report.text}}"</p>
@@ -29,10 +29,10 @@
 
         <tr>
             <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Open Sans,sans-serif;font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#252525;">You can:</p>
+                <p style="font-family: Open Sans,sans-serif;font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Что вы можете предпринять:</p>
                 <ul>
-                    <li style="font-family: Open Sans,sans-serif;font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#0680fc; margin-bottom: 17px;"><a href="{{linkModerate}}">Moderate this comment</a> - {{#isUserNotified}}User notified{{/isUserNotified}}{{^isUserNotified}}User NOT notified{{/isUserNotified}}</li>
-                    <li style="font-family: Open Sans,sans-serif;font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#252525; margin-bottom: 17px;">Leave it as it is, but community moderators may still decide to hide it from the default views.</li>
+                    <li style="font-family: Open Sans,sans-serif;font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#0680fc; margin-bottom: 17px;"><a href="{{linkModerate}}">Модерировать этот комментарий</a> - {{#isUserNotified}}Пользователь был уведомлен{{/isUserNotified}}{{^isUserNotified}}Пользователь НЕ был уведомлен{{/isUserNotified}}</li>
+                    <li style="font-family: Open Sans,sans-serif;font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#252525; margin-bottom: 17px;">Оставить комментарий в изначальной форме, но в этом случае он может стать скрытым по умолчанию модераторами сообщества.</li>
                 </ul>
             </td>
         </tr>
