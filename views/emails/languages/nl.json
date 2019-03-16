@@ -23,15 +23,15 @@
       "OBSCENE": "Obsceen taalgebruik",
       "SPAM": "Bevat spam of houdt geen verband met het onderwerp",
       "HATE": "Bevat haatdragende taal",
-      "NETIQUETTE": "Infringes (n)etiquette",
-      "DUPLICATE": "Is a duplicate"
+      "NETIQUETTE": "Schending van de etiquette/nettiquette",
+      "DUPLICATE": "Het is een duplicaat"
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Your comment has been reported as inappropriate by the community"
+    "SUBJECT": "Uw reactie werd door de community gemeld als ongepast"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "A comment has been reported as inappropriate by the community"
+    "SUBJECT": "Een reactie werd door de community gemeld als ongepast"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
