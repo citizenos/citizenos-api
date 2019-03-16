@@ -20,7 +20,7 @@
   "REPORT_COMMENT": {
     "REPORT_TYPE": {
       "ABUSE": "Is grof of beledigend",
-      "OBSCENE": "Obsceen taalgebruik",
+      "OBSCENE": "Bevat obsceen taalgebruik",
       "SPAM": "Bevat spam of houdt geen verband met het onderwerp",
       "HATE": "Bevat haatdragende taal",
       "NETIQUETTE": "Schending van de etiquette/nettiquette",
