@@ -1,28 +1,28 @@
 {
   "LAYOUT": {
-    "LINK_TO_PLATFORM": "Link to platform",
-    "LINK_PRIVACY_POLICY": "Privacy Policy"
+    "LINK_TO_PLATFORM": "Link naar platform",
+    "LINK_PRIVACY_POLICY": "Privacybeleid"
   },
   "ACCOUNT_VERIFICATION": {
-    "SUBJECT": "Activate your Citizen OS account"
+    "SUBJECT": "Activeer uw Citizen OS-account"
   },
   "INVITE_GROUP": {
-    "SUBJECT": "{{fromUser.name}} is inviting you to join our group “{{group.name}}” on Citizen OS"
+    "SUBJECT": "{{fromUser.name}} nodigt u uit om deel te nemen aan onze groep “{{group.name}}” op Citizen OS"
   },
   "INVITE_TOPIC": {
-    "SUBJECT": "{{fromUser.name}} is inviting you to make a collaborative decision",
+    "SUBJECT": "{{fromUser.name}} nodigt u uit om een gezamenlijke beslissing te nemen",
     "SUBJECT_rahvaalgatus_ee": "{{fromUser.name}}, user of rahvaalgatus.ee invites you to co-create a discussion/initiative",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Reset your Citizen OS account password"
+    "SUBJECT": "Reset het wachtwoord voor uw Citizen OS-account"
   },
   "REPORT_COMMENT": {
     "REPORT_TYPE": {
-      "ABUSE": "Is abusive or insulting",
-      "OBSCENE": "Contains obscene language",
-      "SPAM": "Contains spam or is unrelated to topic",
-      "HATE": "Contains hate speech",
+      "ABUSE": "Is grof of beledigend",
+      "OBSCENE": "Obsceen taalgebruik",
+      "SPAM": "Bevat spam of houdt geen verband met het onderwerp",
+      "HATE": "Bevat haatdragende taal",
       "NETIQUETTE": "Infringes (n)etiquette",
       "DUPLICATE": "Is a duplicate"
     }
