@@ -1,7 +1,7 @@
 {
   "LAYOUT": {
-    "LINK_TO_PLATFORM": "Link to platform",
-    "LINK_PRIVACY_POLICY": "Privacy Policy"
+    "LINK_TO_PLATFORM": "Enlace a la plataforma",
+    "LINK_PRIVACY_POLICY": "Política de privacidad"
   },
   "ACCOUNT_VERIFICATION": {
     "SUBJECT": "Activate your CitizenOS account"
@@ -10,7 +10,7 @@
     "SUBJECT": "{{fromUser.name}} is inviting you to join our group “{{group.name}}” on CitizenOS"
   },
   "INVITE_TOPIC": {
-    "SUBJECT": "{{fromUser.name}} is inviting you to make a collaborative decision",
+    "SUBJECT": "{{fromUser.name}} le invita a tomar una decisión colaborativa",
     "SUBJECT_rahvaalgatus_ee": "{{fromUser.name}}, user of rahvaalgatus.ee invites you to co-create a discussion/initiative",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust"
   },
@@ -19,19 +19,19 @@
   },
   "REPORT_COMMENT": {
     "REPORT_TYPE": {
-      "ABUSE": "Is abusive or insulting",
-      "OBSCENE": "Contains obscene language",
-      "SPAM": "Contains spam or is unrelated to topic",
-      "HATE": "Contains hate speech",
-      "NETIQUETTE": "Infringes (n)etiquette",
-      "DUPLICATE": "Is a duplicate"
+      "ABUSE": "Es abusivo o insultante",
+      "OBSCENE": "Contiene lenguaje obsceno",
+      "SPAM": "Contiene spam o no está relacionado con el tema",
+      "HATE": "Contiene declaraciones que incitan al odio",
+      "NETIQUETTE": "Infringe la etiqueta de Internet",
+      "DUPLICATE": "Es un duplicado"
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Your comment has been reported as inappropriate by the community"
+    "SUBJECT": "La comunidad ha denunciado su comentario como inadecuado"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "A comment has been reported as inappropriate by the community"
+    "SUBJECT": "La comunidad ha denunciado un comentario como inadecuado"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
