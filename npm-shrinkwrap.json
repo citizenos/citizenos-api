@@ -323,9 +323,9 @@
       "resolved": "https://registry.npmjs.org/base64url/-/base64url-3.0.1.tgz"
     },
     "basic-auth": {
-      "version": "1.0.4",
-      "from": "basic-auth@>=1.0.1 <1.1.0",
-      "resolved": "https://registry.npmjs.org/basic-auth/-/basic-auth-1.0.4.tgz"
+      "version": "2.0.1",
+      "from": "basic-auth@>=2.0.0 <2.1.0",
+      "resolved": "https://registry.npmjs.org/basic-auth/-/basic-auth-2.0.1.tgz"
     },
     "batch": {
       "version": "0.6.1",
@@ -2488,34 +2488,24 @@
       "resolved": "https://registry.npmjs.org/moment-timezone/-/moment-timezone-0.5.23.tgz"
     },
     "morgan": {
-      "version": "1.5.3",
-      "from": "morgan@1.5.3",
-      "resolved": "https://registry.npmjs.org/morgan/-/morgan-1.5.3.tgz",
+      "version": "1.9.1",
+      "from": "morgan@1.9.1",
+      "resolved": "https://registry.npmjs.org/morgan/-/morgan-1.9.1.tgz",
       "dependencies": {
-        "debug": {
-          "version": "2.2.0",
-          "from": "debug@>=2.2.0 <2.3.0",
-          "resolved": "https://registry.npmjs.org/debug/-/debug-2.2.0.tgz"
-        },
         "depd": {
-          "version": "1.0.1",
-          "from": "depd@>=1.0.1 <1.1.0",
-          "resolved": "https://registry.npmjs.org/depd/-/depd-1.0.1.tgz"
+          "version": "1.1.2",
+          "from": "depd@>=1.1.2 <1.2.0",
+          "resolved": "https://registry.npmjs.org/depd/-/depd-1.1.2.tgz"
         },
         "ee-first": {
-          "version": "1.1.0",
-          "from": "ee-first@1.1.0",
-          "resolved": "https://registry.npmjs.org/ee-first/-/ee-first-1.1.0.tgz"
-        },
-        "ms": {
-          "version": "0.7.1",
-          "from": "ms@0.7.1",
-          "resolved": "https://registry.npmjs.org/ms/-/ms-0.7.1.tgz"
+          "version": "1.1.1",
+          "from": "ee-first@1.1.1",
+          "resolved": "https://registry.npmjs.org/ee-first/-/ee-first-1.1.1.tgz"
         },
         "on-finished": {
-          "version": "2.2.1",
-          "from": "on-finished@>=2.2.1 <2.3.0",
-          "resolved": "https://registry.npmjs.org/on-finished/-/on-finished-2.2.1.tgz"
+          "version": "2.3.0",
+          "from": "on-finished@>=2.3.0 <2.4.0",
+          "resolved": "https://registry.npmjs.org/on-finished/-/on-finished-2.3.0.tgz"
         }
       }
     },
@@ -2686,6 +2676,11 @@
       "version": "2.1.0",
       "from": "on-finished@2.1.0",
       "resolved": "https://registry.npmjs.org/on-finished/-/on-finished-2.1.0.tgz"
+    },
+    "on-headers": {
+      "version": "1.0.2",
+      "from": "on-headers@>=1.0.1 <1.1.0",
+      "resolved": "https://registry.npmjs.org/on-headers/-/on-headers-1.0.2.tgz"
     },
     "once": {
       "version": "1.4.0",
