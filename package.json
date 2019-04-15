@@ -1,6 +1,6 @@
 {
   "name": "citizenos-api",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": false,
   "license": "Apache-2.0",
   "main": "./bin/www",
@@ -84,8 +84,8 @@
   },
   "devDependencies": {
     "adm-zip": "0.4.11",
-    "chai": "3.0.0",
-    "chai-datetime": "1.4.0",
+    "chai": "4.2.0",
+    "chai-datetime": "1.5.0",
     "chai-shallow-deep-equal": "1.4.6",
     "grunt": "1.0.1",
     "grunt-cli": "1.2.0",
@@ -96,11 +96,11 @@
     "grunt-markdown-toc": "0.0.2",
     "grunt-plantuml": "0.2.3",
     "husky": "0.14.3",
-    "mocha": "2.2.5",
-    "supertest": "1.2.0"
+    "mocha": "6.1.3",
+    "supertest": "4.0.2"
   },
   "engines": {
-    "node": "6.13.1",
-    "npm": "3.10.10"
+    "node": "10.13.0",
+    "npm": "6.4.1"
   }
 }

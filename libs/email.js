@@ -65,37 +65,44 @@ module.exports = function (app) {
      * @private
      */
     var resolveTemplate = function (template, language) {
-        var lang = language ? language.toLowerCase() : 'en';
+        const lang = language ? language.toLowerCase() : 'en';
 
-        var pathTemplate = ':templateRoot/build/:template_:language.html'
+        const pathTemplate = ':templateRoot/build/:template_:language.html'
             .replace(':templateRoot', templateRoot)
             .replace(':template', template)
             .replace(':language', lang);
 
-        var pathTranslations = ':templateRoot/languages/:language.json'
+        const pathTemplateFallback = ':templateRoot/:template.html'
+            .replace(':templateRoot', templateRoot)
+            .replace(':template', template);
+
+        const pathTranslations = ':templateRoot/languages/:language.json'
             .replace(':templateRoot', templateRoot)
             .replace(':language', lang);
 
-        var templateObj = {
+        const templateObj = {
             body: null,
             translations: null
         };
 
-        var cachedTemplateObj = templateCache[pathTemplate];
+        let cachedTemplateObj = templateCache[pathTemplate];
         if (cachedTemplateObj) {
             return cachedTemplateObj;
         }
 
+        // TODO: Rewrite to async FS operations
         try {
-            // TODO: Rewrite to async FS operations
             templateObj.body = fs.readFileSync(pathTemplate, {encoding: 'utf8'}); // eslint-disable-line no-sync
-            templateObj.translations = JSON.parse(fs.readFileSync(pathTranslations, {encoding: 'utf8'})); // eslint-disable-line no-sync
-            templateCache[pathTemplate] = templateObj;
-
-            return templateObj;
         } catch (e) {
-            logger.warn('Template could not be read!', pathTemplate);
+            logger.warn('Could not read template using fallback instead!', pathTemplate, pathTemplateFallback);
+            templateObj.body = fs.readFileSync(pathTemplateFallback, {encoding: 'utf8'}); // eslint-disable-line no-sync
         }
+
+        // TODO: Rewrite to async FS operations
+        templateObj.translations = JSON.parse(fs.readFileSync(pathTranslations, {encoding: 'utf8'})); // eslint-disable-line no-sync
+        templateCache[pathTemplate] = templateObj;
+
+        return templateObj;
     };
 
     /**
@@ -870,6 +877,89 @@ module.exports = function (app) {
     };
 
     /**
+     * Send comment report related e-mails
+     *
+     * @param {object} report TopicReport Sequelize instance
+     *
+     * @returns {Promise} Topic report result
+     *
+     * @private
+     * @see Citizen OS Topic moderation - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
+     *
+     */
+    var _sendTopicReport = async function (report) {
+        const promisesToResolve = [];
+
+        // Get the topic info
+        promisesToResolve.push(
+            Topic.findOne({
+                where: {
+                    id: report.topicId
+                }
+            })
+        );
+
+        promisesToResolve.push(
+            User.findOne({
+                    where: {
+                        id: report.creatorId
+                    }
+                }
+            ));
+
+        const resolvedPromises = await Promise.all(promisesToResolve);
+
+        let topic = resolvedPromises[0];
+        let userReporter = resolvedPromises[1];
+
+        let linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+
+        var sendReporterEmail = async function () {
+            //Send e-mail to the User (reporter) - 1.1 - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
+            //variables - reporter.name, report.id, report.type, report.text, topic.title, link to moderation quidelines
+            let templateObject = resolveTemplate('reportTopicCreator', userReporter.language);
+            linkedData.translations = templateObject.translations; // FIXME: REVIEW THIS, don't quite understand this implementation...
+
+            let subject = templateObject.translations.REPORT_TOPIC_REPORTER.SUBJECT
+                .replace('{{report.id}}', report.id);
+
+            return emailClient.sendStringAsync(
+                templateObject.body,
+                {
+                    subject: subject,
+                    to: userReporter.email,
+                    social: config.email.social,
+                    images: [
+                        {
+                            name: emailHeaderLogoName,
+                            file: emailHeaderLogo
+                        },
+                        {
+                            name: emailFooterLogoName,
+                            file: emailFooterLogo
+                        }
+                    ],
+                    //Placeholders
+                    report: report,
+                    linkViewTopic: linkViewTopic,
+                    linkToModerationGuidelines: config.email.linkToModerationGuidelines,
+                    provider: {
+                        merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
+                    },
+                    styles: styles,
+                    linkedData: linkedData
+                }
+            );
+        };
+
+
+        await Promise.all([sendReporterEmail()]);
+
+        //Send e-mail to admin/edit Members of the Topic - 1.2
+        //Send e-mail to Moderators - 1.3
+    };
+
+    /**
      * Send e-mail to Parliament to process new initiative
      *
      * TODO: This logic is specific to Rahvaalgatus.ee, with next Partner we have to make it more generic - https://trello.com/c/Sj3XRF5V/353-raa-ee-followup-email-to-riigikogu-and-token-access-to-events-api
@@ -1008,6 +1098,7 @@ module.exports = function (app) {
         sendPasswordReset: _sendPasswordReset,
         sendTopicInvite: _sendTopicInvite,
         sendTopicGroupInvite: _sendTopicGroupInvite,
+        sendTopicReport: _sendTopicReport,
         sendGroupInvite: _sendGroupInvite,
         sendCommentReport: _sendCommentReport,
         sendToParliament: _sendToParliament

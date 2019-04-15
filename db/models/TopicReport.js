@@ -102,5 +102,7 @@ module.exports = function (sequelize, DataTypes) {
         return data;
     };
 
+    TopicReport.TYPES = Report.TYPES;
+
     return TopicReport;
 };

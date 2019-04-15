@@ -17,6 +17,9 @@
   "PASSWORD_RESET": {
     "SUBJECT": "Reset your CitizenOS account password"
   },
+  "REPORT_TOPIC_REPORTER": {
+    "SUBJECT": "Thank you, we received your report (#{{report.id}})"
+  },
   "REPORT_COMMENT": {
     "REPORT_TYPE": {
       "ABUSE": "Is abusive or insulting",

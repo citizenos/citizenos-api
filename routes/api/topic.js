@@ -3516,9 +3516,11 @@ module.exports = function (app) {
                     );
             })
             .then(function (report) {
-                //FIXME: Send TopicReport e-mail - emailLib.sendCommentReport(commentId, report); // Fire and forget
                 // FIXME: Topic report create activity!
-                return res.ok(report);
+                return emailLib.sendTopicReport(report)
+                    .then(function () {
+                        return res.ok(report);
+                    });
             })
             .catch(next);
     };
