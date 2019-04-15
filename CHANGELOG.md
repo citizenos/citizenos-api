@@ -1,3 +1,8 @@
+## 2019-04-10
+
+* Fix etherpad sync endpoint, remove rev number to put less stress on etherpad. * Fix partner topic read test
+* Update morgan
+
 ## 2019-02-22
 
 * Fix `GET /api/users/:userId/topics/:topicId/members/users` not returning all member users https://github.com/citizenos/citizenos-api/issues/117

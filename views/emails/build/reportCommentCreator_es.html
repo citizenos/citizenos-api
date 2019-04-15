@@ -3,13 +3,13 @@
 
         <tr>
             <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Noto-Serif;font-size:20px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Your comment has been reported as inappropriate by the community</p>
+                <p style="font-family: Noto-Serif;font-size:20px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Un usuario de la comunidad ha denunciado su comentario como inadecuado</p>
             </td>
         </tr>
 
         <tr>
             <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#252525;">You wrote:</p>
+                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#252525;">Escribió lo siguiente:</p>
                 {{#comment.subject}}
                 <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#707070; font-style: italic">"{{comment.subject}}"</p>
                 {{/comment.subject}}
@@ -19,7 +19,7 @@
 
         <tr>
             <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold; background-color: #FFFFFF; color:#252525;">Community reported it:</p>
+                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold; background-color: #FFFFFF; color:#252525;">Este es el motivo de la denuncia del usuario de la plataforma:</p>
                 <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold; background-color: #FFFFFF; color:#252525; font-style: italic">{{report.type}}</p>
                 {{#report.text}}
                 <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold; background-color: #FFFFFF; color:#707070; font-style: italic">"{{report.text}}"</p>
@@ -29,10 +29,10 @@
 
         <tr>
             <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Open Sans,sans-serif;font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#252525;">You can:</p>
+                <p style="font-family: Open Sans,sans-serif;font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Esto es lo que puede hacer:</p>
                 <ul>
-                    <li style="font-family: Open Sans,sans-serif;font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#0680fc; margin-bottom: 17px;"><a href="{{linkViewTopic}}" style="color:#0680FC; text-decoration: none; font-family: Open Sans,sans-serif;">Edit or delete your comment</a></li>
-                    <li style="font-family: Open Sans,sans-serif;font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#252525; margin-bottom: 17px;">Leave it as it is, but community moderators may still decide to hide it from the default views.</li>
+                    <li style="font-family: Open Sans,sans-serif;font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#0680fc; margin-bottom: 17px;"><a href="{{linkViewTopic}}" style="color:#0680FC; text-decoration: none; font-family: Open Sans,sans-serif;">Editar o eliminar el comentario</a></li>
+                    <li style="font-family: Open Sans,sans-serif;font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#252525; margin-bottom: 17px;">Dejarlo tal cual, pero los moderadores de la comunidad pueden decidir ocultarlo de forma predeterminada (se mostrará una advertencia a los usuarios antes de que vean su comentario).</li>
                 </ul>
             </td>
         </tr>
