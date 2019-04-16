@@ -7730,7 +7730,7 @@ suite('Users', function () {
                                 userCreator = results[0];
                                 userReporter = results[1];
 
-                                topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
+                                topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR SPAM REPORTING</h2></body></html>', null, function (err, res) {
                                     if (err) return done(err);
 
                                     topic = res.body.data;
@@ -7742,8 +7742,8 @@ suite('Users', function () {
                 });
 
                 test('Success', function (done) {
-                    var reportType = Report.TYPES.hate;
-                    var reportText = 'Topic hate speech report test';
+                    var reportType = Report.TYPES.spam;
+                    var reportText = 'Topic spam report test';
 
                     topicReportCreate(agentReporter, topic.id, reportType, reportText, function (err, res) {
                         if (err) return done(err);

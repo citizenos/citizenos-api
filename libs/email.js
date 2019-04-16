@@ -918,7 +918,7 @@ module.exports = function (app) {
             //Send e-mail to the User (reporter) - 1.1 - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
             //variables - reporter.name, report.id, report.type, report.text, topic.title, link to moderation quidelines
             let templateObject = resolveTemplate('reportTopicCreator', userReporter.language);
-            linkedData.translations = templateObject.translations; // FIXME: REVIEW THIS, don't quite understand this implementation...
+            linkedData.translations = templateObject.translations; // FIXME: REVIEW THIS
 
             let subject = templateObject.translations.REPORT_TOPIC_REPORTER.SUBJECT
                 .replace('{{report.id}}', report.id);
