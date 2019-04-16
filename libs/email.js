@@ -888,10 +888,10 @@ module.exports = function (app) {
      *
      */
     var _sendTopicReport = async function (report) {
-        const promisesToResolve = [];
+        const infoFetchPromisesToResolve = [];
 
         // Get the topic info
-        promisesToResolve.push(
+        infoFetchPromisesToResolve.push(
             Topic.findOne({
                 where: {
                     id: report.topicId
@@ -899,7 +899,7 @@ module.exports = function (app) {
             })
         );
 
-        promisesToResolve.push(
+        infoFetchPromisesToResolve.push(
             User.findOne({
                     where: {
                         id: report.creatorId
@@ -907,59 +907,66 @@ module.exports = function (app) {
                 }
             ));
 
-        const resolvedPromises = await Promise.all(promisesToResolve);
+        const infoFetchPromisesResults = await Promise.all(infoFetchPromisesToResolve);
 
-        let topic = resolvedPromises[0];
-        let userReporter = resolvedPromises[1];
+        const topic = infoFetchPromisesResults[0];
+        const userReporter = infoFetchPromisesResults[1];
+        const linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
 
-        let linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+        const sendEmailPromisesToResolve = [];
 
-        var sendReporterEmail = async function () {
+        if (userReporter.email) {
             //Send e-mail to the User (reporter) - 1.1 - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
-            //variables - reporter.name, report.id, report.type, report.text, topic.title, link to moderation quidelines
-            let templateObject = resolveTemplate('reportTopicCreator', userReporter.language);
-            linkedData.translations = templateObject.translations; // FIXME: REVIEW THIS
+            var sendReporterEmail = async function () {
+                if (!userReporter.email) {
 
-            let subject = templateObject.translations.REPORT_TOPIC_REPORTER.SUBJECT
-                .replace('{{report.id}}', report.id);
-
-            return emailClient.sendStringAsync(
-                templateObject.body,
-                {
-                    subject: subject,
-                    to: userReporter.email,
-                    social: config.email.social,
-                    images: [
-                        {
-                            name: emailHeaderLogoName,
-                            file: emailHeaderLogo
-                        },
-                        {
-                            name: emailFooterLogoName,
-                            file: emailFooterLogo
-                        }
-                    ],
-                    //Placeholders
-                    userReporter: userReporter,
-                    report: {
-                        id: report.id,
-                        type: templateObject.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
-                        text: report.text
-                    },
-                    topic: topic,
-                    linkViewTopic: linkViewTopic,
-                    linkViewModerationGuidelines: config.email.linkViewModerationGuidelines,
-                    provider: {
-                        merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
-                    },
-                    styles: styles,
-                    linkedData: linkedData // FIXME: Redo this?
                 }
-            );
-        };
+                let templateObject = resolveTemplate('reportTopicCreator', userReporter.language);
+                linkedData.translations = templateObject.translations; // FIXME: REVIEW THIS
 
+                let subject = templateObject.translations.REPORT_TOPIC_REPORTER.SUBJECT
+                    .replace('{{report.id}}', report.id);
 
-        await Promise.all([sendReporterEmail()]);
+                return emailClient.sendStringAsync(
+                    templateObject.body,
+                    {
+                        subject: subject,
+                        to: userReporter.email,
+                        social: config.email.social,
+                        images: [
+                            {
+                                name: emailHeaderLogoName,
+                                file: emailHeaderLogo
+                            },
+                            {
+                                name: emailFooterLogoName,
+                                file: emailFooterLogo
+                            }
+                        ],
+                        //Placeholders
+                        userReporter: userReporter,
+                        report: {
+                            id: report.id,
+                            type: templateObject.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
+                            text: report.text
+                        },
+                        topic: topic,
+                        linkViewTopic: linkViewTopic,
+                        linkViewModerationGuidelines: config.email.linkViewModerationGuidelines,
+                        provider: {
+                            merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
+                        },
+                        styles: styles,
+                        linkedData: linkedData // FIXME: Redo this?
+                    }
+                );
+            };
+            sendEmailPromisesToResolve.push(sendReporterEmail());
+        } else {
+            logger.info('Could not send e-mail to Topic reporter because e-mail address does not exist', userReporter.id, req.path);
+        }
+
+        await Promise.all(sendEmailPromisesToResolve);
 
         //Send e-mail to admin/edit Members of the Topic - 1.2
         //Send e-mail to Moderators - 1.3
