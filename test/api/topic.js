@@ -6723,10 +6723,11 @@ suite('Users', function () {
 
                             assert.property(commentReply, 'id');
                             assert.equal(commentReply.type, Comment.TYPES.reply);
-                            assert.notProperty('subject');
+                            assert.notProperty(commentReply, 'subject');
                             assert.equal(commentReply.text, commentReplyText);
                             assert.equal(commentReply.creator.id, user.id);
                             assert.equal(commentReply.parent.id, comment.id);
+
                             done();
                         });
                     });

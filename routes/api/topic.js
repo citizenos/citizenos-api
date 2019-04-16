@@ -3454,8 +3454,6 @@ module.exports = function (app) {
     app.get('/api/topics/:topicId/attachments', hasVisibility(Topic.VISIBILITY.public), topicAttachmentsList);
 
     var readAttachment = function (req, res, next) {
-
-
         Attachment
             .findOne({
                 where: {
@@ -3481,12 +3479,15 @@ module.exports = function (app) {
                         options.rejectUnauthorized = false;
                     }
 
-                    https.get(options, function (externalRes) {
-                        res.setHeader('content-disposition', 'attachment; filename=' + filename);
-                        externalRes.pipe(res);
-                    }).on('error', function (err) {
-                        next(err);
-                    }).end();
+                    https
+                        .get(options, function (externalRes) {
+                            res.setHeader('content-disposition', 'attachment; filename=' + filename);
+                            externalRes.pipe(res);
+                        })
+                        .on('error', function (err) {
+                            next(err);
+                        })
+                        .end();
                 } else {
                     res.ok(attachment.toJSON());
                 }

@@ -161,7 +161,6 @@ module.exports = function (sequelize, DataTypes) {
         var data = {
             id: this.dataValues.id,
             type: this.dataValues.type,
-            subject: this.dataValues.subject,
             text: this.dataValues.text,
             edits: this.dataValues.edits,
             createdAt: this.dataValues.createdAt,
@@ -170,6 +169,10 @@ module.exports = function (sequelize, DataTypes) {
             deletedReasonType: this.dataValues.deletedReasonType,
             deletedReasonText: this.dataValues.deletedReasonText
         };
+
+        if (this.dataValues.type !== TYPES.reply) { // Replies are not supposed to have a subject
+            data.subject = this.dataValues.subject;
+        }
 
         if (this.dataValues.creator) {
             data.creator = this.dataValues.creator;
