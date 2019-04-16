@@ -940,14 +940,20 @@ module.exports = function (app) {
                         }
                     ],
                     //Placeholders
-                    report: report,
+                    userReporter: userReporter,
+                    report: {
+                        id: report.id,
+                        type: templateObject.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
+                        text: report.text
+                    },
+                    topic: topic,
                     linkViewTopic: linkViewTopic,
-                    linkToModerationGuidelines: config.email.linkToModerationGuidelines,
+                    linkViewModerationGuidelines: config.email.linkViewModerationGuidelines,
                     provider: {
                         merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
                     },
                     styles: styles,
-                    linkedData: linkedData
+                    linkedData: linkedData // FIXME: Redo this?
                 }
             );
         };

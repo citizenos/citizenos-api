@@ -1,10 +1,9 @@
 <!-- E-mail sent to User who reports a Topic -->
 <p>
-    Hello <span class="blue">${{reporter.name}}</span>,
+    Hello <span class="blue">{{userReporter.name}}</span>,
 </p>
 <p class="important">
-    Your report <span class="blue">#{{report.id}}</span> regarding topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" has been sent to Citizen OS
-    moderators
+    Your report <span class="blue">#{{report.id}}</span> regarding topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" has been sent to Citizen OS moderators
 </p>
 
 <h1>What happens next?</h1>
@@ -31,7 +30,7 @@
 <p>Topic: <span class="bold">"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</span>
 <p>Report reference number: <span style="font-weight: bold;">{{report.id}}</span>
 <p>Type of violation: <span style="font-weight: bold;">"{{report.type}}"</span>
-<p>Your explanation: <span style="font-weight: bold;">"{{report.type}}"</span>
+<p>Your explanation: <span style="font-weight: bold;">"{{report.text}}"</span>
 
 <hr/>
 <p>
