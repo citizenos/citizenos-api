@@ -3,7 +3,7 @@
     Hello <span class="blue">${{reporter.name}}</span>,
 </p>
 <p class="important">
-    Your report <span class="blue">#{{report.id}}</span> regarding topic "<a href="#topic">{{topic.title}}</a>" has been sent to Citizen OS
+    Your report <span class="blue">#{{report.id}}</span> regarding topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" has been sent to Citizen OS
     moderators
 </p>
 
@@ -25,10 +25,10 @@
     </li>
 </ol>
 </p>
-<p>You can find more details about Citizen OS moderation process <a href="#">here</a>.</p>
+<p>You can find more details about Citizen OS moderation process <a href="{{linkViewModerationGuidelines}}">here</a>.</p>
 
 <h1>Report summary</h1>
-<p>Topic: <span class="bold">"<a href="#topic">{{topic.title}}</a>"</span>
+<p>Topic: <span class="bold">"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</span>
 <p>Report reference number: <span style="font-weight: bold;">{{report.id}}</span>
 <p>Type of violation: <span style="font-weight: bold;">"{{report.type}}"</span>
 <p>Your explanation: <span style="font-weight: bold;">"{{report.type}}"</span>
