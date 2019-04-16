@@ -1,40 +1,39 @@
-<table border="0" cellpadding="10" cellspacing="0" width="100%">
-    <tbody>
+<!-- E-mail sent to User who reports a Topic -->
+<p>
+    Hello <span class="blue">${{reporter.name}}</span>,
+</p>
+<p class="important">
+    Your report <span class="blue">#{{report.id}}</span> regarding topic "<a href="#topic">{{topic.title}}</a>" has been sent to Citizen OS
+    moderators
+</p>
 
-        <tr>
-            <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Noto-Serif;font-size:20px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Your comment has been reported as inappropriate by someone from the community</p>
-            </td>
-        </tr>
+<h1>What happens next?</h1>
+<p>
+<ol>
+    <li class="li">Moderators will review the report. If a violation is confirmed, access to the topic will be restricted and a warning of
+        inappropriate content will be displayed.
+    </li>
+    <li class="li">Meanwhile admins and editors of the reported topic will be asked to modify it. When topic's inappropriate content has been
+        improved, the moderators will once again review and will remove restrictions if all violations have been cleared.
+    </li>
+    <li class="li">
+        We will notify you if:
+        <ul>
+            <li>moderators apply restrictions to the topic</li>
+            <li>all violations have been cleared and restrictions removed.</li>
+        </ul>
+    </li>
+</ol>
+</p>
+<p>You can find more details about Citizen OS moderation process <a href="#">here</a>.</p>
 
-        <tr>
-            <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#252525;">You wrote:</p>
-                {{#comment.subject}}
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#707070; font-style: italic">"{{comment.subject}}"</p>
-                {{/comment.subject}}
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight: bold;background-color: #FFFFFF; color:#707070; font-style: italic">"{{comment.text}}"</p>
-            </td>
-        </tr>
+<h1>Report summary</h1>
+<p>Topic: <span class="bold">"<a href="#topic">{{topic.title}}</a>"</span>
+<p>Report reference number: <span style="font-weight: bold;">{{report.id}}</span>
+<p>Type of violation: <span style="font-weight: bold;">"{{report.type}}"</span>
+<p>Your explanation: <span style="font-weight: bold;">"{{report.type}}"</span>
 
-        <tr>
-            <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold; background-color: #FFFFFF; color:#252525;">Platform user's reasoning for reporting it:</p>
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold; background-color: #FFFFFF; color:#252525; font-style: italic">{{report.type}}</p>
-                {{#report.text}}
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold; background-color: #FFFFFF; color:#707070; font-style: italic">"{{report.text}}"</p>
-                {{/report.text}}
-            </td>
-        </tr>
-
-        <tr>
-            <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Open Sans,sans-serif;font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Here's what you can do:</p>
-                <ul>
-                    <li style="font-family: Open Sans,sans-serif;font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#0680fc; margin-bottom: 17px;"><a href="{{linkViewTopic}}" style="color:#0680FC; text-decoration: none; font-family: Open Sans,sans-serif;">Edit or delete your comment</a></li>
-                    <li style="font-family: Open Sans,sans-serif;font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#252525; margin-bottom: 17px;">Leave it as is, but community moderators may still decide to have it hidden by default (users will get a warning prior to seeing your comment).</li>
-                </ul>
-            </td>
-        </tr>
-    </tbody>
-</table>
+<hr/>
+<p>
+    Thank you for helping us ensure a high quality of content in Citizen OS user community!
+</p>

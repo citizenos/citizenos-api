@@ -1,0 +1,95 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+<head>
+    <meta content="text/html; charset=utf-8" http-equiv="Content-Type"/>
+    {{#topic}}
+    <meta name="citizenos-topic-id" content="{{topic.id}}"/>
+    {{/topic}}
+</head>
+
+<body style="font-family: Arial; font-size: 16px; color: #2A2A2A; margin: 0;mso-line-height-rule: exactly;padding: 0;min-width: 100%;background-color: #FBFBFB">
+    <table border="0" cellpadding="0" cellspacing="0" id="backgroundTable"
+           style="margin: 0;padding: 0;width: 100% !important;height: 100% !important;line-height: 100% !important;background-color: #f6f6f6;font-size: 16px;border-collapse: collapse;mso-table-lspace: 0;mso-table-rspace: 0">
+        <tbody>
+
+            <tr>
+                <td align="center" height="70" style="border-collapse: collapse" valign="middle">
+                    <!--p style="font-family: arial, helvetica, sans-serif;font-size:12px;background-color: #f6f6f6; color:#828282;">Can't see this mail? <a href="#" target="_blank" style=" color:#828282; text-decoration:underline;font-family: arial, helvetica, sans-serif;font-size:12px;">Click here to view it in your browser</a></p-->
+                </td>
+            </tr>
+
+            <tr>
+                <td align="center" valign="top">
+                    <table border="0" cellpadding="0" cellspacing="0" id="templateContainer" style="background-color: #FFFFFF;margin: 0;padding: 0;" width="600">
+                        <tbody>
+                            <tr>
+                                <td style="background-color: {{styles.headerBackgroundColor}}; border-bottom: 1px solid #e1e1e1;padding: 0px 20px " height="70">
+                                    <img width="{{styles.logoWidth}}" height="{{styles.logoHeight}}" src="cid:logo.png" alt="logo" style="display:block;" border="0"/>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td align="center" valign="top">
+                                    <table border="0" cellpadding="25" cellspacing="0" id="templateBody" width="600" style="background-color: #FFFFFF;margin: 0;padding: 0;">
+                                        <tbody>
+                                            <tr>
+                                                <td class="bodyContent" style="background-color: #FFFFFF;" valign="top">
+                                                    {{{body}}}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td align="center" valign="top" height="60">
+                    <table style="background-color: #eaeaea; padding: 0 15px;" width="600">
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <table>
+                                        <tbody>
+                                            <tr style="color:#0680FC; text-decoration: none; font-size:13px;">
+                                                <td style="font-family:Open Sans,sans-serif;"><a href="{{linkedData.footerLinks.linkToPlatform}}" target="_blank">{{linkedData.translations.LAYOUT.LINK_TO_PLATFORM}}</a>
+                                                </td>
+                                                <td style="font-family:Open Sans,sans-serif; padding-left: 15px;"><a href="{{linkedData.footerLinks.linkToPrivacyPolicy}}" target="_blank">{{linkedData.translations.LAYOUT.LINK_PRIVACY_POLICY}}</a>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </td>
+                                <td align="right" valign="middle" height="60">
+                                    <a href="https://citizenos.com" target="_blank" style="color: black; text-decoration: none;">
+                                        <table>
+                                            <tbody>
+                                                <tr>
+                                                    <td style="font-family:Open Sans,sans-serif; font-size: 13px;">Empowered by</td>
+                                                    <td><img width="97" height="18" src="cid:logo_footer.png" alt="logo" style="display:block;" border="0"/></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </a>
+                                </td>
+                            </tr>
+                            {{#trapped}}
+                            <tr id="trapped">
+                                <td>
+                                    <b>Recipients</b>
+                                        <pre>
+                                            {{trapped}}
+                                        </pre>
+                                </td>
+                            </tr>
+                            {{/trapped}}
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
+    </table>
+</body>
+</html>
