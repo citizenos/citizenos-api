@@ -2,7 +2,7 @@
 
 var campaign = require('campaign');
 var nodemailer = require('nodemailer');
-var bluebird = require('bluebird');
+const util = require('util');
 
 /**
  * E-mail client
@@ -66,8 +66,8 @@ var emailClient = function (config) {
         layout: config.layout || null // Layout template. Absolute path to Mustache template. Null comes down to "layout.mu" bundled with Campaign.
     });
 
-    //TODO: After upgrading to Node 8.x use - https://nodejs.org/dist/latest-v8.x/docs/api/util.html#util_util_promisify_original
-    bluebird.Promise.promisifyAll(client);
+
+    client.sendStringAsync = util.promisify(client.sendString);
 
     return client;
 };

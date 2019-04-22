@@ -106,6 +106,117 @@ module.exports = function (app) {
     };
 
     /**
+     * Get Topic Member Users, be it directly or through Groups
+     *
+     * @param {string} topicId Topic Id
+     * @param {string} [levelMin=TopicMember.LEVELS.admin] One of TopicMember.LEVELS
+     *
+     * @returns {Promise}
+     * @private
+     */
+    let _getTopicMemberUsers = async function (topicId, levelMin) {
+        let levelMinimum = TopicMemberUser.LEVELS.admin;
+
+        if (levelMin && TopicMemberUser.LEVELS[levelMin]) {
+            levelMinimum = levelMin;
+        }
+
+        return db
+            .query(
+                '\
+                    SELECT \
+                        tm.id, \
+                        tm.name, \
+                        tm.email, \
+                        tm.language \
+                    FROM ( \
+                        SELECT DISTINCT ON(id) \
+                            tm."memberId" as id, \
+                            tm."level", \
+                            u.name, \
+                            u.email, \
+                            u.language \
+                        FROM "Topics" t \
+                        JOIN ( \
+                            SELECT \
+                                tmu."topicId", \
+                                tmu."userId" AS "memberId", \
+                                tmu."level"::text, \
+                                1 as "priority" \
+                            FROM "TopicMemberUsers" tmu \
+                            WHERE tmu."deletedAt" IS NULL \
+                            UNION \
+                            ( \
+                                SELECT \
+                                    tmg."topicId", \
+                                    gm."userId" AS "memberId", \
+                                    tmg."level"::text, \
+                                    2 as "priority" \
+                                FROM "TopicMemberGroups" tmg \
+                                LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
+                                WHERE tmg."deletedAt" IS NULL \
+                                AND gm."deletedAt" IS NULL \
+                                ORDER BY tmg."level"::"enum_TopicMemberGroups_level" DESC \
+                            ) \
+                        ) AS tm ON (tm."topicId" = t.id) \
+                        JOIN "Users" u ON (u.id = tm."memberId") \
+                        LEFT JOIN "TopicMemberUsers" tmu ON (tmu."userId" = tm."memberId" AND tmu."topicId" = t.id) \
+                        WHERE t.id = :topicId \
+                        ORDER BY id, tm.priority \
+                    ) tm \
+                    WHERE tm.level::"enum_TopicMemberUsers_level" >= :level \
+                    AND tm.email IS NOT NULL \
+                    ORDER BY name ASC \
+                ',
+                {
+                    replacements: {
+                        topicId: topicId,
+                        level: levelMinimum
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
+    };
+
+
+    /**
+     * Get Moderator list
+     *
+     * @param {String} [sourcePartnerId]
+     *
+     * @returns {Promise} Array of incomplete User objects
+     *
+     * @private
+     */
+    let _getModerators = async function (sourcePartnerId) {
+        return db
+            .query(
+                ' \
+                    SELECT \
+                        u.id, \
+                        u."email", \
+                        u."name", \
+                        u."language" \
+                    FROM "Moderators" m \
+                        JOIN "Users" u ON (u.id = m."userId") \
+                    WHERE u."email" IS NOT NULL \
+                    AND (m."partnerId" = :partnerId \
+                    OR m."partnerId" IS NULL) \
+                ',
+                {
+                    replacements: {
+                        partnerId: sourcePartnerId
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
+    };
+
+    /**
      * Send e-mail verification email.
      *
      * @param {string|Array} to To e-mail(s)
@@ -664,29 +775,7 @@ module.exports = function (app) {
                 if (commentInfo.topic.visibility === Topic.VISIBILITY.public) {
                     logger.debug('Topic is public, sending e-mails to registered partner moderators', commentInfo);
 
-                    return db
-                        .query(
-                            ' \
-                                SELECT \
-                                    u.id, \
-                                    u."email", \
-                                    u."name", \
-                                    u."language" \
-                                FROM "Moderators" m \
-                                    JOIN "Users" u ON (u.id = m."userId") \
-                                WHERE u."email" IS NOT NULL \
-                                AND (m."partnerId" = :partnerId \
-                                OR m."partnerId" IS NULL) \
-                            ',
-                            {
-                                replacements: {
-                                    partnerId: commentInfo.topic.sourcePartnerId
-                                },
-                                type: db.QueryTypes.SELECT,
-                                raw: true,
-                                nest: true
-                            }
-                        )
+                    return _getModerators(commentInfo.topic.sourcePartnerId)
                         .then(function (moderators) {
                             return [commentInfo, moderators];
                         });
@@ -694,63 +783,7 @@ module.exports = function (app) {
                     logger.debug('Topic is NOT public, sending e-mails to Users with admin permissions', commentInfo);
                     // Private Topics will have moderation by admin Users
 
-                    return db
-                        .query(
-                            '\
-                                SELECT \
-                                    tm.id, \
-                                    tm.name, \
-                                    tm.email, \
-                                    tm.language \
-                                FROM ( \
-                                    SELECT DISTINCT ON(id) \
-                                        tm."memberId" as id, \
-                                        tm."level", \
-                                        u.name, \
-                                        u.email, \
-                                        u.language \
-                                    FROM "Topics" t \
-                                    JOIN ( \
-                                        SELECT \
-                                            tmu."topicId", \
-                                            tmu."userId" AS "memberId", \
-                                            tmu."level"::text, \
-                                            1 as "priority" \
-                                        FROM "TopicMemberUsers" tmu \
-                                        WHERE tmu."deletedAt" IS NULL \
-                                        UNION \
-                                        ( \
-                                            SELECT \
-                                                tmg."topicId", \
-                                                gm."userId" AS "memberId", \
-                                                tmg."level"::text, \
-                                                2 as "priority" \
-                                            FROM "TopicMemberGroups" tmg \
-                                            LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
-                                            WHERE tmg."deletedAt" IS NULL \
-                                            AND gm."deletedAt" IS NULL \
-                                            ORDER BY tmg."level"::"enum_TopicMemberGroups_level" DESC \
-                                        ) \
-                                    ) AS tm ON (tm."topicId" = t.id) \
-                                    JOIN "Users" u ON (u.id = tm."memberId") \
-                                    LEFT JOIN "TopicMemberUsers" tmu ON (tmu."userId" = tm."memberId" AND tmu."topicId" = t.id) \
-                                    WHERE t.id = :topicId \
-                                    ORDER BY id, tm.priority \
-                                ) tm \
-                                WHERE tm.level::"enum_TopicMemberUsers_level" >= :level \
-                                AND tm.email IS NOT NULL \
-                                ORDER BY name ASC \
-                            ',
-                            {
-                                replacements: {
-                                    topicId: commentInfo.topic.id,
-                                    level: TopicMemberUser.LEVELS.admin
-                                },
-                                type: db.QueryTypes.SELECT,
-                                raw: true,
-                                nest: true
-                            }
-                        )
+                    return _getTopicMemberUsers(commentInfo.topic.id, TopicMemberUser.LEVELS.admin)
                         .then(function (moderators) {
                             return [commentInfo, moderators];
                         });
@@ -899,18 +932,29 @@ module.exports = function (app) {
             })
         );
 
+        // Get reporters info
         infoFetchPromisesToResolve.push(
             User.findOne({
                     where: {
                         id: report.creatorId
                     }
                 }
-            ));
+            )
+        );
+
+        // Get Topic edit/admin Member list
+        infoFetchPromisesToResolve.push(
+            _getTopicMemberUsers(report.topicId, TopicMemberUser.LEVELS.edit)
+        );
 
         const infoFetchPromisesResults = await Promise.all(infoFetchPromisesToResolve);
 
         const topic = infoFetchPromisesResults[0];
         const userReporter = infoFetchPromisesResults[1];
+        const topicMemberList = infoFetchPromisesResults[2];
+
+        const topicModerators = await _getModerators(topic.sourcePartnerId);
+
         const linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
 
         const sendEmailPromisesToResolve = [];
@@ -932,7 +976,6 @@ module.exports = function (app) {
                     {
                         subject: subject,
                         to: userReporter.email,
-                        social: config.email.social,
                         images: [
                             {
                                 name: emailHeaderLogoName,
@@ -947,7 +990,7 @@ module.exports = function (app) {
                         userReporter: userReporter,
                         report: {
                             id: report.id,
-                            type: templateObject.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
+                            type: templateObject.translations.REPORT.REPORT_TYPE[report.type.toUpperCase()],
                             text: report.text
                         },
                         topic: topic,
@@ -966,10 +1009,10 @@ module.exports = function (app) {
             logger.info('Could not send e-mail to Topic reporter because e-mail address does not exist', userReporter.id, req.path);
         }
 
-        await Promise.all(sendEmailPromisesToResolve);
-
         //Send e-mail to admin/edit Members of the Topic - 1.2
         //Send e-mail to Moderators - 1.3
+
+        return Promise.all(sendEmailPromisesToResolve);
     };
 
     /**
