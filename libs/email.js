@@ -885,14 +885,11 @@ module.exports = function (app) {
         if (userReporter.email) {
             //Send e-mail to the User (reporter) - 1.1 - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
             var sendReporterEmail = async function () {
-                if (!userReporter.email) {
-
-                }
                 let templateObject = resolveTemplate('reportTopicCreator', userReporter.language);
                 let subject = templateObject.translations.REPORT_TOPIC_REPORTER.SUBJECT
                     .replace('{{report.id}}', report.id);
 
-                var emailOptions = Object.assign(
+                let emailOptions = Object.assign(
                     _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
                     {
                         subject: subject,
@@ -918,7 +915,72 @@ module.exports = function (app) {
         }
 
         //Send e-mail to admin/edit Members of the Topic - 1.2
+        topicMemberList.forEach(function (topicMemberUser) {
+            if (topicMemberUser.email) {
+                let sendTopicMemberEmail = async function () {
+                    let templateObject = resolveTemplate('reportTopicMember', topicMemberUser.language);
+                    let subject = templateObject.translations.REPORT_TOPIC_MEMBER.SUBJECT
+                        .replace('{{report.id}}', report.id);
+
+                    let emailOptions = Object.assign(
+                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                        {
+                            subject: subject,
+                            to: topicMemberUser.email,
+                            //Placeholders
+                            userMember: topicMemberUser,
+                            report: {
+                                id: report.id,
+                                type: templateObject.translations.REPORT.REPORT_TYPE[report.type.toUpperCase()],
+                                text: report.text
+                            },
+                            topic: topic,
+                            linkViewTopic: linkViewTopic,
+                            linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
+                        }
+                    );
+
+                    return emailClient.sendStringAsync(templateObject.body, emailOptions);
+                };
+                sendEmailPromisesToResolve.push(sendTopicMemberEmail());
+            } else {
+                logger.info('Could not send e-mail to Topic member because e-mail address does not exist', topicMemberUser.id, req.path);
+            }
+        });
+
         //Send e-mail to Moderators - 1.3
+        topicModerators.forEach(function (userModerator) {
+            if(userModerator.email) {
+                let sendTopicModeratorEmail = async function () {
+                    let templateObject = resolveTemplate('reportTopicModerator', userModerator.language);
+                    let subject = templateObject.translations.REPORT_TOPIC_MODERATOR.SUBJECT
+                        .replace('{{report.id}}', report.id);
+
+                    let emailOptions = Object.assign(
+                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                        {
+                            subject: subject,
+                            to: userModerator.email,
+                            //Placeholders
+                            userModerator: userModerator,
+                            report: {
+                                id: report.id,
+                                type: templateObject.translations.REPORT.REPORT_TYPE[report.type.toUpperCase()],
+                                text: report.text
+                            },
+                            topic: topic,
+                            linkViewTopic: linkViewTopic,
+                            linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
+                        }
+                    );
+
+                    return emailClient.sendStringAsync(templateObject.body, emailOptions);
+                };
+                sendEmailPromisesToResolve.push(sendTopicModeratorEmail());
+            } else {
+                logger.info('Could not send e-mail to Topic Moderator because e-mail address does not exist', userModerator.id, req.path);
+            }
+        });
 
         return Promise.all(sendEmailPromisesToResolve);
     };

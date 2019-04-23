@@ -1,7 +1,8 @@
 {
   "LAYOUT": {
     "LINK_TO_PLATFORM": "Link to platform",
-    "LINK_PRIVACY_POLICY": "Privacy Policy"
+    "LINK_PRIVACY_POLICY": "Privacy Policy",
+    "EMPOWERED_BY": "Empowered by"
   },
   "ACCOUNT_VERIFICATION": {
     "SUBJECT": "Activate your Citizen OS account"
@@ -20,7 +21,13 @@
   "REPORT_TOPIC_REPORTER": {
     "SUBJECT": "Thank you, we received your report (#{{report.id}})"
   },
-  "REPORT_COMMENT": {
+  "REPORT_TOPIC_MEMBER": {
+    "SUBJECT": "Report #{{report.id}}: your Citizen OS topic may contain a violation of guidelines"
+  },
+  "REPORT_TOPIC_MODERATOR": {
+    "SUBJECT": "A Citizen OS topic has been reported ({{report.id}}:), please moderate."
+  },
+  "REPORT": {
     "REPORT_TYPE": {
       "ABUSE": "Is abusive or insulting",
       "OBSCENE": "Contains obscene language",
@@ -30,7 +37,7 @@
       "DUPLICATE": "Is a duplicate"
     }
   },
-  "REPORT": {
+  "REPORT_COMMENT": {
     "REPORT_TYPE": {
       "ABUSE": "Is abusive or insulting",
       "OBSCENE": "Contains obscene language",

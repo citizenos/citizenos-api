@@ -29,7 +29,6 @@
         p.important {
             margin: 30px 0;
             padding: 20px;
-            font-weight: bold;
             background-color: #D5EAFF;
             border: 1px solid #BADCFF;
         }
@@ -67,7 +66,6 @@
         hr {
             display: block;
             height: 0px;
-            border: 0;
             border-top: 1px;
             border-style: solid;
             border-color: #DEDEDE; /** Chrome & Safari **/
@@ -80,10 +78,6 @@
 
         .blue {
             color: #0680FC;
-        }
-
-        .bold {
-            font-weight: bold;
         }
 
         #background {
@@ -187,8 +181,8 @@
                                     <table>
                                         <tbody>
                                             <tr>
-                                                <td><a href="{{linkedData.footerLinks.linkToPlatform}}" target="_blank">{{LAYOUT.LINK_TO_PLATFORM}}</a></td>
-                                                <td style="padding-left: 13px;"><a href="{{linkedData.footerLinks.linkToPrivacyPolicy}}" target="_blank">{{LAYOUT.LINK_PRIVACY_POLICY}}</a></td>
+                                                <td><a href="{{linkedData.footerLinks.linkToPlatform}}" target="_blank">Link to platform</a></td>
+                                                <td style="padding-left: 13px;"><a href="{{linkedData.footerLinks.linkToPrivacyPolicy}}" target="_blank">Privacy policy</a></td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -198,7 +192,7 @@
                                         <table>
                                             <tbody>
                                                 <tr>
-                                                    <td>{{LAYOUT.EMPOWERED_BY}}</td>
+                                                    <td>Empowered by</td>
                                                     <td style="padding-left: 13px;"><img width="97" height="18" src="cid:logo_footer.png" alt="logo"/></td>
                                                 </tr>
                                             </tbody>
@@ -213,8 +207,8 @@
             {{#trapped}}
             <tr id="trapped">
                 <td>
-                    <p class="bold">
-                        Recipients
+                    <p>
+                        <b>Recipients</b>
                     </p>
                     <pre>
                         {{trapped}}

@@ -12,11 +12,30 @@
   },
   "INVITE_TOPIC": {
     "SUBJECT": "{{fromUser.name}} is inviting you to make a collaborative decision",
-    "SUBJECT_rahvaalgatus_ee": "{{fromUser.name}}, user of rahvaalgatus.ee invites you to co-create a discussion/initiative",
+    "SUBJECT_rahvaalgatus_ee": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Reset your Citizen OS account password"
+    "SUBJECT": "Reset your CitizenOS account password"
+  },
+  "REPORT_TOPIC_REPORTER": {
+    "SUBJECT": "Thank you, we received your report (#{{report.id}})"
+  },
+  "REPORT_TOPIC_MEMBER": {
+    "SUBJECT": "Report #{{report.id}}: your Citizen OS topic may contain a violation of guidelines"
+  },
+  "REPORT_TOPIC_MODERATOR": {
+    "SUBJECT": "A Citizen OS topic has been reported ({{report.id}}:), please moderate."
+  },
+  "REPORT": {
+    "REPORT_TYPE": {
+      "ABUSE": "Is abusive or insulting",
+      "OBSCENE": "Contains obscene language",
+      "SPAM": "Contains spam or is unrelated to topic",
+      "HATE": "Contains hate speech",
+      "NETIQUETTE": "Infringes (n)etiquette",
+      "DUPLICATE": "Is a duplicate"
+    }
   },
   "REPORT_COMMENT": {
     "REPORT_TYPE": {

@@ -7704,12 +7704,15 @@ suite('Users', function () {
             suite('Create', function () {
                 var agentCreator = request.agent(app);
                 var agentReporter = request.agent(app);
+                var agentModerator = request.agent(app);
 
                 var emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
                 var emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                var emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
 
                 var userCreator;
                 var userReporter;
+                var userModerator;
 
                 var topic;
 
@@ -7722,6 +7725,9 @@ suite('Users', function () {
                                 },
                                 function (cb) {
                                     userLib.createUserAndLogin(agentReporter, emailReporter, null, null, cb);
+                                },
+                                function (cb) {
+                                    userLib.createUser(agentModerator, emailModerator, null, null, cb);
                                 }
                             ]
                             , function (err, results) {
@@ -7729,13 +7735,22 @@ suite('Users', function () {
 
                                 userCreator = results[0];
                                 userReporter = results[1];
+                                userModerator = results[2];
 
                                 topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR SPAM REPORTING</h2></body></html>', null, function (err, res) {
                                     if (err) return done(err);
 
                                     topic = res.body.data;
 
-                                    done();
+                                    // Create a moderator in DB so that the Moderation email flow is executed
+                                    Moderator
+                                        .create({
+                                            userId: userModerator.id
+                                        })
+                                        .then(function () {
+                                            done();
+                                        })
+                                        .catch(done);
                                 });
                             }
                         );
