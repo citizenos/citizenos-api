@@ -186,6 +186,8 @@ require('./libs/passport/index')(app).init();
 // Configure middleware
 app.use(cookieParser());
 app.use(bodyParser.json());
+app.use(bodyParser.json({type: 'application/json'}));
+app.use(bodyParser.json({type: 'application/csp-report'}));
 app.use(bodyParser.urlencoded({extended: false}));
 
 // CORS
