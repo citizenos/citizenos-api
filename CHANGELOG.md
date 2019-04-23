@@ -1,3 +1,7 @@
+## 2019-04-19
+
+* Add `/api/interal/report` endpoint to log csp-reports
+
 ## 2019-04-10
 
 * Fix etherpad sync endpoint, remove rev number to put less stress on etherpad. * Fix partner topic read test
