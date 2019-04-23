@@ -1,7 +1,8 @@
 {
   "LAYOUT": {
     "LINK_TO_PLATFORM": "Link to platform",
-    "LINK_PRIVACY_POLICY": "Privacy Policy"
+    "LINK_PRIVACY_POLICY": "Privacy Policy",
+    "EMPOWERED_BY": "Empowered by"
   },
   "ACCOUNT_VERIFICATION": {
     "SUBJECT": "Activate your Citizen OS account"
