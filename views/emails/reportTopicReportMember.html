@@ -1,6 +1,6 @@
 <!-- E-mail sent to Topic members of a reporter Topic -->
 <p>
-    Hello <span class="blue">{{topicMemberUser.name}}</span>,
+    Hello <span class="blue">{{userMember.name}}</span>,
 </p>
 <p class="important">
     <b>A Citizen OS user thinks there is a violation of Citizen OS community guidelines in your topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" and has filed a report <span class="blue">#{{report.id}}</span>.</b>
@@ -26,7 +26,7 @@
     </li>
 </ol>
 </p>
-<p>You can find more details about Citizen OS moderation process <a href="{{linkViewModerationGuidelines}}">here</a>.</p>
+<p><a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process here.</a></p>
 
 <h1>Details of the report</h1>
 <p>Topic: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>

@@ -3593,6 +3593,7 @@ module.exports = function (app) {
                 '\
                     SELECT \
                         t."id" as "topic.id", \
+                        t."title" as "topic.title", \
                         t."updatedAt" as "topic.updatedAt", \
                         tr."id" as "report.id", \
                         tr."createdAt" as "report.createdAt", \
@@ -3615,14 +3616,14 @@ module.exports = function (app) {
                 }
             )
             .then(function (results) {
-                var topicReport = results[0];
+                let topicReport = results[0];
 
                 if (!topicReport) {
                     return res.notFound();
                 }
 
-                var topic = topicReport.topic;
-                var report = topicReport.report;
+                let topic = topicReport.topic;
+                let report = topicReport.report;
 
                 // If Topic has been updated since the Report was made, deny moderation cause the text may have changed.
                 if (topic.updatedAt.getTime() > report.createdAt.getTime()) {
@@ -3660,8 +3661,12 @@ module.exports = function (app) {
                             );
                     });
             })
-            .then(function (topicReport) {
-                return res.ok(topicReport[1][0]);
+            .then(async function (topicReportModerateResult) {
+                let topicReport = topicReportModerateResult[1][0];
+
+                await emailLib.sendTopicReportModerate(topicReport);
+
+                return res.ok(topicReport);
             })
             .catch(next);
     });

@@ -18,14 +18,20 @@
   "PASSWORD_RESET": {
     "SUBJECT": "Reset your CitizenOS account password"
   },
-  "REPORT_TOPIC_REPORTER": {
+  "REPORT_TOPIC_REPORT_REPORTER": {
     "SUBJECT": "Thank you, we received your report (#{{report.id}})"
   },
-  "REPORT_TOPIC_MEMBER": {
+  "REPORT_TOPIC_REPORT_MEMBER": {
     "SUBJECT": "Report #{{report.id}}: your Citizen OS topic may contain a violation of guidelines"
   },
-  "REPORT_TOPIC_MODERATOR": {
-    "SUBJECT": "A Citizen OS topic has been reported ({{report.id}}:), please moderate."
+  "REPORT_TOPIC_REPORT_MODERATOR": {
+    "SUBJECT": "A Citizen OS topic has been reported ({{report.id}}:), please moderate"
+  },
+  "REPORT_TOPIC_MODERATE_REPORTER": {
+    "SUBJECT": "Your Citizen OS report #{{report.id}} has been reviewed"
+  },
+  "REPORT_TOPIC_MODERATE_MEMBER": {
+    "SUBJECT": "Report #{{report.id}}: Your Citizen OS topic has been reviewed by a moderator"
   },
   "REPORT": {
     "REPORT_TYPE": {
