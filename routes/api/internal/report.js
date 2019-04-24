@@ -9,10 +9,13 @@ module.exports = function (app) {
 
     app.post('/api/internal/report', function (req, res) {
 
-        logger.error({
-            headers: req.headers, 
-            body: req.body
-        });
+        logger.error(
+            'CSP report',
+            {
+                headers: req.headers,
+                body: req.body
+            }
+        );
 
         res.ok();
     });
