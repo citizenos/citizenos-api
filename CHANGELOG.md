@@ -4,9 +4,14 @@
 * FEATURE: Added Topic Report API - https://github.com/citizenos/citizenos-api/issues/5
 * Default Node.JS version upgraded to 10.13.0.
 
+## 2019-04-19
+
+* Add `/api/interal/report` endpoint to log csp-reports
+
 ## 2019-04-10
 
-* Fix etherpad sync endpoint, remove rev number to put less stress on etherpad. * Fix partner topic read test
+* Fix Etherpad sync endpoint, remove rev number to put less stress on etherpad. 
+* Fix partner topic read test
 * Update morgan
 
 ## 2019-02-22
