@@ -3596,6 +3596,7 @@ module.exports = function (app) {
                         t."title" as "topic.title", \
                         t."updatedAt" as "topic.updatedAt", \
                         tr."id" as "report.id", \
+                        tr."creatorId" as "report.creatorId", \
                         tr."createdAt" as "report.createdAt", \
                         tr."resolvedById" as "report.resolvedById", \
                         tr."moderatedById" as "report.moderatedById" \
@@ -3658,22 +3659,44 @@ module.exports = function (app) {
                                 {
                                     transaction: t
                                 }
-                            );
+                            )
+                            .then(function(topicReportSaved){
+                                return [topicReport, topicReportSaved[1][0]];
+                            });
                     });
             })
-            .then(async function (topicReportModerateResult) {
-                let topicReport = topicReportModerateResult[1][0];
+            .then(async function (topicReportResult) {
+                let topicReportLoaded = topicReportResult[0];
+                let topicReportInstance = topicReportResult[1];
 
-                await emailLib.sendTopicReportModerate(topicReport);
+                await emailLib.sendTopicReportModerate(
+                    // Pass on the Topic info we loaded, don't need to load Topic again.
+                    Object.assign(
+                        {},
+                        topicReportInstance.toJSON(),
+                        {
+                            topic: topicReportLoaded.topic
+                        }
+                    )
+                );
 
-                return res.ok(topicReport);
+                return res.ok(topicReportInstance);
             })
             .catch(next);
     });
 
     /** Send a Topic report for review - User let's Moderators know that the violations have been corrected **/
     app.post(['/api/users/:userId/:topicId/reports/review', '/api/topics/:topicId/reports/review'], loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), function (req, res, next) {
-        // FIXME: Send e-mails to Moderators to review the Topic
+        let text = req.body.text;
+
+        if (!text) {
+            return res.badRequest('Parameter "text" is required', 1);
+        }
+
+        if (text.length < 10 || text.length > 4000) {
+            return res.badRequest('Parameter "text" has to be between 10 and 4000 characters', 2);
+        }
+
         return res.notImplemented();
     });
 

@@ -837,7 +837,7 @@ module.exports = function (app) {
      *
      * @param {object} topicReport TopicReport Sequelize instance
      *
-     * @returns {Promise} Topic report result
+     * @returns {Promise}
      *
      * @private
      *
@@ -986,7 +986,7 @@ module.exports = function (app) {
      *
      * @param {object} topicReport TopicReport Sequelize instance
      *
-     * @returns {Promise} Topic report result
+     * @returns {Promise}
      *
      * @private
      *
@@ -995,22 +995,13 @@ module.exports = function (app) {
      */
     var _sendTopicReportModerate = async function (topicReport) {
         let infoFetchPromisesToResolve = [];
-
-        // Get the topic
-        infoFetchPromisesToResolve.push(
-            Topic.findOne({
-                    where: {
-                        id: topicReport.topicId
-                    }
-                }
-            )
-        );
+        let topic = topicReport.topic;
 
         // Get reporters info
         infoFetchPromisesToResolve.push(
             User.findOne({
                     where: {
-                        id: topicReport.creatorId
+                        id: topicReport.creator.id
                     }
                 }
             )
@@ -1018,10 +1009,11 @@ module.exports = function (app) {
 
         // Get Topic member Users
         infoFetchPromisesToResolve.push(
-            _getTopicMemberUsers(topicReport.topicId, TopicMemberUser.LEVELS.edit)
+            _getTopicMemberUsers(topic.id, TopicMemberUser.LEVELS.edit)
         );
 
-        let [topic, userReporter, topicMemberList] = await Promise.all(infoFetchPromisesToResolve);
+        let [userReporter, topicMemberList] = await Promise.all(infoFetchPromisesToResolve);
+
         const linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
 
         const sendEmailPromisesToResolve = [];
@@ -1093,6 +1085,11 @@ module.exports = function (app) {
         });
 
         return Promise.all(sendEmailPromisesToResolve);
+    };
+
+    var _sendTopicReportReview = async function () {
+        // FIXME: Implement
+        throw new Error('Not implemented!');
     };
 
     /**
@@ -1225,6 +1222,7 @@ module.exports = function (app) {
         sendTopicGroupInvite: _sendTopicGroupInvite,
         sendTopicReport: _sendTopicReport,
         sendTopicReportModerate: _sendTopicReportModerate,
+        sendTopicReportReview: _sendTopicReportReview,
         sendGroupInvite: _sendGroupInvite,
         sendCommentReport: _sendCommentReport,
         sendToParliament: _sendToParliament

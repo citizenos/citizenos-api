@@ -453,21 +453,27 @@ var topicReportModerate = function (agent, topicId, reportId, token, type, text,
     _topicReportModerate(agent, topicId, reportId, token, type, text, 200, callback);
 };
 
-var _topicReportsReview = function (agent, userId, topicId, expectedHttpCode, callback) {
+var _topicReportsReview = function (agent, userId, topicId, text, expectedHttpCode, callback) {
     var path = '/api/users/:userId/:topicId/reports/review'
         .replace(':userId', userId)
         .replace(':topicId', topicId);
 
+    var body = {};
+    if (text) {
+        body.text = text;
+    }
+
     agent
         .post(path)
         .set('Content-Type', 'application/json')
+        .send(body)
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/)
         .end(callback);
 };
 
-var topicReportsReview = function (agent, userId, topicId, callback) {
-    _topicReportsReview(agent, userId, topicId, 200, callback);
+var topicReportsReview = function (agent, userId, topicId, text, callback) {
+    _topicReportsReview(agent, userId, topicId, text, 200, callback);
 };
 
 var _topicCommentCreate = function (agent, userId, topicId, parentId, parentVersion, type, subject, text, expectedHttpCode, callback) {
@@ -8080,7 +8086,7 @@ suite('Users', function () {
                 });
 
                 test('Success', function (done) {
-                    topicReportsReview(agentCreator, userCreator.id, topic.id, function (err, res) {
+                    topicReportsReview(agentCreator, userCreator.id, topic.id, 'Please review, I have made many changes', function (err, res) {
                         if (err) {
                             return done(err);
                         }
@@ -8090,7 +8096,59 @@ suite('Users', function () {
                 });
 
                 test('Fail - 403 - Unauthorized, restricted to Users with access', function (done) {
-                    _topicReportsReview(agentReporter, userReporter.id, topic.id, 403, done);
+                    _topicReportsReview(agentReporter, userReporter.id, topic.id, 'Please review, I have made many changes', 403, done);
+                });
+
+                test('Fail - 40001 - Missing required parameter "text"', function (done) {
+                    _topicReportsReview(agentCreator, userCreator.id, topic.id, undefined, 400, function (err, res) {
+                        if (err) {
+                            return done(err);
+                        }
+
+                        var expectedStatus = {
+                            code: 40001,
+                            message: 'Parameter "text" is required'
+                        };
+
+                        assert.deepEqual(res.body.status, expectedStatus);
+
+                        done();
+                    });
+                });
+
+                test('Fail - 40002 - Review text too short', function (done) {
+                    _topicReportsReview(agentCreator, userCreator.id, topic.id, 'x', 400, function (err, res) {
+                        if (err) {
+                            return done(err);
+                        }
+
+                        var expectedStatus = {
+                            code: 40002,
+                            message: 'Parameter "text" has to be between 10 and 4000 characters'
+                        };
+
+                        assert.deepEqual(res.body.status, expectedStatus);
+
+                        done();
+                    });
+                });
+
+                test('Fail - 40002 - Review text too long', function (done) {
+                    var text = new Array(4002).join('a');
+                    _topicReportsReview(agentCreator, userCreator.id, topic.id, text, 400, function (err, res) {
+                        if (err) {
+                            return done(err);
+                        }
+
+                        var expectedStatus = {
+                            code: 40002,
+                            message: 'Parameter "text" has to be between 10 and 4000 characters'
+                        };
+
+                        assert.deepEqual(res.body.status, expectedStatus);
+
+                        done();
+                    });
                 });
             });
 

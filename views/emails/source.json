@@ -33,6 +33,9 @@
   "REPORT_TOPIC_MODERATE_MEMBER": {
     "SUBJECT": "Report #{{report.id}}: Your Citizen OS topic has been reviewed by a moderator"
   },
+  "REPORT_TOPIC_REVIEW_MODERATOR": {
+    "SUBJECT": "A reported #{{report.id}} Citizen OS topic has been revised, please review"
+  },
   "REPORT": {
     "REPORT_TYPE": {
       "ABUSE": "Is abusive or insulting",
