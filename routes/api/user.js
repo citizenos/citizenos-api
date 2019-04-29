@@ -10,6 +10,7 @@ module.exports = function (app) {
     var cosActivities = app.get('cosActivities');
     var urlLib = app.get('urlLib');
     var jwt = app.get('jwt');
+    var uuid = app.get('uuid');
 
     var User = models.User;
     var UserConsent = models.UserConsent;
@@ -35,7 +36,9 @@ module.exports = function (app) {
                 if (req.body.email && req.body.email !== user.email) {
                     updateEmail = true;
                     fields.push('emailIsVerified');
+                    fields.push('emailVerificationCode');
                     req.body.emailIsVerified = false;
+                    req.body.emailVerificationCode = uuid.v4(); // Generate new emailVerificationCode
                 }
 
                 return User
@@ -53,7 +56,7 @@ module.exports = function (app) {
 
             })
             .then(function (results) {
-                const user = results[1][0].toJSON();
+                const user = results[1][0];
 
                 let sendEmailPromise = Promise.resolve();
 
@@ -69,7 +72,7 @@ module.exports = function (app) {
 
                 return sendEmailPromise
                     .then(function () {
-                        return res.ok(user);
+                        return res.ok(user.toJSON());
                     });
             })
             .catch(next);

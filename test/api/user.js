@@ -264,7 +264,6 @@ suite('User', function () {
             });
         });
 
-        //FIXME: This is important to be fixed - https://trello.com/c/fJFSb4p5/62-bug-crit-model-update-does-not-support-options-fields-which-means-users-may-be-able-to-update-fields-that-the-should-not
         test('Fail - try to update forbidden field "emailVerificationCode" - fail silently', function (done) {
             var newEmailVerificationCode = uuid.v4();
 
@@ -288,6 +287,7 @@ suite('User', function () {
                         })
                         .then(function (u) {
                             assert.notEqual(u.emailVerificationCode, newEmailVerificationCode);
+
                             done();
                         })
                         .catch(done);
