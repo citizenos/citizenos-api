@@ -48,7 +48,7 @@
     "json-patch-gen": "1.0.2",
     "jsonwebtoken": "5.7.0",
     "lodash": "4.17.11",
-    "log4js": "2.8.0",
+    "log4js": "4.1.0",
     "mimeparse": "0.1.4",
     "moment": "2.21.0",
     "morgan": "1.9.1",

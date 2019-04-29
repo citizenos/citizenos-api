@@ -3666,8 +3666,7 @@ module.exports = function (app) {
                     });
             })
             .then(async function (topicReportResult) {
-                let topicReportLoaded = topicReportResult[0];
-                let topicReportInstance = topicReportResult[1];
+                let [topicReportLoaded, topicReportInstance] = topicReportResult;
 
                 await emailLib.sendTopicReportModerate(
                     // Pass on the Topic info we loaded, don't need to load Topic again.
