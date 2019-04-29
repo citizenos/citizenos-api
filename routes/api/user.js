@@ -10,7 +10,7 @@ module.exports = function (app) {
     var cosActivities = app.get('cosActivities');
     var urlLib = app.get('urlLib');
     var jwt = app.get('jwt');
-    
+
     var User = models.User;
     var UserConsent = models.UserConsent;
 
@@ -19,7 +19,7 @@ module.exports = function (app) {
      */
     app.put('/api/users/:userId', loginCheck(['partner']), function (req, res, next) {
 
-        var fields = ['name', 'company', 'email', 'language', 'imageUrl'];
+        const fields = ['name', 'company', 'email', 'language', 'imageUrl'];
         if (!req.user.partnerId) { // Allow only our own app change the password
             fields.push('password');
         }
@@ -50,23 +50,27 @@ module.exports = function (app) {
                             returning: true
                         }
                     );
-                    
+
             })
             .then(function (results) {
-                var user = results[1][0].toJSON();
+                const user = results[1][0].toJSON();
+
+                let sendEmailPromise = Promise.resolve();
+
                 if (updateEmail) {
-                    var tokenData = {
+                    const tokenData = {
                         redirectSuccess: urlLib.getFe() // TODO: Misleading naming, would like to use "redirectUri" (OpenID convention) instead, but needs RAA.ee to update codebase.
                     };
 
-                    var token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
+                    const token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
 
-                    emailLib
-                        .sendAccountVerification(user.email, user.emailVerificationCode, token);
+                    sendEmailPromise = emailLib.sendAccountVerification(user.email, user.emailVerificationCode, token);
                 }
 
-                // Results array where 1-st element is number of rows modified and 2-nd is array of modified rows
-                return res.ok(user);
+                return sendEmailPromise
+                    .then(function () {
+                        return res.ok(user);
+                    });
             })
             .catch(next);
     });

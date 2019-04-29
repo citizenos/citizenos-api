@@ -308,10 +308,6 @@ module.exports = function (app) {
                         return res.redirect(302, redirectSuccess + '?error=emailVerificationFailed');
                     }
 
-                    var user = result[1][0];
-
-                    setAuthCookie(req, res, user.id);
-
                     if (getStateCookie(req, COOKIE_NAME_OPENID_AUTH_STATE)) { // We are in the middle of OpenID authorization flow
                         return res.redirect(urlLib.getApi('/api/auth/openid/authorize'));
                     } else {
