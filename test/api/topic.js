@@ -7708,19 +7708,19 @@ suite('Users', function () {
         suite('Reports', function () {
 
             suite('Create', function () {
-                var agentCreator = request.agent(app);
-                var agentReporter = request.agent(app);
-                var agentModerator = request.agent(app);
+                const agentCreator = request.agent(app);
+                const agentReporter = request.agent(app);
+                const agentModerator = request.agent(app);
 
-                var emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
-                var emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
-                var emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                const emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                const emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                const emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
 
-                var userCreator;
-                var userReporter;
-                var userModerator;
+                let userCreator;
+                let userReporter;
+                let userModerator;
 
-                var topic;
+                let topic;
 
                 suiteSetup(function (done) {
                     async
@@ -7739,9 +7739,7 @@ suite('Users', function () {
                             , function (err, results) {
                                 if (err) return done(err);
 
-                                userCreator = results[0];
-                                userReporter = results[1];
-                                userModerator = results[2];
+                                [userCreator,userReporter, userModerator] = results;
 
                                 topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR SPAM REPORTING</h2></body></html>', null, function (err, res) {
                                     if (err) return done(err);
@@ -7763,13 +7761,13 @@ suite('Users', function () {
                 });
 
                 test('Success', function (done) {
-                    var reportType = Report.TYPES.spam;
-                    var reportText = 'Topic spam report test';
+                    const reportType = Report.TYPES.spam;
+                    const reportText = 'Topic spam report test';
 
                     topicReportCreate(agentReporter, topic.id, reportType, reportText, function (err, res) {
                         if (err) return done(err);
 
-                        var reportResult = res.body.data;
+                        const reportResult = res.body.data;
 
                         assert.isTrue(validator.isUUID(reportResult.id, 4));
                         assert.equal(reportResult.type, reportType);
@@ -7782,8 +7780,8 @@ suite('Users', function () {
                 });
 
                 test('Fail - 40001 - Topic has already been reported. No duplicate reports.', function (done) {
-                    var reportType = Report.TYPES.spam;
-                    var reportText = 'Topic spam report test';
+                    const reportType = Report.TYPES.spam;
+                    const reportText = 'Topic spam report test';
 
                     _topicReportCreate(agentReporter, topic.id, reportType, reportText, 400, function (err, res) {
                         if (err) return done(err);
@@ -7800,8 +7798,8 @@ suite('Users', function () {
                 });
 
                 test('Fail - 40400 - Can\'t report a private Topic', function (done) {
-                    var reportType = Report.TYPES.hate;
-                    var reportText = 'Topic hate speech report for private Topic test';
+                    const reportType = Report.TYPES.hate;
+                    const reportText = 'Topic hate speech report for private Topic test';
 
                     topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.private, null, null, null, null, function (err, res) {
                         if (err) return done(err);
@@ -7815,27 +7813,27 @@ suite('Users', function () {
             });
 
             suite('Read', function () {
-                var agentCreator = request.agent(app);
-                var agentReporter = request.agent(app);
-                var agentModerator = request.agent(app);
+                const agentCreator = request.agent(app);
+                const agentReporter = request.agent(app);
+                const agentModerator = request.agent(app);
 
-                var emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
-                var emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
-                var emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                const emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                const emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                const emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
 
-                var topicTitle = 'Topic report test';
-                var topicDescription = '<!DOCTYPE HTML><html><body><h1>Topic report test</h1><br>Topic report test desc<br><br></body></html>'
+                const topicTitle = 'Topic report test';
+                const topicDescription = '<!DOCTYPE HTML><html><body><h1>Topic report test</h1><br>Topic report test desc<br><br></body></html>'
                     .replace(':topicTitle', topicTitle);
 
-                var reportType = Report.TYPES.hate;
-                var reportText = 'Topic hate speech report test';
+                const reportType = Report.TYPES.hate;
+                const reportText = 'Topic hate speech report test';
 
-                var userCreator;
-                var userModerator;
-                var userReporter;
+                let userCreator;
+                let userModerator;
+                let userReporter;
 
-                var topic;
-                var report;
+                let topic;
+                let report;
 
                 suiteSetup(function (done) {
                     async
@@ -7854,9 +7852,7 @@ suite('Users', function () {
                             , function (err, results) {
                                 if (err) return done(err);
 
-                                userCreator = results[0];
-                                userModerator = results[1];
-                                userReporter = results[2];
+                                [userCreator,userReporter, userModerator] = results;
 
                                 topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null, function (err, res) {
                                     if (err) return done(err);
@@ -7896,7 +7892,7 @@ suite('Users', function () {
                     topicReportRead(agentReporter, topic.id, report.id, token, function (err, res) {
                         if (err) return done(err);
 
-                        var reportResult = res.body.data;
+                        const reportResult = res.body.data;
 
                         assert.equal(reportResult.id, report.id);
                         assert.equal(reportResult.type, report.type);
@@ -7909,7 +7905,7 @@ suite('Users', function () {
                         assert.property(reportResult, 'moderatedReasonText');
                         assert.property(reportResult, 'moderatedReasonType');
 
-                        var reportResultTopic = reportResult.topic;
+                        const reportResultTopic = reportResult.topic;
 
                         assert.equal(reportResultTopic.id, topic.id);
                         assert.equal(reportResultTopic.title, topicTitle);
@@ -7921,27 +7917,27 @@ suite('Users', function () {
             });
 
             suite('Moderate', function () {
-                var agentCreator = request.agent(app);
-                var agentReporter = request.agent(app);
-                var agentModerator = request.agent(app);
+                const agentCreator = request.agent(app);
+                const agentReporter = request.agent(app);
+                const agentModerator = request.agent(app);
 
-                var emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
-                var emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
-                var emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                const emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                const emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                const emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
 
-                var topicTitle = 'Topic report test';
-                var topicDescription = '<!DOCTYPE HTML><html><body><h1>Topic report test</h1><br>Topic report test desc<br><br></body></html>'
+                const topicTitle = 'Topic report test';
+                const topicDescription = '<!DOCTYPE HTML><html><body><h1>Topic report test</h1><br>Topic report test desc<br><br></body></html>'
                     .replace(':topicTitle', topicTitle);
 
-                var reportType = Report.TYPES.hate;
-                var reportText = 'Topic hate speech report test';
+                const reportType = Report.TYPES.hate;
+                const reportText = 'Topic hate speech report test';
 
-                var userCreator;
-                var userModerator;
-                var userReporter;
+                let userCreator;
+                let userModerator;
+                let userReporter;
 
-                var topic;
-                var report;
+                let topic;
+                let report;
 
                 suiteSetup(function (done) {
                     async
@@ -7960,9 +7956,7 @@ suite('Users', function () {
                             , function (err, results) {
                                 if (err) return done(err);
 
-                                userCreator = results[0];
-                                userModerator = results[1];
-                                userReporter = results[2];
+                                [userCreator,userReporter, userModerator] = results;
 
                                 topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null, function (err, res) {
                                     if (err) return done(err);
@@ -8010,7 +8004,7 @@ suite('Users', function () {
                         topicReportRead(agentReporter, topic.id, report.id, token, function (err, res) {
                             if (err) return done(err);
 
-                            var reportReadResult = res.body.data;
+                            const reportReadResult = res.body.data;
                             delete reportReadResult.topic; // No Topic info returned in moderation result
 
                             assert.deepEqual(moderateResult, reportReadResult);
@@ -8061,9 +8055,7 @@ suite('Users', function () {
                             , function (err, results) {
                                 if (err) return done(err);
 
-                                userCreator = results[0];
-                                userModerator = results[1];
-                                userReporter = results[2];
+                                [userCreator,userReporter, userModerator] = results;
 
                                 topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null, function (err, res) {
                                     if (err) return done(err);
@@ -8209,9 +8201,7 @@ suite('Users', function () {
                             , function (err, results) {
                                 if (err) return done(err);
 
-                                userCreator = results[0];
-                                userModerator = results[1];
-                                userReporter = results[2];
+                                [userCreator,userReporter, userModerator] = results;
 
                                 topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null, function (err, res) {
                                     if (err) return done(err);

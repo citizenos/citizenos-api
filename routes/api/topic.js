@@ -3516,7 +3516,7 @@ module.exports = function (app) {
         }
 
         const topicReport = await db.transaction(async function (t) {
-            let topicReport = await TopicReport
+            const topicReport = await TopicReport
                 .create(
                     {
                         topicId: topicId,
@@ -3550,8 +3550,8 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-api/issues/5
      */
-    app.get(['/api/topics/:topicId/reports/:reportId', '/api/users/:userId/topics/:topicId/reports/:reportId'], authTokenRestrictedUse, function (req, res, next) {
-        db
+    app.get(['/api/topics/:topicId/reports/:reportId', '/api/users/:userId/topics/:topicId/reports/:reportId'], authTokenRestrictedUse, asyncMiddleware(async function (req, res, next) {
+        const topicReports = await db
             .query(
                 '\
                     SELECT \
@@ -3582,29 +3582,26 @@ module.exports = function (app) {
                     type: db.QueryTypes.SELECT,
                     raw: true,
                     nest: true
-                }
-            )
-            .then(function (results) {
-                if (!results || !results.length) {
-                    return res.notFound();
-                }
+                });
 
-                var topicReport = results[0];
+        const topicReport = topicReports[0];
 
-                return res.ok(topicReport);
-            })
-            .catch(next);
-    });
+        if (!topicReport) {
+            return res.notFound();
+        }
+
+        return res.ok(topicReport);
+    }));
 
     /**
      * Moderate a Topic - moderator approves a report, thus applying restrictions to the Topic
      */
-    app.post('/api/topics/:topicId/reports/:reportId/moderate', authTokenRestrictedUse, function (req, res, next) {
-        var moderatedReasonType = req.body.type; // Delete reason type which is provided in case deleted/hidden by moderator due to a user report
-        var moderatedReasonText = req.body.text; // Free text with reason why the comment was deleted/hidden
-        var moderatorTokenData = req.locals.tokenDecoded;
+    app.post('/api/topics/:topicId/reports/:reportId/moderate', authTokenRestrictedUse, asyncMiddleware(async function (req, res, next) {
+        const moderatedReasonType = req.body.type; // Delete reason type which is provided in case deleted/hidden by moderator due to a user report
+        const moderatedReasonText = req.body.text; // Free text with reason why the comment was deleted/hidden
+        const moderatorTokenData = req.locals.tokenDecoded;
 
-        db
+        const topicReports = await db
             .query(
                 '\
                     SELECT \
@@ -3631,78 +3628,71 @@ module.exports = function (app) {
                     raw: true,
                     nest: true
                 }
-            )
-            .then(function (results) {
-                let topicReport = results[0];
+            );
 
-                if (!topicReport) {
-                    return res.notFound();
-                }
+        const topicReportRead = topicReports[0];
 
-                let topic = topicReport.topic;
-                let report = topicReport.report;
+        if (!topicReportRead) {
+            return res.notFound();
+        }
 
-                // If Topic has been updated since the Report was made, deny moderation cause the text may have changed.
-                if (topic.updatedAt.getTime() > report.createdAt.getTime()) {
-                    return res.badRequest('Report has become invalid cause Topic has been updated after the report', 10);
-                }
+        const topic = topicReportRead.topic;
+        const report = topicReportRead.report;
 
-                if (report.resolvedById) {
-                    return res.badRequest('Report has become invalid cause the report has been already resolved', 11);
-                }
+        // If Topic has been updated since the Report was made, deny moderation cause the text may have changed.
+        if (topic.updatedAt.getTime() > report.createdAt.getTime()) {
+            return res.badRequest('Report has become invalid cause Topic has been updated after the report', 10);
+        }
 
-                if (report.moderatedById) {
-                    return res.badRequest('Report has become invalid cause the report has been already moderated', 12);
-                }
+        if (report.resolvedById) {
+            return res.badRequest('Report has become invalid cause the report has been already resolved', 11);
+        }
 
-                return db
-                    .transaction(function (t) {
-                        // FIXME: Activity!
-                        return TopicReport
-                            .update(
-                                {
-                                    moderatedById: moderatorTokenData.id,
-                                    moderatedAt: db.fn('NOW'),
-                                    moderatedReasonType: moderatedReasonType,
-                                    moderatedReasonText: moderatedReasonText
-                                },
-                                {
-                                    where: {
-                                        id: report.id
-                                    },
-                                    returning: true // FIXME: When activities come a long, we need to return
-                                },
-                                {
-                                    transaction: t
-                                }
-                            )
-                            .then(function (topicReportSaved) {
-                                return [topicReport, topicReportSaved[1][0]];
-                            });
-                    });
-            })
-            .then(async function (topicReportResult) {
-                let [topicReportLoaded, topicReportInstance] = topicReportResult;
+        if (report.moderatedById) {
+            return res.badRequest('Report has become invalid cause the report has been already moderated', 12);
+        }
 
-                await emailLib.sendTopicReportModerate(
-                    // Pass on the Topic info we loaded, don't need to load Topic again.
-                    Object.assign(
-                        {},
-                        topicReportInstance.toJSON(),
+        const topicReportUpdateResult = await db
+            .transaction(function (t) {
+                return TopicReport
+                    .update(
                         {
-                            topic: topicReportLoaded.topic
+                            moderatedById: moderatorTokenData.id,
+                            moderatedAt: db.fn('NOW'),
+                            moderatedReasonType: moderatedReasonType,
+                            moderatedReasonText: moderatedReasonText
+                        },
+                        {
+                            where: {
+                                id: report.id
+                            },
+                            returning: true // FIXME: When activities come a long, we need to return
+                        },
+                        {
+                            transaction: t
                         }
-                    )
-                );
+                    );
+            });
 
-                return res.ok(topicReportInstance);
-            })
-            .catch(next);
-    });
+        const topicReportUpdated = topicReportUpdateResult[1][0];
+
+        await emailLib.sendTopicReportModerate(
+            // Pass on the Topic info we loaded, don't need to load Topic again.
+            Object.assign(
+                {},
+                topicReportUpdated.toJSON(),
+                {
+                    topic: topicReportRead.topic
+                }
+            )
+        );
+
+        return res.ok(topicReportUpdated);
+    }));
 
     /** Send a Topic report for review - User let's Moderators know that the violations have been corrected **/
     app.post(['/api/users/:userId/:topicId/reports/review', '/api/topics/:topicId/reports/review'], loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), function (req, res, next) {
-        let text = req.body.text;
+        const text = req.body.text;
 
         if (!text) {
             return res.badRequest('Parameter "text" is required', 1);
