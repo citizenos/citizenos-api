@@ -7781,6 +7781,23 @@ suite('Users', function () {
                     });
                 });
 
+                test('Fail - 40001 - Topic has already been reported. No duplicate reports.', function (done) {
+                    var reportType = Report.TYPES.spam;
+                    var reportText = 'Topic spam report test';
+
+                    _topicReportCreate(agentReporter, topic.id, reportType, reportText, 400, function (err, res) {
+                        if (err) return done(err);
+
+                        const expectedStatus = {
+                            code: 40001,
+                            message: 'Topic has already been reported. Only one active report is allowed at the time to avoid overloading the moderators'
+                        };
+
+                        assert.deepEqual(res.body.status, expectedStatus);
+
+                        done();
+                    });
+                });
 
                 test('Fail - 40400 - Can\'t report a private Topic', function (done) {
                     var reportType = Report.TYPES.hate;

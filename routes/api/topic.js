@@ -35,6 +35,7 @@ module.exports = function (app) {
     var loginCheck = app.get('middleware.loginCheck');
     var authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
     var partnerParser = app.get('middleware.partnerParser');
+    var asyncMiddleware = app.get('middleware.asyncMiddleware');
 
     var User = models.User;
     var UserConnection = models.UserConnection;
@@ -3497,42 +3498,57 @@ module.exports = function (app) {
     app.get('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), readAttachment);
     app.get('/api/topics/:topicId/attachments/:attachmentId', hasVisibility(Topic.VISIBILITY.public), readAttachment);
 
-    var topicReportsCreate = function (req, res, next) {
-        var topicId = req.params.topicId;
+    var topicReportsCreate = async function (req, res) {
+        const topicId = req.params.topicId;
 
-        db
-            .transaction(function (t) {
-                return TopicReport
-                    .create(
-                        {
-                            topicId: topicId,
-                            type: req.body.type,
-                            text: req.body.text,
-                            creatorId: req.user.id,
-                            creatorIp: req.ip
-                        },
-                        {
-                            transaction: t
-                        }
-                    );
-            })
-            .then(function (report) {
-                // FIXME: Topic report create activity!
-                return emailLib.sendTopicReport(report)
-                    .then(function () {
-                        return res.ok(report);
-                    });
-            })
-            .catch(next);
+        const activeReportsCount = await TopicReport
+            .count(
+                {
+                    where: {
+                        topicId: topicId,
+                        resolvedById: null
+                    }
+                }
+            );
+
+        if (activeReportsCount) {
+            return res.badRequest('Topic has already been reported. Only one active report is allowed at the time to avoid overloading the moderators', 1);
+        }
+
+        const topicReport = await db.transaction(async function (t) {
+            let topicReport = await TopicReport
+                .create(
+                    {
+                        topicId: topicId,
+                        type: req.body.type,
+                        text: req.body.text,
+                        creatorId: req.user.id,
+                        creatorIp: req.ip
+                    },
+                    {
+                        transaction: t
+                    }
+                );
+
+            await emailLib.sendTopicReport(topicReport);
+
+            return topicReport;
+        });
+
+        return res.ok(topicReport);
     };
 
     /**
      * Report a Topic
+     *
+     * @see https://github.com/citizenos/citizenos-api/issues/5
      */
-    app.post(['/api/users/:userId/topics/:topicId/reports', '/api/topics/:topicId/reports'], loginCheck(['partner']), hasVisibility(Topic.VISIBILITY.public), topicReportsCreate);
+    app.post(['/api/users/:userId/topics/:topicId/reports', '/api/topics/:topicId/reports'], loginCheck(['partner']), hasVisibility(Topic.VISIBILITY.public), asyncMiddleware(topicReportsCreate));
 
     /**
      * Read Topic Report
+     *
+     * @see https://github.com/citizenos/citizenos-api/issues/5
      */
     app.get(['/api/topics/:topicId/reports/:reportId', '/api/users/:userId/topics/:topicId/reports/:reportId'], authTokenRestrictedUse, function (req, res, next) {
         db
@@ -3660,7 +3676,7 @@ module.exports = function (app) {
                                     transaction: t
                                 }
                             )
-                            .then(function(topicReportSaved){
+                            .then(function (topicReportSaved) {
                                 return [topicReport, topicReportSaved[1][0]];
                             });
                     });
