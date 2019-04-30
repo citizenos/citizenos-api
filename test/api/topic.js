@@ -453,10 +453,11 @@ var topicReportModerate = function (agent, topicId, reportId, token, type, text,
     _topicReportModerate(agent, topicId, reportId, token, type, text, 200, callback);
 };
 
-var _topicReportsReview = function (agent, userId, topicId, text, expectedHttpCode, callback) {
-    var path = '/api/users/:userId/:topicId/reports/review'
+var _topicReportsReview = function (agent, userId, topicId, reportId, text, expectedHttpCode, callback) {
+    var path = '/api/users/:userId/topics/:topicId/reports/:reportId/review'
         .replace(':userId', userId)
-        .replace(':topicId', topicId);
+        .replace(':topicId', topicId)
+        .replace(':reportId', reportId);
 
     var body = {};
     if (text) {
@@ -472,8 +473,8 @@ var _topicReportsReview = function (agent, userId, topicId, text, expectedHttpCo
         .end(callback);
 };
 
-var topicReportsReview = function (agent, userId, topicId, text, callback) {
-    _topicReportsReview(agent, userId, topicId, text, 200, callback);
+var topicReportsReview = function (agent, userId, topicId, reportId, text, callback) {
+    _topicReportsReview(agent, userId, topicId, reportId, text, 200, callback);
 };
 
 var _topicCommentCreate = function (agent, userId, topicId, parentId, parentVersion, type, subject, text, expectedHttpCode, callback) {
@@ -7739,7 +7740,7 @@ suite('Users', function () {
                             , function (err, results) {
                                 if (err) return done(err);
 
-                                [userCreator,userReporter, userModerator] = results;
+                                [userCreator, userReporter, userModerator] = results;
 
                                 topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR SPAM REPORTING</h2></body></html>', null, function (err, res) {
                                     if (err) return done(err);
@@ -7852,7 +7853,7 @@ suite('Users', function () {
                             , function (err, results) {
                                 if (err) return done(err);
 
-                                [userCreator,userReporter, userModerator] = results;
+                                [userCreator, userModerator, userReporter] = results;
 
                                 topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null, function (err, res) {
                                     if (err) return done(err);
@@ -7864,7 +7865,15 @@ suite('Users', function () {
 
                                         report = res.body.data;
 
-                                        done();
+                                        // Create a moderator in DB so that the Moderation email flow is executed
+                                        Moderator
+                                            .create({
+                                                userId: userModerator.id
+                                            })
+                                            .then(function () {
+                                                done();
+                                            })
+                                            .catch(done);
                                     });
                                 });
                             }
@@ -7956,7 +7965,7 @@ suite('Users', function () {
                             , function (err, results) {
                                 if (err) return done(err);
 
-                                [userCreator,userReporter, userModerator] = results;
+                                [userCreator, userModerator, userReporter] = results;
 
                                 topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null, function (err, res) {
                                     if (err) return done(err);
@@ -7968,7 +7977,15 @@ suite('Users', function () {
 
                                         report = res.body.data;
 
-                                        done();
+                                        // Create a moderator in DB so that the Moderation email flow is executed
+                                        Moderator
+                                            .create({
+                                                userId: userModerator.id
+                                            })
+                                            .then(function () {
+                                                done();
+                                            })
+                                            .catch(done);
                                     });
                                 });
                             }
@@ -7996,12 +8013,12 @@ suite('Users', function () {
                     var type = Report.TYPES.spam;
                     var text = 'Test: contains spam.';
 
-                    topicReportModerate(agentReporter, topic.id, report.id, token, type, text, function (err, res) {
+                    topicReportModerate(agentModerator, topic.id, report.id, token, type, text, function (err, res) {
                         if (err) return done(err);
 
                         var moderateResult = res.body.data;
 
-                        topicReportRead(agentReporter, topic.id, report.id, token, function (err, res) {
+                        topicReportRead(agentModerator, topic.id, report.id, token, function (err, res) {
                             if (err) return done(err);
 
                             const reportReadResult = res.body.data;
@@ -8055,7 +8072,7 @@ suite('Users', function () {
                             , function (err, results) {
                                 if (err) return done(err);
 
-                                [userCreator,userReporter, userModerator] = results;
+                                [userCreator, userModerator, userReporter] = results;
 
                                 topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null, function (err, res) {
                                     if (err) return done(err);
@@ -8087,7 +8104,15 @@ suite('Users', function () {
                                         var type = Report.TYPES.spam;
                                         var text = 'Test: contains spam.';
 
-                                        topicReportModerate(agentReporter, topic.id, report.id, token, type, text, done);
+                                        // Create a moderator in DB so that the Moderation email flow is executed
+                                        Moderator
+                                            .create({
+                                                userId: userModerator.id
+                                            })
+                                            .then(function () {
+                                                topicReportModerate(agentModerator, topic.id, report.id, token, type, text, done);
+                                            })
+                                            .catch(done);
                                     });
                                 });
                             }
@@ -8095,7 +8120,7 @@ suite('Users', function () {
                 });
 
                 test('Success', function (done) {
-                    topicReportsReview(agentCreator, userCreator.id, topic.id, 'Please review, I have made many changes', function (err, res) {
+                    topicReportsReview(agentCreator, userCreator.id, topic.id, report.id, 'Please review, I have made many changes', function (err, res) {
                         if (err) {
                             return done(err);
                         }
@@ -8105,11 +8130,11 @@ suite('Users', function () {
                 });
 
                 test('Fail - 403 - Unauthorized, restricted to Users with access', function (done) {
-                    _topicReportsReview(agentReporter, userReporter.id, topic.id, 'Please review, I have made many changes', 403, done);
+                    _topicReportsReview(agentReporter, userReporter.id, topic.id, report.id, 'Please review, I have made many changes', 403, done);
                 });
 
                 test('Fail - 40001 - Missing required parameter "text"', function (done) {
-                    _topicReportsReview(agentCreator, userCreator.id, topic.id, undefined, 400, function (err, res) {
+                    _topicReportsReview(agentCreator, userCreator.id, topic.id, report.id, undefined, 400, function (err, res) {
                         if (err) {
                             return done(err);
                         }
@@ -8126,7 +8151,7 @@ suite('Users', function () {
                 });
 
                 test('Fail - 40002 - Review text too short', function (done) {
-                    _topicReportsReview(agentCreator, userCreator.id, topic.id, 'x', 400, function (err, res) {
+                    _topicReportsReview(agentCreator, userCreator.id, topic.id, report.id, 'x', 400, function (err, res) {
                         if (err) {
                             return done(err);
                         }
@@ -8144,7 +8169,7 @@ suite('Users', function () {
 
                 test('Fail - 40002 - Review text too long', function (done) {
                     var text = new Array(4002).join('a');
-                    _topicReportsReview(agentCreator, userCreator.id, topic.id, text, 400, function (err, res) {
+                    _topicReportsReview(agentCreator, userCreator.id, topic.id, report.id, text, 400, function (err, res) {
                         if (err) {
                             return done(err);
                         }
@@ -8201,7 +8226,7 @@ suite('Users', function () {
                             , function (err, results) {
                                 if (err) return done(err);
 
-                                [userCreator,userReporter, userModerator] = results;
+                                [userCreator, userModerator, userReporter] = results;
 
                                 topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null, function (err, res) {
                                     if (err) return done(err);

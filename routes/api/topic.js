@@ -3691,7 +3691,9 @@ module.exports = function (app) {
     }));
 
     /** Send a Topic report for review - User let's Moderators know that the violations have been corrected **/
-    app.post(['/api/users/:userId/:topicId/reports/review', '/api/topics/:topicId/reports/review'], loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), function (req, res, next) {
+    app.post(['/api/users/:userId/topics/:topicId/reports/:reportId/review', '/api/topics/:topicId/reports/:reportId/review'], loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), asyncMiddleware(async function (req, res, next) {
+        const topicId = req.params.topicId;
+        const reportId = req.params.reportId;
         const text = req.body.text;
 
         if (!text) {
@@ -3702,8 +3704,21 @@ module.exports = function (app) {
             return res.badRequest('Parameter "text" has to be between 10 and 4000 characters', 2);
         }
 
-        return res.notImplemented();
-    });
+        var topicReport = await TopicReport.findOne({
+            where: {
+                topicId: topicId,
+                id: reportId
+            }
+        });
+
+        if (!topicReport) {
+            return res.notFound('Topic report not found');
+        }
+
+        await emailLib.sendTopicReportReview(topicReport, text);
+
+        return res.ok();
+    }));
 
     /**
      * Resolve a Topic report - mark the Topic report as fixed, thus lifting restrictions on the Topic
