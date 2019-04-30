@@ -4,6 +4,10 @@
 * FEATURE: Added Topic Report API - https://github.com/citizenos/citizenos-api/issues/5
 * Default Node.JS version upgraded to 10.13.0.
 
+## 2019-04-29
+
+* E-mail verification (`GET /api/auth/verify/:code`) not to automatically log in User after e-mail verification - https://github.com/citizenos/citizenos-api/issues/122
+
 ## 2019-04-19
 
 * Add `/api/interal/report` endpoint to log csp-reports
