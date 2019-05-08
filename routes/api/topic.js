@@ -231,13 +231,13 @@ module.exports = function (app) {
         };
     };
 
-    var hasVisibility = function (visiblity) {
+    var hasVisibility = function (visibility) {
         return function (req, res, next) {
             return Topic
                 .count({
                     where: {
                         id: req.params.topicId,
-                        visibility: visiblity
+                        visibility: visibility
                     }
                 })
                 .then(function (count) {
@@ -3550,7 +3550,7 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-api/issues/5
      */
-    app.get(['/api/topics/:topicId/reports/:reportId', '/api/users/:userId/topics/:topicId/reports/:reportId'], authTokenRestrictedUse, asyncMiddleware(async function (req, res, next) {
+    app.get(['/api/topics/:topicId/reports/:reportId', '/api/users/:userId/topics/:topicId/reports/:reportId'], hasVisibility(Topic.VISIBILITY.public), isModerator(), asyncMiddleware(async function (req, res, next) {
         const topicReports = await db
             .query(
                 '\
@@ -3596,10 +3596,9 @@ module.exports = function (app) {
     /**
      * Moderate a Topic - moderator approves a report, thus applying restrictions to the Topic
      */
-    app.post('/api/topics/:topicId/reports/:reportId/moderate', authTokenRestrictedUse, asyncMiddleware(async function (req, res, next) {
+    app.post('/api/topics/:topicId/reports/:reportId/moderate', hasVisibility(Topic.VISIBILITY.public), isModerator(), asyncMiddleware(async function (req, res, next) {
         const moderatedReasonType = req.body.type; // Delete reason type which is provided in case deleted/hidden by moderator due to a user report
         const moderatedReasonText = req.body.text; // Free text with reason why the comment was deleted/hidden
-        const moderatorTokenData = req.locals.tokenDecoded;
 
         const topicReports = await db
             .query(
@@ -3657,7 +3656,7 @@ module.exports = function (app) {
                 return TopicReport
                     .update(
                         {
-                            moderatedById: moderatorTokenData.id,
+                            moderatedById: req.user.id,
                             moderatedAt: db.fn('NOW'),
                             moderatedReasonType: moderatedReasonType,
                             moderatedReasonText: moderatedReasonText
@@ -3724,15 +3723,14 @@ module.exports = function (app) {
      * Resolve a Topic report - mark the Topic report as fixed, thus lifting restrictions on the Topic
      * We don't require /reports/review request to be sent to enable Moderators to act proactively
      */
-    app.post('/api/topics/:topicId/reports/resolve', authTokenRestrictedUse, function (req, res, next) {
+    app.post('/api/topics/:topicId/reports/:reportId/resolve', hasVisibility(Topic.VISIBILITY.public), isModerator(), function (req, res, next) {
         var topicId = req.params.topicId;
-        var moderatorTokenData = req.locals.tokenDecoded;
 
         // FIXME: Do we want to send e-mail to interested parties that the restrictions have been lifted?
         TopicReport
             .update(
                 {
-                    resolvedById: moderatorTokenData.id,
+                    resolvedById: req.user.id,
                     resolvedAt: db.fn('NOW')
                 },
                 {
