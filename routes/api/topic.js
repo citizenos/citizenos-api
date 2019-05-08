@@ -3722,12 +3722,17 @@ module.exports = function (app) {
     /**
      * Resolve a Topic report - mark the Topic report as fixed, thus lifting restrictions on the Topic
      * We don't require /reports/review request to be sent to enable Moderators to act proactively
+     *
+     * @see https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce?argumentsPage=1
      */
-    app.post('/api/topics/:topicId/reports/:reportId/resolve', hasVisibility(Topic.VISIBILITY.public), isModerator(), function (req, res, next) {
+    app.post('/api/topics/:topicId/reports/:reportId/resolve', hasVisibility(Topic.VISIBILITY.public), isModerator(), asyncMiddleware(async function (req, res, next) {
         var topicId = req.params.topicId;
+        var reportId = req.params.reportId;
 
         // FIXME: Do we want to send e-mail to interested parties that the restrictions have been lifted?
-        TopicReport
+        // 4.1 To the User (reporter) who reported the topic
+        // 4.2 To admin/edit Members of the topic
+        await TopicReport
             .update(
                 {
                     resolvedById: req.user.id,
@@ -3735,14 +3740,14 @@ module.exports = function (app) {
                 },
                 {
                     where: {
-                        topicId: topicId
+                        topicId: topicId,
+                        id: reportId
                     }
                 }
-            )
-            .then(function () {
-                return res.ok();
-            });
-    });
+            );
+
+        return res.ok();
+    }));
 
     /**
      * Create Topic Comment
