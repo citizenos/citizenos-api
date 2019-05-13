@@ -33,8 +33,14 @@
   "REPORT_TOPIC_MODERATE_MEMBER": {
     "SUBJECT": "Report #{{report.id}}: Your Citizen OS topic has been reviewed by a moderator"
   },
-  "REPORT_TOPIC_REVIEW_MODERATOR": {
+  "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
     "SUBJECT": "A reported (#{{report.id}}) Citizen OS topic has been revised, please review"
+  },
+  "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
+    "SUBJECT": "Report #{{report.id}}: access to your Citizen OS topic has been restored."
+  },
+  "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
+    "SUBJECT": "Your report (#{{report.id}}) in Citizen OS has been resolved"
   },
   "REPORT": {
     "REPORT_TYPE": {

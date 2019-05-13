@@ -845,10 +845,10 @@ module.exports = function (app) {
      *
      */
     var _sendTopicReport = async function (topicReport) {
-        const infoFetchPromisesToResolve = [];
+        const infoFetchPromises = [];
 
         // Get the topic info
-        infoFetchPromisesToResolve.push(
+        infoFetchPromises.push(
             Topic.findOne({
                 where: {
                     id: topicReport.topicId
@@ -857,7 +857,7 @@ module.exports = function (app) {
         );
 
         // Get reporters info
-        infoFetchPromisesToResolve.push(
+        infoFetchPromises.push(
             User.findOne({
                     where: {
                         id: topicReport.creatorId
@@ -867,11 +867,11 @@ module.exports = function (app) {
         );
 
         // Get Topic edit/admin Member list
-        infoFetchPromisesToResolve.push(
+        infoFetchPromises.push(
             _getTopicMemberUsers(topicReport.topicId, TopicMemberUser.LEVELS.edit)
         );
 
-        const [topic, userReporter, topicMemberList] = await Promise.all(infoFetchPromisesToResolve);
+        const [topic, userReporter, topicMemberList] = await Promise.all(infoFetchPromises);
         const topicModerators = await _getModerators(topic.sourcePartnerId);
 
         const linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
@@ -1016,7 +1016,7 @@ module.exports = function (app) {
 
         const linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
 
-        const sendEmailPromisesToResolve = [];
+        const sendEmailPromiseses = [];
 
         // 2.1 To the User (reporter) who reported the topic - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
         if (userReporter.email) {
@@ -1045,7 +1045,7 @@ module.exports = function (app) {
 
                 return emailClient.sendStringAsync(templateObject.body, emailOptions);
             };
-            sendEmailPromisesToResolve.push(sendReporterEmail());
+            sendEmailPromiseses.push(sendReporterEmail());
         } else {
             logger.info('Could not send e-mail to Topic reporter because e-mail address does not exist', userReporter.id, req.path);
         }
@@ -1078,13 +1078,13 @@ module.exports = function (app) {
 
                     return emailClient.sendStringAsync(templateObject.body, emailOptions);
                 };
-                sendEmailPromisesToResolve.push(sendTopicMemberEmail());
+                sendEmailPromiseses.push(sendTopicMemberEmail());
             } else {
                 logger.info('Could not send e-mail to Topic member because e-mail address does not exist', topicMemberUser.id, req.path);
             }
         });
 
-        return Promise.all(sendEmailPromisesToResolve);
+        return Promise.all(sendEmailPromiseses);
     };
 
     /**
@@ -1114,8 +1114,8 @@ module.exports = function (app) {
         topicModerators.forEach(function (userModerator) {
             if (userModerator.email) {
                 let sendTopicModeratorEmail = async function () {
-                    let templateObject = resolveTemplate('reportTopicReviewModerator', userModerator.language);
-                    let subject = templateObject.translations.REPORT_TOPIC_REVIEW_MODERATOR.SUBJECT
+                    let templateObject = resolveTemplate('reportTopicReportReviewModerator', userModerator.language);
+                    let subject = templateObject.translations.REPORT_TOPIC_REPORT_REVIEW_MODERATOR.SUBJECT
                         .replace('{{report.id}}', topicReport.id);
 
                     let emailOptions = Object.assign(
@@ -1142,6 +1142,114 @@ module.exports = function (app) {
                 sendEmailPromises.push(sendTopicModeratorEmail());
             } else {
                 logger.info('Could not send e-mail to Topic Moderator because e-mail address does not exist', userModerator.id, req.path);
+            }
+        });
+
+        await Promise.all(sendEmailPromises);
+    };
+
+    /**
+     * Send Topic report resolve related e-mails
+     *
+     * @param {object} topicReport TopicReport Sequelize instance
+     *
+     * @returns {Promise}
+     *
+     * @private
+     *
+     * @see Citizen OS Topic moderation 4 - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
+     */
+    var _sendTopicReportResolve = async function (topicReport) {
+        const infoFetchPromises = [];
+
+        // Topic info
+        infoFetchPromises.push(
+            Topic.findOne({
+                where: {
+                    id: topicReport.topicId
+                }
+            }
+        ));
+
+        // Get reporters info
+        infoFetchPromises.push(
+            User.findOne({
+                    where: {
+                        id: topicReport.creatorId
+                    }
+                }
+            )
+        );
+
+        // Get Topic edit/admin Member list
+        infoFetchPromises.push(
+            _getTopicMemberUsers(topicReport.topicId, TopicMemberUser.LEVELS.edit)
+        );
+
+        const [topic, userReporter, topicMemberList] = await Promise.all(infoFetchPromises);
+
+        const linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+
+
+        const sendEmailPromises = [];
+
+        // 4.1 To the User (reporter) who reported the topic - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
+        if (userReporter.email) {
+            var sendReporterEmail = async function () {
+                let templateObject = resolveTemplate('reportTopicReportResolveReporter', userReporter.language);
+                let subject = templateObject.translations.REPORT_TOPIC_REPORT_RESOLVE_REPORTER.SUBJECT
+                    .replace('{{report.id}}', topicReport.id);
+
+                let emailOptions = Object.assign(
+                    _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                    {
+                        subject: subject,
+                        to: userReporter.email,
+                        //Placeholders
+                        userReporter: userReporter,
+                        report: {
+                            createdAt: topicReport.createdAt // FIXME: Date and time formats!
+                        },
+                        topic: topic,
+                        linkViewTopic: linkViewTopic,
+                        linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
+                    }
+                );
+
+                return emailClient.sendStringAsync(templateObject.body, emailOptions);
+            };
+            sendEmailPromises.push(sendReporterEmail());
+        } else {
+            logger.info('Could not send e-mail to Topic reporter because e-mail address does not exist', userReporter.id, req.path);
+        }
+
+
+        // 4.2 To admin/edit Members of the topic - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce?argumentsPage=1
+        topicMemberList.forEach(function (topicMemberUser) {
+            if (topicMemberUser.email) {
+                let sendTopicMemberEmail = async function () {
+                    let templateObject = resolveTemplate('reportTopicReportResolveMember', topicMemberUser.language);
+                    let subject = templateObject.translations.REPORT_TOPIC_REPORT_RESOLVE_MEMBER.SUBJECT
+                        .replace('{{report.id}}', topicReport.id);
+
+                    let emailOptions = Object.assign(
+                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                        {
+                            subject: subject,
+                            to: topicMemberUser.email,
+                            //Placeholders
+                            userMember: topicMemberUser,
+                            topic: topic,
+                            linkViewTopic: linkViewTopic,
+                            linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
+                        }
+                    );
+
+                    return emailClient.sendStringAsync(templateObject.body, emailOptions);
+                };
+                sendEmailPromises.push(sendTopicMemberEmail());
+            } else {
+                logger.info('Could not send e-mail to Topic member because e-mail address does not exist', topicMemberUser.id, req.path);
             }
         });
 
@@ -1279,6 +1387,7 @@ module.exports = function (app) {
         sendTopicReport: _sendTopicReport,
         sendTopicReportModerate: _sendTopicReportModerate,
         sendTopicReportReview: _sendTopicReportReview,
+        sendTopicReportResolve: _sendTopicReportResolve,
         sendGroupInvite: _sendGroupInvite,
         sendCommentReport: _sendCommentReport,
         sendToParliament: _sendToParliament
