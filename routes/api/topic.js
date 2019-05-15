@@ -607,7 +607,10 @@ module.exports = function (app) {
                      \'none\' as "permission.level", \
                      muc.count as "members.users.count", \
                      COALESCE(mgc.count, 0) as "members.groups.count", \
-                     tv."voteId" \
+                     tv."voteId", \
+                     tr."id" AS "report.id", \
+                     tr."moderatedReasonType" AS "report.moderatedReasonType", \
+                     tr."moderatedReasonText" AS "report.moderatedReasonText" \
                      ' + returncolumns + ' \
                 FROM "Topics" t \
                     LEFT JOIN "Users" c ON (c.id = t."creatorId") \
@@ -662,6 +665,7 @@ module.exports = function (app) {
                         LEFT JOIN "Votes" v \
                                 ON v.id = tv."voteId" \
                     ) AS tv ON (tv."topicId" = t.id) \
+                    LEFT JOIN "TopicReports" tr ON (tr."topicId" = t.id AND tr."moderatedById" IS NOT NULL AND tr."resolvedById" IS NULL AND tr."deletedAt" IS NULL) \
                     ' + join + ' \
                 WHERE t.id = :topicId \
                   AND t.visibility = \'public\'\
@@ -1011,6 +1015,11 @@ module.exports = function (app) {
             , uc."connectionData"::jsonb->>\'pid\' AS "creator.pid" \
             , uc."connectionData"::jsonb->\'phoneNumber\' AS "creator.phoneNumber" \
             ';
+
+            returncolumns += ' \
+            , tr."type" AS "report.type" \
+            , tr."text" AS "report.text" \
+            ';
         }
 
         db
@@ -1050,7 +1059,10 @@ module.exports = function (app) {
                         tv."voteId", \
                         u.id as "user.id", \
                         u.name as "user.name", \
-                        u.language as "user.language" \
+                        u.language as "user.language", \
+                        tr.id AS "report.id", \
+                        tr."moderatedReasonType" AS "report.moderatedReasonType", \
+                        tr."moderatedReasonText" AS "report.moderatedReasonText" \
                         ' + returncolumns + ' \
                 FROM "Topics" t \
                         LEFT JOIN ( \
@@ -1126,6 +1138,7 @@ module.exports = function (app) {
                                 ON v.id = tv."voteId" \
                     ) AS tv ON (tv."topicId" = t.id) \
                     LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId \
+                    LEFT JOIN "TopicReports" tr ON (tr."topicId" = t.id AND tr."resolvedById" IS NULL AND tr."deletedAt" IS NULL) \
                     ' + join + ' \
                 WHERE t.id = :topicId \
                     AND t."deletedAt" IS NULL \
@@ -1195,6 +1208,10 @@ module.exports = function (app) {
                                     rows: options
                                 };
 
+                                if(!topic.report.id) {
+                                    delete topic.report;
+                                }
+
                                 return res.ok(topic);
                             },
                             function (err) {
@@ -1203,6 +1220,10 @@ module.exports = function (app) {
                         );
                 } else {
                     delete topic.vote;
+
+                    if(!topic.report.id) {
+                        delete topic.report;
+                    }
 
                     return res.ok(topic);
                 }
@@ -1247,6 +1268,10 @@ module.exports = function (app) {
                                         rows: options
                                     };
 
+                                    if (!topic.report.id) {
+                                        delete topic.report;
+                                    }
+
                                     return res.ok(topic);
                                 },
                                 function (err) {
@@ -1255,6 +1280,10 @@ module.exports = function (app) {
                             );
                     } else {
                         delete topic.vote;
+
+                        if (!topic.report.id) {
+                            delete topic.report;
+                        }
 
                         return res.ok(topic);
                     }
