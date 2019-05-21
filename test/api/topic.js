@@ -7950,29 +7950,32 @@ suite('Users', function () {
 
                                 [userCreator, userModerator, userReporter] = results;
 
-                                topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null, function (err, res) {
-                                    if (err) return done(err);
-
-                                    topic = res.body.data;
-
-                                    topicReportCreate(agentReporter, topic.id, reportType, reportText, function (err, res) {
-                                        if (err) return done(err);
-
-                                        report = res.body.data;
-
-                                        // Create a moderator in DB so that the Moderation email flow is executed
-                                        Moderator
-                                            .create({
-                                                userId: userModerator.id
-                                            })
-                                            .then(function () {
-                                                done();
-                                            })
-                                            .catch(done);
-                                    });
-                                });
+                                Moderator
+                                    .create({
+                                        userId: userModerator.id
+                                    })
+                                    .then(function () {
+                                        done();
+                                    })
+                                    .catch(done);
                             }
                         );
+                });
+
+                setup(function (done) {
+                    topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null, function (err, res) {
+                        if (err) return done(err);
+
+                        topic = res.body.data;
+
+                        topicReportCreate(agentReporter, topic.id, reportType, reportText, function (err, res) {
+                            if (err) return done(err);
+
+                            report = res.body.data;
+
+                            done();
+                        });
+                    });
                 });
 
                 test('Success', function (done) {
@@ -7994,6 +7997,67 @@ suite('Users', function () {
 
                             return done();
                         });
+                    });
+                });
+
+                test('Fail - 40012 - Report has become invalid cause the report has been already moderated', function (done) {
+                    var type = Report.TYPES.spam;
+                    var text = 'Test: contains spam.';
+
+                    topicReportModerate(agentModerator, topic.id, report.id, type, text, function (err, res) {
+                        if (err) return done(err);
+
+                        _topicReportModerate(agentModerator, topic.id, report.id, type, text, 400, function (err, res) {
+                            if (err) return done(err);
+
+                            var expectedBody = {
+                                status: {
+                                    code: 40012,
+                                    message: 'Report has become invalid cause the report has been already moderated'
+                                }
+                            };
+                            assert.deepEqual(res.body, expectedBody);
+
+                            done();
+                        });
+                    });
+                });
+
+                test('Fail - 40000 - type cannot be null', function (done) {
+                    var type = null;
+                    var text = 'Test: contains spam.';
+
+                    _topicReportModerate(agentModerator, topic.id, report.id, type, text, 400, function (err, res) {
+                        if (err) return done(err);
+
+                        var expectedBody = {
+                            status: {code: 40000},
+                            errors: {
+                                moderatedReasonType: 'TopicReport.moderatedReasonType cannot be null when moderator is set'
+                            }
+                        };
+                        assert.deepEqual(res.body, expectedBody);
+
+                        done();
+                    });
+                });
+
+                test('Fail - 40000 - text cannot be null', function (done) {
+                    var type = Report.TYPES.spam;
+                    var text = null;
+
+                    _topicReportModerate(agentModerator, topic.id, report.id, type, text, 400, function (err, res) {
+                        if (err) return done(err);
+
+                        var expectedBody = {
+                            status: {code: 40000},
+                            errors: {
+                                moderatedReasonText: 'Text can be 1 to 2048 characters long.'
+                            }
+                        };
+                        assert.deepEqual(res.body, expectedBody);
+
+                        done();
                     });
                 });
             });
@@ -8209,7 +8273,8 @@ suite('Users', function () {
             });
         });
     });
-});
+})
+;
 
 // API - /api/topics - unauthenticated endpoints
 suite('Topics', function () {

@@ -49,12 +49,24 @@ module.exports = function (sequelize, DataTypes) {
             type: DataTypes.ENUM,
             values: _.values(Report.TYPES),
             allowNull: true,
-            comment: 'Moderation reason - verbal abuse, obscene content, hate speech etc..'
+            comment: 'Moderation reason - verbal abuse, obscene content, hate speech etc..',
+            validate: {
+                doNotAllowNullWhenModeratorIsSet (value) {
+                    if ((this.moderatedAt || this.moderatedById) && !value) {
+                        throw new Error('TopicReport.moderatedReasonType cannot be null when moderator is set');
+                    }
+                }
+            }
         },
         moderatedReasonText: {
             type: DataTypes.STRING(2048),
             allowNull: true,
             validate: {
+                doNotAllowNullWhenModeratorIsSet (value) {
+                    if ((this.moderatedAt || this.moderatedById) && !value) {
+                        throw new Error('TopicReport.moderatedReasonText cannot be null when moderator is set!');
+                    }
+                },
                 len: {
                     args: [1, 2048],
                     msg: 'Text can be 1 to 2048 characters long.'

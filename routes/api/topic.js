@@ -1208,7 +1208,7 @@ module.exports = function (app) {
                                     rows: options
                                 };
 
-                                if(!topic.report.id) {
+                                if (!topic.report.id) {
                                     delete topic.report;
                                 }
 
@@ -1221,7 +1221,7 @@ module.exports = function (app) {
                 } else {
                     delete topic.vote;
 
-                    if(!topic.report.id) {
+                    if (!topic.report.id) {
                         delete topic.report;
                     }
 
@@ -3625,97 +3625,63 @@ module.exports = function (app) {
     /**
      * Moderate a Topic - moderator approves a report, thus applying restrictions to the Topic
      */
-    app.post('/api/topics/:topicId/reports/:reportId/moderate', hasVisibility(Topic.VISIBILITY.public), isModerator(), asyncMiddleware(async function (req, res, next) {
+    app.post(['/api/topics/:topicId/reports/:reportId/moderate', '/api/users/:userId/topics/:topicId/reports/:reportId/moderate'], hasVisibility(Topic.VISIBILITY.public), isModerator(), asyncMiddleware(async function (req, res, next) {
         const moderatedReasonType = req.body.type; // Delete reason type which is provided in case deleted/hidden by moderator due to a user report
         const moderatedReasonText = req.body.text; // Free text with reason why the comment was deleted/hidden
 
-        const topicReports = await db
-            .query(
-                '\
-                    SELECT \
-                        t."id" as "topic.id", \
-                        t."title" as "topic.title", \
-                        t."updatedAt" as "topic.updatedAt", \
-                        tr."id" as "report.id", \
-                        tr."creatorId" as "report.creatorId", \
-                        tr."createdAt" as "report.createdAt", \
-                        tr."resolvedById" as "report.resolvedById", \
-                        tr."moderatedById" as "report.moderatedById" \
-                    FROM "TopicReports" tr \
-                    LEFT JOIN "Topics" t ON (t.id = tr."topicId") \
-                    WHERE tr."topicId" = :topicId AND tr."id" = :reportId \
-                    AND t."deletedAt" IS NULL \
-                    AND tr."deletedAt" IS NULL \
-                ;',
-                {
-                    replacements: {
-                        topicId: req.params.topicId,
-                        reportId: req.params.reportId
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true,
-                    nest: true
-                }
-            );
+        const topic = await Topic.findOne({
+            where: {
+                id: req.params.topicId
+            }
+        });
 
-        const topicReportRead = topicReports[0];
+        let topicReport = await TopicReport.findOne({
+            where: {
+                id: req.params.reportId,
+                topicId: req.params.topicId
+            }
+        });
 
-        if (!topicReportRead) {
+        if (!topic || !topicReport) {
             return res.notFound();
         }
 
-        const topic = topicReportRead.topic;
-        const report = topicReportRead.report;
-
-        // If Topic has been updated since the Report was made, deny moderation cause the text may have changed.
-        if (topic.updatedAt.getTime() > report.createdAt.getTime()) {
-            return res.badRequest('Report has become invalid cause Topic has been updated after the report', 10);
-        }
-
-        if (report.resolvedById) {
+        if (topicReport.resolvedById) {
             return res.badRequest('Report has become invalid cause the report has been already resolved', 11);
         }
 
-        if (report.moderatedById) {
+        if (topicReport.moderatedById) {
             return res.badRequest('Report has become invalid cause the report has been already moderated', 12);
         }
 
-        const topicReportUpdateResult = await db
+        topicReport = await db
             .transaction(function (t) {
-                return TopicReport
-                    .update(
+                topicReport.moderatedById = req.user.id;
+                topicReport.moderatedAt = db.fn('NOW');
+                topicReport.moderatedReasonType = moderatedReasonType || ''; // HACK: If Model has "allowNull: true", it will skip all validators when value is "null"
+                topicReport.moderatedReasonText = moderatedReasonText || '';  // HACK: If Model has "allowNull: true", it will skip all validators when value is "null"
+
+                return topicReport
+                    .save(
                         {
-                            moderatedById: req.user.id,
-                            moderatedAt: db.fn('NOW'),
-                            moderatedReasonType: moderatedReasonType,
-                            moderatedReasonText: moderatedReasonText
-                        },
-                        {
-                            where: {
-                                id: report.id
-                            },
-                            returning: true // FIXME: When activities come a long, we need to return
-                        },
-                        {
-                            transaction: t
+                            transaction: t,
+                            returning: true
                         }
                     );
             });
-
-        const topicReportUpdated = topicReportUpdateResult[1][0];
 
         await emailLib.sendTopicReportModerate(
             // Pass on the Topic info we loaded, don't need to load Topic again.
             Object.assign(
                 {},
-                topicReportUpdated.toJSON(),
+                topicReport.toJSON(),
                 {
-                    topic: topicReportRead.topic
+                    topic: topic
                 }
             )
         );
 
-        return res.ok(topicReportUpdated);
+        return res.ok(topicReport);
     }));
 
     /** Send a Topic report for review - User let's Moderators know that the violations have been corrected **/
