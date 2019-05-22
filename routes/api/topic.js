@@ -665,7 +665,7 @@ module.exports = function (app) {
                         LEFT JOIN "Votes" v \
                                 ON v.id = tv."voteId" \
                     ) AS tv ON (tv."topicId" = t.id) \
-                    LEFT JOIN "TopicReports" tr ON (tr."topicId" = t.id AND tr."moderatedById" IS NOT NULL AND tr."resolvedById" IS NULL AND tr."deletedAt" IS NULL) \
+                    LEFT JOIN "TopicReports" tr ON (tr."topicId" = t.id AND tr."resolvedById" IS NULL AND tr."deletedAt" IS NULL) \
                     ' + join + ' \
                 WHERE t.id = :topicId \
                   AND t.visibility = \'public\'\
