@@ -8142,7 +8142,7 @@ suite('Users', function () {
                     });
                 });
 
-                test('Fail - 403 - Unauthorized, restricted to Users with access', function (done) {
+                test('Fail - 40300 - Unauthorized, restricted to Users with access', function (done) {
                     _topicReportsReview(agentReporter, userReporter.id, topic.id, report.id, 'Please review, I have made many changes', 403, done);
                 });
 
@@ -8152,47 +8152,54 @@ suite('Users', function () {
                             return done(err);
                         }
 
-                        var expectedStatus = {
-                            code: 40001,
-                            message: 'Parameter "text" is required'
-                        };
+                        var expectedBody = {
+                            status: {
+                                code: 40001,
+                                message: 'Bad request'
+                            },
+                            errors: {text: 'Parameter "text" has to be between 10 and 4000 characters'}
+                        }
 
-                        assert.deepEqual(res.body.status, expectedStatus);
+                        assert.deepEqual(res.body, expectedBody);
 
                         done();
                     });
                 });
 
-                test('Fail - 40002 - Review text too short', function (done) {
+                test('Fail - 40001 - Review text too short', function (done) {
                     _topicReportsReview(agentCreator, userCreator.id, topic.id, report.id, 'x', 400, function (err, res) {
                         if (err) {
                             return done(err);
                         }
 
-                        var expectedStatus = {
-                            code: 40002,
-                            message: 'Parameter "text" has to be between 10 and 4000 characters'
-                        };
-
-                        assert.deepEqual(res.body.status, expectedStatus);
+                        var expectedBody = {
+                            status: {
+                                code: 40001,
+                                message: 'Bad request'
+                            },
+                            errors: {text: 'Parameter "text" has to be between 10 and 4000 characters'}
+                        }
+                        assert.deepEqual(res.body, expectedBody);
 
                         done();
                     });
                 });
 
-                test('Fail - 40002 - Review text too long', function (done) {
+                test('Fail - 40001 - Review text too long', function (done) {
                     var text = new Array(4002).join('a');
                     _topicReportsReview(agentCreator, userCreator.id, topic.id, report.id, text, 400, function (err, res) {
                         if (err) {
                             return done(err);
                         }
 
-                        var expectedStatus = {
-                            code: 40002,
-                            message: 'Parameter "text" has to be between 10 and 4000 characters'
-                        };
-
-                        assert.deepEqual(res.body.status, expectedStatus);
+                        var expectedBody = {
+                            status: {
+                                code: 40001,
+                                message: 'Bad request'
+                            },
+                            errors: {text: 'Parameter "text" has to be between 10 and 4000 characters'}
+                        }
+                        assert.deepEqual(res.body, expectedBody);
 
                         done();
                     });

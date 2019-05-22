@@ -3690,12 +3690,8 @@ module.exports = function (app) {
         const reportId = req.params.reportId;
         const text = req.body.text;
 
-        if (!text) {
-            return res.badRequest('Parameter "text" is required', 1);
-        }
-
-        if (text.length < 10 || text.length > 4000) {
-            return res.badRequest('Parameter "text" has to be between 10 and 4000 characters', 2);
+        if (!text || text.length < 10 || text.length > 4000) {
+            return res.badRequest(null, 1, {text: 'Parameter "text" has to be between 10 and 4000 characters'});
         }
 
         var topicReport = await TopicReport.findOne({
@@ -3720,7 +3716,7 @@ module.exports = function (app) {
      *
      * @see https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce?argumentsPage=1
      */
-    app.post('/api/topics/:topicId/reports/:reportId/resolve', hasVisibility(Topic.VISIBILITY.public), isModerator(), asyncMiddleware(async function (req, res, next) {
+    app.post(['/api/topics/:topicId/reports/:reportId/resolve', '/api/users/:userId/topics/:topicId/reports/:reportId/resolve'], hasVisibility(Topic.VISIBILITY.public), isModerator(), asyncMiddleware(async function (req, res, next) {
         const topicId = req.params.topicId;
         const reportId = req.params.reportId;
 
