@@ -294,6 +294,11 @@ module.exports = function (app) {
         });
     };
 
+    /**
+     * NOTE! This does not block access in case of not being a Moderator, but only adds moderator flag to user object.
+     *
+     * @returns {Function}
+     */
     var isModerator = function () {
         return function (req, res, next) {
             var topicId = req.params.topicId;
@@ -324,6 +329,38 @@ module.exports = function (app) {
                         return next(err);
                     }
                 )
+                .catch(next);
+        };
+    };
+
+    /**
+     * Middleware to check for Moderator permissions. Rejects request if there are no Moderator permissions.
+     *
+     * @returns {Function} Express middleware function
+     */
+    var hasPermissionModerator = function () {
+        return function (req, res, next) {
+            var topicId = req.params.topicId;
+            var userId;
+
+            if (req.user) {
+                userId = req.user.id;
+            }
+
+            if (!topicId || !userId) {
+                return res.unauthorised();
+            }
+
+            _isModerator(topicId, userId)
+                .then(function(result){
+                    if (result) {
+                        req.user.moderator = result.isModerator;
+
+                        next(null, req, res);
+                    } else {
+                        return res.unauthorised();
+                    }
+                })
                 .catch(next);
         };
     };
@@ -3579,7 +3616,7 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-api/issues/5
      */
-    app.get(['/api/topics/:topicId/reports/:reportId', '/api/users/:userId/topics/:topicId/reports/:reportId'], hasVisibility(Topic.VISIBILITY.public), isModerator(), asyncMiddleware(async function (req, res, next) {
+    app.get(['/api/topics/:topicId/reports/:reportId', '/api/users/:userId/topics/:topicId/reports/:reportId'], hasVisibility(Topic.VISIBILITY.public), hasPermissionModerator(), asyncMiddleware(async function (req, res, next) {
         const topicReports = await db
             .query(
                 '\
@@ -3625,7 +3662,7 @@ module.exports = function (app) {
     /**
      * Moderate a Topic - moderator approves a report, thus applying restrictions to the Topic
      */
-    app.post(['/api/topics/:topicId/reports/:reportId/moderate', '/api/users/:userId/topics/:topicId/reports/:reportId/moderate'], hasVisibility(Topic.VISIBILITY.public), isModerator(), asyncMiddleware(async function (req, res, next) {
+    app.post(['/api/topics/:topicId/reports/:reportId/moderate', '/api/users/:userId/topics/:topicId/reports/:reportId/moderate'], hasVisibility(Topic.VISIBILITY.public), hasPermissionModerator(), asyncMiddleware(async function (req, res, next) {
         const moderatedReasonType = req.body.type; // Delete reason type which is provided in case deleted/hidden by moderator due to a user report
         const moderatedReasonText = req.body.text; // Free text with reason why the comment was deleted/hidden
 
@@ -3716,7 +3753,7 @@ module.exports = function (app) {
      *
      * @see https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce?argumentsPage=1
      */
-    app.post(['/api/topics/:topicId/reports/:reportId/resolve', '/api/users/:userId/topics/:topicId/reports/:reportId/resolve'], hasVisibility(Topic.VISIBILITY.public), isModerator(), asyncMiddleware(async function (req, res, next) {
+    app.post(['/api/topics/:topicId/reports/:reportId/resolve', '/api/users/:userId/topics/:topicId/reports/:reportId/resolve'], hasVisibility(Topic.VISIBILITY.public), hasPermissionModerator(), asyncMiddleware(async function (req, res, next) {
         const topicId = req.params.topicId;
         const reportId = req.params.reportId;
 

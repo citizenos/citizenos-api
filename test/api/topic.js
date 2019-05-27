@@ -8158,7 +8158,7 @@ suite('Users', function () {
                                 message: 'Bad request'
                             },
                             errors: {text: 'Parameter "text" has to be between 10 and 4000 characters'}
-                        }
+                        };
 
                         assert.deepEqual(res.body, expectedBody);
 
@@ -8178,7 +8178,8 @@ suite('Users', function () {
                                 message: 'Bad request'
                             },
                             errors: {text: 'Parameter "text" has to be between 10 and 4000 characters'}
-                        }
+                        };
+
                         assert.deepEqual(res.body, expectedBody);
 
                         done();
@@ -8198,7 +8199,8 @@ suite('Users', function () {
                                 message: 'Bad request'
                             },
                             errors: {text: 'Parameter "text" has to be between 10 and 4000 characters'}
-                        }
+                        };
+
                         assert.deepEqual(res.body, expectedBody);
 
                         done();
@@ -8261,7 +8263,15 @@ suite('Users', function () {
                                         var type = Report.TYPES.spam;
                                         var text = 'Test: contains spam.';
 
-                                        topicReportModerate(agentModerator, topic.id, report.id, type, text, done);
+                                        // Create a moderator in DB so that the Moderation email flow is executed
+                                        Moderator
+                                            .create({
+                                                userId: userModerator.id
+                                            })
+                                            .then(function () {
+                                                topicReportModerate(agentModerator, topic.id, report.id, type, text, done);
+                                            })
+                                            .catch(done);
                                     });
                                 });
                             }
