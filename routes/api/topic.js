@@ -354,7 +354,7 @@ module.exports = function (app) {
             }
 
             _isModerator(topicId, userId)
-                .then(function(result){
+                .then(function (result) {
                     if (result) {
                         req.user.moderator = result.isModerator;
 

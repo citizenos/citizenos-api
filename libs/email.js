@@ -95,7 +95,8 @@ module.exports = function (app) {
 
         const templateObj = {
             body: null,
-            translations: null
+            translations: null,
+            language: lang
         };
 
         let cachedTemplateObj = templateCache[pathTemplate];
@@ -1035,7 +1036,8 @@ module.exports = function (app) {
                         report: {
                             id: topicReport.id,
                             moderatedReasonType: templateObject.translations.REPORT.REPORT_TYPE[topicReport.moderatedReasonType.toUpperCase()],
-                            moderatedReasonText: topicReport.moderatedReasonText
+                            moderatedReasonText: topicReport.moderatedReasonText,
+                            createdAt: moment(topicReport.createdAt).locale(templateObject.language).format('LLL Z')
                         },
                         topic: topic,
                         linkViewTopic: linkViewTopic,
@@ -1068,7 +1070,8 @@ module.exports = function (app) {
                             report: {
                                 id: topicReport.id,
                                 moderatedReasonType: templateObject.translations.REPORT.REPORT_TYPE[topicReport.moderatedReasonType.toUpperCase()],
-                                moderatedReasonText: topicReport.moderatedReasonText
+                                moderatedReasonText: topicReport.moderatedReasonText,
+                                createdAt: moment(topicReport.createdAt).locale(templateObject.language).format('LLL Z')
                             },
                             topic: topic,
                             linkViewTopic: linkViewTopic,
@@ -1208,7 +1211,7 @@ module.exports = function (app) {
                         //Placeholders
                         userReporter: userReporter,
                         report: {
-                            createdAt: topicReport.createdAt // FIXME: Date and time formats!
+                            createdAt: moment(topicReport.createdAt).locale(templateObject.language).format('LLL Z')
                         },
                         topic: topic,
                         linkViewTopic: linkViewTopic,

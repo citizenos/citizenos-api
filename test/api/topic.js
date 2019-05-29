@@ -10369,7 +10369,8 @@ suite('Topics', function () {
                                             where: {
                                                 id: comment.id
                                             },
-                                            paranoid: false,}
+                                            paranoid: false,
+                                        }
                                     )
                                     .then(function () {
                                         _topicCommentReportModerate(request.agent(app), topic.id, comment.id, report.id, token, moderateType, moderateText, 400, function (err, res) {
