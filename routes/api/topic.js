@@ -245,6 +245,8 @@ module.exports = function (app) {
                         return res.notFound();
                     }
                     next();
+
+                    return null; // NOTE: Avoids Bluebird throwing a warning about not returning a promise - http://goo.gl/rRqMUw
                 })
                 .catch(next);
         };
