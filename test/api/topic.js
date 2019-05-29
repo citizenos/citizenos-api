@@ -7803,6 +7803,20 @@ suite('Users', function () {
                     });
                 });
 
+
+                test('Fail - 40100 - Authentication is required', function (done) {
+                    const reportType = Report.TYPES.hate;
+                    const reportText = 'Topic hate speech report for private Topic test';
+
+                    topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.private, null, null, null, null, function (err, res) {
+                        if (err) return done(err);
+
+                        topic = res.body.data;
+
+                        _topicReportCreate(request.agent(app), topic.id, reportType, reportText, 401, done);
+                    });
+                });
+
             });
 
             suite('Read', function () {
@@ -7899,6 +7913,10 @@ suite('Users', function () {
 
                         done();
                     });
+                });
+
+                test('Fail - 40100 - Only moderators can read a report', function (done) {
+                    _topicReportRead(agentCreator, topic.id, report.id, 401, done);
                 });
             });
 
@@ -8054,6 +8072,13 @@ suite('Users', function () {
                         done();
                     });
                 });
+
+                test('Fail - 40100 - Moderation only allowed for Moderators', function (done) {
+                    var type = Report.TYPES.spam;
+                    var text = null;
+
+                    _topicReportModerate(agentCreator, topic.id, report.id, type, text, 401, done);
+                });
             });
 
             suite('Review', function () {
@@ -8127,13 +8152,7 @@ suite('Users', function () {
                 });
 
                 test('Success', function (done) {
-                    topicReportsReview(agentCreator, userCreator.id, topic.id, report.id, 'Please review, I have made many changes', function (err, res) {
-                        if (err) {
-                            return done(err);
-                        }
-
-                        done();
-                    });
+                    topicReportsReview(agentCreator, userCreator.id, topic.id, report.id, 'Please review, I have made many changes', done);
                 });
 
                 test('Fail - 40300 - Unauthorized, restricted to Users with access', function (done) {
@@ -8199,6 +8218,10 @@ suite('Users', function () {
 
                         done();
                     });
+                });
+
+                test('Fail - 40300 - Review requests are only allowed for Topic members', function (done) {
+                    _topicReportsReview(agentReporter, userReporter.id, topic.id, report.id, 'Please review, I have made many changes', 403, done);
                 });
             });
 
@@ -8273,13 +8296,11 @@ suite('Users', function () {
                 });
 
                 test('Success', function (done) {
-                    topicReportsResolve(agentModerator, topic.id, report.id, function (err, res) {
-                        if (err) {
-                            return done(err);
-                        }
+                    topicReportsResolve(agentModerator, topic.id, report.id, done);
+                });
 
-                        done();
-                    });
+                test('Fail - 40100 - Only Moderators can resolve a report', function (done) {
+                    _topicReportsResolve(agentReporter, topic.id, report.id, 401, done);
                 });
             });
         });
