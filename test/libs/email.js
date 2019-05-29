@@ -67,9 +67,10 @@ suite('Email', function () {
         test('Success', function (done) {
             emailLib
                 .sendTopicReport(report)
-                .then(function (res) {
+                .then(function () {
                     done();
-                });
+                })
+                .catch(done);
         });
 
     });

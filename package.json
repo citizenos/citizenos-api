@@ -91,7 +91,7 @@
     "grunt-cli": "1.2.0",
     "grunt-concurrent": "2.3.1",
     "grunt-contrib-watch": "1.0.0",
-    "grunt-eslint": "20.1.0",
+    "grunt-eslint": "21.0.0",
     "grunt-exec": "3.0.0",
     "grunt-markdown-toc": "0.0.2",
     "grunt-plantuml": "0.2.3",
