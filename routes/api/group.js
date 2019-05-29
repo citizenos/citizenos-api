@@ -8,7 +8,7 @@ module.exports = function (app) {
     var logger = app.get('logger');
     var models = app.get('models');
     var db = models.sequelize;
-    var Op = db.Op;
+    var Op = db.Sequelize.Op;
     var _ = app.get('lodash');
     var cosActivities = app.get('cosActivities');
     var validator = app.get('validator');
@@ -303,7 +303,7 @@ module.exports = function (app) {
      */
     app.delete('/api/users/:userId/groups/:groupId', loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, null), function (req, res, next) {
         Group
-            .findById(req.params.groupId)
+            .findByPk(req.params.groupId)
             .then(function (group) {
                 if (!group) {
                     res.notFound('No such Group found.');
@@ -1136,7 +1136,7 @@ module.exports = function (app) {
         }
         // TODO: .findAndCount does 2 queries, either write a raw query using PG window functions (http://www.postgresql.org/docs/9.3/static/tutorial-window.html) or wait for Sequelize to fix it - https://github.com/sequelize/sequelize/issues/2465
         Group
-            .findAndCount({
+            .findAndCountAll({
                 where: where,
                 include: [
                     {

@@ -1703,17 +1703,21 @@ suite('Auth', function () {
             suite('Send', function () {
                 test('Success', function (done) {
                     passwordResetSend(agent, email, function () {
-                        User.find({
-                            where: {
-                                email: email
-                            }
-                        }).then(function (user) {
-                            var passwordResetCode = user.passwordResetCode;
-                            assert.property(user, 'passwordResetCode');
-                            assert.isNotNull(passwordResetCode);
-                            assert.lengthOf(passwordResetCode, 36);
-                            done();
-                        });
+                        User
+                            .findOne({
+                                where: {
+                                    email: email
+                                }
+                            })
+                            .then(function (user) {
+                                var passwordResetCode = user.passwordResetCode;
+
+                                assert.property(user, 'passwordResetCode');
+                                assert.isNotNull(passwordResetCode);
+                                assert.lengthOf(passwordResetCode, 36);
+
+                                done();
+                            });
                     });
                 });
 
@@ -1771,7 +1775,7 @@ suite('Auth', function () {
                         }
 
                         return User
-                            .find({
+                            .findOne({
                                 where: {
                                     email: email
                                 }
@@ -1875,7 +1879,7 @@ suite('Auth', function () {
                             assert.equal(email, res.body.data.email);
 
                             return User
-                                .find({
+                                .findOne({
                                     where: {
                                         email: email
                                     }

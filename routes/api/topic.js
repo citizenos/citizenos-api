@@ -921,7 +921,6 @@ module.exports = function (app) {
                         return topic
                             .save({transaction: t})
                             .then(function () {
-
                                 // The creator is also the first member
                                 return topic
                                     .addMemberUser(// Magic method by Sequelize - https://github.com/sequelize/sequelize/wiki/API-Reference-Associations#hasmanytarget-options
@@ -1600,7 +1599,7 @@ module.exports = function (app) {
      */
     app.delete('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), function (req, res, next) {
         Topic
-            .findById(req.params.topicId)
+            .findByPk(req.params.topicId)
             .then(function (topic) {
                 if (!topic) {
                     res.notFound('No such topic found.');

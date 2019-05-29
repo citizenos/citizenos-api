@@ -3,7 +3,8 @@
 * Default Node.JS version upgraded to 10.13.0.
 * BREAKING CHANGE: Started using **async/await**, so Node.JS >=7.6.0 is require
 * FEATURE: Added Topic Report API - https://github.com/citizenos/citizenos-api/issues/5
-* DEVELOPMENT: `asyncMiddleware` added so that `async/await` can be used in Express routes. 
+* DEVELOPMENT: `asyncMiddleware` added so that `async/await` can be used in Express routes.
+* Upgraded to Sequelize 5.x.
 
 ## 2019-04-29
 

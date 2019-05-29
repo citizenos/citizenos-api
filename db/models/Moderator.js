@@ -1,5 +1,7 @@
 'use strict';
 
+const Sequelize = require('sequelize');
+
 /**
  * Moderator
  *
@@ -12,7 +14,7 @@
  */
 module.exports = function (sequelize, DataTypes) {
 
-    var Op = sequelize.Op;
+    var Op = Sequelize.Op;
 
     var Moderator = sequelize.define(
         'Moderator',

@@ -69,7 +69,7 @@
     "pg-query-stream": "0.7.0",
     "prerender-node": "2.4.0",
     "sanitize-filename": "1.4.4",
-    "sequelize": "4.39.0",
+    "sequelize": "5.8.7",
     "sequelize-cli": "4.1.1",
     "soap": "0.9.4",
     "stream_upload": "0.0.3",

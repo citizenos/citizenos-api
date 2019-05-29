@@ -146,7 +146,7 @@ suite('User', function () {
                         }
 
                         User
-                            .find({
+                            .findOne({
                                 where: {id: user.id}
                             })
                             .then(function (u) {
@@ -171,7 +171,7 @@ suite('User', function () {
             userUpdate(agent, user.id, nameNew, emailNew, passwordNew, null, function () {
                 auth.logout(agent, function () {
                     User
-                        .find({
+                        .findOne({
                             where: {id: user.id}
                         })
                         .then(function (u) {
@@ -193,7 +193,7 @@ suite('User', function () {
                                         }
                 
                                         User
-                                            .find({
+                                            .findOne({
                                                 where: {id: user.id}
                                             })
                                             .then(function (u) {
@@ -223,7 +223,7 @@ suite('User', function () {
                 }
 
                 User
-                    .find({
+                    .findOne({
                         where: {id: user.id}
                     })
                     .then(function (u) {
@@ -253,7 +253,7 @@ suite('User', function () {
 
             userUpdate(agent, user.id, null, null, null, newLanguage, function () {
                 User
-                    .find({
+                    .findOne({
                         where: {id: user.id}
                     })
                     .then(function (u) {
@@ -282,7 +282,7 @@ suite('User', function () {
                 .expect('Content-Type', /json/)
                 .end(function () {
                     User
-                        .find({
+                        .findOne({
                             where: {id: user.id}
                         })
                         .then(function (u) {

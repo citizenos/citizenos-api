@@ -14,7 +14,7 @@ module.exports = function (app) {
     var passport = app.get('passport');
     var models = app.get('models');
     var db = models.sequelize;
-    var Op = db.Op;
+    var Op = db.Sequelize.Op;
     var cosBdoc = app.get('cosBdoc');
     var cosActivities = app.get('cosActivities');
     var jwt = app.get('jwt');
@@ -396,7 +396,7 @@ module.exports = function (app) {
         var passwordResetCode = req.body.passwordResetCode;
 
         User
-            .find({
+            .findOne({
                 where: {
                     email: email,
                     passwordResetCode: passwordResetCode

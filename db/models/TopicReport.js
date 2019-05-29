@@ -90,7 +90,7 @@ module.exports = function (sequelize, DataTypes) {
             allowNull: true,
             comment: 'Time when the Report was marked as resolved.'
         }
-    }, Report.attributes);
+    }, Report.rawAttributes);
 
     var TopicReport = sequelize.define('TopicReport', attributes);
 

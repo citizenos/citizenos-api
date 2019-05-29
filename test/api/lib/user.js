@@ -43,7 +43,7 @@ module.exports = function (app) {
             }
 
             User
-                .find({
+                .findOne({
                     where: {
                         email: email
                     }

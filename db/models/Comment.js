@@ -213,7 +213,7 @@ module.exports = function (sequelize, DataTypes) {
      *
      * @see http://sequelize.readthedocs.org/en/latest/docs/hooks/
      */
-    Comment.hook('beforeValidate', function (comment) {
+    Comment.addHook('beforeValidate', function (comment) {
         if (!comment.parentId) {
             comment.parentId = comment.id;
         }
