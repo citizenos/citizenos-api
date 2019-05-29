@@ -107,12 +107,6 @@ suite('User', function () {
             .finally(done);
     });
 
-    suiteTeardown(function (done) {
-        shared
-            .closeDb()
-            .finally(done);
-    });
-
     suite('Update', function () {
         var agent = request.agent(app);
 

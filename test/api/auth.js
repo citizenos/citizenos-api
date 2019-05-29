@@ -450,12 +450,6 @@ suite('Auth', function () {
             .finally(done);
     });
 
-    suiteTeardown(function (done) {
-        shared
-            .closeDb()
-            .finally(done);
-    });
-
     suite('Login', function () {
 
         suite('Username & password', function () {

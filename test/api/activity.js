@@ -74,12 +74,6 @@ suite('Users', function () {
             .finally(done);
     });
 
-    suiteTeardown(function (done) {
-        shared
-            .closeDb()
-            .finally(done);
-    });
-
     // API - /api/users/:userId/activities*
     suite('Activities', function () {
 

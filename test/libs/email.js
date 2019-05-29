@@ -21,12 +21,6 @@ suite('Email', function () {
             .finally(done);
     });
 
-    suiteTeardown(function (done) {
-        shared
-            .closeDb()
-            .finally(done);
-    });
-
     suite('sendTopicReport', function () {
         var agent = request.agent(app);
         var user;

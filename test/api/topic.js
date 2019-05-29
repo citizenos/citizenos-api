@@ -1374,12 +1374,6 @@ suite('Users', function () {
             .finally(done);
     });
 
-    suiteTeardown(function (done) {
-        shared
-            .closeDb()
-            .finally(done);
-    });
-
     // API - /api/users/:userId/topics*
     suite('Topics', function () {
 
@@ -8299,12 +8293,6 @@ suite('Topics', function () {
     suiteSetup(function (done) {
         shared
             .syncDb()
-            .finally(done);
-    });
-
-    suiteTeardown(function (done) {
-        shared
-            .closeDb()
             .finally(done);
     });
 

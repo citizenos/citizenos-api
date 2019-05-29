@@ -37,12 +37,6 @@ suite('Partners', function () {
             .finally(done);
     });
 
-    suiteTeardown(function (done) {
-        shared
-            .closeDb()
-            .finally(done);
-    });
-
     suite('Topics', function () {
 
         suite('Read', function () {

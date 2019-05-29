@@ -9,12 +9,6 @@ suite('cosJwt', function () {
     var jwt = app.get('jwt');
     var config = app.get('config');
 
-    suiteTeardown(function (done) {
-        shared
-            .closeDb()
-            .finally(done);
-    });
-
     test('Success', function (done) {
         var testPayload = {foo: 'bar'};
         var testAudience = 'POST /api/foo/bar';
