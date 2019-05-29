@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 10.7 (Ubuntu 10.7-1.pgdg16.04+1)
+-- Dumped from database version 10.6 (Ubuntu 10.6-1.pgdg16.04+1)
 -- Dumped by pg_dump version 10.6 (Ubuntu 10.6-1.pgdg16.04+1)
 
 SET statement_timeout = 0;
@@ -27,20 +27,6 @@ CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
 --
 
 COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
-
-
---
--- Name: pg_stat_statements; Type: EXTENSION; Schema: -; Owner: -
---
-
-CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA public;
-
-
---
--- Name: EXTENSION pg_stat_statements; Type: COMMENT; Schema: -; Owner: -
---
-
-COMMENT ON EXTENSION pg_stat_statements IS 'track execution statistics of all SQL statements executed';
 
 
 --
@@ -135,6 +121,34 @@ CREATE TYPE public."enum_TopicMemberUsers_level" AS ENUM (
     'read',
     'edit',
     'admin'
+);
+
+
+--
+-- Name: enum_TopicReports_moderatedReasonType; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public."enum_TopicReports_moderatedReasonType" AS ENUM (
+    'abuse',
+    'obscene',
+    'spam',
+    'hate',
+    'netiquette',
+    'duplicate'
+);
+
+
+--
+-- Name: enum_TopicReports_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public."enum_TopicReports_type" AS ENUM (
+    'abuse',
+    'obscene',
+    'spam',
+    'hate',
+    'netiquette',
+    'duplicate'
 );
 
 
@@ -456,6 +470,106 @@ CREATE TABLE public."TopicPins" (
     "topicId" uuid NOT NULL,
     "userId" uuid NOT NULL
 );
+
+
+--
+-- Name: TopicReports; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."TopicReports" (
+    id uuid NOT NULL,
+    type public."enum_TopicReports_type" NOT NULL,
+    text character varying(2048) NOT NULL,
+    "creatorId" uuid NOT NULL,
+    "creatorIp" character varying(45) NOT NULL,
+    "topicId" uuid NOT NULL,
+    "moderatedById" uuid,
+    "moderatedAt" timestamp with time zone,
+    "moderatedReasonType" public."enum_TopicReports_moderatedReasonType",
+    "moderatedReasonText" character varying(2048),
+    "resolvedById" uuid,
+    "resolvedAt" timestamp with time zone,
+    "createdAt" timestamp with time zone NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL,
+    "deletedAt" timestamp with time zone
+);
+
+
+--
+-- Name: COLUMN "TopicReports".type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicReports".type IS 'Report reason - verbal abuse, obscene content, hate speech etc..';
+
+
+--
+-- Name: COLUMN "TopicReports".text; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicReports".text IS 'Additional comment for the report to provide more details on the violation.';
+
+
+--
+-- Name: COLUMN "TopicReports"."creatorId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicReports"."creatorId" IS 'User ID of the reporter.';
+
+
+--
+-- Name: COLUMN "TopicReports"."creatorIp"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicReports"."creatorIp" IS 'IP address of the reporter';
+
+
+--
+-- Name: COLUMN "TopicReports"."topicId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicReports"."topicId" IS 'Id if the Topic which the Report belongs to.';
+
+
+--
+-- Name: COLUMN "TopicReports"."moderatedById"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicReports"."moderatedById" IS 'User ID of the person who moderated the Topic on report. That is, a Moderator agreed that Report is valid.';
+
+
+--
+-- Name: COLUMN "TopicReports"."moderatedAt"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicReports"."moderatedAt" IS 'Time when the Topic was Moderated';
+
+
+--
+-- Name: COLUMN "TopicReports"."moderatedReasonType"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicReports"."moderatedReasonType" IS 'Moderation reason - verbal abuse, obscene content, hate speech etc..';
+
+
+--
+-- Name: COLUMN "TopicReports"."moderatedReasonText"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicReports"."moderatedReasonText" IS 'Additional comment for the Report to provide more details on the Moderator acton.';
+
+
+--
+-- Name: COLUMN "TopicReports"."resolvedById"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicReports"."resolvedById" IS 'User ID of the person who considered the issue to be resolved thus making the report outdated.';
+
+
+--
+-- Name: COLUMN "TopicReports"."resolvedAt"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicReports"."resolvedAt" IS 'Time when the Report was marked as resolved.';
 
 
 --
@@ -836,6 +950,14 @@ ALTER TABLE ONLY public."TopicMemberGroups"
 
 ALTER TABLE ONLY public."TopicMemberUsers"
     ADD CONSTRAINT "TopicMemberUsers_pkey" PRIMARY KEY ("userId", "topicId");
+
+
+--
+-- Name: TopicReports TopicReports_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicReports"
+    ADD CONSTRAINT "TopicReports_pkey" PRIMARY KEY (id, "topicId");
 
 
 --
@@ -1296,6 +1418,38 @@ ALTER TABLE ONLY public."TopicMemberUsers"
 
 
 --
+-- Name: TopicReports TopicReports_creatorId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicReports"
+    ADD CONSTRAINT "TopicReports_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: TopicReports TopicReports_moderatedById_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicReports"
+    ADD CONSTRAINT "TopicReports_moderatedById_fkey" FOREIGN KEY ("moderatedById") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: TopicReports TopicReports_resolvedById_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicReports"
+    ADD CONSTRAINT "TopicReports_resolvedById_fkey" FOREIGN KEY ("resolvedById") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: TopicReports TopicReports_topicId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicReports"
+    ADD CONSTRAINT "TopicReports_topicId_fkey" FOREIGN KEY ("topicId") REFERENCES public."Topics"(id);
+
+
+--
 -- Name: TopicVotes TopicVotes_topicId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1438,4 +1592,5 @@ ALTER TABLE ONLY public."VoteUserContainers"
 COPY public."SequelizeMeta" (name) FROM stdin;
 20181213213857-create-topic-favourite.js
 20190131123024-alter-topic-title-limit.js
+20190529193321-topic-report.js
 \.
