@@ -796,6 +796,11 @@
         "moment": "2.11.2"
       },
       "dependencies": {
+        "mime": {
+          "version": "1.3.4",
+          "resolved": "https://registry.npmjs.org/mime/-/mime-1.3.4.tgz",
+          "integrity": "sha1-EV+eO2s9rylZmDyzjxSaLUDrXVM="
+        },
         "moment": {
           "version": "2.11.2",
           "resolved": "https://registry.npmjs.org/moment/-/moment-2.11.2.tgz",
@@ -4761,9 +4766,9 @@
       "integrity": "sha1-VSmk1nZUE07cxSZmVoNbD4Ua/O4="
     },
     "mime": {
-      "version": "1.3.4",
-      "resolved": "https://registry.npmjs.org/mime/-/mime-1.3.4.tgz",
-      "integrity": "sha1-EV+eO2s9rylZmDyzjxSaLUDrXVM="
+      "version": "1.6.0",
+      "resolved": "https://registry.npmjs.org/mime/-/mime-1.6.0.tgz",
+      "integrity": "sha512-x0Vn8spI+wuJ1O6S7gnbaQg8Pxh4NNHb7KSINmEWKiPE4RKOplvijn+NkmYmmRgP68mc70j2EbeTFRsrswaQeg=="
     },
     "mime-db": {
       "version": "1.12.0",
