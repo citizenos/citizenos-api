@@ -1288,7 +1288,7 @@ module.exports = function (app) {
 
         var promisesToResolve = [];
         var customStyles = {
-            headerBackgroundColor: '#252525',
+            headerBackgroundColor: '#004892',
             logoWidth: 360,
             logoHeight: 51
         };
