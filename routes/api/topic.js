@@ -299,7 +299,7 @@ module.exports = function (app) {
     /**
      * NOTE! This does not block access in case of not being a Moderator, but only adds moderator flag to user object.
      *
-     * @returns {Function}
+     * @returns {Function} Express middleware function
      */
     var isModerator = function () {
         return function (req, res, next) {
@@ -358,7 +358,7 @@ module.exports = function (app) {
                     if (result) {
                         req.user.moderator = result.isModerator;
 
-                        next(null, req, res);
+                        return next(null, req, res);
                     } else {
                         return res.unauthorised();
                     }
@@ -3569,14 +3569,12 @@ module.exports = function (app) {
         const topicId = req.params.topicId;
 
         const activeReportsCount = await TopicReport
-            .count(
-                {
-                    where: {
-                        topicId: topicId,
-                        resolvedById: null
-                    }
+            .count({
+                where: {
+                    topicId: topicId,
+                    resolvedById: null
                 }
-            );
+            });
 
         if (activeReportsCount) {
             return res.badRequest('Topic has already been reported. Only one active report is allowed at the time to avoid overloading the moderators', 1);
@@ -3617,7 +3615,7 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-api/issues/5
      */
-    app.get(['/api/topics/:topicId/reports/:reportId', '/api/users/:userId/topics/:topicId/reports/:reportId'], hasVisibility(Topic.VISIBILITY.public), hasPermissionModerator(), asyncMiddleware(async function (req, res, next) {
+    app.get(['/api/topics/:topicId/reports/:reportId', '/api/users/:userId/topics/:topicId/reports/:reportId'], hasVisibility(Topic.VISIBILITY.public), hasPermissionModerator(), asyncMiddleware(async function (req, res) {
         const topicReports = await db
             .query(
                 '\
@@ -3649,7 +3647,8 @@ module.exports = function (app) {
                     type: db.QueryTypes.SELECT,
                     raw: true,
                     nest: true
-                });
+                }
+            );
 
         const topicReport = topicReports[0];
 
@@ -3663,7 +3662,7 @@ module.exports = function (app) {
     /**
      * Moderate a Topic - moderator approves a report, thus applying restrictions to the Topic
      */
-    app.post(['/api/topics/:topicId/reports/:reportId/moderate', '/api/users/:userId/topics/:topicId/reports/:reportId/moderate'], hasVisibility(Topic.VISIBILITY.public), hasPermissionModerator(), asyncMiddleware(async function (req, res, next) {
+    app.post(['/api/topics/:topicId/reports/:reportId/moderate', '/api/users/:userId/topics/:topicId/reports/:reportId/moderate'], hasVisibility(Topic.VISIBILITY.public), hasPermissionModerator(), asyncMiddleware(async function (req, res) {
         const moderatedReasonType = req.body.type; // Delete reason type which is provided in case deleted/hidden by moderator due to a user report
         const moderatedReasonText = req.body.text; // Free text with reason why the comment was deleted/hidden
 
@@ -3697,33 +3696,29 @@ module.exports = function (app) {
                 topicReport.moderatedById = req.user.id;
                 topicReport.moderatedAt = db.fn('NOW');
                 topicReport.moderatedReasonType = moderatedReasonType || ''; // HACK: If Model has "allowNull: true", it will skip all validators when value is "null"
-                topicReport.moderatedReasonText = moderatedReasonText || '';  // HACK: If Model has "allowNull: true", it will skip all validators when value is "null"
+                topicReport.moderatedReasonText = moderatedReasonText || ''; // HACK: If Model has "allowNull: true", it will skip all validators when value is "null"
 
                 return topicReport
-                    .save(
-                        {
-                            transaction: t,
-                            returning: true
-                        }
-                    );
+                    .save({
+                        transaction: t,
+                        returning: true
+                    });
             });
 
-        await emailLib.sendTopicReportModerate(
-            // Pass on the Topic info we loaded, don't need to load Topic again.
-            Object.assign(
-                {},
-                topicReport.toJSON(),
-                {
-                    topic: topic
-                }
-            )
-        );
+        // Pass on the Topic info we loaded, don't need to load Topic again.
+        await emailLib.sendTopicReportModerate(Object.assign(
+            {},
+            topicReport.toJSON(),
+            {
+                topic: topic
+            }
+        ));
 
         return res.ok(topicReport);
     }));
 
     /** Send a Topic report for review - User let's Moderators know that the violations have been corrected **/
-    app.post(['/api/users/:userId/topics/:topicId/reports/:reportId/review', '/api/topics/:topicId/reports/:reportId/review'], loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), asyncMiddleware(async function (req, res, next) {
+    app.post(['/api/users/:userId/topics/:topicId/reports/:reportId/review', '/api/topics/:topicId/reports/:reportId/review'], loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const reportId = req.params.reportId;
         const text = req.body.text;
@@ -3754,7 +3749,7 @@ module.exports = function (app) {
      *
      * @see https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce?argumentsPage=1
      */
-    app.post(['/api/topics/:topicId/reports/:reportId/resolve', '/api/users/:userId/topics/:topicId/reports/:reportId/resolve'], hasVisibility(Topic.VISIBILITY.public), hasPermissionModerator(), asyncMiddleware(async function (req, res, next) {
+    app.post(['/api/topics/:topicId/reports/:reportId/resolve', '/api/users/:userId/topics/:topicId/reports/:reportId/resolve'], hasVisibility(Topic.VISIBILITY.public), hasPermissionModerator(), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const reportId = req.params.reportId;
 

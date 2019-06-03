@@ -2,7 +2,6 @@
 
 suite('cosJwt', function () {
     var assert = require('chai').assert;
-    var shared = require('../utils/shared');
 
     var app = require('../../app');
     var cosJwt = app.get('cosJwt');

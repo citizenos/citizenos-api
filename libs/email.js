@@ -136,7 +136,7 @@ module.exports = function (app) {
             levelMinimum = levelMin;
         }
 
-        return db
+        await db
             .query(
                 '\
                     SELECT \
@@ -206,7 +206,7 @@ module.exports = function (app) {
      * @private
      */
     const _getModerators = async function (sourcePartnerId) {
-        return db
+        await db
             .query(
                 ' \
                     SELECT \
@@ -839,7 +839,7 @@ module.exports = function (app) {
      *
      * @param {object} topicReport TopicReport Sequelize instance
      *
-     * @returns {Promise}
+     * @returns {Promise} Topic report result
      *
      * @private
      *
@@ -850,27 +850,21 @@ module.exports = function (app) {
         const infoFetchPromises = [];
 
         // Get the topic info
-        infoFetchPromises.push(
-            Topic.findOne({
-                where: {
-                    id: topicReport.topicId
-                }
-            })
-        );
+        infoFetchPromises.push(Topic.findOne({
+            where: {
+                id: topicReport.topicId
+            }
+        }));
 
         // Get reporters info
-        infoFetchPromises.push(
-            User.findOne({
-                where: {
-                    id: topicReport.creatorId
-                }
-            })
-        );
+        infoFetchPromises.push(User.findOne({
+            where: {
+                id: topicReport.creatorId
+            }
+        }));
 
         // Get Topic edit/admin Member list
-        infoFetchPromises.push(
-            _getTopicMemberUsers(topicReport.topicId, TopicMemberUser.LEVELS.edit)
-        );
+        infoFetchPromises.push(_getTopicMemberUsers(topicReport.topicId, TopicMemberUser.LEVELS.edit));
 
         const [topic, userReporter, topicMemberList] = await Promise.all(infoFetchPromises);
         const topicModerators = await _getModerators(topic.sourcePartnerId);
@@ -904,7 +898,7 @@ module.exports = function (app) {
                     }
                 );
 
-                return emailClient.sendStringAsync(templateObject.body, emailOptions);
+                await emailClient.sendStringAsync(templateObject.body, emailOptions);
             };
             sendEmailPromises.push(sendReporterEmail());
         } else {
@@ -937,7 +931,7 @@ module.exports = function (app) {
                         }
                     );
 
-                    return emailClient.sendStringAsync(templateObject.body, emailOptions);
+                    await emailClient.sendStringAsync(templateObject.body, emailOptions);
                 };
                 sendEmailPromises.push(sendTopicMemberEmail());
             } else {
@@ -971,7 +965,7 @@ module.exports = function (app) {
                         }
                     );
 
-                    return emailClient.sendStringAsync(templateObject.body, emailOptions);
+                    await emailClient.sendStringAsync(templateObject.body, emailOptions);
                 };
                 sendEmailPromises.push(sendTopicModeratorEmail());
             } else {
@@ -987,7 +981,7 @@ module.exports = function (app) {
      *
      * @param {object} topicReport TopicReport Sequelize instance
      *
-     * @returns {Promise}
+     * @returns {Promise} Topic report moderate email sending result
      *
      * @private
      *
@@ -999,18 +993,14 @@ module.exports = function (app) {
         const topic = topicReport.topic;
 
         // Get reporters info
-        infoFetchPromises.push(
-            User.findOne({
-                where: {
-                    id: topicReport.creator.id
-                }
-            })
-        );
+        infoFetchPromises.push(User.findOne({
+            where: {
+                id: topicReport.creator.id
+            }
+        }));
 
         // Get Topic member Users
-        infoFetchPromises.push(
-            _getTopicMemberUsers(topic.id, TopicMemberUser.LEVELS.edit)
-        );
+        infoFetchPromises.push(_getTopicMemberUsers(topic.id, TopicMemberUser.LEVELS.edit));
 
         const [userReporter, topicMemberList] = await Promise.all(infoFetchPromises);
 
@@ -1044,7 +1034,7 @@ module.exports = function (app) {
                     }
                 );
 
-                return emailClient.sendStringAsync(templateObject.body, emailOptions);
+                await emailClient.sendStringAsync(templateObject.body, emailOptions);
             };
             sendEmailPromiseses.push(sendReporterEmail());
         } else {
@@ -1078,7 +1068,7 @@ module.exports = function (app) {
                         }
                     );
 
-                    return emailClient.sendStringAsync(templateObject.body, emailOptions);
+                    await emailClient.sendStringAsync(templateObject.body, emailOptions);
                 };
                 sendEmailPromiseses.push(sendTopicMemberEmail());
             } else {
@@ -1095,7 +1085,7 @@ module.exports = function (app) {
      * @param {object} topicReport TopicReport Sequelize instance
      * @param {string} reviewRequestText Review request text
      *
-     * @returns {Promise}
+     * @returns {Promise} Topic report review email result
      *
      * @private
      *
@@ -1139,7 +1129,7 @@ module.exports = function (app) {
                         }
                     );
 
-                    return emailClient.sendStringAsync(templateObject.body, emailOptions);
+                    await emailClient.sendStringAsync(templateObject.body, emailOptions);
                 };
                 sendEmailPromises.push(sendTopicModeratorEmail());
             } else {
@@ -1155,7 +1145,7 @@ module.exports = function (app) {
      *
      * @param {object} topicReport TopicReport Sequelize instance
      *
-     * @returns {Promise}
+     * @returns {Promise} Topic report resolve email result
      *
      * @private
      *
@@ -1165,27 +1155,21 @@ module.exports = function (app) {
         const infoFetchPromises = [];
 
         // Topic info
-        infoFetchPromises.push(
-            Topic.findOne({
-                where: {
-                    id: topicReport.topicId
-                }
-            })
-        );
+        infoFetchPromises.push(Topic.findOne({
+            where: {
+                id: topicReport.topicId
+            }
+        }));
 
         // Get reporters info
-        infoFetchPromises.push(
-            User.findOne({
-                where: {
-                    id: topicReport.creatorId
-                }
-            })
-        );
+        infoFetchPromises.push(User.findOne({
+            where: {
+                id: topicReport.creatorId
+            }
+        }));
 
         // Get Topic edit/admin Member list
-        infoFetchPromises.push(
-            _getTopicMemberUsers(topicReport.topicId, TopicMemberUser.LEVELS.edit)
-        );
+        infoFetchPromises.push(_getTopicMemberUsers(topicReport.topicId, TopicMemberUser.LEVELS.edit));
 
         const [topic, userReporter, topicMemberList] = await Promise.all(infoFetchPromises);
 
@@ -1217,7 +1201,7 @@ module.exports = function (app) {
                     }
                 );
 
-                return emailClient.sendStringAsync(templateObject.body, emailOptions);
+                await emailClient.sendStringAsync(templateObject.body, emailOptions);
             };
             sendEmailPromises.push(sendReporterEmail());
         } else {
@@ -1246,7 +1230,7 @@ module.exports = function (app) {
                         }
                     );
 
-                    return emailClient.sendStringAsync(templateObject.body, emailOptions);
+                    await emailClient.sendStringAsync(templateObject.body, emailOptions);
                 };
                 sendEmailPromises.push(sendTopicMemberEmail());
             } else {

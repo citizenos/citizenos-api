@@ -7837,7 +7837,6 @@ suite('Users', function () {
 
                 let userCreator;
                 let userModerator;
-                let userReporter;
 
                 let topic;
                 let report;
@@ -7859,7 +7858,7 @@ suite('Users', function () {
                             , function (err, results) {
                                 if (err) return done(err);
 
-                                [userCreator, userModerator, userReporter] = results;
+                                [userCreator, userModerator] = results;
 
                                 topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null, function (err, res) {
                                     if (err) return done(err);
@@ -7938,7 +7937,6 @@ suite('Users', function () {
 
                 let userCreator;
                 let userModerator;
-                let userReporter;
 
                 let topic;
                 let report;
@@ -7960,7 +7958,7 @@ suite('Users', function () {
                             , function (err, results) {
                                 if (err) return done(err);
 
-                                [userCreator, userModerator, userReporter] = results;
+                                [userCreator, userModerator] = results;
 
                                 Moderator
                                     .create({
@@ -8016,7 +8014,7 @@ suite('Users', function () {
                     var type = Report.TYPES.spam;
                     var text = 'Test: contains spam.';
 
-                    topicReportModerate(agentModerator, topic.id, report.id, type, text, function (err, res) {
+                    topicReportModerate(agentModerator, topic.id, report.id, type, text, function (err) {
                         if (err) return done(err);
 
                         _topicReportModerate(agentModerator, topic.id, report.id, type, text, 400, function (err, res) {
@@ -8160,7 +8158,7 @@ suite('Users', function () {
                 });
 
                 test('Fail - 40001 - Missing required parameter "text"', function (done) {
-                    _topicReportsReview(agentCreator, userCreator.id, topic.id, report.id, undefined, 400, function (err, res) {
+                    _topicReportsReview(agentCreator, userCreator.id, topic.id, report.id, undefined, 400, function (err, res) { //eslint-disable-line no-undefined
                         if (err) {
                             return done(err);
                         }
@@ -8243,7 +8241,6 @@ suite('Users', function () {
 
                 var userCreator;
                 var userModerator;
-                var userReporter;
 
                 var topic;
                 var report;
@@ -8265,7 +8262,7 @@ suite('Users', function () {
                             , function (err, results) {
                                 if (err) return done(err);
 
-                                [userCreator, userModerator, userReporter] = results;
+                                [userCreator, userModerator] = results;
 
                                 topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null, function (err, res) {
                                     if (err) return done(err);
@@ -8305,8 +8302,7 @@ suite('Users', function () {
             });
         });
     });
-})
-;
+});
 
 // API - /api/topics - unauthenticated endpoints
 suite('Topics', function () {
@@ -10369,7 +10365,7 @@ suite('Topics', function () {
                                             where: {
                                                 id: comment.id
                                             },
-                                            paranoid: false,
+                                            paranoid: false
                                         }
                                     )
                                     .then(function () {

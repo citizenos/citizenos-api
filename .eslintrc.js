@@ -6,6 +6,10 @@ module.exports = {
     'parserOptions': {
         'ecmaVersion': 9
     },
+    "globals": {
+        "Set": "readonly", // Not sure why it's not a global by default...
+        "Promise": "readonly"
+    },
     'extends': 'eslint:recommended',
     'rules': {
         'accessor-pairs': 'error',
