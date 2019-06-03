@@ -129,14 +129,14 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _getTopicMemberUsers = async function (topicId, levelMin) {
+    const _getTopicMemberUsers = function (topicId, levelMin) {
         let levelMinimum = TopicMemberUser.LEVELS.admin;
 
         if (levelMin && TopicMemberUser.LEVELS[levelMin]) {
             levelMinimum = levelMin;
         }
 
-        await db
+        return db
             .query(
                 '\
                     SELECT \
@@ -205,8 +205,8 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _getModerators = async function (sourcePartnerId) {
-        await db
+    const _getModerators = function (sourcePartnerId) {
+        return db
             .query(
                 ' \
                     SELECT \
@@ -898,7 +898,7 @@ module.exports = function (app) {
                     }
                 );
 
-                await emailClient.sendStringAsync(templateObject.body, emailOptions);
+                return await emailClient.sendStringAsync(templateObject.body, emailOptions);
             };
             sendEmailPromises.push(sendReporterEmail());
         } else {
@@ -931,7 +931,7 @@ module.exports = function (app) {
                         }
                     );
 
-                    await emailClient.sendStringAsync(templateObject.body, emailOptions);
+                    return await emailClient.sendStringAsync(templateObject.body, emailOptions);
                 };
                 sendEmailPromises.push(sendTopicMemberEmail());
             } else {
@@ -965,7 +965,7 @@ module.exports = function (app) {
                         }
                     );
 
-                    await emailClient.sendStringAsync(templateObject.body, emailOptions);
+                    return await emailClient.sendStringAsync(templateObject.body, emailOptions);
                 };
                 sendEmailPromises.push(sendTopicModeratorEmail());
             } else {
@@ -1034,7 +1034,7 @@ module.exports = function (app) {
                     }
                 );
 
-                await emailClient.sendStringAsync(templateObject.body, emailOptions);
+                return await emailClient.sendStringAsync(templateObject.body, emailOptions);
             };
             sendEmailPromiseses.push(sendReporterEmail());
         } else {
@@ -1068,7 +1068,7 @@ module.exports = function (app) {
                         }
                     );
 
-                    await emailClient.sendStringAsync(templateObject.body, emailOptions);
+                    return await emailClient.sendStringAsync(templateObject.body, emailOptions);
                 };
                 sendEmailPromiseses.push(sendTopicMemberEmail());
             } else {
@@ -1129,7 +1129,7 @@ module.exports = function (app) {
                         }
                     );
 
-                    await emailClient.sendStringAsync(templateObject.body, emailOptions);
+                    return await emailClient.sendStringAsync(templateObject.body, emailOptions);
                 };
                 sendEmailPromises.push(sendTopicModeratorEmail());
             } else {
@@ -1137,7 +1137,7 @@ module.exports = function (app) {
             }
         });
 
-        await Promise.all(sendEmailPromises);
+        return await Promise.all(sendEmailPromises);
     };
 
     /**
@@ -1201,7 +1201,7 @@ module.exports = function (app) {
                     }
                 );
 
-                await emailClient.sendStringAsync(templateObject.body, emailOptions);
+                return await emailClient.sendStringAsync(templateObject.body, emailOptions);
             };
             sendEmailPromises.push(sendReporterEmail());
         } else {
@@ -1230,7 +1230,7 @@ module.exports = function (app) {
                         }
                     );
 
-                    await emailClient.sendStringAsync(templateObject.body, emailOptions);
+                    return await emailClient.sendStringAsync(templateObject.body, emailOptions);
                 };
                 sendEmailPromises.push(sendTopicMemberEmail());
             } else {
@@ -1238,7 +1238,7 @@ module.exports = function (app) {
             }
         });
 
-        await Promise.all(sendEmailPromises);
+        return await Promise.all(sendEmailPromises);
     };
 
     /**
