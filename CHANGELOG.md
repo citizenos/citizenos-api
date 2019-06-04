@@ -1,3 +1,7 @@
+## 2019-06-04
+
+* Quick fix for app crashing when `DATABASE_OPTIONS_POOL_MAX` env variable is set - https://github.com/citizenos/citizenos-api/issues/137 
+
 ## 2019-06-03
 
 * BREAKING CHANGE: Started using **async/await**, so Node.JS >=7.6.0 is required. Default Node.JS version upgraded to 10.13.0.
