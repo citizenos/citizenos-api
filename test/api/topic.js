@@ -394,6 +394,104 @@ var topicMembersGroupsList = function (agent, userId, topicId, callback) {
     _topicMembersGroupsList(agent, userId, topicId, 200, callback);
 };
 
+var _topicReportCreate = function (agent, topicId, type, text, expectedHttpCode, callback) {
+    var path = '/api/topics/:topicId/reports'
+        .replace(':topicId', topicId);
+
+    agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .send({
+            type: type,
+            text: text
+        })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var topicReportCreate = function (agent, topicId, type, text, callback) {
+    _topicReportCreate(agent, topicId, type, text, 200, callback);
+};
+
+var _topicReportRead = function (agent, topicId, reportId, expectedHttpCode, callback) {
+    var path = '/api/topics/:topicId/reports/:reportId'
+        .replace(':topicId', topicId)
+        .replace(':reportId', reportId);
+
+    agent
+        .get(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var topicReportRead = function (agent, topicId, reportId, callback) {
+    _topicReportRead(agent, topicId, reportId, 200, callback);
+};
+
+var _topicReportModerate = function (agent, topicId, reportId, type, text, expectedHttpCode, callback) {
+    var path = '/api/topics/:topicId/reports/:reportId/moderate'
+        .replace(':topicId', topicId)
+        .replace(':reportId', reportId);
+
+    agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .send({
+            type: type,
+            text: text
+        })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var topicReportModerate = function (agent, topicId, reportId, type, text, callback) {
+    _topicReportModerate(agent, topicId, reportId, type, text, 200, callback);
+};
+
+var _topicReportsReview = function (agent, userId, topicId, reportId, text, expectedHttpCode, callback) {
+    var path = '/api/users/:userId/topics/:topicId/reports/:reportId/review'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':reportId', reportId);
+
+    var body = {};
+    if (text) {
+        body.text = text;
+    }
+
+    agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .send(body)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var topicReportsReview = function (agent, userId, topicId, reportId, text, callback) {
+    _topicReportsReview(agent, userId, topicId, reportId, text, 200, callback);
+};
+
+var _topicReportsResolve = function (agent, topicId, reportId, expectedHttpCode, callback) {
+    var path = '/api/topics/:topicId/reports/:reportId/resolve'
+        .replace(':topicId', topicId)
+        .replace(':reportId', reportId);
+
+    agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var topicReportsResolve = function (agent, topicId, reportId, callback) {
+    _topicReportsResolve(agent, topicId, reportId, 200, callback);
+};
+
 var _topicCommentCreate = function (agent, userId, topicId, parentId, parentVersion, type, subject, text, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/comments'
         .replace(':userId', userId)
@@ -1273,12 +1371,6 @@ suite('Users', function () {
     suiteSetup(function (done) {
         shared
             .syncDb()
-            .finally(done);
-    });
-
-    suiteTeardown(function (done) {
-        shared
-            .closeDb()
             .finally(done);
     });
 
@@ -6630,10 +6722,11 @@ suite('Users', function () {
 
                             assert.property(commentReply, 'id');
                             assert.equal(commentReply.type, Comment.TYPES.reply);
-                            assert.notProperty('subject');
+                            assert.notProperty(commentReply, 'subject');
                             assert.equal(commentReply.text, commentReplyText);
                             assert.equal(commentReply.creator.id, user.id);
                             assert.equal(commentReply.parent.id, comment.id);
+
                             done();
                         });
                     });
@@ -6669,7 +6762,7 @@ suite('Users', function () {
 
             });
 
-            suite('Edit', function () {
+            suite('Update', function () {
                 var agent2 = request.agent(app);
                 var agent3 = request.agent(app);
 
@@ -7603,6 +7696,611 @@ suite('Users', function () {
                 });
             });
         });
+
+        // API - /api/users/:userId/topics/:topicId/reports
+        suite('Reports', function () {
+
+            suite('Create', function () {
+                const agentCreator = request.agent(app);
+                const agentReporter = request.agent(app);
+                const agentModerator = request.agent(app);
+
+                const emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                const emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                const emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+
+                let userCreator;
+                let userReporter;
+                let userModerator;
+
+                let topic;
+
+                suiteSetup(function (done) {
+                    async
+                        .parallel(
+                            [
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentCreator, emailCreator, null, null, cb);
+                                },
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentModerator, emailModerator, null, null, cb);
+                                },
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentReporter, emailReporter, null, null, cb);
+                                }
+                            ]
+                            , function (err, results) {
+                                if (err) return done(err);
+
+                                [userCreator, userModerator, userReporter] = results;
+
+                                topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR SPAM REPORTING</h2></body></html>', null, function (err, res) {
+                                    if (err) return done(err);
+
+                                    topic = res.body.data;
+
+                                    // Create a moderator in DB so that the Moderation email flow is executed
+                                    Moderator
+                                        .create({
+                                            userId: userModerator.id
+                                        })
+                                        .then(function () {
+                                            done();
+                                        })
+                                        .catch(done);
+                                });
+                            }
+                        );
+                });
+
+                test('Success', function (done) {
+                    const reportType = Report.TYPES.spam;
+                    const reportText = 'Topic spam report test';
+
+                    topicReportCreate(agentReporter, topic.id, reportType, reportText, function (err, res) {
+                        if (err) return done(err);
+
+                        const reportResult = res.body.data;
+
+                        assert.isTrue(validator.isUUID(reportResult.id, 4));
+                        assert.equal(reportResult.type, reportType);
+                        assert.equal(reportResult.text, reportText);
+                        assert.property(reportResult, 'createdAt');
+                        assert.equal(reportResult.creator.id, userReporter.id);
+
+                        done();
+                    });
+                });
+
+                test('Fail - 40001 - Topic has already been reported. No duplicate reports.', function (done) {
+                    const reportType = Report.TYPES.spam;
+                    const reportText = 'Topic spam report test';
+
+                    _topicReportCreate(agentReporter, topic.id, reportType, reportText, 400, function (err, res) {
+                        if (err) return done(err);
+
+                        const expectedStatus = {
+                            code: 40001,
+                            message: 'Topic has already been reported. Only one active report is allowed at the time to avoid overloading the moderators'
+                        };
+
+                        assert.deepEqual(res.body.status, expectedStatus);
+
+                        done();
+                    });
+                });
+
+                test('Fail - 40400 - Can\'t report a private Topic', function (done) {
+                    const reportType = Report.TYPES.hate;
+                    const reportText = 'Topic hate speech report for private Topic test';
+
+                    topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.private, null, null, null, null, function (err, res) {
+                        if (err) return done(err);
+
+                        topic = res.body.data;
+
+                        _topicReportCreate(agentReporter, topic.id, reportType, reportText, 404, done);
+                    });
+                });
+
+
+                test('Fail - 40100 - Authentication is required', function (done) {
+                    const reportType = Report.TYPES.hate;
+                    const reportText = 'Topic hate speech report for private Topic test';
+
+                    topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.private, null, null, null, null, function (err, res) {
+                        if (err) return done(err);
+
+                        topic = res.body.data;
+
+                        _topicReportCreate(request.agent(app), topic.id, reportType, reportText, 401, done);
+                    });
+                });
+
+            });
+
+            suite('Read', function () {
+                const agentCreator = request.agent(app);
+                const agentReporter = request.agent(app);
+                const agentModerator = request.agent(app);
+
+                const emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                const emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                const emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+
+                const topicTitle = 'Topic report test';
+                const topicDescription = '<!DOCTYPE HTML><html><body><h1>Topic report test</h1><br>Topic report test desc<br><br></body></html>'
+                    .replace(':topicTitle', topicTitle);
+
+                const reportType = Report.TYPES.hate;
+                const reportText = 'Topic hate speech report test';
+
+                let userCreator;
+                let userModerator;
+
+                let topic;
+                let report;
+
+                suiteSetup(function (done) {
+                    async
+                        .parallel(
+                            [
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentCreator, emailCreator, null, null, cb);
+                                },
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentModerator, emailModerator, null, null, cb);
+                                },
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentReporter, emailReporter, null, null, cb);
+                                }
+                            ]
+                            , function (err, results) {
+                                if (err) return done(err);
+
+                                [userCreator, userModerator] = results;
+
+                                topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null, function (err, res) {
+                                    if (err) return done(err);
+
+                                    topic = res.body.data;
+
+                                    topicReportCreate(agentReporter, topic.id, reportType, reportText, function (err, res) {
+                                        if (err) return done(err);
+
+                                        report = res.body.data;
+
+                                        // Create a moderator in DB so that the Moderation email flow is executed
+                                        Moderator
+                                            .create({
+                                                userId: userModerator.id
+                                            })
+                                            .then(function () {
+                                                done();
+                                            })
+                                            .catch(done);
+                                    });
+                                });
+                            }
+                        );
+                });
+
+                test('Success', function (done) {
+
+                    topicReportRead(agentModerator, topic.id, report.id, function (err, res) {
+                        if (err) return done(err);
+
+                        const reportResult = res.body.data;
+
+                        assert.equal(reportResult.id, report.id);
+                        assert.equal(reportResult.type, report.type);
+                        assert.equal(reportResult.text, report.text);
+                        assert.equal(reportResult.createdAt, report.createdAt);
+
+                        // FIXME: MAY NOT want to output moderator info
+                        assert.isNotNull(reportResult.moderator);
+                        assert.property(reportResult.moderator, 'id');
+
+                        assert.property(reportResult, 'moderatedReasonText');
+                        assert.property(reportResult, 'moderatedReasonType');
+
+                        const reportResultTopic = reportResult.topic;
+
+                        assert.equal(reportResultTopic.id, topic.id);
+                        assert.equal(reportResultTopic.title, topicTitle);
+                        assert.equal(reportResultTopic.description, '<!DOCTYPE HTML><html><body><h1>Topic report test</h1><br>Topic report test desc<br><br><br></body></html>'); // DOH, whatever you do Etherpad adds extra <br>
+
+                        done();
+                    });
+                });
+
+                test('Fail - 40100 - Only moderators can read a report', function (done) {
+                    _topicReportRead(agentCreator, topic.id, report.id, 401, done);
+                });
+            });
+
+            suite('Moderate', function () {
+                const agentCreator = request.agent(app);
+                const agentReporter = request.agent(app);
+                const agentModerator = request.agent(app);
+
+                const emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                const emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                const emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+
+                const topicTitle = 'Topic report test';
+                const topicDescription = '<!DOCTYPE HTML><html><body><h1>Topic report test</h1><br>Topic report test desc<br><br></body></html>'
+                    .replace(':topicTitle', topicTitle);
+
+                const reportType = Report.TYPES.hate;
+                const reportText = 'Topic hate speech report test';
+
+                let userCreator;
+                let userModerator;
+
+                let topic;
+                let report;
+
+                suiteSetup(function (done) {
+                    async
+                        .parallel(
+                            [
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentCreator, emailCreator, null, null, cb);
+                                },
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentModerator, emailModerator, null, null, cb);
+                                },
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentReporter, emailReporter, null, null, cb);
+                                }
+                            ]
+                            , function (err, results) {
+                                if (err) return done(err);
+
+                                [userCreator, userModerator] = results;
+
+                                Moderator
+                                    .create({
+                                        userId: userModerator.id
+                                    })
+                                    .then(function () {
+                                        done();
+                                    })
+                                    .catch(done);
+                            }
+                        );
+                });
+
+                setup(function (done) {
+                    topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null, function (err, res) {
+                        if (err) return done(err);
+
+                        topic = res.body.data;
+
+                        topicReportCreate(agentReporter, topic.id, reportType, reportText, function (err, res) {
+                            if (err) return done(err);
+
+                            report = res.body.data;
+
+                            done();
+                        });
+                    });
+                });
+
+                test('Success', function (done) {
+                    var type = Report.TYPES.spam;
+                    var text = 'Test: contains spam.';
+
+                    topicReportModerate(agentModerator, topic.id, report.id, type, text, function (err, res) {
+                        if (err) return done(err);
+
+                        var moderateResult = res.body.data;
+
+                        topicReportRead(agentModerator, topic.id, report.id, function (err, res) {
+                            if (err) return done(err);
+
+                            const reportReadResult = res.body.data;
+                            delete reportReadResult.topic; // No Topic info returned in moderation result
+
+                            assert.deepEqual(moderateResult, reportReadResult);
+
+                            return done();
+                        });
+                    });
+                });
+
+                test('Fail - 40012 - Report has become invalid cause the report has been already moderated', function (done) {
+                    var type = Report.TYPES.spam;
+                    var text = 'Test: contains spam.';
+
+                    topicReportModerate(agentModerator, topic.id, report.id, type, text, function (err) {
+                        if (err) return done(err);
+
+                        _topicReportModerate(agentModerator, topic.id, report.id, type, text, 400, function (err, res) {
+                            if (err) return done(err);
+
+                            var expectedBody = {
+                                status: {
+                                    code: 40012,
+                                    message: 'Report has become invalid cause the report has been already moderated'
+                                }
+                            };
+                            assert.deepEqual(res.body, expectedBody);
+
+                            done();
+                        });
+                    });
+                });
+
+                test('Fail - 40000 - type cannot be null', function (done) {
+                    var type = null;
+                    var text = 'Test: contains spam.';
+
+                    _topicReportModerate(agentModerator, topic.id, report.id, type, text, 400, function (err, res) {
+                        if (err) return done(err);
+
+                        var expectedBody = {
+                            status: {code: 40000},
+                            errors: {
+                                moderatedReasonType: 'TopicReport.moderatedReasonType cannot be null when moderator is set'
+                            }
+                        };
+                        assert.deepEqual(res.body, expectedBody);
+
+                        done();
+                    });
+                });
+
+                test('Fail - 40000 - text cannot be null', function (done) {
+                    var type = Report.TYPES.spam;
+                    var text = null;
+
+                    _topicReportModerate(agentModerator, topic.id, report.id, type, text, 400, function (err, res) {
+                        if (err) return done(err);
+
+                        var expectedBody = {
+                            status: {code: 40000},
+                            errors: {
+                                moderatedReasonText: 'Text can be 1 to 2048 characters long.'
+                            }
+                        };
+                        assert.deepEqual(res.body, expectedBody);
+
+                        done();
+                    });
+                });
+
+                test('Fail - 40100 - Moderation only allowed for Moderators', function (done) {
+                    var type = Report.TYPES.spam;
+                    var text = null;
+
+                    _topicReportModerate(agentCreator, topic.id, report.id, type, text, 401, done);
+                });
+            });
+
+            suite('Review', function () {
+                var agentCreator = request.agent(app);
+                var agentReporter = request.agent(app);
+                var agentModerator = request.agent(app);
+
+                var emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                var emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                var emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+
+                var topicTitle = 'Topic report test';
+                var topicDescription = '<!DOCTYPE HTML><html><body><h1>Topic report test</h1><br>Topic report test desc<br><br></body></html>'
+                    .replace(':topicTitle', topicTitle);
+
+                var reportType = Report.TYPES.hate;
+                var reportText = 'Topic hate speech report test';
+
+                var userCreator;
+                var userModerator;
+                var userReporter;
+
+                var topic;
+                var report;
+
+                suiteSetup(function (done) {
+                    async
+                        .parallel(
+                            [
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentCreator, emailCreator, null, null, cb);
+                                },
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentModerator, emailModerator, null, null, cb);
+                                },
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentReporter, emailReporter, null, null, cb);
+                                }
+                            ]
+                            , function (err, results) {
+                                if (err) return done(err);
+
+                                [userCreator, userModerator, userReporter] = results;
+
+                                topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null, function (err, res) {
+                                    if (err) return done(err);
+
+                                    topic = res.body.data;
+
+                                    topicReportCreate(agentReporter, topic.id, reportType, reportText, function (err, res) {
+                                        if (err) return done(err);
+
+                                        report = res.body.data;
+
+                                        var type = Report.TYPES.spam;
+                                        var text = 'Test: contains spam.';
+
+                                        // Create a moderator in DB so that the Moderation email flow is executed
+                                        Moderator
+                                            .create({
+                                                userId: userModerator.id
+                                            })
+                                            .then(function () {
+                                                topicReportModerate(agentModerator, topic.id, report.id, type, text, done);
+                                            })
+                                            .catch(done);
+                                    });
+                                });
+                            }
+                        );
+                });
+
+                test('Success', function (done) {
+                    topicReportsReview(agentCreator, userCreator.id, topic.id, report.id, 'Please review, I have made many changes', done);
+                });
+
+                test('Fail - 40300 - Unauthorized, restricted to Users with access', function (done) {
+                    _topicReportsReview(agentReporter, userReporter.id, topic.id, report.id, 'Please review, I have made many changes', 403, done);
+                });
+
+                test('Fail - 40001 - Missing required parameter "text"', function (done) {
+                    _topicReportsReview(agentCreator, userCreator.id, topic.id, report.id, undefined, 400, function (err, res) { //eslint-disable-line no-undefined
+                        if (err) {
+                            return done(err);
+                        }
+
+                        var expectedBody = {
+                            status: {
+                                code: 40001,
+                                message: 'Bad request'
+                            },
+                            errors: {text: 'Parameter "text" has to be between 10 and 4000 characters'}
+                        };
+
+                        assert.deepEqual(res.body, expectedBody);
+
+                        done();
+                    });
+                });
+
+                test('Fail - 40001 - Review text too short', function (done) {
+                    _topicReportsReview(agentCreator, userCreator.id, topic.id, report.id, 'x', 400, function (err, res) {
+                        if (err) {
+                            return done(err);
+                        }
+
+                        var expectedBody = {
+                            status: {
+                                code: 40001,
+                                message: 'Bad request'
+                            },
+                            errors: {text: 'Parameter "text" has to be between 10 and 4000 characters'}
+                        };
+
+                        assert.deepEqual(res.body, expectedBody);
+
+                        done();
+                    });
+                });
+
+                test('Fail - 40001 - Review text too long', function (done) {
+                    var text = new Array(4002).join('a');
+                    _topicReportsReview(agentCreator, userCreator.id, topic.id, report.id, text, 400, function (err, res) {
+                        if (err) {
+                            return done(err);
+                        }
+
+                        var expectedBody = {
+                            status: {
+                                code: 40001,
+                                message: 'Bad request'
+                            },
+                            errors: {text: 'Parameter "text" has to be between 10 and 4000 characters'}
+                        };
+
+                        assert.deepEqual(res.body, expectedBody);
+
+                        done();
+                    });
+                });
+
+                test('Fail - 40300 - Review requests are only allowed for Topic members', function (done) {
+                    _topicReportsReview(agentReporter, userReporter.id, topic.id, report.id, 'Please review, I have made many changes', 403, done);
+                });
+            });
+
+            suite('Resolve', function () {
+                var agentCreator = request.agent(app);
+                var agentReporter = request.agent(app);
+                var agentModerator = request.agent(app);
+
+                var emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                var emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                var emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+
+                var topicTitle = 'Topic report test';
+                var topicDescription = '<!DOCTYPE HTML><html><body><h1>Topic report test</h1><br>Topic report test desc<br><br></body></html>'
+                    .replace(':topicTitle', topicTitle);
+
+                var reportType = Report.TYPES.hate;
+                var reportText = 'Topic hate speech report test';
+
+                var userCreator;
+                var userModerator;
+
+                var topic;
+                var report;
+
+                suiteSetup(function (done) {
+                    async
+                        .parallel(
+                            [
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentCreator, emailCreator, null, null, cb);
+                                },
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentModerator, emailModerator, null, null, cb);
+                                },
+                                function (cb) {
+                                    userLib.createUserAndLogin(agentReporter, emailReporter, null, null, cb);
+                                }
+                            ]
+                            , function (err, results) {
+                                if (err) return done(err);
+
+                                [userCreator, userModerator] = results;
+
+                                topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null, function (err, res) {
+                                    if (err) return done(err);
+
+                                    topic = res.body.data;
+
+                                    topicReportCreate(agentReporter, topic.id, reportType, reportText, function (err, res) {
+                                        if (err) return done(err);
+
+                                        report = res.body.data;
+
+                                        var type = Report.TYPES.spam;
+                                        var text = 'Test: contains spam.';
+
+                                        // Create a moderator in DB so that the Moderation email flow is executed
+                                        Moderator
+                                            .create({
+                                                userId: userModerator.id
+                                            })
+                                            .then(function () {
+                                                topicReportModerate(agentModerator, topic.id, report.id, type, text, done);
+                                            })
+                                            .catch(done);
+                                    });
+                                });
+                            }
+                        );
+                });
+
+                test('Success', function (done) {
+                    topicReportsResolve(agentModerator, topic.id, report.id, done);
+                });
+
+                test('Fail - 40100 - Only Moderators can resolve a report', function (done) {
+                    _topicReportsResolve(agentReporter, topic.id, report.id, 401, done);
+                });
+            });
+        });
     });
 });
 
@@ -7612,12 +8310,6 @@ suite('Topics', function () {
     suiteSetup(function (done) {
         shared
             .syncDb()
-            .finally(done);
-    });
-
-    suiteTeardown(function (done) {
-        shared
-            .closeDb()
             .finally(done);
     });
 
@@ -9667,7 +10359,7 @@ suite('Topics', function () {
                                 Comment
                                     .update(
                                         {
-                                            updatedAt: db.fn('NOW')
+                                            text: 'Update comment!'
                                         },
                                         {
                                             where: {

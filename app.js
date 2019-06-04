@@ -186,6 +186,8 @@ require('./libs/passport/index')(app).init();
 // Configure middleware
 app.use(cookieParser());
 app.use(bodyParser.json());
+app.use(bodyParser.json({type: 'application/json'}));
+app.use(bodyParser.json({type: 'application/csp-report'}));
 app.use(bodyParser.urlencoded({extended: false}));
 
 // CORS
@@ -242,6 +244,7 @@ app.set('middleware.authApiKey', require('./libs/middleware/authApiKey'));
 app.set('middleware.authTokenRestrictedUse', require('./libs/middleware/authTokenRestrictedUse'));
 app.set('middleware.partnerParser', require('./libs/middleware/partnerParser')(app));
 app.set('middleware.uuidValidator', require('./libs/middleware/uuidValidator')(app));
+app.set('middleware.asyncMiddleware', require('./libs/middleware/asyncMiddleware'));
 
 // Bot header logger
 app.use(require('./libs/middleware/botHeaderLogger'));

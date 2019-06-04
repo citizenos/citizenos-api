@@ -35,6 +35,7 @@ module.exports = function (app) {
     var loginCheck = app.get('middleware.loginCheck');
     var authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
     var partnerParser = app.get('middleware.partnerParser');
+    var asyncMiddleware = app.get('middleware.asyncMiddleware');
 
     var User = models.User;
     var UserConnection = models.UserConnection;
@@ -43,6 +44,7 @@ module.exports = function (app) {
     var Topic = models.Topic;
     var TopicMemberUser = models.TopicMemberUser;
     var TopicMemberGroup = models.TopicMemberGroup;
+    var TopicReport = models.TopicReport;
 
     var Report = models.Report;
 
@@ -229,13 +231,13 @@ module.exports = function (app) {
         };
     };
 
-    var hasVisibility = function (visiblity) {
+    var hasVisibility = function (visibility) {
         return function (req, res, next) {
             return Topic
                 .count({
                     where: {
                         id: req.params.topicId,
-                        visibility: visiblity
+                        visibility: visibility
                     }
                 })
                 .then(function (count) {
@@ -243,6 +245,8 @@ module.exports = function (app) {
                         return res.notFound();
                     }
                     next();
+
+                    return null; // NOTE: Avoids Bluebird throwing a warning about not returning a promise - http://goo.gl/rRqMUw
                 })
                 .catch(next);
         };
@@ -292,6 +296,11 @@ module.exports = function (app) {
         });
     };
 
+    /**
+     * NOTE! This does not block access in case of not being a Moderator, but only adds moderator flag to user object.
+     *
+     * @returns {Function} Express middleware function
+     */
     var isModerator = function () {
         return function (req, res, next) {
             var topicId = req.params.topicId;
@@ -322,6 +331,38 @@ module.exports = function (app) {
                         return next(err);
                     }
                 )
+                .catch(next);
+        };
+    };
+
+    /**
+     * Middleware to check for Moderator permissions. Rejects request if there are no Moderator permissions.
+     *
+     * @returns {Function} Express middleware function
+     */
+    var hasPermissionModerator = function () {
+        return function (req, res, next) {
+            var topicId = req.params.topicId;
+            var userId;
+
+            if (req.user) {
+                userId = req.user.id;
+            }
+
+            if (!topicId || !userId) {
+                return res.unauthorised();
+            }
+
+            _isModerator(topicId, userId)
+                .then(function (result) {
+                    if (result) {
+                        req.user.moderator = result.isModerator;
+
+                        return next(null, req, res);
+                    } else {
+                        return res.unauthorised();
+                    }
+                })
                 .catch(next);
         };
     };
@@ -605,7 +646,10 @@ module.exports = function (app) {
                      \'none\' as "permission.level", \
                      muc.count as "members.users.count", \
                      COALESCE(mgc.count, 0) as "members.groups.count", \
-                     tv."voteId" \
+                     tv."voteId", \
+                     tr."id" AS "report.id", \
+                     tr."moderatedReasonType" AS "report.moderatedReasonType", \
+                     tr."moderatedReasonText" AS "report.moderatedReasonText" \
                      ' + returncolumns + ' \
                 FROM "Topics" t \
                     LEFT JOIN "Users" c ON (c.id = t."creatorId") \
@@ -660,6 +704,7 @@ module.exports = function (app) {
                         LEFT JOIN "Votes" v \
                                 ON v.id = tv."voteId" \
                     ) AS tv ON (tv."topicId" = t.id) \
+                    LEFT JOIN "TopicReports" tr ON (tr."topicId" = t.id AND tr."resolvedById" IS NULL AND tr."deletedAt" IS NULL) \
                     ' + join + ' \
                 WHERE t.id = :topicId \
                   AND t.visibility = \'public\'\
@@ -878,7 +923,6 @@ module.exports = function (app) {
                         return topic
                             .save({transaction: t})
                             .then(function () {
-
                                 // The creator is also the first member
                                 return topic
                                     .addMemberUser(// Magic method by Sequelize - https://github.com/sequelize/sequelize/wiki/API-Reference-Associations#hasmanytarget-options
@@ -1009,6 +1053,11 @@ module.exports = function (app) {
             , uc."connectionData"::jsonb->>\'pid\' AS "creator.pid" \
             , uc."connectionData"::jsonb->\'phoneNumber\' AS "creator.phoneNumber" \
             ';
+
+            returncolumns += ' \
+            , tr."type" AS "report.type" \
+            , tr."text" AS "report.text" \
+            ';
         }
 
         db
@@ -1048,7 +1097,10 @@ module.exports = function (app) {
                         tv."voteId", \
                         u.id as "user.id", \
                         u.name as "user.name", \
-                        u.language as "user.language" \
+                        u.language as "user.language", \
+                        tr.id AS "report.id", \
+                        tr."moderatedReasonType" AS "report.moderatedReasonType", \
+                        tr."moderatedReasonText" AS "report.moderatedReasonText" \
                         ' + returncolumns + ' \
                 FROM "Topics" t \
                         LEFT JOIN ( \
@@ -1124,6 +1176,7 @@ module.exports = function (app) {
                                 ON v.id = tv."voteId" \
                     ) AS tv ON (tv."topicId" = t.id) \
                     LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId \
+                    LEFT JOIN "TopicReports" tr ON (tr."topicId" = t.id AND tr."resolvedById" IS NULL AND tr."deletedAt" IS NULL) \
                     ' + join + ' \
                 WHERE t.id = :topicId \
                     AND t."deletedAt" IS NULL \
@@ -1193,6 +1246,10 @@ module.exports = function (app) {
                                     rows: options
                                 };
 
+                                if (!topic.report.id) {
+                                    delete topic.report;
+                                }
+
                                 return res.ok(topic);
                             },
                             function (err) {
@@ -1201,6 +1258,10 @@ module.exports = function (app) {
                         );
                 } else {
                     delete topic.vote;
+
+                    if (!topic.report.id) {
+                        delete topic.report;
+                    }
 
                     return res.ok(topic);
                 }
@@ -1245,6 +1306,10 @@ module.exports = function (app) {
                                         rows: options
                                     };
 
+                                    if (!topic.report.id) {
+                                        delete topic.report;
+                                    }
+
                                     return res.ok(topic);
                                 },
                                 function (err) {
@@ -1253,6 +1318,10 @@ module.exports = function (app) {
                             );
                     } else {
                         delete topic.vote;
+
+                        if (!topic.report.id) {
+                            delete topic.report;
+                        }
 
                         return res.ok(topic);
                     }
@@ -1378,7 +1447,7 @@ module.exports = function (app) {
                             );
 
                         promisesToResolve.push(topicUpdatePromise);
-                        
+
                         var topicActivityPromise = cosActivities
                             .updateActivity(
                                 topic,
@@ -1393,7 +1462,7 @@ module.exports = function (app) {
                             );
 
                         promisesToResolve.push(topicActivityPromise);
-                        
+
                         if (isBackToVoting) {
                             promisesToResolve.push(cosBdoc.deleteFinalBdoc(topicId, vote.id));
 
@@ -1532,7 +1601,7 @@ module.exports = function (app) {
      */
     app.delete('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), function (req, res, next) {
         Topic
-            .findById(req.params.topicId)
+            .findByPk(req.params.topicId)
             .then(function (topic) {
                 if (!topic) {
                     res.notFound('No such topic found.');
@@ -3453,8 +3522,6 @@ module.exports = function (app) {
     app.get('/api/topics/:topicId/attachments', hasVisibility(Topic.VISIBILITY.public), topicAttachmentsList);
 
     var readAttachment = function (req, res, next) {
-
-
         Attachment
             .findOne({
                 where: {
@@ -3480,12 +3547,15 @@ module.exports = function (app) {
                         options.rejectUnauthorized = false;
                     }
 
-                    https.get(options, function (externalRes) {
-                        res.setHeader('content-disposition', 'attachment; filename=' + filename);
-                        externalRes.pipe(res);
-                    }).on('error', function (err) {
-                        next(err);
-                    }).end();
+                    https
+                        .get(options, function (externalRes) {
+                            res.setHeader('content-disposition', 'attachment; filename=' + filename);
+                            externalRes.pipe(res);
+                        })
+                        .on('error', function (err) {
+                            next(err);
+                        })
+                        .end();
                 } else {
                     res.ok(attachment.toJSON());
                 }
@@ -3494,6 +3564,214 @@ module.exports = function (app) {
 
     app.get('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), readAttachment);
     app.get('/api/topics/:topicId/attachments/:attachmentId', hasVisibility(Topic.VISIBILITY.public), readAttachment);
+
+    var topicReportsCreate = async function (req, res) {
+        const topicId = req.params.topicId;
+
+        const activeReportsCount = await TopicReport
+            .count({
+                where: {
+                    topicId: topicId,
+                    resolvedById: null
+                }
+            });
+
+        if (activeReportsCount) {
+            return res.badRequest('Topic has already been reported. Only one active report is allowed at the time to avoid overloading the moderators', 1);
+        }
+
+        const topicReport = await db.transaction(async function (t) {
+            const topicReport = await TopicReport
+                .create(
+                    {
+                        topicId: topicId,
+                        type: req.body.type,
+                        text: req.body.text,
+                        creatorId: req.user.id,
+                        creatorIp: req.ip
+                    },
+                    {
+                        transaction: t
+                    }
+                );
+
+            await emailLib.sendTopicReport(topicReport);
+
+            return topicReport;
+        });
+
+        return res.ok(topicReport);
+    };
+
+    /**
+     * Report a Topic
+     *
+     * @see https://github.com/citizenos/citizenos-api/issues/5
+     */
+    app.post(['/api/users/:userId/topics/:topicId/reports', '/api/topics/:topicId/reports'], loginCheck(['partner']), hasVisibility(Topic.VISIBILITY.public), asyncMiddleware(topicReportsCreate));
+
+    /**
+     * Read Topic Report
+     *
+     * @see https://github.com/citizenos/citizenos-api/issues/5
+     */
+    app.get(['/api/topics/:topicId/reports/:reportId', '/api/users/:userId/topics/:topicId/reports/:reportId'], hasVisibility(Topic.VISIBILITY.public), hasPermissionModerator(), asyncMiddleware(async function (req, res) {
+        const topicReports = await db
+            .query(
+                '\
+                    SELECT \
+                        tr."id", \
+                        tr."type", \
+                        tr."text", \
+                        tr."createdAt", \
+                        tr."creatorId" as "creator.id", \
+                        tr."moderatedById" as "moderator.id", \
+                        tr."moderatedReasonText", \
+                        tr."moderatedReasonType", \
+                        tr."moderatedAt", \
+                        t."id" as "topic.id", \
+                        t."title" as "topic.title", \
+                        t."description" as "topic.description", \
+                        t."updatedAt" as "topic.updatedAt" \
+                    FROM "TopicReports" tr \
+                    LEFT JOIN "Topics" t ON (t.id = tr."topicId") \
+                    WHERE tr.id = :id \
+                    AND t.id = :topicId \
+                    AND tr."deletedAt" IS NULL \
+                ;',
+                {
+                    replacements: {
+                        topicId: req.params.topicId,
+                        id: req.params.reportId
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
+
+        const topicReport = topicReports[0];
+
+        if (!topicReport) {
+            return res.notFound();
+        }
+
+        return res.ok(topicReport);
+    }));
+
+    /**
+     * Moderate a Topic - moderator approves a report, thus applying restrictions to the Topic
+     */
+    app.post(['/api/topics/:topicId/reports/:reportId/moderate', '/api/users/:userId/topics/:topicId/reports/:reportId/moderate'], hasVisibility(Topic.VISIBILITY.public), hasPermissionModerator(), asyncMiddleware(async function (req, res) {
+        const moderatedReasonType = req.body.type; // Delete reason type which is provided in case deleted/hidden by moderator due to a user report
+        const moderatedReasonText = req.body.text; // Free text with reason why the comment was deleted/hidden
+
+        const topic = await Topic.findOne({
+            where: {
+                id: req.params.topicId
+            }
+        });
+
+        let topicReport = await TopicReport.findOne({
+            where: {
+                id: req.params.reportId,
+                topicId: req.params.topicId
+            }
+        });
+
+        if (!topic || !topicReport) {
+            return res.notFound();
+        }
+
+        if (topicReport.resolvedById) {
+            return res.badRequest('Report has become invalid cause the report has been already resolved', 11);
+        }
+
+        if (topicReport.moderatedById) {
+            return res.badRequest('Report has become invalid cause the report has been already moderated', 12);
+        }
+
+        topicReport = await db
+            .transaction(function (t) {
+                topicReport.moderatedById = req.user.id;
+                topicReport.moderatedAt = db.fn('NOW');
+                topicReport.moderatedReasonType = moderatedReasonType || ''; // HACK: If Model has "allowNull: true", it will skip all validators when value is "null"
+                topicReport.moderatedReasonText = moderatedReasonText || ''; // HACK: If Model has "allowNull: true", it will skip all validators when value is "null"
+
+                return topicReport
+                    .save({
+                        transaction: t,
+                        returning: true
+                    });
+            });
+
+        // Pass on the Topic info we loaded, don't need to load Topic again.
+        await emailLib.sendTopicReportModerate(Object.assign(
+            {},
+            topicReport.toJSON(),
+            {
+                topic: topic
+            }
+        ));
+
+        return res.ok(topicReport);
+    }));
+
+    /** Send a Topic report for review - User let's Moderators know that the violations have been corrected **/
+    app.post(['/api/users/:userId/topics/:topicId/reports/:reportId/review', '/api/topics/:topicId/reports/:reportId/review'], loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), asyncMiddleware(async function (req, res) {
+        const topicId = req.params.topicId;
+        const reportId = req.params.reportId;
+        const text = req.body.text;
+
+        if (!text || text.length < 10 || text.length > 4000) {
+            return res.badRequest(null, 1, {text: 'Parameter "text" has to be between 10 and 4000 characters'});
+        }
+
+        var topicReport = await TopicReport.findOne({
+            where: {
+                topicId: topicId,
+                id: reportId
+            }
+        });
+
+        if (!topicReport) {
+            return res.notFound('Topic report not found');
+        }
+
+        await emailLib.sendTopicReportReview(topicReport, text);
+
+        return res.ok();
+    }));
+
+    /**
+     * Resolve a Topic report - mark the Topic report as fixed, thus lifting restrictions on the Topic
+     * We don't require /reports/review request to be sent to enable Moderators to act proactively
+     *
+     * @see https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce?argumentsPage=1
+     */
+    app.post(['/api/topics/:topicId/reports/:reportId/resolve', '/api/users/:userId/topics/:topicId/reports/:reportId/resolve'], hasVisibility(Topic.VISIBILITY.public), hasPermissionModerator(), asyncMiddleware(async function (req, res) {
+        const topicId = req.params.topicId;
+        const reportId = req.params.reportId;
+
+        const topicReport = await TopicReport
+            .update(
+                {
+                    resolvedById: req.user.id,
+                    resolvedAt: db.fn('NOW')
+                },
+                {
+                    where: {
+                        topicId: topicId,
+                        id: reportId
+                    },
+                    returning: true
+                }
+            );
+
+        await emailLib.sendTopicReportResolve(topicReport[1][0]);
+
+        return res.ok();
+    }));
 
     /**
      * Create Topic Comment
@@ -3965,7 +4243,7 @@ module.exports = function (app) {
                     delete comment.countPro;
                     delete comment.countCon;
                 });
-                
+
                 return res.ok({
                     count: {
                         pro: countPro,
@@ -4157,10 +4435,17 @@ module.exports = function (app) {
                             )
                             .then(function (report) {
                                 return cosActivities
-                                    .addActivity(report, {
-                                        type: 'User',
-                                        id: req.user.id
-                                    }, null, comment, req.method + ' ' + req.path, t)
+                                    .addActivity(
+                                        report,
+                                        {
+                                            type: 'User',
+                                            id: req.user.id
+                                        },
+                                        null,
+                                        comment,
+                                        req.method + ' ' + req.path,
+                                        t
+                                    )
                                     .then(function () {
                                         return CommentReport
                                             .create(
@@ -4229,6 +4514,10 @@ module.exports = function (app) {
                 }
             )
             .then(function (results) {
+                if (!results || !results.length) {
+                    return res.notFound();
+                }
+
                 var commentReport = results[0];
 
                 return res.ok(commentReport);
@@ -4284,7 +4573,7 @@ module.exports = function (app) {
                     return res.badRequest('Report has become invalid cause comment has been updated after the report', 10);
                 }
 
-                Comment
+                return Comment
                     .findOne({
                         where: {
                             id: comment.id

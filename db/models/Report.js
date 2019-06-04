@@ -41,11 +41,11 @@ module.exports = function (sequelize, DataTypes) {
             },
             text: {
                 type: DataTypes.STRING(2048),
-                allowNull: true,
+                allowNull: false,
                 validate: {
                     len: {
                         args: [1, 2048],
-                        msg: 'Text can be 1 to 2048 characters long.'
+                        msg: 'Report text can be 1 to 2048 characters long.'
                     }
                 },
                 comment: 'Additional comment for the report to provide more details on the violation.'

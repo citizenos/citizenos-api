@@ -37,12 +37,6 @@ suite('Partners', function () {
             .finally(done);
     });
 
-    suiteTeardown(function (done) {
-        shared
-            .closeDb()
-            .finally(done);
-    });
-
     suite('Topics', function () {
 
         suite('Read', function () {
@@ -50,7 +44,7 @@ suite('Partners', function () {
 
             var user;
             var partner;
-            var partnerObjectId = Math.random().toString(36).substring(16);
+            var partnerObjectId = Math.random().toString(36).substring(0, 16);
             var topic;
 
             suiteSetup(function (done) {

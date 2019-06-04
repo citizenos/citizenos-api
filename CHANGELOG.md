@@ -1,3 +1,28 @@
+## 2019-06-04
+
+* Quick fix for app crashing when `DATABASE_OPTIONS_POOL_MAX` env variable is set - https://github.com/citizenos/citizenos-api/issues/137 
+
+## 2019-06-03
+
+* BREAKING CHANGE: Started using **async/await**, so Node.JS >=7.6.0 is required. Default Node.JS version upgraded to 10.13.0.
+* FEATURE: Added Topic Report API - https://github.com/citizenos/citizenos-api/issues/5
+* DEVELOPMENT: `asyncMiddleware` added so that `async/await` can be used in Express routes.
+* Upgraded to Sequelize 5.x.
+
+## 2019-04-29
+
+* E-mail verification (`GET /api/auth/verify/:code`) not to automatically log in User after e-mail verification - https://github.com/citizenos/citizenos-api/issues/122
+
+## 2019-04-19
+
+* Add `/api/interal/report` endpoint to log csp-reports
+
+## 2019-04-10
+
+* Fix Etherpad sync endpoint, remove rev number to put less stress on etherpad. 
+* Fix partner topic read test
+* Update morgan
+
 ## 2019-02-22
 
 * Fix `GET /api/users/:userId/topics/:topicId/members/users` not returning all member users https://github.com/citizenos/citizenos-api/issues/117

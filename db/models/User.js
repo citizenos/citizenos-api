@@ -3,6 +3,7 @@
 var _ = require('lodash');
 var cryptoLib = require('../../libs/crypto');
 var hooks = require('../../libs/sequelize/hooks');
+const Sequelize = require('sequelize');
 
 /**
  * User
@@ -98,9 +99,9 @@ module.exports = function (sequelize, DataTypes) {
                         return;
                     }
 
-                    var uuid = sequelize.Utils.toDefaultValue(DataTypes.UUIDV4());
+                    var uuid = Sequelize.Utils.toDefaultValue(DataTypes.UUIDV4());
 
-                    return this.setDataValue('passwordResetCode', uuid);
+                    this.setDataValue('passwordResetCode', uuid);
                 }
             },
             emailIsVerified: {
@@ -197,7 +198,6 @@ module.exports = function (sequelize, DataTypes) {
         }
 
         user.password = cryptoLib.getHash(user.password, 'sha256');
-
         options.validate = false; // Stop validation from running twice!
     });
 

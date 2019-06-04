@@ -36,12 +36,6 @@ suite('cosBdoc', function () {
             .finally(done);
     });
 
-    suiteTeardown(function (done) {
-        shared
-            .closeDb()
-            .finally(done);
-    });
-
     // FIXME: Proper test
     test.skip('createVoteFiles', function (done) {
         cosBdoc

@@ -21,6 +21,9 @@ var defaultLoggingFunction = function (query) {
 };
 
 var dbOptions = config.db.options;
+config.db.options.pool.max = parseInt(config.db.options.pool.max); // FIXME: https://github.com/citizenos/citizenos-api/issues/137
+config.db.options.pool.min = parseInt(config.db.options.pool.min); // FIXME: https://github.com/citizenos/citizenos-api/issues/137
+
 if (dbOptions.logging && typeof dbOptions.logging !== 'function') {
     dbOptions.logging = defaultLoggingFunction;
 }

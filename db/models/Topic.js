@@ -5,6 +5,7 @@ var hooks = require('../../libs/sequelize/hooks');
 var util = require('util');
 var stringUtil = require('../../libs/util');
 var config = require('config');
+const Sequelize = require('sequelize');
 
 /**
  * Topic
@@ -56,7 +57,7 @@ module.exports = function (sequelize, DataTypes) {
     }
     var HASHTAG_BYTES_LENGTH_MAX = 59; //Maximum bytelenght of twitter hashtag in search API.
 
-    var Op = sequelize.Op;
+    var Op = Sequelize.Op;
 
     var Topic = sequelize.define(
         'Topic',
@@ -101,12 +102,14 @@ module.exports = function (sequelize, DataTypes) {
                 type: DataTypes.ARRAY(DataTypes.STRING), // While Sequelize does not support ARRAY of ENUM I'll use ARRAY of Strings - https://github.com/sequelize/sequelize/issues/1498
                 defaultValue: [],
                 validate: {
-                    isArrayOfCategories: function (values) {
-                        if (!Array.isArray(values)) {
+                    isArrayOfCategories: function (value) {
+                        if (!value) return; // Since Sequelize 5.x custom validators are run when allowNull is true.
+
+                        if (!Array.isArray(value)) {
                             throw new Error('Must be an array.');
                         }
 
-                        if (values.length > CATEGORIES_COUNT_MAX) {
+                        if (value.length > CATEGORIES_COUNT_MAX) {
                             throw new Error(util.format('Maximum of %d categories allowed.', CATEGORIES_COUNT_MAX));
                         }
                     }
@@ -174,6 +177,8 @@ module.exports = function (sequelize, DataTypes) {
                 allowNull: true,
                 validate: {
                     isDefinedByteLength: function (value) {
+                        if (!value) return; // Since Sequelize 5.x custom validators are run when allowNull is true.
+
                         var length = Buffer.byteLength(value);
                         if (!length || length > HASHTAG_BYTES_LENGTH_MAX) {
                             throw new Error(util.format('Maximum of %d bytes allowed. Currently %d bytes', HASHTAG_BYTES_LENGTH_MAX, length));
@@ -249,6 +254,10 @@ module.exports = function (sequelize, DataTypes) {
         });
 
         Topic.hasMany(models.TopicEvent, {
+            foreignKey: 'topicId'
+        });
+
+        Topic.hasMany(models.TopicReport, {
             foreignKey: 'topicId'
         });
 

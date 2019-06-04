@@ -14,7 +14,7 @@ module.exports = function (app) {
     var passport = app.get('passport');
     var models = app.get('models');
     var db = models.sequelize;
-    var Op = db.Op;
+    var Op = db.Sequelize.Op;
     var cosBdoc = app.get('cosBdoc');
     var cosActivities = app.get('cosActivities');
     var jwt = app.get('jwt');
@@ -308,10 +308,6 @@ module.exports = function (app) {
                         return res.redirect(302, redirectSuccess + '?error=emailVerificationFailed');
                     }
 
-                    var user = result[1][0];
-
-                    setAuthCookie(req, res, user.id);
-
                     if (getStateCookie(req, COOKIE_NAME_OPENID_AUTH_STATE)) { // We are in the middle of OpenID authorization flow
                         return res.redirect(urlLib.getApi('/api/auth/openid/authorize'));
                     } else {
@@ -400,7 +396,7 @@ module.exports = function (app) {
         var passwordResetCode = req.body.passwordResetCode;
 
         User
-            .find({
+            .findOne({
                 where: {
                     email: email,
                     passwordResetCode: passwordResetCode

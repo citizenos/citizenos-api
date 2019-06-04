@@ -2,8 +2,6 @@
 
 /**
  * All emails sent by the system
- *
- * TODO: Write all to Promises
  */
 
 module.exports = function (app) {
@@ -37,18 +35,33 @@ module.exports = function (app) {
     if (fs.existsSync(path.join(templateRootLocal, 'images/logo-email.png'))) { //eslint-disable-line no-sync
         emailHeaderLogo = path.join(templateRootLocal, 'images/logo-email.png');
     }
-    logger.info('Using email header logo from', emailHeaderLogo);
+    logger.debug('Using email header logo from', emailHeaderLogo);
 
-    var linkToPlatform = config.email.linkToPlatform || urlLib.getFe();
-    var linkToPrivacyPolicy = config.email.linkToPrivacyPolicy;
-    var linkedData = {
-        footerLinks: {
-            linkToPlatform: linkToPlatform,
-            linkToPrivacyPolicy: linkToPrivacyPolicy
+    // Default e-mail sending options common to all e-mails
+    // NOTE: ALWAYS CLONE (_.cloneDeep) this, do not modify!
+    const EMAIL_OPTIONS_DEFAULT = {
+        images: [
+            {
+                name: emailHeaderLogoName,
+                file: emailHeaderLogo
+            },
+            {
+                name: emailFooterLogoName,
+                file: emailFooterLogo
+            }
+        ],
+        styles: config.email.styles,
+        linkedData: {
+            footerLinks: {
+                linkToPlatform: config.email.linkToPlatform || urlLib.getFe(),
+                linkToPrivacyPolicy: config.email.linkToPrivacyPolicy
+            }
+        },
+        provider: {
+            merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
         }
     };
-    var styles = config.email.styles;
-    var partnerStyles = config.email.partnerStyles;
+
 
     var templateCache = {};
 
@@ -65,37 +78,157 @@ module.exports = function (app) {
      * @private
      */
     var resolveTemplate = function (template, language) {
-        var lang = language ? language.toLowerCase() : 'en';
+        const lang = language ? language.toLowerCase() : 'en';
 
-        var pathTemplate = ':templateRoot/build/:template_:language.html'
+        const pathTemplate = ':templateRoot/build/:template_:language.html'
             .replace(':templateRoot', templateRoot)
             .replace(':template', template)
             .replace(':language', lang);
 
-        var pathTranslations = ':templateRoot/languages/:language.json'
+        const pathTemplateFallback = ':templateRoot/:template.html'
+            .replace(':templateRoot', templateRoot)
+            .replace(':template', template);
+
+        const pathTranslations = ':templateRoot/languages/:language.json'
             .replace(':templateRoot', templateRoot)
             .replace(':language', lang);
 
-        var templateObj = {
+        const templateObj = {
             body: null,
-            translations: null
+            translations: null,
+            language: lang
         };
 
-        var cachedTemplateObj = templateCache[pathTemplate];
+        const cachedTemplateObj = templateCache[pathTemplate];
         if (cachedTemplateObj) {
             return cachedTemplateObj;
         }
 
+        // TODO: Rewrite to async FS operations
         try {
-            // TODO: Rewrite to async FS operations
             templateObj.body = fs.readFileSync(pathTemplate, {encoding: 'utf8'}); // eslint-disable-line no-sync
-            templateObj.translations = JSON.parse(fs.readFileSync(pathTranslations, {encoding: 'utf8'})); // eslint-disable-line no-sync
-            templateCache[pathTemplate] = templateObj;
-
-            return templateObj;
         } catch (e) {
-            logger.warn('Template could not be read!', pathTemplate);
+            logger.warn('Could not read template using fallback instead!', pathTemplate, pathTemplateFallback);
+            templateObj.body = fs.readFileSync(pathTemplateFallback, {encoding: 'utf8'}); // eslint-disable-line no-sync
         }
+
+        // TODO: Rewrite to async FS operations
+        templateObj.translations = JSON.parse(fs.readFileSync(pathTranslations, {encoding: 'utf8'})); // eslint-disable-line no-sync
+        templateCache[pathTemplate] = templateObj;
+
+        return templateObj;
+    };
+
+    /**
+     * Get Topic Member Users, be it directly or through Groups
+     *
+     * @param {string} topicId Topic Id
+     * @param {string} [levelMin=TopicMember.LEVELS.admin] One of TopicMember.LEVELS
+     *
+     * @returns {Promise<Array>} Array of topic members
+     *
+     * @private
+     */
+    const _getTopicMemberUsers = function (topicId, levelMin) {
+        let levelMinimum = TopicMemberUser.LEVELS.admin;
+
+        if (levelMin && TopicMemberUser.LEVELS[levelMin]) {
+            levelMinimum = levelMin;
+        }
+
+        return db
+            .query(
+                '\
+                    SELECT \
+                        tm.id, \
+                        tm.name, \
+                        tm.email, \
+                        tm.language \
+                    FROM ( \
+                        SELECT DISTINCT ON(id) \
+                            tm."memberId" as id, \
+                            tm."level", \
+                            u.name, \
+                            u.email, \
+                            u.language \
+                        FROM "Topics" t \
+                        JOIN ( \
+                            SELECT \
+                                tmu."topicId", \
+                                tmu."userId" AS "memberId", \
+                                tmu."level"::text, \
+                                1 as "priority" \
+                            FROM "TopicMemberUsers" tmu \
+                            WHERE tmu."deletedAt" IS NULL \
+                            UNION \
+                            ( \
+                                SELECT \
+                                    tmg."topicId", \
+                                    gm."userId" AS "memberId", \
+                                    tmg."level"::text, \
+                                    2 as "priority" \
+                                FROM "TopicMemberGroups" tmg \
+                                LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
+                                WHERE tmg."deletedAt" IS NULL \
+                                AND gm."deletedAt" IS NULL \
+                                ORDER BY tmg."level"::"enum_TopicMemberGroups_level" DESC \
+                            ) \
+                        ) AS tm ON (tm."topicId" = t.id) \
+                        JOIN "Users" u ON (u.id = tm."memberId") \
+                        LEFT JOIN "TopicMemberUsers" tmu ON (tmu."userId" = tm."memberId" AND tmu."topicId" = t.id) \
+                        WHERE t.id = :topicId \
+                        ORDER BY id, tm.priority \
+                    ) tm \
+                    WHERE tm.level::"enum_TopicMemberUsers_level" >= :level \
+                    AND tm.email IS NOT NULL \
+                    ORDER BY name ASC \
+                ',
+                {
+                    replacements: {
+                        topicId: topicId,
+                        level: levelMinimum
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
+    };
+
+
+    /**
+     * Get Moderator list
+     *
+     * @param {String} [sourcePartnerId] Source partner id - UUID
+     *
+     * @returns {Promise} Array of incomplete User objects
+     *
+     * @private
+     */
+    const _getModerators = function (sourcePartnerId) {
+        return db
+            .query(
+                ' \
+                    SELECT \
+                        u.id, \
+                        u."email", \
+                        u."name", \
+                        u."language" \
+                    FROM "Moderators" m \
+                        JOIN "Users" u ON (u.id = m."userId") \
+                    WHERE u."email" IS NOT NULL \
+                    AND (m."partnerId" = :partnerId \
+                    OR m."partnerId" IS NULL) \
+                ',
+                {
+                    replacements: {
+                        partnerId: sourcePartnerId
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
     };
 
     /**
@@ -121,36 +254,21 @@ module.exports = function (app) {
 
                 _.forEach(users, function (user) {
                     var templateObject = resolveTemplate('accountVerification', user.language);
-                    linkedData.translations = templateObject.translations;
                     var linkVerify = urlLib.getApi('/api/auth/verify/:code', {code: emailVerificationCode}, {token: token});
 
+                    var emailOptions = Object.assign(
+                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
+                        {
+                            subject: templateObject.translations.ACCOUNT_VERIFICATION.SUBJECT,
+                            to: user.email,
+                            //Placeholders
+                            toUser: user,
+                            linkVerify: linkVerify
+                        }
+                    );
+
                     // https://github.com/bevacqua/campaign#email-sending-option
-                    var userEmailPromise = emailClient.sendStringAsync(templateObject.body, {
-                        subject: templateObject.translations.ACCOUNT_VERIFICATION.SUBJECT,
-                        to: user.email,
-                        social: config.email.social,
-                        images: [
-                            {
-                                name: emailHeaderLogoName,
-                                file: emailHeaderLogo
-                            },
-                            {
-                                name: emailFooterLogoName,
-                                file: emailFooterLogo
-                            }
-                        ],
-                        //Placeholders
-                        toUser: user,
-                        linkVerify: linkVerify,
-                        linkToApplication: urlLib.getFe(),
-                        linkToPlatform: linkToPlatform,
-                        linkToPrivacyPolicy: linkToPrivacyPolicy,
-                        provider: {
-                            merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
-                        },
-                        styles: styles,
-                        linkedData: linkedData
-                    });
+                    var userEmailPromise = emailClient.sendStringAsync(templateObject.body, emailOptions);
 
                     promisesToResolve.push(userEmailPromise);
                 });
@@ -180,34 +298,20 @@ module.exports = function (app) {
                 var promisesToResolve = [];
 
                 _.forEach(users, function (user) {
-                    var template = resolveTemplate('passwordReset', user.language);
-                    linkedData.translations = template.translations;
-                    var userEmailPromise = emailClient.sendStringAsync(template.body, {
-                        subject: template.translations.PASSWORD_RESET.SUBJECT,
-                        to: user.email,
-                        images: [
-                            {
-                                name: emailHeaderLogoName,
-                                file: emailHeaderLogo
-                            },
-                            {
-                                name: emailFooterLogoName,
-                                file: emailFooterLogo
-                            }
-                        ],
-                        social: config.email.social, // social.name maps to "from_name". I think this should be part of Campaign client config OR at least defaults can be set somewhere in client options
-                        //Placeholders..
-                        toUser: user,
-                        linkReset: urlLib.getFe('/account/password/reset/:passwordResetCode', {passwordResetCode: passwordResetCode}, {email: user.email}),
-                        linkToApplication: urlLib.getFe(),
-                        linkToPlatform: linkToPlatform,
-                        linkToPrivacyPolicy: linkToPrivacyPolicy,
-                        provider: {
-                            merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
-                        },
-                        styles: styles,
-                        linkedData: linkedData
-                    });
+                    const template = resolveTemplate('passwordReset', user.language);
+
+                    const emailOptions = Object.assign(
+                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
+                        {
+                            subject: template.translations.PASSWORD_RESET.SUBJECT,
+                            to: user.email,
+                            //Placeholders..
+                            toUser: user,
+                            linkReset: urlLib.getFe('/account/password/reset/:passwordResetCode', {passwordResetCode: passwordResetCode}, {email: user.email})
+                        }
+                    );
+
+                    const userEmailPromise = emailClient.sendStringAsync(template.body, emailOptions);
 
                     promisesToResolve.push(userEmailPromise);
                 });
@@ -242,7 +346,7 @@ module.exports = function (app) {
 
             return Promise.resolve();
         }
-        var customStyles = styles;
+        var customStyles = EMAIL_OPTIONS_DEFAULT.styles;
         var toUsersPromise = User.findAll({
             where: {
                 id: toUserIds
@@ -289,7 +393,7 @@ module.exports = function (app) {
 
                     if (!sourceSite) {
                         // Handle CitizenOS links
-                        from = config.email.from;
+                        from = EMAIL_OPTIONS_DEFAULT.from;
                         logoFile = emailHeaderLogo;
                         templateName = 'inviteTopic';
                         linkToApplication = urlLib.getFe();
@@ -299,7 +403,7 @@ module.exports = function (app) {
                         logoFile = templateRoot + '/images/logo-email_' + sourceSite + '.png';
                         templateName = 'inviteTopic_' + sourceSite;
                         linkToApplication = partner.website;
-                        customStyles = partnerStyles[sourceSite];
+                        customStyles = config.email.partnerStyles[sourceSite];
                     }
 
                     //TODO: we can win performance if we collect together all Users with same language and send these with 1 request to mail provider
@@ -336,9 +440,7 @@ module.exports = function (app) {
                             // In case Topic has no title, just show the full url.
                             topic.title = topic.title ? topic.title : linkViewTopic;
 
-                            linkedData.translations = template.translations;
-
-                            var emailPromise = emailClient.sendStringAsync(template.body, {
+                            const emailOptions = {
                                 from: from,
                                 subject: subject,
                                 to: user.email,
@@ -352,20 +454,17 @@ module.exports = function (app) {
                                         file: emailFooterLogo
                                     }
                                 ],
-                                social: config.email.social, // social.name maps to "from_name". I think this should be part of Campaign client config OR at least defaults can be set somewhere in client options
                                 toUser: user,
                                 fromUser: fromUser,
                                 topic: topic,
                                 linkViewTopic: linkViewTopic,
                                 linkToApplication: linkToApplication,
-                                linkToPlatform: linkToPlatform,
-                                linkToPrivacyPolicy: linkToPrivacyPolicy,
-                                provider: {
-                                    merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
-                                },
+                                provider: EMAIL_OPTIONS_DEFAULT.provider,
                                 styles: customStyles,
-                                linkedData: linkedData
-                            });
+                                linkedData: EMAIL_OPTIONS_DEFAULT.linkedData
+                            };
+
+                            var emailPromise = emailClient.sendStringAsync(template.body, emailOptions);
 
                             promisesToResolve.push(emailPromise);
                         }
@@ -450,11 +549,9 @@ module.exports = function (app) {
                 if (toUsers && toUsers.length) {
                     var promisesToResolve = [];
 
-                    // TODO: We can gain in performance if we group Users with same language code
                     _.forEach(toUsers, function (user) {
                         if (user.email) {
                             var template = resolveTemplate('inviteTopic', user.language);
-                            linkedData.translations = template.translations;
                             // TODO: Could use Mu here....
                             var subject = template.translations.INVITE_TOPIC.SUBJECT
                                 .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name));
@@ -467,33 +564,19 @@ module.exports = function (app) {
                             // In case Topic has no title, just show the full url.
                             topic.title = topic.title ? topic.title : linkViewTopic;
 
-                            var sendEmailPromise = emailClient.sendStringAsync(template.body, {
-                                subject: subject,
-                                to: user.email,
-                                images: [
-                                    {
-                                        name: emailHeaderLogoName,
-                                        file: emailHeaderLogo
-                                    },
-                                    {
-                                        name: emailFooterLogoName,
-                                        file: emailFooterLogo
-                                    }
-                                ],
-                                social: config.email.social, // social.name maps to "from_name". I think this should be part of Campaign client config OR at least defaults can be set somewhere in client options
-                                toUser: user,
-                                fromUser: fromUser,
-                                topic: topic,
-                                linkViewTopic: linkViewTopic,
-                                linkToApplication: urlLib.getFe(),
-                                linkToPlatform: linkToPlatform,
-                                linkToPrivacyPolicy: linkToPrivacyPolicy,
-                                provider: {
-                                    merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
-                                },
-                                styles: styles,
-                                linkedData: linkedData
-                            });
+                            var emailOptions = Object.assign(
+                                _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                                {
+                                    subject: subject,
+                                    to: user.email,
+                                    toUser: user,
+                                    fromUser: fromUser,
+                                    topic: topic,
+                                    linkViewTopic: linkViewTopic
+                                }
+                            );
+
+                            var sendEmailPromise = emailClient.sendStringAsync(template.body, emailOptions);
 
                             promisesToResolve.push(sendEmailPromise);
                         }
@@ -566,41 +649,32 @@ module.exports = function (app) {
                     _.forEach(toUsers, function (user) {
                         if (user.email) {
                             var template = resolveTemplate('inviteGroup', user.language);
-                            linkedData.translations = template.translations;
+
                             // TODO: could use Mu here...
                             var subject = template.translations.INVITE_GROUP.SUBJECT
                                 .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
                                 .replace('{{group.name}}', util.escapeHtml(group.name));
 
-                            var userEmailPromise = emailClient.sendStringAsync(template.body, {
-                                subject: subject,
-                                to: user.email,
-                                images: [
-                                    {
-                                        name: emailHeaderLogoName,
-                                        file: emailHeaderLogo
-                                    },
-                                    {
-                                        name: emailFooterLogoName,
-                                        file: emailFooterLogo
-                                    }
-                                ],
-                                social: config.email.social, // social.name maps to "from_name". I think this should be part of Campaign client config OR at least defaults can be set somewhere in client options
-                                //Placeholders..
-                                toUser: user,
-                                fromUser: fromUser,
-                                group: group,
-                                linkViewGroup: urlLib.getApi('/api/invite/view', null, {
-                                    email: user.email,
-                                    groupId: group.id
-                                }),
-                                linkToApplication: urlLib.getFe(),
-                                provider: {
-                                    merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
-                                },
-                                styles: styles,
-                                linkedData: linkedData
-                            });
+                            var emailOptions = Object.assign(
+                                _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                                {
+                                    subject: subject,
+                                    to: user.email,
+                                    //Placeholders..
+                                    toUser: user,
+                                    fromUser: fromUser,
+                                    group: group,
+                                    linkViewGroup: urlLib.getApi(
+                                        '/api/invite/view',
+                                        null,
+                                        {
+                                            email: user.email,
+                                            groupId: group.id
+                                        }
+                                    )
+                                }
+                            );
+                            var userEmailPromise = emailClient.sendStringAsync(template.body, emailOptions);
 
                             promisesToResolve.push(userEmailPromise);
                         }
@@ -657,29 +731,7 @@ module.exports = function (app) {
                 if (commentInfo.topic.visibility === Topic.VISIBILITY.public) {
                     logger.debug('Topic is public, sending e-mails to registered partner moderators', commentInfo);
 
-                    return db
-                        .query(
-                            ' \
-                                SELECT \
-                                    u.id, \
-                                    u."email", \
-                                    u."name", \
-                                    u."language" \
-                                FROM "Moderators" m \
-                                    JOIN "Users" u ON (u.id = m."userId") \
-                                WHERE u."email" IS NOT NULL \
-                                AND (m."partnerId" = :partnerId \
-                                OR m."partnerId" IS NULL) \
-                            ',
-                            {
-                                replacements: {
-                                    partnerId: commentInfo.topic.sourcePartnerId
-                                },
-                                type: db.QueryTypes.SELECT,
-                                raw: true,
-                                nest: true
-                            }
-                        )
+                    return _getModerators(commentInfo.topic.sourcePartnerId)
                         .then(function (moderators) {
                             return [commentInfo, moderators];
                         });
@@ -687,63 +739,7 @@ module.exports = function (app) {
                     logger.debug('Topic is NOT public, sending e-mails to Users with admin permissions', commentInfo);
                     // Private Topics will have moderation by admin Users
 
-                    return db
-                        .query(
-                            '\
-                                SELECT \
-                                    tm.id, \
-                                    tm.name, \
-                                    tm.email, \
-                                    tm.language \
-                                FROM ( \
-                                    SELECT DISTINCT ON(id) \
-                                        tm."memberId" as id, \
-                                        tm."level", \
-                                        u.name, \
-                                        u.email, \
-                                        u.language \
-                                    FROM "Topics" t \
-                                    JOIN ( \
-                                        SELECT \
-                                            tmu."topicId", \
-                                            tmu."userId" AS "memberId", \
-                                            tmu."level"::text, \
-                                            1 as "priority" \
-                                        FROM "TopicMemberUsers" tmu \
-                                        WHERE tmu."deletedAt" IS NULL \
-                                        UNION \
-                                        ( \
-                                            SELECT \
-                                                tmg."topicId", \
-                                                gm."userId" AS "memberId", \
-                                                tmg."level"::text, \
-                                                2 as "priority" \
-                                            FROM "TopicMemberGroups" tmg \
-                                            LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
-                                            WHERE tmg."deletedAt" IS NULL \
-                                            AND gm."deletedAt" IS NULL \
-                                            ORDER BY tmg."level"::"enum_TopicMemberGroups_level" DESC \
-                                        ) \
-                                    ) AS tm ON (tm."topicId" = t.id) \
-                                    JOIN "Users" u ON (u.id = tm."memberId") \
-                                    LEFT JOIN "TopicMemberUsers" tmu ON (tmu."userId" = tm."memberId" AND tmu."topicId" = t.id) \
-                                    WHERE t.id = :topicId \
-                                    ORDER BY id, tm.priority \
-                                ) tm \
-                                WHERE tm.level::"enum_TopicMemberUsers_level" >= :level \
-                                AND tm.email IS NOT NULL \
-                                ORDER BY name ASC \
-                            ',
-                            {
-                                replacements: {
-                                    topicId: commentInfo.topic.id,
-                                    level: TopicMemberUser.LEVELS.admin
-                                },
-                                type: db.QueryTypes.SELECT,
-                                raw: true,
-                                nest: true
-                            }
-                        )
+                    return _getTopicMemberUsers(commentInfo.topic.id, TopicMemberUser.LEVELS.admin)
                         .then(function (moderators) {
                             return [commentInfo, moderators];
                         });
@@ -756,40 +752,25 @@ module.exports = function (app) {
                 var commentCreatorInformed = true;
                 if (commentInfo.comment.creator.email) {
                     var templateObject = resolveTemplate('reportCommentCreator', commentInfo.comment.creator.language);
-                    linkedData.translations = templateObject.translations;
                     var linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: commentInfo.topic.id});
 
-                    var promiseCreatorEmail = emailClient.sendStringAsync(
-                        templateObject.body,
+                    var emailOptions = Object.assign(
+                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
                         {
                             subject: templateObject.translations.REPORT_COMMENT_CREATOR.SUBJECT,
                             to: commentInfo.comment.creator.email,
-                            social: config.email.social,
-                            images: [
-                                {
-                                    name: emailHeaderLogoName,
-                                    file: emailHeaderLogo
-                                },
-                                {
-                                    name: emailFooterLogoName,
-                                    file: emailFooterLogo
-                                }
-                            ],
                             //Placeholders
                             comment: commentInfo.comment,
                             report: {
                                 type: templateObject.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
                                 text: report.text
                             },
-                            linkViewTopic: linkViewTopic,
-                            linkToApplication: urlLib.getFe(),
-                            provider: {
-                                merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
-                            },
-                            styles: styles,
-                            linkedData: linkedData
+                            linkViewTopic: linkViewTopic
                         }
                     );
+
+                    var promiseCreatorEmail = emailClient.sendStringAsync(templateObject.body, emailOptions);
+
                     promisesToResolve.push(promiseCreatorEmail);
                 } else {
                     logger.info('Comment reported, but no e-mail could be sent to creator as there is no e-mail in the profile', commentInfo);
@@ -826,22 +807,11 @@ module.exports = function (app) {
                                 ]
                             );
 
-                            var promiseModeratorEmail = emailClient.sendStringAsync(
-                                templateObject.body,
+                            var emailOptions = Object.assign(
+                                _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
                                 {
                                     subject: templateObject.translations.REPORT_COMMENT_MODERATOR.SUBJECT,
                                     to: moderator.email,
-                                    social: config.email.social,
-                                    images: [
-                                        {
-                                            name: emailHeaderLogoName,
-                                            file: emailHeaderLogo
-                                        },
-                                        {
-                                            name: emailFooterLogoName,
-                                            file: emailFooterLogo
-                                        }
-                                    ],
                                     //Placeholders...
                                     comment: commentInfo.comment,
                                     report: {
@@ -849,16 +819,11 @@ module.exports = function (app) {
                                         text: report.text
                                     },
                                     linkModerate: linkModerate + '?token=' + encodeURIComponent(token),
-                                    isUserNotified: commentCreatorInformed,
-                                    linkToApplication: urlLib.getFe(),
-                                    linkToPlatform: linkToPlatform,
-                                    linkToPrivacyPolicy: linkToPrivacyPolicy,
-                                    provider: {
-                                        merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
-                                    },
-                                    styles: styles
+                                    isUserNotified: commentCreatorInformed
                                 }
                             );
+
+                            var promiseModeratorEmail = emailClient.sendStringAsync(templateObject.body, emailOptions);
 
                             promisesToResolve.push(promiseModeratorEmail);
                         }
@@ -867,6 +832,413 @@ module.exports = function (app) {
 
                 return Promise.all(promisesToResolve);
             });
+    };
+
+    /**
+     * Send Topic report related e-mails
+     *
+     * @param {object} topicReport TopicReport Sequelize instance
+     *
+     * @returns {Promise} Topic report result
+     *
+     * @private
+     *
+     * @see Citizen OS Topic moderation 1 - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
+     *
+     */
+    var _sendTopicReport = async function (topicReport) {
+        const infoFetchPromises = [];
+
+        // Get the topic info
+        infoFetchPromises.push(Topic.findOne({
+            where: {
+                id: topicReport.topicId
+            }
+        }));
+
+        // Get reporters info
+        infoFetchPromises.push(User.findOne({
+            where: {
+                id: topicReport.creatorId
+            }
+        }));
+
+        // Get Topic edit/admin Member list
+        infoFetchPromises.push(_getTopicMemberUsers(topicReport.topicId, TopicMemberUser.LEVELS.edit));
+
+        const [topic, userReporter, topicMemberList] = await Promise.all(infoFetchPromises);
+        const topicModerators = await _getModerators(topic.sourcePartnerId);
+
+        const linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+
+        const sendEmailPromises = [];
+
+        if (userReporter.email) {
+            // 1.1 To the User (reporter) who reported the topic - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
+            var sendReporterEmail = async function () {
+                const templateObject = resolveTemplate('reportTopicReportReporter', userReporter.language);
+                const subject = templateObject.translations.REPORT_TOPIC_REPORT_REPORTER.SUBJECT
+                    .replace('{{report.id}}', topicReport.id);
+
+                const emailOptions = Object.assign(
+                    _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                    {
+                        subject: subject,
+                        to: userReporter.email,
+                        //Placeholders
+                        userReporter: userReporter,
+                        report: {
+                            id: topicReport.id,
+                            type: templateObject.translations.REPORT.REPORT_TYPE[topicReport.type.toUpperCase()],
+                            text: topicReport.text
+                        },
+                        topic: topic,
+                        linkViewTopic: linkViewTopic,
+                        linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
+                    }
+                );
+
+                return await emailClient.sendStringAsync(templateObject.body, emailOptions);
+            };
+            sendEmailPromises.push(sendReporterEmail());
+        } else {
+            logger.info('Could not send e-mail to Topic reporter because e-mail address does not exist', userReporter.id);
+        }
+
+        // 1.2. To admin/edit Members of the topic - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce?argumentsPage=1
+        topicMemberList.forEach(function (topicMemberUser) {
+            if (topicMemberUser.email) {
+                const sendTopicMemberEmail = async function () {
+                    const templateObject = resolveTemplate('reportTopicReportMember', topicMemberUser.language);
+                    const subject = templateObject.translations.REPORT_TOPIC_REPORT_MEMBER.SUBJECT
+                        .replace('{{report.id}}', topicReport.id);
+
+                    const emailOptions = Object.assign(
+                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                        {
+                            subject: subject,
+                            to: topicMemberUser.email,
+                            //Placeholders
+                            userMember: topicMemberUser,
+                            report: {
+                                id: topicReport.id,
+                                type: templateObject.translations.REPORT.REPORT_TYPE[topicReport.type.toUpperCase()],
+                                text: topicReport.text
+                            },
+                            topic: topic,
+                            linkViewTopic: linkViewTopic,
+                            linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
+                        }
+                    );
+
+                    return await emailClient.sendStringAsync(templateObject.body, emailOptions);
+                };
+                sendEmailPromises.push(sendTopicMemberEmail());
+            } else {
+                logger.info('Could not send e-mail to Topic member because e-mail address does not exist', topicMemberUser.id);
+            }
+        });
+
+        // 1.3 To the Moderators - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce?argumentsPage=1
+        topicModerators.forEach(function (userModerator) {
+            if (userModerator.email) {
+                const sendTopicModeratorEmail = async function () {
+                    const templateObject = resolveTemplate('reportTopicReportModerator', userModerator.language);
+                    const subject = templateObject.translations.REPORT_TOPIC_REPORT_MODERATOR.SUBJECT
+                        .replace('{{report.id}}', topicReport.id);
+
+                    const emailOptions = Object.assign(
+                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                        {
+                            subject: subject,
+                            to: userModerator.email,
+                            //Placeholders
+                            userModerator: userModerator,
+                            report: {
+                                id: topicReport.id,
+                                type: templateObject.translations.REPORT.REPORT_TYPE[topicReport.type.toUpperCase()],
+                                text: topicReport.text
+                            },
+                            topic: topic,
+                            linkViewTopic: linkViewTopic,
+                            linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
+                        }
+                    );
+
+                    return await emailClient.sendStringAsync(templateObject.body, emailOptions);
+                };
+                sendEmailPromises.push(sendTopicModeratorEmail());
+            } else {
+                logger.info('Could not send e-mail to Topic Moderator because e-mail address does not exist', userModerator.id);
+            }
+        });
+
+        return Promise.all(sendEmailPromises);
+    };
+
+    /**
+     * Send Topic report moderation related e-mails
+     *
+     * @param {object} topicReport TopicReport Sequelize instance
+     *
+     * @returns {Promise} Topic report moderate email sending result
+     *
+     * @private
+     *
+     * @see Citizen OS Topic moderation 2 - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
+     *
+     */
+    var _sendTopicReportModerate = async function (topicReport) {
+        const infoFetchPromises = [];
+        const topic = topicReport.topic;
+
+        // Get reporters info
+        infoFetchPromises.push(User.findOne({
+            where: {
+                id: topicReport.creator.id
+            }
+        }));
+
+        // Get Topic member Users
+        infoFetchPromises.push(_getTopicMemberUsers(topic.id, TopicMemberUser.LEVELS.edit));
+
+        const [userReporter, topicMemberList] = await Promise.all(infoFetchPromises);
+
+        const linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+
+        const sendEmailPromiseses = [];
+
+        // 2.1 To the User (reporter) who reported the topic - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
+        if (userReporter.email) {
+            var sendReporterEmail = async function () {
+                const templateObject = resolveTemplate('reportTopicModerateReporter', userReporter.language);
+                const subject = templateObject.translations.REPORT_TOPIC_MODERATE_REPORTER.SUBJECT
+                    .replace('{{report.id}}', topicReport.id);
+
+                const emailOptions = Object.assign(
+                    _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                    {
+                        subject: subject,
+                        to: userReporter.email,
+                        //Placeholders
+                        userReporter: userReporter,
+                        report: {
+                            id: topicReport.id,
+                            moderatedReasonType: templateObject.translations.REPORT.REPORT_TYPE[topicReport.moderatedReasonType.toUpperCase()],
+                            moderatedReasonText: topicReport.moderatedReasonText,
+                            createdAt: moment(topicReport.createdAt).locale(templateObject.language).format('LLL Z')
+                        },
+                        topic: topic,
+                        linkViewTopic: linkViewTopic,
+                        linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
+                    }
+                );
+
+                return await emailClient.sendStringAsync(templateObject.body, emailOptions);
+            };
+            sendEmailPromiseses.push(sendReporterEmail());
+        } else {
+            logger.info('Could not send e-mail to Topic reporter because e-mail address does not exist', userReporter.id);
+        }
+
+        // 2.2 To admin/edit Members of the topic - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce?argumentsPage=1
+        topicMemberList.forEach(function (topicMemberUser) {
+            if (topicMemberUser.email) {
+                const sendTopicMemberEmail = async function () {
+                    const templateObject = resolveTemplate('reportTopicModerateMember', topicMemberUser.language);
+                    const subject = templateObject.translations.REPORT_TOPIC_MODERATE_MEMBER.SUBJECT
+                        .replace('{{report.id}}', topicReport.id);
+
+                    const emailOptions = Object.assign(
+                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                        {
+                            subject: subject,
+                            to: topicMemberUser.email,
+                            //Placeholders
+                            userMember: topicMemberUser,
+                            report: {
+                                id: topicReport.id,
+                                moderatedReasonType: templateObject.translations.REPORT.REPORT_TYPE[topicReport.moderatedReasonType.toUpperCase()],
+                                moderatedReasonText: topicReport.moderatedReasonText,
+                                createdAt: moment(topicReport.createdAt).locale(templateObject.language).format('LLL Z')
+                            },
+                            topic: topic,
+                            linkViewTopic: linkViewTopic,
+                            linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
+                        }
+                    );
+
+                    return await emailClient.sendStringAsync(templateObject.body, emailOptions);
+                };
+                sendEmailPromiseses.push(sendTopicMemberEmail());
+            } else {
+                logger.info('Could not send e-mail to Topic member because e-mail address does not exist', topicMemberUser.id);
+            }
+        });
+
+        return Promise.all(sendEmailPromiseses);
+    };
+
+    /**
+     * Send Topic report review related e-mails
+     *
+     * @param {object} topicReport TopicReport Sequelize instance
+     * @param {string} reviewRequestText Review request text
+     *
+     * @returns {Promise} Topic report review email result
+     *
+     * @private
+     *
+     * @see Citizen OS Topic moderation 3 - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
+     */
+    var _sendTopicReportReview = async function (topicReport, reviewRequestText) {
+        const topic = await Topic.findOne({
+            where: {
+                id: topicReport.topicId
+            }
+        });
+
+        const topicModerators = await _getModerators(topic.sourcePartnerId);
+
+        const linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+        const sendEmailPromises = [];
+
+        topicModerators.forEach(function (userModerator) {
+            if (userModerator.email) {
+                const sendTopicModeratorEmail = async function () {
+                    const templateObject = resolveTemplate('reportTopicReportReviewModerator', userModerator.language);
+                    const subject = templateObject.translations.REPORT_TOPIC_REPORT_REVIEW_MODERATOR.SUBJECT
+                        .replace('{{report.id}}', topicReport.id);
+
+                    const emailOptions = Object.assign(
+                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                        {
+                            subject: subject,
+                            to: userModerator.email,
+                            //Placeholders
+                            userModerator: userModerator,
+                            report: {
+                                id: topicReport.id,
+                                moderatedReasonType: templateObject.translations.REPORT.REPORT_TYPE[topicReport.moderatedReasonType.toUpperCase()],
+                                moderatedReasonText: topicReport.moderatedReasonText
+                            },
+                            topic: topic,
+                            reviewRequestText: reviewRequestText,
+                            linkViewTopic: linkViewTopic,
+                            linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
+                        }
+                    );
+
+                    return await emailClient.sendStringAsync(templateObject.body, emailOptions);
+                };
+                sendEmailPromises.push(sendTopicModeratorEmail());
+            } else {
+                logger.info('Could not send e-mail to Topic Moderator because e-mail address does not exist', userModerator.id);
+            }
+        });
+
+        return await Promise.all(sendEmailPromises);
+    };
+
+    /**
+     * Send Topic report resolve related e-mails
+     *
+     * @param {object} topicReport TopicReport Sequelize instance
+     *
+     * @returns {Promise} Topic report resolve email result
+     *
+     * @private
+     *
+     * @see Citizen OS Topic moderation 4 - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
+     */
+    var _sendTopicReportResolve = async function (topicReport) {
+        const infoFetchPromises = [];
+
+        // Topic info
+        infoFetchPromises.push(Topic.findOne({
+            where: {
+                id: topicReport.topicId
+            }
+        }));
+
+        // Get reporters info
+        infoFetchPromises.push(User.findOne({
+            where: {
+                id: topicReport.creatorId
+            }
+        }));
+
+        // Get Topic edit/admin Member list
+        infoFetchPromises.push(_getTopicMemberUsers(topicReport.topicId, TopicMemberUser.LEVELS.edit));
+
+        const [topic, userReporter, topicMemberList] = await Promise.all(infoFetchPromises);
+
+        const linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+
+
+        const sendEmailPromises = [];
+
+        // 4.1 To the User (reporter) who reported the topic - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
+        if (userReporter.email) {
+            var sendReporterEmail = async function () {
+                const templateObject = resolveTemplate('reportTopicReportResolveReporter', userReporter.language);
+                const subject = templateObject.translations.REPORT_TOPIC_REPORT_RESOLVE_REPORTER.SUBJECT
+                    .replace('{{report.id}}', topicReport.id);
+
+                const emailOptions = Object.assign(
+                    _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                    {
+                        subject: subject,
+                        to: userReporter.email,
+                        //Placeholders
+                        userReporter: userReporter,
+                        report: {
+                            createdAt: moment(topicReport.createdAt).locale(templateObject.language).format('LLL Z')
+                        },
+                        topic: topic,
+                        linkViewTopic: linkViewTopic,
+                        linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
+                    }
+                );
+
+                return await emailClient.sendStringAsync(templateObject.body, emailOptions);
+            };
+            sendEmailPromises.push(sendReporterEmail());
+        } else {
+            logger.info('Could not send e-mail to Topic reporter because e-mail address does not exist', userReporter.id);
+        }
+
+
+        // 4.2 To admin/edit Members of the topic - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce?argumentsPage=1
+        topicMemberList.forEach(function (topicMemberUser) {
+            if (topicMemberUser.email) {
+                const sendTopicMemberEmail = async function () {
+                    const templateObject = resolveTemplate('reportTopicReportResolveMember', topicMemberUser.language);
+                    const subject = templateObject.translations.REPORT_TOPIC_REPORT_RESOLVE_MEMBER.SUBJECT
+                        .replace('{{report.id}}', topicReport.id);
+
+                    const emailOptions = Object.assign(
+                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                        {
+                            subject: subject,
+                            to: topicMemberUser.email,
+                            //Placeholders
+                            userMember: topicMemberUser,
+                            topic: topic,
+                            linkViewTopic: linkViewTopic,
+                            linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
+                        }
+                    );
+
+                    return await emailClient.sendStringAsync(templateObject.body, emailOptions);
+                };
+                sendEmailPromises.push(sendTopicMemberEmail());
+            } else {
+                logger.info('Could not send e-mail to Topic member because e-mail address does not exist', topicMemberUser.id);
+            }
+        });
+
+        return await Promise.all(sendEmailPromises);
     };
 
     /**
@@ -890,7 +1262,6 @@ module.exports = function (app) {
         }
 
         var template = resolveTemplate('toParliament', 'et'); // Estonian Gov only accepts et
-        linkedData.translations = template.translations;
         var linkToApplication = config.features.sendToParliament.urlPrefix;
 
         var from = config.features.sendToParliament.from;
@@ -901,7 +1272,7 @@ module.exports = function (app) {
 
         var promisesToResolve = [];
         var customStyles = {
-            headerBackgroundColor: '#252525',
+            headerBackgroundColor: '#004892',
             logoWidth: 360,
             logoHeight: 51
         };
@@ -924,22 +1295,17 @@ module.exports = function (app) {
                             file: emailFooterLogo
                         }
                     ],
-                    social: config.email.social, // social.name maps to "from_name". I think this should be part of Campaign client config OR at least defaults can be set somewhere in client options
                     //Placeholders..
                     linkViewTopic: linkViewTopic,
                     linkDownloadBdocFinal: linkDownloadBdocFinal,
                     linkDownloadBdocFinalExpiryDate: moment(linkDownloadBdocFinalExpiryDate).locale('et').format('LL'),
                     linkAddEvent: linkAddEvent,
                     linkToApplication: linkToApplication,
-                    linkToPlatform: linkToPlatform,
-                    linkToPrivacyPolicy: linkToPrivacyPolicy,
                     topic: topic,
                     contact: contact,
-                    provider: {
-                        merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
-                    },
+                    provider: EMAIL_OPTIONS_DEFAULT.provider,
                     styles: customStyles,
-                    linkedData: linkedData
+                    linkedData: EMAIL_OPTIONS_DEFAULT.linkedData
                 }
             )
             .then(function () {
@@ -971,22 +1337,17 @@ module.exports = function (app) {
                             file: emailFooterLogo
                         }
                     ],
-                    social: config.email.social, // social.name maps to "from_name". I think this should be part of Campaign client config OR at least defaults can be set somewhere in client options
                     //Placeholders..
                     linkViewTopic: linkViewTopic,
                     linkDownloadBdocFinal: config.features.sendToParliament.sendContainerDownloadLinkToCreator ? linkDownloadBdocFinal : null,
                     linkDownloadBdocFinalExpiryDate: config.features.sendToParliament.sendContainerDownloadLinkToCreator ? moment(linkDownloadBdocFinalExpiryDate).locale('et').format('LL') : null,
                     linkAddEvent: null,
                     linkToApplication: linkToApplication,
-                    linkToPlatform: linkToPlatform,
-                    linkToPrivacyPolicy: linkToPrivacyPolicy,
                     topic: topic,
                     contact: contact,
-                    provider: {
-                        merge: {} // TODO: empty merge required until fix - https://github.com/bevacqua/campaign-mailgun/issues/1
-                    },
+                    provider: EMAIL_OPTIONS_DEFAULT.provider,
                     styles: customStyles,
-                    linkedData: linkedData
+                    linkedData: EMAIL_OPTIONS_DEFAULT.linkedData
                 }
             )
             .then(function () {
@@ -1008,6 +1369,10 @@ module.exports = function (app) {
         sendPasswordReset: _sendPasswordReset,
         sendTopicInvite: _sendTopicInvite,
         sendTopicGroupInvite: _sendTopicGroupInvite,
+        sendTopicReport: _sendTopicReport,
+        sendTopicReportModerate: _sendTopicReportModerate,
+        sendTopicReportReview: _sendTopicReportReview,
+        sendTopicReportResolve: _sendTopicReportResolve,
         sendGroupInvite: _sendGroupInvite,
         sendCommentReport: _sendCommentReport,
         sendToParliament: _sendToParliament

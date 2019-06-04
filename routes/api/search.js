@@ -11,7 +11,7 @@ module.exports = function (app) {
     var Promise = app.get('Promise');
     var models = app.get('models');
     var db = models.sequelize;
-    var Op = db.Op;
+    var Op = db.Sequelize.Op;
 
     var loginCheck = app.get('middleware.loginCheck');
 

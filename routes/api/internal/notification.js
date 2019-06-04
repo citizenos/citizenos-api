@@ -27,8 +27,7 @@ module.exports = function (app) {
                         {
                             'type': 'User',
                             id: pdata.userId
-                        },
-                        pdata.rev
+                        }
                     );
             });
         });

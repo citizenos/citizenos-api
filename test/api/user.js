@@ -107,12 +107,6 @@ suite('User', function () {
             .finally(done);
     });
 
-    suiteTeardown(function (done) {
-        shared
-            .closeDb()
-            .finally(done);
-    });
-
     suite('Update', function () {
         var agent = request.agent(app);
 
@@ -146,7 +140,7 @@ suite('User', function () {
                         }
 
                         User
-                            .find({
+                            .findOne({
                                 where: {id: user.id}
                             })
                             .then(function (u) {
@@ -171,7 +165,7 @@ suite('User', function () {
             userUpdate(agent, user.id, nameNew, emailNew, passwordNew, null, function () {
                 auth.logout(agent, function () {
                     User
-                        .find({
+                        .findOne({
                             where: {id: user.id}
                         })
                         .then(function (u) {
@@ -193,7 +187,7 @@ suite('User', function () {
                                         }
                 
                                         User
-                                            .find({
+                                            .findOne({
                                                 where: {id: user.id}
                                             })
                                             .then(function (u) {
@@ -223,7 +217,7 @@ suite('User', function () {
                 }
 
                 User
-                    .find({
+                    .findOne({
                         where: {id: user.id}
                     })
                     .then(function (u) {
@@ -253,7 +247,7 @@ suite('User', function () {
 
             userUpdate(agent, user.id, null, null, null, newLanguage, function () {
                 User
-                    .find({
+                    .findOne({
                         where: {id: user.id}
                     })
                     .then(function (u) {
@@ -264,7 +258,6 @@ suite('User', function () {
             });
         });
 
-        //FIXME: This is important to be fixed - https://trello.com/c/fJFSb4p5/62-bug-crit-model-update-does-not-support-options-fields-which-means-users-may-be-able-to-update-fields-that-the-should-not
         test('Fail - try to update forbidden field "emailVerificationCode" - fail silently', function (done) {
             var newEmailVerificationCode = uuid.v4();
 
@@ -283,11 +276,12 @@ suite('User', function () {
                 .expect('Content-Type', /json/)
                 .end(function () {
                     User
-                        .find({
+                        .findOne({
                             where: {id: user.id}
                         })
                         .then(function (u) {
                             assert.notEqual(u.emailVerificationCode, newEmailVerificationCode);
+
                             done();
                         })
                         .catch(done);

@@ -215,12 +215,6 @@ suite('Users', function () {
             .finally(done);
     });
 
-    suiteTeardown(function (done) {
-        shared
-            .closeDb()
-            .finally(done);
-    });
-
     suite('Groups', function () {
 
         suite('Create', function () {

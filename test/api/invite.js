@@ -20,12 +20,6 @@ suite('Invite', function () {
             .finally(done);
     });
 
-    suiteTeardown(function (done) {
-        shared
-            .closeDb()
-            .finally(done);
-    });
-
     suite('View', function () {
 
         test('Success - non existing user', function (done) {

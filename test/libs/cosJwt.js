@@ -2,18 +2,11 @@
 
 suite('cosJwt', function () {
     var assert = require('chai').assert;
-    var shared = require('../utils/shared');
 
     var app = require('../../app');
     var cosJwt = app.get('cosJwt');
     var jwt = app.get('jwt');
     var config = app.get('config');
-
-    suiteTeardown(function (done) {
-        shared
-            .closeDb()
-            .finally(done);
-    });
 
     test('Success', function (done) {
         var testPayload = {foo: 'bar'};
