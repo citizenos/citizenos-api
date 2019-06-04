@@ -25,7 +25,7 @@
     "SUBJECT": "Report #{{report.id}}: your Citizen OS topic may contain a violation of guidelines"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "A Citizen OS topic has been reported ({{report.id}}:), please moderate"
+    "SUBJECT": "A Citizen OS topic has been reported (#{{report.id}}), please moderate"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
     "SUBJECT": "Your Citizen OS report #{{report.id}} has been reviewed"

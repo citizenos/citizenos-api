@@ -1,0 +1,33 @@
+<!-- E-mail sent to Topic members of a reported Topic -->
+<p>
+    Hello <span class="blue">{{userMember.name}}</span>,
+</p>
+<p class="important">
+    <b>A moderator has reviewed the report <span class="blue">#{{report.id}}</span>, which was submitted on {{report.createdAt}} about your Citizen OS topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" being inappropriate.</b>
+</p>
+
+<h1>Decision of the moderator:</h1>
+<p>
+<ul>
+    <li class="li">Violation type: "{{report.moderatedReasonType}}"</li>
+    <li class="li">Reasoning: "{{report.moderatedReasonText}}"</li>
+</ul>
+</p>
+<p>
+    When accessing your topic, users will now see an overlay, warning about violations in the topic. However, viewers have an option to bypass the overlay and view topic content at their own risk anyway.
+</p>
+
+<h1>What happens next?</h1>
+<p>
+<ol>
+    <li class="li">You and other admins and editors of the topic can edit topic content at any time to clear possible violations. You can then send the topic to moderators for review.</li>
+    <li class="li">Upon a review request, moderators will review the topic and remove restrictions if violations have been cleared.</li>
+    <li class="li">Until such time, access to the topic will remain restricted.</li>
+</ol>
+</p>
+<p><a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process here.</a></p>
+
+<hr/>
+<p>
+    Please review your topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" and see if it contains violations of community guidelines. Together we can maintain a high quality of content in Citizen OS user community.
+</p>
