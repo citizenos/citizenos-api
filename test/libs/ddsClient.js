@@ -147,7 +147,7 @@ suite('DDS Client', function () {
         ddsClient
             .getSignedDoc()
             .spread(function (response) {
-                return new Buffer(response.SignedDocData.$value, 'base64');
+                return Buffer.from(response.SignedDocData.$value, 'base64');
             })
             .then(function (buffer) {
                 var stream = fs.createWriteStream(testBdocFilePath);
@@ -187,7 +187,7 @@ suite('DDS Client', function () {
                                 ddsClient
                                     .getSignedDoc()
                                     .spread(function (response) {
-                                        return new Buffer(response.SignedDocData.$value, 'base64');
+                                        return Buffer.from(response.SignedDocData.$value, 'base64');
                                     })
                                     .then(function (buffer) {
                                         var stream = fs.createWriteStream(testBdocFilePath);
@@ -197,10 +197,10 @@ suite('DDS Client', function () {
                                         return streamPromise;
                                     })
                                     .then(function () {
-                                        ddsClient
+                                        return ddsClient
                                             .closeSession()
                                             .spread(function () {
-                                                done();
+                                                return done();
                                             });
                                     });
                             });

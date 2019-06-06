@@ -147,7 +147,7 @@ suite('cosBdoc', function () {
                 .getFinalBdoc(topic.id, vote.id)
                 .then(function (fileBuffer) {
                     return fs
-                        .writeFileAsync(voteFileDir + '/final.bdoc', new Buffer(fileBuffer, 'base64')); // eslint-disable-line no-buffer-constructor
+                        .writeFileAsync(voteFileDir + '/final.bdoc', Buffer.from(fileBuffer, 'base64')); // eslint-disable-line no-buffer-constructor
                 })
                 .then(done)
                 .catch(done);

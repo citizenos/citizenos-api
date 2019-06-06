@@ -1,3 +1,7 @@
+## 2019-06-06
+
+* Update base64-url version update dssClient tests
+
 ## 2019-06-04
 
 * Quick fix for app crashing when `DATABASE_OPTIONS_POOL_MAX` env variable is set - https://github.com/citizenos/citizenos-api/issues/137 

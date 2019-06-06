@@ -865,7 +865,7 @@ DigiDocServiceClient.prototype._getEncodedString = function (readableStream, enc
 
         readableStream.on('data', function (d) {
             if (typeof d === 'string') { // Mu2 streams send mixed Buffers and Strings as data event parameter
-                d = new Buffer(d);
+                d = Buffer.from(d);
             }
 
             length += d.length;

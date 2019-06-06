@@ -558,7 +558,7 @@ module.exports = function (app) {
         switch (format) {
             case 'der':
                 // DDS PrepareSignature accepts HEX encoded DER, but CheckCertificate accepts PEM.
-                var der = new Buffer(certificate, 'hex').toString('binary');
+                var der = Buffer.from(certificate, 'hex').toString('binary');
                 var msg = {
                     type: 'CERTIFICATE',
                     body: der
@@ -689,7 +689,7 @@ module.exports = function (app) {
             .spread(function (signedDocResult) {
                 var signedDocument = signedDocResult.SignedDocData.$value;
 
-                return new Buffer(signedDocument, 'base64');
+                return Buffer.from(signedDocument, 'base64');
             });
     };
 
@@ -729,7 +729,7 @@ module.exports = function (app) {
                     .getSignedDocInfo()
                     .spread(function (signedDocInfoResult) {
                         return {
-                            signedDocData: new Buffer(signedDocResult.SignedDocData.$value, 'base64'),
+                            signedDocData: Buffer.from(signedDocResult.SignedDocData.$value, 'base64'),
                             signerInfo: _getPersonalInfoFromCommonName(signedDocInfoResult.SignedDocInfo.SignatureInfo[0].Signer.CommonName.$value)
                         };
                     });
