@@ -133,6 +133,16 @@ module.exports = function (sequelize, DataTypes) {
                 type: DataTypes.STRING,
                 allowNull: true,
                 comment: 'User profile image url.'
+            },
+            termsVersion: {
+                type: DataTypes.STRING,
+                allowNull: true,
+                comment: 'Version identifier of user terms accepted by user'
+            },
+            termsAcceptedAt: {
+                type: DataTypes.DATE,
+                comment: 'Time when the terms were accepted',
+                allowNull: true
             }
         }
     );
@@ -169,7 +179,9 @@ module.exports = function (sequelize, DataTypes) {
             company: this.dataValues.company,
             language: this.dataValues.language,
             email: this.dataValues.email, //TODO: probably should take this out of the responses, is email sensitive? Seems a bit so as used for log-in.
-            imageUrl: this.dataValues.imageUrl
+            imageUrl: this.dataValues.imageUrl,
+            termsVersion: this.dataValues.termsVersion,
+            termsAcceptedAt: this.dataValues.termsAcceptedAt
         };
 
         return user;

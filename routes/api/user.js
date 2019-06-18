@@ -11,6 +11,7 @@ module.exports = function (app) {
     var urlLib = app.get('urlLib');
     var jwt = app.get('jwt');
     var uuid = app.get('uuid');
+    var moment = app.get('moment');
 
     var User = models.User;
     var UserConsent = models.UserConsent;
@@ -20,7 +21,7 @@ module.exports = function (app) {
      */
     app.put('/api/users/:userId', loginCheck(['partner']), function (req, res, next) {
 
-        const fields = ['name', 'company', 'email', 'language', 'imageUrl'];
+        const fields = ['name', 'company', 'email', 'language', 'imageUrl', 'termsVersion'];
         if (!req.user.partnerId) { // Allow only our own app change the password
             fields.push('password');
         }
@@ -39,6 +40,10 @@ module.exports = function (app) {
                     fields.push('emailVerificationCode');
                     req.body.emailIsVerified = false;
                     req.body.emailVerificationCode = uuid.v4(); // Generate new emailVerificationCode
+                }
+                if (req.body.termsVersion && req.body.termsVersion !== user.termsVersion) {
+                    fields.push('termsAcceptedAt');
+                    req.body.termsAcceptedAt = moment().format();
                 }
 
                 return User
