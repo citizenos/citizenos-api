@@ -13,11 +13,14 @@ var log4js = require('log4js');
 log4js.configure(config.logging.log4js);
 var logger = log4js.getLogger(path.basename(__filename));
 
-var db = require('../../libs/sequelize/sequelize')(config.db.url, config.db.options, logger);
+//var db = require('../../libs/sequelize/sequelize')(config.db.url, config.db.options, logger);
 
-var Topic = db.import('../../models/Topic');
-var Partner = db.import('../../models/Partner');
-var User = db.import('../../models/User');
+var models = require('../../db/models');
+var db = models.sequelize;
+
+var Topic = db.import('../../db/models/Topic');
+var Partner = db.import('../../db/models/Partner');
+var User = db.import('../../db/models/User');
 
 var urlApi = config.url.api;
 var userEmail = process.env.CITIZENOS_ARVAMUSFESTIVAL_DATA_IMPORTER_USER_EMAIL;
@@ -41,7 +44,8 @@ var stats = {
     updated: 0,
     created: 0,
     failed: 0,
-    ignored: 0
+    ignored: 0,
+    skipped: 0
 };
 
 Partner
@@ -72,7 +76,7 @@ Partner
                     email: userEmail,
                     password: userPassword,
                     emailIsVerified: true,
-                    name: 'Arvamusfestival 2018',
+                    name: 'Arvamusfestival 2019',
                     company: 'MTÜ Arvamusfestival',
                     language: 'et',
                     source: User.SOURCES.citizenosSystem
@@ -103,7 +107,9 @@ Partner
         return superagent.agent()
             .post('https://www.arvamusfestival.ee/api/?events')
             .timeout(1000 * 10)
-            .send('app_secret=' + afApiKey);
+            .send('app_secret=' + afApiKey)
+            .send('mode=active\
+            ');
     })
     .then(function (resultEvents) {
         // AF API returns JSON but response content type is text/html thus Superagent does not parse JSON
@@ -114,87 +120,92 @@ Partner
 
         return Promise
             .each(events, function (event) {
-                var title = event.name_est;
-                var description = event.short_description_est;
+                if (!Number(event.hide_afoorum)) {                    
+                    var title = event.name_est;
+                    var description = event.short_description_est;
 
-                if (title && description && Boolean(title.trim()) && Boolean(description.trim())) {
-                    return Topic
-                        .findOne({
-                            where: {
-                                sourcePartnerId: partner.id,
-                                sourcePartnerObjectId: String(event.event_id),
-                                creatorId: user.id
-                            }
-                        })
-                        .then(function (topic) {
-                            if (!topic) { // create Topic
-                                logger.info('Creating a new Topic', event.event_id, event.time_updated);
+                    if (title && description && Boolean(title.trim()) && Boolean(description.trim())) {
+                        return Topic
+                            .findOne({
+                                where: {
+                                    sourcePartnerId: partner.id,
+                                    sourcePartnerObjectId: String(event.event_id),
+                                    creatorId: user.id
+                                }
+                            })
+                            .then(function (topic) {
+                                if (!topic) { // create Topic
+                                    logger.info('Creating a new Topic', event.event_id, event.time_updated);
 
-                                return userAgent
-                                    .post(urlApi + '/api/users/self/topics')
-                                    .set('x-partner-id', partner.id)
-                                    .send({
-                                        description: '<!DOCTYPE HTML><html><body><h1>' + title + '</h1><p>' + description.replace(/\r/g, '').replace(/\n/g, '<br>') + '</p></body>',
-                                        visibility: Topic.VISIBILITY.public,
-                                        sourcePartnerObjectId: event.event_id
-                                    })
-                                    .then(function (res) {
-                                        var resTopic = res.body.data;
+                                    return userAgent
+                                        .post(urlApi + '/api/users/self/topics')
+                                        .set('x-partner-id', partner.id)
+                                        .send({
+                                            description: '<!DOCTYPE HTML><html><body><h1>' + title + '</h1><p>' + description.replace(/\r/g, '').replace(/\n/g, '<br>') + '</p></body>',
+                                            visibility: Topic.VISIBILITY.public,
+                                            sourcePartnerObjectId: event.event_id
+                                        })
+                                        .then(function (res) {
+                                            var resTopic = res.body.data;
 
-                                        return Topic
-                                            .update(
-                                                {
-                                                    createdAt: moment.tz(event.time_updated, 'Europe/Tallinn'),
-                                                    updatedAt: moment.tz(event.time_updated, 'Europe/Tallinn')
-                                                },
-                                                {
-                                                    where: {
-                                                        id: resTopic.id
+                                            return Topic
+                                                .update(
+                                                    {
+                                                        createdAt: moment.tz(event.time_updated, 'Europe/Tallinn'),
+                                                        updatedAt: moment.tz(event.time_updated, 'Europe/Tallinn')
+                                                    },
+                                                    {
+                                                        where: {
+                                                            id: resTopic.id
+                                                        }
                                                     }
-                                                }
-                                            );
-                                    })
-                                    .then(function () {
-                                        stats.created++;
-                                    });
-                            } else { // update Topic
-                                logger.info('Updating a Topic', topic.id, event.event_id);
+                                                );
+                                        })
+                                        .then(function () {
+                                            stats.created++;
+                                        });
+                                } else { // update Topic
+                                    logger.info('Updating a Topic', topic.id, event.event_id);
 
-                                return userAgent
-                                    .put(urlApi + '/api/users/self/topics/' + topic.id)
-                                    .set('x-partner-id', partner.id)
-                                    .send({
-                                        description: '<!DOCTYPE HTML><html><body><h1>' + title + '</h1><p>' + description.replace(/\r/g, '').replace(/\n/g, '<br>') + '</p></body>'
-                                    })
-                                    .then(function () {
-                                        return Topic
-                                            .update(
-                                                {
-                                                    updatedAt: moment.tz(event.time_updated, 'Europe/Tallinn')
-                                                },
-                                                {
-                                                    where: {
-                                                        id: topic.id
+                                    return userAgent
+                                        .put(urlApi + '/api/users/self/topics/' + topic.id)
+                                        .set('x-partner-id', partner.id)
+                                        .send({
+                                            description: '<!DOCTYPE HTML><html><body><h1>' + title + '</h1><p>' + description.replace(/\r/g, '').replace(/\n/g, '<br>') + '</p></body>'
+                                        })
+                                        .then(function () {
+                                            return Topic
+                                                .update(
+                                                    {
+                                                        updatedAt: moment.tz(event.time_updated, 'Europe/Tallinn')
+                                                    },
+                                                    {
+                                                        where: {
+                                                            id: topic.id
+                                                        }
                                                     }
-                                                }
-                                            );
-                                    })
-                                    .then(function (res) {
-                                        logger.info('Done updating Topic', res.body, event.event_id);
+                                                );
+                                        })
+                                        .then(function (res) {
+                                            logger.info('Done updating Topic', res.body, event.event_id);
 
-                                        stats.updated++;
-                                    });
-                            }
-                        })
-                        .catch(function (err) {
-                            logger.error('Failed to import Topic', event.event_id, err);
+                                            stats.updated++;
+                                        });
+                                }
+                            })
+                            .catch(function (err) {
+                                logger.error('Failed to import Topic', event.event_id, err);
 
-                            stats.failed++;
-                        });
+                                stats.failed++;
+                            });
+                    } else {
+                        logger.warn('Ignoring AF event due to lack of information', event);
+
+                        stats.ignored++;
+                    }
                 } else {
-                    logger.warn('Ignoring AF event due to lack of information', event);
-
-                    stats.ignored++;
+                    logger.warn('Ignoring AF event due to settings', event);
+                    stats.skipped++;
                 }
             });
     })
