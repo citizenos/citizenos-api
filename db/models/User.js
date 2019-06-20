@@ -179,9 +179,7 @@ module.exports = function (sequelize, DataTypes) {
             company: this.dataValues.company,
             language: this.dataValues.language,
             email: this.dataValues.email, //TODO: probably should take this out of the responses, is email sensitive? Seems a bit so as used for log-in.
-            imageUrl: this.dataValues.imageUrl,
-            termsVersion: this.dataValues.termsVersion,
-            termsAcceptedAt: this.dataValues.termsAcceptedAt
+            imageUrl: this.dataValues.imageUrl
         };
 
         return user;

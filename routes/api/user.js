@@ -106,6 +106,12 @@ module.exports = function (app) {
     });
 
     /**
+     * Delete User
+     */
+    app.delete('/users/:userId', loginCheck(), function (req, res, next) {
+        
+    });
+    /**
      * Create UserConsent
      */
     app.post('/api/users/:userId/consents', loginCheck(), function (req, res, next) {

@@ -442,8 +442,11 @@ module.exports = function (app) {
 
                     return res.notFound();
                 }
+                var userData = user.toJSON();
+                userData.termsVersion = user.dataValues.termsVersion;
+                userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
 
-                return res.ok(user.toJSON());
+                return res.ok(userData);
             })
             .catch(next);
     });
@@ -554,14 +557,20 @@ module.exports = function (app) {
                                     });
                             }).then(function (user) {
                                 setAuthCookie(req, res, user.id);
+                                var userData = user.toJSON();
+                                userData.termsVersion = user.dataValues.termsVersion;
+                                userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
 
-                                return res.ok(user.toJSON(), 3); // New user was created
+                                return res.ok(userData, 3); // New user was created
                             });
                         } else {
                             var user = userConnectionInfo.User;
                             setAuthCookie(req, res, user.id);
+                            var userData = user.toJSON();
+                            userData.termsVersion = user.dataValues.termsVersion;
+                            userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
 
-                            return res.ok(user.toJSON(), 2); // Existing User found and logged in
+                            return res.ok(userData, 2); // Existing User found and logged in
                         }
                     });
             }, _.noop)
@@ -909,14 +918,20 @@ module.exports = function (app) {
                                     });
                             }).then(function (user) {
                                 setAuthCookie(req, res, user.id);
+                                var userData = user.toJSON();
+                                userData.termsVersion = user.dataValues.termsVersion;
+                                userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
 
-                                return res.ok(user.toJSON(), 3); // New user was created
+                                return res.ok(userData, 3); // New user was created
                             });
                         } else {
                             var user = userConnectionInfo.User;
                             setAuthCookie(req, res, user.id);
+                            var userData = user.toJSON();
+                            userData.termsVersion = user.dataValues.termsVersion;
+                            userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
 
-                            return res.ok(user.toJSON(), 2); // Existing User found and logged in
+                            return res.ok(userData, 2); // Existing User found and logged in
                         }
                     });
             }, _.noop)
