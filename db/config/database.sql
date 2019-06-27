@@ -1593,4 +1593,5 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 20181213213857-create-topic-favourite.js
 20190131123024-alter-topic-title-limit.js
 20190529193321-topic-report.js
+20190627132611-alter-partner-terms-link.js
 \.

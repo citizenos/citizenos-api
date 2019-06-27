@@ -4,7 +4,23 @@ module.exports = function (app) {
     var models = app.get('models');
     
     var Topic = models.Topic;
+    var Partner = models.Partner;
 
+    /**
+     * Get Partner info
+     */
+    app.get('/api/partners/:partnerId', function (req, res, next) {
+        Partner
+            .findOne({
+                where: {
+                    id: req.params.partnerId
+                }
+            })
+            .then(function (partner) {
+                return res.ok(partner.toJSON());
+            })
+            .catch(next);
+    });
     /**
      * Get Partner Topic mapping
      *

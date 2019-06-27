@@ -1,3 +1,8 @@
+## 2019-06-27
+
+* Add linkPrivacyPolicy property to Partners table
+* Add new API endpoint GET /api/partners/:partnerId
+
 ## 2019-06-06
 
 * Update base64-url version update dssClient tests

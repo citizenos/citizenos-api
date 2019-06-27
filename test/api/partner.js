@@ -12,6 +12,22 @@ var topicLib = require('./topic');
 var Topic = models.Topic;
 var Partner = models.Partner;
 
+var _partnerRead = function (agent, partnerId, expectedHttpCode, callback) {
+    var path = '/api/partners/:partnerId'
+        .replace(':partnerId', partnerId);
+
+    agent
+        .get(path)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var partnerRead = function (agent, partnerId, callback) {
+    _partnerRead(agent, partnerId, 200, callback);
+};
+
 var _partnerTopicRead = function (agent, partnerId, sourcePartnerObjectId, expectedHttpCode, callback) {
     var path = '/api/partners/:partnerId/topics/:sourcePartnerObjectId'
         .replace(':partnerId', partnerId)
@@ -35,6 +51,44 @@ suite('Partners', function () {
         shared
             .syncDb()
             .finally(done);
+    });
+
+    suite('Read', function () {
+        var partner;
+
+        suiteSetup(function (done) {
+            Partner
+                .findOrCreate({
+                    where: {
+                        website: 'notimportant'
+                    },
+                    defaults: {
+                        website: 'notimportant',
+                        redirectUriRegexp: 'notimportant'
+                    }
+                })
+                .then(function (resultPartner) {
+                    partner = resultPartner[0].toJSON();
+                    done();
+                })
+                .catch(done);
+        });
+
+        test('Success', function (done) {
+            partnerRead(request.agent(app), partner.id, function (err, res) {
+                if (err) {
+                    return done(err);
+                }
+                var resPartnerInfo = res.body.data;
+                partner.createdAt = null;
+                partner.updatedAt = null;
+                resPartnerInfo.createdAt = null;
+                resPartnerInfo.updatedAt = null;
+                assert.deepEqual(res.body.data, partner);
+
+                done();
+            });
+        });
     });
 
     suite('Topics', function () {
