@@ -121,6 +121,25 @@ module.exports = function (app) {
                                                         }, null, user, req.method + ' ' + req.path, t);
                                                     })
                                                     .then(function () {
+                                                        return UserConnection
+                                                            .create(
+                                                                {
+                                                                    userId: user.id,
+                                                                    connectionId: UserConnection.CONNECTION_IDS.citizenos,
+                                                                    connectionUserId: user.id,
+                                                                    connectionData: user
+                                                                },
+                                                                {transaction: t}
+                                                            )
+                                                            .then(function (ucCos) {
+
+                                                                return cosActivities.addActivity(ucCos, {
+                                                                    type: 'User',
+                                                                    id: user.id
+                                                                }, null, user, req.method + ' ' + req.path, t);
+                                                            });
+                                                    })
+                                                    .then(function () {
                                                         if (!user.imageUrl) {
                                                             logger.info('Updating User profile image from social network');
                                                             user.imageUrl = imageUrl; // Update existing Users image url in case there is none (for case where User is created via CitizenOS but logs in with social)
@@ -140,7 +159,11 @@ module.exports = function (app) {
                         }
                     })
                     .spread(function (user) {
-                        done(null, user.toJSON());
+                        if (user) {
+                            done(null, user.toJSON());
+                        } else {                            
+                            done(null, null);
+                        }
                     })
                     .catch(done);
             }
@@ -228,6 +251,25 @@ module.exports = function (app) {
                                                         }, null, user, 'GET ' + config.passport.facebook.callbackUrl, t);
                                                     })
                                                     .then(function () {
+                                                        return UserConnection
+                                                            .findOrCreate(
+                                                                {
+                                                                    userId: user.id,
+                                                                    connectionId: UserConnection.CONNECTION_IDS.citizenos,
+                                                                    connectionUserId: user.id,
+                                                                    connectionData: user
+                                                                },
+                                                                {transaction: t}
+                                                            )
+                                                            .then(function (ucCos) {
+
+                                                                return cosActivities.addActivity(ucCos, {
+                                                                    type: 'User',
+                                                                    id: user.id
+                                                                }, null, user, 'GET ' + config.passport.facebook.callbackUrl, t);
+                                                            });
+                                                    })
+                                                    .then(function () {
                                                         if (!user.imageUrl) {
                                                             logger.info('Updating User profile image from social network');
                                                             user.imageUrl = imageUrl; // Update existing Users image url in case there is none (for case where User is created via CitizenOS but logs in with social)
@@ -264,15 +306,20 @@ module.exports = function (app) {
                 if (!validator.isEmail(email)) {
                     return done({message: 'Invalid email.'}, false);
                 }
-
-                User
+                UserConnection
                     .findOne({
                         where: {
-                            email: email
-                        }
+                            connectionId: UserConnection.CONNECTION_IDS.citizenos,
+                            'connectionData.email': email
+                        },
+                            include: [User]
                     })
-                    .then(function (user) {
-                        if (!user || !user.password) {
+                    .then(function (userConnectionInfo) {
+                        var user = null;
+                        if (userConnectionInfo) {
+                            user = userConnectionInfo.User;
+                        }                        
+                        if (!userConnectionInfo || !user || !user.password) {
                             return done({
                                 message: 'The account does not exists.',
                                 code: 1
@@ -299,6 +346,7 @@ module.exports = function (app) {
                             }, false);
                         }
                     });
+                
             }
         ));
     };

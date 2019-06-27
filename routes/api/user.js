@@ -15,6 +15,7 @@ module.exports = function (app) {
 
     var User = models.User;
     var UserConsent = models.UserConsent;
+    var UserConnection = models.UserConnection;
 
     /**
      * Update User info
@@ -66,13 +67,24 @@ module.exports = function (app) {
                 let sendEmailPromise = Promise.resolve();
 
                 if (updateEmail) {
-                    const tokenData = {
-                        redirectSuccess: urlLib.getFe() // TODO: Misleading naming, would like to use "redirectUri" (OpenID convention) instead, but needs RAA.ee to update codebase.
-                    };
-
-                    const token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
-
-                    sendEmailPromise = emailLib.sendAccountVerification(user.email, user.emailVerificationCode, token);
+                    UserConnection
+                        .update({
+                            connectionData: user 
+                        }, {
+                            where: {
+                                connectionId: UserConnection.CONNECTION_IDS.citizenos,
+                                userId: user.id
+                            }
+                        })
+                        .then(function () {
+                            const tokenData = {
+                                redirectSuccess: urlLib.getFe() // TODO: Misleading naming, would like to use "redirectUri" (OpenID convention) instead, but needs RAA.ee to update codebase.
+                            };
+        
+                            const token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
+        
+                            sendEmailPromise = emailLib.sendAccountVerification(user.email, user.emailVerificationCode, token);
+                        });
                 }
 
                 return sendEmailPromise
@@ -108,8 +120,52 @@ module.exports = function (app) {
     /**
      * Delete User
      */
-    app.delete('/users/:userId', loginCheck(), function (req, res, next) {
-        
+    app.delete('/api/users/:userId', loginCheck(), function (req, res, next) {
+        User
+            .findOne({
+                where: {
+                    id: req.user.id
+                }
+            })
+            .then(function (user) {
+                if (!user) {
+                    return res.notFound();
+                }
+                return db
+                    .transaction(function (t) {
+                        return User
+                            .update(
+                                {
+                                    name: 'Anonymous',
+                                    email: null,
+                                    company: null,
+                                    imageUrl: null,
+                                    sourceId: null
+
+                                },
+                                {
+                                    where: {
+                                        id: req.user.id
+                                    },
+                                    limit: 1,
+                                    returning: true,
+                                    transaction: t
+                                }
+                            )
+                            .then(function () {
+                                return User.destroy({
+                                    where: {
+                                        id: req.user.id
+                                    },
+                                    transaction: t
+                                });
+                            });
+            })
+        })
+        .then(function () {
+            return res.ok();
+        })
+        .catch(next);
     });
     /**
      * Create UserConsent
