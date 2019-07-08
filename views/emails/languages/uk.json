@@ -48,25 +48,25 @@
       "OBSCENE": "Містить ненормативну лексику",
       "SPAM": "Містить спам або не відноситься до теми",
       "HATE": "Містить мову ворожнечі",
-      "NETIQUETTE": "Infringes (n)etiquette",
-      "DUPLICATE": "Is a duplicate"
+      "NETIQUETTE": "Порушує (н)етикет",
+      "DUPLICATE": "Є повторенням"
     }
   },
   "REPORT_COMMENT": {
     "REPORT_TYPE": {
-      "ABUSE": "Is abusive or insulting",
-      "OBSCENE": "Contains obscene language",
-      "SPAM": "Contains spam or is unrelated to topic",
-      "HATE": "Contains hate speech",
-      "NETIQUETTE": "Infringes (n)etiquette",
-      "DUPLICATE": "Is a duplicate"
+      "ABUSE": "Містить лайку або образи",
+      "OBSCENE": "Містить ненормативну лексику",
+      "SPAM": "Містить спам або не відноситься до теми",
+      "HATE": "Містить мову ворожнечі",
+      "NETIQUETTE": "Порушує (н)етикет",
+      "DUPLICATE": "Є повторенням"
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Your comment has been reported as inappropriate by the community"
+    "SUBJECT": "Хтось у спільноті поскаржився на ваш коментар як на недоречний"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "A comment has been reported as inappropriate by the community"
+    "SUBJECT": "Хтось у спільноті поскаржився на коментар як на недоречний"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
