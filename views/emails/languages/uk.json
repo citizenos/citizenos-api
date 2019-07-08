@@ -16,31 +16,31 @@
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Скинути пароль вашого облікового запису Citizen OS"
+    "SUBJECT": "Скинути пароль облікового запису Citizen OS"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Дякуємо, ми отримали вашу скаргу (#{{report.id}})"
+    "SUBJECT": "Дякуємо, ми отримали вашу скаргу (#№{{report.id}})"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Скарга #{{report.id}}: ваша тема Citizen OS може містити порушення рекомендацій для спільноти"
+    "SUBJECT": "Скарга №{{report.id}}: ваша тема Citizen OS може містити порушення рекомендацій для спільноти"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "Тема Citizen OS була оскаржена (#{{report.id}}), будь ласка, відмодеруйте"
+    "SUBJECT": "Тема Citizen OS була оскаржена (№{{report.id}}), будь ласка, відмодеруйте"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Ваша скарга Citizen OS #{{report.id}} була переглянута"
+    "SUBJECT": "Ваша скарга Citizen OS №{{report.id}} була переглянута"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Скарга #{{report.id}}: ваша тема Citizen OS була переглянута модератором"
+    "SUBJECT": "Скарга №{{report.id}}: ваша тема Citizen OS була переглянута модератором"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "Оскаржена (#{{report.id}}) тема Citizen OS була відредагована, будь ласка, перегляньте"
+    "SUBJECT": "Оскаржена (№{{report.id}}) тема Citizen OS була відредагована, будь ласка, перегляньте"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Скарга #{{report.id}}: доступ до вашої теми Citizen OS був відновлений."
+    "SUBJECT": "Скарга №{{report.id}}: доступ до вашої теми Citizen OS був відновлений."
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
-    "SUBJECT": "Питання щодо вашої скарги (#{{report.id}}) у Citizen OS було вирішено"
+    "SUBJECT": "Питання щодо вашої скарги (№{{report.id}}) у Citizen OS було вирішено"
   },
   "REPORT": {
     "REPORT_TYPE": {
