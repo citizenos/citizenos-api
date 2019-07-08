@@ -1,34 +1,34 @@
 {
   "LAYOUT": {
-    "LINK_TO_PLATFORM": "Link to platform",
-    "LINK_PRIVACY_POLICY": "Privacy Policy",
-    "EMPOWERED_BY": "Empowered by"
+    "LINK_TO_PLATFORM": "Посилання на платформу",
+    "LINK_PRIVACY_POLICY": "Політика конфіденційності",
+    "EMPOWERED_BY": "За підтримки"
   },
   "ACCOUNT_VERIFICATION": {
-    "SUBJECT": "Activate your Citizen OS account"
+    "SUBJECT": "Активуйте свій обліковий запис Citizen OS"
   },
   "INVITE_GROUP": {
-    "SUBJECT": "{{fromUser.name}} is inviting you to join our group “{{group.name}}” on Citizen OS"
+    "SUBJECT": "{{fromUser.name}} запрошує вас приєднатися до нашої групи \"{{group.name}}\" на Citizen OS"
   },
   "INVITE_TOPIC": {
-    "SUBJECT": "{{fromUser.name}} is inviting you to make a collaborative decision",
+    "SUBJECT": "{{fromUser.name}} запрошує вас до прийняття спільного рішення",
     "SUBJECT_rahvaalgatus_ee": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Reset your Citizen OS account password"
+    "SUBJECT": "Скинути пароль вашого облікового запису Citizen OS"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Thank you, we received your report (#{{report.id}})"
+    "SUBJECT": "Дякуємо, ми отримали вашу скаргу (#{{report.id}})"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: your Citizen OS topic may contain a violation of guidelines"
+    "SUBJECT": "Скарга #{{report.id}}: ваша тема Citizen OS може містити порушення рекомендацій для спільноти"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "A Citizen OS topic has been reported (#{{report.id}}), please moderate"
+    "SUBJECT": "Тема Citizen OS була оскаржена (#{{report.id}}), будь ласка, відмодеруйте"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Your Citizen OS report #{{report.id}} has been reviewed"
+    "SUBJECT": "Ваша скарга Citizen OS #{{report.id}} була переглянута"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
     "SUBJECT": "Report #{{report.id}}: Your Citizen OS topic has been reviewed by a moderator"
