@@ -31,23 +31,23 @@
     "SUBJECT": "Ваша скарга Citizen OS #{{report.id}} була переглянута"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: Your Citizen OS topic has been reviewed by a moderator"
+    "SUBJECT": "Скарга #{{report.id}}: ваша тема Citizen OS була переглянута модератором"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "A reported (#{{report.id}}) Citizen OS topic has been revised, please review"
+    "SUBJECT": "Оскаржена (#{{report.id}}) тема Citizen OS була відредагована, будь ласка, перегляньте"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: access to your Citizen OS topic has been restored."
+    "SUBJECT": "Скарга #{{report.id}}: доступ до вашої теми Citizen OS був відновлений."
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
-    "SUBJECT": "Your report (#{{report.id}}) in Citizen OS has been resolved"
+    "SUBJECT": "Питання щодо вашої скарги (#{{report.id}}) у Citizen OS було вирішено"
   },
   "REPORT": {
     "REPORT_TYPE": {
-      "ABUSE": "Is abusive or insulting",
-      "OBSCENE": "Contains obscene language",
-      "SPAM": "Contains spam or is unrelated to topic",
-      "HATE": "Contains hate speech",
+      "ABUSE": "Містить лайку або образи",
+      "OBSCENE": "Містить ненормативну лексику",
+      "SPAM": "Містить спам або не відноситься до теми",
+      "HATE": "Містить мову ворожнечі",
       "NETIQUETTE": "Infringes (n)etiquette",
       "DUPLICATE": "Is a duplicate"
     }
