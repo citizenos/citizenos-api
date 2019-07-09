@@ -25,7 +25,7 @@
     "SUBJECT": "Скарга №{{report.id}}: ваша тема Citizen OS може містити порушення рекомендацій для спільноти"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "Тема Citizen OS була оскаржена (№{{report.id}}), будь ласка, відмодеруйте"
+    "SUBJECT": "Тема Citizen OS була оскаржена (скарга №{{report.id}}), та потребує модерації"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
     "SUBJECT": "Ваша скарга Citizen OS №{{report.id}} була переглянута"
