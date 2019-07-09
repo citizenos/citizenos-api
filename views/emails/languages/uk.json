@@ -19,7 +19,7 @@
     "SUBJECT": "Скинути пароль облікового запису Citizen OS"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Дякуємо, ми отримали вашу скаргу (#№{{report.id}})"
+    "SUBJECT": "Дякуємо, ми отримали вашу скаргу (№{{report.id}})"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
     "SUBJECT": "Скарга №{{report.id}}: ваша тема Citizen OS може містити порушення рекомендацій для спільноти"
