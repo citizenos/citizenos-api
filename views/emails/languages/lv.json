@@ -2,7 +2,7 @@
   "LAYOUT": {
     "LINK_TO_PLATFORM": "Saite uz platformu",
     "LINK_PRIVACY_POLICY": "Privātuma politika",
-    "EMPOWERED_BY": "Empowered by"
+    "EMPOWERED_BY": "Darbību nodrošina"
   },
   "ACCOUNT_VERIFICATION": {
     "SUBJECT": "Aktivizējiet savu Citizen OS kontu"
@@ -16,40 +16,40 @@
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Reset your Citizen OS account password"
+    "SUBJECT": "Atiestatīt jūsu Citizen OS konta paroli"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Thank you, we received your report (#{{report.id}})"
+    "SUBJECT": "Paldies, jūsu ziņojumu (#{{report.id}}) saņēmām"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: your Citizen OS topic may contain a violation of guidelines"
+    "SUBJECT": "Ziņojums #{{report.id}}: iespējams, ka jūsu Citizen OS temats pārkāpj noteikumus"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "A Citizen OS topic has been reported (#{{report.id}}), please moderate"
+    "SUBJECT": "Saņemts ziņojums (#{{report.id}}) par Citizen OS tematu, lūdzu, pārbaudiet"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Your Citizen OS report #{{report.id}} has been reviewed"
+    "SUBJECT": "Jūsu Citizen OS ziņojums #{{report.id}} ir izskatīts"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: Your Citizen OS topic has been reviewed by a moderator"
+    "SUBJECT": "Ziņojums #{{report.id}}: Jūsu Citizen OS tematu pārbaudīja moderators"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "A reported (#{{report.id}}) Citizen OS topic has been revised, please review"
+    "SUBJECT": "Citizen OS temats, par kuru saņemts ziņojums (#{{report.id}}), ir pārbaudīts, lūdzu, pārskatiet"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: access to your Citizen OS topic has been restored."
+    "SUBJECT": "Ziņojums #{{report.id}}: piekļuve jūsu Citizen OS tematam ir atjaunota."
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
-    "SUBJECT": "Your report (#{{report.id}}) in Citizen OS has been resolved"
+    "SUBJECT": "Jūsu Citizen OS ziņojums (#{{report.id}}) ir izskatīts"
   },
   "REPORT": {
     "REPORT_TYPE": {
-      "ABUSE": "Is abusive or insulting",
-      "OBSCENE": "Contains obscene language",
-      "SPAM": "Contains spam or is unrelated to topic",
-      "HATE": "Contains hate speech",
-      "NETIQUETTE": "Infringes (n)etiquette",
-      "DUPLICATE": "Is a duplicate"
+      "ABUSE": "Ir aizskarošs vai noniecinošs",
+      "OBSCENE": "Satur lamuvārdus",
+      "SPAM": "Satur spamu vai nav saistīts ar tematu",
+      "HATE": "Satur naida runu",
+      "NETIQUETTE": "Pārkāpj etiķetes normas",
+      "DUPLICATE": "Ir dublikāts"
     }
   },
   "REPORT_COMMENT": {
