@@ -1,33 +1,33 @@
 <!-- E-mail sent to Topic members of a reported Topic -->
 <p>
-    Hello <span class="blue">{{userMember.name}}</span>,
+    Sveiki <span class="blue">{{userMember.name}}</span>,
 </p>
 <p class="important">
-    <b>A moderator has reviewed the report <span class="blue">#{{report.id}}</span>, which was submitted on {{report.createdAt}} about your Citizen OS topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" being inappropriate.</b>
+    <b>Moderators pārbaudīja ziņojumu <span class="blue">#{{report.id}}</span>, kas tika iesniegts {{report.createdAt}} par to, ka jūsu Citizen OS temats "<a href="{{linkViewTopic}}">{{topic.title}}</a>" ir neatbilstošs.</b>
 </p>
 
-<h1>Decision of the moderator:</h1>
+<h1>Moderatora lēmums:</h1>
 <p>
 <ul>
-    <li class="li">Violation type: "{{report.moderatedReasonType}}"</li>
-    <li class="li">Reasoning: "{{report.moderatedReasonText}}"</li>
+    <li class="li">Pārkāpuma veids: "{{report.moderatedReasonType}}"</li>
+    <li class="li">Pamatojums: "{{report.moderatedReasonText}}"</li>
 </ul>
 </p>
 <p>
-    When accessing your topic, users will now see an overlay, warning about violations in the topic. However, viewers have an option to bypass the overlay and view topic content at their own risk anyway.
+    Piekļūstot jūsu tematam, lietotāji redzēs brīdinājumu par pārkāpumiem tematā. Taču, neskatoties uz to, lasītāji var lasīt šo tematu, ja to vēlas.
 </p>
 
-<h1>What happens next?</h1>
+<h1>Kas notiks tālāk?</h1>
 <p>
 <ol>
-    <li class="li">You and other admins and editors of the topic can edit topic content at any time to clear possible violations. You can then send the topic to moderators for review.</li>
-    <li class="li">Upon a review request, moderators will review the topic and remove restrictions if violations have been cleared.</li>
-    <li class="li">Until such time, access to the topic will remain restricted.</li>
+    <li class="li">Jūs, temata administratori un redaktori var rediģēt šī temata saturu jebkurā laikā, lai novērstu pārkāpumus. Jūs varat nosūtīt tematu pārbaudei moderatoriem.</li>
+    <li class="li">Pēc pārbaudes pieprasījuma saņemšanas, moderatori pārbaudīs tematu un atcels ierobežojumus, ja pārkāpumi ir novērsti.</li>
+    <li class="li">Piekļuve tematam paliks ierobežota, kamēr pārkāpumi netiks novērsti.</li>
 </ol>
 </p>
-<p><a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process here.</a></p>
+<p><a href="{{linkViewModerationGuidelines}}">Vairāk informācijas par Citizen OS moderācijas procesu atradīsiet šeit.</a></p>
 
 <hr/>
 <p>
-    Please review your topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" and see if it contains violations of community guidelines. Together we can maintain a high quality of content in Citizen OS user community.
+    Lūdzu, pārskatiet savu tematu "<a href="{{linkViewTopic}}">{{topic.title}}</a>" un pārliecinieties par to, ka tas nepārkāpj kopienas noteikumus. Kopā mēs spēsim saglabāt Citizen OS lietotāju kopienas satura augsto kvalitāti.
 </p>
