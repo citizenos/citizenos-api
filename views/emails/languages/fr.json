@@ -2,7 +2,7 @@
   "LAYOUT": {
     "LINK_TO_PLATFORM": "Lien vers la plate-forme",
     "LINK_PRIVACY_POLICY": "Politique de confidentialité",
-    "EMPOWERED_BY": "Empowered by"
+    "EMPOWERED_BY": "Propulsé par"
   },
   "ACCOUNT_VERIFICATION": {
     "SUBJECT": "Activer votre compte Citizen OS"
@@ -16,16 +16,16 @@
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Reset your Citizen OS account password"
+    "SUBJECT": "Réinitialisez le mot de passe de votre compte Citizen OS"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Thank you, we received your report (#{{report.id}})"
+    "SUBJECT": "Merci, nous avons reçu votre rapport (#{{report.id}})"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: your Citizen OS topic may contain a violation of guidelines"
+    "SUBJECT": "Rapport #{{report.id}}: votre sujet de Citizen OS peut contenir une violation des lignes directrices"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "A Citizen OS topic has been reported (#{{report.id}}), please moderate"
+    "SUBJECT": "Un sujet de Citizen OS a été signalé (#{{report.id}}), veuillez modérer"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
     "SUBJECT": "Your Citizen OS report #{{report.id}} has been reviewed"
