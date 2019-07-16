@@ -57,7 +57,8 @@
       ],
       "origin": [
         "rahvaalgatus\\.ee(:[0-9]{2,4})?$",
-        "citizenos\\.com(:[0-9]{2,4})?$"
+        "citizenos\\.com(:[0-9]{2,4})?$",
+        "lecielfoundation\\.com(:[0-9]{2,4})?$"
       ],
       "methods": [
         "GET",
