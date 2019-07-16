@@ -28,13 +28,13 @@
     "SUBJECT": "Un sujet de Citizen OS a été signalé (#{{report.id}}), veuillez modérer"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Your Citizen OS report #{{report.id}} has been reviewed"
+    "SUBJECT": "Votre signalement Citizen OS #{{report.id}} a été examiné"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: Your Citizen OS topic has been reviewed by a moderator"
+    "SUBJECT": "Signalement #{{report.id}}: Votre sujet de Citizen OS a été examiné par un modérateur"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "A reported (#{{report.id}}) Citizen OS topic has been revised, please review"
+    "SUBJECT": "Un sujet de Citizen OS signalé (#{{report.id}}) a été révisé, veuillez l'examiner"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
     "SUBJECT": "Report #{{report.id}}: access to your Citizen OS topic has been restored."
