@@ -1,8 +1,8 @@
 {
   "LAYOUT": {
-    "LINK_TO_PLATFORM": "Link to platform",
-    "LINK_PRIVACY_POLICY": "Privacy Policy",
-    "EMPOWERED_BY": "Empowered by"
+    "LINK_TO_PLATFORM": "Tautan ke platform",
+    "LINK_PRIVACY_POLICY": "Kebijakan Privasi",
+    "EMPOWERED_BY": "Didukung oleh"
   },
   "ACCOUNT_VERIFICATION": {
     "SUBJECT": "Mengaktifkan akun Citizen OS"
@@ -16,40 +16,40 @@
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Reset your Citizen OS account password"
+    "SUBJECT": "Atur ulang kata sandi akun Citizen OS Anda"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Thank you, we received your report (#{{report.id}})"
+    "SUBJECT": "Terima kasih, kami telah menerima laporan (#{{report.id}}) Anda"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: your Citizen OS topic may contain a violation of guidelines"
+    "SUBJECT": "Laporan #{{report.id}}: topik Citizen OS Anda mungkin memuat pelanggaran terhadap panduan"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "A Citizen OS topic has been reported (#{{report.id}}), please moderate"
+    "SUBJECT": "Sebuah topik Citizen OS telah dilaporkan (#{{report.id}}), silakan dimoderasi"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Your Citizen OS report #{{report.id}} has been reviewed"
+    "SUBJECT": "Laporan #{{report.id}} Citizen OS Anda telah diperiksa"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: Your Citizen OS topic has been reviewed by a moderator"
+    "SUBJECT": "Laporan #{{report.id}}: Topik Citizen OS Anda telah diperiksa oleh moderator"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "A reported (#{{report.id}}) Citizen OS topic has been revised, please review"
+    "SUBJECT": "Topik (#{{report.id}}) Citizen OS yang dilaporkan telah direvisi, silakan diperiksa"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: access to your Citizen OS topic has been restored."
+    "SUBJECT": "Laporan #{{report.id}}: akses ke topik Citizen OS Anda telah dipulihkan."
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
-    "SUBJECT": "Your report (#{{report.id}}) in Citizen OS has been resolved"
+    "SUBJECT": "Laporan (#{{report.id}}) Anda dalam Citizen OS telah diselesaikan"
   },
   "REPORT": {
     "REPORT_TYPE": {
-      "ABUSE": "Is abusive or insulting",
-      "OBSCENE": "Contains obscene language",
-      "SPAM": "Contains spam or is unrelated to topic",
-      "HATE": "Contains hate speech",
-      "NETIQUETTE": "Infringes (n)etiquette",
-      "DUPLICATE": "Is a duplicate"
+      "ABUSE": "Bersifat kasar atau menghina",
+      "OBSCENE": "Mengandung bahasa tidak senonoh",
+      "SPAM": "Mengandung spam atau tidak berhubungan dengan topik",
+      "HATE": "Mengandung ujaran kebencian",
+      "NETIQUETTE": "Melanggar (n)etiket",
+      "DUPLICATE": "Merupakan duplikat"
     }
   },
   "REPORT_COMMENT": {
