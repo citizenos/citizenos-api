@@ -66,7 +66,7 @@
     "SUBJECT": "Вашиот коментар е пријавен како несоодветен од страна на заедницата"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "Коментар беше пријавен како несоодветен од страна на заедницата"
+    "SUBJECT": "Коментар е пријавен како несоодветен од страна на заедницата"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
