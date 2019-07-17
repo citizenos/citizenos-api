@@ -1,40 +1,40 @@
 <!-- E-mail sent to Topic members of a reporter Topic -->
 <p>
-    Hello <span class="blue">{{userMember.name}}</span>,
+    Tere, <span class="blue">{{userMember.name}}</span>!
 </p>
 <p class="important">
-    <b>A Citizen OS user thinks there is a violation of Citizen OS community guidelines in your topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" and has filed a report <span class="blue">#{{report.id}}</span>.</b>
+    <b>Üks Citizen OS-i kasutaja arvab, et Sinu loodud teema "<a href="{{linkViewTopic}}">{{topic.title}}</a>" rikub Citizen OS-i kogukonnareegleid, ja esitas selle kohta raporti <span class="blue">#{{report.id}}</span>.</b>
     <br><br>
-    All editors of the topic and community moderators are receiving this report, please see details below.
+    See raport saadetakse kõigile selle teema toimetajatele ja kogukonna moderaatoritele. Palun tutvu üksikasjadega allpool.
 </p>
 
-<h1>What happens next?</h1>
+<h1>Mis edasi saab?</h1>
 <p>
 <ol>
-    <li class="li">Moderators are currently reviewing the topic. If they confirm a violation, they will restrict access to the topic.
+    <li class="li">Moderaatorid vaatavad praegu seda teemat üle. Kui rikkumine saab kinnitust, piiravad nad juurdepääsu sellele teemale.
     </li>
-    <li class="li">However, you and other editors can edit the topic at any time to clear possible violations. If the violations have been cleared, the topic can be sent for review to Citizen OS
-        moderators.
+    <li class="li">Sinul ja teistel selle teema toimetajatel on aga igal ajal õigus võimalikud rikkumised kõrvaldada. Pärast teema sisu reeglitepäraseks muutmist, võid saata selle ülevaatamiseks 
+        Citizen OS-i moderaatoritele.
     </li>
-    <li class="li">Upon a review request, moderators will review the topic and withdraw all restrictions if violations have been removed.</li>
+    <li class="li">Ülevaatamistaotluse saamisel kontrollivad moderaatorid teema uuesti üle ja kui kõik on reeglitepärane, siis eemaldavad piirangu.</li>
     <li class="li">
-        We will notify you if:
+        Anname Sulle teada, kui:
         <ul>
-            <li>moderators apply restrictions to the topic</li>
-            <li>Removal of violations has been reviewed and restrictions withdrawn.</li>
+            <li>moderaatorid määravad teemale piirangu,</li>
+            <li>rikkumiste kõrvaldamine on üle kontrollitud ja piirangud eemaldatud.</li>
         </ul>
     </li>
 </ol>
 </p>
-<p><a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process here.</a></p>
+<p><a href="{{linkViewModerationGuidelines}}">Täpsemalt võid Citizen OS-i modereerimisprotsessi kohta lugeda siit.</a></p>
 
-<h1>Details of the report</h1>
-<p>Topic: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
-<p>Report reference number: <b>{{report.id}}</b>
-<p>Type of violation: <b>"{{report.type}}"</b>
-<p>Your explanation: <b>"{{report.text}}"</b>
+<h1>Raporti üksikasjad</h1>
+<p>Teema: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
+<p>Raporti viitenumber: <b>{{report.id}}</b>
+<p>Rikkumise tüüp: <b>"{{report.type}}"</b>
+<p>Sinu selgitus: <b>"{{report.text}}"</b>
 
 <hr/>
 <p>
-    Please review your topic  "<a href="{{linkViewTopic}}">{{topic.title}}</a>" and see if it contains violations of community guidelines. Together we can maintain a high quality of content in Citizen OS user community.
+    Palun kontrolli, et Sinu algatatud teemas "<a href="{{linkViewTopic}}">{{topic.title}}</a>" poleks kogukonnareegleid rikkuvat sisu. Koostöös saame Citizen OS-i kasutajakogukonnas avaldatud sisu kõrge kvaliteedi lihtsamini tagada.
 </p>
