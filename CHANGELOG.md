@@ -1,3 +1,7 @@
+## 2019-07-19
+
+* Lodash security update to version 4.17.13
+
 ## 2019-06-27
 
 * Add linkPrivacyPolicy property to Partners table
