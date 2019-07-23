@@ -33,6 +33,11 @@ module.exports = function (sequelize, DataTypes) {
                 type: DataTypes.STRING,
                 allowNull: false,
                 comment: 'Partner callback (callback_uri) validation regexp. Also may be used to check request Origin and Referer if present.'
+            },
+            linkPrivacyPolicy: {
+                type: DataTypes.TEXT,
+                allowNull: true,
+                description: 'Link to partners privacy policy'
             }
         }
     );
@@ -41,6 +46,20 @@ module.exports = function (sequelize, DataTypes) {
         Partner.hasMany(models.UserConsent, {
             foreignKey: 'partnerId'
         });
+    };
+
+    Partner.prototype.toJSON = function () {
+        // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
+        var data = {
+            id: this.dataValues.id,
+            website: this.dataValues.website,
+            redirectUriRegexp: this.dataValues.redirectUriRegexp,
+            linkPrivacyPolicy: this.dataValues.linkPrivacyPolicy,
+            createdAt: this.dataValues.createdAt,
+            updatedAt: this.dataValues.updatedAt
+        };
+
+        return data;
     };
 
     return Partner;
