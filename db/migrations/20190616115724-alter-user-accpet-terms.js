@@ -18,7 +18,7 @@ module.exports = {
         })
     },
 
-    down: (queryInterface, Sequelize) => {
+    down: (queryInterface) => {
         return queryInterface.sequelize.transaction((t) => {
             return Promise.all([
                 queryInterface.removeColumn('Users', 'termsVersion', { transaction: t }),

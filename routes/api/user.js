@@ -159,6 +159,15 @@ module.exports = function (app) {
                                     },
                                     transaction: t
                                 });
+                            })
+                            .then(function () {
+                                return UserConnection.destroy({
+                                    where: {
+                                        userId: req.user.id
+                                    },
+                                    force: true,
+                                    transaction: t
+                                })
                             });
             })
         })
