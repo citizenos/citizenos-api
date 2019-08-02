@@ -25,8 +25,9 @@ module.exports = function (app) {
                         topicId,
                         req.method + ' ' + req.path,
                         {
-                            'type': 'User',
-                            id: pdata.userId
+                            type: 'User',
+                            id: pdata.userId,
+                            ip: req.ip
                         }
                     );
             });

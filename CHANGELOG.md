@@ -1,3 +1,7 @@
+## 2019-08-02
+
+* Log user ip-s into acitivities table https://github.com/citizenos/citizenos-api/issues/133
+
 ## 2019-07-19
 
 * Lodash security update to version 4.17.13

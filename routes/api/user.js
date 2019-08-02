@@ -126,7 +126,8 @@ module.exports = function (app) {
                             return cosActivities
                                 .createActivity(userConsent, null, {
                                     type: 'User',
-                                    id: userId
+                                    id: userId,
+                                    ip: req.ip
                                 }, req.method + ' ' + req.path, t);
                         }
 
@@ -211,7 +212,8 @@ module.exports = function (app) {
                                 null,
                                 {
                                     type: 'User',
-                                    id: req.user.id
+                                    id: req.user.id,
+                                    ip: req.ip
                                 },
                                 req.method + ' ' + req.path,
                                 t

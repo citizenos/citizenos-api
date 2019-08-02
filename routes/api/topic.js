@@ -941,7 +941,8 @@ module.exports = function (app) {
                                                 null,
                                                 {
                                                     type: 'User',
-                                                    id: req.user.id
+                                                    id: req.user.id,
+                                                    ip: req.ip
                                                 }
                                                 , req.method + ' ' + req.path,
                                                 t
@@ -959,7 +960,8 @@ module.exports = function (app) {
                             req.method + ' ' + req.path,
                             {
                                 type: 'User',
-                                id: req.user.id
+                                id: req.user.id,
+                                ip: req.ip
                             }
                         );
                 } else {
@@ -1454,7 +1456,8 @@ module.exports = function (app) {
                                 null,
                                 {
                                     type: 'User',
-                                    id: req.user.id
+                                    id: req.user.id,
+                                    ip: req.ip
                                 },
                                 null,
                                 req.method + ' ' + req.path,
@@ -1498,7 +1501,8 @@ module.exports = function (app) {
                                     req.method + ' ' + req.path,
                                     {
                                         type: 'User',
-                                        id: req.user.id
+                                        id: req.user.id,
+                                        ip: req.ip
                                     }
                                 );
                         } else {
@@ -1577,7 +1581,8 @@ module.exports = function (app) {
                         return cosActivities
                             .updateActivity(topic, null, {
                                 type: 'User',
-                                id: req.user.id
+                                id: req.user.id,
+                                ip: req.ip
                             }, null, req.method + ' ' + req.path, t)
                             .then(function () {
                                 return topic
@@ -1638,7 +1643,8 @@ module.exports = function (app) {
                         }).then(function () {
                             return cosActivities.deleteActivity(topic, null, {
                                 type: 'User',
-                                id: req.user.id
+                                id: req.user.id,
+                                ip: req.ip
                             }, req.method + ' ' + req.path, t);
                         });
 
@@ -2312,7 +2318,7 @@ module.exports = function (app) {
                             .then(function (users) {
                                 var userCreateActivityPromises = [];
                                 users.forEach(function (u) {
-                                    userCreateActivityPromises.push(cosActivities.createActivity(u, null, {type: 'System'}, req.method + ' ' + req.path, t));
+                                    userCreateActivityPromises.push(cosActivities.createActivity(u, null, {type: 'System', ip: req.ip}, req.method + ' ' + req.path, t));
                                 });
 
                                 return Promise.all(userCreateActivityPromises)
@@ -2385,7 +2391,8 @@ module.exports = function (app) {
                                             user.dataValues.id = value[0].userId;
                                             cosActivities.addActivity(user, {
                                                 type: 'User',
-                                                id: req.user.id
+                                                id: req.user.id,
+                                                ip: req.ip
                                             }, null, topic, req.method + ' ' + req.path);
                                         }
                                     } else {
@@ -2831,7 +2838,8 @@ module.exports = function (app) {
                                                     topic,
                                                     {
                                                         type: 'User',
-                                                        id: req.user.id
+                                                        id: req.user.id,
+                                                        ip: req.ip
                                                     },
                                                     null,
                                                     group,
@@ -2911,7 +2919,8 @@ module.exports = function (app) {
                         return cosActivities
                             .updateActivity(topicMemberUser, null, {
                                 type: 'User',
-                                id: req.user.id
+                                id: req.user.id,
+                                ip: req.ip
                             }, null, req.method + ' ' + req.path, t)
                             .then(function () {
                                 return topicMemberUser
@@ -2970,7 +2979,8 @@ module.exports = function (app) {
                                                 null,
                                                 {
                                                     type: 'User',
-                                                    id: req.user.id
+                                                    id: req.user.id,
+                                                    ip: req.ip
                                                 },
                                                 null,
                                                 req.method + ' ' + req.path,
@@ -3088,7 +3098,8 @@ module.exports = function (app) {
                                         return cosActivities
                                             .leaveActivity(topic, {
                                                 type: 'User',
-                                                id: req.user.id
+                                                id: req.user.id,
+                                                ip: req.ip
                                             }, req.method + ' ' + req.path, t);
                                     };
                                 } else {
@@ -3096,7 +3107,8 @@ module.exports = function (app) {
                                         return cosActivities
                                             .deleteActivity(user, topic, {
                                                 type: 'User',
-                                                id: req.user.id
+                                                id: req.user.id,
+                                                ip: req.ip
                                             }, req.method + ' ' + req.path, t);
                                     };
                                 }
@@ -3209,7 +3221,8 @@ module.exports = function (app) {
                                                 topic,
                                                 {
                                                     type: 'User',
-                                                    id: req.user.id
+                                                    id: req.user.id,
+                                                    ip: req.ip
                                                 },
                                                 req.method + ' ' + req.path,
                                                 t
@@ -3308,6 +3321,7 @@ module.exports = function (app) {
                                                 {
                                                     type: 'User',
                                                     id: user.id,
+                                                    ip: req.ip,
                                                     level: TopicMemberUser.LEVELS.read
                                                 },
                                                 req.method + ' ' + req.path,
@@ -3388,7 +3402,8 @@ module.exports = function (app) {
                                                 attachment,
                                                 {
                                                     type: 'User',
-                                                    id: req.user.id
+                                                    id: req.user.id,
+                                                    ip: req.ip
                                                 },
                                                 null,
                                                 topic,
@@ -3431,7 +3446,8 @@ module.exports = function (app) {
                         return cosActivities
                             .updateActivity(attachment, topic, {
                                 type: 'User',
-                                id: req.user.id
+                                id: req.user.id,
+                                ip: req.ip
                             }, null, req.method + ' ' + req.path, t)
                             .then(function () {
                                 return attachment
@@ -3465,7 +3481,8 @@ module.exports = function (app) {
                         return cosActivities
                             .deleteActivity(attachment, attachment.Topics[0], {
                                 type: 'User',
-                                id: req.user.id
+                                id: req.user.id,
+                                ip: req.ip
                             }, req.method + ' ' + req.path, t)
                             .then(function () {
                                 return attachment
@@ -3841,7 +3858,8 @@ module.exports = function (app) {
                                                         topic,
                                                         {
                                                             type: 'User',
-                                                            id: req.user.id
+                                                            id: req.user.id,
+                                                            ip: req.ip
                                                         }
                                                         , req.method + ' ' + req.path,
                                                         t
@@ -3857,7 +3875,8 @@ module.exports = function (app) {
                                             topic,
                                             {
                                                 type: 'User',
-                                                id: req.user.id
+                                                id: req.user.id,
+                                                ip: req.ip
                                             },
                                             req.method + ' ' + req.path,
                                             t
@@ -4296,7 +4315,8 @@ module.exports = function (app) {
                                         comment.Topics[0],
                                         {
                                             type: 'User',
-                                            id: req.user.id
+                                            id: req.user.id,
+                                            ip: req.ip
                                         },
                                         req.method + ' ' + req.path,
                                         t
@@ -4365,7 +4385,8 @@ module.exports = function (app) {
                         return cosActivities
                             .updateActivity(comment, topic, {
                                 type: 'User',
-                                id: req.user.id
+                                id: req.user.id,
+                                ip: req.ip
                             }, null, req.method + ' ' + req.path, t)
                             .then(function () {
                                 return comment
@@ -4439,7 +4460,8 @@ module.exports = function (app) {
                                         report,
                                         {
                                             type: 'User',
-                                            id: req.user.id
+                                            id: req.user.id,
+                                            ip: req.ip
                                         },
                                         null,
                                         comment,
@@ -4594,7 +4616,8 @@ module.exports = function (app) {
                                 return cosActivities
                                     .updateActivity(comment, topic, {
                                         type: 'Moderator',
-                                        id: eventTokenData.userId
+                                        id: eventTokenData.userId,
+                                        ip: req.ip
                                     }, null, req.method + ' ' + req.path, t)
                                     .then(function () {
                                         return Comment
@@ -4622,7 +4645,8 @@ module.exports = function (app) {
                                                 return cosActivities
                                                     .deleteActivity(comment, topic, {
                                                         type: 'Moderator',
-                                                        id: eventTokenData.userId
+                                                        id: eventTokenData.userId,
+                                                        ip: req.ip
                                                     }, req.method + ' ' + req.path, t);
                                             });
                                     });
@@ -4796,7 +4820,8 @@ module.exports = function (app) {
                                     return cosActivities
                                         .updateActivity(vote, comment, {
                                             type: 'User',
-                                            id: req.user.id
+                                            id: req.user.id,
+                                            ip: req.ip
                                         }, null, req.method + ' ' + req.path, t)
                                         .then(function () {
                                             return vote.save({transaction: t});
@@ -4815,7 +4840,8 @@ module.exports = function (app) {
                                             return cosActivities
                                                 .createActivity(cv, comment, {
                                                     type: 'User',
-                                                    id: req.user.id
+                                                    id: req.user.id,
+                                                    ip: req.ip
                                                 }, req.method + ' ' + req.params, t);
                                         });
                                 }
@@ -4924,7 +4950,8 @@ module.exports = function (app) {
                                 null,
                                 {
                                     type: 'User',
-                                    id: req.user.id
+                                    id: req.user.id,
+                                    ip: req.ip
                                 },
                                 req.method + ' ' + req.path,
                                 t
@@ -4964,7 +4991,8 @@ module.exports = function (app) {
                                         null,
                                         {
                                             type: 'User',
-                                            id: req.user.id
+                                            id: req.user.id,
+                                            ip: req.ip
                                         },
                                         req.method + ' ' + req.path,
                                         t
@@ -4984,7 +5012,8 @@ module.exports = function (app) {
                                                         topic,
                                                         {
                                                             type: 'User',
-                                                            id: req.user.id
+                                                            id: req.user.id,
+                                                            ip: req.ip
                                                         },
                                                         req.method + ' ' + req.path,
                                                         t
@@ -4998,7 +5027,8 @@ module.exports = function (app) {
                                 return cosActivities
                                     .updateActivity(topic, null, {
                                         type: 'User',
-                                        id: req.user.id
+                                        id: req.user.id,
+                                        ip: req.ip
                                     }, null, req.method + ' ' + req.path, t)
                                     .then(function () {
                                         return topic
@@ -5266,7 +5296,8 @@ module.exports = function (app) {
                             topic,
                             {
                                 type: 'User',
-                                id: req.user.id
+                                id: req.user.id,
+                                ip: req.ip
                             },
                             null,
                             req.method + ' ' + req.path,
@@ -5434,7 +5465,8 @@ module.exports = function (app) {
                                         tc,
                                         {
                                             type: 'User',
-                                            id: req.user.id
+                                            id: req.user.id,
+                                            ip: req.ip
                                         },
                                         req.method + ' ' + req.path,
                                         t
@@ -5639,7 +5671,7 @@ module.exports = function (app) {
                                             )
                                             .then(function (user) {
                                                 cosActivities
-                                                    .createActivity(user, null, {type: 'System'}, req.method + ' ' + req.path, t)
+                                                    .createActivity(user, null, {type: 'System', ip: req.ip}, req.method + ' ' + req.path, t)
                                                     .then(function () {
                                                         return UserConnection
                                                             .create(
@@ -5897,7 +5929,7 @@ module.exports = function (app) {
                                     vl[key] = el;
                                 });
 
-                                var actor = {type: 'User'};
+                                var actor = {type: 'User', ip: req.ip};
                                 if (userId) {
                                     actor.id = userId;
                                 }
@@ -6097,7 +6129,7 @@ module.exports = function (app) {
                                             el = VoteList.build(el.dataValues);
                                             vl[key] = el;
                                         });
-                                        var actor = {type: 'User'};
+                                        var actor = {type: 'User', ip: req.ip};
                                         if (userId) {
                                             actor.id = userId;
                                         }
@@ -6330,7 +6362,7 @@ module.exports = function (app) {
                 var container = voteUserContainer.dataValues.container;
                 delete voteUserContainer.dataValues.container;
 
-                var actor = {type: 'User'};
+                var actor = {type: 'User', ip: req.ip};
                 if (userId) {
                     actor.id = userId;
                 }
@@ -6572,7 +6604,8 @@ module.exports = function (app) {
                                                         vote,
                                                         {
                                                             type: 'User',
-                                                            id: req.user.id
+                                                            id: req.user.id,
+                                                            ip: req.ip
                                                         },
                                                         req.method + ' ' + req.path,
                                                         t
@@ -6652,7 +6685,8 @@ module.exports = function (app) {
                                         vote,
                                         {
                                             type: 'User',
-                                            id: req.user.id
+                                            id: req.user.id,
+                                            ip: req.ip
                                         },
                                         req.method + ' ' + req.path,
                                         t
@@ -6697,7 +6731,7 @@ module.exports = function (app) {
                                 }
                             )
                             .then(function (event) {
-                                var actor = {type: 'User'};
+                                var actor = {type: 'User', ip: req.ip};
 
                                 if (req.user && req.user.id) {
                                     actor.id = req.user.id;
@@ -6784,7 +6818,8 @@ module.exports = function (app) {
                         return cosActivities
                             .deleteActivity(event, event.Topic, {
                                 type: 'User',
-                                id: req.user.id
+                                id: req.user.id,
+                                ip: req.ip
                             }, req.method + ' ' + req.path, t)
                             .then(function () {
                                 return TopicEvent
@@ -6835,7 +6870,8 @@ module.exports = function (app) {
                                             topic,
                                             {
                                                 type: 'User',
-                                                id: userId
+                                                id: userId,
+                                                ip: req.ip
                                             },
                                             null,
                                             topicPin,
@@ -6882,7 +6918,8 @@ module.exports = function (app) {
                                             topic,
                                             {
                                                 type: 'User',
-                                                id: req.user.id
+                                                id: req.user.id,
+                                                ip: req.ip
                                             },
                                             req.method + ' ' + req.path,
                                             t

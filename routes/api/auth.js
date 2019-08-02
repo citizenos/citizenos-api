@@ -163,10 +163,11 @@ module.exports = function (app) {
                                 var activityPromise = [];
 
                                 if (created) {
-                                    logger.info('Created a new user with Google', user.id);
+                                    logger.info('Created a new user', user.id);
                                     activityPromise.push(cosActivities.createActivity(user, null, {
                                         type: 'User',
-                                        id: user.id
+                                        id: user.id,
+                                        ip: req.ip
                                     }, req.method + ' ' + req.path, t));
                                 }
 
@@ -186,7 +187,8 @@ module.exports = function (app) {
 
                                                 return cosActivities.addActivity(uc, {
                                                     type: 'User',
-                                                    id: user.id
+                                                    id: user.id,
+                                                    ip: req.ip
                                                 }, null, user, req.method + ' ' + req.path, t);
                                             })
                                             .then(function () {

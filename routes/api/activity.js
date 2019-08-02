@@ -443,7 +443,8 @@ module.exports = function (app) {
                                 activity,
                                 {
                                     type: 'User',
-                                    id: req.user.id
+                                    id: req.user.id,
+                                    ip: req.ip
                                 },
                                 req.method + ' ' + req.path,
                                 t
@@ -1023,7 +1024,8 @@ module.exports = function (app) {
                                 activity,
                                 {
                                     type: 'User',
-                                    id: req.user.id
+                                    id: req.user.id,
+                                    ip: req.ip
                                 },
                                 req.method + ' ' + req.path,
                                 t
@@ -1124,7 +1126,8 @@ module.exports = function (app) {
                                 activity,
                                 {
                                     type: 'User',
-                                    id: req.user.id
+                                    id: req.user.id,
+                                    ip: req.ip
                                 },
                                 req.method + ' ' + req.path,
                                 t

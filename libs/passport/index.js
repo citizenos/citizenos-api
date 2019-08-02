@@ -96,7 +96,8 @@ module.exports = function (app) {
                                             
                                             activityPromise.push(cosActivities.createActivity(user, null, {
                                                 type: 'User',
-                                                id: user.id
+                                                id: user.id,
+                                                ip: req.ip
                                             }, req.method + ' ' + req.path, t));
                                         }
 
@@ -117,7 +118,8 @@ module.exports = function (app) {
 
                                                         return cosActivities.addActivity(uc, {
                                                             type: 'User',
-                                                            id: user.id
+                                                            id: user.id,
+                                                            ip: req.ip
                                                         }, null, user, req.method + ' ' + req.path, t);
                                                     })
                                                     .then(function () {
@@ -153,9 +155,10 @@ module.exports = function (app) {
                 clientSecret: config.passport.facebook.clientSecret,
                 callbackURL: urlLib.getApi(config.passport.facebook.callbackUrl),
                 enableProof: false,
-                profileFields: ['id', 'displayName', 'cover', 'email']
+                profileFields: ['id', 'displayName', 'cover', 'email'],
+                passReqToCallback: true
             },
-            function (accessToken, refreshToken, profile, done) {
+            function (req, accessToken, refreshToken, profile, done) {
                 logger.info('Facebook responded with profile: ', profile);
 
                 if (!profile.emails || !profile.emails.length) {
@@ -203,8 +206,9 @@ module.exports = function (app) {
                                             
                                             activityPromise.push(cosActivities.createActivity(user, null, {
                                                 type: 'User',
-                                                id: user.id
-                                            }, 'GET ' + config.passport.facebook.callbackUrl, t));
+                                                id: user.id,
+                                                ip: req.ip
+                                            }, req.method + ' ' + req.path, t));
                                         }
 
                                         return Promise
@@ -224,8 +228,9 @@ module.exports = function (app) {
 
                                                         return cosActivities.addActivity(uc, {
                                                             type: 'User',
-                                                            id: user.id
-                                                        }, null, user, 'GET ' + config.passport.facebook.callbackUrl, t);
+                                                            id: user.id,
+                                                            ip: req.ip
+                                                        }, null, user, req.method + ' ' + req.path, t);
                                                     })
                                                     .then(function () {
                                                         if (!user.imageUrl) {

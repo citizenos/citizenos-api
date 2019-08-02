@@ -139,7 +139,8 @@ module.exports = function (app) {
                                 null,
                                 {
                                     type: 'User',
-                                    id: req.user.id
+                                    id: req.user.id,
+                                    ip: req.ip
                                 },
                                 req.method + ' ' + req.path, t
                             );
@@ -235,7 +236,8 @@ module.exports = function (app) {
                                         null,
                                         {
                                             type: 'User',
-                                            id: req.user.id
+                                            id: req.user.id,
+                                            ip: req.ip
                                         },
                                         null,
                                         req.method + ' ' + req.path,
@@ -323,7 +325,8 @@ module.exports = function (app) {
                                     null,
                                     {
                                         type: 'User',
-                                        id: req.user.id
+                                        id: req.user.id,
+                                        ip: req.ip
                                     },
                                     req.method + ' ' + req.path, t
                                 );
@@ -629,7 +632,8 @@ module.exports = function (app) {
                                             u,
                                             null,
                                             {
-                                                type: 'System'
+                                                type: 'System',
+                                                ip: req.ip
                                             },
                                             req.method + ' ' + req.path,
                                             t
@@ -715,7 +719,8 @@ module.exports = function (app) {
                                             user.dataValues.id = value[0].userId;
                                             cosActivities.addActivity(user, {
                                                 type: 'User',
-                                                id: req.user.id
+                                                id: req.user.id,
+                                                ip: req.ip
                                             }, null, group, req.method + ' ' + req.path);
                                         }
                                     } else {
@@ -812,7 +817,8 @@ module.exports = function (app) {
                                         null,
                                         {
                                             type: 'User',
-                                            id: req.user.id
+                                            id: req.user.id,
+                                            ip: req.ip
                                         },
                                         null,
                                         req.method + ' ' + req.path, t
@@ -871,7 +877,8 @@ module.exports = function (app) {
                                 group,
                                 {
                                     type: 'User',
-                                    id: req.user.id
+                                    id: req.user.id,
+                                    ip: req.ip
                                 },
                                 req.method + ' ' + req.path,
                                 t
