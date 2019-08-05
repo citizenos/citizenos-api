@@ -133,6 +133,16 @@ module.exports = function (sequelize, DataTypes) {
                 type: DataTypes.STRING,
                 allowNull: true,
                 comment: 'User profile image url.'
+            },
+            termsVersion: {
+                type: DataTypes.STRING,
+                allowNull: true,
+                comment: 'Version identifier of user terms accepted by user'
+            },
+            termsAcceptedAt: {
+                type: DataTypes.DATE,
+                comment: 'Time when the terms were accepted',
+                allowNull: true
             }
         }
     );
