@@ -31,6 +31,7 @@ module.exports = function (app) {
     var encoder = app.get('encoder');
     var URL = require('url');
     var https = require('https');
+    var smartId = app.get('smartId');
 
     var loginCheck = app.get('middleware.loginCheck');
     var authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
@@ -5509,246 +5510,102 @@ module.exports = function (app) {
         //mID
         var pid = req.body.pid;
         var phoneNumber = req.body.phoneNumber;
-
+        //smart-ID
+        var countryCode = req.body.countryCode;
         var personalInfo;
         var signingMethod;
 
-        if (!certificate && !(pid && phoneNumber)) {
+        if (!certificate && !(pid && (phoneNumber || countryCode))) {
             res.badRequest('Vote with hard authentication requires users certificate when signing with ID card OR phoneNumber+pid when signing with mID', 9);
 
             return Promise.reject();
         }
 
         var getCertificatePromise;
-
-        if (certificate) {
-            signingMethod = Vote.SIGNING_METHODS.idCard;
-            getCertificatePromise = Promise.resolve({
-                certificate: certificate,
-                format: 'der'
-            });
-        } else {
-            signingMethod = Vote.SIGNING_METHODS.mid;
-            getCertificatePromise = cosBdoc
-                .getMobileCertificate(pid, phoneNumber, 'sign')
-                .then(function (certInfo) {
-                    switch (certInfo.statusCode) {
-                        case 0:
-                            return {
-                                certificate: certInfo.sign,
-                                format: 'pem'
-                            };
-                        case 101:
-                            res.badRequest('Invalid input parameters.', 20);
-
-                            return Promise.reject();
-                        case 301:
-                            res.badRequest('User is not a Mobile-ID client. Please double check phone number and/or id code.', 21);
-
-                            return Promise.reject();
-                        case 302:
-                            res.badRequest('User certificates are revoked or suspended.', 22);
-
-                            return Promise.reject();
-                        case 303:
-                            res.badRequest('User certificate is not activated.', 23);
-
-                            return Promise.reject();
-                        case 304:
-                            res.badRequest('User certificate is suspended.', 24);
-
-                            return Promise.reject();
-                        case 305:
-                            res.badRequest('User certificate is expired.', 25);
-
-                            return Promise.reject();
-                        default:
-                            logger.error('Unhandled DDS status code', certInfo.statusCode);
-                            res.internalServerError();
-
-                            return Promise.reject();
-                    }
-                });
-        }
-
-        var personalInfoPromise = getCertificatePromise
-            .then(function (certificateInfo) {
-                return cosBdoc
-                    .getPersonalInfoFromCertificate(certificateInfo.certificate, certificateInfo.format)
-                    .spread(function (status, personalInfoFromCertificate) {
-                        switch (status) { //GOOD, UNKNOWN, EXPIRED, SUSPENDED, REVOKED
-                            case 'GOOD':
-                                personalInfo = personalInfoFromCertificate;
-                                if (signingMethod === Vote.SIGNING_METHODS.mid) {
-                                    personalInfo.phoneNumber = phoneNumber;
-                                }
-
-                                return;
-                            case 'SUSPENDED':
-                                res.badRequest('User certificate is suspended.', 24);
-
-                                return Promise.reject();
-                            case 'UNKNOWN':
-                                res.badRequest('Unknown user certificate.', 26);
-
-                                return Promise.reject();
-                            case 'EXPIRED':
-                            case 'REVOKED':
-                                res.badRequest('User certificates are revoked or suspended.', 22);
-
-                                return Promise.reject();
-                            default:
-                                logger.error('Unexpected certificate status from DDS', status);
-                                res.internalServerError();
-
-                                return Promise.reject();
-                        }
-                    });
-            });
-
-        return db
-            .transaction(function (t) { // One big transaction, we don't want created User data to lay around in DB if the process failed.
-                return personalInfoPromise
-                    .then(function () {
-                        var promisesToResolve = [];
-                        // Authenticated User
-                        if (userId) {
-                            var anotherUserConnectionPromise = UserConnection
-                                .findOne({
-                                    where: {
-                                        connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                        connectionUserId: personalInfo.pid
-                                    },
-                                    transaction: t
-                                })
-                                .then(function (userConnection) {
-                                    if (userConnection && userConnection.userId !== userId) {
-                                        res.badRequest('Personal ID already connected to another user account.', 30);
-
-                                        return Promise.reject();
-                                    }
-                                });
-
-                            var userConnectionPromise = UserConnection
-                                .findOne({
-                                    where: {
-                                        connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                        userId: userId
-                                    },
-                                    transaction: t
-                                })
-                                .then(function (userConnection) {
-                                    if (userConnection && userConnection.connectionUserId !== personalInfo.pid) {
-                                        res.badRequest('User account already connected to another PID.', 31);
-
-                                        return Promise.reject();
-                                    }
-                                });
-
-                            promisesToResolve.push(anotherUserConnectionPromise, userConnectionPromise);
-                        } else { // Un-authenticated User, find or create one.
-                            // TODO: DUPLICATE CODE, also used in /api/auth/id
-                            var userPromise = UserConnection
-                                .findOne({
-                                    where: {
-                                        connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                        connectionUserId: personalInfo.pid
-                                    },
-                                    include: [User],
-                                    transaction: t
-                                })
-                                .then(function (userConnectionInfo) {
-                                    if (!userConnectionInfo) {
-                                        return User
-                                            .create(
-                                                {
-                                                    name: db.fn('initcap', personalInfo.firstName + ' ' + personalInfo.lastName),
-                                                    source: User.SOURCES.citizenos
-                                                },
-                                                {
-                                                    transaction: t
-                                                }
-                                            )
-                                            .then(function (user) {
-                                                cosActivities
-                                                    .createActivity(user, null, {type: 'System', ip: req.ip}, req.method + ' ' + req.path, t)
-                                                    .then(function () {
-                                                        return UserConnection
-                                                            .create(
-                                                                {
-                                                                    userId: user.id,
-                                                                    connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                                                    connectionUserId: personalInfo.pid,
-                                                                    connectionData: personalInfo
-                                                                },
-                                                                {
-                                                                    transaction: t
-                                                                }
-                                                            )
-                                                            .then(function () {
-                                                                userId = user.id;
-                                                            });
-                                                    });
-                                            });
-                                    } else { // User existed before
-                                        userId = userConnectionInfo.User.id;
-                                    }
-                                });
-
-                            promisesToResolve.push(userPromise);
-                        }
-
-                        // Check that the personal ID is not related to another User account. We don't want Users signing Votes from different accounts.
-                        return Promise
-                            .all(promisesToResolve)
-                            .then(function () {
-                                switch (signingMethod) {
-                                    case Vote.SIGNING_METHODS.idCard:
-                                        return cosBdoc.signInitIdCard(topicId, voteId, userId, vote.VoteOptions, certificate, t);
-                                    case Vote.SIGNING_METHODS.mid:
-                                        return cosBdoc.signInitMobile(topicId, voteId, userId, vote.VoteOptions, personalInfo.pid, personalInfo.phoneNumber, t);
-                                    default:
-                                        throw new Error('Invalid signing method ' + signingMethod);
-                                }
-                            });
-                    })
+        if (pid && countryCode) {
+            signingMethod = Vote.SIGNING_METHODS.smartId;
+            getCertificatePromise = smartId
+                    .getUserCertificate(pid, phoneNumber)
                     .then(function (signInitResponse) {
-                        switch (signInitResponse.statusCode) {
-                            case 0:
-                                // Common to MID and ID-card signing
-                                var sessionData = {
-                                    sesscode: signInitResponse.sesscode,
-                                    voteOptions: voteOptions,
-                                    personalInfo: personalInfo,
-                                    userId: userId, // Required for un-authenticated signing.
-                                    voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
+                        return smartId
+                            .status(signInitResponse.sessionId, signInitResponse.sessionHash)
+                            .then(function (cert) {
+                                return {
+                                    certificate: cert,
+                                    format: 'pem'
                                 };
+                            });
+                        /*var sessionData = {
+                            sessionId: signInitResponse.sessionId,
+                            voteOptions: voteOptions,
+                            sessionHash: signInitResponse.sessionHash,
+                            userId: userId, // Required for un-authenticated signing.
+                            voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
+                        };
 
-                                // ID card
-                                if (signInitResponse.signatureId) {
-                                    sessionData.signatureId = signInitResponse.signatureId;
-                                }
+                        // Send JWT with state and expect it back in /sign /status - https://trello.com/c/ZDN2WomW/287-bug-id-card-signing-does-not-work-for-some-users
+                        // Wrapping sessionDataEncrypted in object, otherwise jwt.sign "expiresIn" will not work - https://github.com/auth0/node-jsonwebtoken/issues/166
+                        var sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
+                        var token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
+                            expiresIn: '5m',
+                            algorithm: config.session.algorithm
+                        });
 
-                                // Send JWT with state and expect it back in /sign /status - https://trello.com/c/ZDN2WomW/287-bug-id-card-signing-does-not-work-for-some-users
-                                // Wrapping sessionDataEncrypted in object, otherwise jwt.sign "expiresIn" will not work - https://github.com/auth0/node-jsonwebtoken/issues/166
-                                var sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
-                                var token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
-                                    expiresIn: '5m',
-                                    algorithm: config.session.algorithm
-                                });
+                        return res.ok({
+                            challengeID: signInitResponse.challengeID,
+                            token: token
+                        }, 1);*/
+                    });
+           /* signingMethod = Vote.SIGNING_METHODS.smartId;
+            return smartId
+                .createUserBdoc(topicId, voteId, userId, voteOptions)
+                .then(function (bdoc) {
+                    return smartId
+                        .signature(pid, countryCode, bdoc)
+                        .then(function (signInitResponse) {
+                            console.log('signInitResponse', signInitResponse);
+                            var sessionData = {
+                                sessionId: signInitResponse.sessionId,
+                                voteOptions: voteOptions,
+                                sessionHash: signInitResponse.sessionHash,
+                                userId: userId, // Required for un-authenticated signing.
+                                voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
+                            };
 
-                                if (signingMethod === Vote.SIGNING_METHODS.idCard) {
-                                    return res.ok({
-                                        signedInfoDigest: signInitResponse.signedInfoDigest,
-                                        signedInfoHashType: cryptoLib.getHashType(signInitResponse.signedInfoDigest),
-                                        token: token
-                                    }, 1);
-                                } else {
-                                    return res.ok({
-                                        challengeID: signInitResponse.challengeID,
-                                        token: token
-                                    }, 1);
-                                }
+                            // Send JWT with state and expect it back in /sign /status - https://trello.com/c/ZDN2WomW/287-bug-id-card-signing-does-not-work-for-some-users
+                            // Wrapping sessionDataEncrypted in object, otherwise jwt.sign "expiresIn" will not work - https://github.com/auth0/node-jsonwebtoken/issues/166
+                            var sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
+                            var token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
+                                expiresIn: '5m',
+                                algorithm: config.session.algorithm
+                            });
+
+                            return res.ok({
+                                challengeID: signInitResponse.challengeID,
+                                token: token
+                            }, 1);
+                        });
+                });*/
+     //   } else {
+
+            
+            } else if (certificate) {
+                signingMethod = Vote.SIGNING_METHODS.idCard;
+                getCertificatePromise = Promise.resolve({
+                    certificate: certificate,
+                    format: 'der'
+                });
+            } else {
+                signingMethod = Vote.SIGNING_METHODS.mid;
+                getCertificatePromise = cosBdoc
+                    .getMobileCertificate(pid, phoneNumber, 'sign')
+                    .then(function (certInfo) {
+                        switch (certInfo.statusCode) {
+                            case 0:
+                                return {
+                                    certificate: certInfo.sign,
+                                    format: 'pem'
+                                };
                             case 101:
                                 res.badRequest('Invalid input parameters.', 20);
 
@@ -5774,13 +5631,250 @@ module.exports = function (app) {
 
                                 return Promise.reject();
                             default:
-                                logger.error('Unhandled DDS status code', signInitResponse.statusCode);
+                                logger.error('Unhandled DDS status code', certInfo.statusCode);
                                 res.internalServerError();
 
                                 return Promise.reject();
                         }
                     });
-            });
+            }
+
+            var personalInfoPromise = getCertificatePromise
+                .then(function (certificateInfo) {
+                    return cosBdoc
+                        .getPersonalInfoFromCertificate(certificateInfo.certificate, certificateInfo.format)
+                        .spread(function (status, personalInfoFromCertificate) {
+                            switch (status) { //GOOD, UNKNOWN, EXPIRED, SUSPENDED, REVOKED
+                                case 'GOOD':
+                                    personalInfo = personalInfoFromCertificate;
+                                    if (signingMethod === Vote.SIGNING_METHODS.mid) {
+                                        personalInfo.phoneNumber = phoneNumber;
+                                    }
+
+                                    return;
+                                case 'SUSPENDED':
+                                    res.badRequest('User certificate is suspended.', 24);
+
+                                    return Promise.reject();
+                                case 'UNKNOWN':
+                                    res.badRequest('Unknown user certificate.', 26);
+
+                                    return Promise.reject();
+                                case 'EXPIRED':
+                                case 'REVOKED':
+                                    res.badRequest('User certificates are revoked or suspended.', 22);
+
+                                    return Promise.reject();
+                                default:
+                                    logger.error('Unexpected certificate status from DDS', status);
+                                    res.internalServerError();
+
+                                    return Promise.reject();
+                            }
+                        });
+                });
+
+            return db
+                .transaction(function (t) { // One big transaction, we don't want created User data to lay around in DB if the process failed.
+                    return personalInfoPromise
+                        .then(function () {
+                            var promisesToResolve = [];
+                            // Authenticated User
+                            if (userId) {
+                                var anotherUserConnectionPromise = UserConnection
+                                    .findOne({
+                                        where: {
+                                            connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                            connectionUserId: personalInfo.pid
+                                        },
+                                        transaction: t
+                                    })
+                                    .then(function (userConnection) {
+                                        if (userConnection && userConnection.userId !== userId) {
+                                            res.badRequest('Personal ID already connected to another user account.', 30);
+
+                                            return Promise.reject();
+                                        }
+                                    });
+
+                                var userConnectionPromise = UserConnection
+                                    .findOne({
+                                        where: {
+                                            connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                            userId: userId
+                                        },
+                                        transaction: t
+                                    })
+                                    .then(function (userConnection) {
+                                        if (userConnection && userConnection.connectionUserId !== personalInfo.pid) {
+                                            res.badRequest('User account already connected to another PID.', 31);
+
+                                            return Promise.reject();
+                                        }
+                                    });
+
+                                promisesToResolve.push(anotherUserConnectionPromise, userConnectionPromise);
+                            } else { // Un-authenticated User, find or create one.
+                                // TODO: DUPLICATE CODE, also used in /api/auth/id
+                                var userPromise = UserConnection
+                                    .findOne({
+                                        where: {
+                                            connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                            connectionUserId: personalInfo.pid
+                                        },
+                                        include: [User],
+                                        transaction: t
+                                    })
+                                    .then(function (userConnectionInfo) {
+                                        if (!userConnectionInfo) {
+                                            return User
+                                                .create(
+                                                    {
+                                                        name: db.fn('initcap', personalInfo.firstName + ' ' + personalInfo.lastName),
+                                                        source: User.SOURCES.citizenos
+                                                    },
+                                                    {
+                                                        transaction: t
+                                                    }
+                                                )
+                                                .then(function (user) {
+                                                    cosActivities
+                                                        .createActivity(user, null, {type: 'System', ip: req.ip}, req.method + ' ' + req.path, t)
+                                                        .then(function () {
+                                                            return UserConnection
+                                                                .create(
+                                                                    {
+                                                                        userId: user.id,
+                                                                        connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                                                        connectionUserId: personalInfo.pid,
+                                                                        connectionData: personalInfo
+                                                                    },
+                                                                    {
+                                                                        transaction: t
+                                                                    }
+                                                                )
+                                                                .then(function () {
+                                                                    userId = user.id;
+                                                                });
+                                                        });
+                                                });
+                                        } else { // User existed before
+                                            userId = userConnectionInfo.User.id;
+                                        }
+                                    });
+
+                                promisesToResolve.push(userPromise);
+                            }
+
+                            // Check that the personal ID is not related to another User account. We don't want Users signing Votes from different accounts.
+                            return Promise
+                                .all(promisesToResolve)
+                                .then(function () {
+                                    switch (signingMethod) {
+                                        case Vote.SIGNING_METHODS.idCard:
+                                            return cosBdoc.signInitIdCard(topicId, voteId, userId, vote.VoteOptions, certificate, t);
+                                        case Vote.SIGNING_METHODS.smartId:
+                                            return smartId.signInitSmartId(topicId, voteId, userId, vote.VoteOptions, personalInfo.pid, countryCode, t);
+                                        case Vote.SIGNING_METHODS.mid:
+                                            return cosBdoc.signInitMobile(topicId, voteId, userId, vote.VoteOptions, personalInfo.pid, personalInfo.phoneNumber, t);
+                                        default:
+                                            throw new Error('Invalid signing method ' + signingMethod);
+                                    }
+                                });
+                        })
+                        .then(function (signInitResponse) {
+                            var sessionData, token, sessionDataEncrypted;
+                            console.log('signInitResponse', signInitResponse);
+                            if (signInitResponse.sessionId && signInitResponse.sessionHash) {
+                                sessionData = {
+                                    sessionId: signInitResponse.sessionId,
+                                    voteOptions: voteOptions,
+                                    sessionHash: signInitResponse.sessionHash,
+                                    userId: userId, // Required for un-authenticated signing.
+                                    voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
+                                };
+
+
+                                sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
+                                token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
+                                    expiresIn: '5m',
+                                    algorithm: config.session.algorithm
+                                });
+                                return res.ok({
+                                    challengeID: signInitResponse.challengeID,
+                                    token: token
+                                }, 1);
+                            } else {
+                                switch (signInitResponse.statusCode) {
+                                    case 0:
+                                        // Common to MID and ID-card signing
+                                        sessionData = {
+                                            sesscode: signInitResponse.sesscode,
+                                            voteOptions: voteOptions,
+                                            personalInfo: personalInfo,
+                                            userId: userId, // Required for un-authenticated signing.
+                                            voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
+                                        };
+    
+                                        // ID card
+                                        if (signInitResponse.signatureId) {
+                                            sessionData.signatureId = signInitResponse.signatureId;
+                                        }
+    
+                                        // Send JWT with state and expect it back in /sign /status - https://trello.com/c/ZDN2WomW/287-bug-id-card-signing-does-not-work-for-some-users
+                                        // Wrapping sessionDataEncrypted in object, otherwise jwt.sign "expiresIn" will not work - https://github.com/auth0/node-jsonwebtoken/issues/166
+                                        sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
+                                        token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
+                                            expiresIn: '5m',
+                                            algorithm: config.session.algorithm
+                                        });
+    
+                                        if (signingMethod === Vote.SIGNING_METHODS.idCard) {
+                                            return res.ok({
+                                                signedInfoDigest: signInitResponse.signedInfoDigest,
+                                                signedInfoHashType: cryptoLib.getHashType(signInitResponse.signedInfoDigest),
+                                                token: token
+                                            }, 1);
+                                        } else {
+                                            return res.ok({
+                                                challengeID: signInitResponse.challengeID,
+                                                token: token
+                                            }, 1);
+                                        }
+                                    case 101:
+                                        res.badRequest('Invalid input parameters.', 20);
+    
+                                        return Promise.reject();
+                                    case 301:
+                                        res.badRequest('User is not a Mobile-ID client. Please double check phone number and/or id code.', 21);
+    
+                                        return Promise.reject();
+                                    case 302:
+                                        res.badRequest('User certificates are revoked or suspended.', 22);
+    
+                                        return Promise.reject();
+                                    case 303:
+                                        res.badRequest('User certificate is not activated.', 23);
+    
+                                        return Promise.reject();
+                                    case 304:
+                                        res.badRequest('User certificate is suspended.', 24);
+    
+                                        return Promise.reject();
+                                    case 305:
+                                        res.badRequest('User certificate is expired.', 25);
+    
+                                        return Promise.reject();
+                                    default:
+                                        logger.error('Unhandled DDS status code', signInitResponse.statusCode);
+                                        res.internalServerError();
+    
+                                        return Promise.reject();
+                                }
+                            }
+                        });
+                });
+        
     };
 
     /**
@@ -5797,7 +5891,7 @@ module.exports = function (app) {
                 if (vote.authType === Vote.AUTH_TYPES.soft) {
                     return handleTopicVoteSoft(vote, req, res);
                 } else {
-                    return handleTopicVoteHard(vote, req, res);
+                   return handleTopicVoteHard(vote, req, res);
                 }
             })
             .catch(next);
@@ -6044,237 +6138,309 @@ module.exports = function (app) {
             }
         }
 
+        if (idSignFlowData.sessionId && idSignFlowData.sessionHash) {
+            smartId
+                .status(idSignFlowData.sessionId, idSignFlowData.sessionHash)
+                .then(function (statusCode) {
+                    switch (statusCode.state) {
+                        case 'RUNNING':
+                            res.ok('Signing in progress', 1);
 
-        var userId = req.user ? req.user.id : idSignFlowData.userId;
+                            return Promise.reject();
+                        case 'COMPLETE':
+                            return Promise.resolve(statusCode.result);
+                        case 'USER_CANCEL':
+                            res.badRequest('User has cancelled the signing process', 10);
 
-        cosBdoc
-            .getMobileSignedDoc(idSignFlowData.sesscode)
-            .then(function (signedDocInfo) {
-                return db
-                    .transaction(function (t) {
-                        // Store vote options
-                        var voteOptions = idSignFlowData.voteOptions;
+                            return Promise.reject();
+                        case 'EXPIRED_TRANSACTION':
+                            res.badRequest('The transaction has expired', 11);
 
-                        var optionGroupId = Math.random().toString(36).substring(2, 10);
+                            return Promise.reject();
+                        case 'NOT_VALID':
+                            res.badRequest('Signature is not valid', 12);
 
-                        var promisesToResolve = [];
+                            return Promise.reject();
+                        case 'MID_NOT_READY':
+                            res.badRequest('Mobile-ID functionality of the phone is not yet ready', 13);
 
-                        _(voteOptions).forEach(function (o) {
-                            o.voteId = voteId;
-                            o.userId = userId;
-                            o.optionGroupId = optionGroupId;
-                        });
+                            return Promise.reject();
+                        case 'PHONE_ABSENT':
+                            res.badRequest('Delivery of the message was not successful, mobile phone is probably switched off or out of coverage;', 14);
 
-                        // Authenticated User signing, check the user connection
-                        if (req.user) {
-                            var anotherUserConnectionPromise = UserConnection
-                                .findOne({
-                                    where: {
-                                        connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                        connectionUserId: idSignFlowData.personalInfo.pid
-                                    },
-                                    transaction: t
-                                })
-                                .then(function (userConnection) {
-                                    if (userConnection && userConnection.userId !== userId) {
-                                        res.badRequest('Personal ID already connected to another user account.', 30);
+                            return Promise.reject();
+                        case 'SENDING_ERROR':
+                            res.badRequest('Other error when sending message (phone is incapable of receiving the message, error in messaging server etc.)', 15);
 
-                                        return Promise.reject();
-                                    }
-                                });
+                            return Promise.reject();
+                        case 'SIM_ERROR':
+                            res.badRequest('SIM application error.', 16);
 
-                            var userConnectionPromise = UserConnection
-                                .findOne({
-                                    where: {
-                                        connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                        userId: userId
-                                    },
-                                    transaction: t
-                                })
-                                .then(function (userConnection) {
-                                    if (userConnection && userConnection.connectionUserId !== idSignFlowData.personalInfo.pid) {
-                                        res.badRequest('User account already connected to another PID.', 31);
+                            return Promise.reject();
+                        case 'REVOKED_CERTIFICATE':
+                            res.badRequest('Certificate has been revoked', 17);
 
-                                        return Promise.reject();
-                                    }
-                                });
+                            return Promise.reject();
+                        case 'INTERNAL_ERROR':
+                            logger.error('Unknown error when trying to sign with mobile', statusCode);
+                            res.internalServerError('DigiDocService error', 1);
 
-                            promisesToResolve.push(anotherUserConnectionPromise, userConnectionPromise);
+                            return Promise.reject();
+                        default:
+                            logger.error('Unknown status code when trying to sign with mobile', statusCode);
+                            res.internalServerError();
+
+                            return Promise.reject();
+                    }
+                })
+                .then(function (result) {
+                    console.log('result', result);
+                    return res.ok(
+                        'Signing has been completed',
+                        2,
+                        {
+                            bdocUri: getBdocURL({
+                                userId: userId,
+                                topicId: topicId,
+                                voteId: voteId,
+                                type: 'user'
+                            })
                         }
+                    );
+                }, _.noop)
+                .error(next);
+        } else {
+            var userId = req.user ? req.user.id : idSignFlowData.userId;
 
-                        var voteListCreatePromise = VoteList
-                            .bulkCreate(
-                                voteOptions,
-                                {
-                                    fields: ['optionId', 'voteId', 'userId', 'optionGroupId'],
-                                    transaction: t
-                                }
-                            ).then(function (voteList) {
-                                return Topic
+            cosBdoc
+                .getMobileSignedDoc(idSignFlowData.sesscode)
+                .then(function (signedDocInfo) {
+                    return db
+                        .transaction(function (t) {
+                            // Store vote options
+                            var voteOptions = idSignFlowData.voteOptions;
+
+                            var optionGroupId = Math.random().toString(36).substring(2, 10);
+
+                            var promisesToResolve = [];
+
+                            _(voteOptions).forEach(function (o) {
+                                o.voteId = voteId;
+                                o.userId = userId;
+                                o.optionGroupId = optionGroupId;
+                            });
+
+                            // Authenticated User signing, check the user connection
+                            if (req.user) {
+                                var anotherUserConnectionPromise = UserConnection
                                     .findOne({
                                         where: {
-                                            id: topicId
+                                            connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                            connectionUserId: idSignFlowData.personalInfo.pid
                                         },
                                         transaction: t
                                     })
-                                    .then(function (topic) {
-                                        var vl = [];
-                                        var tc = _.cloneDeep(topic.dataValues);
-                                        tc.description = null;
-                                        tc = Topic.build(tc);
+                                    .then(function (userConnection) {
+                                        if (userConnection && userConnection.userId !== userId) {
+                                            res.badRequest('Personal ID already connected to another user account.', 30);
 
-                                        voteList.forEach(function (el, key) {
-                                            delete el.dataValues.optionId;
-                                            delete el.dataValues.optionGroupId;
-                                            el = VoteList.build(el.dataValues);
-                                            vl[key] = el;
-                                        });
-                                        var actor = {type: 'User', ip: req.ip};
-                                        if (userId) {
-                                            actor.id = userId;
+                                            return Promise.reject();
                                         }
-
-                                        return cosActivities
-                                            .createActivity(
-                                                vl,
-                                                tc,
-                                                actor,
-                                                req.method + ' ' + req.path,
-                                                t
-                                            )
-                                            .then(function () {
-                                                return voteList;
-                                            });
                                     });
 
-                            });
+                                var userConnectionPromise = UserConnection
+                                    .findOne({
+                                        where: {
+                                            connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                            userId: userId
+                                        },
+                                        transaction: t
+                                    })
+                                    .then(function (userConnection) {
+                                        if (userConnection && userConnection.connectionUserId !== idSignFlowData.personalInfo.pid) {
+                                            res.badRequest('User account already connected to another PID.', 31);
 
-                        // Delete delegation if you are voting - TODO: why is this here? You cannot delegate for authType === 'hard' anyway
-                        var voteDelegationDestroyPromise = VoteDelegation
-                            .destroy({
-                                where: {
-                                    voteId: voteId,
-                                    byUserId: userId
-                                },
-                                force: true,
-                                transaction: t
-                            });
+                                            return Promise.reject();
+                                        }
+                                    });
 
-                        var userConnectionAddPromise = UserConnection
-                            .upsert(
-                                {
-                                    userId: userId,
-                                    connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId: idSignFlowData.personalInfo.pid,
-                                    connectionData: _.merge(idSignFlowData.personalInfo, signedDocInfo.signerInfo) // When starting signing with Mobile-ID we have no full name, thus we need to fetch and update
-                                },
-                                {
-                                    transaction: t
-                                }
-                            );
+                                promisesToResolve.push(anotherUserConnectionPromise, userConnectionPromise);
+                            }
 
-                        var voteUserContainerPromise = VoteUserContainer
-                            .upsert(
-                                {
-                                    userId: userId,
-                                    voteId: voteId,
-                                    container: signedDocInfo.signedDocData
-                                },
-                                {
-                                    transaction: t,
-                                    logging: false
-                                }
-                            );
-
-                        if (!req.user) {
-                            // When starting signing with Mobile-ID we have no full name, thus we need to fetch and update
-                            var userNameUpdatePromise = User
-                                .update(
+                            var voteListCreatePromise = VoteList
+                                .bulkCreate(
+                                    voteOptions,
                                     {
-                                        name: db.fn('initcap', signedDocInfo.signerInfo.firstName + ' ' + signedDocInfo.signerInfo.lastName)
+                                        fields: ['optionId', 'voteId', 'userId', 'optionGroupId'],
+                                        transaction: t
+                                    }
+                                ).then(function (voteList) {
+                                    return Topic
+                                        .findOne({
+                                            where: {
+                                                id: topicId
+                                            },
+                                            transaction: t
+                                        })
+                                        .then(function (topic) {
+                                            var vl = [];
+                                            var tc = _.cloneDeep(topic.dataValues);
+                                            tc.description = null;
+                                            tc = Topic.build(tc);
+
+                                            voteList.forEach(function (el, key) {
+                                                delete el.dataValues.optionId;
+                                                delete el.dataValues.optionGroupId;
+                                                el = VoteList.build(el.dataValues);
+                                                vl[key] = el;
+                                            });
+                                            var actor = {type: 'User', ip: req.ip};
+                                            if (userId) {
+                                                actor.id = userId;
+                                            }
+
+                                            return cosActivities
+                                                .createActivity(
+                                                    vl,
+                                                    tc,
+                                                    actor,
+                                                    req.method + ' ' + req.path,
+                                                    t
+                                                )
+                                                .then(function () {
+                                                    return voteList;
+                                                });
+                                        });
+
+                                });
+
+                            // Delete delegation if you are voting - TODO: why is this here? You cannot delegate for authType === 'hard' anyway
+                            var voteDelegationDestroyPromise = VoteDelegation
+                                .destroy({
+                                    where: {
+                                        voteId: voteId,
+                                        byUserId: userId
+                                    },
+                                    force: true,
+                                    transaction: t
+                                });
+
+                            var userConnectionAddPromise = UserConnection
+                                .upsert(
+                                    {
+                                        userId: userId,
+                                        connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                        connectionUserId: idSignFlowData.personalInfo.pid,
+                                        connectionData: _.merge(idSignFlowData.personalInfo, signedDocInfo.signerInfo) // When starting signing with Mobile-ID we have no full name, thus we need to fetch and update
                                     },
                                     {
-                                        where: {
-                                            id: userId,
-                                            name: null
-                                        },
-                                        limit: 1, // SAFETY
                                         transaction: t
                                     }
                                 );
 
-                            promisesToResolve.push(userNameUpdatePromise);
-                        }
+                            var voteUserContainerPromise = VoteUserContainer
+                                .upsert(
+                                    {
+                                        userId: userId,
+                                        voteId: voteId,
+                                        container: signedDocInfo.signedDocData
+                                    },
+                                    {
+                                        transaction: t,
+                                        logging: false
+                                    }
+                                );
 
-                        promisesToResolve.push(voteListCreatePromise, voteDelegationDestroyPromise, userConnectionAddPromise, voteUserContainerPromise);
+                            if (!req.user) {
+                                // When starting signing with Mobile-ID we have no full name, thus we need to fetch and update
+                                var userNameUpdatePromise = User
+                                    .update(
+                                        {
+                                            name: db.fn('initcap', signedDocInfo.signerInfo.firstName + ' ' + signedDocInfo.signerInfo.lastName)
+                                        },
+                                        {
+                                            where: {
+                                                id: userId,
+                                                name: null
+                                            },
+                                            limit: 1, // SAFETY
+                                            transaction: t
+                                        }
+                                    );
 
-                        return Promise.all(promisesToResolve);
-                    });
-            }, function (statusCode) {
-                switch (statusCode) {
-                    case 'OUTSTANDING_TRANSACTION':
-                        res.ok('Signing in progress', 1);
+                                promisesToResolve.push(userNameUpdatePromise);
+                            }
 
-                        return Promise.reject();
-                    case 'USER_CANCEL':
-                        res.badRequest('User has cancelled the signing process', 10);
+                            promisesToResolve.push(voteListCreatePromise, voteDelegationDestroyPromise, userConnectionAddPromise, voteUserContainerPromise);
 
-                        return Promise.reject();
-                    case 'EXPIRED_TRANSACTION':
-                        res.badRequest('The transaction has expired', 11);
+                            return Promise.all(promisesToResolve);
+                        });
+                }, function (statusCode) {
+                    switch (statusCode) {
+                        case 'OUTSTANDING_TRANSACTION':
+                            res.ok('Signing in progress', 1);
 
-                        return Promise.reject();
-                    case 'NOT_VALID':
-                        res.badRequest('Signature is not valid', 12);
+                            return Promise.reject();
+                        case 'USER_CANCEL':
+                            res.badRequest('User has cancelled the signing process', 10);
 
-                        return Promise.reject();
-                    case 'MID_NOT_READY':
-                        res.badRequest('Mobile-ID functionality of the phone is not yet ready', 13);
+                            return Promise.reject();
+                        case 'EXPIRED_TRANSACTION':
+                            res.badRequest('The transaction has expired', 11);
 
-                        return Promise.reject();
-                    case 'PHONE_ABSENT':
-                        res.badRequest('Delivery of the message was not successful, mobile phone is probably switched off or out of coverage;', 14);
+                            return Promise.reject();
+                        case 'NOT_VALID':
+                            res.badRequest('Signature is not valid', 12);
 
-                        return Promise.reject();
-                    case 'SENDING_ERROR':
-                        res.badRequest('Other error when sending message (phone is incapable of receiving the message, error in messaging server etc.)', 15);
+                            return Promise.reject();
+                        case 'MID_NOT_READY':
+                            res.badRequest('Mobile-ID functionality of the phone is not yet ready', 13);
 
-                        return Promise.reject();
-                    case 'SIM_ERROR':
-                        res.badRequest('SIM application error.', 16);
+                            return Promise.reject();
+                        case 'PHONE_ABSENT':
+                            res.badRequest('Delivery of the message was not successful, mobile phone is probably switched off or out of coverage;', 14);
 
-                        return Promise.reject();
-                    case 'REVOKED_CERTIFICATE':
-                        res.badRequest('Certificate has been revoked', 17);
+                            return Promise.reject();
+                        case 'SENDING_ERROR':
+                            res.badRequest('Other error when sending message (phone is incapable of receiving the message, error in messaging server etc.)', 15);
 
-                        return Promise.reject();
-                    case 'INTERNAL_ERROR':
-                        logger.error('Unknown error when trying to sign with mobile', statusCode);
-                        res.internalServerError('DigiDocService error', 1);
+                            return Promise.reject();
+                        case 'SIM_ERROR':
+                            res.badRequest('SIM application error.', 16);
 
-                        return Promise.reject();
-                    default:
-                        logger.error('Unknown status code when trying to sign with mobile', statusCode);
-                        res.internalServerError();
+                            return Promise.reject();
+                        case 'REVOKED_CERTIFICATE':
+                            res.badRequest('Certificate has been revoked', 17);
 
-                        return Promise.reject();
-                }
-            })
-            .then(function () {
-                return res.ok(
-                    'Signing has been completed',
-                    2,
-                    {
-                        bdocUri: getBdocURL({
-                            userId: userId,
-                            topicId: topicId,
-                            voteId: voteId,
-                            type: 'user'
-                        })
+                            return Promise.reject();
+                        case 'INTERNAL_ERROR':
+                            logger.error('Unknown error when trying to sign with mobile', statusCode);
+                            res.internalServerError('DigiDocService error', 1);
+
+                            return Promise.reject();
+                        default:
+                            logger.error('Unknown status code when trying to sign with mobile', statusCode);
+                            res.internalServerError();
+
+                            return Promise.reject();
                     }
-                );
-            }, _.noop)
-            .error(next);
+                })
+                .then(function () {
+                    return res.ok(
+                        'Signing has been completed',
+                        2,
+                        {
+                            bdocUri: getBdocURL({
+                                userId: userId,
+                                topicId: topicId,
+                                voteId: voteId,
+                                type: 'user'
+                            })
+                        }
+                    );
+                }, _.noop)
+                .error(next);
+        }
     };
 
     /**

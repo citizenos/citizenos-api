@@ -689,7 +689,8 @@ module.exports = function (app) {
             .spread(function (signedDocResult) {
                 var signedDocument = signedDocResult.SignedDocData.$value;
 
-                return Buffer.from(signedDocument, 'base64');
+                //Buffer.from(signedDocument, 'base64');
+                return signedDocument;
             });
     };
 

@@ -8,11 +8,21 @@ function CosSmartId (app) {
     var that = this;
     var logger = app.get('logger');
     var crypto = app.get('crypto');
+    var sanitizeFilename = app.get('sanitizeFilename');
+    var DigiDocServiceClient = app.get('ddsClient');
     var https = require('https');
     var Promise = app.get('Promise');
     var x509 = require('x509.js');
     var encoder = require('utf8');
     var pem = require('pem');
+    var mu = app.get('mu');
+    var models = app.get('models');
+    var db = models.sequelize;
+    var config = app.get('config');
+    var stream = app.get('stream');
+
+    var VoteContainerFile = models.VoteContainerFile;
+    var UserConnection = models.UserConnection;
 
     var _replyingPartyUUID;
     var _replyingPartyName;
@@ -24,10 +34,48 @@ function CosSmartId (app) {
     var _apiPath;
     var _cert;
 
+    var FILE_CREATE_MODE = '0760';
+
+    var TOPIC_FILE = {
+        template: 'bdoc/document.html',
+        name: 'document.docx',
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    };
+
+    var METAINFO_FILE = {
+        template: 'bdoc/metainfo.html',
+        name: '__metainfo.html',
+        mimeType: 'text/html'
+    };
+
+    var VOTE_OPTION_FILE = {
+        template: 'bdoc/voteOption.html',
+        name: ':value.html', // ":value" is a placeholder to replace with sanitized file name
+        mimeType: 'text/html'
+    };
+
+    var USERINFO_FILE = {
+        template: 'bdoc/userinfo.html',
+        name: '__userinfo.html',
+        mimeType: 'text/html'
+    };
+
+    var VOTE_RESULTS_FILE = {
+        name: 'votes.csv',
+        mimeType: 'text/csv'
+    };
+
+    var USER_BDOC_FILE = {
+        name: ':pid.bdoc',
+        mimeType: 'application/vnd.etsi.asic-e+zip'
+    };
+
     var _paths = {
         authenticate: '/authentication/pno/:countryCode/:pid',
         status: '/session/:sessionId?timeoutMs=:timeout',
-        authenticationDocument: '/authentication/document/:documentNumber'
+        authenticationDocument: '/authentication/document/:documentNumber',
+        signature: '/signature/pno/:countryCode/:pid',
+        certificatechoice: '/certificatechoice/pno/:countryCode/:pid'
     };
 
     var _init = function (options) {
@@ -215,6 +263,213 @@ function CosSmartId (app) {
         });
     };
 
+    /**
+     * Get the file name for specific VoteOption
+     *
+     * @param {Object} voteOption VoteOption Sequelize instance
+     *
+     * @returns {string} File name
+     *
+     * @private
+     */
+    var _getVoteOptionFileName = function (voteOption) {
+        var sanitizedfileName = sanitizeFilename(voteOption.value);
+        
+        if (!sanitizedfileName.length) {
+            throw Error('Nothing left after sanitizing the optionValue: ' + voteOption.value);
+        }
+        return VOTE_OPTION_FILE.name.replace(':value', sanitizedfileName);
+    };
+
+    var _getUserCertificate = function (pid, countryCode) {
+        countryCode = countryCode || 'EE'; //defaults to Estonia
+        var sessionHash = _createHash();
+        var path = _buildPath('certificatechoice');
+
+        var params = {
+            relyingPartyUUID: _replyingPartyUUID,
+            relyingPartyName: _replyingPartyName,
+            certificateLevel: 'QUALIFIED'
+        };
+
+        params = JSON.stringify(params);
+
+        var options = {
+            hostname: _hostname,
+            path: path.replace(':countryCode', countryCode).replace(':pid', pid),
+            method: 'POST',
+            port: _port,
+            headers: {
+                'Authorization': 'Bearer ' + _authorizeToken,
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(params, 'utf8')
+            }
+        };
+
+        return new Promise(function (resolve, reject) {
+            var request = https.request(options, function (result) {
+                result.setEncoding('utf8');
+                result.on('data', function (chunk) {
+                    try {
+                        var data = JSON.parse(chunk);
+                        if (!data.sessionID) {
+                            return reject(data);
+                        }
+
+                        var verficationCode = _getVerificationCode(sessionHash);
+
+                        return resolve({
+                            sessionId: data.sessionID,
+                            challengeID: verficationCode,
+                            sessionHash: sessionHash
+                        });
+                    } catch (e) {
+                        return reject(e);
+                    }
+
+                });
+            });
+
+            // write data to request body
+
+            request.write(params);
+            request.end();
+            request.on('error', function (e) {
+                logger.error('problem with request: ', e.message);
+
+                return reject(e);
+            });
+        });
+    }
+    var _createUserBdoc = function (topicId, voteId, userId, voteOptions, transaction) {
+        var chosenVoteOptionFileNames = voteOptions.map(_getVoteOptionFileName);
+        var ddsClient = new DigiDocServiceClient(config.services.digiDoc.serviceWsdlUrl, config.services.digiDoc.serviceName, config.services.digiDoc.token);
+
+        return ddsClient.startSession(null, null, true)
+            .then(function () {
+                var format = DigiDocServiceClient.DOCUMENT_FORMATS.BDOC;
+
+                return ddsClient.createSignedDoc(format.name, format.version);
+            })
+            .then(function () {
+                return VoteContainerFile
+                    .findAll({
+                        where: {
+                            voteId: voteId
+                        },
+                        transaction: transaction
+                    });
+            })
+            .each(function (voteContainerFile) {
+                var fileName = voteContainerFile.fileName;
+                var mimeType = voteContainerFile.mimeType;
+                var content = voteContainerFile.content;
+
+                switch (voteContainerFile.fileName) {
+                    case TOPIC_FILE.name:
+                    case METAINFO_FILE.name:
+                        break;
+                    default:
+                        // Must be option file
+                        if (chosenVoteOptionFileNames.indexOf(fileName)) {
+                            //Skip the option that User did not choose
+                            return;
+                        }
+                }
+
+                var voteContainerFileStream = new stream.PassThrough();
+                voteContainerFileStream.end(content);
+
+                return ddsClient.addDataFileEmbeddedBase64(voteContainerFileStream, fileName, mimeType);
+            })
+            .then(function () {
+                var templateStream = mu.compileAndRender(USERINFO_FILE.template, {user: {id: userId}});
+
+                return ddsClient.addDataFileEmbeddedBase64(templateStream, USERINFO_FILE.name, USERINFO_FILE.mimeType);
+            })
+            .then(function () {
+                return ddsClient.getSignedDoc();
+            })
+            .spread(function (signedDocResult) {
+                var signedDocument = signedDocResult.SignedDocData.$value;
+
+                return Buffer.from(signedDocument, 'base64').toString('hex');
+            });
+    };
+
+    var _signature = function (pid, countryCode, data) {
+        countryCode = countryCode || 'EE'; //defaults to Estonia
+        var sessionHash = _createHash(data);
+        var path = _buildPath('signature');
+        
+        var params = {
+            relyingPartyUUID: _replyingPartyUUID,
+            relyingPartyName: _replyingPartyName,
+            certificateLevel: 'QUALIFIED',
+            hash: Buffer.from(sessionHash, 'hex').toString('base64'),
+            hashType: _hashType.toUpperCase(),
+            displayText: 'Sign document on CitizenOS',
+            requestProperties: {
+                'vcChoice': false
+            }
+        };
+
+        params = JSON.stringify(params);
+
+        var options = {
+            hostname: _hostname,
+            path: path.replace(':countryCode', countryCode).replace(':pid', pid),
+            method: 'POST',
+            port: _port,
+            headers: {
+                'Authorization': 'Bearer ' + _authorizeToken,
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(params, 'utf8')
+            }
+        };
+
+        return new Promise(function (resolve, reject) {
+            var request = https.request(options, function (result) {
+                result.setEncoding('utf8');
+                result.on('data', function (chunk) {
+                    try {
+                        var data = JSON.parse(chunk);
+                        if (!data.sessionID) {
+                            return reject(data);
+                        }
+
+                        var verficationCode = _getVerificationCode(sessionHash);
+                        return resolve({
+                            sessionId: data.sessionID,
+                            challengeID: verficationCode,
+                            sessionHash: sessionHash
+                        });
+                    } catch (e) {
+                        return reject(e);
+                    }
+
+                });
+            });
+
+            // write data to request body
+
+            request.write(params);
+            request.end();
+            request.on('error', function (e) {
+                logger.error('problem with request: ', e.message);
+
+                return reject(e);
+            });
+        });
+    };
+
+    var _signInitSmartId = function (topicId, voteId, userId, voteOptions, pid, countryCode, transaction) {
+        return _createUserBdoc(topicId, voteId, userId, voteOptions, transaction)
+            .then(function (data) {
+                return _signature(pid, countryCode, data);
+            });
+    };
+
     var _status = function (sessionId, sessionHash, timeout) {
         if (!sessionId || !sessionHash) {
             return false;
@@ -258,33 +513,42 @@ function CosSmartId (app) {
                     chunks += chunk;
                 });
                 result.on('end', function () {
-                    var data = _parseJSON(chunks);
-
+                    var data = _parseJSON(chunks);        
+             //       console.log('DATA', data);            
                     if (data.result) {
                         if (data.result.endResult === 'OK') {
-                            var cert = _setCert(data.cert.value);
-                            _parseCertData(cert)
-                                .then(function (certData) {
-                                    _verifySignature(sessionHash, data.signature.value, _cert)
-                                        .then(function (isValid) {
-                                            if (isValid) {
-                                                var returnData = {
-                                                    state: data.state,
-                                                    result: data.result
-                                                };
+                            if (data.cert) {                                
+                                var cert = _setCert(data.cert.value);
+                //                console.log('DATA', cert);
+                                if (data.signature) {
+                                    _parseCertData(cert)
+                                        .then(function (certData) {
+                             //               console.log('certData', certData);
+                                                _verifySignature(sessionHash, data.signature.value, _cert)
+                                                    .then(function (isValid) {
+                                                        if (isValid) {
+                                                            var returnData = {
+                                                                state: data.state,
+                                                                result: data.result
+                                                            };
 
-                                                returnData.result.user = _getUser(certData);
+                                                            returnData.result.user = _getUser(certData);
 
-                                                return resolve(returnData);
-                                            } else {
-                                                return resolve({
-                                                    error: {
-                                                        message: 'Invalid signature'
-                                                    }
-                                                });
-                                            }
+                                                            return resolve(returnData);
+                                                        } else {
+                                                            return resolve({
+                                                                error: {
+                                                                    message: 'Invalid signature'
+                                                                }
+                                                            });
+                                                        }
+                                                    });                                        
+                                            
                                         });
-                                });
+                                } else {
+                                    return resolve(cert);
+                                }
+                            }
                         } else if (data.result.endResult === 'USER_REFUSED') {
                             return resolve({
                                 error: {
@@ -319,6 +583,10 @@ function CosSmartId (app) {
     return {
         init: _init,
         authenticate: _authenticate,
+        getUserCertificate: _getUserCertificate,
+        signInitSmartId: _signInitSmartId,
+        signature: _signature,
+        createUserBdoc: _createUserBdoc,
         status: _status,
         getVerificationCode: _getVerificationCode
     };
