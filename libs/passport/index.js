@@ -311,20 +311,15 @@ module.exports = function (app) {
                 if (!validator.isEmail(email)) {
                     return done({message: 'Invalid email.'}, false);
                 }
-                UserConnection
+
+                User
                     .findOne({
                         where: {
-                            connectionId: UserConnection.CONNECTION_IDS.citizenos,
-                            'connectionData.email': email
-                        },
-                            include: [User]
+                            email: email
+                        }
                     })
-                    .then(function (userConnectionInfo) {
-                        var user = null;
-                        if (userConnectionInfo) {
-                            user = userConnectionInfo.User;
-                        }                        
-                        if (!userConnectionInfo || !user || !user.password) {
+                    .then(function (user) {
+                        if (!user || !user.password) {
                             return done({
                                 message: 'The account does not exists.',
                                 code: 1
