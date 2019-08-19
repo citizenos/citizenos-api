@@ -2,7 +2,7 @@
   "LAYOUT": {
     "LINK_TO_PLATFORM": "Ссылка на платформу",
     "LINK_PRIVACY_POLICY": "Политика конфиденциальности",
-    "EMPOWERED_BY": "Empowered by"
+    "EMPOWERED_BY": "При поддержке"
   },
   "ACCOUNT_VERIFICATION": {
     "SUBJECT": "Активируйте свой аккаунт Citizen OS"
@@ -16,40 +16,40 @@
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Reset your CitizenOS account password"
+    "SUBJECT": "Восстановить пароль учетной записи Citizen OS"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Thank you, we received your report (#{{report.id}})"
+    "SUBJECT": "Спасибо! Мы получили вашу жалобу (№{{report.id}})"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: your Citizen OS topic may contain a violation of guidelines"
+    "SUBJECT": "Жалоба №{{report.id}}: возможно, содержание вашей темы Citizen OS противоречит правилам сообщества Citizen OS"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "A Citizen OS topic has been reported (#{{report.id}}), please moderate"
+    "SUBJECT": "В отношении темы на портале Citizen OS была составлена жалоба (№{{report.id}}). Рассмотрите ее"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Your Citizen OS report #{{report.id}} has been reviewed"
+    "SUBJECT": "Ваша жалоба №{{report.id}} была рассмотрена"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: Your Citizen OS topic has been reviewed by a moderator"
+    "SUBJECT": "Жалоба №{{report.id}}: ваша тема Citizen OS была рассмотрена модератором"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "A reported (#{{report.id}}) Citizen OS topic has been revised, please review"
+    "SUBJECT": "Содержание темы (жалоба №{{report.id}}) было изменено. Пожалуйста, пересмотрите тему"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: access to your Citizen OS topic has been restored."
+    "SUBJECT": "Жалоба №{{report.id}}: доступ к содержанию вашей темы был восстановлен."
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
-    "SUBJECT": "Your report (#{{report.id}}) in Citizen OS has been resolved"
+    "SUBJECT": "Ваша жалоба (№{{report.id}}) на портале Citizen OS была разрешена"
   },
   "REPORT": {
     "REPORT_TYPE": {
-      "ABUSE": "Is abusive or insulting",
-      "OBSCENE": "Contains obscene language",
-      "SPAM": "Contains spam or is unrelated to topic",
-      "HATE": "Contains hate speech",
-      "NETIQUETTE": "Infringes (n)etiquette",
-      "DUPLICATE": "Is a duplicate"
+      "ABUSE": "Оскорбительное содержание",
+      "OBSCENE": "Содержит нецензурную лексику",
+      "SPAM": "Содержит спам или не имеет отношение к теме",
+      "HATE": "Ксенофобные высказывания",
+      "NETIQUETTE": "Нарушает этикет",
+      "DUPLICATE": "Дублирует содержание другой темы"
     }
   },
   "REPORT_COMMENT": {

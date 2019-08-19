@@ -1,36 +1,36 @@
 <!-- E-mail sent to User who reported the Topic -->
 <p>
-    Hello <span class="blue">{{userReporter.name}}</span>,
+    Tere, <span class="blue">{{userReporter.name}}</span>!
 </p>
 <p class="important">
-    <b>A moderator has reviewed your report <span class="blue">#{{report.id}}</span>, which you submitted on {{report.createdAt}} about Citizen OS topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" being inappropriate.</b>
+    <b>Moderaator vaatas üle Sinu {{report.createdAt}} esitatud raporti <span class="blue">#{{report.id}}</span>, kus väidad, et Citizen OS-i teema "<a href="{{linkViewTopic}}">{{topic.title}}</a>" on sobimatu.</b>
     <br><br>
-    There is nothing you need to do, this email is for your information.
+    Sul pole vaja rohkem midagi teha. See meilisõnum on lihtsalt teavituseks.
 </p>
 
-<h1>Decision of the moderator:</h1>
+<h1>Moderaatori otsus:</h1>
 <p>
 <ul>
-    <li class="li">Violation type: "{{report.moderatedReasonType}}"</li>
-    <li class="li">Reasoning: "{{report.moderatedReasonText}}"</li>
+    <li class="li">Rikkumise tüüp: "{{report.moderatedReasonType}}"</li>
+    <li class="li">Põhjendus: "{{report.moderatedReasonText}}"</li>
 </ul>
 </p>
 <p>
-    When accessing the topic, users will now see an overlay, warning about violations in the topic. However, viewers have an option to bypass the overlay and view topic content at their own risk anyway
+    Teemat avades näevad kasutajad nüüd katteteksti, mis hoiatab, et teema ei vasta kogukonnareeglitele. Kasutajatele jääb aga siiski võimalus see kattetekst eemaldada ja omal vastutusel teema sisuga tutvuda
 </p>
 
-<h1>What happens next?</h1>
+<h1>Mis edasi saab?</h1>
 <p>
 <ol>
-    <li class="li">Admins and editors of the topic have also received the report. They can edit their topic at any time to clear possible violations. They can then send the topic to moderators for review.</li>
-    <li class="li">Upon a review request, moderators will review the topic and remove restrictions if violations have been cleared.</li>
-    <li class="li">Until such time, access to the topic will remain restricted.</li>
+    <li class="li">See raport saadeti ka selle teema administraatoritele ja toimetajatele. Nad võivad oma teema igal ajal reeglitekohaseks muuta. Seejärel võivad nad paluda moderaatoritel teema uuesti üle vaadata.</li>
+    <li class="li">Ülevaatamistaotluse saamisel kontrollivad moderaatorid teema uuesti üle ja, kui kõik on reeglitepärane, siis eemaldavad piirangu.</li>
+    <li class="li">Rikkumiste kõrvaldamiseni jääb juurdepääs teemale piiratuks.</li>
 </ol>
 </p>
-<p><a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process here.</a></p>
+<p><a href="{{linkViewModerationGuidelines}}">Täpsemalt võid Citizen OS-i modereerimisprotsessi kohta lugeda siit.</a></p>
 
 <hr/>
 
 <p>
-    Thank you for helping us ensure a high quality of content in Citizen OS user community!
+    Aitäh, et andsid oma panuse Citizen OS-i kasutajakogukonna loodud sisu kõrge kvaliteedi tagamiseks!
 </p>

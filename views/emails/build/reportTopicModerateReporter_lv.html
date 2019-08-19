@@ -1,36 +1,36 @@
 <!-- E-mail sent to User who reported the Topic -->
 <p>
-    Hello <span class="blue">{{userReporter.name}}</span>,
+    Sveiki <span class="blue">{{userReporter.name}}</span>,
 </p>
 <p class="important">
-    <b>A moderator has reviewed your report <span class="blue">#{{report.id}}</span>, which you submitted on {{report.createdAt}} about Citizen OS topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" being inappropriate.</b>
+    <b>Moderators pārbaudīja jūsu ziņojumu <span class="blue">#{{report.id}}</span>, kas tika iesniegts {{report.createdAt}} par Citizen OS tematu "<a href="{{linkViewTopic}}">{{topic.title}}</a>".</b>
     <br><br>
-    There is nothing you need to do, this email is for your information.
+    Jums vairs nav nekas jādara, šis ir informatīvs e-pasts.
 </p>
 
-<h1>Decision of the moderator:</h1>
+<h1>Moderatora lēmums:</h1>
 <p>
 <ul>
-    <li class="li">Violation type: "{{report.moderatedReasonType}}"</li>
-    <li class="li">Reasoning: "{{report.moderatedReasonText}}"</li>
+    <li class="li">Pārkāpuma veids: "{{report.moderatedReasonType}}"</li>
+    <li class="li">Pamatojums: "{{report.moderatedReasonText}}"</li>
 </ul>
 </p>
 <p>
-    When accessing the topic, users will now see an overlay, warning about violations in the topic. However, viewers have an option to bypass the overlay and view topic content at their own risk anyway
+    Piekļūstot tematam, lietotāji redzēs brīdinājumu par pārkāpumiem tematā. Taču, neskatoties uz to, lasītāji var lasīt šo tematu, ja to vēlas.
 </p>
 
-<h1>What happens next?</h1>
+<h1>Kas notiks tālāk?</h1>
 <p>
 <ol>
-    <li class="li">Admins and editors of the topic have also received the report. They can edit their topic at any time to clear possible violations. They can then send the topic to moderators for review.</li>
-    <li class="li">Upon a review request, moderators will review the topic and remove restrictions if violations have been cleared.</li>
-    <li class="li">Until such time, access to the topic will remain restricted.</li>
+    <li class="li">Ziņojumu par tematu saņēma arī administratori un redaktori. Viņi jebkurā laikā var rediģēt tematu, lai novērstu pārkāpumus. Viņi varat nosūtīt tematu pārbaudei moderatoriem.</li>
+    <li class="li">Pēc pārbaudes pieprasījuma saņemšanas, moderatori pārbaudīs tematu un atcels ierobežojumus, ja pārkāpumi ir novērsti.</li>
+    <li class="li">Piekļuve tematam paliks ierobežota, kamēr pārkāpumi netiks novērsti.</li>
 </ol>
 </p>
-<p><a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process here.</a></p>
+<p><a href="{{linkViewModerationGuidelines}}">Vairāk informācijas par Citizen OS moderācijas procesu atradīsiet šeit.</a></p>
 
 <hr/>
 
 <p>
-    Thank you for helping us ensure a high quality of content in Citizen OS user community!
+    Paldies par palīdzību augstas kvalitātes satura nodrošināšanā Citizen OS lietotāju kopienā!
 </p>

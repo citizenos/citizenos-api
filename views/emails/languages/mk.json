@@ -5,18 +5,18 @@
     "EMPOWERED_BY": "Empowered by"
   },
   "ACCOUNT_VERIFICATION": {
-    "SUBJECT": "Активирајте го Вашиот Citizen OS налог"
+    "SUBJECT": "Активирајте ја својата Citizen OS-сметка"
   },
   "INVITE_GROUP": {
-    "SUBJECT": "{{fromUser.name}} Ве поканува да се приклучите на групата „{{group.name}}“ на Citizen OS"
+    "SUBJECT": "{{fromUser.name}} ве поканува да се приклучите на групата “{{group.name}}” на Citizen OS"
   },
   "INVITE_TOPIC": {
-    "SUBJECT": "{{fromUser.name}} Ве поканува да направите колаборативна одлука",
+    "SUBJECT": "{{fromUser.name}} ве поканува да направите колаборативна одлука",
     "SUBJECT_rahvaalgatus_ee": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Reset your CitizenOS account password"
+    "SUBJECT": "Reset your Citizen OS account password"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
     "SUBJECT": "Thank you, we received your report (#{{report.id}})"
@@ -55,18 +55,18 @@
   "REPORT_COMMENT": {
     "REPORT_TYPE": {
       "ABUSE": "Е нападен или навредлив",
-      "OBSCENE": "Користи нецензуриран јазик",
-      "SPAM": "Содржи спам или зборува надвор од темата",
+      "OBSCENE": "Содржи нецензуриран јазик",
+      "SPAM": "Содржи спам или е надвор од темата",
       "HATE": "Содржи говор на омраза",
-      "NETIQUETTE": "Прекршува (н)етикет",
+      "NETIQUETTE": "Прекршува (н)етикеција",
       "DUPLICATE": "Е дупликат"
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Вашиот коментар беше пријавен како несоодветен од страна на заедницата"
+    "SUBJECT": "Вашиот коментар е пријавен како несоодветен од страна на заедницата"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "Коментар беше пријавен како несоодветен од страна на заедницата"
+    "SUBJECT": "Коментар е пријавен како несоодветен од страна на заедницата"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""

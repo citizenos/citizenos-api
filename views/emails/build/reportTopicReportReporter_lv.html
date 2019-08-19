@@ -1,38 +1,36 @@
 <!-- E-mail sent to User who reports a Topic -->
 <p>
-    Hello <span class="blue">{{userReporter.name}}</span>,
+    Sveiki <span class="blue">{{userReporter.name}}</span>,
 </p>
 <p class="important">
-    <b>Your report <span class="blue">#{{report.id}}</span> regarding topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" has been sent to Citizen OS moderators</b>
+    <b>Jūsu ziņojums <span class="blue">#{{report.id}}</span> par tematu "<a href="{{linkViewTopic}}">{{topic.title}}</a>" ir nosūtīts Citizen OS moderatoriem</b>
 </p>
 
-<h1>What happens next?</h1>
+<h1>Kas notiks tālāk?</h1>
 <p>
 <ol>
-    <li class="li">Moderators will review the report. If a violation is confirmed, access to the topic will be restricted and a warning of
-        inappropriate content will be displayed.
+    <li class="li">Moderatori pārbaudīs ziņojumu. Ja pārkāpums tiks apstiprināts, piekļuve šim tematam tiks ierobežota un tiks atspoguļots brīdinājums par neatbilstošu saturu.
     </li>
-    <li class="li">Meanwhile admins and editors of the reported topic will be asked to modify it. When topic's inappropriate content has been
-        improved, the moderators will once again review and will remove restrictions if all violations have been cleared.
+    <li class="li">Tikmēr temata, par kuru saņemts ziņojums, administratoriem un redaktoriem tiks lūgts veikt izmaiņas. Pēc temata neatbilstošā satura labojumu veikšanas, moderatori atkārtoti pārskatīs tematu un noņems ierobežojumus, ja visi pārkāpumi ir novērsti.
     </li>
     <li class="li">
-        We will notify you if:
+        Mēs informēsim jūs, ja:
         <ul>
-            <li>moderators apply restrictions to the topic</li>
-            <li>all violations have been cleared and restrictions removed.</li>
+            <li>moderatori ierobežos piekļuvi šim tematam</li>
+            <li>visi pārkāpumi tiks novērsti un ierobežojumi atcelti.</li>
         </ul>
     </li>
 </ol>
 </p>
-<p><a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process here.</a></p>
+<p><a href="{{linkViewModerationGuidelines}}">Vairāk informācijas par Citizen OS moderācijas procesu atradīsiet šeit.</a></p>
 
-<h1>Report summary</h1>
-<p>Topic: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
-<p>Report reference number: <b>{{report.id}}</b>
-<p>Type of violation: <b>"{{report.type}}"</b>
-<p>Your explanation: <b>"{{report.text}}"</b>
+<h1>Ziņojuma kopsavilkums</h1>
+<p>Temats: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
+<p>Ziņojuma uzskaites numurs: <b>{{report.id}}</b>
+<p>Pārkāpuma veids: <b>"{{report.type}}"</b>
+<p>Jūsu skaidrojums: <b>"{{report.text}}"</b>
 
 <hr/>
 <p>
-    Thank you for helping us ensure a high quality of content in Citizen OS user community!
+    Paldies par palīdzību augstas kvalitātes satura nodrošināšanā Citizen OS lietotāju kopienā!
 </p>

@@ -2,7 +2,7 @@
   "LAYOUT": {
     "LINK_TO_PLATFORM": "Link naar platform",
     "LINK_PRIVACY_POLICY": "Privacybeleid",
-    "EMPOWERED_BY": "Empowered by"
+    "EMPOWERED_BY": "Mogelijk gemaakt door"
   },
   "ACCOUNT_VERIFICATION": {
     "SUBJECT": "Activeer uw Citizen OS-account"
@@ -16,40 +16,40 @@
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Reset your CitizenOS account password"
+    "SUBJECT": "Het wachtwoord van uw Citizen OS-account resetten"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Thank you, we received your report (#{{report.id}})"
+    "SUBJECT": "Bedankt, we hebben uw melding ontvangen (nr. {{report.id}})"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: your Citizen OS topic may contain a violation of guidelines"
+    "SUBJECT": "Melding nr. {{report.id}}: uw Citizen OS-topic bevat mogelijk een overtreding van onze richtlijnen"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "A Citizen OS topic has been reported (#{{report.id}}), please moderate"
+    "SUBJECT": "Een Citizen OS-topic is gemeld (nr. {{report.id}}), modereer het alstublieft"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Your Citizen OS report #{{report.id}} has been reviewed"
+    "SUBJECT": "Uw Citizen OS-melding nr. {{report.id}} is beoordeeld"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: Your Citizen OS topic has been reviewed by a moderator"
+    "SUBJECT": "Melding nr. {{report.id}}: uw Citizen OS-topic is beoordeeld door een moderator"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "A reported (#{{report.id}}) Citizen OS topic has been revised, please review"
+    "SUBJECT": "Een gemelde (nr. {{report.id}}) Citizen OS-topic is herzien, beoordeel deze alstublieft"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: access to your Citizen OS topic has been restored."
+    "SUBJECT": "Melding nr. {{report.id}}: de toegang tot uw Citizen OS-topic is hersteld."
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
-    "SUBJECT": "Your report (#{{report.id}}) in Citizen OS has been resolved"
+    "SUBJECT": "Uw melding (nr. {{report.id}}) in Citizen OS is opgelost"
   },
   "REPORT": {
     "REPORT_TYPE": {
-      "ABUSE": "Is abusive or insulting",
-      "OBSCENE": "Contains obscene language",
-      "SPAM": "Contains spam or is unrelated to topic",
-      "HATE": "Contains hate speech",
-      "NETIQUETTE": "Infringes (n)etiquette",
-      "DUPLICATE": "Is a duplicate"
+      "ABUSE": "Is grof of beledigend",
+      "OBSCENE": "Bevat obsceen taalgebruik",
+      "SPAM": "Bevat spam of houdt geen verband met de topic",
+      "HATE": "Bevat haatdragende taal",
+      "NETIQUETTE": "Schending van de etiquette/nettiquette",
+      "DUPLICATE": "Is een duplicaat"
     }
   },
   "REPORT_COMMENT": {

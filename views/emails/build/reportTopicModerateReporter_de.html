@@ -1,36 +1,36 @@
 <!-- E-mail sent to User who reported the Topic -->
 <p>
-    Hello <span class="blue">{{userReporter.name}}</span>,
+    Hallo <span class="blue">{{userReporter.name}}</span>,
 </p>
 <p class="important">
-    <b>A moderator has reviewed your report <span class="blue">#{{report.id}}</span>, which you submitted on {{report.createdAt}} about Citizen OS topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" being inappropriate.</b>
+    <b>Ein Moderator hat Ihren Bericht <span class="blue">#{{report.id}}</span> geprüft, der am {{report.createdAt}} zum Citizen OS-Thema "<a href="{{linkViewTopic}}">{{topic.title}}</a>" wegen unangemessenem Inhalt eingereicht wurde.</b>
     <br><br>
-    There is nothing you need to do, this email is for your information.
+    Sie müssen nichts tun. Diese E-Mail dient zu Ihrer Information.
 </p>
 
-<h1>Decision of the moderator:</h1>
+<h1>Entscheidung des Moderators:</h1>
 <p>
 <ul>
-    <li class="li">Violation type: "{{report.moderatedReasonType}}"</li>
-    <li class="li">Reasoning: "{{report.moderatedReasonText}}"</li>
+    <li class="li">Art der Verletzung: "{{report.moderatedReasonType}}"</li>
+    <li class="li">Begründung: "{{report.moderatedReasonText}}"</li>
 </ul>
 </p>
 <p>
-    When accessing the topic, users will now see an overlay, warning about violations in the topic. However, viewers have an option to bypass the overlay and view topic content at their own risk anyway
+    Wenn Benutzer auf das Thema zugreifen, wird diesen nun eine Überlagerung angezeigt, die vor Verletzungen im Thema warnt. Die Betrachter haben jedoch die Möglichkeit, die Überlagerung zu umgehen und Themeninhalte auf eigene Gefahr zu betrachten
 </p>
 
-<h1>What happens next?</h1>
+<h1>Was passiert als Nächstes?</h1>
 <p>
 <ol>
-    <li class="li">Admins and editors of the topic have also received the report. They can edit their topic at any time to clear possible violations. They can then send the topic to moderators for review.</li>
-    <li class="li">Upon a review request, moderators will review the topic and remove restrictions if violations have been cleared.</li>
-    <li class="li">Until such time, access to the topic will remain restricted.</li>
+    <li class="li">Auch Administratoren und Bearbeiter des Themas haben den Bericht erhalten. Sie können ihr Thema jederzeit bearbeiten, um mögliche Verletzungen zu entfernen. Anschließend können sie das Thema zur Prüfung an die Moderatoren senden.</li>
+    <li class="li">Nach einer Prüfanforderung prüfen die Moderatoren das Thema und entfernen Einschränkungen, sobald Verletzungen entfernt wurden.</li>
+    <li class="li">Bis dahin bleibt der Zugriff auf das Thema eingeschränkt.</li>
 </ol>
 </p>
-<p><a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process here.</a></p>
+<p><a href="{{linkViewModerationGuidelines}}">Weitere Details über den Moderationsprozess von Citizen OS finden Sie hier.</a></p>
 
 <hr/>
 
 <p>
-    Thank you for helping us ensure a high quality of content in Citizen OS user community!
+    Vielen Dank, dass Sie uns dabei unterstützen, eine hohe Qualität der Inhalte in der Citizen OS-Benutzergemeinschaft sicherzustellen!
 </p>

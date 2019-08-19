@@ -1,19 +1,19 @@
 <!-- E-mail sent to User who reported a Topic -->
 <p>
-    Hello <span class="blue">{{userReporter.name}}</span>,
+    Здравствуйте, {{userReporter.name}}!
 </p>
 
 <p class="important">
-    <b>You reported Citizen OS topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" as inappropriate on {{topicReport.createdAt}}. The violations have now been removed. Access to the topic has been restored by a reviewing moderator.</b>
+    <b>{{topicReport.createdAt}} вы сообщили о том, что содержание темы «<a href="{{linkViewTopic}}">{{topic.title}}</a>» противоречит правилам сообщества Citizen OS. На данный момент все нарушения устранены. Доступ к теме был восстановлен модератором.</b>
 </p>
 
 <p>
-    Please have a look. Should you still find the topic inappropriate, feel free to report it again.
+    Вы тоже можете вглянуть. Если вы все еще считаете, что в теме есть ненадлежащий контент, пожалуйста, составьте еще одну жалобу.
 </p>
-<p><a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process here.</a></p>
+<p><a href="{{linkViewModerationGuidelines}}">Прочитайте информацию о процессе модерации на платформе Citizen OS.</a></p>
 
 <hr/>
 
 <p>
-    Thank you for helping us ensure a high quality of content within the Citizen OS user community!
+    Спасибо вам за помощь в обеспечении высокого качества контента на платформе Citizen OS и среди сообщества наших пользователей!
 </p>

@@ -1,33 +1,33 @@
 <!-- E-mail sent to Topic members of a reported Topic -->
 <p>
-    Hello <span class="blue">{{userMember.name}}</span>,
+    Доброго дня, <span class="blue">{{userMember.name}}</span>,
 </p>
 <p class="important">
-    <b>A moderator has reviewed the report <span class="blue">#{{report.id}}</span>, which was submitted on {{report.createdAt}} about your Citizen OS topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" being inappropriate.</b>
+    <b>Модератор переглянув скаргу <span class="blue">№{{report.id}}</span>, яка була подана {{report.createdAt}}, щодо недоречності вашої теми "<a href="{{linkViewTopic}}">{{topic.title}}</a>".</b>
 </p>
 
-<h1>Decision of the moderator:</h1>
+<h1>Рішення модератора:</h1>
 <p>
 <ul>
-    <li class="li">Violation type: "{{report.moderatedReasonType}}"</li>
-    <li class="li">Reasoning: "{{report.moderatedReasonText}}"</li>
+    <li class="li">Тип порушення: "{{report.moderatedReasonType}}"</li>
+    <li class="li">Пояснення: "{{report.moderatedReasonText}}"</li>
 </ul>
 </p>
 <p>
-    When accessing your topic, users will now see an overlay, warning about violations in the topic. However, viewers have an option to bypass the overlay and view topic content at their own risk anyway.
+    Відтепер, при доступі до вашої теми користувачі бачитимуть попередження про порушення. Проте, користувачі все одно зможуть переглянути вміст теми на власний ризик.
 </p>
 
-<h1>What happens next?</h1>
+<h1>Що відбуватиметься далі?</h1>
 <p>
 <ol>
-    <li class="li">You and other admins and editors of the topic can edit topic content at any time to clear possible violations. You can then send the topic to moderators for review.</li>
-    <li class="li">Upon a review request, moderators will review the topic and remove restrictions if violations have been cleared.</li>
-    <li class="li">Until such time, access to the topic will remain restricted.</li>
+    <li class="li">Ви, а також інші адміністратори та редактори теми, можете відредагувати її вміст у будь-який момент, аби усунути можливі порушення. Після цього ви можете надіслати тему на перегляд модераторам.</li>
+    <li class="li">Після запиту модератори переглянуть цю тему та знімуть обмеження, якщо порушення були усунені.</li>
+    <li class="li">До того часу доступ до теми буде залишатися обмеженим.</li>
 </ol>
 </p>
-<p><a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process here.</a></p>
+<p><a href="{{linkViewModerationGuidelines}}">Ви можете більш детально ознайомитися з процесом модерації Citizen OS тут.</a></p>
 
 <hr/>
 <p>
-    Please review your topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" and see if it contains violations of community guidelines. Together we can maintain a high quality of content in Citizen OS user community.
+    Будь ласка, передивіться вашу тему "<a href="{{linkViewTopic}}">{{topic.title}}</a>", та переконайтеся, що вона не містить порушень рекомендацій для спільноти. Разом ми можемо підтримувати високу якість вмісту у користувацькій спільноті Citizen OS.
 </p>

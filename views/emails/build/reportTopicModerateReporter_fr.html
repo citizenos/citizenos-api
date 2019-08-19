@@ -1,36 +1,36 @@
 <!-- E-mail sent to User who reported the Topic -->
 <p>
-    Hello <span class="blue">{{userReporter.name}}</span>,
+    Bonjour <span class="blue">{{userReporter.name}}</span>,
 </p>
 <p class="important">
-    <b>A moderator has reviewed your report <span class="blue">#{{report.id}}</span>, which you submitted on {{report.createdAt}} about Citizen OS topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" being inappropriate.</b>
+    <b>Un modérateur a examiné votre rapport <span class="blue">#{{report.id}}</span>, que vous avez soumis sur {{report.createdAt}} sur le sujet de Citizen OS « <a href="{{linkViewTopic}}">{{topic.title}}</a> » comme étant inapproprié.</b>
     <br><br>
-    There is nothing you need to do, this email is for your information.
+    Il n'y a rien à faire, ce courriel est pour votre information.
 </p>
 
-<h1>Decision of the moderator:</h1>
+<h1>Décision du modérateur :</h1>
 <p>
 <ul>
-    <li class="li">Violation type: "{{report.moderatedReasonType}}"</li>
-    <li class="li">Reasoning: "{{report.moderatedReasonText}}"</li>
+    <li class="li">Type de violation : « {{report.moderatedReasonType}} »</li>
+    <li class="li">Raison de la décision : « {{report.moderatedReasonText}} »</li>
 </ul>
 </p>
 <p>
-    When accessing the topic, users will now see an overlay, warning about violations in the topic. However, viewers have an option to bypass the overlay and view topic content at their own risk anyway
+    Lorsqu'ils accèderont au sujet, les utilisateurs verront maintenant une superposition, en avertissant des violations du sujet. Cependant, les lecteurs ont la possibilité de contourner la superposition et de voir le contenu des sujets à leur propre risque
 </p>
 
-<h1>What happens next?</h1>
+<h1>Que se passe-t-il maintenant ?</h1>
 <p>
 <ol>
-    <li class="li">Admins and editors of the topic have also received the report. They can edit their topic at any time to clear possible violations. They can then send the topic to moderators for review.</li>
-    <li class="li">Upon a review request, moderators will review the topic and remove restrictions if violations have been cleared.</li>
-    <li class="li">Until such time, access to the topic will remain restricted.</li>
+    <li class="li">Les administrateurs et les éditeurs du sujet ont également reçu le signalement. Ils peuvent modifier leur sujet à tout moment pour éliminer les éventuelles violations. Ils peuvent alors envoyer le sujet aux modérateurs pour examen.</li>
+    <li class="li">À la demande d'examen, les modérateurs examineront le sujet et supprimeront les restrictions si des violations ont été effacées.</li>
+    <li class="li">En attendant, l'accès à ce sujet sera limité.</li>
 </ol>
 </p>
-<p><a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process here.</a></p>
+<p><a href="{{linkViewModerationGuidelines}}">Vous pouvez trouver plus de détails sur le processus de modération de Citizen OS ici.</a></p>
 
 <hr/>
 
 <p>
-    Thank you for helping us ensure a high quality of content in Citizen OS user community!
+    Merci de nous aider à assurer une qualité de contenu dans la communauté des utilisateurs de Citizen OS !
 </p>

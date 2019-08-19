@@ -2,7 +2,7 @@
   "LAYOUT": {
     "LINK_TO_PLATFORM": "Platvormile",
     "LINK_PRIVACY_POLICY": "Privaatsuspoliitika",
-    "EMPOWERED_BY": "Empowered by"
+    "EMPOWERED_BY": "Kasutatud tarkvara"
   },
   "ACCOUNT_VERIFICATION": {
     "SUBJECT": "Aktiveeri oma Citizen OS konto"
@@ -16,40 +16,40 @@
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Reset your CitizenOS account password"
+    "SUBJECT": "Taasta oma Citizen OS konto parool"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Thank you, we received your report (#{{report.id}})"
+    "SUBJECT": "Aitäh! Saime Su raporti (#{{report.id}}) kätte"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: your Citizen OS topic may contain a violation of guidelines"
+    "SUBJECT": "Raport #{{report.id}}: teema, mille Citizen OS kogukonnas algatasid, võib olla vastuolus kogukonnareeglitega"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "A Citizen OS topic has been reported (#{{report.id}}), please moderate"
+    "SUBJECT": "Ühe Citizen OS-i teema kohta saadeti raport (#{{report.id}}), palun modereeri"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Your Citizen OS report #{{report.id}} has been reviewed"
+    "SUBJECT": "Sinu Citizen OS-i raport #{{report.id}} vaadati üle"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: Your Citizen OS topic has been reviewed by a moderator"
+    "SUBJECT": "Raport #{{report.id}}: moderaator vaatas Sinu Citizen OS-i teema üle"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "A reported (#{{report.id}}) Citizen OS topic has been revised, please review"
+    "SUBJECT": "Raporteeritud (#{{report.id}}) Citizen OS-i teemat parandati, palun vaata see üle"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: access to your Citizen OS topic has been restored."
+    "SUBJECT": "Raport #{{report.id}}: juurdepääs Sinu Citizen OS-i teemale on taastatud."
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
-    "SUBJECT": "Your report (#{{report.id}}) in Citizen OS has been resolved"
+    "SUBJECT": "Sinu Citizen OS-is esitatud raport (#{{report.id}}) on lahendatud"
   },
   "REPORT": {
     "REPORT_TYPE": {
-      "ABUSE": "Is abusive or insulting",
-      "OBSCENE": "Contains obscene language",
-      "SPAM": "Contains spam or is unrelated to topic",
-      "HATE": "Contains hate speech",
-      "NETIQUETTE": "Infringes (n)etiquette",
-      "DUPLICATE": "Is a duplicate"
+      "ABUSE": "On solvav",
+      "OBSCENE": "Sisaldab sündsusetuid väljendeid",
+      "SPAM": "Sisaldab reklaami või pole teemaga seotud",
+      "HATE": "Õhutab vaenu",
+      "NETIQUETTE": "Ei vasta headele tavadele",
+      "DUPLICATE": "Duplikaat"
     }
   },
   "REPORT_COMMENT": {

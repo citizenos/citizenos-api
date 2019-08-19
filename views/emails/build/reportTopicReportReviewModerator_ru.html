@@ -1,29 +1,30 @@
 <!-- E-mail sent to moderators when a Topic report is sent for a review -->
 <p>
-    Hello <span class="blue">{{userModerator.name}}</span>,
+    Здравствуйте, {{userModerator.name}}!
 </p>
 <p class="important">
-    <b>You are receiving this email as a Citizen OS community moderator.</b>
+    <b>Вы получили это письмо, так как являетесь модератором сообщества Citizen OS.
+</b>
     <br><br>
-    Citizen OS topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>", that was reported as inappropriate, has been revised by an admin / editor of that topic. They have submitted their changes for review and have provided the following explanation:
+    Тема «<a href="{{linkViewTopic}}">{{topic.title}}</a>», содержание которой было заявлено как несоответствующее правилам сообщества, была изменена ее администратором/редактором. Они направили изменения на рассмотрение, а также предоставили пояснительную информацию:
     <br><br>
     <i>{{reviewRequestText}}</i>
 </p>
 
-<h1>You or another moderator originally decided to restrict access to the topic.</h1>
+<h1>Вы или другой модератор ранее наложили ограничения на доступ к этой теме.</h1>
 <p>
 <ul>
-    <li class="li">Violation type: "{{report.moderatedReasonType}}"</li>
-    <li class="li">Reasoning: "{{report.moderatedReasonText}}"</li>
+    <li class="li">Тип нарушения: «{{report.moderatedReasonType}}»</li>
+    <li class="li">Обоснование: «{{report.moderatedReasonText}}»</li>
 </ul>
 </p>
 <p>
-    <b>Please review the topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" and decide if it is now in compliance with guidelines and access restriction should be removed or not.</b>
+    <b>Мы просим вас повторно рассмотреть тему «<a href="{{linkViewTopic}}">{{topic.title}}</a>» и вынести решение, соответствует ли обновленное содержание парвилам сообщества, и возможно ли снять ограничения с темы.</b>
 </p>
-<p><a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process here.</a></p>
+<p><a href="{{linkViewModerationGuidelines}}">Прочитайте информацию о процессе модерации на платформе Citizen OS.</a></p>
 
 <hr/>
 
 <p>
-    Thank you! Together we can maintain a high quality of content in Citizen OS user community.
+    Благодарим вас! Вместе мы сможем обеспечивать высокое качество контента для сообщества пользователей Citizen OS.
 </p>

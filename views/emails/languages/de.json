@@ -16,40 +16,40 @@
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Reset your CitizenOS account password"
+    "SUBJECT": "Passwort für Ihr Citizen OS Konto zurücksetzen"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Thank you, we received your report (#{{report.id}})"
+    "SUBJECT": "Vielen Dank, wir haben Ihren Bericht (#{{report.id}}) erhalten"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: your Citizen OS topic may contain a violation of guidelines"
+    "SUBJECT": "Bericht #{{report.id}}: Ihr Citizen OS-Thema enthält möglicherweise eine Verletzung der Richtlinien"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "A Citizen OS topic has been reported (#{{report.id}}), please moderate"
+    "SUBJECT": "Ein Citizen OS-Thema wurde gemeldet (#{{report.id}}), bitte moderieren"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Your Citizen OS report #{{report.id}} has been reviewed"
+    "SUBJECT": "Ihr Citizen OS-Bericht #{{report.id}} wurde geprüft"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: Your Citizen OS topic has been reviewed by a moderator"
+    "SUBJECT": "Bericht #{{report.id}}: Ihr Citizen OS-Thema wurde von einem Moderator geprüft"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "A reported (#{{report.id}}) Citizen OS topic has been revised, please review"
+    "SUBJECT": "Ein gemeldetes (#{{report.id}}) Citizen OS-Thema wurde überarbeitet, bitte prüfen"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: access to your Citizen OS topic has been restored."
+    "SUBJECT": "Bericht #{{report.id}}: Der Zugriff auf Ihr Citizen OS-Thema wurde wiederhergestellt."
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
-    "SUBJECT": "Your report (#{{report.id}}) in Citizen OS has been resolved"
+    "SUBJECT": "Ihr Bericht (#{{report.id}}) in Citizen OS wurde abgeschlossen"
   },
   "REPORT": {
     "REPORT_TYPE": {
-      "ABUSE": "Is abusive or insulting",
-      "OBSCENE": "Contains obscene language",
-      "SPAM": "Contains spam or is unrelated to topic",
-      "HATE": "Contains hate speech",
-      "NETIQUETTE": "Infringes (n)etiquette",
-      "DUPLICATE": "Is a duplicate"
+      "ABUSE": "Ist beleidigend oder abwertend",
+      "OBSCENE": "Enthält obszöne Sprache",
+      "SPAM": "Enthält Spam oder hat keinen Bezug zum Thema",
+      "HATE": "Enthält Hassrede",
+      "NETIQUETTE": "Verstößt gegen die (N)Etikette",
+      "DUPLICATE": "Ist ein Duplikat"
     }
   },
   "REPORT_COMMENT": {

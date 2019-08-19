@@ -1,40 +1,39 @@
 <!-- E-mail sent to Topic members of a reporter Topic -->
 <p>
-    Hello <span class="blue">{{userMember.name}}</span>,
+    Доброго дня, <span class="blue">{{userMember.name}}</span>,
 </p>
 <p class="important">
-    <b>A Citizen OS user thinks there is a violation of Citizen OS community guidelines in your topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" and has filed a report <span class="blue">#{{report.id}}</span>.</b>
+    <b>Користувач Citizen OS вважає, що у вашій темі "<a href="{{linkViewTopic}}">{{topic.title}}</a>" наявне порушення рекомендацій для спільноти Citizen OS, і подав скаргу <span class="blue">№{{report.id}}</span>.</b>
     <br><br>
-    All editors of the topic and community moderators are receiving this report, please see details below.
+    Усі редактори теми та модератори спільноти отримали цю скаргу. Будь ласка, ознайомтеся з наведеними нижче подробицями.
 </p>
 
-<h1>What happens next?</h1>
+<h1>Що відбуватиметься далі?</h1>
 <p>
 <ol>
-    <li class="li">Moderators are currently reviewing the topic. If they confirm a violation, they will restrict access to the topic.
+    <li class="li">Модератори наразі переглядають тему. Якщо вони підтвердять порушення, доступ до теми буде обмежено.
     </li>
-    <li class="li">However, you and other editors can edit the topic at any time to clear possible violations. If the violations have been cleared, the topic can be sent for review to Citizen OS
-        moderators.
+    <li class="li">Проте, ви та інші редактори теми можете відредагувати її у будь-який момент, аби усунути можливі порушення. Якщо порушення будуть усунені, тема може бути надіслана на перегляд модераторам Citizen OS.
     </li>
-    <li class="li">Upon a review request, moderators will review the topic and withdraw all restrictions if violations have been removed.</li>
+    <li class="li">Після запиту на перегляд модератори переглянуть цю тему та знімуть усі обмеження, якщо порушення були усунені.</li>
     <li class="li">
-        We will notify you if:
+        Ми вас повідомимо, якщо:
         <ul>
-            <li>moderators apply restrictions to the topic</li>
-            <li>Removal of violations has been reviewed and restrictions withdrawn.</li>
+            <li>модератори застосують до теми обмеження;</li>
+            <li>усунення порушень будуть переглянуті, а обмеження - скасовані.</li>
         </ul>
     </li>
 </ol>
 </p>
-<p><a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process here.</a></p>
+<p><a href="{{linkViewModerationGuidelines}}">Ви можете більш детально ознайомитися з процесом модерації Citizen OS тут.</a></p>
 
-<h1>Details of the report</h1>
-<p>Topic: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
-<p>Report reference number: <b>{{report.id}}</b>
-<p>Type of violation: <b>"{{report.type}}"</b>
-<p>Your explanation: <b>"{{report.text}}"</b>
+<h1>Подробиці скарги</h1>
+<p>Тема: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
+<p>Номер скарги: <b>{{report.id}}</b>
+<p>Тип порушення: <b>"{{report.type}}"</b>
+<p>Ваше пояснення: <b>"{{report.text}}"</b>
 
 <hr/>
 <p>
-    Please review your topic  "<a href="{{linkViewTopic}}">{{topic.title}}</a>" and see if it contains violations of community guidelines. Together we can maintain a high quality of content in Citizen OS user community.
+    Будь ласка, передивіться вашу тему "<a href="{{linkViewTopic}}">{{topic.title}}</a>", та переконайтеся, що вона не містить порушень рекомендацій для спільноти. Разом ми можемо підтримувати високу якість вмісту у користувацькій спільноті Citizen OS.
 </p>
