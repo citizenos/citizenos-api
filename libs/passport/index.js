@@ -338,7 +338,11 @@ module.exports = function (app) {
                         }
 
                         if (user.password === cryptoLib.getHash(password, 'sha256')) {
-                            return done(null, user.toJSON());
+                            var userData = user.toJSON();
+                            userData.termsVersion = user.dataValues.termsVersion;
+                            userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
+
+                            return done(null, userData);
                         } else {
                             return done({
                                 message: {password: 'Invalid password'},
