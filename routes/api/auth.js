@@ -477,6 +477,7 @@ module.exports = function (app) {
                 }, 1);
             })
             .catch(function (e) {
+                console.log(e);
                 if (e.code === 404) {
                     return res.notFound();
                 }
@@ -497,7 +498,7 @@ module.exports = function (app) {
         var loginMobileFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
 
         smartId
-            .status(loginMobileFlowData.sessionId, loginMobileFlowData.sessionHash, 500)
+            .statusAuth(loginMobileFlowData.sessionId)
             .then(function (response) {
                 // TODO: DUPLICATE CODE, also used in /api/auth/id
                 if (response.error) {

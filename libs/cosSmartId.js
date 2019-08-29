@@ -9,7 +9,6 @@ function CosSmartId (app) {
     var logger = app.get('logger');
     var crypto = app.get('crypto');
     var sanitizeFilename = app.get('sanitizeFilename');
-    var DigiDocServiceClient = app.get('ddsClient');
     var https = require('https');
     var Promise = app.get('Promise');
     var x509 = require('x509.js');
@@ -17,12 +16,33 @@ function CosSmartId (app) {
     var pem = require('pem');
     var mu = app.get('mu');
     var models = app.get('models');
-    var db = models.sequelize;
-    var config = app.get('config');
-    var stream = app.get('stream');
+    var fs = app.get('fs');
+    var java = require('java');
+    
+    var javaLibsPath = './libs/java';
+    var dependencies = fs.readdirSync(javaLibsPath);
+
+    dependencies.forEach(function(dependency){
+        java.classpath.push(javaLibsPath + '/' + dependency);
+    });
 
     var VoteContainerFile = models.VoteContainerFile;
     var UserConnection = models.UserConnection;
+
+    //Load java classes
+    var SmartIdClient = java.import('ee.sk.smartid.SmartIdClient');
+    var HashType = java.import('ee.sk.smartid.HashType');
+    var SmartIdSignatureToken = java.import('ee.sk.smartid.digidoc4j.SmartIdSignatureToken');
+    var NationalIdentity = java.import('ee.sk.smartid.rest.dao.NationalIdentity');
+    var DigestAlgorithm = java.import('org.digidoc4j.DigestAlgorithm');
+    var SignatureBuilder = java.import('org.digidoc4j.SignatureBuilder');
+    var AuthenticationResponseValidator = java.import('ee.sk.smartid.AuthenticationResponseValidator');
+    var Configuration = java.import('org.digidoc4j.Configuration');
+    var Helper = java.import('org.digidoc4j.utils.Helper');
+    var ContainerBuilder = java.import('org.digidoc4j.ContainerBuilder');
+    var SmartIdAuthenticationResponse = java.import('ee.sk.smartid.SmartIdAuthenticationResponse');
+    var CertificateParser = java.import('ee.sk.smartid.CertificateParser'); 
+    var SmartIdRestConnector = java.import('ee.sk.smartid.rest.SmartIdRestConnector');
 
     var _replyingPartyUUID;
     var _replyingPartyName;
@@ -33,8 +53,10 @@ function CosSmartId (app) {
     var _port;
     var _apiPath;
     var _cert;
+    var _client;
+    var _endpointUrl;
 
-    var FILE_CREATE_MODE = '0760';
+   // var FILE_CREATE_MODE = '0760';
 
     var TOPIC_FILE = {
         template: 'bdoc/document.html',
@@ -59,7 +81,7 @@ function CosSmartId (app) {
         name: '__userinfo.html',
         mimeType: 'text/html'
     };
-
+/*
     var VOTE_RESULTS_FILE = {
         name: 'votes.csv',
         mimeType: 'text/csv'
@@ -68,7 +90,7 @@ function CosSmartId (app) {
     var USER_BDOC_FILE = {
         name: ':pid.bdoc',
         mimeType: 'application/vnd.etsi.asic-e+zip'
-    };
+    };*/
 
     var _paths = {
         authenticate: '/authentication/pno/:countryCode/:pid',
@@ -90,6 +112,12 @@ function CosSmartId (app) {
         }
 
         _apiPath = options.apiPath;
+        _endpointUrl = 'https://'+_hostname+_apiPath;
+
+        _client = new SmartIdClient();
+        _client.setRelyingPartyUUIDSync(_replyingPartyUUID);
+        _client.setRelyingPartyNameSync(_replyingPartyName);
+        _client.setHostUrlSync(_endpointUrl);
 
         return that;
     };
@@ -97,7 +125,7 @@ function CosSmartId (app) {
     /**
      *Creates random hash to calculate
      */
-
+/*
     var _createHash = function (input, hashType) {
         input = input || crypto.randomBytes(20).toString('hex');
         _hashType = hashType || 'sha256';
@@ -107,7 +135,7 @@ function CosSmartId (app) {
         hash.update(encoder.encode(input));
 
         return hash.digest('hex');
-    };
+    };*/
 
     var _buildPath = function (resourceName) {
         return _apiPath + _paths[resourceName];
@@ -201,64 +229,81 @@ function CosSmartId (app) {
         });
     };
 
-    var _authenticate = function (pid, countryCode) {
-        countryCode = countryCode || 'EE'; //defaults to Estonia
-        var sessionHash = _createHash();
-        var path = _buildPath('authenticate');
+    var _getAuthenticationResponse = function (status) {
+        var endResult = status.getResultSync().getEndResultSync();
+        if (endResult === 'OK') {
+            var certValue = status.getCertSync().getValueSync();
+            var cert = CertificateParser.parseX509CertificateSync(certValue);
+            var signature = status.getSignatureSync().getValueSync();
 
-        var params = {
-            relyingPartyUUID: _replyingPartyUUID,
-            relyingPartyName: _replyingPartyName,
-            hash: Buffer.from(sessionHash, 'hex').toString('base64'),
-            hashType: _hashType.toUpperCase()
-        };
+            var responseStatus = new SmartIdAuthenticationResponse();
+            responseStatus.setEndResultSync(endResult);
+            responseStatus.setCertificateSync(cert);
+            responseStatus.setSignatureValueInBase64Sync(signature);
+            responseStatus.setHashTypeSync(HashType.SHA256);
 
-        params = JSON.stringify(params);
-
-        var options = {
-            hostname: _hostname,
-            path: path.replace(':countryCode', countryCode).replace(':pid', pid),
-            method: 'POST',
-            port: _port,
-            headers: {
-                'Authorization': 'Bearer ' + _authorizeToken,
-                'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(params, 'utf8')
+            return responseStatus;
+        } else {
+            return {
+                error: {
+                    message: endResult
+                }
             }
-        };
+        }
+    }
+    var _statusAuth = function (sessionId) {
+        return new Promise (function (resolve) {
+            var sessionStatus = new SmartIdRestConnector(_endpointUrl);
+            
+            var status = sessionStatus.getSessionStatusSync(sessionId);
+            var authResponse = _getAuthenticationResponse(status);
+            if (authResponse.error) {
+                return resolve(authResponse);
+            }
+            var authenticationResult = AuthenticationResponseValidator().validateSync(authResponse);
 
-        return new Promise(function (resolve, reject) {
-            var request = https.request(options, function (result) {
-                result.setEncoding('utf8');
-                result.on('data', function (chunk) {
-                    try {
-                        var data = JSON.parse(chunk);
-                        if (!data.sessionID) {
-                            return reject(data);
-                        }
+            var authIdentity = authenticationResult.getAuthenticationIdentitySync();
+            var firstName = authIdentity.getGivenNameSync(); // e.g. Mari-Liis"
+            var lastName = authIdentity.getSurNameSync(); // e.g. "Männik"
+            var pid = authIdentity.getIdentityCodeSync(); // e.g. "47101010033"
+            var country = authIdentity.getCountrySync(); // e.g. "EE"
 
-                        var verficationCode = _getVerificationCode(sessionHash);
-
-                        return resolve({
-                            sessionId: data.sessionID,
-                            challengeID: verficationCode,
-                            sessionHash: sessionHash
-                        });
-                    } catch (e) {
-                        return reject(e);
+            return resolve({
+                state: 'COMPLETE',
+                result: {
+                    endResult: 'OK',
+                    user: {
+                        firstName,
+                        lastName,
+                        pid,
+                        country
                     }
-
-                });
+                }
             });
+        });
+    }
 
-            // write data to request body
+    var _authenticate = function (pid, countryCode) {
+        return new Promise (function (resolve) {
+            var AuthenticationHash = java.import('ee.sk.smartid.AuthenticationHash');
+            var nationalIdentity = new NationalIdentity(countryCode, pid);
 
-            request.write(params);
-            request.end();
-            request.on('error', function (e) {
-                logger.error('problem with request: ', e.message);
+            // For security reasons a new hash value must be created for each new authentication request
+            var authenticationHash = AuthenticationHash.generateRandomHashSync();
 
-                return reject(e);
+            var verificationCode = authenticationHash.calculateVerificationCodeSync();
+
+            var authenticationResponse = _client
+                .createAuthenticationSync()
+                .withNationalIdentitySync(nationalIdentity)
+                .withAuthenticationHashSync(authenticationHash)
+                .withDisplayTextSync('Citizen OS Login')
+                .withCertificateLevelSync("QUALIFIED") // Certificate level can either be "QUALIFIED" or "ADVANCED"
+                .initiateAuthenticationSync();
+
+            return resolve({
+                challengeID: verificationCode,
+                sessionId: authenticationResponse
             });
         });
     };
@@ -282,83 +327,37 @@ function CosSmartId (app) {
     };
 
     var _getUserCertificate = function (pid, countryCode) {
-        countryCode = countryCode || 'EE'; //defaults to Estonia
-        var sessionHash = _createHash();
-        var path = _buildPath('certificatechoice');
-
-        var params = {
-            relyingPartyUUID: _replyingPartyUUID,
-            relyingPartyName: _replyingPartyName,
-            certificateLevel: 'QUALIFIED'
-        };
-
-        params = JSON.stringify(params);
-
-        var options = {
-            hostname: _hostname,
-            path: path.replace(':countryCode', countryCode).replace(':pid', pid),
-            method: 'POST',
-            port: _port,
-            headers: {
-                'Authorization': 'Bearer ' + _authorizeToken,
-                'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(params, 'utf8')
-            }
-        };
-
-        return new Promise(function (resolve, reject) {
-            var request = https.request(options, function (result) {
-                result.setEncoding('utf8');
-                result.on('data', function (chunk) {
-                    try {
-                        var data = JSON.parse(chunk);
-                        if (!data.sessionID) {
-                            return reject(data);
-                        }
-
-                        var verficationCode = _getVerificationCode(sessionHash);
-
-                        return resolve({
-                            sessionId: data.sessionID,
-                            challengeID: verficationCode,
-                            sessionHash: sessionHash
-                        });
-                    } catch (e) {
-                        return reject(e);
-                    }
-
-                });
-            });
-
-            // write data to request body
-
-            request.write(params);
-            request.end();
-            request.on('error', function (e) {
-                logger.error('problem with request: ', e.message);
-
-                return reject(e);
-            });
+       // var Base64 = java.import('java.util.Base64');
+        return new Promise (function (resolve) {
+            countryCode = countryCode || 'EE';
+            var identity = new NationalIdentity(countryCode, pid); // identity of the signer
+            var smartIdSignatureToken = new SmartIdSignatureToken(_client, identity);
+            // Get the signer's certificate
+            var signingCert = smartIdSignatureToken.getCertificateSync();
+            var cert = Buffer.from(signingCert.getEncodedSync(), 'binary').toString('base64');
+           // Base64*/
+            return resolve(cert);
         });
     }
-    var _createUserBdoc = function (topicId, voteId, userId, voteOptions, transaction) {
+
+    var _createUserBdoc = function (topicId, voteId, userId, voteOptions, transaction) {        
+        //Configuration
+        var configuration = Configuration.ofSync(Configuration.Mode.TEST);
+        configuration.getTSLSync().addTSLCertificateSync(Helper.loadCertificateSync('./config/certs/TEST_of_EID-SK_2016.pem.crt'));
+
+        //Create a container with a text file to be signed
+        var container = ContainerBuilder
+            .aContainerSync()
+            .withConfigurationSync(configuration);
+        
         var chosenVoteOptionFileNames = voteOptions.map(_getVoteOptionFileName);
-        var ddsClient = new DigiDocServiceClient(config.services.digiDoc.serviceWsdlUrl, config.services.digiDoc.serviceName, config.services.digiDoc.token);
 
-        return ddsClient.startSession(null, null, true)
-            .then(function () {
-                var format = DigiDocServiceClient.DOCUMENT_FORMATS.BDOC;
-
-                return ddsClient.createSignedDoc(format.name, format.version);
-            })
-            .then(function () {
-                return VoteContainerFile
-                    .findAll({
-                        where: {
-                            voteId: voteId
-                        },
-                        transaction: transaction
-                    });
+        return VoteContainerFile
+            .findAll({
+                where: {
+                    voteId: voteId
+                },
+                transaction: transaction
             })
             .each(function (voteContainerFile) {
                 var fileName = voteContainerFile.fileName;
@@ -377,96 +376,141 @@ function CosSmartId (app) {
                         }
                 }
 
-                var voteContainerFileStream = new stream.PassThrough();
+                var voteContainerFileStream = fs.createWriteStream('./files/'+ topicId +'/'+ voteId +'/'+ fileName);
                 voteContainerFileStream.end(content);
 
-                return ddsClient.addDataFileEmbeddedBase64(voteContainerFileStream, fileName, mimeType);
+                return container.withDataFileSync('./files/'+ topicId +'/'+ voteId  +'/'+ fileName, mimeType);
             })
             .then(function () {
                 var templateStream = mu.compileAndRender(USERINFO_FILE.template, {user: {id: userId}});
+                var writeStream = fs.createWriteStream('./files/'+ topicId +'/'+ voteId +'/'+ USERINFO_FILE.name);
+                templateStream.pipe(writeStream);
 
-                return ddsClient.addDataFileEmbeddedBase64(templateStream, USERINFO_FILE.name, USERINFO_FILE.mimeType);
+                return container.withDataFileSync('./files/'+ topicId +'/'+ voteId +'/'+ USERINFO_FILE.name, USERINFO_FILE.mimeType);
             })
-            .then(function () {
-                return ddsClient.getSignedDoc();
-            })
-            .spread(function (signedDocResult) {
-                var signedDocument = signedDocResult.SignedDocData.$value;
-
-                return Buffer.from(signedDocument, 'base64').toString('hex');
+            .then(function () {            
+                return container.buildSync();
             });
-    };
+    }
 
-    var _signature = function (pid, countryCode, data) {
-        countryCode = countryCode || 'EE'; //defaults to Estonia
-        var sessionHash = _createHash(data);
-        var path = _buildPath('signature');
-        
-        var params = {
-            relyingPartyUUID: _replyingPartyUUID,
-            relyingPartyName: _replyingPartyName,
-            certificateLevel: 'QUALIFIED',
-            hash: Buffer.from(sessionHash, 'hex').toString('base64'),
-            hashType: _hashType.toUpperCase(),
-            displayText: 'Sign document on CitizenOS',
-            requestProperties: {
-                'vcChoice': false
-            }
-        };
-
-        params = JSON.stringify(params);
-
-        var options = {
-            hostname: _hostname,
-            path: path.replace(':countryCode', countryCode).replace(':pid', pid),
-            method: 'POST',
-            port: _port,
-            headers: {
-                'Authorization': 'Bearer ' + _authorizeToken,
-                'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(params, 'utf8')
-            }
-        };
-
+    var _toByteArray = function (data) {
+        return java.newArray(
+            "byte",
+            data
+              .map(function(c) { return java.newByte(Number(c)); }));
+    }
+    var _statusSign = function (sessionId, containerHash) {
         return new Promise(function (resolve, reject) {
-            var request = https.request(options, function (result) {
-                result.setEncoding('utf8');
-                result.on('data', function (chunk) {
-                    try {
-                        var data = JSON.parse(chunk);
-                        if (!data.sessionID) {
-                            return reject(data);
-                        }
+            // Sign the digest
+            var containerBytes = _toByteArray(containerHash.split(','));
+            var containerStream = java.newInstanceSync('java.io.ByteArrayInputStream', containerBytes);
+            var container = ContainerBuilder.aContainerSync().fromStreamSync(containerStream).buildSync();
+            
+            var sessionStatus = new SmartIdRestConnector(_endpointUrl);
+            
+            var status = sessionStatus.getSessionStatusSync(sessionId);
 
-                        var verficationCode = _getVerificationCode(sessionHash);
-                        return resolve({
-                            sessionId: data.sessionID,
-                            challengeID: verficationCode,
-                            sessionHash: sessionHash
-                        });
-                    } catch (e) {
-                        return reject(e);
-                    }
+            var endResult = status.getResultSync().getEndResultSync();
+            if (endResult === 'OK') {
+                var certValue = status.getCertSync().getValueSync();
+                var cert = CertificateParser.parseX509CertificateSync(certValue);
+                var dataToSign = SignatureBuilder
+                    .aSignatureSync(container)
+                    .withSigningCertificateSync(cert)
+                    .withSignatureDigestAlgorithmSync(DigestAlgorithm.SHA256)
+                    .buildDataToSignSync();
 
+                var signatureValue = status.getSignatureSync().getValueSync();
+                var signature = dataToSign.finalizeSync(_toByteArray(signatureValue.split()));
+                console.log('signature', signature);
+            } else {
+                return resolve({
+                    error: endResult
                 });
-            });
+            }
 
-            // write data to request body
+            /*
+            var signatureValue = smartIdSignatureToken.signDigestSync(DigestAlgorithm.SHA256, byteArrayDigest);
 
-            request.write(params);
-            request.end();
-            request.on('error', function (e) {
-                logger.error('problem with request: ', e.message);
+            // Finalize the signature with OCSP response and timestamp (or timemark)
+            
+            var signatureValueBytes = _toByteArray(signatureValue.toString().split(","));
+            var signature = dataToSign.finalizeSync(signatureValueBytes);
+            
+            console.log('signature', signature);
+            // Add signature to the container*/
+            container.addSignatureSync(signature);
+            
 
-                return reject(e);
+            return {
+                signedDocData: Buffer.from(container.saveAsStreamSync()),
+                signerInfo: _getPersonalInfoFromCommonName(signedDocInfoResult.SignedDocInfo.SignatureInfo[0].Signer.CommonName.$value)
+            };
+        }).catch(function(e) {
+            console.log(e);
+        })
+        
+    }
+
+    var _signature = function (pid, countryCode, container) {
+        return new Promise (function (resolve) {
+            var SignableData = java.import('ee.sk.smartid.SignableData');
+            var identity = new NationalIdentity(countryCode, pid);
+ 
+            var certificateResponse = _client
+               .getCertificateSync()
+               .withNationalIdentitySync(identity)
+               .fetchSync();
+        
+            // get the document number for creating signature
+            var documentNumber = certificateResponse.getDocumentNumberSync();
+            
+            var containerStream = container.saveAsStreamSync();
+           // console.log('containerStreamA', containerStream.readSync());
+            var targetArray = [];
+            while(containerStream.availableSync()) {
+                targetArray.push(containerStream.readSync())
+            }
+            var containerbytes = _toByteArray(targetArray.toString('base64').split(","))
+            var dataToSign = new SignableData(containerbytes);
+           
+      /*     hashToSign.setHashType(HashType.SHA256);
+           hashToSign.setHashInBase64("0nbgC2fVdLVQFZJdBbmG7oPoElpCYsQMtrY0c0wKYRg=");;*/
+        
+           // to display the verificationCode on the web page
+            var verificationCode = dataToSign.calculateVerificationCodeSync();
+            var sessionId = _client
+                .createSignatureSync()
+                .withDocumentNumberSync(documentNumber)
+                .withSignableDataSync(dataToSign)
+                .withCertificateLevelSync("QUALIFIED")
+                .initiateSigningSync();
+/* -------------------*/
+            // For security reasons a new hash value must be created for each new authentication request
+          /*  var authenticationHash = AuthenticationHash.generateRandomHashSync();
+
+            var verificationCode = authenticationHash.calculateVerificationCodeSync();
+
+            var authenticationResponse = _client
+                .createAuthenticationSync()
+                .withNationalIdentitySync(nationalIdentity)
+                .withAuthenticationHashSync(authenticationHash)
+                .withDisplayTextSync('Citizen OS Login')
+                .withCertificateLevelSync("QUALIFIED") // Certificate level can either be "QUALIFIED" or "ADVANCED"
+                .initiateAuthenticationSync();
+*/
+            return resolve({
+                challengeID: verificationCode,
+                sessionHash: targetArray.toString(),
+                sessionId: sessionId
             });
         });
     };
 
     var _signInitSmartId = function (topicId, voteId, userId, voteOptions, pid, countryCode, transaction) {
         return _createUserBdoc(topicId, voteId, userId, voteOptions, transaction)
-            .then(function (data) {
-                return _signature(pid, countryCode, data);
+            .then(function (bdoc) {
+                return _signature(pid, countryCode, bdoc);
             });
     };
 
@@ -513,13 +557,11 @@ function CosSmartId (app) {
                     chunks += chunk;
                 });
                 result.on('end', function () {
-                    var data = _parseJSON(chunks);        
-             //       console.log('DATA', data);            
+                    var data = _parseJSON(chunks);
                     if (data.result) {
                         if (data.result.endResult === 'OK') {
                             if (data.cert) {                                
                                 var cert = _setCert(data.cert.value);
-                //                console.log('DATA', cert);
                                 if (data.signature) {
                                     _parseCertData(cert)
                                         .then(function (certData) {
@@ -586,8 +628,10 @@ function CosSmartId (app) {
         getUserCertificate: _getUserCertificate,
         signInitSmartId: _signInitSmartId,
         signature: _signature,
+        statusSign: _statusSign,
         createUserBdoc: _createUserBdoc,
         status: _status,
+        statusAuth: _statusAuth,
         getVerificationCode: _getVerificationCode
     };
 }

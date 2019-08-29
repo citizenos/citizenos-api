@@ -32,6 +32,7 @@ module.exports = function (app) {
     var URL = require('url');
     var https = require('https');
     var smartId = app.get('smartId');
+    var java = app.get('java');
 
     var loginCheck = app.get('middleware.loginCheck');
     var authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
@@ -5526,67 +5527,12 @@ module.exports = function (app) {
             signingMethod = Vote.SIGNING_METHODS.smartId;
             getCertificatePromise = smartId
                     .getUserCertificate(pid, phoneNumber)
-                    .then(function (signInitResponse) {
-                        return smartId
-                            .status(signInitResponse.sessionId, signInitResponse.sessionHash)
-                            .then(function (cert) {
-                                return {
-                                    certificate: cert,
-                                    format: 'pem'
-                                };
-                            });
-                        /*var sessionData = {
-                            sessionId: signInitResponse.sessionId,
-                            voteOptions: voteOptions,
-                            sessionHash: signInitResponse.sessionHash,
-                            userId: userId, // Required for un-authenticated signing.
-                            voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
-                        };
-
-                        // Send JWT with state and expect it back in /sign /status - https://trello.com/c/ZDN2WomW/287-bug-id-card-signing-does-not-work-for-some-users
-                        // Wrapping sessionDataEncrypted in object, otherwise jwt.sign "expiresIn" will not work - https://github.com/auth0/node-jsonwebtoken/issues/166
-                        var sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
-                        var token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
-                            expiresIn: '5m',
-                            algorithm: config.session.algorithm
-                        });
-
-                        return res.ok({
-                            challengeID: signInitResponse.challengeID,
-                            token: token
-                        }, 1);*/
-                    });
-           /* signingMethod = Vote.SIGNING_METHODS.smartId;
-            return smartId
-                .createUserBdoc(topicId, voteId, userId, voteOptions)
-                .then(function (bdoc) {
-                    return smartId
-                        .signature(pid, countryCode, bdoc)
-                        .then(function (signInitResponse) {
-                            console.log('signInitResponse', signInitResponse);
-                            var sessionData = {
-                                sessionId: signInitResponse.sessionId,
-                                voteOptions: voteOptions,
-                                sessionHash: signInitResponse.sessionHash,
-                                userId: userId, // Required for un-authenticated signing.
-                                voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
+                        .then(function (cert) {
+                            return {
+                                certificate: cert,
+                                format: 'pem'
                             };
-
-                            // Send JWT with state and expect it back in /sign /status - https://trello.com/c/ZDN2WomW/287-bug-id-card-signing-does-not-work-for-some-users
-                            // Wrapping sessionDataEncrypted in object, otherwise jwt.sign "expiresIn" will not work - https://github.com/auth0/node-jsonwebtoken/issues/166
-                            var sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
-                            var token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
-                                expiresIn: '5m',
-                                algorithm: config.session.algorithm
-                            });
-
-                            return res.ok({
-                                challengeID: signInitResponse.challengeID,
-                                token: token
-                            }, 1);
-                        });
-                });*/
-     //   } else {
+                    });
 
             
             } else if (certificate) {
@@ -6140,7 +6086,7 @@ module.exports = function (app) {
 
         if (idSignFlowData.sessionId && idSignFlowData.sessionHash) {
             smartId
-                .status(idSignFlowData.sessionId, idSignFlowData.sessionHash)
+                .statusSign(idSignFlowData.sessionId, idSignFlowData.sessionHash)
                 .then(function (statusCode) {
                     switch (statusCode.state) {
                         case 'RUNNING':
