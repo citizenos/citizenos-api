@@ -1,36 +1,35 @@
 <!-- E-mail sent to User who reported the Topic -->
 <p>
-    Hello <span class="blue">{{userReporter.name}}</span>,
+    Здраво <span class="blue">{{userReporter.name}}</span>,
 </p>
 <p class="important">
-    <b>A moderator has reviewed your report <span class="blue">#{{report.id}}</span>, which you submitted on {{report.createdAt}} about Citizen OS topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" being inappropriate.</b>
-    <br><br>
-    There is nothing you need to do, this email is for your information.
+    <b>Модератор ја разгледа пријавата <span class="blue">#{{report.id}}</span>, поднесена на {{report.createdAt}} за тоа дека вашата Citizen OS-тема "<a href="{{linkViewTopic}}">{{topic.title}}</a>" е несоодветна.</b>
+    <br><br>Не треба ништо да направите, оваа е-пошта е само информативна.
 </p>
 
-<h1>Decision of the moderator:</h1>
+<h1>Одлука на модераторот:</h1>
 <p>
 <ul>
-    <li class="li">Violation type: "{{report.moderatedReasonType}}"</li>
-    <li class="li">Reasoning: "{{report.moderatedReasonText}}"</li>
+    <li class="li">Повреда од тип: "{{report.moderatedReasonType}}"</li>
+    <li class="li">Објасување: "{{report.moderatedReasonText}}"</li>
 </ul>
 </p>
 <p>
-    When accessing the topic, users will now see an overlay, warning about violations in the topic. However, viewers have an option to bypass the overlay and view topic content at their own risk anyway
+    Кога ѝ пристапуваат на темата, корисниците сега ќе видат преклопување, предупредување дека има повреди во темата. Сепак, гледачите имаат опција да го поминат преклопот и да ја гледаат содржината на темата на сопствен ризик
 </p>
 
-<h1>What happens next?</h1>
+<h1>Што е следно?</h1>
 <p>
 <ol>
-    <li class="li">Admins and editors of the topic have also received the report. They can edit their topic at any time to clear possible violations. They can then send the topic to moderators for review.</li>
-    <li class="li">Upon a review request, moderators will review the topic and remove restrictions if violations have been cleared.</li>
-    <li class="li">Until such time, access to the topic will remain restricted.</li>
+    <li class="li">Администраторите и уредниците на темата исто така ја добија пријавата. Можат да ја уредат својата тема во кое било време за да ги отстранат можните повреди. Потоа, можат да им на пратат темата на модераторите на разгледување.</li>
+    <li class="li">По барање за разгледување, модераторите ќе ја разгледаат темата и ќе ги отстранат ограничувањата ако биле отстранети повредите.</li>
+    <li class="li">Дотогаш, пристапот до темата ќе остане ограничен.</li>
 </ol>
 </p>
-<p><a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process here.</a></p>
+<p><a href="{{linkViewModerationGuidelines}}">Повеќе детали за процесот за модерирање на Citizen OS можете да дознаете тука.</a></p>
 
 <hr/>
 
 <p>
-    Thank you for helping us ensure a high quality of content in Citizen OS user community!
+    Ви благодариме што ни помагате да го одржуваме високиот квалитет на содржината во заедницата на корисници на Citizen OS!
 </p>
