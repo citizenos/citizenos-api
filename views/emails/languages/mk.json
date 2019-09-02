@@ -2,7 +2,7 @@
   "LAYOUT": {
     "LINK_TO_PLATFORM": "Линк до платформата",
     "LINK_PRIVACY_POLICY": "Политика на приватност",
-    "EMPOWERED_BY": "Empowered by"
+    "EMPOWERED_BY": "Покренато од"
   },
   "ACCOUNT_VERIFICATION": {
     "SUBJECT": "Активирајте ја својата Citizen OS-сметка"
@@ -16,40 +16,40 @@
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Reset your Citizen OS account password"
+    "SUBJECT": "Ресетирајте ја својата Citizen OS-лозинка"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Thank you, we received your report (#{{report.id}})"
+    "SUBJECT": "Благодариме, ја добивме вашата пријава (#{{report.id}})"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: your Citizen OS topic may contain a violation of guidelines"
+    "SUBJECT": "Пријава #{{report.id}}: вашата Citizen OS-тема можеби ги повредува насоките"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "A Citizen OS topic has been reported (#{{report.id}}), please moderate"
+    "SUBJECT": "Пријавена е Citizen OS-тема (#{{report.id}}), ве молиме, модерирајте"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Your Citizen OS report #{{report.id}} has been reviewed"
+    "SUBJECT": "Разгледана е вашата Citizen OS-пријава #{{report.id}}"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: Your Citizen OS topic has been reviewed by a moderator"
+    "SUBJECT": "Пријава #{{report.id}}: Вашата Citizen OS-тема ја разгледа модератор"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "A reported (#{{report.id}}) Citizen OS topic has been revised, please review"
+    "SUBJECT": "Пријавена (#{{report.id}}) Citizen OS-тема е изменета, ве молиме разгледајте ја"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: access to your Citizen OS topic has been restored."
+    "SUBJECT": "Пријава #{{report.id}}: обновен е пристап до вашата Citizen OS-тема."
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
-    "SUBJECT": "Your report (#{{report.id}}) in Citizen OS has been resolved"
+    "SUBJECT": "Решена е вашата пријава (#{{report.id}}) во Citizen OS"
   },
   "REPORT": {
     "REPORT_TYPE": {
-      "ABUSE": "Is abusive or insulting",
-      "OBSCENE": "Contains obscene language",
-      "SPAM": "Contains spam or is unrelated to topic",
-      "HATE": "Contains hate speech",
-      "NETIQUETTE": "Infringes (n)etiquette",
-      "DUPLICATE": "Is a duplicate"
+      "ABUSE": "Е нападен или навредлив",
+      "OBSCENE": "Користи нецензуриран јазик",
+      "SPAM": "Содржи спам или е неповрзан со темата",
+      "HATE": "Содржи говор на омраза",
+      "NETIQUETTE": "Прекршува (н)етикеција",
+      "DUPLICATE": "Е дупликат"
     }
   },
   "REPORT_COMMENT": {
