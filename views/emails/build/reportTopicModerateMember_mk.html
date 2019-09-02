@@ -1,33 +1,33 @@
 <!-- E-mail sent to Topic members of a reported Topic -->
 <p>
-    Hello <span class="blue">{{userMember.name}}</span>,
+    Здраво <span class="blue">{{userMember.name}}</span>,
 </p>
 <p class="important">
-    <b>A moderator has reviewed the report <span class="blue">#{{report.id}}</span>, which was submitted on {{report.createdAt}} about your Citizen OS topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" being inappropriate.</b>
+    <b>Модератор ја разгледа пријавата <span class="blue">#{{report.id}}</span>, поднесена на {{report.createdAt}} за тоа дека вашата Citizen OS-тема "<a href="{{linkViewTopic}}">{{topic.title}}</a>" е несоодветна.</b>
 </p>
 
-<h1>Decision of the moderator:</h1>
+<h1>Одлука на модераторот:</h1>
 <p>
 <ul>
-    <li class="li">Violation type: "{{report.moderatedReasonType}}"</li>
-    <li class="li">Reasoning: "{{report.moderatedReasonText}}"</li>
+    <li class="li">Повреда од тип: "{{report.moderatedReasonType}}"</li>
+    <li class="li">Објасување: "{{report.moderatedReasonText}}"</li>
 </ul>
 </p>
 <p>
-    When accessing your topic, users will now see an overlay, warning about violations in the topic. However, viewers have an option to bypass the overlay and view topic content at their own risk anyway.
+    Кога ѝ пристапуваат на вашата тема, корисниците сега ќе видат преклопување, предупредување за повредата во темата. Сепак, гледачите имаат опција да го поминат преклопот и да ја видат содржината на темата на сопствен ризик.
 </p>
 
-<h1>What happens next?</h1>
+<h1>Што е следно?</h1>
 <p>
 <ol>
-    <li class="li">You and other admins and editors of the topic can edit topic content at any time to clear possible violations. You can then send the topic to moderators for review.</li>
-    <li class="li">Upon a review request, moderators will review the topic and remove restrictions if violations have been cleared.</li>
-    <li class="li">Until such time, access to the topic will remain restricted.</li>
+    <li class="li">Вие и другите арминистратори и уредници на темата ќе можете да ја уредувате содржината на темата во кое било време за да ги отстраните можните повреди. Потоа, можете да им ја пратите темата на модераторите на разгледување.</li>
+    <li class="li">По барање за разгледување, модераторите ќе ја разгледаат темата и ќе ги отстранат ограничувањата ако биле отстранети повредите.</li>
+    <li class="li">Дотогаш, пристапот до темата ќе остане ограничен.</li>
 </ol>
 </p>
-<p><a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process here.</a></p>
+<p><a href="{{linkViewModerationGuidelines}}">Повеќе детали за процесот на модерирање на Citizen OS можете да најдете тука.</a></p>
 
 <hr/>
 <p>
-    Please review your topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" and see if it contains violations of community guidelines. Together we can maintain a high quality of content in Citizen OS user community.
+    Проверете ја својата тема "<a href="{{linkViewTopic}}">{{topic.title}}</a>" и видете дали ги повредува насоките на заедницата. Заедно можеме да го одржуваме високиот квалитет на содржината во заедницата на Citizen OS- корисници.
 </p>
