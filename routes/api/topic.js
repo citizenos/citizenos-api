@@ -2318,7 +2318,10 @@ module.exports = function (app) {
                             .then(function (users) {
                                 var userCreateActivityPromises = [];
                                 users.forEach(function (u) {
-                                    userCreateActivityPromises.push(cosActivities.createActivity(u, null, {type: 'System', ip: req.ip}, req.method + ' ' + req.path, t));
+                                    userCreateActivityPromises.push(cosActivities.createActivity(u, null, {
+                                        type: 'System',
+                                        ip: req.ip
+                                    }, req.method + ' ' + req.path, t));
                                 });
 
                                 return Promise.all(userCreateActivityPromises)
@@ -3689,33 +3692,33 @@ module.exports = function (app) {
             }
         });
 
-        let topicReport = await TopicReport.findOne({
+        let topicReportRead = await TopicReport.findOne({
             where: {
                 id: req.params.reportId,
                 topicId: req.params.topicId
             }
         });
 
-        if (!topic || !topicReport) {
+        if (!topic || !topicReportRead) {
             return res.notFound();
         }
 
-        if (topicReport.resolvedById) {
+        if (topicReportRead.resolvedById) {
             return res.badRequest('Report has become invalid cause the report has been already resolved', 11);
         }
 
-        if (topicReport.moderatedById) {
+        if (topicReportRead.moderatedById) {
             return res.badRequest('Report has become invalid cause the report has been already moderated', 12);
         }
 
-        topicReport = await db
+        let topicReportSaved = await db
             .transaction(function (t) {
-                topicReport.moderatedById = req.user.id;
-                topicReport.moderatedAt = db.fn('NOW');
-                topicReport.moderatedReasonType = moderatedReasonType || ''; // HACK: If Model has "allowNull: true", it will skip all validators when value is "null"
-                topicReport.moderatedReasonText = moderatedReasonText || ''; // HACK: If Model has "allowNull: true", it will skip all validators when value is "null"
+                topicReportRead.moderatedById = req.user.id;
+                topicReportRead.moderatedAt = db.fn('NOW');
+                topicReportRead.moderatedReasonType = moderatedReasonType || ''; // HACK: If Model has "allowNull: true", it will skip all validators when value is "null"
+                topicReportRead.moderatedReasonText = moderatedReasonText || ''; // HACK: If Model has "allowNull: true", it will skip all validators when value is "null"
 
-                return topicReport
+                return topicReportRead
                     .save({
                         transaction: t,
                         returning: true
@@ -3725,13 +3728,13 @@ module.exports = function (app) {
         // Pass on the Topic info we loaded, don't need to load Topic again.
         await emailLib.sendTopicReportModerate(Object.assign(
             {},
-            topicReport.toJSON(),
+            topicReportSaved.toJSON(),
             {
                 topic: topic
             }
         ));
 
-        return res.ok(topicReport);
+        return res.ok(topicReportSaved);
     }));
 
     /** Send a Topic report for review - User let's Moderators know that the violations have been corrected **/
@@ -5671,7 +5674,10 @@ module.exports = function (app) {
                                             )
                                             .then(function (user) {
                                                 cosActivities
-                                                    .createActivity(user, null, {type: 'System', ip: req.ip}, req.method + ' ' + req.path, t)
+                                                    .createActivity(user, null, {
+                                                        type: 'System',
+                                                        ip: req.ip
+                                                    }, req.method + ' ' + req.path, t)
                                                     .then(function () {
                                                         return UserConnection
                                                             .create(
@@ -5929,7 +5935,10 @@ module.exports = function (app) {
                                     vl[key] = el;
                                 });
 
-                                var actor = {type: 'User', ip: req.ip};
+                                var actor = {
+                                    type: 'User',
+                                    ip: req.ip
+                                };
                                 if (userId) {
                                     actor.id = userId;
                                 }
@@ -6129,7 +6138,10 @@ module.exports = function (app) {
                                             el = VoteList.build(el.dataValues);
                                             vl[key] = el;
                                         });
-                                        var actor = {type: 'User', ip: req.ip};
+                                        var actor = {
+                                            type: 'User',
+                                            ip: req.ip
+                                        };
                                         if (userId) {
                                             actor.id = userId;
                                         }
@@ -6362,7 +6374,10 @@ module.exports = function (app) {
                 var container = voteUserContainer.dataValues.container;
                 delete voteUserContainer.dataValues.container;
 
-                var actor = {type: 'User', ip: req.ip};
+                var actor = {
+                    type: 'User',
+                    ip: req.ip
+                };
                 if (userId) {
                     actor.id = userId;
                 }
@@ -6731,7 +6746,10 @@ module.exports = function (app) {
                                 }
                             )
                             .then(function (event) {
-                                var actor = {type: 'User', ip: req.ip};
+                                var actor = {
+                                    type: 'User',
+                                    ip: req.ip
+                                };
 
                                 if (req.user && req.user.id) {
                                     actor.id = req.user.id;
