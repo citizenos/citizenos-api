@@ -1,39 +1,39 @@
 <!-- E-mail sent to moderators when a Topic is reported -->
 <p>
-    Hello <span class="blue">{{userModerator.name}}</span>,
+    Hei <span class="blue">{{userModerator.name}}</span>,
 </p>
 <p class="important">
-    <b>You are receiving this email as a Citizen OS community moderator.</b>
+    <b> Saat tämän sähköpostin Citizen OS:n yhteisön moderoijana.</b>
     <br><br>
-    A Citizen OS user thinks there is a violation of community guidelines in the topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>". Please find below the report they filed.
+    Citizen OS:n käyttäjän mielestä yhteisön ohjeita on rikottu aiheessa ”<a href="{{linkViewTopic}}">{{topic.title}}</a>”. Voit löytää hänen jättämänsä ilmoituksen tämän alta.
 </p>
 
-<h1>What happens next?</h1>
+<h1>Mitä tapahtuu seuraavaksi?</h1>
 <p>
 <ol>
     <li class="li">
-        Please review the report, the topic, and then decide:
+        Ole hyvä ja arvioi ilmoitus ja aihe. Päätä sitten:
         <ul>
-            <li><b>YES</b>, there is a violation of community guidelines, restrict access to the topic.</li>
-            <li></b>NO</b> violation, dismiss the report.</li>
+            <li><b>KYLLÄ</b>, yhteisön ohjeita on rikottu. Rajoita aiheen käyttöoikeuksia.</li>
+            <li></b>EI</b> rikkomusta. Hylkää ilmoitus.</li>
         </ul>
     </li>
-    <li class="li">Admins and editors of the topic have also received this report. They can edit the topic at any time to clear possible violations. They can then send the topic to moderators for
-        review.
+    <li class="li">Aiheen ylläpitäjät ja muokkaajat ovat myös vastaanottaneet tämän raportin. He voivat muokata aihetta koska tahansa korjatakseen mahdolliset rikkomukset. He voivat sitten lähettää aiheen moderoijien
+        arvioitavaksi.
     </li>
-    <li class="li">Upon a review request, you can review the topic and remove all restrictions if violations have been cleared.
+    <li class="li">Arviointipyynnön saatuasi voit arvioida aiheen ja poistaa kaikki rajoitukset, mikäli rikkomukset on korjattu.
     </li>
 </ol>
 </p>
-<p><a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process here.</a></p>
+<p><a href="{{linkViewModerationGuidelines}}">Voit löytää lisää tietoja Citizen OS:n moderointiprosessista täältä.</a></p>
 
-<h1>Details of the report</h1>
-<p>Topic: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
-<p>Report reference number: <b>{{report.id}}</b>
-<p>Type of violation: <b>"{{report.type}}"</b>
-<p>Your explanation: <b>"{{report.text}}"</b>
+<h1>Ilmoituksen tiedot</h1>
+<p>Aihe: <b><a href="{{linkViewTopic}}">{{topic.title}}</a></b>
+<p>Ilmoituksen viitenumero: <b>{{report.id}}</b>
+<p>Sääntörikkomuksen tyyppi: <b>{{report.type}}</b>
+<p>Selityksesi: <b>{{report.text}}</b>
 
 <hr/>
 <p>
-    Thank you! Together we can maintain a high quality of content in Citizen OS user community.
+    Kiitos! Voimme yhdessä ylläpitää sisällön korkeaa laatua Citizen OS:n käyttäjäyhteisössä.
 </p>
