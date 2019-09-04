@@ -988,7 +988,7 @@ module.exports = function (app) {
 
         passport.authenticate('facebook', {
             scope: ['email'],
-            display: 'popup'
+            display: req.query.display ? 'popup' : null
         })(req, res, next);
     });
 
