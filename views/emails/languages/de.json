@@ -14,7 +14,7 @@
     "SUBJECT": "{{fromUser.name}} lädt Sie ein, eine gemeinsame Entscheidung zu treffen",
     "SUBJECT_rahvaalgatus_ee": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust",
-    "SUBJECT_rahvaalgatus_test": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust"
+    "SUBJECT_rahvaalgatus_test": "{{fromUser.name}}, user of rahvaalgatus.ee invites you to co-create a discussion/initiative"
   },
   "PASSWORD_RESET": {
     "SUBJECT": "Passwort für Ihr Citizen OS Konto zurücksetzen"
