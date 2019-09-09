@@ -4,6 +4,7 @@ files:
       - /views/emails/governmentNotification.html
       - /views/emails/inviteTopic_rahvaalgatus.ee.html
       - /views/emails/inviteTopic_uuseakus.rahvaalgatus.ee.html
+      - /views/emails/inviteTopic_rahvaalgatus.test.html
     translation: /views/emails/build/%file_name%_%two_letters_code%.%file_extension%
   - source: /views/emails/source.json
     translation: /views/emails/languages/%two_letters_code%.%file_extension%
