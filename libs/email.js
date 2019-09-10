@@ -393,13 +393,20 @@ module.exports = function (app) {
 
                     if (!sourceSite) {
                         // Handle CitizenOS links
-                        from = EMAIL_OPTIONS_DEFAULT.from;
+                        // from - comes from emailClient.js configuration
                         logoFile = emailHeaderLogo;
                         templateName = 'inviteTopic';
                         linkToApplication = urlLib.getFe();
                     } else {
                         // Handle Partner links
-                        from = 'info@' + sourceSite.match(/[^.]*\.[^.]*$/)[0]; // uuseakus.rahvaalgatus.ee to have from rahvaalgatus.ee so thta Mailgun would not reject it
+                        // HACK: Rahvaalgatus.ee staging env is rahvaalgatus.test but Mailgun will try to verify the "from" domain and fails...
+                        // Why not go for a better fix, as in add from email as part of Partner conf? We MAY end up droping SAAS model, that is partner specific code will be all gone anyway.
+                        // By dropping SAAS model I mean, if a Partner wants a deployment, we would give a separate server not run on our own.
+                        if (app.get('env') === 'production') {
+                            from = 'info@' + sourceSite.match(/[^.]*\.[^.]*$/)[0]; // uuseakus.rahvaalgatus.ee to have from rahvaalgatus.ee so thta Mailgun would not reject it
+                        } else { // testing, development...
+                            // from - comes from emailClient.js default configuration
+                        }
                         logoFile = templateRoot + '/images/logo-email_' + sourceSite + '.png';
                         templateName = 'inviteTopic_' + sourceSite;
                         linkToApplication = partner.website;
