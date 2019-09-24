@@ -70,40 +70,9 @@ module.exports = function (app) {
     var _verifyTokenRestrictedUse = function (token, audience, options) {
         var effectiveOptions = Object.assign({}, TOKEN_OPTIONS_VERIFY_DEFAULTS, options);
 
-        //eslint-disable-next-line
-        /** TODO: Uncomment this block when legacy token support is dropped! - https://github.com/citizenos/citizenos-api/issues/70
-         effectiveOptions.audience = audience;
+        effectiveOptions.audience = audience;
 
-         return jwt.verify(token, config.session.publicKey, effectiveOptions);
-         */
-
-        // TODO: Delete all below this when you uncomment the block above and drop the legacy token support! - https://github.com/citizenos/citizenos-api/issues/70
-        // NOTE: While legacy token with (path/paths) verification is required, not using jwt.verify-s audience option to verify the audience.
-        // When legacy token support is removed, can use "effectiveOptions.audience = audience;" and delete the whole manual verification code.
-        var decoded = jwt.verify(token, config.session.publicKey, effectiveOptions);
-
-        if (decoded.path) { // Let's see if its a legacy token with "path" string property containing path without method. Example: "/foo/bar"
-            if (decoded.path === audience.split(' ')[1]) {
-                return decoded;
-            } else {
-                throw new jwt.JsonWebTokenError('jwt audience invalid. expected: ' + audience);
-            }
-        } else if (decoded.paths) { // Let's see if its a legacy token with "paths" array property with path and method. Example: "['GET_/foo/bar']"
-            if (decoded.paths.indexOf(audience.replace(' ', '_')) > -1) {
-                return decoded;
-            } else {
-                throw new jwt.JsonWebTokenError('jwt audience invalid. expected: ' + audience);
-            }
-        } else if (decoded.aud) { // The right format by the JWT standard "aud" containing paths with methods separated by space.
-            if (decoded.aud.indexOf(audience) > -1) {
-                return decoded;
-            } else {
-                throw new jwt.JsonWebTokenError('jwt audience invalid. expected: ' + audience);
-            }
-        } else {
-            // No audience (scope) provided, we don't like that...
-            throw new jwt.JsonWebTokenError('jwt audience missing. expected: ' + audience);
-        }
+        return jwt.verify(token, config.session.publicKey, effectiveOptions);
     };
 
     return {

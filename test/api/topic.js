@@ -10074,48 +10074,6 @@ suite('Topics', function () {
                     });
                 });
 
-                test('Success - legacy token with "paths"', function (done) {
-                    var token = jwt.sign(
-                        {
-                            paths: [
-                                'GET_/api/topics/:topicId/comments/:commentId/reports/:reportId'
-                                    .replace(':topicId', topic.id)
-                                    .replace(':commentId', comment.id)
-                                    .replace(':reportId', report.id)
-                            ],
-                            userId: userModerator.id
-                        },
-                        config.session.privateKey,
-                        {
-                            algorithm: config.session.algorithm
-                        }
-                    );
-
-                    topicCommentReportRead(request.agent(app), topic.id, comment.id, report.id, token, function (err, res) {
-                        if (err) return done(err);
-
-                        var expectedResult = {
-                            status: {code: 20000},
-                            data: {
-                                id: report.id,
-                                type: report.type,
-                                text: report.text,
-                                createdAt: report.createdAt,
-                                comment: {
-                                    subject: comment.subject,
-                                    text: comment.text,
-                                    id: comment.id
-                                }
-                            }
-                        };
-
-                        assert.deepEqual(res.body, expectedResult);
-
-                        done();
-                    });
-                });
-
-
                 test('Fail - 40100 - Invalid token', function (done) {
                     var token = {};
                     _topicCommentReportRead(request.agent(app), topic.id, comment.id, report.id, token, 401, done);
@@ -10251,20 +10209,16 @@ suite('Topics', function () {
                     var moderateType = Comment.DELETE_REASON_TYPES.duplicate;
                     var moderateText = 'Report create moderation text';
 
-                    var token = jwt.sign(
+                    var token = cosJwt.getTokenRestrictedUse(
                         {
-                            paths: [
-                                'POST_/api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
-                                    .replace(':topicId', topic.id)
-                                    .replace(':commentId', comment.id)
-                                    .replace(':reportId', report.id)
-                            ],
                             userId: userModerator.id
                         },
-                        config.session.privateKey,
-                        {
-                            algorithm: config.session.algorithm
-                        }
+                        [
+                            'POST /api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
+                                .replace(':topicId', topic.id)
+                                .replace(':commentId', comment.id)
+                                .replace(':reportId', report.id)
+                        ]
                     );
 
                     topicCommentReportModerate(request.agent(app), topic.id, comment.id, report.id, token, moderateType, moderateText, function (err) {
@@ -10340,20 +10294,16 @@ suite('Topics', function () {
                                 var moderateType = Comment.DELETE_REASON_TYPES.duplicate;
                                 var moderateText = 'Report create moderation text';
 
-                                var token = jwt.sign(
+                                var token = cosJwt.getTokenRestrictedUse(
                                     {
-                                        paths: [
-                                            'POST_/api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
-                                                .replace(':topicId', topic.id)
-                                                .replace(':commentId', comment.id)
-                                                .replace(':reportId', report.id)
-                                        ],
                                         userId: userModerator.id
                                     },
-                                    config.session.privateKey,
-                                    {
-                                        algorithm: config.session.algorithm
-                                    }
+                                    [
+                                        'POST /api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
+                                            .replace(':topicId', topic.id)
+                                            .replace(':commentId', comment.id)
+                                            .replace(':reportId', report.id)
+                                    ]
                                 );
 
                                 Comment
@@ -10736,13 +10686,16 @@ suite('Topics', function () {
                 var subject = 'Test Event title, testing with token';
                 var text = 'Test Event description, testing with token';
 
-                var path = '/api/topics/:topicId/events'
-                    .replace(':topicId', topic.id);
-
-                var token = jwt.sign({path: path}, config.session.privateKey, {
-                    expiresIn: '1d',
-                    algorithm: config.session.algorithm
-                });
+                var token = cosJwt.getTokenRestrictedUse(
+                    {},
+                    [
+                        'POST /api/topics/:topicId/events'
+                            .replace(':topicId', topic.id)
+                    ],
+                    {
+                        expiresIn: '1d'
+                    }
+                );
 
                 topicEventCreateUnauth(agent, topic.id, token, subject, text, function (err, res) {
                     if (err) return done(err);

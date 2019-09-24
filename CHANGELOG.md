@@ -1,6 +1,9 @@
+## 2019-09-24
+* Dropped support for legacy restricted use token validation - https://github.com/citizenos/citizenos-api/issues/70
+
 ## 2019-08-02
 
-* Log user ip-s into acitivities table https://github.com/citizenos/citizenos-api/issues/133
+* Log user ip-s into activities table (Law enforcement) - https://github.com/citizenos/citizenos-api/issues/133
 
 ## 2019-07-19
 

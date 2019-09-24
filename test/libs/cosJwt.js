@@ -21,55 +21,6 @@ suite('cosJwt', function () {
         done();
     });
 
-    test('Success - legacy token "path" string without a method. Example: "/foo/bar"', function (done) {
-        var testAudience = 'GET /foo/bar';
-        var testAudienceLegacy = testAudience.split(' ')[1];
-
-        var testPayload = {
-            foo: 'bar',
-            path: testAudienceLegacy
-        };
-
-        var token = jwt.sign(
-            testPayload,
-            config.session.privateKey,
-            {
-                algorithm: config.session.algorithm
-            }
-        );
-
-        var decoded = cosJwt.verifyTokenRestrictedUse(token, testAudience);
-
-        assert.equal(decoded.foo, testPayload.foo);
-        assert.deepEqual(decoded.path, testAudienceLegacy);
-
-        done();
-    });
-
-    test('Success - legacy token "paths" array without a method. Example: "[\'GET_/foo/bar\']"', function (done) {
-        var testAudience = 'GET /api/foo/bar';
-        var testAudienceLegacy = testAudience.replace(' ', '_');
-        var testPayload = {
-            foo: 'bar',
-            paths: [testAudienceLegacy]
-        };
-
-        var token = jwt.sign(
-            testPayload,
-            config.session.privateKey,
-            {
-                algorithm: config.session.algorithm
-            }
-        );
-
-        var decoded = cosJwt.verifyTokenRestrictedUse(token, testAudience);
-
-        assert.equal(decoded.foo, testPayload.foo);
-        assert.deepEqual(decoded.paths, [testAudienceLegacy]);
-
-        done();
-    });
-
     test('Success - multiple audiences (scopes)', function (done) {
         var testPayload = {foo: 'bar'};
         var testAudiences = ['GET /asd', 'POST /api/foo/bar'];
@@ -168,7 +119,7 @@ suite('cosJwt', function () {
             return done(new Error('Should fail due to invalid audience!'));
         } catch (err) {
             assert.instanceOf(err, jwt.JsonWebTokenError);
-            assert.equal(err.message, 'jwt audience missing. expected: ' + testAudience);
+            assert.equal(err.message, 'jwt audience invalid. expected: ' + testAudience);
 
             done();
         }
