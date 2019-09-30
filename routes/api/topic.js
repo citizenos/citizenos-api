@@ -31,6 +31,7 @@ module.exports = function (app) {
     var encoder = app.get('encoder');
     var URL = require('url');
     var https = require('https');
+    var uuid = app.get('uuid');
 
     var loginCheck = app.get('middleware.loginCheck');
     var authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
@@ -45,6 +46,7 @@ module.exports = function (app) {
     var TopicMemberUser = models.TopicMemberUser;
     var TopicMemberGroup = models.TopicMemberGroup;
     var TopicReport = models.TopicReport;
+    var TopicInvite = models.TopicInvite;
 
     var Report = models.Report;
 
@@ -577,7 +579,7 @@ module.exports = function (app) {
         return urlLib.getApi(signOptions.path, null, urlOptions);
     };
 
-    var readTopicUnauth = function (topicId, include) {
+    var _topicReadUnauth = function (topicId, include) {
         var join = '';
         var returncolumns = '';
 
@@ -719,6 +721,275 @@ module.exports = function (app) {
                     nest: true
                 }
             );
+    };
+
+    var _topicReadAuth = async function (topicId, include, user, partner) {
+        var join = '';
+        var returncolumns = '';
+
+        if (include && !Array.isArray(include)) {
+            include = [include];
+        }
+
+        if (include) {
+            if (include.indexOf('vote') > -1) {
+                join += ' \
+                    LEFT JOIN ( \
+                                SELECT "voteId", to_json(array( \
+                                    SELECT CONCAT(id, \':\', value) \
+                                    FROM "VoteOptions" \
+                                    WHERE "deletedAt" IS NULL AND vo."voteId"="voteId" \
+                                )) as "optionIds" \
+                                FROM "VoteOptions" vo \
+                                WHERE vo."deletedAt" IS NULL \
+                                GROUP BY "voteId" \
+                            ) AS vo ON vo."voteId"=tv."voteId" ';
+                returncolumns += ' \
+                    , vo."optionIds" as "vote.options" \
+                    , tv."voteId" as "vote.id" \
+                    , tv."authType" as "vote.authType" \
+                    , tv."createdAt" as "vote.createdAt" \
+                    , tv."delegationIsAllowed" as "vote.delegationIsAllowed" \
+                    , tv."description" as "vote.description" \
+                    , tv."endsAt" as "vote.endsAt" \
+                    , tv."maxChoices" as "vote.maxChoices" \
+                    , tv."minChoices" as "vote.minChoices" \
+                    , tv."type" as "vote.type" \
+                    ';
+            }
+
+            if (include.indexOf('event') > -1) {
+                join += '\
+                    LEFT JOIN ( \
+                        SELECT COUNT(events.id) as count, \
+                        events."topicId" \
+                        FROM "TopicEvents" events\
+                        WHERE events."topicId" = :topicId \
+                        AND events."deletedAt" IS NULL \
+                        GROUP BY events."topicId" \
+                    ) as te ON te."topicId" = t.id \
+                ';
+                returncolumns += ' \
+                    , COALESCE(te.count, 0) AS "events.count" \
+                    ';
+            }
+        }
+
+        if (user.moderator) {
+            returncolumns += ' \
+            , c.email as "creator.email" \
+            , uc."connectionData"::jsonb->>\'pid\' AS "creator.pid" \
+            , uc."connectionData"::jsonb->\'phoneNumber\' AS "creator.phoneNumber" \
+            ';
+
+            returncolumns += ' \
+            , tr."type" AS "report.type" \
+            , tr."text" AS "report.text" \
+            ';
+        }
+
+        return db
+            .query(
+                'SELECT \
+                        t.id, \
+                        t.title, \
+                        t.description, \
+                        t.status, \
+                        t.visibility, \
+                        t.hashtag, \
+                        CASE \
+                        WHEN COALESCE(tmup.level, tmgp.level, \'none\') = \'admin\' THEN t."tokenJoin" \
+                        ELSE NULL \
+                        END as "tokenJoin", \
+                        CASE \
+                        WHEN tp."topicId" = t.id THEN true \
+                        ELSE false \
+                        END as "pinned", \
+                        t.categories, \
+                        t."endsAt", \
+                        t."padUrl", \
+                        t."sourcePartnerId", \
+                        t."sourcePartnerObjectId", \
+                        t."createdAt", \
+                        t."updatedAt", \
+                        c.id as "creator.id", \
+                        c.name as "creator.name", \
+                        c.company as "creator.company", \
+                        COALESCE(\
+                        tmup.level, \
+                        tmgp.level, \
+                        \'none\' \
+                    ) as "permission.level", \
+                        muc.count as "members.users.count", \
+                        COALESCE(mgc.count, 0) as "members.groups.count", \
+                        tv."voteId", \
+                        u.id as "user.id", \
+                        u.name as "user.name", \
+                        u.language as "user.language", \
+                        tr.id AS "report.id", \
+                        tr."moderatedReasonType" AS "report.moderatedReasonType", \
+                        tr."moderatedReasonText" AS "report.moderatedReasonText" \
+                        ' + returncolumns + ' \
+                FROM "Topics" t \
+                        LEFT JOIN ( \
+                        SELECT \
+                            tmu."topicId", \
+                            tmu."userId", \
+                            tmu.level::text AS level \
+                        FROM "TopicMemberUsers" tmu \
+                        WHERE tmu."deletedAt" IS NULL \
+                    ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId) \
+                    LEFT JOIN ( \
+                        SELECT \
+                            tmg."topicId", \
+                            gm."userId", \
+                            MAX(tmg.level)::text AS level \
+                        FROM "TopicMemberGroups" tmg \
+                            LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
+                        WHERE tmg."deletedAt" IS NULL \
+                        AND gm."deletedAt" IS NULL \
+                        GROUP BY "topicId", "userId" \
+                    ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId) \
+                    LEFT JOIN "Users" c ON (c.id = t."creatorId") \
+                    LEFT JOIN "UserConnections" uc ON (uc."userId" = t."creatorId") \
+                    LEFT JOIN ( \
+                        SELECT tmu."topicId", COUNT(tmu."memberId") AS "count" FROM ( \
+                            SELECT \
+                                tmuu."topicId", \
+                                tmuu."userId" AS "memberId" \
+                            FROM "TopicMemberUsers" tmuu \
+                            WHERE tmuu."deletedAt" IS NULL \
+                            UNION \
+                            SELECT \
+                                tmg."topicId", \
+                                gm."userId" AS "memberId" \
+                            FROM "TopicMemberGroups" tmg \
+                                LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
+                                JOIN "Groups" gr ON gr.id = tmg."groupId" \
+                            WHERE tmg."deletedAt" IS NULL \
+                            AND gm."deletedAt" IS NULL \
+                            AND gr."deletedAt" IS NULL \
+                        ) AS tmu GROUP BY "topicId" \
+                    ) AS muc ON (muc."topicId" = t.id) \
+                    LEFT JOIN ( \
+                        SELECT "topicId", count("groupId") AS "count" \
+                        FROM "TopicMemberGroups" tmg \
+                        JOIN "Groups" g ON tmg."groupId" = g.id \
+                        WHERE tmg."deletedAt" IS NULL \
+                        AND g."deletedAt" IS NULL \
+                        GROUP BY "topicId" \
+                    ) AS mgc ON (mgc."topicId" = t.id) \
+                    LEFT JOIN "Users" u ON (u.id = :userId) \
+                    LEFT JOIN ( \
+                        SELECT \
+                            tv."topicId", \
+                            tv."voteId", \
+                            v."authType", \
+                            v."createdAt", \
+                            v."delegationIsAllowed", \
+                            v."description", \
+                            v."endsAt", \
+                            v."maxChoices", \
+                            v."minChoices", \
+                            v."type" \
+                        FROM "TopicVotes" tv INNER JOIN \
+                            (   \
+                                SELECT \
+                                    MAX("createdAt") as "createdAt", \
+                                    "topicId" \
+                                FROM "TopicVotes" \
+                                GROUP BY "topicId" \
+                            ) AS _tv ON (_tv."topicId" = tv."topicId" AND _tv."createdAt" = tv."createdAt") \
+                        LEFT JOIN "Votes" v \
+                                ON v.id = tv."voteId" \
+                    ) AS tv ON (tv."topicId" = t.id) \
+                    LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId \
+                    LEFT JOIN "TopicReports" tr ON (tr."topicId" = t.id AND tr."resolvedById" IS NULL AND tr."deletedAt" IS NULL) \
+                    ' + join + ' \
+                WHERE t.id = :topicId \
+                    AND t."deletedAt" IS NULL \
+                ',
+                {
+                    replacements: {
+                        topicId: topicId,
+                        userId: user.id
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            )
+            .then(function (result) {
+                if (result && result.length && result[0]) {
+                    return result[0];
+                } else {
+                    logger.warn('Topic not found', topicId);
+                    return Promise.reject();
+                }
+            })
+            .then(function (topic) {
+                topic.padUrl = cosEtherpad.getUserAccessUrl(topic, topic.user.id, topic.user.name, topic.user.language, partner);
+                topic.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+
+                if (topic.visibility === Topic.VISIBILITY.public && topic.permission.level === TopicMemberUser.LEVELS.none) {
+                    topic.permission.level = TopicMemberUser.LEVELS.read;
+                }
+                // Remove the user info from output, was only needed for padUrl generation
+                delete topic.user;
+
+                if (include && include.indexOf('vote') > -1 && topic.vote && topic.vote.id) {
+
+                    return getVoteResults(topic.vote.id, user.id)
+                        .then(
+                            function (result) {
+                                var options = [];
+                                topic.vote.options.forEach(function (option) {
+                                    option = option.split(':');
+                                    var o = {
+                                        id: option[0],
+                                        value: option[1]
+                                    };
+                                    if (result) {
+                                        var res = _.find(result, {'optionId': o.id});
+                                        if (res) {
+                                            o.voteCount = parseInt(res.voteCount, 10);
+                                            if (res.selected) {
+                                                o.selected = res.selected;
+                                                topic.vote.downloads = {
+                                                    bdocVote: getBdocURL({
+                                                        userId: user.id,
+                                                        topicId: topicId,
+                                                        voteId: topic.vote.id,
+                                                        type: 'user'
+                                                    })
+                                                };
+                                            }
+                                        }
+                                    }
+                                    options.push(o);
+                                });
+                                topic.vote.options = {
+                                    count: options.length,
+                                    rows: options
+                                };
+
+                                if (!topic.report.id) {
+                                    delete topic.report;
+                                }
+
+                                return topic;
+                            }
+                        );
+                } else {
+                    delete topic.vote;
+
+                    if (!topic.report.id) {
+                        delete topic.report;
+                    }
+
+                    return topic;
+                }
+            });
     };
 
     var getAllVotesResults = function (userId) {
@@ -995,281 +1266,20 @@ module.exports = function (app) {
     /**
      * Read a Topic
      */
-    app.get('/api/users/:userId/topics/:topicId', loginCheck(['partner']), partnerParser, hasPermission(TopicMemberUser.LEVELS.read, true), isModerator(), function (req, res, next) {
-        var include = req.query.include;
-        var join = '';
-        var returncolumns = '';
-        var topicId = req.params.topicId;
+    app.get('/api/users/:userId/topics/:topicId', loginCheck(['partner']), partnerParser, hasPermission(TopicMemberUser.LEVELS.read, true), isModerator(), asyncMiddleware(async function (req, res, next) {
+        const include = req.query.include;
+        const topicId = req.params.topicId;
+        const user = req.user;
+        const partner = req.locals.partner;
 
-        if (include && !Array.isArray(include)) {
-            include = [include];
+        const topic = await _topicReadAuth(topicId, include, user, partner);
+
+        if (!topic) {
+            return res.notFound();
         }
 
-        if (include) {
-            if (include.indexOf('vote') > -1) {
-                join += ' \
-                    LEFT JOIN ( \
-                                SELECT "voteId", to_json(array( \
-                                    SELECT CONCAT(id, \':\', value) \
-                                    FROM "VoteOptions" \
-                                    WHERE "deletedAt" IS NULL AND vo."voteId"="voteId" \
-                                )) as "optionIds" \
-                                FROM "VoteOptions" vo \
-                                WHERE vo."deletedAt" IS NULL \
-                                GROUP BY "voteId" \
-                            ) AS vo ON vo."voteId"=tv."voteId" ';
-                returncolumns += ' \
-                    , vo."optionIds" as "vote.options" \
-                    , tv."voteId" as "vote.id" \
-                    , tv."authType" as "vote.authType" \
-                    , tv."createdAt" as "vote.createdAt" \
-                    , tv."delegationIsAllowed" as "vote.delegationIsAllowed" \
-                    , tv."description" as "vote.description" \
-                    , tv."endsAt" as "vote.endsAt" \
-                    , tv."maxChoices" as "vote.maxChoices" \
-                    , tv."minChoices" as "vote.minChoices" \
-                    , tv."type" as "vote.type" \
-                    ';
-            }
-
-            if (include.indexOf('event') > -1) {
-                join += '\
-                    LEFT JOIN ( \
-                        SELECT COUNT(events.id) as count, \
-                        events."topicId" \
-                        FROM "TopicEvents" events\
-                        WHERE events."topicId" = :topicId \
-                        AND events."deletedAt" IS NULL \
-                        GROUP BY events."topicId" \
-                    ) as te ON te."topicId" = t.id \
-                ';
-                returncolumns += ' \
-                    , COALESCE(te.count, 0) AS "events.count" \
-                    ';
-            }
-        }
-
-        if (req.user.moderator) {
-            returncolumns += ' \
-            , c.email as "creator.email" \
-            , uc."connectionData"::jsonb->>\'pid\' AS "creator.pid" \
-            , uc."connectionData"::jsonb->\'phoneNumber\' AS "creator.phoneNumber" \
-            ';
-
-            returncolumns += ' \
-            , tr."type" AS "report.type" \
-            , tr."text" AS "report.text" \
-            ';
-        }
-
-        db
-            .query(
-                'SELECT \
-                        t.id, \
-                        t.title, \
-                        t.description, \
-                        t.status, \
-                        t.visibility, \
-                        t.hashtag, \
-                        CASE \
-                        WHEN COALESCE(tmup.level, tmgp.level, \'none\') = \'admin\' THEN t."tokenJoin" \
-                        ELSE NULL \
-                        END as "tokenJoin", \
-                        CASE \
-                        WHEN tp."topicId" = t.id THEN true \
-                        ELSE false \
-                        END as "pinned", \
-                        t.categories, \
-                        t."endsAt", \
-                        t."padUrl", \
-                        t."sourcePartnerId", \
-                        t."sourcePartnerObjectId", \
-                        t."createdAt", \
-                        t."updatedAt", \
-                        c.id as "creator.id", \
-                        c.name as "creator.name", \
-                        c.company as "creator.company", \
-                        COALESCE(\
-                        tmup.level, \
-                        tmgp.level, \
-                        \'none\' \
-                    ) as "permission.level", \
-                        muc.count as "members.users.count", \
-                        COALESCE(mgc.count, 0) as "members.groups.count", \
-                        tv."voteId", \
-                        u.id as "user.id", \
-                        u.name as "user.name", \
-                        u.language as "user.language", \
-                        tr.id AS "report.id", \
-                        tr."moderatedReasonType" AS "report.moderatedReasonType", \
-                        tr."moderatedReasonText" AS "report.moderatedReasonText" \
-                        ' + returncolumns + ' \
-                FROM "Topics" t \
-                        LEFT JOIN ( \
-                        SELECT \
-                            tmu."topicId", \
-                            tmu."userId", \
-                            tmu.level::text AS level \
-                        FROM "TopicMemberUsers" tmu \
-                        WHERE tmu."deletedAt" IS NULL \
-                    ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId) \
-                    LEFT JOIN ( \
-                        SELECT \
-                            tmg."topicId", \
-                            gm."userId", \
-                            MAX(tmg.level)::text AS level \
-                        FROM "TopicMemberGroups" tmg \
-                            LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
-                        WHERE tmg."deletedAt" IS NULL \
-                        AND gm."deletedAt" IS NULL \
-                        GROUP BY "topicId", "userId" \
-                    ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId) \
-                    LEFT JOIN "Users" c ON (c.id = t."creatorId") \
-                    LEFT JOIN "UserConnections" uc ON (uc."userId" = t."creatorId") \
-                    LEFT JOIN ( \
-                        SELECT tmu."topicId", COUNT(tmu."memberId") AS "count" FROM ( \
-                            SELECT \
-                                tmuu."topicId", \
-                                tmuu."userId" AS "memberId" \
-                            FROM "TopicMemberUsers" tmuu \
-                            WHERE tmuu."deletedAt" IS NULL \
-                            UNION \
-                            SELECT \
-                                tmg."topicId", \
-                                gm."userId" AS "memberId" \
-                            FROM "TopicMemberGroups" tmg \
-                                LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
-                                JOIN "Groups" gr ON gr.id = tmg."groupId" \
-                            WHERE tmg."deletedAt" IS NULL \
-                            AND gm."deletedAt" IS NULL \
-                            AND gr."deletedAt" IS NULL \
-                        ) AS tmu GROUP BY "topicId" \
-                    ) AS muc ON (muc."topicId" = t.id) \
-                    LEFT JOIN ( \
-                        SELECT "topicId", count("groupId") AS "count" \
-                        FROM "TopicMemberGroups" tmg \
-                        JOIN "Groups" g ON tmg."groupId" = g.id \
-                        WHERE tmg."deletedAt" IS NULL \
-                        AND g."deletedAt" IS NULL \
-                        GROUP BY "topicId" \
-                    ) AS mgc ON (mgc."topicId" = t.id) \
-                    LEFT JOIN "Users" u ON (u.id = :userId) \
-                    LEFT JOIN ( \
-                        SELECT \
-                            tv."topicId", \
-                            tv."voteId", \
-                            v."authType", \
-                            v."createdAt", \
-                            v."delegationIsAllowed", \
-                            v."description", \
-                            v."endsAt", \
-                            v."maxChoices", \
-                            v."minChoices", \
-                            v."type" \
-                        FROM "TopicVotes" tv INNER JOIN \
-                            (   \
-                                SELECT \
-                                    MAX("createdAt") as "createdAt", \
-                                    "topicId" \
-                                FROM "TopicVotes" \
-                                GROUP BY "topicId" \
-                            ) AS _tv ON (_tv."topicId" = tv."topicId" AND _tv."createdAt" = tv."createdAt") \
-                        LEFT JOIN "Votes" v \
-                                ON v.id = tv."voteId" \
-                    ) AS tv ON (tv."topicId" = t.id) \
-                    LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId \
-                    LEFT JOIN "TopicReports" tr ON (tr."topicId" = t.id AND tr."resolvedById" IS NULL AND tr."deletedAt" IS NULL) \
-                    ' + join + ' \
-                WHERE t.id = :topicId \
-                    AND t."deletedAt" IS NULL \
-                ',
-                {
-                    replacements: {
-                        topicId: topicId,
-                        userId: req.user.id
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true,
-                    nest: true
-                }
-            )
-            .then(function (result) {
-                if (result && result.length && result[0]) {
-                    return result[0];
-                } else {
-                    res.notFound();
-
-                    return Promise.reject();
-                }
-            })
-            .then(function (topic) {
-                topic.padUrl = cosEtherpad.getUserAccessUrl(topic, topic.user.id, topic.user.name, topic.user.language, req.locals.partner);
-                topic.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
-
-                if (topic.visibility === Topic.VISIBILITY.public && topic.permission.level === TopicMemberUser.LEVELS.none) {
-                    topic.permission.level = TopicMemberUser.LEVELS.read;
-                }
-                // Remove the user info from output, was only needed for padUrl generation
-                delete topic.user;
-
-                if (include && include.indexOf('vote') > -1 && topic.vote && topic.vote.id) {
-
-                    return getVoteResults(topic.vote.id, req.user.id)
-                        .then(
-                            function (result) {
-                                var options = [];
-                                topic.vote.options.forEach(function (option) {
-                                    option = option.split(':');
-                                    var o = {
-                                        id: option[0],
-                                        value: option[1]
-                                    };
-                                    if (result) {
-                                        var res = _.find(result, {'optionId': o.id});
-                                        if (res) {
-                                            o.voteCount = parseInt(res.voteCount, 10);
-                                            if (res.selected) {
-                                                o.selected = res.selected;
-                                                topic.vote.downloads = {
-                                                    bdocVote: getBdocURL({
-                                                        userId: req.user.id,
-                                                        topicId: topicId,
-                                                        voteId: topic.vote.id,
-                                                        type: 'user'
-                                                    })
-                                                };
-                                            }
-                                        }
-                                    }
-                                    options.push(o);
-                                });
-                                topic.vote.options = {
-                                    count: options.length,
-                                    rows: options
-                                };
-
-                                if (!topic.report.id) {
-                                    delete topic.report;
-                                }
-
-                                return res.ok(topic);
-                            },
-                            function (err) {
-                                logger.error('ERROR', err);
-                            }
-                        );
-                } else {
-                    delete topic.vote;
-
-                    if (!topic.report.id) {
-                        delete topic.report;
-                    }
-
-                    return res.ok(topic);
-                }
-            })
-            .catch(next);
-    });
+        return res.ok(topic);
+    }));
 
     app.get('/api/topics/:topicId', function (req, res, next) {
         var include = req.query.include;
@@ -1279,7 +1289,7 @@ module.exports = function (app) {
             include = [include];
         }
 
-        readTopicUnauth(topicId, include)
+        _topicReadUnauth(topicId, include)
             .then(function (result) {
                 if (result && result.length && result[0]) {
                     var topic = result[0];
@@ -2779,7 +2789,6 @@ module.exports = function (app) {
     /**
      * Create new member Groups to a Topic
      */
-
     app.post('/api/users/:userId/topics/:topicId/members/groups', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), function (req, res, next) {
         var members = req.body;
         var topicId = req.params.topicId;
@@ -3274,6 +3283,68 @@ module.exports = function (app) {
             .catch(next);
 
     });
+
+    /**
+     * Invite new Members to the Topic
+     *
+     * Does NOT add a Member automatically, but will send an invite, which has to accept in order to become a Member of the Topic
+     *
+     * @see /api/users/:userId/topics/:topicId/members/users "Auto accept" - Adds a Member to the Topic instantly and sends a notification to the User.
+     */
+    app.post('/api/users/:userId/topics/:topicId/invites', hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res, next) {
+        // FIXME: PROTOTYPE.
+        // FIXME: Add recommendation to use this interface over POST /api/users/:userId/topics/:topicId/members to the interfaces JSDOC once the interfaces are finalized.
+
+        const topicId = req.params.topicId;
+        const userId = req.user.id;
+
+        let members = req.body;
+
+        if (!Array.isArray(members)) {
+            members = [members];
+        }
+
+        // FIXME: Send invite e-mails
+        // FIXME: Activity
+        var createdInvites = await db
+            .transaction(async function (t) {
+                const createInvitePromises = members.map(async function (member) {
+                    return await TopicInvite
+                        .create(
+                            {
+                                topicId: topicId,
+                                creatorId: userId,
+                                userId: member.userId,
+                                level: member.level
+                            },
+                            {
+                                transaction: t
+                            }
+                        )
+                });
+
+                return Promise.all(createInvitePromises);
+            });
+
+        return res.created(createdInvites);
+    }));
+
+    app.get('/api/topics/:topicId/invites/:inviteId', asyncMiddleware(async function (req, res, next) {
+        const topicId = req.params.topicId;
+        const inviteId = req.params.inviteId;
+
+        const invite = await TopicInvite
+            .findOne(
+                {
+                    where: {
+                        id: inviteId,
+                        topicId: topicId
+                    }
+                }
+            );
+
+        return res.ok(invite);
+    }));
 
     /**
      * Join authenticated User to Topic with a given token.
