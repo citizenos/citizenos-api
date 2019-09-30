@@ -66,7 +66,6 @@ module.exports = function (sequelize, DataTypes) {
             data.topic.id = this.dataValues.topicId;
         }
 
-
         return data;
     };
 

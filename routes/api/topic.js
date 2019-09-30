@@ -3341,6 +3341,10 @@ module.exports = function (app) {
                 }
             );
 
+        if (!invite) {
+            return res.notFound();
+        }
+
         return res.ok(invite);
     }));
 

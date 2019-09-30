@@ -1356,52 +1356,53 @@ module.exports.topicCommentCreate = topicCommentCreate;
 module.exports.topicMemberGroupsCreate = topicMemberGroupsCreate;
 module.exports.topicMemberUsersCreate = topicMemberUsersCreate;
 
-var chai = require('chai');
+const chai = require('chai');
 chai.use(require('chai-datetime'));
 chai.use(require('chai-shallow-deep-equal'));
-var assert = chai.assert;
-var request = require('supertest');
-var app = require('../../app');
+const assert = chai.assert;
+const request = require('supertest');
+const app = require('../../app');
 
-var config = app.get('config');
-var models = app.get('models');
-var db = models.sequelize;
-var _ = app.get('lodash');
-var cosUtil = app.get('util');
-var async = app.get('async');
-var fs = app.get('fs');
-var etherpadClient = app.get('etherpadClient');
-var cosEtherpad = app.get('cosEtherpad');
-var jwt = app.get('jwt');
-var cosJwt = app.get('cosJwt');
-var moment = app.get('moment');
-var validator = app.get('validator');
+const config = app.get('config');
+const models = app.get('models');
+const db = models.sequelize;
+const _ = app.get('lodash');
+const cosUtil = app.get('util');
+const async = app.get('async');
+const fs = app.get('fs');
+const etherpadClient = app.get('etherpadClient');
+const cosEtherpad = app.get('cosEtherpad');
+const jwt = app.get('jwt');
+const cosJwt = app.get('cosJwt');
+const moment = app.get('moment');
+const validator = app.get('validator');
 
-var shared = require('../utils/shared');
-var userLib = require('./lib/user')(app);
-var groupLib = require('./group');
-var authLib = require('./auth');
+const shared = require('../utils/shared');
+const userLib = require('./lib/user')(app);
+const groupLib = require('./group');
+const authLib = require('./auth');
 
-var User = models.User;
-var UserConnection = models.UserConnection;
+const User = models.User;
+const UserConnection = models.UserConnection;
 
-var Partner = models.Partner;
+const Partner = models.Partner;
 
-var Moderator = models.Moderator;
+const Moderator = models.Moderator;
 
-var GroupMember = models.GroupMember;
+const GroupMember = models.GroupMember;
 
-var Topic = models.Topic;
-var TopicMemberUser = models.TopicMemberUser;
-var TopicMemberGroup = models.TopicMemberGroup;
+const Topic = models.Topic;
+const TopicMemberUser = models.TopicMemberUser;
+const TopicMemberGroup = models.TopicMemberGroup;
+const TopicInvite = models.TopicInvite;
 
-var Comment = models.Comment;
+const Comment = models.Comment;
 
-var Report = models.Report;
+const Report = models.Report;
 
-var Vote = models.Vote;
-var VoteOption = models.VoteOption;
-var VoteDelegation = models.VoteDelegation;
+const Vote = models.Vote;
+const VoteOption = models.VoteOption;
+const VoteDelegation = models.VoteDelegation;
 
 // API - /api/users*
 suite('Users', function () {
@@ -4837,9 +4838,68 @@ suite('Users', function () {
             });
 
             suite('Read', function () {
+                const agentCreator = request.agent(app);
 
-                test('Success', function (done) {
-                    done(new Error('Not implemented!'));
+                let userCreator;
+                let userToInvite;
+
+                let topic;
+                let topicInviteCreated;
+                let topicInviteId;
+
+                suiteSetup(function (done) {
+                    userLib.createUser(request.agent(app), null, null, null, function (err, res) {
+                        if (err) return done(err);
+                        userToInvite = res;
+
+                        userLib.createUserAndLogin(agentCreator, null, null, null, function (err, res) {
+                            if (err) return done(err);
+
+                            userCreator = res;
+                            topicCreate(agentCreator, userCreator.id, null, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>', null, function (err, res) {
+                                if (err) return done(err);
+
+                                topic = res.body.data;
+
+                                const invitation = {
+                                    userId: userToInvite.id,
+                                    level: TopicMemberUser.LEVELS.read
+                                };
+
+                                topicInvitesCreate(agentCreator, userCreator.id, topic.id, invitation, function (err, res) {
+                                    if (err) return done(err);
+
+                                    topicInviteCreated = res.body.data[0];
+
+                                    TopicInvite
+                                        .findOne({
+                                            where: {
+                                                topicId: topic.id,
+                                                userId: userToInvite.id
+                                            }
+                                        })
+                                        .then(function (topicInvite) {
+                                            topicInviteId = topicInvite.id;
+
+                                            done();
+                                        })
+                                        .catch(done);
+                                });
+                            });
+                        });
+                    });
+                });
+
+                test('Success - 20000', function (done) {
+                    topicInvitesRead(request.agent(app), topic.id, topicInviteId, function (err, res) {
+                        if(err) return done(err);
+
+                        const inviteRead = res.body.data;
+
+                        assert.deepEqual(inviteRead, topicInviteCreated);
+
+                        done();
+                    });
                 });
 
             });
