@@ -4892,9 +4892,32 @@ suite('Users', function () {
 
                 test('Success - 20000', function (done) {
                     topicInvitesRead(request.agent(app), topic.id, topicInviteId, function (err, res) {
-                        if(err) return done(err);
+                        if (err) return done(err);
 
                         const inviteRead = res.body.data;
+
+                        //const expected = {
+                        //    createdAt: "2019-09-30T15:21:18.280Z",
+                        //    creator: {
+                        //        company: null,
+                        //        email: "test_0p3o19lgmryA1@test.com",
+                        //        id: "bd1fb556-149d-4877-aba3-f6be8fd9f077",
+                        //        imageUrl: null,
+                        //        language: "en",
+                        //        name: "Test 0p3o19lgmryA1",
+                        //    },
+                        //    level: "read",
+                        //    topic: {
+                        //        creator: {
+                        //            id: "bd1fb556-149d-4877-aba3-f6be8fd9f077"
+                        //        },
+                        //        id: "10b6b56e-57d4-4773-9587-39f4d65fced7",
+                        //        title: "TOPIC TITLE FOR INVITE TEST",
+                        //        visibility: "private",
+                        //    },
+                        //    updatedAt: "2019-09-30T15:21:18.280Z",
+                        //    userId: "48f7402b-5ba6-4e15-94d4-a986ff0799b2"
+                        //}
 
                         assert.deepEqual(inviteRead, topicInviteCreated);
 

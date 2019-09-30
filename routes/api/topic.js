@@ -3337,7 +3337,18 @@ module.exports = function (app) {
                     where: {
                         id: inviteId,
                         topicId: topicId
-                    }
+                    },
+                    include: [
+                        {
+                            model: Topic,
+                            attributes: ['id', 'title', 'visibility', 'creatorId'],
+                            as: 'topic'
+                        },
+                        {
+                            model: User,
+                            as: 'creator'
+                        }
+                    ]
                 }
             );
 

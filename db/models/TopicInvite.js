@@ -29,8 +29,7 @@ module.exports = function (sequelize, DataTypes) {
             references: {
                 model: 'Topics',
                 key: 'id'
-            },
-            primaryKey: true
+            }
         },
         level: {
             type: DataTypes.ENUM,
@@ -42,6 +41,18 @@ module.exports = function (sequelize, DataTypes) {
     }, Invite.attributes);
 
     const TopicInvite = sequelize.define('TopicInvite', attributes);
+
+    TopicInvite.associate = function (models) {
+        TopicInvite.belongsTo(models.Topic, {
+            foreignKey: 'topicId',
+            as: 'topic'
+        });
+
+        TopicInvite.belongsTo(models.User, {
+            foreignKey: 'creatorId',
+            as: 'creator'
+        });
+    };
 
     TopicInvite.prototype.toJSON = function () {
         const data = {
