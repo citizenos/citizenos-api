@@ -1,6 +1,6 @@
 'use strict';
 
-var _ = require('lodash');
+const _ = require('lodash');
 
 /**
  * TopicInvite
@@ -17,11 +17,11 @@ var _ = require('lodash');
 module.exports = function (sequelize, DataTypes) {
 
     // Parent model for this model
-    var Invite = require('./_Invite').model(sequelize, DataTypes);
-    var TopicMember = require('./_TopicMember').model(sequelize, DataTypes);
+    const Invite = require('./_Invite').model(sequelize, DataTypes);
+    const TopicMember = require('./_TopicMember').model(sequelize, DataTypes);
 
     // NOTE: TopicMemberUser extends TopicMember
-    var attributes = _.extend({
+    const attributes = _.extend({
         topicId: {
             type: DataTypes.UUID,
             allowNull: false,
@@ -41,5 +41,21 @@ module.exports = function (sequelize, DataTypes) {
         }
     }, Invite.attributes);
 
-    return sequelize.define('TopicInvite', attributes);
+    const TopicInvite = sequelize.define('TopicInvite', attributes);
+
+    TopicInvite.prototype.toJSON = function () {
+        const data = {
+            // id: this.dataValues.id, - DO NOT EXPOSE BY DEFAULT, as the whole invite system relies on the secrecy of the id
+            topicId: this.dataValues.topicId,
+            creatorId: this.dataValues.creatorId,
+            userId: this.dataValues.userId,
+            level: this.dataValues.level,
+            createdAt: this.dataValues.createdAt,
+            updatedAt: this.dataValues.updatedAt
+        };
+
+        return data;
+    };
+
+    return TopicInvite;
 };
