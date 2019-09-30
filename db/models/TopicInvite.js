@@ -46,13 +46,26 @@ module.exports = function (sequelize, DataTypes) {
     TopicInvite.prototype.toJSON = function () {
         const data = {
             // id: this.dataValues.id, - DO NOT EXPOSE BY DEFAULT, as the whole invite system relies on the secrecy of the id
-            topicId: this.dataValues.topicId,
-            creatorId: this.dataValues.creatorId,
             userId: this.dataValues.userId,
             level: this.dataValues.level,
             createdAt: this.dataValues.createdAt,
             updatedAt: this.dataValues.updatedAt
         };
+
+        if (this.dataValues.creator) {
+            data.creator = this.dataValues.creator;
+        } else {
+            data.creator = {};
+            data.creator.id = this.dataValues.creatorId;
+        }
+
+        if (this.dataValues.topic) {
+            data.topic = this.dataValues.topic;
+        } else {
+            data.topic = {};
+            data.topic.id = this.dataValues.topicId;
+        }
+
 
         return data;
     };

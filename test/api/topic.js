@@ -4751,8 +4751,12 @@ suite('Users', function () {
 
                         const createdInvite = createResult.data[0];
                         assert.notProperty(createdInvite, 'id'); // id not exposed, as the whole invite system relies on the secrecy of the id
-                        assert.equal(createdInvite.topicId, topic.id);
-                        assert.equal(createdInvite.creatorId, userCreator.id);
+                        assert.deepEqual(createdInvite.topic, {
+                            id: topic.id
+                        });
+                        assert.deepEqual(createdInvite.creator, {
+                            id: userCreator.id
+                        });
                         assert.equal(createdInvite.userId, invitation.userId);
                         assert.equal(createdInvite.level, invitation.level);
                         assert.isNotNull(createdInvite.createdAt);
@@ -4793,8 +4797,12 @@ suite('Users', function () {
 
                             const createdInviteUser1 = _.find(createResult.data, {userId: invitation[0].userId});
                             assert.notProperty(createdInviteUser1, 'id'); // id not exposed, as the whole invite system relies on the secrecy of the id
-                            assert.equal(createdInviteUser1.topicId, topic.id);
-                            assert.equal(createdInviteUser1.creatorId, userCreator.id);
+                            assert.deepEqual(createdInviteUser1.topic, {
+                                id: topic.id
+                            });
+                            assert.deepEqual(createdInviteUser1.creator, {
+                                id: userCreator.id
+                            });
                             assert.equal(createdInviteUser1.userId, invitation[0].userId);
                             assert.equal(createdInviteUser1.level, invitation[0].level);
                             assert.isNotNull(createdInviteUser1.createdAt);
@@ -4802,8 +4810,12 @@ suite('Users', function () {
 
                             const createdInviteUser2 = _.find(createResult.data, {userId: invitation[1].userId});
                             assert.notProperty(createdInviteUser2, 'id'); // id not exposed, as the whole invite system relies on the secrecy of the id
-                            assert.equal(createdInviteUser2.topicId, topic.id);
-                            assert.equal(createdInviteUser2.creatorId, userCreator.id);
+                            assert.deepEqual(createdInviteUser2.topic, {
+                                id: topic.id
+                            });
+                            assert.deepEqual(createdInviteUser2.creator, {
+                                id: userCreator.id
+                            });
                             assert.equal(createdInviteUser2.userId, invitation[1].userId);
                             assert.equal(createdInviteUser2.level, invitation[1].level);
                             assert.isNotNull(createdInviteUser2.createdAt);

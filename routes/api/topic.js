@@ -3292,9 +3292,7 @@ module.exports = function (app) {
      * @see /api/users/:userId/topics/:topicId/members/users "Auto accept" - Adds a Member to the Topic instantly and sends a notification to the User.
      */
     app.post('/api/users/:userId/topics/:topicId/invites', hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res, next) {
-        // FIXME: PROTOTYPE.
         // FIXME: Add recommendation to use this interface over POST /api/users/:userId/topics/:topicId/members to the interfaces JSDOC once the interfaces are finalized.
-
         const topicId = req.params.topicId;
         const userId = req.user.id;
 
