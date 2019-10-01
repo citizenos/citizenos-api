@@ -2258,20 +2258,20 @@ module.exports = function (app) {
      * You can add User with e-mail or User id.
      * If e-mail does not exist, User is created in the DB with NULL password.
      */
-    app.post('/api/users/:userId/topics/:topicId/members/users', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), partnerParser, function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/members/users', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), partnerParser, asyncMiddleware(async function (req, res, next) {
         //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
 
-        var members = req.body;
-        var topicId = req.params.topicId;
+        let members = req.body;
+        const topicId = req.params.topicId;
 
-        var validEmailMembers = [];
-        var validUserIdMembers = [];
+        const validEmailMembers = [];
+        const validUserIdMembers = [];
 
         if (!Array.isArray(members)) {
             members = [members];
         }
 
-        // TODO: not the best design that userId can be UUID4 or email. Should use separate properties {userId, email}...
+        // userId can be actual UUID or e-mail
         _(members).forEach(function (m) {
             if (m.userId) {
                 m.userId = m.userId.trim();
@@ -2289,138 +2289,136 @@ module.exports = function (app) {
             }
         });
 
-        var validEmails = _.map(validEmailMembers, 'userId');
-        // Find out which e-mails already exist
+        const validEmails = _.map(validEmailMembers, 'userId');
 
-        return User
+        // Find out which e-mails already exist
+        const usersExistingEmail = await User
             .findAll({
                 where: {email: validEmails},
                 attributes: ['id', 'email']
-            })
-            .then(function (users) {
-                // These e-mails already exist and the ID-s can be added to validUserIdMembers
-                _(users).forEach(function (u) {
-                    var member = _.find(validEmailMembers, {userId: u.email});
-                    if (member) {
-                        member.userId = u.id;
-                        validUserIdMembers.push(member);
-                        _.remove(validEmailMembers, member); // Remove the e-mail, so that by the end of the day only e-mails that did not exist remain.
+            });
+
+        _(usersExistingEmail).forEach(function (u) {
+            const member = _.find(validEmailMembers, {userId: u.email});
+            if (member) {
+                member.userId = u.id;
+                validUserIdMembers.push(member);
+                _.remove(validEmailMembers, member); // Remove the e-mail, so that by the end of the day only e-mails that did not exist remain.
+            }
+        });
+
+        // The leftovers are e-mails for which User did not exist
+        let createdUsers;
+
+        if (validEmailMembers.length) {
+            var usersToCreate = [];
+            _(validEmailMembers).forEach(function (m) {
+                usersToCreate.push({
+                    email: m.userId,
+                    language: m.language,
+                    password: null,
+                    name: util.emailToDisplayName(m.userId),
+                    source: User.SOURCES.citizenos
+                });
+            });
+
+            createdUsers = await db.transaction(function (t) {
+                return User
+                    .bulkCreate(usersToCreate, {transaction: t})
+                    .then(function (users) {
+                        var userCreateActivityPromises = [];
+                        users.forEach(function (u) {
+                            userCreateActivityPromises.push(cosActivities.createActivity(u, null, {
+                                type: 'System',
+                                ip: req.ip
+                            }, req.method + ' ' + req.path, t));
+                        });
+
+                        return Promise.all(userCreateActivityPromises)
+                            .then(function () {
+                                return users;
+                            });
+                    });
+            });
+        }
+
+        if (createdUsers && createdUsers.length) {
+            _(createdUsers).forEach(function (u) {
+                var member = {
+                    userId: u.id
+                };
+
+                // Sequelize defaultValue has no effect if "undefined" or "null" is set for attribute...
+                var level = _.find(validEmailMembers, {userId: u.email}).level;
+                if (level) {
+                    member.level = level;
+                }
+
+                validUserIdMembers.push(member);
+            });
+        }
+
+        // TODO: Creates 1 DB call per Member which is not wise when thinking of performance.
+        // Change once http://sequelize.readthedocs.org/en/latest/api/model/#bulkcreaterecords-options-promisearrayinstance suppors "bulkUpsert"
+        const findOrCreatePromises = validUserIdMembers.map(function (member) {
+            member.topicId = topicId;
+            member.type = 'TopicMemberUser';
+
+            return TopicMemberUser
+                .findOrCreate({
+                    where: {
+                        topicId: member.topicId,
+                        userId: member.userId
+                    },
+                    defaults: {
+                        level: member.level || TopicMemberUser.LEVELS.read
                     }
                 });
+        });
 
-                // The leftovers are e-mails for which User did not exist
-                if (validEmailMembers.length) {
-                    var usersToCreate = [];
-                    _(validEmailMembers).forEach(function (m) {
-                        usersToCreate.push({
-                            email: m.userId,
-                            language: m.language,
-                            password: null,
-                            name: util.emailToDisplayName(m.userId),
-                            source: User.SOURCES.citizenos
-                        });
-                    });
-
-                    return db.transaction(function (t) {
-                        return User
-                            .bulkCreate(usersToCreate, {transaction: t})
-                            .then(function (users) {
-                                var userCreateActivityPromises = [];
-                                users.forEach(function (u) {
-                                    userCreateActivityPromises.push(cosActivities.createActivity(u, null, {
-                                        type: 'System',
-                                        ip: req.ip
-                                    }, req.method + ' ' + req.path, t));
-                                });
-
-                                return Promise.all(userCreateActivityPromises)
-                                    .then(function () {
-                                        return users;
-                                    });
-                            });
-                    }).catch(function (err) {
-                        logger.error(err);
-                    });
-                } else {
-                    return null;
-                }
+        const findOrCreateMembersResult = await Promise.all(
+            findOrCreatePromises.map(function (promise) {
+                return promise.reflect(); // http://bluebirdjs.com/docs/api/reflect.html
             })
-            .then(function (createdUsers) {
-                if (createdUsers && createdUsers.length) {
-                    _(createdUsers).forEach(function (u) {
-                        var member = {
-                            userId: u.id
-                        };
+        );
 
-                        // Sequelize defaultValue has no effect if "undefined" or "null" is set for attribute...
-                        var level = _.find(validEmailMembers, {userId: u.email}).level;
-                        if (level) {
-                            member.level = level;
-                        }
-
-                        validUserIdMembers.push(member);
-                    });
+        const topic = await Topic
+            .findOne({
+                where: {
+                    id: topicId
                 }
+            });
 
-                // TODO: Creates 1 DB call per Member which is not wise when thinking of performance.
-                // Change once http://sequelize.readthedocs.org/en/latest/api/model/#bulkcreaterecords-options-promisearrayinstance suppors "bulkUpsert"
-                var findOrCreatePromises = validUserIdMembers.map(function (member) {
-                    member.topicId = topicId;
-                    member.type = 'TopicMemberUser';
+        const userIdsToInvite = [];
+        findOrCreateMembersResult.forEach(function (result, i) {
+            if (result.isFulfilled()) {
+                const [member, created] = result.value(); // findOrCreate returns [[instance, created=true/false]]
 
-                    return TopicMemberUser
-                        .findOrCreate({
-                            where: {
-                                topicId: member.topicId,
-                                userId: member.userId
-                            },
-                            defaults: {
-                                level: member.level || TopicMemberUser.LEVELS.read
-                            }
-                        });
-                });
+                if (created && member) {
+                    userIdsToInvite.push(validUserIdMembers[i].userId);
+                    const user = User.build({id: member.userId});
+                    user.dataValues.id = member.userId;
+                    cosActivities.addActivity( // Fire and forget!
+                        user,
+                        {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        },
+                        null,
+                        topic,
+                        req.method + ' ' + req.path
+                    );
+                }
+            } else {
+                logger.error('Failed to add a TopicMemberUser', validUserIdMembers[i]);
+            }
+        });
 
-                return Promise
-                    .all(findOrCreatePromises.map(function (promise) {
-                        return promise.reflect();
-                    }))
-                    .then(function (results) {
-                        return Topic
-                            .findOne({
-                                where: {
-                                    id: topicId
-                                }
-                            })
-                            .then(function (topic) {
-                                var userIdsToInvite = [];
-                                results.forEach(function (result, i) {
-                                    if (result.isFulfilled()) {
-                                        var value = result.value(); // findOrCreate returns [instance, created=true/false]
+        await emailLib.sendTopicMemberUserCreate(userIdsToInvite, req.user.id, topicId, req.locals.partner);
 
-                                        if (value && value[1]) {
-                                            userIdsToInvite.push(validUserIdMembers[i].userId);
-                                            var user = User.build({id: value[0].userId});
-                                            user.dataValues.id = value[0].userId;
-                                            cosActivities.addActivity(user, {
-                                                type: 'User',
-                                                id: req.user.id,
-                                                ip: req.ip
-                                            }, null, topic, req.method + ' ' + req.path);
-                                        }
-                                    } else {
-                                        logger.error('Failed to add a TopicMemberUser', validUserIdMembers[i]);
-                                    }
-                                });
-
-                                return emailLib.sendTopicInvite(userIdsToInvite, req.user.id, topicId, req.locals.partner);
-                            });
-                    })
-                    .then(function () {
-                        return res.created();
-                    });
-            })
-            .catch(next);
-    });
+        return res.created();
+    }));
 
 
     /**
@@ -2863,7 +2861,7 @@ module.exports = function (app) {
                                             return Promise
                                                 .all(memberGroupActivities)
                                                 .then(function () {
-                                                    return emailLib.sendTopicGroupInvite(groupIdsToInvite, req.user.id, topicId);
+                                                    return emailLib.sendTopicMemberGroupCreate(groupIdsToInvite, req.user.id, topicId);
                                                 });
                                         });
                                 });
@@ -3359,7 +3357,7 @@ module.exports = function (app) {
         return res.ok(invite);
     }));
 
-    app.post('/api/users/:userId/topics/:topicId/invites/:inviteId/accept', loginCheck(['partner']), asyncMiddleware(async function (req, res) {
+    app.post(['/api/users/:userId/topics/:topicId/invites/:inviteId/accept', '/api/topics/:topicId/invites/:inviteId/accept'], loginCheck(['partner']), asyncMiddleware(async function (req, res) {
         const userId = req.user.id;
         const topicId = req.params.topicId;
         const inviteId = req.params.inviteId;

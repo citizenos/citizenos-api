@@ -728,7 +728,7 @@ module.exports = function (app) {
                                     }
                                 });
 
-                                return emailLib.sendGroupInvite(userIdsToInvite, req.user.id, groupId);
+                                return emailLib.sendGroupMemberUserCreate(userIdsToInvite, req.user.id, groupId);
                             });
                     });
             })

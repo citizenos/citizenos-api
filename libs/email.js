@@ -332,7 +332,7 @@ module.exports = function (app) {
      *
      * @private
      */
-    var _sendTopicInvite = function (toUserIds, fromUserId, topicId, partner) {
+    var _sendTopicMemberUserCreate = function (toUserIds, fromUserId, topicId, partner) {
         if (!toUserIds || !fromUserId || !topicId) {
             return Promise.reject(new Error('Missing one or more required parameters'));
         }
@@ -495,7 +495,7 @@ module.exports = function (app) {
      *
      * @private
      */
-    var _sendTopicGroupInvite = function (toGroupIds, fromUserId, topicId) {
+    var _sendTopicMemberGroupCreate = function (toGroupIds, fromUserId, topicId) {
         if (!toGroupIds || !fromUserId || !topicId) {
             return Promise.reject(new Error('Missing one or more required parameters'));
         }
@@ -608,7 +608,7 @@ module.exports = function (app) {
      *
      * @private
      */
-    var _sendGroupInvite = function (toUserIds, fromUserId, groupId) {
+    var _sendGroupMemberUserCreate = function (toUserIds, fromUserId, groupId) {
         if (!toUserIds || !fromUserId || !groupId) {
             return Promise.reject(new Error('Missing one or more required parameters'));
         }
@@ -1374,13 +1374,13 @@ module.exports = function (app) {
     return {
         sendAccountVerification: _sendAccountVerification,
         sendPasswordReset: _sendPasswordReset,
-        sendTopicInvite: _sendTopicInvite,
-        sendTopicGroupInvite: _sendTopicGroupInvite,
+        sendTopicMemberUserCreate: _sendTopicMemberUserCreate,
+        sendTopicMemberGroupCreate: _sendTopicMemberGroupCreate,
         sendTopicReport: _sendTopicReport,
         sendTopicReportModerate: _sendTopicReportModerate,
         sendTopicReportReview: _sendTopicReportReview,
         sendTopicReportResolve: _sendTopicReportResolve,
-        sendGroupInvite: _sendGroupInvite,
+        sendGroupMemberUserCreate: _sendGroupMemberUserCreate,
         sendCommentReport: _sendCommentReport,
         sendToParliament: _sendToParliament
     };
