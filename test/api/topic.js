@@ -5019,7 +5019,9 @@ suite('Users', function () {
                 });
 
                 test('Success - 20000 - User already a Member, but accepts an Invite', function (done) {
-                    topicInvitesAccept(agentUserToInvite, userToInvite.id, topic.id, topicInviteId, function (err, res) {
+                    topicInvitesAccept(agentUserToInvite, userToInvite.id, topic.id, topicInviteId, function (err) {
+                        if (err) return done(err);
+
                         _topicInvitesAccept(agentUserToInvite, userToInvite.id, topic.id, topicInviteId, 200, function (err, res) {
                             if (err) return done(err);
 
@@ -5037,11 +5039,11 @@ suite('Users', function () {
                     });
                 });
 
-                test('Fail - 401 - Unauthorized', function(done){
+                test('Fail - 401 - Unauthorized', function (done) {
                     _topicInvitesAccept(request.agent(app), userToInvite.id, topic.id, topicInviteId, 401, done);
                 });
 
-                test('Fail - 403 - Forbidden - Cannot accept for someone else', function(done){
+                test('Fail - 403 - Forbidden - Cannot accept for someone else', function (done) {
                     _topicInvitesAccept(agentCreator, userToInvite.id, topic.id, topicInviteId, 403, done);
                 });
             });

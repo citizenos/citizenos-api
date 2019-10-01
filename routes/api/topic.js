@@ -1265,7 +1265,7 @@ module.exports = function (app) {
     /**
      * Read a Topic
      */
-    app.get('/api/users/:userId/topics/:topicId', loginCheck(['partner']), partnerParser, hasPermission(TopicMemberUser.LEVELS.read, true), isModerator(), asyncMiddleware(async function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId', loginCheck(['partner']), partnerParser, hasPermission(TopicMemberUser.LEVELS.read, true), isModerator(), asyncMiddleware(async function (req, res) {
         const include = req.query.include;
         const topicId = req.params.topicId;
         const user = req.user;
@@ -3290,7 +3290,7 @@ module.exports = function (app) {
      *
      * @see /api/users/:userId/topics/:topicId/members/users "Auto accept" - Adds a Member to the Topic instantly and sends a notification to the User.
      */
-    app.post('/api/users/:userId/topics/:topicId/invites', hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/invites', hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
         // FIXME: Add recommendation to use this interface over POST /api/users/:userId/topics/:topicId/members to the interfaces JSDOC once the interfaces are finalized.
         const topicId = req.params.topicId;
         const userId = req.user.id;
@@ -3327,7 +3327,7 @@ module.exports = function (app) {
         return res.created(createdInvites);
     }));
 
-    app.get('/api/topics/:topicId/invites/:inviteId', asyncMiddleware(async function (req, res, next) {
+    app.get('/api/topics/:topicId/invites/:inviteId', asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const inviteId = req.params.inviteId;
 
@@ -3359,7 +3359,7 @@ module.exports = function (app) {
         return res.ok(invite);
     }));
 
-    app.post('/api/users/:userId/topics/:topicId/invites/:inviteId/accept', loginCheck(['partner']), asyncMiddleware(async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/invites/:inviteId/accept', loginCheck(['partner']), asyncMiddleware(async function (req, res) {
         const userId = req.user.id;
         const topicId = req.params.topicId;
         const inviteId = req.params.inviteId;
