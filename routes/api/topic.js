@@ -31,7 +31,6 @@ module.exports = function (app) {
     var encoder = app.get('encoder');
     var URL = require('url');
     var https = require('https');
-    var uuid = app.get('uuid');
 
     var loginCheck = app.get('middleware.loginCheck');
     var authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
@@ -3304,6 +3303,7 @@ module.exports = function (app) {
 
         // FIXME: Send invite e-mails
         // FIXME: Activity
+        // FIXME: No double invites? As in, if User already is a Member of topic? OR we update the prefs?
         var createdInvites = await db
             .transaction(async function (t) {
                 const createInvitePromises = members.map(async function (member) {
@@ -3357,6 +3357,50 @@ module.exports = function (app) {
         }
 
         return res.ok(invite);
+    }));
+
+    app.post('/api/users/:userId/topics/:topicId/invites/:inviteId/accept', loginCheck(['partner']), asyncMiddleware(async function (req, res, next) {
+        const userId = req.user.id;
+        const topicId = req.params.topicId;
+        const inviteId = req.params.inviteId;
+
+        const invite = await TopicInvite
+            .findOne(
+                {
+                    where: {
+                        id: inviteId,
+                        topicId: topicId
+                    }
+                }
+            );
+
+        if (!invite) {
+            return res.notFound();
+        }
+
+        // Cannot accept the invite for someone else
+        if (invite.userId !== userId) {
+            return res.forbidden();
+        }
+
+        // FIXME: Activity?
+        // FIXME: Will we have expiring invites?
+        const [memberUser, created] = await TopicMemberUser
+            .findOrCreate({
+                where: {
+                    topicId: invite.topicId,
+                    userId: invite.userId
+                },
+                defaults: {
+                    level: TopicMemberUser.LEVELS[invite.level]
+                }
+            });
+
+        if (created) {
+            return res.created(memberUser);
+        } else {
+            return res.ok(memberUser);
+        }
     }));
 
     /**

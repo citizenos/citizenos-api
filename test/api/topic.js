@@ -417,6 +417,25 @@ var topicInvitesRead = function (agent, topicId, inviteId, callback) {
     _topicInvitesRead(agent, topicId, inviteId, 200, callback);
 };
 
+var _topicInvitesAccept = function (agent, userId, topicId, inviteId, expectedHttpCode, callback) {
+    var path = '/api/users/:userId/topics/:topicId/invites/:inviteId/accept'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':inviteId', inviteId);
+
+    agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var topicInvitesAccept = function (agent, userId, topicId, inviteId, callback) {
+    _topicInvitesAccept(agent, userId, topicId, inviteId, 201, callback);
+};
+
+
 var _topicJoin = function (agent, tokenJoin, expectedHttpCode, callback) {
     var path = '/api/topics/join/:tokenJoin'
         .replace(':tokenJoin', tokenJoin);
@@ -4925,6 +4944,106 @@ suite('Users', function () {
                     });
                 });
 
+            });
+
+            suite('Accept', function () {
+
+                const agentCreator = request.agent(app);
+                const agentUserToInvite = request.agent(app);
+
+                let userCreator;
+                let userToInvite;
+
+                let topic;
+                let topicInviteCreated;
+                let topicInviteId;
+
+                suiteSetup(function (done) {
+                    userLib.createUserAndLogin(agentUserToInvite, null, null, null, function (err, res) {
+                        if (err) return done(err);
+                        userToInvite = res;
+
+                        userLib.createUserAndLogin(agentCreator, null, null, null, function (err, res) {
+                            if (err) return done(err);
+
+                            userCreator = res;
+                            topicCreate(agentCreator, userCreator.id, null, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>', null, function (err, res) {
+                                if (err) return done(err);
+
+                                topic = res.body.data;
+
+                                const invitation = {
+                                    userId: userToInvite.id,
+                                    level: TopicMemberUser.LEVELS.edit
+                                };
+
+                                topicInvitesCreate(agentCreator, userCreator.id, topic.id, invitation, function (err, res) {
+                                    if (err) return done(err);
+
+                                    topicInviteCreated = res.body.data[0];
+
+                                    TopicInvite
+                                        .findOne({
+                                            where: {
+                                                topicId: topic.id,
+                                                userId: userToInvite.id
+                                            }
+                                        })
+                                        .then(function (topicInvite) {
+                                            topicInviteId = topicInvite.id;
+
+                                            done();
+                                        })
+                                        .catch(done);
+                                });
+                            });
+                        });
+                    });
+                });
+
+                test('Success - 20100 - New member created', function (done) {
+                    topicInvitesAccept(agentUserToInvite, userToInvite.id, topic.id, topicInviteId, function (err, res) {
+                        if (err) return done(err);
+
+                        var topicMemberUser = res.body.data;
+
+                        assert.equal(topicMemberUser.topicId, topic.id);
+                        assert.equal(topicMemberUser.userId, userToInvite.id);
+                        assert.equal(topicMemberUser.level, topicInviteCreated.level);
+                        assert.property(topicMemberUser, 'createdAt');
+                        assert.property(topicMemberUser, 'updatedAt');
+                        assert.property(topicMemberUser, 'deletedAt');
+
+                        done();
+                    });
+                });
+
+                test('Success - 20000 - User already a Member, but accepts an Invite', function (done) {
+                    topicInvitesAccept(agentUserToInvite, userToInvite.id, topic.id, topicInviteId, function (err, res) {
+                        _topicInvitesAccept(agentUserToInvite, userToInvite.id, topic.id, topicInviteId, 200, function (err, res) {
+                            if (err) return done(err);
+
+                            var topicMemberUser = res.body.data;
+
+                            assert.equal(topicMemberUser.topicId, topic.id);
+                            assert.equal(topicMemberUser.userId, userToInvite.id);
+                            assert.equal(topicMemberUser.level, topicInviteCreated.level);
+                            assert.property(topicMemberUser, 'createdAt');
+                            assert.property(topicMemberUser, 'updatedAt');
+                            assert.property(topicMemberUser, 'deletedAt');
+
+                            done();
+                        });
+                    });
+                });
+
+                test('Fail - 401 - Unauthorized', function(done){
+                    _topicInvitesAccept(request.agent(app), userToInvite.id, topic.id, topicInviteId, 401, done);
+                });
+
+                test('Fail - 403 - Forbidden - Cannot accept for someone else', function(done){
+                    _topicInvitesAccept(agentCreator, userToInvite.id, topic.id, topicInviteId, 403, done);
+                });
             });
 
         });
