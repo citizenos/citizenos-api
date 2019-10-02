@@ -2260,18 +2260,16 @@ module.exports = function (app) {
      */
     app.post('/api/users/:userId/topics/:topicId/members/users', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), partnerParser, asyncMiddleware(async function (req, res, next) {
         //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
-
-        let members = req.body;
         const topicId = req.params.topicId;
-
-        const validEmailMembers = [];
-        const validUserIdMembers = [];
-
+        let members = req.body;
         if (!Array.isArray(members)) {
             members = [members];
         }
 
-        // userId can be actual UUID or e-mail
+        const validEmailMembers = [];
+        const validUserIdMembers = [];
+
+        // userId can be actual UUID or e-mail, sort to relevant buckets
         _(members).forEach(function (m) {
             if (m.userId) {
                 m.userId = m.userId.trim();
@@ -2307,31 +2305,39 @@ module.exports = function (app) {
             }
         });
 
-        // The leftovers are e-mails for which User did not exist
-        let createdUsers;
+        await db.transaction(async function (t) {
+            // The leftovers are e-mails for which User did not exist
+            let createdUsers;
 
-        if (validEmailMembers.length) {
-            var usersToCreate = [];
-            _(validEmailMembers).forEach(function (m) {
-                usersToCreate.push({
-                    email: m.userId,
-                    language: m.language,
-                    password: null,
-                    name: util.emailToDisplayName(m.userId),
-                    source: User.SOURCES.citizenos
+            if (validEmailMembers.length) {
+                var usersToCreate = [];
+                _(validEmailMembers).forEach(function (m) {
+                    usersToCreate.push({
+                        email: m.userId,
+                        language: m.language,
+                        password: null,
+                        name: util.emailToDisplayName(m.userId),
+                        source: User.SOURCES.citizenos
+                    });
                 });
-            });
 
-            createdUsers = await db.transaction(function (t) {
-                return User
+                createdUsers = await User
                     .bulkCreate(usersToCreate, {transaction: t})
                     .then(function (users) {
                         var userCreateActivityPromises = [];
                         users.forEach(function (u) {
-                            userCreateActivityPromises.push(cosActivities.createActivity(u, null, {
-                                type: 'System',
-                                ip: req.ip
-                            }, req.method + ' ' + req.path, t));
+                            userCreateActivityPromises.push(
+                                cosActivities.createActivity(
+                                    u,
+                                    null,
+                                    {
+                                        type: 'System',
+                                        ip: req.ip
+                                    },
+                                    req.method + ' ' + req.path,
+                                    t
+                                )
+                            );
                         });
 
                         return Promise.all(userCreateActivityPromises)
@@ -2339,83 +2345,85 @@ module.exports = function (app) {
                                 return users;
                             });
                     });
-            });
-        }
-
-        if (createdUsers && createdUsers.length) {
-            _(createdUsers).forEach(function (u) {
-                var member = {
-                    userId: u.id
-                };
-
-                // Sequelize defaultValue has no effect if "undefined" or "null" is set for attribute...
-                var level = _.find(validEmailMembers, {userId: u.email}).level;
-                if (level) {
-                    member.level = level;
-                }
-
-                validUserIdMembers.push(member);
-            });
-        }
-
-        // TODO: Creates 1 DB call per Member which is not wise when thinking of performance.
-        // Change once http://sequelize.readthedocs.org/en/latest/api/model/#bulkcreaterecords-options-promisearrayinstance suppors "bulkUpsert"
-        const findOrCreatePromises = validUserIdMembers.map(function (member) {
-            member.topicId = topicId;
-            member.type = 'TopicMemberUser';
-
-            return TopicMemberUser
-                .findOrCreate({
-                    where: {
-                        topicId: member.topicId,
-                        userId: member.userId
-                    },
-                    defaults: {
-                        level: member.level || TopicMemberUser.LEVELS.read
-                    }
-                });
-        });
-
-        const findOrCreateMembersResult = await Promise.all(
-            findOrCreatePromises.map(function (promise) {
-                return promise.reflect(); // http://bluebirdjs.com/docs/api/reflect.html
-            })
-        );
-
-        const topic = await Topic
-            .findOne({
-                where: {
-                    id: topicId
-                }
-            });
-
-        const userIdsToInvite = [];
-        findOrCreateMembersResult.forEach(function (result, i) {
-            if (result.isFulfilled()) {
-                const [member, created] = result.value(); // findOrCreate returns [[instance, created=true/false]]
-
-                if (created && member) {
-                    userIdsToInvite.push(validUserIdMembers[i].userId);
-                    const user = User.build({id: member.userId});
-                    user.dataValues.id = member.userId;
-                    cosActivities.addActivity( // Fire and forget!
-                        user,
-                        {
-                            type: 'User',
-                            id: req.user.id,
-                            ip: req.ip
-                        },
-                        null,
-                        topic,
-                        req.method + ' ' + req.path
-                    );
-                }
-            } else {
-                logger.error('Failed to add a TopicMemberUser', validUserIdMembers[i]);
             }
-        });
 
-        await emailLib.sendTopicMemberUserCreate(userIdsToInvite, req.user.id, topicId, req.locals.partner);
+            if (createdUsers && createdUsers.length) {
+                _(createdUsers).forEach(function (u) {
+                    var member = {
+                        userId: u.id
+                    };
+
+                    // Sequelize defaultValue has no effect if "undefined" or "null" is set for attribute...
+                    var level = _.find(validEmailMembers, {userId: u.email}).level;
+                    if (level) {
+                        member.level = level;
+                    }
+
+                    validUserIdMembers.push(member);
+                });
+            }
+
+            // TODO: Creates 1 DB call per Member which is not wise when thinking of performance.
+            // Change once http://sequelize.readthedocs.org/en/latest/api/model/#bulkcreaterecords-options-promisearrayinstance suppors "bulkUpsert"
+            const findOrCreatePromises = validUserIdMembers.map(function (member) {
+                member.topicId = topicId;
+                member.type = 'TopicMemberUser';
+
+                return TopicMemberUser
+                    .findOrCreate({
+                        where: {
+                            topicId: member.topicId,
+                            userId: member.userId
+                        },
+                        defaults: {
+                            level: member.level || TopicMemberUser.LEVELS.read
+                        },
+                        transaction: t
+                    });
+            });
+
+            const findOrCreateMembersResult = await Promise.all(
+                findOrCreatePromises.map(function (promise) {
+                    return promise.reflect(); // http://bluebirdjs.com/docs/api/reflect.html
+                })
+            );
+
+            const topic = await Topic
+                .findOne({
+                    where: {
+                        id: topicId
+                    },
+                    transaction: t
+                });
+
+            const userIdsToInvite = [];
+            findOrCreateMembersResult.forEach(function (result, i) {
+                if (result.isFulfilled()) {
+                    const [member, created] = result.value(); // findOrCreate returns [[instance, created=true/false]]
+
+                    if (created && member) {
+                        userIdsToInvite.push(validUserIdMembers[i].userId);
+                        const user = User.build({id: member.userId});
+                        user.dataValues.id = member.userId;
+                        cosActivities.addActivity( // Fire and forget!
+                            user,
+                            {
+                                type: 'User',
+                                id: req.user.id,
+                                ip: req.ip
+                            },
+                            null,
+                            topic,
+                            req.method + ' ' + req.path
+                        );
+                    }
+                } else {
+                    logger.error('Failed to add a TopicMemberUser', validUserIdMembers[i]);
+                }
+            });
+
+            return await emailLib.sendTopicMemberUserCreate(userIdsToInvite, req.user.id, topicId, req.locals.partner);
+        });
 
         return res.created();
     }));
@@ -3289,16 +3297,6 @@ module.exports = function (app) {
      * @see /api/users/:userId/topics/:topicId/members/users "Auto accept" - Adds a Member to the Topic instantly and sends a notification to the User.
      */
     app.post('/api/users/:userId/topics/:topicId/invites', hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
-        // FIXME: Add recommendation to use this interface over POST /api/users/:userId/topics/:topicId/members to the interfaces JSDOC once the interfaces are finalized.
-        const topicId = req.params.topicId;
-        const userId = req.user.id;
-
-        let members = req.body;
-
-        if (!Array.isArray(members)) {
-            members = [members];
-        }
-
         // FIXME: Send invite e-mails
         // FIXME: Activity
         // FIXME: No double invites? As in, if User already is a Member of topic? OR we update the prefs?
