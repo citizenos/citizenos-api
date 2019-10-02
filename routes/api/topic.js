@@ -2321,30 +2321,22 @@ module.exports = function (app) {
                     });
                 });
 
-                createdUsers = await User
-                    .bulkCreate(usersToCreate, {transaction: t})
-                    .then(function (users) {
-                        var userCreateActivityPromises = [];
-                        users.forEach(function (u) {
-                            userCreateActivityPromises.push(
-                                cosActivities.createActivity(
-                                    u,
-                                    null,
-                                    {
-                                        type: 'System',
-                                        ip: req.ip
-                                    },
-                                    req.method + ' ' + req.path,
-                                    t
-                                )
-                            );
-                        });
+                createdUsers = await User.bulkCreate(usersToCreate, {transaction: t});
 
-                        return Promise.all(userCreateActivityPromises)
-                            .then(function () {
-                                return users;
-                            });
-                    });
+                const createdUsersActivitiesCreatePromises = createdUsers.map(async function (user) {
+                    return cosActivities.createActivity(
+                        user,
+                        null,
+                        {
+                            type: 'System',
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
+                });
+
+                await Promise.all(createdUsersActivitiesCreatePromises);
             }
 
             if (createdUsers && createdUsers.length) {
@@ -2397,9 +2389,9 @@ module.exports = function (app) {
                 });
 
             const userIdsToInvite = [];
-            const activityCreatePromises = findOrCreateMembersResult.map(async function (result, i) {
-                if (result.isFulfilled()) {
-                    const [member, created] = result.value(); // findOrCreate returns [[instance, created=true/false]]
+            const activityCreatePromises = findOrCreateMembersResult.map(async function (memberResult, i) {
+                if (memberResult.isFulfilled()) {
+                    const [member, created] = memberResult.value(); // findOrCreate returns [[instance, created=true/false]]
 
                     if (created && member) {
                         userIdsToInvite.push(validUserIdMembers[i].userId);
