@@ -2397,7 +2397,7 @@ module.exports = function (app) {
                 });
 
             const userIdsToInvite = [];
-            findOrCreateMembersResult.forEach(function (result, i) {
+            const activityCreatePromises = findOrCreateMembersResult.map(async function (result, i) {
                 if (result.isFulfilled()) {
                     const [member, created] = result.value(); // findOrCreate returns [[instance, created=true/false]]
 
@@ -2405,7 +2405,7 @@ module.exports = function (app) {
                         userIdsToInvite.push(validUserIdMembers[i].userId);
                         const user = User.build({id: member.userId});
                         user.dataValues.id = member.userId;
-                        cosActivities.addActivity( // Fire and forget!
+                        return cosActivities.addActivity( // Fire and forget!
                             user,
                             {
                                 type: 'User',
@@ -2414,13 +2414,15 @@ module.exports = function (app) {
                             },
                             null,
                             topic,
-                            req.method + ' ' + req.path
+                            req.method + ' ' + req.path,
+                            t
                         );
                     }
                 } else {
                     logger.error('Failed to add a TopicMemberUser', validUserIdMembers[i]);
                 }
             });
+            await Promise.all(activityCreatePromises);
 
             return await emailLib.sendTopicMemberUserCreate(userIdsToInvite, req.user.id, topicId, req.locals.partner);
         });
