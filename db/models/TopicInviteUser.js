@@ -1,7 +1,5 @@
 'use strict';
 
-const _ = require('lodash');
-
 /**
  * TopicInvite
  *
@@ -17,20 +15,10 @@ const _ = require('lodash');
 module.exports = function (sequelize, DataTypes) {
 
     // Parent model for this model
-    const Invite = require('./_Invite').model(sequelize, DataTypes);
-    const TopicMember = require('./_TopicMember').model(sequelize, DataTypes);
+    const TopicInvite = require('./_TopicInvite').model(sequelize, DataTypes);
 
     // NOTE: TopicMemberUser extends TopicMember
-    const attributes = _.extend({
-        topicId: {
-            type: DataTypes.UUID,
-            allowNull: false,
-            comment: 'Topic to which User is invited to.',
-            references: {
-                model: 'Topics',
-                key: 'id'
-            }
-        },
+    const attributes = Object.assign({
         userId: {
             type: DataTypes.UUID,
             allowNull: false,
@@ -39,31 +27,24 @@ module.exports = function (sequelize, DataTypes) {
                 model: 'Users',
                 key: 'id'
             }
-        },
-        level: {
-            type: DataTypes.ENUM,
-            values: _.values(TopicMember.LEVELS),
-            allowNull: false,
-            defaultValue: TopicMember.LEVELS.read,
-            comment: 'User membership level.'
         }
-    }, Invite.attributes);
+    }, TopicInvite.attributes);
 
-    const TopicInvite = sequelize.define('TopicInvite', attributes);
+    const TopicInviteUser = sequelize.define('TopicInviteUser', attributes);
 
-    TopicInvite.associate = function (models) {
-        TopicInvite.belongsTo(models.Topic, {
+    TopicInviteUser.associate = function (models) {
+        TopicInviteUser.belongsTo(models.Topic, {
             foreignKey: 'topicId',
             as: 'topic'
         });
 
-        TopicInvite.belongsTo(models.User, {
+        TopicInviteUser.belongsTo(models.User, {
             foreignKey: 'creatorId',
             as: 'creator'
         });
     };
 
-    TopicInvite.prototype.toJSON = function () {
+    TopicInviteUser.prototype.toJSON = function () {
         const data = {
             // id: this.dataValues.id, - DO NOT EXPOSE BY DEFAULT, as the whole invite system relies on the secrecy of the id
             userId: this.dataValues.userId,
@@ -89,5 +70,5 @@ module.exports = function (sequelize, DataTypes) {
         return data;
     };
 
-    return TopicInvite;
+    return TopicInviteUser;
 };

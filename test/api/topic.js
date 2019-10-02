@@ -1413,7 +1413,7 @@ const GroupMember = models.GroupMember;
 const Topic = models.Topic;
 const TopicMemberUser = models.TopicMemberUser;
 const TopicMemberGroup = models.TopicMemberGroup;
-const TopicInvite = models.TopicInvite;
+const TopicInviteUser = models.TopicInviteUser;
 
 const Comment = models.Comment;
 
@@ -4890,7 +4890,7 @@ suite('Users', function () {
 
                                     topicInviteCreated = res.body.data[0];
 
-                                    TopicInvite
+                                    TopicInviteUser
                                         .findOne({
                                             where: {
                                                 topicId: topic.id,
@@ -4982,7 +4982,7 @@ suite('Users', function () {
 
                                     topicInviteCreated = res.body.data[0];
 
-                                    TopicInvite
+                                    TopicInviteUser
                                         .findOne({
                                             where: {
                                                 topicId: topic.id,

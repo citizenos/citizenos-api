@@ -45,7 +45,7 @@ module.exports = function (app) {
     var TopicMemberUser = models.TopicMemberUser;
     var TopicMemberGroup = models.TopicMemberGroup;
     var TopicReport = models.TopicReport;
-    var TopicInvite = models.TopicInvite;
+    var TopicInviteUser = models.TopicInviteUser;
 
     var Report = models.Report;
 
@@ -3378,7 +3378,7 @@ module.exports = function (app) {
             }
 
             const createInvitePromises = members.map(async function (member) {
-                return await TopicInvite
+                return await TopicInviteUser
                     .create(
                         {
                             topicId: topicId,
@@ -3404,7 +3404,7 @@ module.exports = function (app) {
         const topicId = req.params.topicId;
         const inviteId = req.params.inviteId;
 
-        const invite = await TopicInvite
+        const invite = await TopicInviteUser
             .findOne(
                 {
                     where: {
@@ -3437,7 +3437,7 @@ module.exports = function (app) {
         const topicId = req.params.topicId;
         const inviteId = req.params.inviteId;
 
-        const invite = await TopicInvite
+        const invite = await TopicInviteUser
             .findOne(
                 {
                     where: {
