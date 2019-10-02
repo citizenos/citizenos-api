@@ -2292,7 +2292,9 @@ module.exports = function (app) {
         // Find out which e-mails already exist
         const usersExistingEmail = await User
             .findAll({
-                where: {email: validEmails},
+                where: {
+                    email: validEmails
+                },
                 attributes: ['id', 'email']
             });
 
@@ -2306,9 +2308,9 @@ module.exports = function (app) {
         });
 
         await db.transaction(async function (t) {
-            // The leftovers are e-mails for which User did not exist
             let createdUsers;
 
+            // The leftovers are e-mails for which User did not exist
             if (validEmailMembers.length) {
                 var usersToCreate = [];
                 _(validEmailMembers).forEach(function (m) {
@@ -2357,7 +2359,7 @@ module.exports = function (app) {
 
             // TODO: Creates 1 DB call per Member which is not wise when thinking of performance.
             // Change once http://sequelize.readthedocs.org/en/latest/api/model/#bulkcreaterecords-options-promisearrayinstance suppors "bulkUpsert"
-            const findOrCreatePromises = validUserIdMembers.map(function (member) {
+            const findOrCreateMembersPromises = validUserIdMembers.map(function (member) {
                 member.topicId = topicId;
                 member.type = 'TopicMemberUser';
 
@@ -2375,7 +2377,7 @@ module.exports = function (app) {
             });
 
             const findOrCreateMembersResult = await Promise.all(
-                findOrCreatePromises.map(function (promise) {
+                findOrCreateMembersPromises.map(function (promise) {
                     return promise.reflect(); // http://bluebirdjs.com/docs/api/reflect.html
                 })
             );
@@ -3291,28 +3293,109 @@ module.exports = function (app) {
      * @see /api/users/:userId/topics/:topicId/members/users "Auto accept" - Adds a Member to the Topic instantly and sends a notification to the User.
      */
     app.post('/api/users/:userId/topics/:topicId/invites', hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
-        // FIXME: Send invite e-mails
-        // FIXME: Activity
-        // FIXME: No double invites? As in, if User already is a Member of topic? OR we update the prefs?
-        var createdInvites = await db
-            .transaction(async function (t) {
-                const createInvitePromises = members.map(async function (member) {
-                    return await TopicInvite
-                        .create(
-                            {
-                                topicId: topicId,
-                                creatorId: userId,
-                                userId: member.userId,
-                                level: member.level
-                            },
-                            {
-                                transaction: t
-                            }
-                        )
+        //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
+        const topicId = req.params.topicId;
+        const userId = req.user.id;
+        let members = req.body;
+
+        if (!Array.isArray(members)) {
+            members = [members];
+        }
+
+        const validEmailMembers = [];
+        const validUserIdMembers = [];
+
+        // userId can be actual UUID or e-mail, sort to relevant buckets
+        _(members).forEach(function (m) {
+            if (m.userId) {
+                m.userId = m.userId.trim();
+
+                // Is it an e-mail?
+                if (validator.isEmail(m.userId)) {
+                    validEmailMembers.push(m); // The whole member object with level
+                } else if (validator.isUUID(m.userId, 4)) {
+                    validUserIdMembers.push(m);
+                } else {
+                    logger.warn('Invalid member ID, is not UUID or email thus ignoring', req.method, req.path, m, req.body);
+                }
+            } else {
+                logger.warn('Missing member id, ignoring', req.method, req.path, m, req.body);
+            }
+        });
+
+        const validEmails = _.map(validEmailMembers, 'userId');
+
+        // Find out which e-mails already exist
+        const usersExistingEmail = await User
+            .findAll({
+                where: {
+                    email: validEmails
+                },
+                attributes: ['id', 'email']
+            });
+
+        _(usersExistingEmail).forEach(function (u) {
+            const member = _.find(validEmailMembers, {userId: u.email});
+            if (member) {
+                member.userId = u.id;
+                validUserIdMembers.push(member);
+                _.remove(validEmailMembers, member); // Remove the e-mail, so that by the end of the day only e-mails that did not exist remain.
+            }
+        });
+
+        const createdInvites = await db.transaction(async function (t) {
+            let createdUsers;
+
+            // The leftovers are e-mails for which User did not exist
+            if (validEmailMembers.length) {
+                var usersToCreate = [];
+                _(validEmailMembers).forEach(function (m) {
+                    usersToCreate.push({
+                        email: m.userId,
+                        language: m.language,
+                        password: null,
+                        name: util.emailToDisplayName(m.userId),
+                        source: User.SOURCES.citizenos
+                    });
                 });
 
-                return Promise.all(createInvitePromises);
+                createdUsers = await User.bulkCreate(usersToCreate, {transaction: t});
+
+                const createdUsersActivitiesCreatePromises = createdUsers.map(async function (user) {
+                    return cosActivities.createActivity(
+                        user,
+                        null,
+                        {
+                            type: 'System',
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
+                });
+
+                await Promise.all(createdUsersActivitiesCreatePromises);
+            }
+
+            const createInvitePromises = members.map(async function (member) {
+                return await TopicInvite
+                    .create(
+                        {
+                            topicId: topicId,
+                            creatorId: userId,
+                            userId: member.userId,
+                            level: member.level
+                        },
+                        {
+                            transaction: t
+                        }
+                    )
             });
+            // FIXME: Activities
+            // FIXME: EMAILS
+
+            return Promise.all(createInvitePromises);
+        });
 
         return res.created(createdInvites);
     }));

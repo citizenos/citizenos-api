@@ -4958,7 +4958,7 @@ suite('Users', function () {
                 let topicInviteCreated;
                 let topicInviteId;
 
-                suiteSetup(function (done) {
+                setup(function (done) {
                     userLib.createUserAndLogin(agentUserToInvite, null, null, null, function (err, res) {
                         if (err) return done(err);
                         userToInvite = res;
@@ -4967,7 +4967,7 @@ suite('Users', function () {
                             if (err) return done(err);
 
                             userCreator = res;
-                            topicCreate(agentCreator, userCreator.id, null, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>', null, function (err, res) {
+                            topicCreate(agentCreator, userCreator.id, null, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST ACCEPT</h2></body></html>', null, function (err, res) {
                                 if (err) return done(err);
 
                                 topic = res.body.data;
