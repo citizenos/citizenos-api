@@ -30,15 +30,6 @@ module.exports.model = function (sequelize, DataTypes) {
                     model: 'Users',
                     key: 'id'
                 }
-            },
-            userId: {
-                type: DataTypes.UUID,
-                allowNull: false,
-                comment: 'User who is invited.',
-                references: {
-                    model: 'Users',
-                    key: 'id'
-                }
             }
         }
     };

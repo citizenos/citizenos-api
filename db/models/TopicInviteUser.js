@@ -31,6 +31,15 @@ module.exports = function (sequelize, DataTypes) {
                 key: 'id'
             }
         },
+        userId: {
+            type: DataTypes.UUID,
+            allowNull: false,
+            comment: 'User who is invited.',
+            references: {
+                model: 'Users',
+                key: 'id'
+            }
+        },
         level: {
             type: DataTypes.ENUM,
             values: _.values(TopicMember.LEVELS),
