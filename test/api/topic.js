@@ -1378,6 +1378,7 @@ module.exports.topicMemberUsersCreate = topicMemberUsersCreate;
 const chai = require('chai');
 chai.use(require('chai-datetime'));
 chai.use(require('chai-shallow-deep-equal'));
+chai.use(require('chai-uuid'));
 const assert = chai.assert;
 const request = require('supertest');
 const app = require('../../app');
@@ -4787,7 +4788,7 @@ suite('Users', function () {
                 });
 
 
-                test('Success - invite multiple Users', function (done) {
+                test('Success - invite multiple Users - userId (uuidv4)', function (done) {
                     userLib.createUser(request.agent(app), null, null, null, function (err, res) {
                         const invitation = [
                             {
@@ -4840,6 +4841,169 @@ suite('Users', function () {
                             assert.equal(createdInviteUser2.level, invitation[1].level);
                             assert.isNotNull(createdInviteUser2.createdAt);
                             assert.isNotNull(createdInviteUser2.updatedAt);
+
+                            done();
+                        });
+                    });
+                });
+
+                test('Success - invite multiple existing Users - userId (uuid4) & email', function (done) {
+                    userLib.createUser(request.agent(app), null, null, null, function (err, userToIvite2) {
+                        const invitation = [
+                            {
+                                userId: userToInvite.id,
+                                level: TopicMemberUser.LEVELS.read
+                            },
+                            {
+                                userId: userToIvite2.email,
+                                level: TopicMemberUser.LEVELS.edit
+                            }
+                        ];
+
+                        topicInvitesCreate(agentCreator, userCreator.id, topic.id, invitation, function (err, res) {
+                            if (err) return done(err);
+
+                            const createResult = res.body;
+
+                            assert.deepEqual(
+                                createResult.status,
+                                {
+                                    code: 20100
+                                }
+                            );
+
+                            assert.isArray(createResult.data);
+                            assert.equal(createResult.data.length, 2);
+
+                            const createdInviteUser1 = _.find(createResult.data, {level: invitation[0].level}); // find by level, not by id to keep the code simpler
+                            assert.notProperty(createdInviteUser1, 'id'); // id not exposed, as the whole invite system relies on the secrecy of the id
+                            assert.deepEqual(createdInviteUser1.topic, {
+                                id: topic.id
+                            });
+                            assert.deepEqual(createdInviteUser1.creator, {
+                                id: userCreator.id
+                            });
+                            assert.equal(createdInviteUser1.userId, invitation[0].userId);
+                            assert.equal(createdInviteUser1.level, invitation[0].level);
+                            assert.isNotNull(createdInviteUser1.createdAt);
+                            assert.isNotNull(createdInviteUser1.updatedAt);
+
+                            const createdInviteUser2 = _.find(createResult.data, {level: invitation[1].level}); // find by level, not by id to keep the code simpler
+                            assert.notProperty(createdInviteUser2, 'id'); // id not exposed, as the whole invite system relies on the secrecy of the id
+                            assert.deepEqual(createdInviteUser2.topic, {
+                                id: topic.id
+                            });
+                            assert.deepEqual(createdInviteUser2.creator, {
+                                id: userCreator.id
+                            });
+                            assert.equal(createdInviteUser2.userId, userToIvite2.id);
+                            assert.equal(createdInviteUser2.level, invitation[1].level);
+                            assert.isNotNull(createdInviteUser2.createdAt);
+                            assert.isNotNull(createdInviteUser2.updatedAt);
+
+                            done();
+                        });
+                    });
+                });
+
+                test('Success - invite multiple users, 1 existing User and one not existing User - email & email', function (done) {
+                    const invitation = [
+                        {
+                            userId: userToInvite.email,
+                            level: TopicMemberUser.LEVELS.read
+                        },
+                        {
+                            userId: cosUtil.randomString() + '@invitetest.com',
+                            level: TopicMemberUser.LEVELS.edit
+                        }
+                    ];
+
+                    topicInvitesCreate(agentCreator, userCreator.id, topic.id, invitation, function (err, res) {
+                        if (err) return done(err);
+
+                        const createResult = res.body;
+
+                        assert.deepEqual(
+                            createResult.status,
+                            {
+                                code: 20100
+                            }
+                        );
+
+                        assert.isArray(createResult.data);
+                        assert.equal(createResult.data.length, 2);
+
+                        const createdInviteUser1 = _.find(createResult.data, {level: invitation[0].level}); // find by level, not by id to keep the code simpler
+                        assert.notProperty(createdInviteUser1, 'id'); // id not exposed, as the whole invite system relies on the secrecy of the id
+                        assert.deepEqual(createdInviteUser1.topic, {
+                            id: topic.id
+                        });
+                        assert.deepEqual(createdInviteUser1.creator, {
+                            id: userCreator.id
+                        });
+                        assert.uuid(createdInviteUser1.userId, 'v4');
+                        assert.equal(createdInviteUser1.level, invitation[0].level);
+                        assert.isNotNull(createdInviteUser1.createdAt);
+                        assert.isNotNull(createdInviteUser1.updatedAt);
+
+                        const createdInviteUser2 = _.find(createResult.data, {level: invitation[1].level}); // find by level, not by id to keep the code simpler
+                        assert.notProperty(createdInviteUser2, 'id'); // id not exposed, as the whole invite system relies on the secrecy of the id
+                        assert.deepEqual(createdInviteUser2.topic, {
+                            id: topic.id
+                        });
+                        assert.deepEqual(createdInviteUser2.creator, {
+                            id: userCreator.id
+                        });
+                        assert.uuid(createdInviteUser2.userId, 'v4')
+                        assert.equal(createdInviteUser2.level, invitation[1].level);
+                        assert.isNotNull(createdInviteUser2.createdAt);
+                        assert.isNotNull(createdInviteUser2.updatedAt);
+
+                        done();
+                    });
+                });
+
+                test('Fail - 40001 - invite a User with invalid userId', function (done) {
+                    const invitation = [
+                        {
+                            userId: 'notAnEmailNorUserId',
+                            level: TopicMemberUser.LEVELS.read
+                        }
+                    ];
+
+                    _topicInvitesCreate(agentCreator, userCreator.id, topic.id, invitation, 400, function (err, res) {
+                        if (err) return done(err);
+
+                        const expectedResponseBody = {
+                            status: {
+                                code: 40001,
+                                message: 'No invites were created. Possibly because no valid userId-s (uuidv4s or emails) were provided.'
+                            }
+                        }
+
+                        assert.deepEqual(res.body, expectedResponseBody);
+
+                        done();
+                    });
+                });
+
+                test('Fail - 40000 - invalid JSON in request body', function (done) {
+                    const expectedResponseBody = {
+                        status: {
+                            code: 40000,
+                            message: 'Invalid JSON in request body'
+                        }
+                    };
+
+                    _topicInvitesCreate(agentCreator, userCreator.id, topic.id, '{asdasdas', 400, function (err, res) {
+                        if (err) return done(err);
+
+                        assert.deepEqual(res.body, expectedResponseBody);
+
+                        _topicInvitesCreate(agentCreator, userCreator.id, topic.id, 'PPPasdasdas', 400, function (err, res) {
+                            if(err) return done(err);
+
+                            assert.deepEqual(res.body, expectedResponseBody);
 
                             done();
                         });

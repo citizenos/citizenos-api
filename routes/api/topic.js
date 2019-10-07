@@ -3377,7 +3377,24 @@ module.exports = function (app) {
                 await Promise.all(createdUsersActivitiesCreatePromises);
             }
 
-            const createInvitePromises = members.map(async function (member) {
+            // Go through the newly created users and add them to the validUserIdMembers list so that they get invited
+            if (createdUsers && createdUsers.length) {
+                _(createdUsers).forEach(function (u) {
+                    var member = {
+                        userId: u.id
+                    };
+
+                    // Sequelize defaultValue has no effect if "undefined" or "null" is set for attribute...
+                    var level = _.find(validEmailMembers, {userId: u.email}).level;
+                    if (level) {
+                        member.level = level;
+                    }
+
+                    validUserIdMembers.push(member);
+                });
+            }
+
+            const createInvitePromises = validUserIdMembers.map(async function (member) {
                 return await TopicInviteUser
                     .create(
                         {
@@ -3397,7 +3414,11 @@ module.exports = function (app) {
             return Promise.all(createInvitePromises);
         });
 
-        return res.created(createdInvites);
+        if (createdInvites.length) {
+            return res.created(createdInvites);
+        } else {
+            return res.badRequest('No invites were created. Possibly because no valid userId-s (uuidv4s or emails) were provided.', 1);
+        }
     }));
 
     app.get('/api/topics/:topicId/invites/:inviteId', asyncMiddleware(async function (req, res) {
@@ -3457,7 +3478,6 @@ module.exports = function (app) {
         }
 
         // FIXME: Activity?
-        // FIXME: Will we have expiring invites?
         const [memberUser, created] = await TopicMemberUser
             .findOrCreate({
                 where: {

@@ -29,6 +29,19 @@ function cosErrorHandler (err, req, res, next) { //eslint-disable-line no-unused
     var message = 'Internal Server Error';
 
     if (req.accepts('json')) {
+        // If the request Content-Type is JSON...
+        if (req.is('json')) {
+            // body-parser has 2 validations - 1 based on first character and other is just JSON parser exception, need to handle both
+            if ((err.message = 'invalid json' || err instanceof SyntaxError) && err.status === 400 && 'body' in err) {
+                return res.status(400).json({
+                    status: {
+                        code: 40000,
+                        message: 'Invalid JSON in request body'
+                    }
+                });
+            }
+        }
+
         return res.status(status).json({
             status: {
                 code: (status + '00000').slice(0, 5),
