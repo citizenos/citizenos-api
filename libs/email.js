@@ -485,6 +485,106 @@ module.exports = function (app) {
     };
 
     /**
+     * Send Topic invite e-mail
+     *
+     * @param {Array<TopicInviteUser>} invites TopicInviteUser instances
+     *
+     * @returns {Promise} Promise
+     *
+     * @private
+     */
+    var _sendTopicMemberUserInviteCreate = async function (invites) {
+        if (!invites || !Array.isArray(invites)) {
+            return Promise.reject(new Error('Missing one or more required parameters'));
+        }
+
+        if (!invites.length) {
+            logger.warn('Got empty invites list, no emails will be sent.');
+
+            return Promise.resolve();
+        }
+
+        // We assume that all TopicInviteUser instances are created at once, thus having the same topicId and creatorId
+        const fromUserPromise = User.findOne({ // From User
+            where: {
+                id: invites[0].creatorId
+            },
+            attributes: ['id', 'name']
+        });
+
+        const topicPromise = Topic.findOne({
+            where: {
+                id: invites[0].topicId
+            },
+            attributes: ['id', 'title', 'visibility']
+        });
+
+        const toUsersPromise = User.findAll({
+            where: {
+                id: invites.map(invite => invite.userId)
+            },
+            attributes: ['email', 'language', 'name'],
+            raw: true
+        });
+
+        const [fromUser, topic, toUsers] = await Promise.all([fromUserPromise, topicPromise, toUsersPromise]);
+
+        let logoFile = emailHeaderLogo;
+        let templateName = 'inviteTopic';
+        let linkToApplication = urlLib.getFe();
+        let customStyles = EMAIL_OPTIONS_DEFAULT.styles;
+
+        const emailsSendPromises = toUsers.map(async function (toUser, index) {
+            if (!toUser.email) {
+                logger.info('Skipping invite e-mail to user as there is no email on the profile', toUser.email);
+                return Promise.resolve();
+            }
+
+            const template = resolveTemplate(templateName, toUser.language);
+
+            // Handle Partner links
+            // TODO: could use Mu here...
+            const subject = template.translations.INVITE_TOPIC.SUBJECT
+                .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name));
+            const linkViewInvite = urlLib.getFe('/topics/:topicId/invites/:inviteId', { // FIXME: Do we want to go through /api/invite/view?
+                inviteId: invites[index].id,
+                topicId: topic.id
+            });
+
+            // In case Topic has no title, just show the full url.
+            topic.title = topic.title ? topic.title : linkViewInvite;
+
+            const emailOptions = {
+                // from: from, - comes from emailClient.js configuration
+                subject: subject,
+                to: toUser.email,
+                images: [
+                    {
+                        name: emailHeaderLogoName,
+                        file: logoFile
+                    },
+                    {
+                        name: emailFooterLogoName,
+                        file: emailFooterLogo
+                    }
+                ],
+                toUser: toUser,
+                fromUser: fromUser,
+                topic: topic,
+                linkViewTopic: linkViewInvite,
+                linkToApplication: linkToApplication,
+                provider: EMAIL_OPTIONS_DEFAULT.provider,
+                styles: customStyles,
+                linkedData: EMAIL_OPTIONS_DEFAULT.linkedData
+            };
+
+            return await emailClient.sendStringAsync(template.body, emailOptions);
+        });
+
+        return Promise.all(emailsSendPromises);
+    };
+
+    /**
      * Send Topic invite e-mail all members of the Groups
      *
      * @param {(string|Array)} toGroupIds Group ID-s for which Members the invite will be sent.
@@ -1375,6 +1475,7 @@ module.exports = function (app) {
         sendAccountVerification: _sendAccountVerification,
         sendPasswordReset: _sendPasswordReset,
         sendTopicMemberUserCreate: _sendTopicMemberUserCreate,
+        sendTopicMemberUserInviteCreate: _sendTopicMemberUserInviteCreate,
         sendTopicMemberGroupCreate: _sendTopicMemberGroupCreate,
         sendTopicReport: _sendTopicReport,
         sendTopicReportModerate: _sendTopicReportModerate,

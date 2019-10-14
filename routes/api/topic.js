@@ -3409,10 +3409,10 @@ module.exports = function (app) {
                     )
             });
             // FIXME: Activities
-            // FIXME: EMAILS
-
             return Promise.all(createInvitePromises);
         });
+
+        await emailLib.sendTopicMemberUserInviteCreate(createdInvites);
 
         if (createdInvites.length) {
             return res.created(createdInvites);
@@ -3421,7 +3421,7 @@ module.exports = function (app) {
         }
     }));
 
-    app.get('/api/topics/:topicId/invites/:inviteId', asyncMiddleware(async function (req, res) {
+    app.get(['/api/topics/:topicId/invites/:inviteId', '/api/users/:userId/topics/:topicId/invites/:inviteId'], asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const inviteId = req.params.inviteId;
 
@@ -3440,6 +3440,7 @@ module.exports = function (app) {
                         },
                         {
                             model: User,
+                            attributes: ['id', 'name', 'company', 'imageUrl'],
                             as: 'creator'
                         }
                     ]
