@@ -1,5 +1,7 @@
 'use strict';
 
+const util = require('../../libs/util');
+
 /**
  * TopicInvite
  *
@@ -42,16 +44,27 @@ module.exports = function (sequelize, DataTypes) {
             foreignKey: 'creatorId',
             as: 'creator'
         });
+
+        TopicInviteUser.belongsTo(models.User, {
+            foreignKey: 'userId',
+            as: 'user'
+        });
     };
 
     TopicInviteUser.prototype.toJSON = function () {
         const data = {
             // id: this.dataValues.id, - DO NOT EXPOSE BY DEFAULT, as the whole invite system relies on the secrecy of the id
-            userId: this.dataValues.userId,
             level: this.dataValues.level,
             createdAt: this.dataValues.createdAt,
             updatedAt: this.dataValues.updatedAt
         };
+
+        if (this.dataValues.topic) {
+            data.topic = this.dataValues.topic;
+        } else {
+            data.topic = {};
+            data.topic.id = this.dataValues.topicId;
+        }
 
         if (this.dataValues.creator) {
             data.creator = this.dataValues.creator;
@@ -60,11 +73,16 @@ module.exports = function (sequelize, DataTypes) {
             data.creator.id = this.dataValues.creatorId;
         }
 
-        if (this.dataValues.topic) {
-            data.topic = this.dataValues.topic;
+        if (this.dataValues.user) {
+            data.user = this.dataValues.user;
         } else {
-            data.topic = {};
-            data.topic.id = this.dataValues.topicId;
+            data.user = {};
+            data.user.id = this.dataValues.userId;
+        }
+
+        // MASK THE EMAIL, we don't want to show complete email
+        if (data.user.email) {
+            data.user.email = util.emailToMaskedEmail(data.user.email);
         }
 
         return data;

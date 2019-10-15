@@ -3436,12 +3436,20 @@ module.exports = function (app) {
                         {
                             model: Topic,
                             attributes: ['id', 'title', 'visibility', 'creatorId'],
-                            as: 'topic'
+                            as: 'topic',
+                            required: true
                         },
                         {
                             model: User,
                             attributes: ['id', 'name', 'company', 'imageUrl'],
-                            as: 'creator'
+                            as: 'creator',
+                            required: true
+                        },
+                        {
+                            model: User,
+                            attributes: ['id', 'email'],
+                            as: 'user',
+                            required: true
                         }
                     ]
                 }

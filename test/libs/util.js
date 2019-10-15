@@ -39,6 +39,16 @@ suite('Util', function () {
 
     });
 
+    suite('emailToMaskedEmail', function() {
+
+        test('Success', function (done) {
+            var email = 'foo@bar.com';
+            assert.equal(util.emailToMaskedEmail(email), 'fo******@bar.com');
+            done();
+        });
+
+    });
+
     suite('randomString', function () {
 
         test('Success - default 8 character string', function (done) {

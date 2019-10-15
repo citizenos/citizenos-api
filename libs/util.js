@@ -4,10 +4,10 @@
  * Utils
  */
 
-var emailToDisplayName = function (email) {
+const emailToDisplayName = function (email) {
     if (!email || !email.indexOf('@') || email.indexOf('@') < 1) return null;
 
-    var displayName = '';
+    let displayName = '';
 
     email.split('@')[0].split(/[._-]/).forEach(function (val) {
         displayName += val.charAt(0).toUpperCase() + val.substr(1) + ' ';
@@ -16,7 +16,22 @@ var emailToDisplayName = function (email) {
     return displayName.trim();
 };
 
-var escapeHtml = function (text) {
+/**
+ * Mask an email address
+ *
+ * Example: make foo@bar.com to f*o@b*r.com
+ *
+ * @param {string} email Email
+ */
+const emailToMaskedEmail = function (email) {
+    if (!email || !email.indexOf('@') || email.indexOf('@') < 1) return null;
+
+    let [prefix, domain] = email.split('@');
+
+    return prefix.substring(0, 2) + '******@' + domain;
+};
+
+const escapeHtml = function (text) {
     var map = {
         '&': '&amp;',
         '<': '&lt;',
@@ -37,7 +52,7 @@ var escapeHtml = function (text) {
  *
  * @return {string} Random string
  */
-var randomString = function (length) {
+const randomString = function (length) {
     var charArr = [];
     var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     length = length ? length : 8;
@@ -57,7 +72,7 @@ var randomString = function (length) {
  *
  * @returns {number} Random number
  */
-var randomNumber = function (min, max) {
+const randomNumber = function (min, max) {
     return Math.floor(Math.random() * (max - min + 1) + min);
 };
 
@@ -69,12 +84,12 @@ var randomNumber = function (min, max) {
  * @returns {string} PID
  *
  */
-var randomPid = function () {
-    var sex = randomNumber(1, 6); // Odd - male, even - female
-    var year = ('00' + randomNumber(0, 99)).slice(-2);
-    var month = ('00' + randomNumber(1, 12)).slice(-2);
-    var day = ('00' + randomNumber(1, 28)).slice(-2);
-    var uniq = randomNumber(1000, 9999);
+const randomPid = function () {
+    const sex = randomNumber(1, 6); // Odd - male, even - female
+    const year = ('00' + randomNumber(0, 99)).slice(-2);
+    const month = ('00' + randomNumber(1, 12)).slice(-2);
+    const day = ('00' + randomNumber(1, 28)).slice(-2);
+    const uniq = randomNumber(1000, 9999);
 
     return sex + year + month + day + uniq;
 };
@@ -107,7 +122,7 @@ var streamToPromise = function (stream) {
  */
 var streamToBuffer = function (readableStream) {
     return new Promise(function (resolve, reject) {
-        var buf;
+        let buf;
 
         readableStream.on('data', function (d) {
             if (typeof d === 'string') { // Mu2 streams send mixed Buffers and Strings as data event parameter
@@ -146,6 +161,7 @@ var streamToString = function (readableStream) {
 };
 
 module.exports.emailToDisplayName = emailToDisplayName;
+module.exports.emailToMaskedEmail = emailToMaskedEmail;
 module.exports.escapeHtml = escapeHtml;
 module.exports.randomString = randomString;
 module.exports.randomNumber = randomNumber;
