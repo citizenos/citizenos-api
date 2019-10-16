@@ -5228,6 +5228,15 @@ suite('Users', function () {
                             done();
                         });
                     });
+
+                    test('Fail - 40300 - at least admin permissions required', function (done) {
+                        const agentInvalidUser = request.agent(app);
+                        userLib.createUserAndLogin(agentInvalidUser, null, null, null, function (err, res) {
+                            if (err) return done(err);
+                            _topicInviteUsersDelete(agentInvalidUser, topic.id, '094ba349-c03e-4fa9-874e-48a978013b2a', 403, done);
+                        });
+                    });
+
                 });
 
             });
