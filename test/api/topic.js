@@ -379,8 +379,7 @@ var topicMembersGroupsList = function (agent, userId, topicId, callback) {
     _topicMembersGroupsList(agent, userId, topicId, 200, callback);
 };
 
-// FIXME: Naming?
-var _topicInvitesCreate = function (agent, userId, topicId, members, expectedHttpCode, callback) {
+var _topicInviteUsersCreate = function (agent, userId, topicId, members, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/invites'
         .replace(':userId', userId)
         .replace(':topicId', topicId);
@@ -394,13 +393,28 @@ var _topicInvitesCreate = function (agent, userId, topicId, members, expectedHtt
         .end(callback);
 };
 
-// FIXME: Naming?
-var topicInvitesCreate = function (agent, userId, topicId, members, callback) {
-    _topicInvitesCreate(agent, userId, topicId, members, 201, callback);
+var topicInviteUsersCreate = function (agent, userId, topicId, members, callback) {
+    _topicInviteUsersCreate(agent, userId, topicId, members, 201, callback);
 };
 
+var _topicInviteUsersDelete = function (agent, topicId, inviteId, expectedHttpCode, callback) {
+    var path = '/api/topics/:topicId/invites/:inviteId'
+        .replace(':topicId', topicId)
+        .replace(':inviteId', inviteId);
 
-var _topicInvitesRead = function (agent, topicId, inviteId, expectedHttpCode, callback) {
+    agent
+        .delete(path)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var topicInviteUsersDelete = function (agent, topicId, inviteId, callback) {
+    _topicInviteUsersDelete(agent, topicId, inviteId, 200, callback);
+};
+
+var _topicInviteUsersRead = function (agent, topicId, inviteId, expectedHttpCode, callback) {
     var path = '/api/topics/:topicId/invites/:inviteId'
         .replace(':topicId', topicId)
         .replace(':inviteId', inviteId);
@@ -413,11 +427,11 @@ var _topicInvitesRead = function (agent, topicId, inviteId, expectedHttpCode, ca
         .end(callback);
 };
 
-var topicInvitesRead = function (agent, topicId, inviteId, callback) {
-    _topicInvitesRead(agent, topicId, inviteId, 200, callback);
+var topicInviteUsersRead = function (agent, topicId, inviteId, callback) {
+    _topicInviteUsersRead(agent, topicId, inviteId, 200, callback);
 };
 
-var _topicInvitesAccept = function (agent, userId, topicId, inviteId, expectedHttpCode, callback) {
+var _topicInviteUsersAccept = function (agent, userId, topicId, inviteId, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/invites/:inviteId/accept'
         .replace(':userId', userId)
         .replace(':topicId', topicId)
@@ -431,10 +445,9 @@ var _topicInvitesAccept = function (agent, userId, topicId, inviteId, expectedHt
         .end(callback);
 };
 
-var topicInvitesAccept = function (agent, userId, topicId, inviteId, callback) {
-    _topicInvitesAccept(agent, userId, topicId, inviteId, 201, callback);
+var topicInviteUsersAccept = function (agent, userId, topicId, inviteId, callback) {
+    _topicInviteUsersAccept(agent, userId, topicId, inviteId, 201, callback);
 };
-
 
 var _topicJoin = function (agent, tokenJoin, expectedHttpCode, callback) {
     var path = '/api/topics/join/:tokenJoin'
@@ -4755,7 +4768,7 @@ suite('Users', function () {
                         level: TopicMemberUser.LEVELS.read
                     };
 
-                    topicInvitesCreate(agentCreator, userCreator.id, topic.id, invitation, function (err, res) {
+                    topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation, function (err, res) {
                         if (err) return done(err);
 
                         const createResult = res.body;
@@ -4778,7 +4791,7 @@ suite('Users', function () {
                         assert.deepEqual(createdInvite.creator, {
                             id: userCreator.id
                         });
-                        assert.equal(createdInvite.userId, invitation.userId);
+                        assert.equal(createdInvite.user.id, invitation.userId);
                         assert.equal(createdInvite.level, invitation.level);
                         assert.isNotNull(createdInvite.createdAt);
                         assert.isNotNull(createdInvite.updatedAt);
@@ -4801,7 +4814,7 @@ suite('Users', function () {
                             }
                         ];
 
-                        topicInvitesCreate(agentCreator, userCreator.id, topic.id, invitation, function (err, res) {
+                        topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation, function (err, res) {
                             if (err) return done(err);
 
                             const createResult = res.body;
@@ -4816,7 +4829,9 @@ suite('Users', function () {
                             assert.isArray(createResult.data);
                             assert.equal(createResult.data.length, 2);
 
-                            const createdInviteUser1 = _.find(createResult.data, {userId: invitation[0].userId});
+                            const createdInviteUser1 = _.find(createResult.data, invite => {
+                                return invite.user.id === invitation[0].userId;
+                            });
                             assert.notProperty(createdInviteUser1, 'id'); // id not exposed, as the whole invite system relies on the secrecy of the id
                             assert.deepEqual(createdInviteUser1.topic, {
                                 id: topic.id
@@ -4824,12 +4839,14 @@ suite('Users', function () {
                             assert.deepEqual(createdInviteUser1.creator, {
                                 id: userCreator.id
                             });
-                            assert.equal(createdInviteUser1.userId, invitation[0].userId);
+                            assert.equal(createdInviteUser1.user.id, invitation[0].userId);
                             assert.equal(createdInviteUser1.level, invitation[0].level);
                             assert.isNotNull(createdInviteUser1.createdAt);
                             assert.isNotNull(createdInviteUser1.updatedAt);
 
-                            const createdInviteUser2 = _.find(createResult.data, {userId: invitation[1].userId});
+                            const createdInviteUser2 = _.find(createResult.data, invite => {
+                                return invite.user.id === invitation[1].userId;
+                            });
                             assert.notProperty(createdInviteUser2, 'id'); // id not exposed, as the whole invite system relies on the secrecy of the id
                             assert.deepEqual(createdInviteUser2.topic, {
                                 id: topic.id
@@ -4837,7 +4854,7 @@ suite('Users', function () {
                             assert.deepEqual(createdInviteUser2.creator, {
                                 id: userCreator.id
                             });
-                            assert.equal(createdInviteUser2.userId, invitation[1].userId);
+                            assert.equal(createdInviteUser2.user.id, invitation[1].userId);
                             assert.equal(createdInviteUser2.level, invitation[1].level);
                             assert.isNotNull(createdInviteUser2.createdAt);
                             assert.isNotNull(createdInviteUser2.updatedAt);
@@ -4860,7 +4877,7 @@ suite('Users', function () {
                             }
                         ];
 
-                        topicInvitesCreate(agentCreator, userCreator.id, topic.id, invitation, function (err, res) {
+                        topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation, function (err, res) {
                             if (err) return done(err);
 
                             const createResult = res.body;
@@ -4883,7 +4900,7 @@ suite('Users', function () {
                             assert.deepEqual(createdInviteUser1.creator, {
                                 id: userCreator.id
                             });
-                            assert.equal(createdInviteUser1.userId, invitation[0].userId);
+                            assert.equal(createdInviteUser1.user.id, invitation[0].userId);
                             assert.equal(createdInviteUser1.level, invitation[0].level);
                             assert.isNotNull(createdInviteUser1.createdAt);
                             assert.isNotNull(createdInviteUser1.updatedAt);
@@ -4896,7 +4913,7 @@ suite('Users', function () {
                             assert.deepEqual(createdInviteUser2.creator, {
                                 id: userCreator.id
                             });
-                            assert.equal(createdInviteUser2.userId, userToIvite2.id);
+                            assert.equal(createdInviteUser2.user.id, userToIvite2.id);
                             assert.equal(createdInviteUser2.level, invitation[1].level);
                             assert.isNotNull(createdInviteUser2.createdAt);
                             assert.isNotNull(createdInviteUser2.updatedAt);
@@ -4918,7 +4935,7 @@ suite('Users', function () {
                         }
                     ];
 
-                    topicInvitesCreate(agentCreator, userCreator.id, topic.id, invitation, function (err, res) {
+                    topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation, function (err, res) {
                         if (err) return done(err);
 
                         const createResult = res.body;
@@ -4941,7 +4958,7 @@ suite('Users', function () {
                         assert.deepEqual(createdInviteUser1.creator, {
                             id: userCreator.id
                         });
-                        assert.uuid(createdInviteUser1.userId, 'v4');
+                        assert.uuid(createdInviteUser1.user.id, 'v4');
                         assert.equal(createdInviteUser1.level, invitation[0].level);
                         assert.isNotNull(createdInviteUser1.createdAt);
                         assert.isNotNull(createdInviteUser1.updatedAt);
@@ -4954,7 +4971,7 @@ suite('Users', function () {
                         assert.deepEqual(createdInviteUser2.creator, {
                             id: userCreator.id
                         });
-                        assert.uuid(createdInviteUser2.userId, 'v4')
+                        assert.uuid(createdInviteUser2.user.id, 'v4')
                         assert.equal(createdInviteUser2.level, invitation[1].level);
                         assert.isNotNull(createdInviteUser2.createdAt);
                         assert.isNotNull(createdInviteUser2.updatedAt);
@@ -4971,7 +4988,7 @@ suite('Users', function () {
                         }
                     ];
 
-                    _topicInvitesCreate(agentCreator, userCreator.id, topic.id, invitation, 400, function (err, res) {
+                    _topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation, 400, function (err, res) {
                         if (err) return done(err);
 
                         const expectedResponseBody = {
@@ -4995,13 +5012,13 @@ suite('Users', function () {
                         }
                     };
 
-                    _topicInvitesCreate(agentCreator, userCreator.id, topic.id, '{asdasdas', 400, function (err, res) {
+                    _topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, '{asdasdas', 400, function (err, res) {
                         if (err) return done(err);
 
                         assert.deepEqual(res.body, expectedResponseBody);
 
-                        _topicInvitesCreate(agentCreator, userCreator.id, topic.id, 'PPPasdasdas', 400, function (err, res) {
-                            if(err) return done(err);
+                        _topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, 'PPPasdasdas', 400, function (err, res) {
+                            if (err) return done(err);
 
                             assert.deepEqual(res.body, expectedResponseBody);
 
@@ -5014,7 +5031,7 @@ suite('Users', function () {
                     const agentInvalidUser = request.agent(app);
                     userLib.createUserAndLogin(agentInvalidUser, null, null, null, function (err, res) {
                         if (err) return done(err);
-                        _topicInvitesCreate(agentInvalidUser, res.id, topic.id, [], 403, done);
+                        _topicInviteUsersCreate(agentInvalidUser, res.id, topic.id, [], 403, done);
                     });
                 });
 
@@ -5049,7 +5066,7 @@ suite('Users', function () {
                                     level: TopicMemberUser.LEVELS.read
                                 };
 
-                                topicInvitesCreate(agentCreator, userCreator.id, topic.id, invitation, function (err, res) {
+                                topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation, function (err, res) {
                                     if (err) return done(err);
 
                                     topicInviteCreated = res.body.data[0];
@@ -5074,7 +5091,7 @@ suite('Users', function () {
                 });
 
                 test('Success - 20000', function (done) {
-                    topicInvitesRead(request.agent(app), topic.id, topicInviteId, function (err, res) {
+                    topicInviteUsersRead(request.agent(app), topic.id, topicInviteId, function (err, res) {
                         if (err) return done(err);
 
                         const inviteRead = res.body.data;
@@ -5105,6 +5122,111 @@ suite('Users', function () {
                         assert.deepEqual(inviteRead, topicInviteCreated);
 
                         done();
+                    });
+                });
+
+            });
+
+            suite('Delete', function () {
+
+                suite('Success', function () {
+
+                    const agentCreator = request.agent(app);
+
+                    let userCreator;
+                    let userToInvite;
+
+                    let topic;
+                    let topicInviteCreated;
+                    let topicInviteId;
+
+                    suiteSetup(function (done) {
+                        userLib.createUser(request.agent(app), null, null, null, function (err, res) {
+                            if (err) return done(err);
+                            userToInvite = res;
+
+                            userLib.createUserAndLogin(agentCreator, null, null, null, function (err, res) {
+                                if (err) return done(err);
+
+                                userCreator = res;
+                                topicCreate(agentCreator, userCreator.id, null, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>', null, function (err, res) {
+                                    if (err) return done(err);
+
+                                    topic = res.body.data;
+
+                                    const invitation = {
+                                        userId: userToInvite.id,
+                                        level: TopicMemberUser.LEVELS.read
+                                    };
+
+                                    topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation, function (err, res) {
+                                        if (err) return done(err);
+
+                                        topicInviteCreated = res.body.data[0];
+
+                                        TopicInviteUser
+                                            .findOne({
+                                                where: {
+                                                    topicId: topic.id,
+                                                    userId: userToInvite.id
+                                                }
+                                            })
+                                            .then(function (topicInvite) {
+                                                topicInviteId = topicInvite.id;
+
+                                                done();
+                                            })
+                                            .catch(done);
+                                    });
+                                });
+                            });
+                        });
+                    });
+
+                    test('Success - 20000', function (done) {
+                        topicInviteUsersDelete(agentCreator, topic.id, topicInviteId, function (err, res) {
+                            if (err) return done(err);
+
+                            const expectedBody = {
+                                status: {
+                                    code: 20000
+                                }
+                            };
+
+                            assert.deepEqual(res.body, expectedBody);
+
+                            TopicInviteUser
+                                .findOne({
+                                    where: {
+                                        id: topicInviteId,
+                                        topicId: topic.id
+                                    },
+                                    paranoid: false
+                                })
+                                .then(function (topicInvite) {
+                                    assert.isNotNull(topicInvite, 'deletedAt');
+
+                                    done();
+                                });
+                        });
+                    });
+
+                    test('Fail - 40401 - Invite not found', function (done) {
+                        _topicInviteUsersDelete(agentCreator, topic.id, '094ba349-c03e-4fa9-874e-48a978013b2a', 404, function (err, res) {
+                            if (err) return done(err);
+
+                            const expectedBody = {
+                                status: {
+                                    code: 40401,
+                                    message: 'Invite not found'
+                                }
+                            };
+
+                            assert.deepEqual(res.body, expectedBody);
+
+
+                            done();
+                        });
                     });
                 });
 
@@ -5141,7 +5263,7 @@ suite('Users', function () {
                                     level: TopicMemberUser.LEVELS.edit
                                 };
 
-                                topicInvitesCreate(agentCreator, userCreator.id, topic.id, invitation, function (err, res) {
+                                topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation, function (err, res) {
                                     if (err) return done(err);
 
                                     topicInviteCreated = res.body.data[0];
@@ -5166,7 +5288,7 @@ suite('Users', function () {
                 });
 
                 test('Success - 20100 - New member created', function (done) {
-                    topicInvitesAccept(agentUserToInvite, userToInvite.id, topic.id, topicInviteId, function (err, res) {
+                    topicInviteUsersAccept(agentUserToInvite, userToInvite.id, topic.id, topicInviteId, function (err, res) {
                         if (err) return done(err);
 
                         var topicMemberUser = res.body.data;
@@ -5183,10 +5305,10 @@ suite('Users', function () {
                 });
 
                 test('Success - 20000 - User already a Member, but accepts an Invite', function (done) {
-                    topicInvitesAccept(agentUserToInvite, userToInvite.id, topic.id, topicInviteId, function (err) {
+                    topicInviteUsersAccept(agentUserToInvite, userToInvite.id, topic.id, topicInviteId, function (err) {
                         if (err) return done(err);
 
-                        _topicInvitesAccept(agentUserToInvite, userToInvite.id, topic.id, topicInviteId, 200, function (err, res) {
+                        _topicInviteUsersAccept(agentUserToInvite, userToInvite.id, topic.id, topicInviteId, 200, function (err, res) {
                             if (err) return done(err);
 
                             var topicMemberUser = res.body.data;
@@ -5204,11 +5326,11 @@ suite('Users', function () {
                 });
 
                 test('Fail - 401 - Unauthorized', function (done) {
-                    _topicInvitesAccept(request.agent(app), userToInvite.id, topic.id, topicInviteId, 401, done);
+                    _topicInviteUsersAccept(request.agent(app), userToInvite.id, topic.id, topicInviteId, 401, done);
                 });
 
                 test('Fail - 403 - Forbidden - Cannot accept for someone else', function (done) {
-                    _topicInvitesAccept(agentCreator, userToInvite.id, topic.id, topicInviteId, 403, done);
+                    _topicInviteUsersAccept(agentCreator, userToInvite.id, topic.id, topicInviteId, 403, done);
                 });
             });
 

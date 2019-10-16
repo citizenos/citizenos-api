@@ -3462,6 +3462,27 @@ module.exports = function (app) {
         return res.ok(invite);
     }));
 
+    app.delete(['/api/topics/:topicId/invites/:inviteId', '/api/users/:userId/topics/:topicId/invites/:inviteId'], hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
+        const topicId = req.params.topicId;
+        const inviteId = req.params.inviteId;
+
+        const deletedCount = await TopicInviteUser
+            .destroy(
+                {
+                    where: {
+                        id: inviteId,
+                        topicId: topicId
+                    }
+                }
+            );
+
+        if (!deletedCount) {
+            return res.notFound('Invite not found', 1);
+        }
+
+        return res.ok();
+    }));
+
     app.post(['/api/users/:userId/topics/:topicId/invites/:inviteId/accept', '/api/topics/:topicId/invites/:inviteId/accept'], loginCheck(['partner']), asyncMiddleware(async function (req, res) {
         const userId = req.user.id;
         const topicId = req.params.topicId;
