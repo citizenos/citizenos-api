@@ -431,6 +431,23 @@ var topicInviteUsersRead = function (agent, topicId, inviteId, callback) {
     _topicInviteUsersRead(agent, topicId, inviteId, 200, callback);
 };
 
+var _topicInviteUsersList = function (agent, userId, topicId, expectedHttpCode, callback) {
+    var path = '/api/users/:userId/topics/:topicId/invites'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId);
+
+    agent
+        .get(path)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var topicInviteUsersList = function (agent, userId, topicId, callback) {
+    _topicInviteUsersList(agent, userId, topicId, 200, callback);
+};
+
 var _topicInviteUsersAccept = function (agent, userId, topicId, inviteId, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/invites/:inviteId/accept'
         .replace(':userId', userId)
@@ -4996,7 +5013,7 @@ suite('Users', function () {
                                 code: 40001,
                                 message: 'No invites were created. Possibly because no valid userId-s (uuidv4s or emails) were provided.'
                             }
-                        }
+                        };
 
                         assert.deepEqual(res.body, expectedResponseBody);
 
@@ -5120,6 +5137,86 @@ suite('Users', function () {
                         //}
 
                         assert.deepEqual(inviteRead, topicInviteCreated);
+
+                        done();
+                    });
+                });
+
+            });
+
+            suite('List', function () {
+                const agentCreator = request.agent(app);
+
+                let userCreator;
+                let userToInvite;
+
+                let topic;
+                let topicInviteCreated;
+                let topicInviteId;
+
+                suiteSetup(function (done) {
+                    userLib.createUser(request.agent(app), null, null, null, function (err, res) {
+                        if (err) return done(err);
+                        userToInvite = res;
+
+                        userLib.createUserAndLogin(agentCreator, null, null, null, function (err, res) {
+                            if (err) return done(err);
+
+                            userCreator = res;
+                            topicCreate(agentCreator, userCreator.id, null, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>', null, function (err, res) {
+                                if (err) return done(err);
+
+                                topic = res.body.data;
+
+                                const invitation = {
+                                    userId: userToInvite.id,
+                                    level: TopicMemberUser.LEVELS.read
+                                };
+
+                                topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation, function (err, res) {
+                                    if (err) return done(err);
+
+                                    topicInviteCreated = res.body.data[0];
+
+                                    TopicInviteUser
+                                        .findOne({
+                                            where: {
+                                                topicId: topic.id,
+                                                userId: userToInvite.id
+                                            }
+                                        })
+                                        .then(function (topicInvite) {
+                                            topicInviteId = topicInvite.id;
+
+                                            done();
+                                        })
+                                        .catch(done);
+                                });
+                            });
+                        });
+                    });
+                });
+
+                test('Success - 20000', function (done) {
+                    topicInviteUsersList(agentCreator, userCreator.id, topic.id, function (err, res) {
+                        if (err) return done(err);
+
+                        const invitesListResult = res.body.data;
+
+                        assert.equal(1, invitesListResult.count);
+
+                        const invitesList = invitesListResult.rows;
+                        assert.isArray(invitesList);
+                        assert.equal(1, invitesList.length);
+
+                        // User object of POST does not have all the User info, so verify the difference and then remove these before comparing to list result
+                        const invitedUser1 = invitesList[0].user;
+                        assert.equal(invitedUser1.name, userToInvite.name);
+                        assert.equal(invitedUser1.imageUrl, userToInvite.imageUrl);
+                        delete invitedUser1.name;
+                        delete invitedUser1.imageUrl;
+
+                        assert.deepEqual(invitesList[0], topicInviteCreated);
 
                         done();
                     });

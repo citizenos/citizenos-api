@@ -3421,6 +3421,36 @@ module.exports = function (app) {
         }
     }));
 
+    app.get('/api/users/:userId/topics/:topicId/invites', hasPermission(TopicMemberUser.LEVELS.read), asyncMiddleware(async function (req, res) {
+        const topicId = req.params.topicId;
+
+        const invites = await TopicInviteUser
+            .findAll(
+                {
+                    where: {
+                        topicId: topicId
+                    },
+                    include: [
+                        {
+                            model: User,
+                            attributes: ['id', 'name', 'imageUrl'],
+                            as: 'user',
+                            required: true
+                        }
+                    ]
+                }
+            );
+
+        if (!invites) {
+            return res.notFound();
+        }
+
+        return res.ok({
+            count: invites.length,
+            rows: invites
+        });
+    }));
+
     app.get(['/api/topics/:topicId/invites/:inviteId', '/api/users/:userId/topics/:topicId/invites/:inviteId'], asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const inviteId = req.params.inviteId;
