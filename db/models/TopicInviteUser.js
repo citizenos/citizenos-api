@@ -53,7 +53,7 @@ module.exports = function (sequelize, DataTypes) {
 
     TopicInviteUser.prototype.toJSON = function () {
         const data = {
-            // id: this.dataValues.id, - DO NOT EXPOSE BY DEFAULT, as the whole invite system relies on the secrecy of the id
+            id: this.dataValues.id,
             level: this.dataValues.level,
             createdAt: this.dataValues.createdAt,
             updatedAt: this.dataValues.updatedAt

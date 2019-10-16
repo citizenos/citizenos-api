@@ -3292,7 +3292,7 @@ module.exports = function (app) {
      *
      * @see /api/users/:userId/topics/:topicId/members/users "Auto accept" - Adds a Member to the Topic instantly and sends a notification to the User.
      */
-    app.post('/api/users/:userId/topics/:topicId/invites', hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
+    app.post('/api/users/:userId/topics/:topicId/invites', loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
         //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
         const topicId = req.params.topicId;
         const userId = req.user.id;
@@ -3415,13 +3415,16 @@ module.exports = function (app) {
         await emailLib.sendTopicMemberUserInviteCreate(createdInvites);
 
         if (createdInvites.length) {
-            return res.created(createdInvites);
+            return res.created({
+                count: createdInvites.length,
+                rows: createdInvites
+            });
         } else {
             return res.badRequest('No invites were created. Possibly because no valid userId-s (uuidv4s or emails) were provided.', 1);
         }
     }));
 
-    app.get('/api/users/:userId/topics/:topicId/invites', hasPermission(TopicMemberUser.LEVELS.read), asyncMiddleware(async function (req, res) {
+    app.get('/api/users/:userId/topics/:topicId/invites', loginCheck(), hasPermission(TopicMemberUser.LEVELS.read), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
 
         const invites = await TopicInviteUser
@@ -3437,6 +3440,16 @@ module.exports = function (app) {
                             as: 'user',
                             required: true
                         }
+                    ],
+                    order: [
+                        [
+                            {
+                                model: User,
+                                as: 'user'
+                            },
+                            'name',
+                            'asc'
+                        ]
                     ]
                 }
             );
@@ -3492,7 +3505,7 @@ module.exports = function (app) {
         return res.ok(invite);
     }));
 
-    app.delete(['/api/topics/:topicId/invites/:inviteId', '/api/users/:userId/topics/:topicId/invites/:inviteId'], hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
+    app.delete(['/api/topics/:topicId/invites/:inviteId', '/api/users/:userId/topics/:topicId/invites/:inviteId'], loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const inviteId = req.params.inviteId;
 
@@ -3513,7 +3526,7 @@ module.exports = function (app) {
         return res.ok();
     }));
 
-    app.post(['/api/users/:userId/topics/:topicId/invites/:inviteId/accept', '/api/topics/:topicId/invites/:inviteId/accept'], loginCheck(['partner']), asyncMiddleware(async function (req, res) {
+    app.post(['/api/users/:userId/topics/:topicId/invites/:inviteId/accept', '/api/topics/:topicId/invites/:inviteId/accept'], loginCheck(), asyncMiddleware(async function (req, res) {
         const userId = req.user.id;
         const topicId = req.params.topicId;
         const inviteId = req.params.inviteId;
