@@ -461,7 +461,7 @@ module.exports = function (app) {
         if (!pid) {
             return res.badRequest('Smart-ID athentication requires users pid', 1);
         }
-
+        console.log(pid, countryCode);
         smartId
             .authenticate(pid, countryCode)
             .then(function (sessionData) {

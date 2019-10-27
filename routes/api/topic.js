@@ -5523,7 +5523,9 @@ module.exports = function (app) {
         }
 
         var getCertificatePromise;
+        var isSmartId = false;
         if (pid && countryCode) {
+            isSmartId = true;
             signingMethod = Vote.SIGNING_METHODS.smartId;
             getCertificatePromise = smartId
                     .getUserCertificate(pid, phoneNumber)
@@ -5535,58 +5537,70 @@ module.exports = function (app) {
                     });
 
             
-            } else if (certificate) {
-                signingMethod = Vote.SIGNING_METHODS.idCard;
-                getCertificatePromise = Promise.resolve({
-                    certificate: certificate,
-                    format: 'der'
+        } else if (certificate) {
+            signingMethod = Vote.SIGNING_METHODS.idCard;
+            getCertificatePromise = Promise.resolve({
+                certificate: certificate,
+                format: 'der'
+            });
+        } else {
+            signingMethod = Vote.SIGNING_METHODS.mid;
+            getCertificatePromise = cosBdoc
+                .getMobileCertificate(pid, phoneNumber, 'sign')
+                .then(function (certInfo) {
+                    switch (certInfo.statusCode) {
+                        case 0:
+                            return {
+                                certificate: certInfo.sign,
+                                format: 'pem'
+                            };
+                        case 101:
+                            res.badRequest('Invalid input parameters.', 20);
+
+                            return Promise.reject();
+                        case 301:
+                            res.badRequest('User is not a Mobile-ID client. Please double check phone number and/or id code.', 21);
+
+                            return Promise.reject();
+                        case 302:
+                            res.badRequest('User certificates are revoked or suspended.', 22);
+
+                            return Promise.reject();
+                        case 303:
+                            res.badRequest('User certificate is not activated.', 23);
+
+                            return Promise.reject();
+                        case 304:
+                            res.badRequest('User certificate is suspended.', 24);
+
+                            return Promise.reject();
+                        case 305:
+                            res.badRequest('User certificate is expired.', 25);
+
+                            return Promise.reject();
+                        default:
+                            logger.error('Unhandled DDS status code', certInfo.statusCode);
+                            res.internalServerError();
+
+                            return Promise.reject();
+                    }
                 });
-            } else {
-                signingMethod = Vote.SIGNING_METHODS.mid;
-                getCertificatePromise = cosBdoc
-                    .getMobileCertificate(pid, phoneNumber, 'sign')
-                    .then(function (certInfo) {
-                        switch (certInfo.statusCode) {
-                            case 0:
-                                return {
-                                    certificate: certInfo.sign,
-                                    format: 'pem'
-                                };
-                            case 101:
-                                res.badRequest('Invalid input parameters.', 20);
-
-                                return Promise.reject();
-                            case 301:
-                                res.badRequest('User is not a Mobile-ID client. Please double check phone number and/or id code.', 21);
-
-                                return Promise.reject();
-                            case 302:
-                                res.badRequest('User certificates are revoked or suspended.', 22);
-
-                                return Promise.reject();
-                            case 303:
-                                res.badRequest('User certificate is not activated.', 23);
-
-                                return Promise.reject();
-                            case 304:
-                                res.badRequest('User certificate is suspended.', 24);
-
-                                return Promise.reject();
-                            case 305:
-                                res.badRequest('User certificate is expired.', 25);
-
-                                return Promise.reject();
-                            default:
-                                logger.error('Unhandled DDS status code', certInfo.statusCode);
-                                res.internalServerError();
-
-                                return Promise.reject();
-                        }
-                    });
-            }
+        }
 
             var personalInfoPromise = getCertificatePromise
                 .then(function (certificateInfo) {
+                    if (isSmartId) {
+                        return smartId
+                            .getCertUserData(certificateInfo.certificate)
+                            .then(function (certificateInfo) {
+                                personalInfo = certificateInfo;
+                                if (personalInfo.pid.indexOf(pid) -1) {
+                                    personalInfo.pid = pid;
+                                }   
+                             
+                                return;
+                            });
+                    }
                     return cosBdoc
                         .getPersonalInfoFromCertificate(certificateInfo.certificate, certificateInfo.format)
                         .spread(function (status, personalInfoFromCertificate) {
@@ -5625,7 +5639,7 @@ module.exports = function (app) {
                     return personalInfoPromise
                         .then(function () {
                             var promisesToResolve = [];
-                            // Authenticated User
+                            // Authenticated User                            
                             if (userId) {
                                 var anotherUserConnectionPromise = UserConnection
                                     .findOne({
@@ -5654,7 +5668,6 @@ module.exports = function (app) {
                                     .then(function (userConnection) {
                                         if (userConnection && userConnection.connectionUserId !== personalInfo.pid) {
                                             res.badRequest('User account already connected to another PID.', 31);
-
                                             return Promise.reject();
                                         }
                                     });
@@ -5716,8 +5729,9 @@ module.exports = function (app) {
                             return Promise
                                 .all(promisesToResolve)
                                 .then(function () {
+                                    console.log('SIGN SMART', countryCode);
                                     switch (signingMethod) {
-                                        case Vote.SIGNING_METHODS.idCard:
+                                        case Vote.SIGNING_METHODS.idCard:                                            
                                             return cosBdoc.signInitIdCard(topicId, voteId, userId, vote.VoteOptions, certificate, t);
                                         case Vote.SIGNING_METHODS.smartId:
                                             return smartId.signInitSmartId(topicId, voteId, userId, vote.VoteOptions, personalInfo.pid, countryCode, t);
@@ -5730,11 +5744,11 @@ module.exports = function (app) {
                         })
                         .then(function (signInitResponse) {
                             var sessionData, token, sessionDataEncrypted;
-                            console.log('signInitResponse', signInitResponse);
-                            if (signInitResponse.sessionId && signInitResponse.sessionHash) {
+                            if (signInitResponse.sessionId) {
+                                signInitResponse.dataToSign;
                                 sessionData = {
-                                    sessionId: signInitResponse.sessionId,
                                     voteOptions: voteOptions,
+                                    sessionId: signInitResponse.sessionId,
                                     sessionHash: signInitResponse.sessionHash,
                                     userId: userId, // Required for un-authenticated signing.
                                     voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
@@ -6083,84 +6097,17 @@ module.exports = function (app) {
                 return res.unauthorised('Invalid JWT token');
             }
         }
-
-        if (idSignFlowData.sessionId && idSignFlowData.sessionHash) {
-            smartId
-                .statusSign(idSignFlowData.sessionId, idSignFlowData.sessionHash)
-                .then(function (statusCode) {
-                    switch (statusCode.state) {
-                        case 'RUNNING':
-                            res.ok('Signing in progress', 1);
-
-                            return Promise.reject();
-                        case 'COMPLETE':
-                            return Promise.resolve(statusCode.result);
-                        case 'USER_CANCEL':
-                            res.badRequest('User has cancelled the signing process', 10);
-
-                            return Promise.reject();
-                        case 'EXPIRED_TRANSACTION':
-                            res.badRequest('The transaction has expired', 11);
-
-                            return Promise.reject();
-                        case 'NOT_VALID':
-                            res.badRequest('Signature is not valid', 12);
-
-                            return Promise.reject();
-                        case 'MID_NOT_READY':
-                            res.badRequest('Mobile-ID functionality of the phone is not yet ready', 13);
-
-                            return Promise.reject();
-                        case 'PHONE_ABSENT':
-                            res.badRequest('Delivery of the message was not successful, mobile phone is probably switched off or out of coverage;', 14);
-
-                            return Promise.reject();
-                        case 'SENDING_ERROR':
-                            res.badRequest('Other error when sending message (phone is incapable of receiving the message, error in messaging server etc.)', 15);
-
-                            return Promise.reject();
-                        case 'SIM_ERROR':
-                            res.badRequest('SIM application error.', 16);
-
-                            return Promise.reject();
-                        case 'REVOKED_CERTIFICATE':
-                            res.badRequest('Certificate has been revoked', 17);
-
-                            return Promise.reject();
-                        case 'INTERNAL_ERROR':
-                            logger.error('Unknown error when trying to sign with mobile', statusCode);
-                            res.internalServerError('DigiDocService error', 1);
-
-                            return Promise.reject();
-                        default:
-                            logger.error('Unknown status code when trying to sign with mobile', statusCode);
-                            res.internalServerError();
-
-                            return Promise.reject();
-                    }
-                })
-                .then(function (result) {
-                    console.log('result', result);
-                    return res.ok(
-                        'Signing has been completed',
-                        2,
-                        {
-                            bdocUri: getBdocURL({
-                                userId: userId,
-                                topicId: topicId,
-                                voteId: voteId,
-                                type: 'user'
-                            })
-                        }
-                    );
-                }, _.noop)
-                .error(next);
+        var statusPromise;
+        var userId = req.user ? req.user.id : idSignFlowData.userId;
+        if (idSignFlowData.sessionId) {
+            statusPromise = smartId.statusSign(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.voteId, idSignFlowData.userId, topicId, idSignFlowData.voteOptions);
         } else {
-            var userId = req.user ? req.user.id : idSignFlowData.userId;
+            statusPromise = cosBdoc.getMobileSignedDoc(idSignFlowData.sesscode);
+        }
+            return Promise.all([statusPromise])
+                .then(function (results) {
+                    var signedDocInfo = results[0];
 
-            cosBdoc
-                .getMobileSignedDoc(idSignFlowData.sesscode)
-                .then(function (signedDocInfo) {
                     return db
                         .transaction(function (t) {
                             // Store vote options
@@ -6322,6 +6269,7 @@ module.exports = function (app) {
                             return Promise.all(promisesToResolve);
                         });
                 }, function (statusCode) {
+                    console.log(statusCode);
                     switch (statusCode) {
                         case 'OUTSTANDING_TRANSACTION':
                             res.ok('Signing in progress', 1);
@@ -6385,8 +6333,9 @@ module.exports = function (app) {
                         }
                     );
                 }, _.noop)
-                .error(next);
-        }
+                .error(function (e) {
+                    console.log(e);
+                });
     };
 
     /**

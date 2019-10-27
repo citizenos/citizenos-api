@@ -18,7 +18,10 @@
     "docs": "./node_modules/.bin/grunt docs"
   },
   "dependencies": {
+    "@peculiar/webcrypto": "^1.0.19",
     "archiver": "3.0.0",
+    "asn1": "^0.2.4",
+    "asn1js": "^2.0.26",
     "async": "0.9.0",
     "aws-sdk": "2.78.0",
     "base64-url": "2.0.0",
@@ -62,6 +65,7 @@
     "node-uuid": "1.4.3",
     "nodemailer": "4.6.8",
     "object-encrypter": "0.1.2",
+    "openssl-nodejs": "^1.0.5",
     "passport": "0.4.0",
     "passport-facebook": "3.0.0",
     "passport-google-oauth20": "2.0.0",
@@ -70,6 +74,7 @@
     "pg": "6.4.2",
     "pg-hstore": "2.3.2",
     "pg-query-stream": "0.7.0",
+    "pkijs": "^2.1.82",
     "prerender-node": "2.4.0",
     "sanitize-filename": "1.4.4",
     "sequelize": "5.8.7",
@@ -83,7 +88,10 @@
     "utf8": "2.1.2",
     "uuid": "2.0.1",
     "validator": "3.22.1",
-    "x509.js": "1.0.0"
+    "x509": "^0.3.4",
+    "x509.js": "1.0.0",
+    "xadesjs": "^2.0.15",
+    "xmlbuilder": "^13.0.2"
   },
   "devDependencies": {
     "adm-zip": "0.4.11",
