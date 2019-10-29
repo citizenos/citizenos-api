@@ -5094,20 +5094,24 @@ suite('Users', function () {
 
                                 topic = res.body.data;
 
-                                const invitation = {
-                                    userId: userToInvite.id,
-                                    level: TopicMemberUser.LEVELS.read
-                                };
-
-                                topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation, function (err, res) {
-                                    if (err) return done(err);
-
-                                    topicInviteCreated = res.body.data.rows[0];
-
-                                    done();
-                                });
+                                done();
                             });
                         });
+                    });
+                });
+
+                setup(function (done) {
+                    const invitation = {
+                        userId: userToInvite.id,
+                        level: TopicMemberUser.LEVELS.read
+                    };
+
+                    topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation, function (err, res) {
+                        if (err) return done(err);
+
+                        topicInviteCreated = res.body.data.rows[0];
+
+                        done();
                     });
                 });
 
@@ -5146,6 +5150,68 @@ suite('Users', function () {
                     });
                 });
 
+
+                test('Fail - 40400 - Not found', function (done) {
+                    _topicInviteUsersRead(request.agent(app), topic.id, 'f4bb46b9-87a1-4ae4-b6df-c2605ab8c471', 404, done);
+                });
+
+                test('Fail - 41001 - Deleted', function (done) {
+                    TopicInviteUser
+                        .destroy({
+                            where: {
+                                id: topicInviteCreated.id
+                            }
+                        })
+                        .then(function () {
+                            _topicInviteUsersRead(request.agent(app), topic.id, topicInviteCreated.id, 410, function (err, res) {
+                                if (err) return done(err);
+
+                                var expectedBody = {
+                                    status: {
+                                        code: 41001,
+                                        message: 'The invite has been deleted'
+                                    }
+                                };
+
+                                assert.deepEqual(res.body, expectedBody);
+
+                                done();
+                            });
+                        })
+                        .catch(done);
+                });
+
+                test('Fail - 41002 - Expired', function (done) {
+                    TopicInviteUser
+                        .update(
+                            {
+                                createdAt: db.literal(`NOW() - INTERVAL '${TopicInviteUser.VALID_DAYS + 1}d'`)
+                            },
+                            {
+                                where: {
+                                    id: topicInviteCreated.id
+                                }
+                            }
+                        )
+                        .then(function () {
+                            _topicInviteUsersRead(request.agent(app), topic.id, topicInviteCreated.id, 410, function (err, res) {
+                                if (err) return done(err);
+
+                                var expectedBody = {
+                                    status: {
+                                        code: 41002,
+                                        message: `The invite has expired. Invites are valid for ${TopicInviteUser.VALID_DAYS} days`
+                                    }
+                                };
+
+                                assert.deepEqual(res.body, expectedBody);
+
+                                done();
+                            });
+                        })
+                        .catch(done);
+                });
+
             });
 
             suite('List', function () {
@@ -5160,6 +5226,7 @@ suite('Users', function () {
                 let topicInviteCreated1;
                 let topicInviteCreated2;
                 let topicInviteCreated3;
+                let topicInviteCreated4;
 
                 suiteSetup(function (done) {
                     async
@@ -5200,6 +5267,11 @@ suite('Users', function () {
                                         level: TopicMemberUser.LEVELS.edit
                                     };
 
+                                    const topicInvite22 = {
+                                        userId: userToInvite2.id,
+                                        level: TopicMemberUser.LEVELS.read
+                                    };
+
                                     async
                                         .series(
                                             [
@@ -5211,16 +5283,38 @@ suite('Users', function () {
                                                 },
                                                 function (cb) {
                                                     topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, topicInvite21, cb);
+                                                },
+                                                function (cb) {
+                                                    topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, topicInvite22, cb);
                                                 }
                                             ],
                                             function (err, results) {
                                                 if (err) return done(err);
 
-                                                [topicInviteCreated1, topicInviteCreated2, topicInviteCreated3] = results.map(res => {
+                                                [topicInviteCreated1, topicInviteCreated2, topicInviteCreated3, topicInviteCreated4] = results.map(res => {
                                                     return res.body.data.rows[0];
                                                 });
 
-                                                topicInviteUsersDelete(agentCreator, userCreator.id, topic.id, topicInviteCreated3.id, done);
+                                                // Delete an invite
+                                                topicInviteUsersDelete(agentCreator, userCreator.id, topic.id, topicInviteCreated3.id, function (err, res) {
+                                                    if (err) return done(err);
+                                                    // Expire an invite
+                                                    TopicInviteUser
+                                                        .update(
+                                                            {
+                                                                createdAt: db.literal(`NOW() - INTERVAL '${TopicInviteUser.VALID_DAYS + 1}d'`)
+                                                            },
+                                                            {
+                                                                where: {
+                                                                    id: topicInviteCreated4.id
+                                                                }
+                                                            }
+                                                        )
+                                                        .then(function () {
+                                                            done();
+                                                        })
+                                                        .catch(done);
+                                                });
                                             }
                                         );
                                 });
@@ -5229,7 +5323,7 @@ suite('Users', function () {
 
                 });
 
-                test('Success - 20000 - 3 invites - 2 to same person with different level, 1 to other but deleted later ', function (done) {
+                test('Success - 20000 - 3 invites - 2 to same person with different level, 1 to other but deleted later, 1 to other but expired', function (done) {
                     topicInviteUsersList(agentCreator, userCreator.id, topic.id, function (err, res) {
                         if (err) return done(err);
 
@@ -5280,7 +5374,7 @@ suite('Users', function () {
                 });
 
                 test('Fail - 40300 - at least read permissions required', function (done) {
-                    userLib.createUserAndLogin(agentCreator, null, null, null, function (err, res) {
+                    userLib.createUserAndLogin(agentCreator, null, null, null, function (err) {
                         if (err) return done(err);
 
                         _topicInviteUsersList(agentCreator, userCreator.id, topic.id, 403, done);

@@ -3519,8 +3519,8 @@ module.exports = function (app) {
             return res.gone('The invite has been deleted', 1);
         }
 
-        if (invite.createdDaysAgo > TopicInviteUser.VALID_DAYS) {
-            return res.gone('The invite has expired', 2);
+        if (invite.dataValues.createdDaysAgo > TopicInviteUser.VALID_DAYS) {
+            return res.gone(`The invite has expired. Invites are valid for ${TopicInviteUser.VALID_DAYS} days`, 2);
         }
 
         return res.ok(invite);
