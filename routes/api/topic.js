@@ -6,67 +6,68 @@
 
 
 module.exports = function (app) {
-    var config = app.get('config');
-    var logger = app.get('logger');
-    var models = app.get('models');
-    var db = models.sequelize;
-    var _ = app.get('lodash');
-    var validator = app.get('validator');
-    var util = app.get('util');
-    var urlLib = app.get('urlLib');
-    var emailLib = app.get('email');
-    var cosBdoc = app.get('cosBdoc');
-    var cosActivities = app.get('cosActivities');
-    var Promise = app.get('Promise');
-    var sanitizeFilename = app.get('sanitizeFilename');
-    var cryptoLib = app.get('cryptoLib');
-    var cosEtherpad = app.get('cosEtherpad');
-    var jwt = app.get('jwt');
-    var cosJwt = app.get('cosJwt');
-    var querystring = app.get('querystring');
-    var objectEncrypter = app.get('objectEncrypter');
-    var twitter = app.get('twitter');
-    var hashtagCache = app.get('hashtagCache');
-    var moment = app.get('moment');
-    var encoder = app.get('encoder');
-    var URL = require('url');
-    var https = require('https');
+    const config = app.get('config');
+    const logger = app.get('logger');
+    const models = app.get('models');
+    const db = models.sequelize;
+    const Op = db.Sequelize.Op;
+    const _ = app.get('lodash');
+    const validator = app.get('validator');
+    const util = app.get('util');
+    const urlLib = app.get('urlLib');
+    const emailLib = app.get('email');
+    const cosBdoc = app.get('cosBdoc');
+    const cosActivities = app.get('cosActivities');
+    const Promise = app.get('Promise');
+    const sanitizeFilename = app.get('sanitizeFilename');
+    const cryptoLib = app.get('cryptoLib');
+    const cosEtherpad = app.get('cosEtherpad');
+    const jwt = app.get('jwt');
+    const cosJwt = app.get('cosJwt');
+    const querystring = app.get('querystring');
+    const objectEncrypter = app.get('objectEncrypter');
+    const twitter = app.get('twitter');
+    const hashtagCache = app.get('hashtagCache');
+    const moment = app.get('moment');
+    const encoder = app.get('encoder');
+    const URL = require('url');
+    const https = require('https');
 
-    var loginCheck = app.get('middleware.loginCheck');
-    var authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
-    var partnerParser = app.get('middleware.partnerParser');
-    var asyncMiddleware = app.get('middleware.asyncMiddleware');
+    const loginCheck = app.get('middleware.loginCheck');
+    const authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
+    const partnerParser = app.get('middleware.partnerParser');
+    const asyncMiddleware = app.get('middleware.asyncMiddleware');
 
-    var User = models.User;
-    var UserConnection = models.UserConnection;
-    var Group = models.Group;
+    const User = models.User;
+    const UserConnection = models.UserConnection;
+    const Group = models.Group;
 
-    var Topic = models.Topic;
-    var TopicMemberUser = models.TopicMemberUser;
-    var TopicMemberGroup = models.TopicMemberGroup;
-    var TopicReport = models.TopicReport;
-    var TopicInviteUser = models.TopicInviteUser;
+    const Topic = models.Topic;
+    const TopicMemberUser = models.TopicMemberUser;
+    const TopicMemberGroup = models.TopicMemberGroup;
+    const TopicReport = models.TopicReport;
+    const TopicInviteUser = models.TopicInviteUser;
 
-    var Report = models.Report;
+    const Report = models.Report;
 
-    var Comment = models.Comment;
-    var CommentVote = models.CommentVote;
-    var CommentReport = models.CommentReport;
+    const Comment = models.Comment;
+    const CommentVote = models.CommentVote;
+    const CommentReport = models.CommentReport;
 
-    var Vote = models.Vote;
-    var VoteOption = models.VoteOption;
-    var VoteUserContainer = models.VoteUserContainer;
-    var VoteList = models.VoteList;
-    var VoteDelegation = models.VoteDelegation;
+    const Vote = models.Vote;
+    const VoteOption = models.VoteOption;
+    const VoteUserContainer = models.VoteUserContainer;
+    const VoteList = models.VoteList;
+    const VoteDelegation = models.VoteDelegation;
 
-    var TopicComment = models.TopicComment;
-    var TopicEvent = models.TopicEvent;
-    var TopicVote = models.TopicVote;
-    var TopicAttachment = models.TopicAttachment;
-    var Attachment = models.Attachment;
-    var TopicPin = models.TopicPin;
+    const TopicComment = models.TopicComment;
+    const TopicEvent = models.TopicEvent;
+    const TopicVote = models.TopicVote;
+    const TopicAttachment = models.TopicAttachment;
+    const Attachment = models.Attachment;
+    const TopicPin = models.TopicPin;
 
-    var _hasPermission = function (topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelf, partnerId) {
+    const _hasPermission = function (topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelf, partnerId) {
         var LEVELS = {
             none: 0, // Enables to override inherited permissions.
             read: 1,
@@ -187,7 +188,7 @@ module.exports = function (app) {
      *
      * @returns {Function} Express middleware function
      */
-    var hasPermission = function (level, allowPublic, topicStatusesAllowed, allowSelf) {
+    const hasPermission = function (level, allowPublic, topicStatusesAllowed, allowSelf) {
         return function (req, res, next) {
             var userId = req.user.id;
             var partnerId = req.user.partnerId;
@@ -232,7 +233,7 @@ module.exports = function (app) {
         };
     };
 
-    var hasVisibility = function (visibility) {
+    const hasVisibility = function (visibility) {
         return function (req, res, next) {
             return Topic
                 .count({
@@ -253,7 +254,7 @@ module.exports = function (app) {
         };
     };
 
-    var _isModerator = function (topicId, userId) {
+    const _isModerator = function (topicId, userId) {
         return new Promise(function (resolve, reject) {
             db
                 .query(
@@ -302,7 +303,7 @@ module.exports = function (app) {
      *
      * @returns {Function} Express middleware function
      */
-    var isModerator = function () {
+    const isModerator = function () {
         return function (req, res, next) {
             var topicId = req.params.topicId;
             var userId;
@@ -368,7 +369,7 @@ module.exports = function (app) {
         };
     };
 
-    var isCommentCreator = function () {
+    const isCommentCreator = function () {
         return function (req, res, next) {
             var userId = req.user.id;
             var commentId = req.params.commentId;
@@ -392,7 +393,7 @@ module.exports = function (app) {
         };
     };
 
-    var getVoteResults = function (voteId, userId) {
+    const getVoteResults = function (voteId, userId) {
         var includeVoted = '';
         if (userId) {
             includeVoted = ',(SELECT true FROM votes WHERE "userId" = :userId AND "optionId" = v."optionId") as "selected" ';
@@ -504,7 +505,7 @@ module.exports = function (app) {
             );
     };
 
-    var getBdocURL = function (params) {
+    const getBdocURL = function (params) {
         var userId = params.userId;
         var topicId = params.topicId;
         var voteId = params.voteId;
@@ -548,7 +549,7 @@ module.exports = function (app) {
         return urlLib.getApi(path, null, urlOptions);
     };
 
-    var getZipURL = function (params) {
+    const getZipURL = function (params) {
         var userId = params.userId;
         var topicId = params.topicId;
         var voteId = params.voteId;
@@ -578,7 +579,7 @@ module.exports = function (app) {
         return urlLib.getApi(signOptions.path, null, urlOptions);
     };
 
-    var _topicReadUnauth = function (topicId, include) {
+    const _topicReadUnauth = function (topicId, include) {
         var join = '';
         var returncolumns = '';
 
@@ -722,7 +723,7 @@ module.exports = function (app) {
             );
     };
 
-    var _topicReadAuth = async function (topicId, include, user, partner) {
+    const _topicReadAuth = async function (topicId, include, user, partner) {
         var join = '';
         var returncolumns = '';
 
@@ -991,7 +992,7 @@ module.exports = function (app) {
             });
     };
 
-    var getAllVotesResults = function (userId) {
+    const getAllVotesResults = function (userId) {
         var where = '';
         var join = '';
         var select = '';
@@ -3431,7 +3432,10 @@ module.exports = function (app) {
             .findAll(
                 {
                     where: {
-                        topicId: topicId
+                        topicId: topicId,
+                        createdAt: { // Invites expire, check for that...
+                            [Op.gte]: db.literal(`NOW() - INTERVAL '${TopicInviteUser.VALID_DAYS}d'`)
+                        }
                     },
                     include: [
                         {
@@ -3475,6 +3479,7 @@ module.exports = function (app) {
                         id: inviteId,
                         topicId: topicId
                     },
+                    paranoid: false, // return deleted!
                     include: [
                         {
                             model: Topic,
@@ -3494,12 +3499,28 @@ module.exports = function (app) {
                             as: 'user',
                             required: true
                         }
-                    ]
+                    ],
+                    attributes: {
+                        include: [
+                            [
+                                db.literal(`EXTRACT(DAY FROM (NOW() - "TopicInviteUser"."createdAt"))`),
+                                'createdDaysAgo'
+                            ]
+                        ]
+                    }
                 }
             );
 
         if (!invite) {
             return res.notFound();
+        }
+
+        if (invite.deletedAt) {
+            return res.gone('The invite has been deleted', 1);
+        }
+
+        if (invite.createdDaysAgo > TopicInviteUser.VALID_DAYS) {
+            return res.gone('The invite has expired', 2);
         }
 
         return res.ok(invite);

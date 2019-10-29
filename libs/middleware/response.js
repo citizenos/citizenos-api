@@ -42,6 +42,7 @@ module.exports = function (req, res, next) {
     res.unauthorised = buildJsonResponse(401, 'Unauthorized');
     res.forbidden = buildJsonResponse(403, 'Forbidden');
     res.notFound = buildJsonResponse(404, 'Not Found');
+    res.gone = buildJsonResponse(410, 'Gone');
     res.internalServerError = buildJsonResponse(500, 'Internal Server Error');
     res.notImplemented = buildJsonResponse(501, 'Not Implemented');
 

@@ -88,5 +88,7 @@ module.exports = function (sequelize, DataTypes) {
         return data;
     };
 
+    TopicInviteUser.VALID_DAYS = 14; // How many days an invite is considered valid, over that is expired
+
     return TopicInviteUser;
 };
