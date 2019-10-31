@@ -8,6 +8,8 @@ var fs = require('fs');
 var moment = require('moment');
 var _ = require('lodash');
 var openssl = require('openssl-nodejs');
+var xadesjs = require('xadesjs');
+var pkijs = require('pkijs');
 
 /**
  * BDOC
@@ -21,6 +23,8 @@ var openssl = require('openssl-nodejs');
  */
 
 var Bdoc = function (docPath) {
+    console.log(xadesjs);
+    console.log(Object.keys(xadesjs));
     var that = this;
     var randomName = Math.random().toString(36).substring(7);
     this.path = docPath || 'tmp/'+randomName+'.bdoc';
