@@ -553,28 +553,30 @@ module.exports = function (app) {
         var voteId = params.voteId;
         var type = params.type;
 
-        var expiresIn = '1d';
-        var signOptions = {};
+        var path;
+        var tokenPayload = {};
+        var tokenOptions = {
+            expiresIn: '1d'
+        }
 
         if (type === 'final') {
-            signOptions.path = '/api/users/self/topics/:topicId/votes/:voteId/downloads/zip/final';
+            path = '/api/users/self/topics/:topicId/votes/:voteId/downloads/zip/final';
         }
         if (userId) {
-            signOptions.userId = userId;
+            tokenPayload.userId = userId;
         }
 
-        signOptions.path = signOptions.path
+        path = path
             .replace(':topicId', topicId)
             .replace(':voteId', voteId);
-        var urlOptions = {};
 
-        urlOptions.token = jwt.sign(signOptions, config.session.privateKey, {
-            expiresIn: expiresIn,
-            algorithm: config.session.algorithm
-        });
+        var urlOptions = {
+            token: cosJwt.getTokenRestrictedUse(tokenPayload, 'GET ' + path, tokenOptions)
+        }
+
         urlOptions.accept = 'application/x-7z-compressed';
 
-        return urlLib.getApi(signOptions.path, null, urlOptions);
+        return urlLib.getApi(path, null, urlOptions);
     };
 
     var readTopicUnauth = function (topicId, include) {
