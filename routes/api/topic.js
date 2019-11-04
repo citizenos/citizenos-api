@@ -3395,6 +3395,13 @@ module.exports = function (app) {
                 });
             }
 
+            // Need the Topic just for the activity
+            const topic = await Topic.findOne({
+                where: {
+                    id: topicId
+                }
+            });
+
             const createInvitePromises = validUserIdMembers.map(async function (member) {
                 return await TopicInviteUser
                     .create(
@@ -3408,8 +3415,25 @@ module.exports = function (app) {
                             transaction: t
                         }
                     )
+                    .then(function (topicInvite) {
+                        return cosActivities
+                            .createActivity(
+                                topicInvite,
+                                topic,
+                                {
+                                    type: 'User',
+                                    id: req.user.id,
+                                    ip: req.ip
+                                },
+                                req.method + ' ' + req.path,
+                                t
+                            )
+                            .then(function () {
+                                return topicInvite;
+                            });
+                    });
             });
-            // FIXME: Activities
+
             return Promise.all(createInvitePromises);
         });
 
@@ -3571,17 +3595,46 @@ module.exports = function (app) {
             return res.forbidden();
         }
 
-        // FIXME: Activity?
-        const [memberUser, created] = await TopicMemberUser
-            .findOrCreate({
-                where: {
-                    topicId: invite.topicId,
-                    userId: invite.userId
-                },
-                defaults: {
-                    level: TopicMemberUser.LEVELS[invite.level]
-                }
-            });
+        // Needed just for the activity
+        const topic = await Topic.findOne({
+            where: {
+                id: topicId
+            }
+        });
+
+        const [memberUser, created] = await db.transaction(function (t) {
+            return TopicMemberUser
+                .findOrCreate({
+                    where: {
+                        topicId: invite.topicId,
+                        userId: invite.userId
+                    },
+                    defaults: {
+                        level: TopicMemberUser.LEVELS[invite.level]
+                    }
+                })
+                .then(function (topicMemberUserResult) {
+                    const [member] = topicMemberUserResult;
+
+                    const user = User.build({id: member.userId});
+                    user.dataValues.id = member.userId;
+
+                    return cosActivities.addActivity(
+                        user,
+                        {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        },
+                        null,
+                        topic,
+                            req.method + ' ' + req.path,
+                        t)
+                        .then(function () {
+                            return topicMemberUserResult;
+                        });
+                });
+        });
 
         if (created) {
             return res.created(memberUser);
