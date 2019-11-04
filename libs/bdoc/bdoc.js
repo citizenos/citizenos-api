@@ -9,7 +9,10 @@ var moment = require('moment');
 var _ = require('lodash');
 var openssl = require('openssl-nodejs');
 var xadesjs = require('xadesjs');
-var pkijs = require('pkijs');
+var Pkijs = require('pkijs');
+var Asn1js = require('asn1js');
+var Certificate = Pkijs.Certificate;
+var asn1js = require('asn1js');
 
 /**
  * BDOC
@@ -23,8 +26,6 @@ var pkijs = require('pkijs');
  */
 
 var Bdoc = function (docPath) {
-    console.log(xadesjs);
-    console.log(Object.keys(xadesjs));
     var that = this;
     var randomName = Math.random().toString(36).substring(7);
     this.path = docPath || 'tmp/'+randomName+'.bdoc';
@@ -82,6 +83,104 @@ var Bdoc = function (docPath) {
         }
 
         return certificate;
+    };
+
+    this.decodeCert = function (pem) {
+        if(typeof pem !== 'string') {
+            throw new Error('Expected PEM as string')
+        }
+    
+        // Load certificate in PEM encoding (base64 encoded DER)
+        const b64 = pem.replace(/(-----(BEGIN|END) CERTIFICATE-----|[\n\r])/g, '')
+    
+        // Now that we have decoded the cert it's now in DER-encoding
+        const der = Buffer(b64, 'base64')
+    
+        // And massage the cert into a BER encoded one
+        const ber = new Uint8Array(der).buffer
+    
+        // And now Asn1js can decode things \o/
+        const asn1 = Asn1js.fromBER(ber)
+        console.log(asn1);
+        console.log(asn1.result);
+        return new Pkijs.Certificate({ schema: asn1.result })
+    };
+
+    var OID = {
+        "2.5.4.3": {
+            short: "CN",
+            long: "CommonName",
+        },
+        "2.5.4.6": {
+            short: "C",
+            long: "Country",
+        },
+        "2.5.4.5": {
+            long: "DeviceSerialNumber",
+        },
+        "0.9.2342.19200300.100.1.25": {
+            short: "DC",
+            long: "DomainComponent",
+        },
+        "1.2.840.113549.1.9.1": {
+            short: "E",
+            long: "EMail",
+        },
+        "2.5.4.42": {
+            short: "G",
+            long: "GivenName",
+        },
+        "2.5.4.43": {
+            short: "I",
+            long: "Initials",
+        },
+        "2.5.4.7": {
+            short: "L",
+            long: "Locality",
+        },
+        "2.5.4.10": {
+            short: "O",
+            long: "Organization",
+        },
+        "2.5.4.11": {
+            short: "OU",
+            long: "OrganizationUnit",
+        },
+        "2.5.4.8": {
+            short: "ST",
+            long: "State",
+        },
+        "2.5.4.9": {
+            short: "Street",
+            long: "StreetAddress",
+        },
+        "2.5.4.4": {
+            short: "SN",
+            long: "SurName",
+        },
+        "2.5.4.12": {
+            short: "T",
+            long: "Title",
+        },
+        "1.2.840.113549.1.9.8": {
+            long: "UnstructuredAddress",
+        },
+        "1.2.840.113549.1.9.2": {
+            long: "UnstructuredName",
+        },
+    };
+
+    this.getCertValue = function (key, cert, splitter) {
+        if (!splitter) splitter = ',';
+        var res = [];
+        cert[key].typesAndValues.forEach(function (typeAndValue) {
+            const type = typeAndValue.type;
+            const oid = OID[type.toString()];
+            const name2 = oid ? oid.short : null;
+            res.push(`${name2 ? name2 : type}=${typeAndValue.value.valueBlock.value}`);
+        });
+
+        return res.join(splitter + " ");
     };
 
     this._pem2Der = function (certificate) {
@@ -178,7 +277,8 @@ var Bdoc = function (docPath) {
                         'xades:Cert': {
                             'xades:CertDigest': {
                                 'ds:DigestMethod': {
-                                    '@Algorithm': 'http://www.w3.org/2001/04/xmlenc#sha256'
+                                    '@Algorithm': 'http://www.w3.org/2001/04/xmlenc#sha256',
+                                    '#text': ' '
                                 },
                                 'ds:DigestValue': certData.certDigest
                             },
@@ -193,23 +293,26 @@ var Bdoc = function (docPath) {
                             'xades:SigPolicyId': {
                                 'xades:Identifier': {
                                     '@Qualifier': 'OIDAsURN',
-                                    '#text': 'urn:oid:1.3.6.1.4.1.10015.1000.3.2.1'
+                                    '#text': ' urn:oid:1.3.6.1.4.1.10015.1000.3.2.1'
                                 }
                             },
                             'xades:SigPolicyHash': {
                                 'ds:DigestMethod': {
-                                    '@Algorithm': 'http://www.w3.org/2001/04/xmlenc#sha256'
+                                    '@Algorithm': 'http://www.w3.org/2001/04/xmlenc#sha256',
+                                    '#text':' '
                                 },
                                 'ds:DigestValue': '3Tl1oILSvOAWomdI9VeWV6IA/32eSXRUri9kPEz1IVs=' //someValue
                             },
                             'xades:SigPolicyQualifiers': {
                                 'xades:SigPolicyQualifier': {
-                                    'xades:SPURI': 'https://www.sk.ee/repository/bdoc-spec21.pdf'
+                                    'xades:SPURI': {
+                                        '#text': ' https://www.sk.ee/repository/bdoc-spec21.pdf'
+                                    }
                                 }
                             }
                         },
                     },
-                    'xades:SignatureProductionPlace': '',
+                    'xades:SignatureProductionPlace': ' ',
                     'xades:SignerRole': {
                         'xades:ClaimedRoles': {
                             'xades:ClaimedRole': ''
@@ -221,7 +324,7 @@ var Bdoc = function (docPath) {
                 }
             }
             };
-        var signedPropertiesXML = xmlbuilder.create(signedProperties).end({ pretty: true}).replace('<?xml version="1.0"?>', '');
+        var signedPropertiesXML = xmlbuilder.create(signedProperties).end({ pretty: true}).replace('<?xml version="1.0"?>', '').trim();
         var signedPropertiesDigest = crypto.createHash('sha256').update(Buffer.from(signedPropertiesXML)).digest('base64');
         fileReferences.push({
             '@Id': 'S'+that.signatureCount+'-ref-sp',
@@ -276,7 +379,8 @@ var Bdoc = function (docPath) {
                                         'xades:Cert': {
                                             'xades:CertDigest': {
                                                 'ds:DigestMethod': {
-                                                    '@Algorithm': 'http://www.w3.org/2001/04/xmlenc#sha256'
+                                                    '@Algorithm': 'http://www.w3.org/2001/04/xmlenc#sha256',
+                                                    '#text': ' '
                                                 },
                                                 'ds:DigestValue': certData.certDigest
                                             },
@@ -291,23 +395,26 @@ var Bdoc = function (docPath) {
                                             'xades:SigPolicyId': {
                                                 'xades:Identifier': {
                                                     '@Qualifier': 'OIDAsURN',
-                                                    '#text': 'urn:oid:1.3.6.1.4.1.10015.1000.3.2.1'
+                                                    '#text': ' urn:oid:1.3.6.1.4.1.10015.1000.3.2.1'
                                                 }
                                             },
                                             'xades:SigPolicyHash': {
                                                 'ds:DigestMethod': {
-                                                    '@Algorithm': 'http://www.w3.org/2001/04/xmlenc#sha256'
+                                                    '@Algorithm': 'http://www.w3.org/2001/04/xmlenc#sha256',
+                                                    '#text':' '
                                                 },
                                                 'ds:DigestValue': '3Tl1oILSvOAWomdI9VeWV6IA/32eSXRUri9kPEz1IVs=' //someValue
                                             },
                                             'xades:SigPolicyQualifiers': {
                                                 'xades:SigPolicyQualifier': {
-                                                    'xades:SPURI': 'https://www.sk.ee/repository/bdoc-spec21.pdf'
+                                                    'xades:SPURI': {
+                                                        '#text': ' https://www.sk.ee/repository/bdoc-spec21.pdf'
+                                                    }
                                                 }
                                             }
                                         },
                                     },
-                                    'xades:SignatureProductionPlace': '',
+                                    'xades:SignatureProductionPlace': ' ',
                                     'xades:SignerRole': {
                                         'xades:ClaimedRoles': {
                                             'xades:ClaimedRole': ''
@@ -387,30 +494,25 @@ Bdoc.prototype.addSignature = function (signature, cert) {
     var certData = {
         content: cert
     };
+
     var preparedCert = that._prepareCert(cert);
     return that.getOCSP(preparedCert)
         .then(function (ocspResponse) {
-            console.log('OCSP', ocspResponse);
             certData.ocspResponse = ocspResponse
         })
         .then(function () {
-            return that.getCertData(preparedCert)
-                .then(function (parsedData) {
-                    console.log('PARSED', parsedData);
-                    var certDigest = crypto.createHash('sha256').update(cert, 'base64').digest('base64');
-                    certData.certDigest = certDigest;
-                    certData.issuer = parsedData.issuer;
-                    certData.serial = parsedData.serial;
-                    var signatureXML = that.buildSignatureXML(signature, certData);
-                    console.log('signatureXML', signatureXML);
-                    that.archive.append(signatureXML, {name: 'META-INF/signatures'+that.signatureCount+'.xml'});
-                    that.signatureCount++;
+            var pkicert = that.decodeCert(preparedCert);
+            console.log('PARSED', Object.keys(pkicert));
+            var certDigest = crypto.createHash('sha256').update(cert, 'base64').digest('base64');
+            certData.certDigest = certDigest;
+            certData.issuer = that.getCertValue('issuer', pkicert);
+            certData.serial = pkicert.serialNumber.valueBlock.toString();
+            var signatureXML = that.buildSignatureXML(signature, certData);
+    //        console.log('signatureXML', signatureXML);
+            that.archive.append(signatureXML, {name: 'META-INF/signatures'+that.signatureCount+'.xml'});
+            that.signatureCount++;
 
-                    return Promise.resolve();
-                })
-                .catch(function (e) {
-                    console.log(e);
-                })
+            return Promise.resolve();
         }).catch(function (e) {
             console.log(e);
         });
