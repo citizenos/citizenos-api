@@ -1156,9 +1156,9 @@ module.exports = function (app) {
     /**
      * Create a new Topic
      */
-    app.post('/api/users/:userId/topics', loginCheck(['partner']), partnerParser, function (req, res, next) {
+    app.post('/api/users/:userId/topics', loginCheck(['partner']), partnerParser, asyncMiddleware(async function (req, res) {
         // I wish Sequelize Model.build supported "fields". This solution requires you to add a field here once new are defined in model.
-        var topic = Topic.build({
+        const topic = Topic.build({
             visibility: req.body.visibility || Topic.VISIBILITY.private,
             creatorId: req.user.id,
             categories: req.body.categories,
@@ -1166,102 +1166,81 @@ module.exports = function (app) {
             endsAt: req.body.endsAt,
             sourcePartnerObjectId: req.body.sourcePartnerObjectId
         });
+        topic.padUrl = cosEtherpad.getTopicPadUrl(topic.id);
 
         if (req.locals.partner) {
             topic.sourcePartnerId = req.locals.partner.id;
         }
 
-        var topicDescription = req.body.description;
-        var user;
+        const topicDescription = req.body.description;
 
-        User
-            .findOne({
-                where: {
-                    id: req.user.id
-                },
-                attributes: ['id', 'name', 'language']
-            })
-            .then(function (u) {
-                user = u;
+        const user = await User.findOne({
+            where: {
+                id: req.user.id
+            },
+            attributes: ['id', 'name', 'language']
+        });
 
-                return cosEtherpad.createTopic(topic.id, user.language, topicDescription);
-            })
-            .then(function () {
-                topic.padUrl = cosEtherpad.getTopicPadUrl(topic.id);
+        // Create topic on Etherpad side
+        await cosEtherpad.createTopic(topic.id, user.language, topicDescription);
 
-                return db
-                    .transaction(function (t) {
-                        return topic
-                            .save({transaction: t})
-                            .then(function () {
-                                // The creator is also the first member
-                                return topic
-                                    .addMemberUser(// Magic method by Sequelize - https://github.com/sequelize/sequelize/wiki/API-Reference-Associations#hasmanytarget-options
-                                        user.id,
-                                        {
-                                            through: {
-                                                level: TopicMemberUser.LEVELS.admin
-                                            },
-                                            transaction: t
-                                        }
-                                    )
-                                    .then(function () {
-                                        return cosActivities
-                                            .createActivity(
-                                                topic,
-                                                null,
-                                                {
-                                                    type: 'User',
-                                                    id: req.user.id,
-                                                    ip: req.ip
-                                                }
-                                                , req.method + ' ' + req.path,
-                                                t
-                                            );
-                                    });
-                            });
-                    });
-            })
-            .then(function () {
-                // Sync Topic with Etherpad only when description was actually set.
-                if (topicDescription) {
-                    return cosEtherpad
-                        .syncTopicWithPad(
-                            topic.id,
-                            req.method + ' ' + req.path,
-                            {
-                                type: 'User',
-                                id: req.user.id,
-                                ip: req.ip
-                            }
-                        );
-                } else {
-                    return Promise.resolve();
+        await db.transaction(async function (t) {
+            await topic.save({transaction: t});
+            await topic.addMemberUser(// Magic method by Sequelize - https://github.com/sequelize/sequelize/wiki/API-Reference-Associations#hasmanytarget-options
+                user.id,
+                {
+                    through: {
+                        level: TopicMemberUser.LEVELS.admin
+                    },
+                    transaction: t
                 }
-            })
-            .then(function () {
-                var level = TopicMemberUser.LEVELS.admin;
-
-                topic.padUrl = cosEtherpad.getUserAccessUrl(topic, user.id, user.name, user.language, req.locals.partner);
-
-                var resObject = topic.toJSON();
-                resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
-
-                if (req.locals.partner) {
-                    resObject.sourcePartnerId = req.locals.partner.id;
-                } else {
-                    resObject.sourcePartnerId = null;
+            );
+            await cosActivities.createActivity(
+                topic,
+                null,
+                {
+                    type: 'User',
+                    id: req.user.id,
+                    ip: req.ip
                 }
+                , req.method + ' ' + req.path,
+                t
+            );
+        });
 
-                resObject.pinned = false;
-                resObject.permission = { // TODO: should be plural?
-                    level: level
-                };
+        // Topic was created with description, force EP to sync with app database for updated title and description
+        if (topicDescription) {
+            const topicSynced = await cosEtherpad.syncTopicWithPad(
+                topic.id,
+                req.method + ' ' + req.path,
+                {
+                    type: 'User',
+                    id: req.user.id,
+                    ip: req.ip
+                }
+            );
+            topic.title = topicSynced.title;
+            topic.description = topicSynced.description;
+        }
 
-                return res.created(resObject);
-            })
-            .catch(next);
-    });
+        topic.padUrl = cosEtherpad.getUserAccessUrl(topic, user.id, user.name, user.language, req.locals.partner);
+
+        var resObject = topic.toJSON();
+        resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+
+        if (req.locals.partner) {
+            resObject.sourcePartnerId = req.locals.partner.id;
+        } else {
+            resObject.sourcePartnerId = null;
+        }
+
+        resObject.pinned = false;
+        resObject.permission = {
+            level: TopicMemberUser.LEVELS.admin
+        };
+
+        return res.created(resObject);
+    }));
 
     /**
      * Read a Topic
@@ -3403,7 +3382,7 @@ module.exports = function (app) {
                 }
             });
 
-            validUserIdMembers = validUserIdMembers.filter(function(member) {
+            validUserIdMembers = validUserIdMembers.filter(function (member) {
                 return member.userId !== req.user.id; // Make sure user does not invite self
             });
 
@@ -4669,8 +4648,8 @@ module.exports = function (app) {
      * Delete Topic Comment
      */
     app.delete('/api/users/:userId/topics/:topicId/comments/:commentId', loginCheck(['partner']), isCommentCreator(), hasPermission(TopicMemberUser.LEVELS.admin, false, null, true));
-    //WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition
-    //NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
+//WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition
+//NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
     app.delete('/api/users/:userId/topics/:topicId/comments/:commentId', function (req, res, next) {
         db
             .transaction(function (t) {
@@ -4721,8 +4700,8 @@ module.exports = function (app) {
 
 
     app.put('/api/users/:userId/topics/:topicId/comments/:commentId', loginCheck(['partner']), isCommentCreator());
-    //WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition.
-    //NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
+//WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition.
+//NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
     app.put('/api/users/:userId/topics/:topicId/comments/:commentId', function (req, res, next) {
         var subject = req.body.subject;
         var text = req.body.text;
@@ -7342,4 +7321,5 @@ module.exports = function (app) {
     return {
         hasPermission: hasPermission
     };
-};
+}
+;

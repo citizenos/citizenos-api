@@ -1,7 +1,8 @@
 'use strict';
 
 var _topicCreate = function (agent, userId, visibility, categories, endsAt, description, hashtag, expectedHttpCode, callback) {
-    var path = '/api/users/:userId/topics'.replace(':userId', userId);
+    var path = '/api/users/:userId/topics'
+        .replace(':userId', userId);
 
     agent
         .post(path)
@@ -5138,7 +5139,30 @@ suite('Users', function () {
                         //    userId: "48f7402b-5ba6-4e15-94d4-a986ff0799b2"
                         //}
 
-                        assert.deepEqual(inviteRead, topicInviteCreated);
+                        const expectedInvite = Object.assign({}, topicInviteCreated);
+
+                        expectedInvite.topic = {
+                            id: topic.id,
+                            title: topic.title,
+                            visibility: topic.visibility,
+                            creator: {
+                                id: userCreator.id
+                            }
+                        };
+
+                        expectedInvite.creator = {
+                            company: null,
+                            id: userCreator.id,
+                            imageUrl: null,
+                            name: userCreator.name
+                        };
+
+                        expectedInvite.user = {
+                            id: userToInvite.id,
+                            email: cosUtil.emailToMaskedEmail(userToInvite.email)
+                        };
+
+                        assert.deepEqual(inviteRead, expectedInvite);
 
                         done();
                     });
