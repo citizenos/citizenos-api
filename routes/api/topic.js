@@ -3304,7 +3304,7 @@ module.exports = function (app) {
         }
 
         const validEmailMembers = [];
-        const validUserIdMembers = [];
+        let validUserIdMembers = [];
 
         // userId can be actual UUID or e-mail, sort to relevant buckets
         _(members).forEach(function (m) {
@@ -3334,6 +3334,7 @@ module.exports = function (app) {
                 },
                 attributes: ['id', 'email']
             });
+
 
         _(usersExistingEmail).forEach(function (u) {
             const member = _.find(validEmailMembers, {userId: u.email});
@@ -3400,6 +3401,10 @@ module.exports = function (app) {
                 where: {
                     id: topicId
                 }
+            });
+
+            validUserIdMembers = validEmailMembers.filter(function(member) {
+                return member.userId !== req.user.id; // Make sure user does not invite self
             });
 
             const createInvitePromises = validUserIdMembers.map(async function (member) {

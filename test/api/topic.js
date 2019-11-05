@@ -4982,6 +4982,28 @@ suite('Users', function () {
                     });
                 });
 
+                test('Fail - 40001 - Invite yourself', function (done) {
+                    const invitation = {
+                        userId: userCreator.id,
+                        level: TopicMemberUser.LEVELS.read
+                    };
+
+                    _topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation, 400, function (err, res) {
+                        if (err) return done(err);
+
+                        var expectedBody = {
+                            status: {
+                                code: 40001,
+                                message: 'No invites were created. Possibly because no valid userId-s (uuidv4s or emails) were provided.'
+                            }
+                        };
+
+                        assert.deepEqual(res.body, expectedBody);
+
+                        done();
+                    });
+                });
+
                 test('Fail - 40001 - invite a User with invalid userId', function (done) {
                     const invitation = [
                         {
