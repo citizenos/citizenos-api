@@ -5314,7 +5314,7 @@ suite('Users', function () {
                                                 });
 
                                                 // Delete an invite
-                                                topicInviteUsersDelete(agentCreator, userCreator.id, topic.id, topicInviteCreated3.id, function (err, res) {
+                                                topicInviteUsersDelete(agentCreator, userCreator.id, topic.id, topicInviteCreated3.id, function (err) {
                                                     if (err) return done(err);
                                                     // Expire an invite
                                                     TopicInviteUser

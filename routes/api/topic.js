@@ -1158,7 +1158,7 @@ module.exports = function (app) {
      */
     app.post('/api/users/:userId/topics', loginCheck(['partner']), partnerParser, asyncMiddleware(async function (req, res) {
         // I wish Sequelize Model.build supported "fields". This solution requires you to add a field here once new are defined in model.
-        const topic = Topic.build({
+        let topic = Topic.build({
             visibility: req.body.visibility || Topic.VISIBILITY.private,
             creatorId: req.user.id,
             categories: req.body.categories,
@@ -1210,7 +1210,7 @@ module.exports = function (app) {
 
         // Topic was created with description, force EP to sync with app database for updated title and description
         if (topicDescription) {
-            const topicSynced = await cosEtherpad.syncTopicWithPad(
+            topic = await cosEtherpad.syncTopicWithPad( // eslint-disable-line require-atomic-updates
                 topic.id,
                 req.method + ' ' + req.path,
                 {
@@ -1219,13 +1219,11 @@ module.exports = function (app) {
                     ip: req.ip
                 }
             );
-            topic.title = topicSynced.title;
-            topic.description = topicSynced.description;
         }
 
-        topic.padUrl = cosEtherpad.getUserAccessUrl(topic, user.id, user.name, user.language, req.locals.partner);
-
         var resObject = topic.toJSON();
+
+        resObject.padUrl = cosEtherpad.getUserAccessUrl(topic, user.id, user.name, user.language, req.locals.partner);
         resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
 
         if (req.locals.partner) {
@@ -2238,7 +2236,7 @@ module.exports = function (app) {
      * You can add User with e-mail or User id.
      * If e-mail does not exist, User is created in the DB with NULL password.
      */
-    app.post('/api/users/:userId/topics/:topicId/members/users', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), partnerParser, asyncMiddleware(async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/members/users', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), partnerParser, asyncMiddleware(async function (req, res) {
         //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
         const topicId = req.params.topicId;
         let members = req.body;
