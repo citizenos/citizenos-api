@@ -3403,7 +3403,7 @@ module.exports = function (app) {
                 }
             });
 
-            validUserIdMembers = validEmailMembers.filter(function(member) {
+            validUserIdMembers = validUserIdMembers.filter(function(member) {
                 return member.userId !== req.user.id; // Make sure user does not invite self
             });
 
