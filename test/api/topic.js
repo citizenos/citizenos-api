@@ -4806,13 +4806,9 @@ suite('Users', function () {
 
                         const createdInvite = createdInvites[0];
                         assert.uuid(createdInvite.id, 'v4');
-                        assert.deepEqual(createdInvite.topic, {
-                            id: topic.id
-                        });
-                        assert.deepEqual(createdInvite.creator, {
-                            id: userCreator.id
-                        });
-                        assert.equal(createdInvite.user.id, invitation.userId);
+                        assert.equal(createdInvite.topicId, topic.id);
+                        assert.equal(createdInvite.creatorId, userCreator.id);
+                        assert.equal(createdInvite.userId, invitation.userId);
                         assert.equal(createdInvite.level, invitation.level);
                         assert.isNotNull(createdInvite.createdAt);
                         assert.isNotNull(createdInvite.updatedAt);
@@ -4854,31 +4850,23 @@ suite('Users', function () {
                             assert.equal(createdInvites.length, 2);
 
                             const createdInviteUser1 = _.find(createdInvites, invite => {
-                                return invite.user.id === invitation[0].userId;
+                                return invite.userId === invitation[0].userId;
                             });
                             assert.uuid(createdInviteUser1.id, 'v4');
-                            assert.deepEqual(createdInviteUser1.topic, {
-                                id: topic.id
-                            });
-                            assert.deepEqual(createdInviteUser1.creator, {
-                                id: userCreator.id
-                            });
-                            assert.equal(createdInviteUser1.user.id, invitation[0].userId);
+                            assert.equal(createdInviteUser1.topicId, topic.id);
+                            assert.equal(createdInviteUser1.creatorId, userCreator.id);
+                            assert.equal(createdInviteUser1.userId, invitation[0].userId);
                             assert.equal(createdInviteUser1.level, invitation[0].level);
                             assert.isNotNull(createdInviteUser1.createdAt);
                             assert.isNotNull(createdInviteUser1.updatedAt);
 
                             const createdInviteUser2 = _.find(createdInvites, invite => {
-                                return invite.user.id === invitation[1].userId;
+                                return invite.userId === invitation[1].userId;
                             });
                             assert.uuid(createdInviteUser2.id, 'v4');
-                            assert.deepEqual(createdInviteUser2.topic, {
-                                id: topic.id
-                            });
-                            assert.deepEqual(createdInviteUser2.creator, {
-                                id: userCreator.id
-                            });
-                            assert.equal(createdInviteUser2.user.id, invitation[1].userId);
+                            assert.equal(createdInviteUser2.topicId, topic.id);
+                            assert.equal(createdInviteUser2.creatorId, userCreator.id);
+                            assert.equal(createdInviteUser2.userId, invitation[1].userId);
                             assert.equal(createdInviteUser2.level, invitation[1].level);
                             assert.isNotNull(createdInviteUser2.createdAt);
                             assert.isNotNull(createdInviteUser2.updatedAt);
@@ -4921,26 +4909,18 @@ suite('Users', function () {
 
                             const createdInviteUser1 = _.find(createdInvites, {level: invitation[0].level}); // find by level, not by id to keep the code simpler
                             assert.uuid(createdInviteUser1.id, 'v4');
-                            assert.deepEqual(createdInviteUser1.topic, {
-                                id: topic.id
-                            });
-                            assert.deepEqual(createdInviteUser1.creator, {
-                                id: userCreator.id
-                            });
-                            assert.equal(createdInviteUser1.user.id, invitation[0].userId);
+                            assert.equal(createdInviteUser1.topicId, topic.id);
+                            assert.equal(createdInviteUser1.creatorId, userCreator.id);
+                            assert.equal(createdInviteUser1.userId, invitation[0].userId);
                             assert.equal(createdInviteUser1.level, invitation[0].level);
                             assert.isNotNull(createdInviteUser1.createdAt);
                             assert.isNotNull(createdInviteUser1.updatedAt);
 
                             const createdInviteUser2 = _.find(createdInvites, {level: invitation[1].level}); // find by level, not by id to keep the code simpler
                             assert.uuid(createdInviteUser2.id, 'v4');
-                            assert.deepEqual(createdInviteUser2.topic, {
-                                id: topic.id
-                            });
-                            assert.deepEqual(createdInviteUser2.creator, {
-                                id: userCreator.id
-                            });
-                            assert.equal(createdInviteUser2.user.id, userToIvite2.id);
+                            assert.equal(createdInviteUser2.topicId, topic.id);
+                            assert.equal(createdInviteUser2.creatorId, userCreator.id);
+                            assert.equal(createdInviteUser2.userId, userToIvite2.id);
                             assert.equal(createdInviteUser2.level, invitation[1].level);
                             assert.isNotNull(createdInviteUser2.createdAt);
                             assert.isNotNull(createdInviteUser2.updatedAt);
@@ -4982,26 +4962,18 @@ suite('Users', function () {
 
                         const createdInviteUser1 = _.find(createdInvites, {level: invitation[0].level}); // find by level, not by id to keep the code simpler
                         assert.uuid(createdInviteUser1.id, 'v4');
-                        assert.deepEqual(createdInviteUser1.topic, {
-                            id: topic.id
-                        });
-                        assert.deepEqual(createdInviteUser1.creator, {
-                            id: userCreator.id
-                        });
-                        assert.uuid(createdInviteUser1.user.id, 'v4');
+                        assert.equal(createdInviteUser1.topicId, topic.id);
+                        assert.equal(createdInviteUser1.creatorId, userCreator.id);
+                        assert.uuid(createdInviteUser1.userId, 'v4');
                         assert.equal(createdInviteUser1.level, invitation[0].level);
                         assert.isNotNull(createdInviteUser1.createdAt);
                         assert.isNotNull(createdInviteUser1.updatedAt);
 
                         const createdInviteUser2 = _.find(createdInvites, {level: invitation[1].level}); // find by level, not by id to keep the code simpler
                         assert.uuid(createdInviteUser2.id, 'v4');
-                        assert.deepEqual(createdInviteUser2.topic, {
-                            id: topic.id
-                        });
-                        assert.deepEqual(createdInviteUser2.creator, {
-                            id: userCreator.id
-                        });
-                        assert.uuid(createdInviteUser2.user.id, 'v4');
+                        assert.equal(createdInviteUser2.topicId, topic.id);
+                        assert.equal(createdInviteUser2.creatorId, userCreator.id);
+                        assert.uuid(createdInviteUser2.userId, 'v4');
                         assert.equal(createdInviteUser2.level, invitation[1].level);
                         assert.isNotNull(createdInviteUser2.createdAt);
                         assert.isNotNull(createdInviteUser2.updatedAt);
@@ -5340,7 +5312,7 @@ suite('Users', function () {
                         }));
 
                         // Make sure the double invites are both present
-                        // The list result User object has more properties than the create, otherwise the objects should be equal
+                        // The list result has User object, otherwise the objects should be equal
                         const inviteListInvite1 = invitesList.find(invite => {
                             return invite.id === topicInviteCreated1.id
                         });
@@ -5349,11 +5321,10 @@ suite('Users', function () {
                         assert.equal(inviteListInivteUser1.id, userToInvite1.id);
                         assert.equal(inviteListInivteUser1.name, userToInvite1.name);
                         assert.property(inviteListInivteUser1, 'imageUrl');
-                        delete inviteListInivteUser1.name;
-                        delete inviteListInivteUser1.imageUrl;
+                        delete inviteListInvite1.user;
                         assert.deepEqual(inviteListInvite1, topicInviteCreated1);
 
-                        // The list result User object has more properties than the create, otherwise the objects should be equal
+                        // The list result has User object, otherwise the objects should be equal
                         const inviteListInvite2 = invitesList.find(invite => {
                             return invite.id === topicInviteCreated2.id
                         });
@@ -5361,8 +5332,7 @@ suite('Users', function () {
                         assert.equal(inviteListInivteUser2.id, userToInvite1.id);
                         assert.equal(inviteListInivteUser2.name, userToInvite1.name);
                         assert.property(inviteListInivteUser2, 'imageUrl');
-                        delete inviteListInivteUser2.name;
-                        delete inviteListInivteUser2.imageUrl;
+                        delete inviteListInvite2.user;
                         assert.deepEqual(inviteListInvite2, topicInviteCreated2);
 
                         done();

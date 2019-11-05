@@ -3614,25 +3614,29 @@ module.exports = function (app) {
                     }
                 })
                 .then(function (topicMemberUserResult) {
-                    const [member] = topicMemberUserResult;
+                    const [member, wasCreated] = topicMemberUserResult;
 
-                    const user = User.build({id: member.userId});
-                    user.dataValues.id = member.userId;
+                    if (wasCreated) {
+                        const user = User.build({id: member.userId});
+                        user.dataValues.id = member.userId;
 
-                    return cosActivities.addActivity(
-                        user,
-                        {
-                            type: 'User',
-                            id: req.user.id,
-                            ip: req.ip
-                        },
-                        null,
-                        topic,
-                            req.method + ' ' + req.path,
-                        t)
-                        .then(function () {
-                            return topicMemberUserResult;
-                        });
+                        return cosActivities.addActivity(
+                            user,
+                            {
+                                type: 'User',
+                                id: req.user.id,
+                                ip: req.ip
+                            },
+                            null,
+                            topic,
+                                req.method + ' ' + req.path,
+                            t)
+                            .then(function () {
+                                return topicMemberUserResult;
+                            });
+                    } else {
+                        return topicMemberUserResult;
+                    }
                 });
         });
 

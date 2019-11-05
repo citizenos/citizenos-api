@@ -92,6 +92,8 @@ module.exports = function (app) {
         activityObject.createdAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS ZZ');
         activityObject.updatedAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS ZZ');
 
+        console.log('SAVE_ACTIVITY', activity);
+
         return Activity
             .create(
                 activityObject,
