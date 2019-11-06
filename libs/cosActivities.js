@@ -1,19 +1,19 @@
 'use strict';
 
-var diff = require('json-patch-gen');
+const diff = require('json-patch-gen');
 
 module.exports = function (app) {
-    var Promise = app.get('Promise');
-    var _ = app.get('lodash');
-    var models = app.get('models');
-    var db = models.sequelize;
-    var uuid = app.get('uuid');
-    var moment = app.get('moment');
+    const Promise = app.get('Promise');
+    const _ = app.get('lodash');
+    const models = app.get('models');
+    const db = models.sequelize;
+    const uuid = app.get('uuid');
+    const moment = app.get('moment');
 
-    var Activity = models.Activity;
+    const Activity = models.Activity;
 
-    var _saveActivity = function (activity, transaction) { //eslint-disable-line complexity
-        var activityObject = {
+    const _saveActivity = function (activity, transaction) { //eslint-disable-line complexity
+        const activityObject = {
             data: activity
         };
 
@@ -101,9 +101,9 @@ module.exports = function (app) {
             );
     };
 
-    var _getInstanceChangeSet = function (instance) {
-        var currentValues = {};
-        var previousValues = instance.previous();
+    const _getInstanceChangeSet = function (instance) {
+        const currentValues = {};
+        const previousValues = instance.previous();
 
         var changed = instance.changed();
         if (!changed) {
@@ -116,7 +116,7 @@ module.exports = function (app) {
         return diff(previousValues, currentValues); // This shows what changes to apply to get previous object
     };
 
-    var _createActivity = function (instance, target, actor, context, transaction) {
+    const _createActivity = function (instance, target, actor, context, transaction) {
         // {
         // "@context": "https://www.w3.org/ns/activitystreams",
         // "summary": "Sally created a note",
@@ -132,12 +132,12 @@ module.exports = function (app) {
         // }
         // }
 
-        var object;
+        let object;
 
         if (Array.isArray(instance)) {
             object = [];
             instance.forEach(function (elem) {
-                var o = _.cloneDeep(elem.toJSON());
+                const o = _.cloneDeep(elem.toJSON());
                 o['@type'] = elem._modelOptions.name.singular;
                 object.push(o);
             });
@@ -147,14 +147,14 @@ module.exports = function (app) {
 
         }
 
-        var activity = {
+        const activity = {
             type: Activity.TYPES.create,
             object: object,
             actor: actor
         };
 
         if (target) {
-            var targetObject = target.toJSON();
+            const targetObject = target.toJSON();
             targetObject['@type'] = target._modelOptions.name.singular;
             activity.target = targetObject;
         }
@@ -166,10 +166,10 @@ module.exports = function (app) {
         return _saveActivity(activity, transaction);
     };
 
-    var _updateTopicDescriptionActivity = function (instance, target, actor, fields, context, transaction) {
+    const _updateTopicDescriptionActivity = function (instance, target, actor, fields, context, transaction) {
 
-        var originPrevious = instance.previous();
-        var origin = _.clone(instance.toJSON());
+        const originPrevious = instance.previous();
+        const origin = _.clone(instance.toJSON());
         _.mapValues(originPrevious, function (val, key) {
             origin[key] = val;
         });
@@ -182,7 +182,7 @@ module.exports = function (app) {
             });
         }
 
-        var changeSet = _getInstanceChangeSet(instance);
+        const changeSet = _getInstanceChangeSet(instance);
 
         if (changeSet.length === 0) {
             return Promise.resolve();
@@ -197,7 +197,7 @@ module.exports = function (app) {
         origin.description = null;
         origin['@type'] = instance._modelOptions.name.singular;
 
-        var activity = {
+        const activity = {
             type: Activity.TYPES.update,
             object: origin,
             origin: origin,
@@ -206,7 +206,7 @@ module.exports = function (app) {
         };
 
         if (target) {
-            var targetObject = target.toJSON();
+            const targetObject = target.toJSON();
             targetObject['@type'] = target._modelOptions.name.singular;
             activity.target = targetObject;
         }
@@ -214,7 +214,7 @@ module.exports = function (app) {
         if (context) {
             activity.context = context;
         }
-        var dataString = JSON.stringify(activity);
+        const dataString = JSON.stringify(activity);
 
         return db
             .query(
@@ -310,7 +310,7 @@ module.exports = function (app) {
             );
     };
 
-    var _updateActivity = function (instance, target, actor, fields, context, transaction) {
+    const _updateActivity = function (instance, target, actor, fields, context, transaction) {
         // {
         // "@context": "https://www.w3.org/ns/activitystreams",
         // "summary": "Sally updated her note",
@@ -321,8 +321,8 @@ module.exports = function (app) {
         // },
         // "object": "http://example.org/notes/1"
 
-        var originPrevious = instance.previous();
-        var origin = _.clone(instance.toJSON());
+        const originPrevious = instance.previous();
+        const origin = _.clone(instance.toJSON());
 
         _.mapValues(originPrevious, function (val, key) {
             origin[key] = val;
@@ -336,14 +336,14 @@ module.exports = function (app) {
             });
         }
 
-        var changeSet = _getInstanceChangeSet(instance);
+        const changeSet = _getInstanceChangeSet(instance);
 
         if (changeSet.length === 0) {
             return Promise.resolve();
         }
 
         origin['@type'] = instance._modelOptions.name.singular;
-        var activity = {
+        const activity = {
             type: Activity.TYPES.update,
             object: origin,
             origin: origin,
@@ -352,7 +352,7 @@ module.exports = function (app) {
         };
 
         if (target) {
-            var targetObject = target.toJSON();
+            const targetObject = target.toJSON();
             targetObject['@type'] = target._modelOptions.name.singular;
             activity.target = targetObject;
         }
@@ -364,7 +364,7 @@ module.exports = function (app) {
         return _saveActivity(activity, transaction);
     };
 
-    var _addActivity = function (instance, actor, origin, target, context, transaction) {
+    const _addActivity = function (instance, actor, origin, target, context, transaction) {
 
         // {
         // "@context": "https://www.w3.org/ns/activitystreams",
@@ -388,23 +388,23 @@ module.exports = function (app) {
         // "name": "My Cat Pictures"
         // }
         // }
-        var object = instance.toJSON();
+        const object = instance.toJSON();
         object['@type'] = instance._modelOptions.name.singular;
 
-        var activity = {
+        const activity = {
             type: Activity.TYPES.add,
             object: object,
             actor: actor
         };
 
         if (origin) {
-            var originObject = origin.toJSON();
+            const originObject = origin.toJSON();
             originObject['@type'] = origin._modelOptions.name.singular;
             activity.origin = originObject;
         }
 
         if (target) {
-            var targetObject = target.toJSON();
+            const targetObject = target.toJSON();
             targetObject['@type'] = target._modelOptions.name.singular;
             activity.target = targetObject;
         }
@@ -416,7 +416,7 @@ module.exports = function (app) {
         return _saveActivity(activity, transaction);
     };
 
-    var _deleteActivity = function (instance, origin, actor, context, transaction) {
+    const _deleteActivity = function (instance, origin, actor, context, transaction) {
         // {
         // "@context": "https://www.w3.org/ns/activitystreams",
         // "summary": "Sally deleted a note",
@@ -432,17 +432,17 @@ module.exports = function (app) {
         // }
         // }
 
-        var object = instance.toJSON();
+        const object = instance.toJSON();
         object['@type'] = instance._modelOptions.name.singular;
 
-        var activity = {
+        const activity = {
             type: Activity.TYPES.delete,
             object: object,
             actor: actor
         };
 
         if (origin) {
-            var originObject = origin.toJSON();
+            const originObject = origin.toJSON();
             originObject['@type'] = origin._modelOptions.name.singular;
 
             activity.origin = originObject;
@@ -455,7 +455,65 @@ module.exports = function (app) {
         return _saveActivity(activity, transaction);
     };
 
-    var _leaveActivity = function (instance, actor, context, transaction) {
+    const _inviteActivity = function (instance, target, actor, context, transaction) {
+        /*
+         // https://www.w3.org/TR/activitystreams-vocabulary/#dfn-invite
+
+         {
+         "@context": "https://www.w3.org/ns/activitystreams",
+         "summary": "Sally invited John and Lisa to a party",
+         "type": "Invite",
+         "actor": {
+         "type": "Person",
+         "name": "Sally"
+         },
+         "object": {
+         "type": "Event",
+         "name": "A Party"
+         },
+         "target": [
+         {
+         "type": "Person",
+         "name": "John"
+         },
+         {
+         "type": "Person",
+         "name": "Lisa"
+         }
+         ]
+         }
+         */
+
+        const _object = instance.toJSON();
+        _object['@type'] = instance._modelOptions.name.singular;
+
+        if (instance.dataValues.level) {
+            _object.level = instance.dataValues.level;
+        }
+
+        var activity = {
+            type: Activity.TYPES.invite,
+            object: _object,
+            actor: actor
+        };
+
+        if (target) {
+            const targetObject = target.toJSON();
+            targetObject['@type'] = target._modelOptions.name.singular;
+            if (target.dataValues.level) {
+                targetObject.level = target.dataValues.level;
+            }
+            activity.target = targetObject;
+        }
+
+        if (context) {
+            activity.context = context;
+        }
+
+        return _saveActivity(activity, transaction);
+    };
+
+    const _leaveActivity = function (instance, actor, context, transaction) {
 
         // {
         // "@context": "https://www.w3.org/ns/activitystreams",
@@ -487,7 +545,7 @@ module.exports = function (app) {
         return _saveActivity(activity, transaction);
     };
 
-    var _viewActivity = function (instance, actor, context, transaction) {
+    const _viewActivity = function (instance, actor, context, transaction) {
         // {
         // "@context": "https://www.w3.org/ns/activitystreams",
         // "summary": "Sally read an article",
@@ -502,10 +560,10 @@ module.exports = function (app) {
         // }
         // }
 
-        var object = instance.toJSON();
+        const object = instance.toJSON();
         object['@type'] = instance._modelOptions.name.singular;
 
-        var activity = {
+        const activity = {
             type: Activity.TYPES.view,
             object: object,
             actor: actor
@@ -518,7 +576,7 @@ module.exports = function (app) {
         return _saveActivity(activity, transaction);
     };
 
-    var _viewActivityFeedActivity = function (instance, actor, context, transaction) {
+    const _viewActivityFeedActivity = function (instance, actor, context, transaction) {
         // {
         // "@context": "https://www.w3.org/ns/activitystreams",
         // "summary": "Sally read an article",
@@ -533,13 +591,13 @@ module.exports = function (app) {
         // }
         // }
 
-        var object = instance.toJSON();
+        const object = instance.toJSON();
         if (object.offset > 0) {
             return Promise.resolve();
         }
         object['@type'] = instance._modelOptions.name.singular;
 
-        var activity = {
+        const activity = {
             type: Activity.TYPES.view,
             object: object,
             actor: actor
@@ -549,7 +607,7 @@ module.exports = function (app) {
             activity.context = context;
         }
 
-        var dataString = JSON.stringify(activity);
+        const dataString = JSON.stringify(activity);
 
         return db
             .query(' \
@@ -608,7 +666,7 @@ module.exports = function (app) {
             });
     };
 
-    var _joinActivity = function (instance, actor, context, transaction) {
+    const _joinActivity = function (instance, actor, context, transaction) {
         // {
         // "@context": "https://www.w3.org/ns/activitystreams",
         // "summary": "Sally joined a group",
@@ -623,10 +681,10 @@ module.exports = function (app) {
         // }
         // }
 
-        var object = instance.toJSON();
+        const object = instance.toJSON();
         object['@type'] = instance._modelOptions.name.singular;
 
-        var activity = {
+        const activity = {
             type: Activity.TYPES.join,
             object: object,
             actor: actor
@@ -639,7 +697,7 @@ module.exports = function (app) {
         return _saveActivity(activity, transaction);
     };
 
-    var _replyActivity = function (instance, inReplyTo, target, actor, context, transaction) {
+    const _replyActivity = function (instance, inReplyTo, target, actor, context, transaction) {
         // {
         // "@context": "https://www.w3.org/ns/activitystreams",
         // "summary": "Sally created a note",
@@ -660,12 +718,12 @@ module.exports = function (app) {
         // }
         // }
 
-        var object;
+        let object;
 
         if (Array.isArray(instance)) {
             object = [];
             instance.forEach(function (elem) {
-                var o = _.cloneDeep(elem.toJSON());
+                const o = _.cloneDeep(elem.toJSON());
                 o['@type'] = elem._modelOptions.name.singular;
                 object.push(o);
             });
@@ -675,10 +733,10 @@ module.exports = function (app) {
 
         }
 
-        var replyTo = inReplyTo.toJSON();
+        const replyTo = inReplyTo.toJSON();
         replyTo['@type'] = inReplyTo._modelOptions.name.singular;
 
-        var activity = {
+        const activity = {
             type: Activity.TYPES.create,
             object: object,
             inReplyTo: replyTo,
@@ -686,7 +744,7 @@ module.exports = function (app) {
         };
 
         if (target) {
-            var targetObject = target.toJSON();
+            const targetObject = target.toJSON();
             targetObject['@type'] = target._modelOptions.name.singular;
             activity.target = targetObject;
         }
@@ -704,6 +762,7 @@ module.exports = function (app) {
         updateActivity: _updateActivity,
         updateTopicDescriptionActivity: _updateTopicDescriptionActivity,
         deleteActivity: _deleteActivity,
+        inviteActivity: _inviteActivity,
         leaveActivity: _leaveActivity,
         addActivity: _addActivity,
         viewActivity: _viewActivity,

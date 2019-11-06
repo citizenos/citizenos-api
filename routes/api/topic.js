@@ -3392,16 +3392,16 @@ module.exports = function (app) {
                             creatorId: userId,
                             userId: member.userId,
                             level: member.level
-                        },
-                        {
-                            transaction: t
                         }
                     )
                     .then(function (topicInvite) {
+                        const userInvited = User.build({id: topicInvite.userId});
+                        userInvited.dataValues.level = topicInvite.level; // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112
+
                         return cosActivities
-                            .createActivity(
-                                topicInvite,
+                            .inviteActivity(
                                 topic,
+                                userInvited,
                                 {
                                     type: 'User',
                                     id: req.user.id,
@@ -3611,8 +3611,9 @@ module.exports = function (app) {
                             },
                             null,
                             topic,
-                                req.method + ' ' + req.path,
-                            t)
+                            req.method + ' ' + req.path,
+                            t
+                            )
                             .then(function () {
                                 return topicMemberUserResult;
                             });

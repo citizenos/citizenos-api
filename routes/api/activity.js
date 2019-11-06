@@ -56,6 +56,7 @@ module.exports = function (app) {
             ELSE NULL \
         END AS origin, \
         CASE \
+            WHEN targu.id IS NOT NULL THEN to_jsonb(targu.*) \
             WHEN targg.id IS NOT NULL THEN to_jsonb(targg.*) \
             WHEN targt.id IS NOT NULL THEN to_jsonb(targt.*) \
             WHEN targtc.id IS NOT NULL THEN to_jsonb(targtc.*) \
@@ -121,6 +122,8 @@ module.exports = function (app) {
             JOIN "Groups" g ON g.id::text = data#>>\'{origin, groupId}\' \
             WHERE a.data#>>\'{origin, @type}\' = \'GroupMember\' \
         ) gmuorig ON a.data#>>\'{origin, @type}\' = \'GroupMember\' AND tmuorig."activityId" = a.id \
+        LEFT JOIN \
+            (SELECT \'User\' AS "@type", u.* FROM "Users" u) targu ON a.data#>>\'{target, @type}\' = \'User\' AND targu.id::text = a.data#>>\'{target, id}\' \
         LEFT JOIN \
             (SELECT \'Group\' AS "@type", g.* FROM "Groups" g) targg ON a.data#>>\'{target, @type}\' = \'Group\' AND targg.id::text = a.data#>>\'{target, id}\' \
         LEFT JOIN\
@@ -307,6 +310,9 @@ module.exports = function (app) {
                             if (field !== 'origin') {
                                 object = User.build(activity[field]).toJSON();
                                 object['@type'] = activity[field]['@type'];
+                                if (activity.data[field].level) { // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112
+                                    object.level = activity.data[field].level;
+                                }
                                 delete object.language;
                             }
                             break;
