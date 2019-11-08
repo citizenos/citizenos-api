@@ -437,14 +437,14 @@ function CosSmartId (app) {
         countryCode = countryCode || 'EE'; //defaults to Estonia
         var dataToSign = bdoc.getDataToSign();
     //    console.log('DATA TO SIGN', dataToSign);
-        var sessionHash = _createHash(dataToSign);
+        var sessionHash = crypto.createHash('sha256').update(dataToSign).digest('base64');
         var hashType = 'sha256';
         
         var path = '/smart-id-rp/v1/signature/pno/:countryCode/:pid';
         var params = {
             relyingPartyUUID: _replyingPartyUUID,
             relyingPartyName: _replyingPartyName,
-            hash: Buffer.from(sessionHash, 'hex').toString('base64'),
+            hash: sessionHash,
             hashType: hashType.toUpperCase()
         };
         
@@ -500,9 +500,10 @@ function CosSmartId (app) {
         });
     };
 
-    var _signInitSmartId = function (topicId, voteId, userId, voteOptions, pid, countryCode, transaction) {
+    var _signInitSmartId = function (topicId, voteId, userId, voteOptions, pid, countryCode, certificate, transaction) {
         return _createUserBdoc(topicId, voteId, userId, voteOptions, 'test', transaction)
             .then(function (bdoc) {
+                bdoc.addSigningCertificate(certificate);
                 bdoc.finalize();
             //    var containerBase64 = _streamToBase64(bdocStream);
              /*   return VoteUserContainer

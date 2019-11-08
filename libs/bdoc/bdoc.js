@@ -170,6 +170,89 @@ var Bdoc = function (docPath) {
         },
     };
 
+    this.addSigningCertificate = function (certificate) {
+        var cert = this.decodeCert(this._prepareCert(certificate));
+        var certDigest = crypto.createHash('sha256').update(this._prepareCert(certificate), 'base64').digest('base64');
+        var issuer = that.getCertValue('issuer', cert);
+        var serialNumber = cert.serialNumber.valueBlock.toString();
+        var timestamp = moment().format('YYYY-MM-DDTHH:mm:ssZ');
+        var sigPolicyId = {
+            'xades:SigPolicyId': {
+                'xades:Identifier': {
+                    '@Qualifier': 'OIDAsURN',
+                    '#text': ' urn:oid:1.3.6.1.4.1.10015.1000.3.2.1'
+                }
+            }
+        };
+        var SigPolicyIdXML = xmlbuilder.create(sigPolicyId).end({ pretty: true}).replace('<?xml version="1.0"?>', '').trim();
+        var policyDigest = crypto.createHash('sha256').update(SigPolicyIdXML, 'base64').digest('base64');
+        var signedDataFileProperties = [];
+        that.filesList.forEach(function (file, index) {
+            signedDataFileProperties.push({
+                '@ObjectReference': '#S0-ref-' + index,
+                'xades:MimeType': file.mimeType
+            });
+        });
+
+        var signedProperties = {
+            'xades:SignedProperties': {
+                '@Id': 'S'+that.signatureCount+'-SignedProperties',
+                'xades:SignedSignatureProperties': {
+                    '@Id': 'S'+that.signatureCount+'-SignedSignatureProperties',
+                    'xades:SigningTime': timestamp,
+                    'xades:SigningCertificate': {
+                        'xades:Cert': {
+                            'xades:CertDigest': {
+                                'ds:DigestMethod': {
+                                    '@Algorithm': 'http://www.w3.org/2001/04/xmlenc#sha256',
+                                    '#text': ' '
+                                },
+                                'ds:DigestValue': certDigest
+                            },
+                            'xades:IssuerSerial': {
+                                'ds:X509IssuerName': issuer,
+                                'ds:X509SerialNumber': serialNumber
+                            }
+                        }
+                    },
+                    'xades:SignaturePolicyIdentifier': {
+                        'xades:SignaturePolicyId': {
+                            'xades:SigPolicyId': {
+                                'xades:Identifier': {
+                                    '@Qualifier': 'OIDAsURN',
+                                    '#text': ' urn:oid:1.3.6.1.4.1.10015.1000.3.2.1'
+                                }
+                            },
+                            'xades:SigPolicyHash': {
+                                'ds:DigestMethod': {
+                                    '@Algorithm': 'http://www.w3.org/2001/04/xmlenc#sha256',
+                                    '#text':' '
+                                },
+                                'ds:DigestValue': policyDigest
+                            },
+                            'xades:SigPolicyQualifiers': {
+                                'xades:SigPolicyQualifier': {
+                                    'xades:SPURI': {
+                                        '#text': ' https://www.sk.ee/repository/bdoc-spec21.pdf'
+                                    }
+                                }
+                            }
+                        },
+                    },
+                    'xades:SignatureProductionPlace': ' ',
+                    'xades:SignerRole': {
+                        'xades:ClaimedRoles': {
+                            'xades:ClaimedRole': ''
+                        }
+                    }
+                },
+                'xades:SignedDataObjectProperties': {
+                    'xades:DataObjectFormat': signedDataFileProperties
+                }
+            }
+        };
+    }
+    
     this.getCertValue = function (key, cert, splitter) {
         if (!splitter) splitter = ',';
         var res = [];
@@ -180,7 +263,7 @@ var Bdoc = function (docPath) {
             res.push(`${name2 ? name2 : type}=${typeAndValue.value.valueBlock.value}`);
         });
 
-        return res.join(splitter + " ");
+        return res.reverse().join(splitter + " ");
     };
 
     this._pem2Der = function (certificate) {
@@ -268,6 +351,17 @@ var Bdoc = function (docPath) {
                 'xades:MimeType': file.mimeType
             });
         });
+        var sigPolicyId = {
+            'xades:SigPolicyId': {
+                'xades:Identifier': {
+                    '@Qualifier': 'OIDAsURN',
+                    '#text': ' urn:oid:1.3.6.1.4.1.10015.1000.3.2.1'
+                }
+            }
+        };
+        var SigPolicyIdXML = xmlbuilder.create(sigPolicyId).end({ pretty: true}).replace('<?xml version="1.0"?>', '').trim();
+        var policyDigest = crypto.createHash('sha256').update(SigPolicyIdXML, 'base64').digest('base64');
+
         var signedProperties = {'xades:SignedProperties': {
                 '@Id': 'S'+that.signatureCount+'-SignedProperties',
                 'xades:SignedSignatureProperties': {
@@ -323,7 +417,8 @@ var Bdoc = function (docPath) {
                     'xades:DataObjectFormat': signedDataFileProperties
                 }
             }
-            };
+        };
+
         var signedPropertiesXML = xmlbuilder.create(signedProperties).end({ pretty: true}).replace('<?xml version="1.0"?>', '').trim();
         var signedPropertiesDigest = crypto.createHash('sha256').update(Buffer.from(signedPropertiesXML)).digest('base64');
         fileReferences.push({
@@ -403,7 +498,7 @@ var Bdoc = function (docPath) {
                                                     '@Algorithm': 'http://www.w3.org/2001/04/xmlenc#sha256',
                                                     '#text':' '
                                                 },
-                                                'ds:DigestValue': '3Tl1oILSvOAWomdI9VeWV6IA/32eSXRUri9kPEz1IVs=' //someValue
+                                                'ds:DigestValue': policyDigest
                                             },
                                             'xades:SigPolicyQualifiers': {
                                                 'xades:SigPolicyQualifier': {
@@ -550,7 +645,7 @@ Bdoc.prototype.getStream = function () {
 };
 
 Bdoc.prototype.getDataToSign = function () {
-    return this.dataToSign.toString('hex');
+    return Buffer.from(this.dataToSign, 'hex');
 };
 
 Bdoc.prototype.setConfiguration = function (type) {

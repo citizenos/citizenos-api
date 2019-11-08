@@ -5523,6 +5523,7 @@ module.exports = function (app) {
         }
 
         var getCertificatePromise;
+        var smartIdcertificate;
         var isSmartId = false;
         if (pid && countryCode) {
             isSmartId = true;
@@ -5530,6 +5531,8 @@ module.exports = function (app) {
             getCertificatePromise = smartId
                     .getUserCertificate(pid, phoneNumber)
                         .then(function (cert) {
+                            smartIdcertificate = cert;
+
                             return {
                                 certificate: cert,
                                 format: 'pem'
@@ -5734,7 +5737,7 @@ module.exports = function (app) {
                                         case Vote.SIGNING_METHODS.idCard:                                            
                                             return cosBdoc.signInitIdCard(topicId, voteId, userId, vote.VoteOptions, certificate, t);
                                         case Vote.SIGNING_METHODS.smartId:
-                                            return smartId.signInitSmartId(topicId, voteId, userId, vote.VoteOptions, personalInfo.pid, countryCode, t);
+                                            return smartId.signInitSmartId(topicId, voteId, userId, vote.VoteOptions, personalInfo.pid, countryCode, smartIdcertificate, t);
                                         case Vote.SIGNING_METHODS.mid:
                                             return cosBdoc.signInitMobile(topicId, voteId, userId, vote.VoteOptions, personalInfo.pid, personalInfo.phoneNumber, t);
                                         default:
