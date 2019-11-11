@@ -487,10 +487,6 @@ module.exports = function (app) {
         const _object = instance.toJSON();
         _object['@type'] = instance._modelOptions.name.singular;
 
-        if (instance.dataValues.level) {
-            _object.level = instance.dataValues.level;
-        }
-
         var activity = {
             type: Activity.TYPES.invite,
             object: _object,
@@ -502,6 +498,9 @@ module.exports = function (app) {
             targetObject['@type'] = target._modelOptions.name.singular;
             if (target.dataValues.level) {
                 targetObject.level = target.dataValues.level;
+            }
+            if (target.dataValues.inviteId) {
+                targetObject.inviteId = target.dataValues.inviteId;
             }
             activity.target = targetObject;
         }

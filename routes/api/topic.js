@@ -3392,11 +3392,15 @@ module.exports = function (app) {
                             creatorId: userId,
                             userId: member.userId,
                             level: member.level
+                        },
+                        {
+                            transaction: t
                         }
                     )
                     .then(function (topicInvite) {
                         const userInvited = User.build({id: topicInvite.userId});
-                        userInvited.dataValues.level = topicInvite.level; // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112
+                        userInvited.dataValues.level = topicInvite.level; // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
+                        userInvited.dataValues.inviteId = topicInvite.id; // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
 
                         return cosActivities
                             .inviteActivity(

@@ -310,8 +310,11 @@ module.exports = function (app) {
                             if (field !== 'origin') {
                                 object = User.build(activity[field]).toJSON();
                                 object['@type'] = activity[field]['@type'];
-                                if (activity.data[field].level) { // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112
+                                if (activity.data[field].level) { // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
                                     object.level = activity.data[field].level;
+                                }
+                                if (activity.data[field].inviteId) { // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
+                                    object.inviteId = activity.data[field].inviteId;
                                 }
                                 delete object.language;
                             }
