@@ -3608,16 +3608,19 @@ module.exports = function (app) {
                         const user = User.build({id: member.userId});
                         user.dataValues.id = member.userId;
 
-                        return cosActivities.addActivity(
-                            user,
+                        return cosActivities.acceptActivity(
+                            invite,
                             {
                                 type: 'User',
                                 id: req.user.id,
                                 ip: req.ip
                             },
-                            null,
+                            {
+                                type: 'User',
+                                id: invite.creatorId
+                            },
                             topic,
-                            req.method + ' ' + req.path,
+                                req.method + ' ' + req.path,
                             t
                             )
                             .then(function () {

@@ -38,6 +38,7 @@ module.exports = function (app) {
         a."deletedAt", \
         CASE \
             WHEN u.id IS NOT NULL THEN to_jsonb(u.*) \
+            WHEN a.data #>> \'{actor, type}\' = \'System\' THEN \'{"type": "System"}\' \
             ELSE NULL \
         END AS actor, \
         CASE \

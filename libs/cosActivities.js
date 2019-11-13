@@ -21,6 +21,7 @@ module.exports = function (app) {
         activityObject.groupIds = [];
         activityObject.userIds = [];
 
+        // TODO: Think about this, we MAY want code that looks for deep properties and adds them to the relevant arrays
         if (activity.object) {
             if (activity.object['@type'] === 'Topic') {
                 activityObject.topicIds.push(activity.object.id);
@@ -29,6 +30,14 @@ module.exports = function (app) {
             } else if (activity.object['@type'] === 'User') {
                 activityObject.userIds.push(activity.object.id);
             }
+
+            if (activity.object.type === 'Invite') {
+                activityObject.userIds.push(activity.object.actor.id);
+                if (activity.object.object['@type'] === 'Topic') {
+                    activityObject.topicIds.push(activity.object.object.id);
+                }
+            }
+
             if (activity.object.topicId) {
                 activityObject.topicIds.push(activity.object.topicId);
             }
@@ -144,7 +153,6 @@ module.exports = function (app) {
         } else {
             object = instance.toJSON();
             object['@type'] = instance._modelOptions.name.singular;
-
         }
 
         const activity = {
@@ -512,6 +520,43 @@ module.exports = function (app) {
         return _saveActivity(activity, transaction);
     };
 
+
+    const _acceptActivity = function (instance, actor, inviteActor, inviteObject, context, transaction) {
+        //https://www.w3.org/TR/activitystreams-vocabulary/#dfn-accept
+        //{
+        //    "@context": "https://www.w3.org/ns/activitystreams",
+        //    "summary": "Sally accepted an invitation to a party",
+        //    "type": "Accept",
+        //    "actor": {
+        //        "type": "Person",
+        //        "name": "Sally"
+        //    },
+        //    "object": {
+        //        "type": "Invite",
+        //            "actor": "http://john.example.org",
+        //            "object": {
+        //                "type": "Event",
+        //                "name": "Going-Away Party for Jim"
+        //        }
+        //    }
+        //}
+        const activity = {
+            type: 'Accept',
+            actor: actor,
+            context: context,
+            object: {
+                type: 'Invite',
+                id: instance.id,
+                actor: inviteActor,
+                object: inviteObject.toJSON()
+            }
+        };
+
+        activity.object.object['@type'] = inviteObject._modelOptions.name.singular;
+
+        return _saveActivity(activity, transaction);
+    };
+
     const _leaveActivity = function (instance, actor, context, transaction) {
 
         // {
@@ -762,6 +807,7 @@ module.exports = function (app) {
         updateTopicDescriptionActivity: _updateTopicDescriptionActivity,
         deleteActivity: _deleteActivity,
         inviteActivity: _inviteActivity,
+        acceptActivity: _acceptActivity,
         leaveActivity: _leaveActivity,
         addActivity: _addActivity,
         viewActivity: _viewActivity,
