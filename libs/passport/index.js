@@ -124,21 +124,27 @@ module.exports = function (app) {
                                                     })
                                                     .then(function () {
                                                         return UserConnection
-                                                            .create(
-                                                                {
+                                                            .findOrCreate({
+                                                                where: {
+                                                                    userId: user.id,
+                                                                    connectionId: UserConnection.CONNECTION_IDS.citizenos,
+                                                                    connectionUserId: user.id
+                                                                },
+                                                                defaults: {
                                                                     userId: user.id,
                                                                     connectionId: UserConnection.CONNECTION_IDS.citizenos,
                                                                     connectionUserId: user.id,
                                                                     connectionData: user
                                                                 },
-                                                                {transaction: t}
-                                                            )
-                                                            .then(function (ucCos) {
-
-                                                                return cosActivities.addActivity(ucCos, {
-                                                                    type: 'User',
-                                                                    id: user.id
-                                                                }, null, user, req.method + ' ' + req.path, t);
+                                                                transaction: t
+                                                            })
+                                                            .then(function (ucCos, ucCoscreated) {
+                                                                if (ucCoscreated) {
+                                                                    return cosActivities.addActivity(ucCos, {
+                                                                        type: 'User',
+                                                                        id: user.id
+                                                                    }, null, user, req.method + ' ' + req.path, t);
+                                                                }
                                                             });
                                                     })
                                                     .then(function () {
@@ -259,19 +265,27 @@ module.exports = function (app) {
                                                         return UserConnection
                                                             .findOrCreate(
                                                                 {
-                                                                    userId: user.id,
-                                                                    connectionId: UserConnection.CONNECTION_IDS.citizenos,
-                                                                    connectionUserId: user.id,
-                                                                    connectionData: user
-                                                                },
-                                                                {transaction: t}
+                                                                    where: {
+                                                                        userId: user.id,
+                                                                        connectionId: UserConnection.CONNECTION_IDS.citizenos,
+                                                                        connectionUserId: user.id
+                                                                    },
+                                                                    defaults: {
+                                                                        userId: user.id,
+                                                                        connectionId: UserConnection.CONNECTION_IDS.citizenos,
+                                                                        connectionUserId: user.id,
+                                                                        connectionData: user
+                                                                    },
+                                                                    transaction: t
+                                                                }
                                                             )
-                                                            .then(function (ucCos) {
-
-                                                                return cosActivities.addActivity(ucCos, {
-                                                                    type: 'User',
-                                                                    id: user.id
-                                                                }, null, user, 'GET ' + config.passport.facebook.callbackUrl, t);
+                                                            .then(function (ucCos, created) {
+                                                                if (created) {
+                                                                    return cosActivities.addActivity(ucCos, {
+                                                                        type: 'User',
+                                                                        id: user.id
+                                                                    }, null, user, 'GET ' + config.passport.facebook.callbackUrl, t);   
+                                                                }
                                                             });
                                                     })
                                                     .then(function () {
