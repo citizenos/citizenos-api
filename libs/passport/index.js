@@ -115,7 +115,6 @@ module.exports = function (app) {
                                                         {transaction: t}
                                                     )
                                                     .then(function (uc) {
-
                                                         return cosActivities.addActivity(uc, {
                                                             type: 'User',
                                                             id: user.id,
@@ -137,14 +136,6 @@ module.exports = function (app) {
                                                                     connectionData: user
                                                                 },
                                                                 transaction: t
-                                                            })
-                                                            .then(function (ucCos, ucCoscreated) {
-                                                                if (ucCoscreated) {
-                                                                    return cosActivities.addActivity(ucCos, {
-                                                                        type: 'User',
-                                                                        id: user.id
-                                                                    }, null, user, req.method + ' ' + req.path, t);
-                                                                }
                                                             });
                                                     })
                                                     .then(function () {
@@ -254,7 +245,6 @@ module.exports = function (app) {
                                                         {transaction: t}
                                                     )
                                                     .then(function (uc) {
-
                                                         return cosActivities.addActivity(uc, {
                                                             type: 'User',
                                                             id: user.id,
@@ -278,15 +268,7 @@ module.exports = function (app) {
                                                                     },
                                                                     transaction: t
                                                                 }
-                                                            )
-                                                            .then(function (ucCos, created) {
-                                                                if (created) {
-                                                                    return cosActivities.addActivity(ucCos, {
-                                                                        type: 'User',
-                                                                        id: user.id
-                                                                    }, null, user, 'GET ' + config.passport.facebook.callbackUrl, t);   
-                                                                }
-                                                            });
+                                                            );
                                                     })
                                                     .then(function () {
                                                         if (!user.imageUrl) {
