@@ -308,6 +308,15 @@ suite('Users', function () {
                 });
             });
 
+            suiteTeardown(function (done) {
+                Group // Remove all public groups so that public test would be accurate
+                    .destroy({
+                        where: {
+                            visibility: Group.VISIBILITY.public
+                        }
+                    })
+                    .finally(done);
+            });
         });
 
         suite('Read', function () {
