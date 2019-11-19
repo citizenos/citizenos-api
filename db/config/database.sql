@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 10.6 (Ubuntu 10.6-1.pgdg16.04+1)
--- Dumped by pg_dump version 10.6 (Ubuntu 10.6-1.pgdg16.04+1)
+-- Dumped from database version 10.10 (Ubuntu 10.10-1.pgdg16.04+1)
+-- Dumped by pg_dump version 10.10 (Ubuntu 10.10-1.pgdg16.04+1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -12,6 +12,7 @@ SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
 SET check_function_bodies = false;
+SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
@@ -27,6 +28,20 @@ CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
 --
 
 COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
+
+
+--
+-- Name: pg_stat_statements; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION pg_stat_statements; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION pg_stat_statements IS 'track execution statistics of all SQL statements executed';
 
 
 --
@@ -370,7 +385,8 @@ CREATE TABLE public."Partners" (
     "redirectUriRegexp" character varying(255) NOT NULL,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone
+    "deletedAt" timestamp with time zone,
+    "linkPrivacyPolicy" text
 );
 
 
@@ -656,8 +672,24 @@ CREATE TABLE public."Users" (
     language character varying(5) DEFAULT 'en'::character varying,
     source public."enum_Users_source" NOT NULL,
     "sourceId" character varying(255),
-    "imageUrl" character varying(255)
+    "imageUrl" character varying(255),
+    "termsVersion" character varying(255),
+    "termsAcceptedAt" timestamp with time zone
 );
+
+
+--
+-- Name: COLUMN "Users"."termsVersion"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Users"."termsVersion" IS 'Version identifier of user terms accepted by user';
+
+
+--
+-- Name: COLUMN "Users"."termsAcceptedAt"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Users"."termsAcceptedAt" IS 'Time when the terms were accepted';
 
 
 --
@@ -1594,4 +1626,5 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 20190131123024-alter-topic-title-limit.js
 20190529193321-topic-report.js
 20190627132611-alter-partner-terms-link.js
+20190616115724-alter-user-accpet-terms.js
 \.
