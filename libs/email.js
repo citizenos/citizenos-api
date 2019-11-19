@@ -523,7 +523,7 @@ module.exports = function (app) {
             where: {
                 id: invites.map(invite => invite.userId)
             },
-            attributes: ['email', 'language', 'name'],
+            attributes: ['id', 'email', 'language', 'name'],
             raw: true
         });
 
@@ -534,7 +534,7 @@ module.exports = function (app) {
         let linkToApplication = urlLib.getFe();
         let customStyles = EMAIL_OPTIONS_DEFAULT.styles;
 
-        const emailsSendPromises = toUsers.map(async function (toUser, index) {
+        const emailsSendPromises = toUsers.map(function (toUser) {
             if (!toUser.email) {
                 logger.info('Skipping invite e-mail to user as there is no email on the profile', toUser.email);
                 return Promise.resolve();
@@ -546,8 +546,9 @@ module.exports = function (app) {
             // TODO: could use Mu here...
             const subject = template.translations.INVITE_TOPIC.SUBJECT
                 .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name));
+            const invite = _.find(invites, {userId: toUser.id});
             const linkViewInvite = urlLib.getFe('/topics/:topicId/invites/users/:inviteId', { // FIXME: Do we want to go through /api/invite/view?
-                inviteId: invites[index].id,
+                inviteId: invite.id,
                 topicId: topic.id
             });
 
@@ -578,7 +579,7 @@ module.exports = function (app) {
                 linkedData: EMAIL_OPTIONS_DEFAULT.linkedData
             };
 
-            return await emailClient.sendStringAsync(template.body, emailOptions);
+            return emailClient.sendStringAsync(template.body, emailOptions);
         });
 
         return Promise.all(emailsSendPromises);
