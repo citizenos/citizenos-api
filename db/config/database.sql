@@ -116,6 +116,18 @@ CREATE TYPE public."enum_Reports_type" AS ENUM (
 
 
 --
+-- Name: enum_TopicInviteUsers_level; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public."enum_TopicInviteUsers_level" AS ENUM (
+    'none',
+    'read',
+    'edit',
+    'admin'
+);
+
+
+--
 -- Name: enum_TopicMemberGroups_level; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -448,6 +460,50 @@ CREATE TABLE public."TopicEvents" (
     "updatedAt" timestamp with time zone NOT NULL,
     "deletedAt" timestamp with time zone
 );
+
+
+--
+-- Name: TopicInviteUsers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."TopicInviteUsers" (
+    id uuid NOT NULL,
+    "creatorId" uuid NOT NULL,
+    "userId" uuid NOT NULL,
+    "topicId" uuid NOT NULL,
+    level public."enum_TopicInviteUsers_level" DEFAULT 'read'::public."enum_TopicInviteUsers_level" NOT NULL,
+    "createdAt" timestamp with time zone NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL,
+    "deletedAt" timestamp with time zone
+);
+
+
+--
+-- Name: COLUMN "TopicInviteUsers"."creatorId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicInviteUsers"."creatorId" IS 'User who created the invite.';
+
+
+--
+-- Name: COLUMN "TopicInviteUsers"."userId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicInviteUsers"."userId" IS 'User who is invited.';
+
+
+--
+-- Name: COLUMN "TopicInviteUsers"."topicId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicInviteUsers"."topicId" IS 'Topic to which member belongs.';
+
+
+--
+-- Name: COLUMN "TopicInviteUsers".level; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicInviteUsers".level IS 'User membership level.';
 
 
 --
@@ -969,6 +1025,14 @@ ALTER TABLE ONLY public."TopicPins"
 
 
 --
+-- Name: TopicInviteUsers TopicInviteUsers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicInviteUsers"
+    ADD CONSTRAINT "TopicInviteUsers_pkey" PRIMARY KEY (id, "topicId");
+
+
+--
 -- Name: TopicMemberGroups TopicMemberGroups_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1418,6 +1482,30 @@ ALTER TABLE ONLY public."TopicPins"
 
 
 --
+-- Name: TopicInviteUsers TopicInviteUsers_creatorId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicInviteUsers"
+    ADD CONSTRAINT "TopicInviteUsers_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES public."Users"(id);
+
+
+--
+-- Name: TopicInviteUsers TopicInviteUsers_topicId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicInviteUsers"
+    ADD CONSTRAINT "TopicInviteUsers_topicId_fkey" FOREIGN KEY ("topicId") REFERENCES public."Topics"(id);
+
+
+--
+-- Name: TopicInviteUsers TopicInviteUsers_userId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicInviteUsers"
+    ADD CONSTRAINT "TopicInviteUsers_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."Users"(id);
+
+
+--
 -- Name: TopicMemberGroups TopicMemberGroups_groupId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1627,4 +1715,5 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 20190529193321-topic-report.js
 20190627132611-alter-partner-terms-link.js
 20190616115724-alter-user-accpet-terms.js
+20191119124917-create-topic-invite-user.js
 \.
