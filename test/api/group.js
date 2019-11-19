@@ -558,7 +558,7 @@ suite('Users', function () {
         });
 
         suite('List', function () {
-            var agent = request.agent(app);
+            var agentCreator = request.agent(app);
             var groupName = 'Test GROUP for masses List';
 
             var user;
@@ -575,7 +575,7 @@ suite('Users', function () {
                                 userLib.createUser(request.agent(app), null, null, 'et', cb);
                             },
                             function (cb) {
-                                userLib.createUserAndLogin(agent, null, null, null, cb);
+                                userLib.createUserAndLogin(agentCreator, null, null, null, cb);
                             },
                             function (cb) {
                                 userLib.createUser(request.agent(app), null, null, 'et', cb);
@@ -590,7 +590,7 @@ suite('Users', function () {
                             user = results[1];
                             member2 = results[2];
 
-                            groupCreate(agent, user.id, groupName, null, null, function (err, res) {
+                            groupCreate(agentCreator, user.id, groupName, null, null, function (err, res) {
                                 if (err) {
                                     return done(err);
                                 }
@@ -612,10 +612,10 @@ suite('Users', function () {
                                     .parallel(
                                         [
                                             function (cb) {
-                                                groupMembersCreate(agent, user.id, group.id, members, cb);
+                                                groupMembersCreate(agentCreator, user.id, group.id, members, cb);
                                             },
                                             function (cb) {
-                                                topicLib.topicCreate(agent, user.id, null, null, null, null, null, cb);
+                                                topicLib.topicCreate(agentCreator, user.id, null, null, null, null, null, cb);
                                             }
                                         ],
                                         function (err, results) {
@@ -630,7 +630,7 @@ suite('Users', function () {
                                                 level: TopicMemberUser.LEVELS.read
                                             };
 
-                                            topicLib.topicMemberGroupsCreate(agent, user.id, topic.id, memberGroup, function (err) {
+                                            topicLib.topicMemberGroupsCreate(agentCreator, user.id, topic.id, memberGroup, function (err) {
                                                 if (err) {
                                                     return done(err);
                                                 }
@@ -645,7 +645,7 @@ suite('Users', function () {
             });
 
             test('Success', function (done) {
-                groupList(agent, user.id, null, function (err, res) {
+                groupList(agentCreator, user.id, null, function (err, res) {
                     if (err) {
                         return done(err);
                     }
@@ -684,7 +684,7 @@ suite('Users', function () {
             test('Success - non-authenticated User - show "public" Groups', function (done) {
                 var groupName2 = 'Test group 2';
 
-                groupCreate(agent, user.id, groupName2, null, Group.VISIBILITY.public, function (err, res) {
+                groupCreate(agentCreator, user.id, groupName2, null, Group.VISIBILITY.public, function (err, res) {
                     if (err) {
                         return done(err);
                     }
@@ -695,16 +695,16 @@ suite('Users', function () {
                     assert.equal(group2.name, groupName2);
                     assert.isNull(group2.parentId);
 
-                    groupsListUnauth(agent, null, null, null, null, null, function (err, res) {
+                    groupsListUnauth(request.agent(app), null, null, null, null, null, function (err, res) {
                         if (err) {
                             return done(err);
                         }
 
                         var groupList = res.body.data;
 
-                        assert.equal(groupList.count, 2);
+                        assert.equal(groupList.count, 1);
                         assert.isArray(groupList.rows);
-                        assert.equal(groupList.rows.length, 2);
+                        assert.equal(groupList.rows.length, 1);
 
                         var group = groupList.rows[0];
                         assert.property(group, 'id');
@@ -721,7 +721,7 @@ suite('Users', function () {
             });
 
             test('Success - non-authenticated User - show "public" Groups with sourcePartnerId', function (done) {
-                groupsListUnauth(agent, null, null, null, null, '4b511ad1-5b20-4c13-a6da-0b95d07b6900', function (err, res) {
+                groupsListUnauth(agentCreator, null, null, null, null, '4b511ad1-5b20-4c13-a6da-0b95d07b6900', function (err, res) {
                     if (err) {
                         return done(err);
                     }
@@ -738,7 +738,7 @@ suite('Users', function () {
             });
 
             test('Success - include users and topics', function (done) {
-                groupList(agent, user.id, ['member.user', 'member.topic'], function (err, res) {
+                groupList(agentCreator, user.id, ['member.user', 'member.topic'], function (err, res) {
                     if (err) {
                         return done(err);
                     }
@@ -762,7 +762,7 @@ suite('Users', function () {
             });
 
             test('Success - include only users', function (done) {
-                groupList(agent, user.id, 'member.user', function (err, res) {
+                groupList(agentCreator, user.id, 'member.user', function (err, res) {
                     if (err) {
                         return done(err);
                     }
@@ -779,7 +779,7 @@ suite('Users', function () {
             });
 
             test('Success - include only topics', function (done) {
-                groupList(agent, user.id, 'member.topic', function (err, res) {
+                groupList(agentCreator, user.id, 'member.topic', function (err, res) {
                     if (err) {
                         return done(err);
                     }
@@ -808,6 +808,16 @@ suite('Users', function () {
 
                     done();
                 });
+            });
+
+            suiteTeardown(function (done) {
+                Group // Remove all public groups so that public test would be accurate
+                    .destroy({
+                        where: {
+                            visibility: Group.VISIBILITY.public
+                        }
+                    })
+                    .finally(done);
             });
 
         });
