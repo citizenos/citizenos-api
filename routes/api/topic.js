@@ -36,6 +36,7 @@ module.exports = function (app) {
     const loginCheck = app.get('middleware.loginCheck');
     const authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
     const partnerParser = app.get('middleware.partnerParser');
+    const DEPRECATED = app.get('middleware.deprecated'); // CAPS for ease of spotting in the code
     const asyncMiddleware = app.get('middleware.asyncMiddleware');
 
     const User = models.User;
@@ -2237,8 +2238,10 @@ module.exports = function (app) {
      *
      * You can add User with e-mail or User id.
      * If e-mail does not exist, User is created in the DB with NULL password.
+     *
+     * @deprecated Use POST /api/users/:userId/topics/:topicId/invites/user instead
      */
-    app.post('/api/users/:userId/topics/:topicId/members/users', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), partnerParser, asyncMiddleware(async function (req, res) {
+    app.post('/api/users/:userId/topics/:topicId/members/users', DEPRECATED('Use invite API - https://github.com/citizenos/citizenos-fe/issues/112'), loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), partnerParser, asyncMiddleware(async function (req, res) {
         //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
         const topicId = req.params.topicId;
         let members = req.body;
@@ -3272,7 +3275,7 @@ module.exports = function (app) {
      *
      * @see /api/users/:userId/topics/:topicId/members/users "Auto accept" - Adds a Member to the Topic instantly and sends a notification to the User.
      */
-    app.post('/api/users/:userId/topics/:topicId/invites', loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
+    app.post('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
         //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
         const topicId = req.params.topicId;
         const userId = req.user.id;
@@ -3437,7 +3440,7 @@ module.exports = function (app) {
         }
     }));
 
-    app.get('/api/users/:userId/topics/:topicId/invites', loginCheck(), hasPermission(TopicMemberUser.LEVELS.read), asyncMiddleware(async function (req, res) {
+    app.get('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), hasPermission(TopicMemberUser.LEVELS.read), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
 
         const invites = await TopicInviteUser
@@ -3480,7 +3483,7 @@ module.exports = function (app) {
         });
     }));
 
-    app.get(['/api/topics/:topicId/invites/:inviteId', '/api/users/:userId/topics/:topicId/invites/:inviteId'], asyncMiddleware(async function (req, res) {
+    app.get(['/api/topics/:topicId/invites/users/:inviteId', '/api/users/:userId/topics/:topicId/invites/users/:inviteId'], asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const inviteId = req.params.inviteId;
 
@@ -3538,7 +3541,7 @@ module.exports = function (app) {
         return res.ok(invite);
     }));
 
-    app.delete(['/api/topics/:topicId/invites/:inviteId', '/api/users/:userId/topics/:topicId/invites/:inviteId'], loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
+    app.delete(['/api/topics/:topicId/invites/users/:inviteId', '/api/users/:userId/topics/:topicId/invites/users/:inviteId'], loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const inviteId = req.params.inviteId;
 
@@ -3559,7 +3562,7 @@ module.exports = function (app) {
         return res.ok();
     }));
 
-    app.post(['/api/users/:userId/topics/:topicId/invites/:inviteId/accept', '/api/topics/:topicId/invites/:inviteId/accept'], loginCheck(), asyncMiddleware(async function (req, res) {
+    app.post(['/api/users/:userId/topics/:topicId/invites/users/:inviteId/accept', '/api/topics/:topicId/invites/users/:inviteId/accept'], loginCheck(), asyncMiddleware(async function (req, res) {
         const userId = req.user.id;
         const topicId = req.params.topicId;
         const inviteId = req.params.inviteId;

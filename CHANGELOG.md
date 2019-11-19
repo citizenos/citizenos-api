@@ -1,3 +1,10 @@
+## 2019-11-19
+
+* FEATURE: Topic User invite flow API - `/api/users/:userId/topics/:topicId/invites` - https://github.com/citizenos/citizenos-fe/issues/112
+* FEATURE: `CitizenOS-Deprecated` response header sent for deprecated API calls. It is important for API clients to log warnings when receiving such response header - https://github.com/citizenos/citizenos-fe/issues/112 
+* DEPRECATED: `POST /api/users/:userId/topics/:topicId/members/users`, use new invite API (`POST /api/users/:userId/topics/:topicId/invites` ) and other invite API-s instead - https://github.com/citizenos/citizenos-fe/issues/112
+* DEVELOPMENT: `deprecated` middleware to send `CitizenOS-Deprecated` response header for deprecated API calls - https://github.com/citizenos/citizenos-fe/issues/112
+
 ## 2019-09-24
 * Dropped support for legacy restricted use token validation - https://github.com/citizenos/citizenos-api/issues/70
 
