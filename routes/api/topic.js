@@ -3390,39 +3390,35 @@ module.exports = function (app) {
             });
 
             const createInvitePromises = validUserIdMembers.map(async function (member) {
-                return await TopicInviteUser
-                    .create(
-                        {
-                            topicId: topicId,
-                            creatorId: userId,
-                            userId: member.userId,
-                            level: member.level
-                        },
-                        {
-                            transaction: t
-                        }
-                    )
-                    .then(function (topicInvite) {
-                        const userInvited = User.build({id: topicInvite.userId});
-                        userInvited.dataValues.level = topicInvite.level; // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
-                        userInvited.dataValues.inviteId = topicInvite.id; // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
+                const topicInvite = await TopicInviteUser.create(
+                    {
+                        topicId: topicId,
+                        creatorId: userId,
+                        userId: member.userId,
+                        level: member.level
+                    },
+                    {
+                        transaction: t
+                    }
+                );
 
-                        return cosActivities
-                            .inviteActivity(
-                                topic,
-                                userInvited,
-                                {
-                                    type: 'User',
-                                    id: req.user.id,
-                                    ip: req.ip
-                                },
-                                req.method + ' ' + req.path,
-                                t
-                            )
-                            .then(function () {
-                                return topicInvite;
-                            });
-                    });
+                const userInvited = User.build({id: topicInvite.userId});
+                userInvited.dataValues.level = topicInvite.level; // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
+                userInvited.dataValues.inviteId = topicInvite.id; // FIXME: HACK? Invite event, pu
+
+                await cosActivities.inviteActivity(
+                    topic,
+                    userInvited,
+                    {
+                        type: 'User',
+                        id: req.user.id,
+                        ip: req.ip
+                    },
+                    req.method + ' ' + req.path,
+                    t
+                );
+
+                return topicInvite;
             });
 
             return Promise.all(createInvitePromises);
@@ -3577,68 +3573,86 @@ module.exports = function (app) {
                 }
             );
 
-        if (!invite) {
-            return res.notFound();
-        }
+        // Find out if the User is already a member of the Topic
+        const memberUserExisting = await TopicMemberUser
+            .findOne({
+                where: {
+                    topicId: topicId,
+                    userId: userId
+                }
+            });
 
-        // Cannot accept the invite for someone else
-        if (invite.userId !== userId) {
-            return res.forbidden();
-        }
-
-        // Needed just for the activity
-        const topic = await Topic.findOne({
-            where: {
-                id: topicId
+        if (invite) {
+            if (invite.userId !== userId) {
+                return res.forbidden();
             }
-        });
 
-        const [memberUser, created] = await db.transaction(function (t) {
-            return TopicMemberUser
-                .findOrCreate({
+            if (memberUserExisting) {
+                // User already a member, see if we need to update the level
+                if (TopicMemberUser.LEVELS.indexOf(memberUserExisting.level) < TopicMemberUser.LEVELS.indexOf(invite.level)) {
+                    const memberUserUpdated = await memberUserExisting.update({
+                        level: invite.level
+                    });
+                    return res.ok(memberUserUpdated);
+                } else {
+                    // No level update, respond with existing member info
+                    return res.ok(memberUserExisting);
+                }
+            } else {
+                // User is not a member, make it happen!
+
+                // Topic needed just for the activity
+                const topic = await Topic.findOne({
                     where: {
-                        topicId: invite.topicId,
-                        userId: invite.userId
-                    },
-                    defaults: {
-                        level: TopicMemberUser.LEVELS[invite.level]
-                    }
-                })
-                .then(function (topicMemberUserResult) {
-                    const [member, wasCreated] = topicMemberUserResult;
-
-                    if (wasCreated) {
-                        const user = User.build({id: member.userId});
-                        user.dataValues.id = member.userId;
-
-                        return cosActivities.acceptActivity(
-                            invite,
-                            {
-                                type: 'User',
-                                id: req.user.id,
-                                ip: req.ip
-                            },
-                            {
-                                type: 'User',
-                                id: invite.creatorId
-                            },
-                            topic,
-                                req.method + ' ' + req.path,
-                            t
-                            )
-                            .then(function () {
-                                return topicMemberUserResult;
-                            });
-                    } else {
-                        return topicMemberUserResult;
+                        id: invite.topicId
                     }
                 });
-        });
 
-        if (created) {
-            return res.created(memberUser);
+                const memberUserCreated = await db.transaction(async function (t) {
+                    const member = await TopicMemberUser.create(
+                        {
+                            topicId: invite.topicId,
+                            userId: invite.userId,
+                            level: TopicMemberUser.LEVELS[invite.level]
+                        },
+                        {
+                            transaction: t
+                        }
+                    );
+
+                    await invite.destroy({transaction: t});
+
+                    const user = User.build({id: member.userId});
+                    user.dataValues.id = member.userId;
+
+                    await cosActivities.acceptActivity(
+                        invite,
+                        {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        },
+                        {
+                            type: 'User',
+                            id: invite.creatorId
+                        },
+                        topic,
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
+                    return member;
+                });
+
+                return res.created(memberUserCreated);
+            }
         } else {
-            return res.ok(memberUser);
+            // Already a member, return that membership information
+            if (memberUserExisting) {
+                return res.ok(memberUserExisting);
+            } else { // No invite, not a member - the User is not invited
+                return res.notFound();
+            }
         }
     }));
 

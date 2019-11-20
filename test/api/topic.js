@@ -4770,7 +4770,7 @@ suite('Users', function () {
 
         suite('Invites', function () {
 
-            suite('Users', function() {
+            suite('Users', function () {
 
                 suite('Create', function () {
                     let agentCreator = request.agent(app);
@@ -5554,7 +5554,8 @@ suite('Users', function () {
                             assert.property(topicMemberUser, 'updatedAt');
                             assert.property(topicMemberUser, 'deletedAt');
 
-                            done();
+                            // The invite is supposed to be deleted
+                            _topicInviteUsersRead(agentCreator, topic.id, topicInviteCreated.id, 410, done);
                         });
                     });
 
@@ -5576,6 +5577,14 @@ suite('Users', function () {
 
                                 done();
                             });
+                        });
+                    });
+
+                    test('Fail - 40400 - Cannot accept deleted invite', function (done) {
+                        topicInviteUsersDelete(agentCreator, userCreator.id, topic.id, topicInviteCreated.id, function (err, res) {
+                            if (err) return done(err);
+
+                            _topicInviteUsersAccept(agentUserToInvite, userToInvite.id, topic.id, topicInviteCreated.id, 404, done);
                         });
                     });
 
