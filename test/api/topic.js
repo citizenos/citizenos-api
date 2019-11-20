@@ -5581,7 +5581,7 @@ suite('Users', function () {
                     });
 
                     test('Fail - 40400 - Cannot accept deleted invite', function (done) {
-                        topicInviteUsersDelete(agentCreator, userCreator.id, topic.id, topicInviteCreated.id, function (err, res) {
+                        topicInviteUsersDelete(agentCreator, userCreator.id, topic.id, topicInviteCreated.id, function (err) {
                             if (err) return done(err);
 
                             _topicInviteUsersAccept(agentUserToInvite, userToInvite.id, topic.id, topicInviteCreated.id, 404, done);
