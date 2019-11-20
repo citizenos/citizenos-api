@@ -5588,6 +5588,37 @@ suite('Users', function () {
                         });
                     });
 
+                    test('Fail - 41002 - Cannot accept expired invite', function (done) {
+                        TopicInviteUser
+                            .update(
+                                {
+                                    createdAt: db.literal(`NOW() - INTERVAL '${TopicInviteUser.VALID_DAYS + 1}d'`)
+                                },
+                                {
+                                    where: {
+                                        id: topicInviteCreated.id
+                                    }
+                                }
+                            )
+                            .then(function () {
+                                _topicInviteUsersAccept(agentUserToInvite, userToInvite.id, topic.id, topicInviteCreated.id, 410, function (err, res) {
+                                    if (err) return done(err);
+
+                                    var expectedBody = {
+                                        status: {
+                                            code: 41002,
+                                            message: `The invite has expired. Invites are valid for ${TopicInviteUser.VALID_DAYS} days`
+                                        }
+                                    };
+
+                                    assert.deepEqual(res.body, expectedBody);
+
+                                    done();
+                                });
+                            })
+                            .catch(done);
+                    });
+
                     test('Fail - 40100 - Unauthorized', function (done) {
                         _topicInviteUsersAccept(request.agent(app), '93857ed7-a81a-4187-85de-234f6d06b011', topic.id, topicInviteCreated.id, 401, done);
                     });

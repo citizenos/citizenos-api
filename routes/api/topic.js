@@ -3569,6 +3569,14 @@ module.exports = function (app) {
                     where: {
                         id: inviteId,
                         topicId: topicId
+                    },
+                    attributes: {
+                        include: [
+                            [
+                                db.literal(`EXTRACT(DAY FROM (NOW() - "TopicInviteUser"."createdAt"))`),
+                                'createdDaysAgo'
+                            ]
+                        ]
                     }
                 }
             );
@@ -3599,7 +3607,10 @@ module.exports = function (app) {
                     return res.ok(memberUserExisting);
                 }
             } else {
-                // User is not a member, make it happen!
+                // Has the invite expired?
+                if (invite.dataValues.createdDaysAgo > TopicInviteUser.VALID_DAYS) {
+                    return res.gone(`The invite has expired. Invites are valid for ${TopicInviteUser.VALID_DAYS} days`, 2);
+                }
 
                 // Topic needed just for the activity
                 const topic = await Topic.findOne({
