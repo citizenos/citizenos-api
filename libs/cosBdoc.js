@@ -25,6 +25,7 @@ module.exports = function (app) {
     var QueryStream = app.get('QueryStream');
     var fastCsv = app.get('fastCsv');
     var Bdoc = app.get('Bdoc');
+    var smartId = app.get('smartId');
     var SevenZip = app.get('SevenZip');
     var CosHtmlToDocx = app.get('cosHtmlToDocx');
     var archiver = require('archiver');
@@ -301,12 +302,78 @@ module.exports = function (app) {
      *
      * @private
      */
-    var _createUserBdoc = function (ddsClient, topicId, voteId, userId, voteOptions, transaction) {
-        var chosenVoteOptionFileNames = voteOptions.map(_getVoteOptionFileName);
+    var _createUserBdoc = function (topicId, voteId, userId, voteOptions, transaction) {
+        let docPath = './files/'+ topicId +'/'+ voteId +'/' + userId;
+        if (!fs.existsSync(docPath)){
+            fs.mkdirSync(docPath);
+        }
+        docPath += '/vote.bdoc';
+        const container = new Bdoc(docPath);
 
+        const chosenVoteOptionFileNames = voteOptions.map(_getVoteOptionFileName);
+
+        return VoteContainerFile
+            .findAll({
+                where: {
+                    voteId: voteId
+                },
+                transaction: transaction
+            })
+            .each(function (voteContainerFile) {
+                const fileName = voteContainerFile.fileName;
+                const mimeType = voteContainerFile.mimeType;
+                const content = voteContainerFile.content;
+
+                switch (voteContainerFile.fileName) {
+                    case TOPIC_FILE.name:
+                    case METAINFO_FILE.name:
+                        break;
+                    default:
+                        // Must be option file
+                        if (chosenVoteOptionFileNames.indexOf(fileName)) {
+                            //Skip the option that User did not choose
+                            return;
+                        }
+                }
+                
+                return container.append(content, {name: fileName, mimeType});
+         /*       var voteContainerFileStream = new stream.PassThrough();
+                voteContainerFileStream.end(content);
+
+                return ddsClient.addDataFileEmbeddedBase64(voteContainerFileStream, fileName, mimeType);*/
+            })
+            .then(function () {
+                return new Promise (function (resolve) {
+                    let finalData = '';
+                    const mufileStream = mu
+                        .compileAndRender(USERINFO_FILE.template, {user: {id: userId}});
+                    mufileStream
+                        .on('data', function (data) {
+                            finalData += data.toString();
+                        });
+                    mufileStream
+                        .on('end', function () {
+                            container.append(Buffer.from(finalData), {
+                                name: USERINFO_FILE.name,
+                                mimeType: 'text/html'
+                            });
+                            return resolve();
+                        });
+                });
+            /*    const templateStream = mu.compileAndRender(USERINFO_FILE.template, {user: {id: userId}});
+                return ddsClient.addDataFileEmbeddedBase64(templateStream, USERINFO_FILE.name, USERINFO_FILE.mimeType);*/
+            })
+            .then(function () {
+                return new Promise(function (resolve) {
+                   return resolve(container);
+                });
+            }).catch(function (e) {
+                console.log(e)
+            })
+/*
         return ddsClient.startSession(null, null, true)
             .then(function () {
-                var format = DigiDocServiceClient.DOCUMENT_FORMATS.BDOC;
+                /*var format = DigiDocServiceClient.DOCUMENT_FORMATS.BDOC;
 
                 return ddsClient.createSignedDoc(format.name, format.version);
             })
@@ -335,7 +402,8 @@ module.exports = function (app) {
                             return;
                         }
                 }
-
+                
+                return bdoc.append(content, {name: fileName, mimeType});
                 var voteContainerFileStream = new stream.PassThrough();
                 voteContainerFileStream.end(content);
 
@@ -345,7 +413,7 @@ module.exports = function (app) {
                 var templateStream = mu.compileAndRender(USERINFO_FILE.template, {user: {id: userId}});
 
                 return ddsClient.addDataFileEmbeddedBase64(templateStream, USERINFO_FILE.name, USERINFO_FILE.mimeType);
-            });
+            });*/
     };
 
     /**
@@ -432,6 +500,46 @@ module.exports = function (app) {
                     statusCode: err.code
                 };
             });
+    };
+
+    /**
+     * Initialize mobile signing
+     *
+     * Creates the User BDOC container and initiates signing with mobile ID
+     *
+     * @param {string} topicId Topic ID
+     * @param {string} voteId Vote ID
+     * @param {string} userId User ID
+     * @param {Object[]} voteOptions Array of selected vote options
+     * @param {string} pid Personal identification code
+     * @param {string} phoneNumber Phone number
+     * @param {Object} transaction Sequelize Transaction
+     *
+     * @return {Promise<Object>} Sign init response
+     *
+     * @private
+     */
+    var _signInitSmartId = function (topicId, voteId, userId, voteOptions, pid, countryCode, certificate, transaction) {
+        return _createUserBdoc(topicId, voteId, userId, voteOptions, transaction)
+            .then(function (bdoc) {
+                bdoc.addSigningCertificate(certificate);
+                return smartId.signature(pid, countryCode, bdoc.getDataToSign());
+            })
+      /*      .spread(function (result) {
+                return {
+                    sesscode: ddsClient.getSesscode(),
+                    statusCode: 0,
+                    status: result.Status.$value,
+                    challengeID: result.ChallengeID.$value
+                };
+            })
+            .catch(DigiDocServiceClient.SoapFault, function (err) {
+                return {
+                    sesscode: ddsClient.getSesscode(),
+                    status: err.message,
+                    statusCode: err.code
+                };
+            });*/
     };
 
     /**
@@ -735,6 +843,50 @@ module.exports = function (app) {
                         };
                     });
             });
+    };
+
+    /**
+     * Get doc signed with mobile
+     *
+     * It is going to wait until User signs the document. It may take a minute or 2
+     *
+     * @param {string} sesscode Session code
+     *
+     * @return {Promise<Object>} {signedDocData<Buffer>, signerInfo<Object>}
+     *
+     * @private
+     */
+    var _getSmartIdSignedDoc = function (sesscode) {        
+        return smartId.statusSign(sesscode);
+        /*var ddsClient = new DigiDocServiceClient(config.services.digiDoc.serviceWsdlUrl, config.services.digiDoc.serviceName, config.services.digiDoc.token);
+        ddsClient.setSesscode(sesscode);
+
+        return ddsClient
+            .startSession()
+            .then(function () {
+                return ddsClient.getStatusInfo(true, false);
+            })
+            .spread(function (getStatusInfoResult) {
+                var statusCode = getStatusInfoResult.StatusCode.$value;
+                switch (statusCode) {
+                    // OK
+                    case 'SIGNATURE':
+                        return ddsClient.getSignedDoc();
+                    // Recoverable
+                    default:
+                        return Promise.reject(statusCode);
+                }
+            })
+            .spread(function (signedDocResult) {
+                return ddsClient
+                    .getSignedDocInfo()
+                    .spread(function (signedDocInfoResult) {
+                        return {
+                            signedDocData: Buffer.from(signedDocResult.SignedDocData.$value, 'base64'),
+                            signerInfo: _getPersonalInfoFromCommonName(signedDocInfoResult.SignedDocInfo.SignatureInfo[0].Signer.CommonName.$value)
+                        };
+                    });
+            });*/
     };
 
     /**
@@ -1121,12 +1273,14 @@ module.exports = function (app) {
         createVoteFiles: _createVoteFiles,
         signInitIdCard: _signInitIdCard,
         signInitMobile: _signInitMobile,
+        signInitSmartId: _signInitSmartId,
         loginMobileInit: _loginMobileInit,
         loginMobileStatus: _loginMobileStatus,
         checkCertificate: _checkCertificate,
         getMobileCertificate: _getMobileCertificate,
         signUserBdoc: _signUserBdoc,
         getMobileSignedDoc: _getMobileSignedDoc,
+        getSmartIdSignedDoc: _getSmartIdSignedDoc,
         getFinalBdoc: _getFinalBdoc,
         getFinalZip: _getFinalZip,
         deleteFinalBdoc: _deleteFinalBdoc,

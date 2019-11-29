@@ -94,15 +94,14 @@ var Bdoc = function (docPath) {
         const b64 = pem.replace(/(-----(BEGIN|END) CERTIFICATE-----|[\n\r])/g, '')
     
         // Now that we have decoded the cert it's now in DER-encoding
-        const der = Buffer(b64, 'base64')
+        const der = Buffer.from(b64, 'base64')
     
         // And massage the cert into a BER encoded one
         const ber = new Uint8Array(der).buffer
     
         // And now Asn1js can decode things \o/
         const asn1 = Asn1js.fromBER(ber)
-        console.log(asn1);
-        console.log(asn1.result);
+
         return new Pkijs.Certificate({ schema: asn1.result })
     };
 
@@ -567,13 +566,15 @@ Bdoc.prototype.append = function (input, data) {
     this.manifestFileContents += this.manifestFileInfoTemplate
         .replace('{{name}}', data.name)
         .replace('{{mimeType}}', data.mimeType);
-    console.log(input);
     var digestValue = crypto.createHash('sha256').update(input).digest('base64');
-    console.log(data.name, 'digestValue', digestValue);
     this.filesList.push({name: data.name, mimeType: data.mimeType, digestValue});
     this.dataToSign += input.toString('hex');
-
-    this.archive.append(input, data);
+    try {
+        this.archive.append(input, data);
+    } catch(e) {
+        console.log('ERROR', e);
+    }
+    
 };
 
 /**

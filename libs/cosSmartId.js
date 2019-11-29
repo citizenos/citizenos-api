@@ -1,102 +1,166 @@
 'use strict';
 
 /**
- * @param {object} app app object
  * @returns {object} CosSmartId object
  */
-function CosSmartId (app) {
-    var that = this;
-    var crypto = app.get('crypto');
-    var sanitizeFilename = app.get('sanitizeFilename');
-    var Promise = app.get('Promise');
-    var mu = app.get('mu');
-    var models = app.get('models');
-    var fs = app.get('fs');
-    var Bdoc = app.get('Bdoc');
-    var encoder = require('utf8');
-    var https = require('https');
-    var x509 = require('x509.js');
-    var _ = app.get('lodash');
-    var db = models.sequelize;
+function CosSmartId () {
+    const that = this;
+    const logger = require('log4js');
+    const crypto = require('crypto');
+    const Promise = require('bluebird');
+   /// const Bdoc = app.get('Bdoc');
+    const encoder = require('utf8');
+    const https = require('https');
+    const Pkijs = require('pkijs');
+    const Asn1js = require('asn1js');
+    const _ = require('lodash');
+    const fs = require('fs');
+ /*   var Hades = require("js-undersign")
+    var Tsl = require("js-undersign/lib/tsl")
 
-    var VoteContainerFile = models.VoteContainerFile;
-    var VoteUserContainer = models.VoteUserContainer;
-    var VoteOption = models.VoteOption;
+    var hades = new Hades({
+        tsl: Tsl.parse(fs.readFileSync("./config/tsl/test-estonian-tsl.xml")),
+        timemarkUrl: "http://demo.sk.ee/ocsp "
+    });
+*/
+    const OID = {
+        "2.5.4.3": {
+            short: "CN",
+            long: "CommonName",
+        },
+        "2.5.4.6": {
+            short: "C",
+            long: "Country",
+        },
+        "2.5.4.5": {
+            long: "DeviceSerialNumber",
+        },
+        "0.9.2342.19200300.100.1.25": {
+            short: "DC",
+            long: "DomainComponent",
+        },
+        "1.2.840.113549.1.9.1": {
+            short: "E",
+            long: "EMail",
+        },
+        "2.5.4.42": {
+            short: "G",
+            long: "GivenName",
+        },
+        "2.5.4.43": {
+            short: "I",
+            long: "Initials",
+        },
+        "2.5.4.7": {
+            short: "L",
+            long: "Locality",
+        },
+        "2.5.4.10": {
+            short: "O",
+            long: "Organization",
+        },
+        "2.5.4.11": {
+            short: "OU",
+            long: "OrganizationUnit",
+        },
+        "2.5.4.8": {
+            short: "ST",
+            long: "State",
+        },
+        "2.5.4.9": {
+            short: "Street",
+            long: "StreetAddress",
+        },
+        "2.5.4.4": {
+            short: "SN",
+            long: "SurName",
+        },
+        "2.5.4.12": {
+            short: "T",
+            long: "Title",
+        },
+        "1.2.840.113549.1.9.8": {
+            long: "UnstructuredAddress",
+        },
+        "1.2.840.113549.1.9.2": {
+            long: "UnstructuredName",
+        },
+    };
+   /* const db = models.sequelize;*/
+/*
+    const VoteContainerFile = models.VoteContainerFile;
+    const VoteUserContainer = models.VoteUserContainer;
+    const VoteOption = models.VoteOption;*/
 
-    var _replyingPartyUUID;
-    var _replyingPartyName;
-    var _authorizeToken;
-    var _dataToSignList = {};
+    let _replyingPartyUUID;
+    let _replyingPartyName;
+    let _authorizeToken;
+    const _dataToSignList = {};
 
-    var _hostname;
-    var _apiPath;
-    var _client;
-    var _endpointUrl;
-    var _port;
-   // var FILE_CREATE_MODE = '0760';
+    let _hostname;
+    let _apiPath;
+    let _client;
+    let _endpointUrl;
+    let _port;
+   // const FILE_CREATE_MODE = '0760';
 
-    var TOPIC_FILE = {
+    const TOPIC_FILE = {
         template: 'bdoc/document.html',
         name: 'document.docx',
         mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     };
 
-    var METAINFO_FILE = {
+    const METAINFO_FILE = {
         template: 'bdoc/metainfo.html',
         name: '__metainfo.html',
         mimeType: 'text/html'
     };
 
-    var VOTE_OPTION_FILE = {
+    const VOTE_OPTION_FILE = {
         template: 'bdoc/voteOption.html',
         name: ':value.html', // ":value" is a placeholder to replace with sanitized file name
         mimeType: 'text/html'
     };
 
-    var USERINFO_FILE = {
+    const USERINFO_FILE = {
         template: 'bdoc/userinfo.html',
         name: '__userinfo.html',
         mimeType: 'text/html'
     };
 
-    var _createHash = function (input = '', hashType) {
+    const _createHash = function (input = '', hashType) {
         input = input.toString() || crypto.randomBytes(20).toString();
         hashType = hashType || 'sha256';
 
-        var hash = crypto.createHash(hashType);
+        const hash = crypto.createHash(hashType);
 
         hash.update(encoder.encode(input));
 
         return hash.digest('hex');
     };
 
-    var _init = function (options) {
+    const _init = function (options) {
         _replyingPartyUUID = options.relyingPartyUUID;
         _replyingPartyName = options.replyingPartyName;
         _authorizeToken = options.authorizeToken;
 
         if (options.hostname) {
-            var hostData = options.hostname.split(':');
+            const hostData = options.hostname.split(':');
             _hostname = hostData[0];
             _port = hostData[1] || 443;
         }
 
         _apiPath = options.apiPath;
         _endpointUrl = _buildPath();
-/*
-        _client = new SmartIdClient();
-        _client.setRelyingPartyUUIDSync(_replyingPartyUUID);
-        _client.setRelyingPartyNameSync(_replyingPartyName);
-        _client.setHostUrlSync(_endpointUrl);*/
 
         return that;
     };
 
-    var _buildPath = function () {
+    const _buildPath = function () {
         return 'https://' + _hostname + _apiPath;
     };
 
-    var _padLeft = function (input, size, padText) {
+    const _padLeft = function (input, size, padText) {
         while (input.length < size) {
             input = padText + input;
         }
@@ -104,27 +168,60 @@ function CosSmartId (app) {
         return input;
     };
 
-    var _getVerificationCode = function (sessionHash) {
-        var enchash = crypto.createHash('sha256');
-        enchash.update(Buffer.from(sessionHash, 'hex'));
-        var buf = enchash.digest();
+    const _apiRequest = function (params, options) {
 
-        var twoRightmostBytes = buf.slice(-2);
-        var buffer = Buffer.from(twoRightmostBytes);
-        var positiveInteger = buffer.readUInt16BE();
+        return new Promise(function (resolve, reject) {
+            const request = https.request(options, function (result) {
+                let data = '';
+                result.setEncoding('utf8');
+                result.on('data', function (chunk) {
+                    data += chunk;
+                });
+
+                result.on('end', function () {
+                    try {
+                        data = JSON.parse(data);
+                        return resolve({
+                            status: result.statusCode,
+                            data: data
+                        });
+                    } catch (e) {
+                        return reject(e);
+                    }
+                });
+            });
+            
+            if (params) {
+                request.write(params);  // write data to request body
+            }
+            request.end();
+            request.on('error', function (e) {
+                return reject(e);
+            });
+        });
+    };
+
+    const _getVerificationCode = function (sessionHash) {
+        const enchash = crypto.createHash('sha256');
+        enchash.update(Buffer.from(sessionHash, 'hex'));
+        const buf = enchash.digest();
+
+        const twoRightmostBytes = buf.slice(-2);
+        const buffer = Buffer.from(twoRightmostBytes);
+        let positiveInteger = buffer.readUInt16BE();
 
         positiveInteger = (positiveInteger % 10000).toString().substr(-4);
 
         return _padLeft(positiveInteger, 4, '0');
     };
 
-    var _authenticate = function (pid, countryCode) {
+    const _authenticate = function (pid, countryCode) {
         countryCode = countryCode || 'EE'; //defaults to Estonia
-        var sessionHash = _createHash();
-        var path = '/smart-id-rp/v1/authentication/pno/:countryCode/:pid';
-        var _hashType = 'sha256'
+        const sessionHash = _createHash();
+        const path = _apiPath + '/authentication/pno/:countryCode/:pid'.replace(':countryCode', countryCode).replace(':pid', pid);
+        const _hashType = 'sha256'
 
-        var params = {
+        let params = {
             relyingPartyUUID: _replyingPartyUUID,
             relyingPartyName: _replyingPartyName,
             hash: Buffer.from(sessionHash, 'hex').toString('base64'),
@@ -133,9 +230,9 @@ function CosSmartId (app) {
 
         params = JSON.stringify(params);
 
-        var options = {
+        const options = {
             hostname: _hostname,
-            path: path.replace(':countryCode', countryCode).replace(':pid', pid),
+            path: path,
             method: 'POST',
             port: _port,
             headers: {
@@ -146,38 +243,49 @@ function CosSmartId (app) {
         };
 
         return new Promise(function (resolve, reject) {
-            var request = https.request(options, function (result) {
-                result.setEncoding('utf8');
-                result.on('data', function (chunk) {
-                    try {
-                        var data = JSON.parse(chunk);
-                        if (!data.sessionID) {
-                            return reject(data);
-                        }
-
-                        var verficationCode = _getVerificationCode(sessionHash);
+            _apiRequest(params, options)
+                .then(function (result) {
+                    if (result.data.sessionID) {
+                        const verficationCode = _getVerificationCode(sessionHash);
 
                         return resolve({
-                            sessionId: data.sessionID,
+                            sessionId: result.data.sessionID,
                             challengeID: verficationCode,
                             sessionHash: sessionHash
-                        });
-                    } catch (e) {
+                        });                        
+                    } else if (result.data.code && result.data.message) {
+                        let e = new Error(result.data.message);
+                        e.code = result.data.code;
+
                         return reject(e);
                     }
 
+                    return reject(result.data);
+
+                    
                 });
             });
+    };
 
-            // write data to request body
+    const _statusAuth = function (sessionId) {
+        return new Promise (function (resolve) {
+            _getSessionStatusData(sessionId)
+                .then(function (result) {
+                    const data = result.data;
+                    if (data.state === 'RUNNING') {
+                        return resolve(data);
+                    }
+                    if (data.result.endResult === 'OK') {
+                        return _getCertUserData(data.cert.value)
+                            .then(function (personalInfo) {
+                                data.personalInfo = personalInfo;
 
-            request.write(params);
-            request.end();
-            request.on('error', function (e) {
-          //      logger.error('problem with request: ', e.message);
+                                return resolve(data);
+                            });
+                    }
 
-                return reject(e);
-            });
+                    return resolve(data);
+                });            
         });
     };
     /**
@@ -189,18 +297,18 @@ function CosSmartId (app) {
      *
      * @private
      */
-    var _getVoteOptionFileName = function (voteOption) {
-        var sanitizedfileName = sanitizeFilename(voteOption.value);
+   /* const _getVoteOptionFileName = function (voteOption) {
+        const sanitizedfileName = sanitizeFilename(voteOption.value);
         
         if (!sanitizedfileName.length) {
             throw Error('Nothing left after sanitizing the optionValue: ' + voteOption.value);
         }
         return VOTE_OPTION_FILE.name.replace(':value', sanitizedfileName);
-    };
+    };*/
 
-    var _getSessionStatusData = function (sessionId) {
-        var path = '/smart-id-rp/v1/session/:sessionId'.replace(':sessionId', sessionId);
-        var options = {
+    const _getSessionStatusData = function (sessionId) {
+        const path = _apiPath + '/session/:sessionId'.replace(':sessionId', sessionId);
+        const options = {
             hostname: _hostname,
             path: path,
             method: 'GET',
@@ -209,43 +317,42 @@ function CosSmartId (app) {
             requestOCSP: true
         };
 
-        var data = '';
         return new Promise(function (resolve, reject) {
-            var request = https.request(options, function (result) {
-                result.setEncoding('utf8');
-                result.on('data', function (chunk) {                    
-                    try {
-                        data += chunk;                     
-
-                    } catch (e) {
-                        return reject(e);
-                    }
-
+            return _apiRequest(null, options)
+                .then(function (result) {
+             //       console.log('sessionId', sessionId);
+            //        console.log('status SIGN', sessionId, result);
+                    return resolve(result);
                 });
-                result.on('end', function (e) {
-                    var finalData = {
-                        ocsp: result.socket.getSession(),
+         /*   const request = https.request(options, function (result) {
+                result.setEncoding('utf8');
+                result.on('data', function (chunk) {
+                    data += chunk;
+                });
+
+                result.on('end', function () {
+                    const finalData = {
                         data: JSON.parse(data)
                     }
+
                     return resolve(finalData);
                 });
             });
 
             request.end();
             request.on('error', function (e) {
-                console.log('ERROR REQUEST', e);
-                //  logger.error('problem with request: ', e.message);
+                logger.error('problem with request: ', e.message);
 
                 return reject(e);
-            });
+            });*/
         })
     };
 
-    var _getUserCertificate = function (pid, countryCode) {
+    const _getUserCertificate = function (pid, countryCode) {
         countryCode = countryCode || 'EE';
-        var path = '/smart-id-rp/v1/certificatechoice/pno/:countryCode/:pid';
+        const path = '/smart-id-rp/v1/certificatechoice/pno/:countryCode/:pid';
 
-        var params = {
+        let params = {
             relyingPartyUUID: _replyingPartyUUID,
             relyingPartyName: _replyingPartyName,
             certificateLevel: 'ADVANCED',
@@ -253,7 +360,7 @@ function CosSmartId (app) {
 
         params = JSON.stringify(params);
         
-        var options = {
+        const options = {
             hostname: _hostname,
             path: path.replace(':countryCode', countryCode).replace(':pid', pid),
             method: 'POST',
@@ -265,17 +372,13 @@ function CosSmartId (app) {
             }
         };
         return new Promise(function (resolve, reject) {
-            var data = '';
-            var request = https.request(options, function (result) {
+            let data = '';
+            const request = https.request(options, function (result) {
                 result.setEncoding('utf8');
                 result.on('data', function (chunk) {
-                    try {
                         data += chunk;
-                    } catch (e) {
-                        return reject(e);
-                    }
-
                 });
+
                 result.on('end', function () {
                     data = JSON.parse(data);
                     return _getSessionStatusData(data.sessionID)
@@ -293,25 +396,23 @@ function CosSmartId (app) {
             request.write(params);
             request.end();
             request.on('error', function (e) {
-                //  logger.error('problem with request: ', e.message);
+                logger.error('problem with request: ', e.message);
 
                 return reject(e);
             });
-        }).catch(function (e) {
-            console.log('ERROR', e);
-        })
-    }
-
-    var _createUserBdoc = function (topicId, voteId, userId, voteOptions, configuration, transaction) {        
-        var docPath = './files/'+ topicId +'/'+ voteId +'/' + userId;
+        });
+    };
+/*
+    const _createUserBdoc = function (topicId, voteId, userId, voteOptions, configuration, transaction) {        
+        let docPath = './files/'+ topicId +'/'+ voteId +'/' + userId;
         if (!fs.existsSync(docPath)){
             fs.mkdirSync(docPath);
         }
         docPath += '/vote.bdoc';
-        var container = new Bdoc(docPath);
+        const container = new Bdoc(docPath);
     //    console.log(container);
         container.setConfiguration(configuration);
-        var chosenVoteOptionFileNames = voteOptions.map(_getVoteOptionFileName);
+        const chosenVoteOptionFileNames = voteOptions.map(_getVoteOptionFileName);
 
         return VoteContainerFile
             .findAll({
@@ -321,9 +422,9 @@ function CosSmartId (app) {
                 transaction: transaction
             })
             .each(function (voteContainerFile) {
-                var fileName = voteContainerFile.fileName;
-                var mimeType = voteContainerFile.mimeType;
-                var content = voteContainerFile.content;
+                const fileName = voteContainerFile.fileName;
+                const mimeType = voteContainerFile.mimeType;
+                const content = voteContainerFile.content;
             
                 switch (voteContainerFile.fileName) {
                     case TOPIC_FILE.name:
@@ -344,8 +445,8 @@ function CosSmartId (app) {
             })
             .then(function () {
                 return new Promise (function (resolve) {
-                    var finalData = '';
-                    var mufileStream = mu
+                    let finalData = '';
+                    const mufileStream = mu
                         .compileAndRender(USERINFO_FILE.template, {user: {id: userId}});
                     mufileStream
                         .on('data', function (data) {
@@ -368,13 +469,13 @@ function CosSmartId (app) {
             }).catch(function (e) {
                 console.log(e)
             })
-    }
+    }*/
 
-    var _prepareCert = function (certificate) {
+    const _prepareCert = function (certificate) {
         
         certificate = certificate.split('');
         if (certificate.indexOf('\n') ===-1) {
-            var certParts = [];
+            const certParts = [];
             while (certificate.length) {
                 certParts.push(certificate.splice(0,64).join(''));
             }
@@ -387,24 +488,53 @@ function CosSmartId (app) {
 
         return certificate;
     };
-    var _getCertUserData = function (certificate) {
-        certificate = _prepareCert(certificate);
-        var certData = x509.parseCert(certificate);
+
+    const getCertValue = function (key, cert) {
+        let res = {};
+        cert[key].typesAndValues.forEach(function (typeAndValue) {
+            const type = typeAndValue.type;
+            const oid = OID[type.toString()];
+            const name2 = oid ? oid.long : null;
+            res[`${name2 ? name2 : type}`] = `${typeAndValue.value.valueBlock.value}`;
+        });
+
+        return res;
+    };
+
+    const _getCertUserData = function (certificate) {        
+        if(typeof certificate !== 'string') {
+            throw new Error('Expected PEM as string')
+        }
+    
+        // Load certificate in PEM encoding (base64 encoded DER)
+        const b64 = certificate.replace(/(-----(BEGIN|END) CERTIFICATE-----|[\n\r])/g, '')
+    
+        // Now that we have decoded the cert it's now in DER-encoding
+        const der = Buffer.from(b64, 'base64')
+    
+        // And massage the cert into a BER encoded one
+        const ber = new Uint8Array(der).buffer
+    
+        // And now Asn1js can decode things \o/
+        const asn1 = Asn1js.fromBER(ber)
+        const cert = new Pkijs.Certificate({ schema: asn1.result })
+        const subject = getCertValue('subject', cert);
 
         return Promise.resolve({
-            lastName: certData.subject.givenName,
-            firstName: certData.subject.surname,
-            pid: certData.subject.serialNumber
+            firstName: subject.GivenName,
+            lastName: subject.SurName,
+            pid: subject.DeviceSerialNumber,
+            country: subject.Country
         });
-    }
+    };
 
-    var _statusSign = function (sessionId, sessionHash, voteId, userId, topicId, voteOptions) {        
+    /*const _statusSign = function (sessionId, sessionHash, voteId, userId, topicId, voteOptions) {        
         return new Promise (function (resolve, reject) {
             return _getSessionStatusData(sessionId)
                 .then(function (result) {
-                    var data = result.data;
+                    const data = result.data;
                     if(data.state === 'COMPLETE') {
-                        return db
+                      /*  return db
                             .transaction(function (t) {
                                 return VoteOption
                                     .findAll({
@@ -431,17 +561,32 @@ function CosSmartId (app) {
                     
                 })
         });        
+    };*/
+
+    const _statusSign = function (sessionId) {
+        return new Promise (function (resolve) {
+            return _getSessionStatusData(sessionId)
+                .then(function (result) {
+                    const data = result.data;
+                  //  console.log('STATUS SIGN', result);
+                    if (data.state === 'COMPLETE' && data.result === 'OK') {
+                        return resolve(data);
+                    }
+
+                    return resolve(data);
+                });
+        });
     };
 
-    var _signature = function (pid, countryCode, bdoc) {
+    const _signature = function (pid, countryCode, dataToSign) {
         countryCode = countryCode || 'EE'; //defaults to Estonia
-        var dataToSign = bdoc.getDataToSign();
+     ///   const dataToSign = bdoc.getDataToSign();
     //    console.log('DATA TO SIGN', dataToSign);
-        var sessionHash = crypto.createHash('sha256').update(dataToSign).digest('base64');
-        var hashType = 'sha256';
+        const sessionHash = crypto.createHash('sha256').update(dataToSign).digest('base64');
+        const hashType = 'sha256';
         
-        var path = '/smart-id-rp/v1/signature/pno/:countryCode/:pid';
-        var params = {
+        const path = '/smart-id-rp/v1/signature/pno/:countryCode/:pid';
+        let params = {
             relyingPartyUUID: _replyingPartyUUID,
             relyingPartyName: _replyingPartyName,
             hash: sessionHash,
@@ -450,7 +595,7 @@ function CosSmartId (app) {
         
         params = JSON.stringify(params);
         
-        var options = {
+        const options = {
             hostname: _hostname,
             path: path.replace(':countryCode', countryCode).replace(':pid', pid),
             method: 'POST',
@@ -463,16 +608,21 @@ function CosSmartId (app) {
         };
 
         return new Promise(function (resolve, reject) {
-            var request = https.request(options, function (result) {
+            const request = https.request(options, function (result) {
+                let data = '';
                 result.setEncoding('utf8');
                 result.on('data', function (chunk) {
+                    data += chunk;
+                });
+
+                result.on('end', function () {
                     try {
-                        var data = JSON.parse(chunk);
+                        data = JSON.parse(data);
                         if (!data.sessionID) {
                             return reject(data);
                         }
 
-                        var verficationCode = _getVerificationCode(sessionHash);
+                        const verficationCode = _getVerificationCode(sessionHash);
 
                         return resolve({
                             sessionId: data.sessionID,
@@ -483,7 +633,6 @@ function CosSmartId (app) {
                     } catch (e) {
                         return reject(e);
                     }
-
                 });
             });
 
@@ -492,20 +641,19 @@ function CosSmartId (app) {
             request.write(params);
             request.end();
             request.on('error', function (e) {
-                console.log('ERROR', e);
-              //  logger.error('problem with request: ', e.message);
+                logger.error('problem with request: ', e.message);
 
                 return reject(e);
             });
         });
     };
 
-    var _signInitSmartId = function (topicId, voteId, userId, voteOptions, pid, countryCode, certificate, transaction) {
+    const _signInitSmartId = function (topicId, voteId, userId, voteOptions, pid, countryCode, certificate, transaction) {
         return _createUserBdoc(topicId, voteId, userId, voteOptions, 'test', transaction)
             .then(function (bdoc) {
                 bdoc.addSigningCertificate(certificate);
                 bdoc.finalize();
-            //    var containerBase64 = _streamToBase64(bdocStream);
+            //    const containerBase64 = _streamToBase64(bdocStream);
              /*   return VoteUserContainer
                     .upsert({
                         userId: userId,
@@ -518,38 +666,6 @@ function CosSmartId (app) {
             });
     };
 
-    var _statusAuth = function (sessionId) {
-        return new Promise (function (resolve) {
-            var sessionStatus = new SmartIdRestConnector(_endpointUrl);
-            
-            var status = sessionStatus.getSessionStatusSync(sessionId);
-            var authResponse = _getAuthenticationResponse(status);
-            if (authResponse.error) {
-                return resolve(authResponse);
-            }
-            var authenticationResult = AuthenticationResponseValidator().validateSync(authResponse);
-
-            var authIdentity = authenticationResult.getAuthenticationIdentitySync();
-            var firstName = authIdentity.getGivenNameSync(); // e.g. Mari-Liis"
-            var lastName = authIdentity.getSurNameSync(); // e.g. "Männik"
-            var pid = authIdentity.getIdentityCodeSync(); // e.g. "47101010033"
-            var country = authIdentity.getCountrySync(); // e.g. "EE"
-
-            return resolve({
-                state: 'COMPLETE',
-                result: {
-                    endResult: 'OK',
-                    user: {
-                        firstName,
-                        lastName,
-                        pid,
-                        country
-                    }
-                }
-            });
-        });
-    }
-
     return {
         init: _init,
         authenticate: _authenticate,
@@ -558,7 +674,6 @@ function CosSmartId (app) {
         signInitSmartId: _signInitSmartId,
         signature: _signature,
         statusSign: _statusSign,
-        createUserBdoc: _createUserBdoc,
         statusAuth: _statusAuth,
         getVerificationCode: _getVerificationCode
     };

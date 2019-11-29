@@ -4,7 +4,7 @@ var assert = require('chai').assert;
 var util = require('../../libs/util');
 var fs = require('fs');
 var AdmZip = require('adm-zip');
-var Bdoc = require('../../libs/bdoc');
+var Bdoc = require('../../libs/bdoc/bdoc');
 
 suite('BDOC', function () {
 

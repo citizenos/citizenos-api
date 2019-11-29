@@ -32,7 +32,6 @@ module.exports = function (app) {
     var URL = require('url');
     var https = require('https');
     var smartId = app.get('smartId');
-    var java = app.get('java');
 
     var loginCheck = app.get('middleware.loginCheck');
     var authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
@@ -5732,12 +5731,11 @@ module.exports = function (app) {
                             return Promise
                                 .all(promisesToResolve)
                                 .then(function () {
-                                    console.log('SIGN SMART', countryCode);
                                     switch (signingMethod) {
                                         case Vote.SIGNING_METHODS.idCard:                                            
                                             return cosBdoc.signInitIdCard(topicId, voteId, userId, vote.VoteOptions, certificate, t);
                                         case Vote.SIGNING_METHODS.smartId:
-                                            return smartId.signInitSmartId(topicId, voteId, userId, vote.VoteOptions, personalInfo.pid, countryCode, smartIdcertificate, t);
+                                            return cosBdoc.signInitSmartId(topicId, voteId, userId, vote.VoteOptions, personalInfo.pid, countryCode, smartIdcertificate, t);
                                         case Vote.SIGNING_METHODS.mid:
                                             return cosBdoc.signInitMobile(topicId, voteId, userId, vote.VoteOptions, personalInfo.pid, personalInfo.phoneNumber, t);
                                         default:
@@ -6103,12 +6101,13 @@ module.exports = function (app) {
         var statusPromise;
         var userId = req.user ? req.user.id : idSignFlowData.userId;
         if (idSignFlowData.sessionId) {
-            statusPromise = smartId.statusSign(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.voteId, idSignFlowData.userId, topicId, idSignFlowData.voteOptions);
+            statusPromise = cosBdoc.getSmartIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.voteId, idSignFlowData.userId, topicId, idSignFlowData.voteOptions);
         } else {
             statusPromise = cosBdoc.getMobileSignedDoc(idSignFlowData.sesscode);
         }
             return Promise.all([statusPromise])
                 .then(function (results) {
+             //       console.log('RESUTLTS', results);
                     var signedDocInfo = results[0];
 
                     return db
@@ -6272,7 +6271,6 @@ module.exports = function (app) {
                             return Promise.all(promisesToResolve);
                         });
                 }, function (statusCode) {
-                    console.log(statusCode);
                     switch (statusCode) {
                         case 'OUTSTANDING_TRANSACTION':
                             res.ok('Signing in progress', 1);

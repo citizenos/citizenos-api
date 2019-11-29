@@ -633,22 +633,54 @@ suite('Auth', function () {
 
                                 assert.equal(response.status.code, 20001);
                                 assert.match(response.data.challengeID, /[0-9]{4}/);
-
-                                var token = response.data.token;
-                                assert.isNotNull(token);
-
-                                var tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                                var tokenData = jwt.verify(response.data.token, config.session.publicKey, {algorithms: [config.session.algorithm]});
                                 var loginMobileFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
+                                assert.property(loginMobileFlowData, 'sessionHash');
 
-                                assert.property(loginMobileFlowData, 'sesscode');
-                                assert.deepEqual(loginMobileFlowData.personalInfo, {
-                                    pid: '60001019906',
-                                    firstName: 'MARY ÄNN',
-                                    lastName: 'O’CONNEŽ-ŠUSLIK TESTNUMBER',
-                                    countryCode: 'EE'
+                                var interval;
+                                var calls = 0;
+                                var replies = 0;
+                                var clearStatus = function () {
+                                    clearInterval(interval);
+                                };
+
+                                interval = setInterval(function () { // eslint-disable-line consistent-return
+                                    if (calls < 5) {
+                                        if (calls === replies) {
+                                            calls++;
+                                            loginMobileStatus(request.agent(app), response.data.token, function (err, res) {
+                                                replies++;
+                                                    if (err) {
+                                                        return done(err);
+                                                    }
+
+                                                    if (res.body.status.code === 20003) {
+                                                        assert.property(res.body.data, 'id');
+                                                        delete res.body.data.id;
+                                                        assert.deepEqual(res.body.data, {
+                                                            name: 'Mary Änn O’Connež-Šuslik Testnumber',
+                                                            company: null,
+                                                            language: 'en',
+                                                            email: null,
+                                                            imageUrl: null,
+                                                            termsVersion: null,
+                                                            termsAcceptedAt: null
+                                                        });
+                                                        clearStatus();
+
+                                                        return done();
+                                                    }
+                                                
+                                                return done();
+                                            });        
+                                        }
+                                    } else {
+                                        clearStatus();
+
+                                        return done(new Error('Maximum retries reached'));
+                                    }
+                                    
                                 });
-
-                                return done();
                             });
                         })
                         .catch(done);
@@ -664,13 +696,16 @@ suite('Auth', function () {
                             return done(err);
                         }
 
+                        var response = res.body;
+
+                        assert.equal(response.status.code, 40000);
+
                         var expectedResponse = {
                             status: {
-                                code: 40021,
-                                message: 'User is not a Mobile-ID client. Please double check phone number and/or id code.'
+                                code: 40000,
+                                message: 'phoneNumber must contain of + and numbers(8-30)'
                             }
                         };
-
                         assert.deepEqual(res.body, expectedResponse);
 
                         return done();
@@ -688,8 +723,8 @@ suite('Auth', function () {
 
                         var expectedResponse = {
                             status: {
-                                code: 40021,
-                                message: 'User is not a Mobile-ID client. Please double check phone number and/or id code.'
+                                code: 40000,
+                                message: 'nationalIdentityNumber must contain of 11 digits'
                             }
                         };
 
@@ -703,21 +738,50 @@ suite('Auth', function () {
                     var phoneNumber = '+37200000266';
                     var pid = '60001019939';
 
-                    _loginMobileInit(request.agent(app), pid, phoneNumber, 400, function (err, res) {
+                    loginMobileInit(request.agent(app), pid, phoneNumber, function (err, res) {
                         if (err) {
                             return done(err);
                         }
-
-                        var expectedResponse = {
-                            status: {
-                                code: 40022,
-                                message: 'User certificates are revoked or suspended.'
-                            }
+                        var response = res.body.data;
+                        var interval;
+                        var calls = 0;
+                        var replies = 0;
+                        var clearStatus = function () {
+                            clearInterval(interval);
                         };
 
-                        assert.deepEqual(res.body, expectedResponse);
+                        interval = setInterval(function () { // eslint-disable-line consistent-return
+                            if (calls < 5) {
+                                if (calls === replies) {
+                                    calls++;
+                                    _loginMobileStatus(request.agent(app), response.token, 400, function (err, res) {
+                                        replies++;
+                                            if (err) {
+                                                return done(err);
+                                            }
 
-                        return done();
+                                            if (res.body.status.code === 40013) {
+                                                clearStatus();
+
+                                                var expectedResponse = {
+                                                    status: {
+                                                        code: 40013,
+                                                        message: 'Mobile-ID functionality of the phone is not yet ready'
+                                                    }
+                                                };
+                                                assert.deepEqual(res.body, expectedResponse);
+                                            }
+                                        
+                                        return done();
+                                    });        
+                                }
+                            } else {
+                                clearStatus();
+
+                                return done(new Error('Maximum retries reached'));
+                            }
+                            
+                        });
                     });
                 });
 
@@ -725,21 +789,50 @@ suite('Auth', function () {
                     var phoneNumber = '+37060000266';
                     var pid = '50001018832';
 
-                    _loginMobileInit(request.agent(app), pid, phoneNumber, 400, function (err, res) {
+                    loginMobileInit(request.agent(app), pid, phoneNumber, function (err, res) {
                         if (err) {
                             return done(err);
                         }
-
-                        var expectedResponse = {
-                            status: {
-                                code: 40022,
-                                message: 'User certificates are revoked or suspended.'
-                            }
+                        var response = res.body.data;
+                        var interval;
+                        var calls = 0;
+                        var replies = 0;
+                        var clearStatus = function () {
+                            clearInterval(interval);
                         };
 
-                        assert.deepEqual(res.body, expectedResponse);
+                        interval = setInterval(function () { // eslint-disable-line consistent-return
+                            if (calls < 5) {
+                                if (calls === replies) {
+                                    calls++;
+                                    _loginMobileStatus(request.agent(app), response.token, 400, function (err, res) {
+                                        replies++;
+                                            if (err) {
+                                                return done(err);
+                                            }
 
-                        return done();
+                                            if (res.body.status.code === 40013) {
+                                                clearStatus();
+
+                                                var expectedResponse = {
+                                                    status: {
+                                                        code: 40013,
+                                                        message: 'Mobile-ID functionality of the phone is not yet ready'
+                                                    }
+                                                };
+                                                assert.deepEqual(res.body, expectedResponse);
+                                            }
+                                        
+                                        return done();
+                                    });        
+                                }
+                            } else {
+                                clearStatus();
+
+                                return done(new Error('Maximum retries reached'));
+                            }
+                            
+                        });
                     });
                 });
 
@@ -747,21 +840,50 @@ suite('Auth', function () {
                     var phoneNumber = '+37200001';
                     var pid = '38002240211';
 
-                    _loginMobileInit(request.agent(app), pid, phoneNumber, 400, function (err, res) {
+                    loginMobileInit(request.agent(app), pid, phoneNumber, function (err, res) {
                         if (err) {
                             return done(err);
                         }
-
-                        var expectedResponse = {
-                            status: {
-                                code: 40023,
-                                message: 'User certificate is not activated.'
-                            }
+                        var response = res.body.data;
+                        var interval;
+                        var calls = 0;
+                        var replies = 0;
+                        var clearStatus = function () {
+                            clearInterval(interval);
                         };
 
-                        assert.deepEqual(res.body, expectedResponse);
+                        interval = setInterval(function () { // eslint-disable-line consistent-return
+                            if (calls < 5) {
+                                if (calls === replies) {
+                                    calls++;
+                                    _loginMobileStatus(request.agent(app), response.token, 400, function (err, res) {
+                                        replies++;
+                                            if (err) {
+                                                return done(err);
+                                            }
 
-                        return done();
+                                            if (res.body.status.code === 40013) {
+                                                clearStatus();
+
+                                                var expectedResponse = {
+                                                    status: {
+                                                        code: 40013,
+                                                        message: 'Mobile-ID functionality of the phone is not yet ready'
+                                                    }
+                                                };
+                                                assert.deepEqual(res.body, expectedResponse);
+                                            }
+                                        
+                                        return done();
+                                    });        
+                                }
+                            } else {
+                                clearStatus();
+
+                                return done(new Error('Maximum retries reached'));
+                            }
+                            
+                        });
                     });
                 });
 
@@ -769,21 +891,50 @@ suite('Auth', function () {
                     var phoneNumber = '+37060000001';
                     var pid = '51001091006';
 
-                    _loginMobileInit(request.agent(app), pid, phoneNumber, 400, function (err, res) {
+                    loginMobileInit(request.agent(app), pid, phoneNumber, function (err, res) {
                         if (err) {
                             return done(err);
                         }
-
-                        var expectedResponse = {
-                            status: {
-                                code: 40023,
-                                message: 'User certificate is not activated.'
-                            }
+                        var response = res.body.data;
+                        var interval;
+                        var calls = 0;
+                        var replies = 0;
+                        var clearStatus = function () {
+                            clearInterval(interval);
                         };
 
-                        assert.deepEqual(res.body, expectedResponse);
+                        interval = setInterval(function () { // eslint-disable-line consistent-return
+                            if (calls < 5) {
+                                if (calls === replies) {
+                                    calls++;
+                                    _loginMobileStatus(request.agent(app), response.token, 400, function (err, res) {
+                                        replies++;
+                                            if (err) {
+                                                return done(err);
+                                            }
 
-                        return done();
+                                            if (res.body.status.code === 40013) {
+                                                clearStatus();
+
+                                                var expectedResponse = {
+                                                    status: {
+                                                        code: 40013,
+                                                        message: 'Mobile-ID functionality of the phone is not yet ready'
+                                                    }
+                                                };
+                                                assert.deepEqual(res.body, expectedResponse);
+                                            }
+                                        
+                                        return done();
+                                    });        
+                                }
+                            } else {
+                                clearStatus();
+
+                                return done(new Error('Maximum retries reached'));
+                            }
+                            
+                        });
                     });
                 });
 
@@ -845,10 +996,6 @@ suite('Auth', function () {
                                             replies++;
                                             if (err) {
                                                 return done(err);
-                                            }
-
-                                            if (calls === 1) {
-                                                assert.equal(res.body.status.code, 20001);
                                             }
 
                                             if (res.body.status.code === 20003) {

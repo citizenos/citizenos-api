@@ -6737,7 +6737,7 @@ suite('Users', function () {
                             var response = res.body;
                             assert.equal(response.status.code, 20001);
                             assert.match(response.data.challengeID, /[0-9]{4}/);
-
+                            console.log(response);
                             done();
                         });
                     });

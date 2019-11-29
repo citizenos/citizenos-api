@@ -80,6 +80,12 @@
       "relyingPartyUUID": "00000000-0000-0000-0000-000000000000",
       "replyingPartyName": "DEMO"
     },
+    "mobileId": {
+      "hostname": "tsp.demo.sk.ee",
+      "apiPath": "/mid-api",
+      "relyingPartyUUID": "00000000-0000-0000-0000-000000000000",
+      "replyingPartyName": "DEMO"
+    },
     "twitter": {
       "consumer_key": "kkFbJ3tySB9XIzXDbDQPqedSt",
       "consumer_secret": "qYP9gsmKDdA8P4FIe1sgEiEMnctjUiep55Ai6mZuNIXmNa55V6",
