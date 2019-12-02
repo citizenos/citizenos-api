@@ -578,11 +578,8 @@ function CosSmartId () {
         });
     };
 
-    const _signature = function (pid, countryCode, dataToSign) {
+    const _signature = function (pid, countryCode, sessionHash) {
         countryCode = countryCode || 'EE'; //defaults to Estonia
-     ///   const dataToSign = bdoc.getDataToSign();
-    //    console.log('DATA TO SIGN', dataToSign);
-        const sessionHash = crypto.createHash('sha256').update(dataToSign).digest('base64');
         const hashType = 'sha256';
         
         const path = '/smart-id-rp/v1/signature/pno/:countryCode/:pid';
@@ -648,30 +645,11 @@ function CosSmartId () {
         });
     };
 
-    const _signInitSmartId = function (topicId, voteId, userId, voteOptions, pid, countryCode, certificate, transaction) {
-        return _createUserBdoc(topicId, voteId, userId, voteOptions, 'test', transaction)
-            .then(function (bdoc) {
-                bdoc.addSigningCertificate(certificate);
-                bdoc.finalize();
-            //    const containerBase64 = _streamToBase64(bdocStream);
-             /*   return VoteUserContainer
-                    .upsert({
-                        userId: userId,
-                        voteId: voteId,
-                        container: Buffer.from(containerBase64, 'base64')
-                    })
-                    .then(function () {*/
-                        return _signature(pid, countryCode, bdoc);
-           //         });                
-            });
-    };
-
     return {
         init: _init,
         authenticate: _authenticate,
         getUserCertificate: _getUserCertificate,
         getCertUserData: _getCertUserData,
-        signInitSmartId: _signInitSmartId,
         signature: _signature,
         statusSign: _statusSign,
         statusAuth: _statusAuth,
