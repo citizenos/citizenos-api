@@ -19,15 +19,8 @@ function CosMobileId () {
     const BN = require('bn.js');
     const java = require('java');
     const EC = require('elliptic').ec;
-    var ec = new EC('secp256k1');
+    const ec = new EC('p256');
 
-
-    const baseDir = "./libs/java";
-    var dependencies = fs.readdirSync(baseDir);
-
-    dependencies.forEach(function(dependency){
-        java.classpath.push(baseDir + "/" + dependency);
-    })
 
     let _replyingPartyUUID;
     let _replyingPartyName;
@@ -37,9 +30,9 @@ function CosMobileId () {
     let _apiPath;
     let _port;
     const LANGUAGES = {
-        et: 'EST', 
-        en: 'ENG', 
-        ru: 'RUS', 
+        et: 'EST',
+        en: 'ENG',
+        ru: 'RUS',
         lt: 'LIT'
     }
 
@@ -109,13 +102,11 @@ function CosMobileId () {
 
     const _createHash = function (input = '', hashType) {
         input = input.toString() || crypto.randomBytes(20).toString();
-        console.log(input);
         hashType = hashType || 'sha256';
+        console.log(`_createHash(input = "${input}", hashType = "${hashType}"`);
 
         const hash = crypto.createHash(hashType);
-        console.log(encoder.encode(input));
         hash.update(input);
-
         return hash.digest('hex');
     };
 
@@ -141,7 +132,7 @@ function CosMobileId () {
                     }
                 });
             });
-            
+
             if (params) {
                 request.write(params);  // write data to request body
             }
@@ -189,22 +180,19 @@ function CosMobileId () {
     };
 
     const _prepareCert = function (certificateString) {
-        if(typeof certificateString !== 'string') {
+        if (typeof certificateString !== 'string') {
             throw new Error('Expected PEM as string')
         }
-    
-        // Load certificate in PEM encoding (base64 encoded DER)
-        const b64 = certificateString.replace(/(-----(BEGIN|END) CERTIFICATE-----|[\n\r])/g, '');
-    
+
         // Now that we have decoded the cert it's now in DER-encoding
-        const der = Buffer.from(b64, 'base64');
-    
+        const der = Buffer.from(certificateString, 'base64');
+
         // And massage the cert into a BER encoded one
         const ber = new Uint8Array(der).buffer;
-    
+
         // And now Asn1js can decode things \o/
         const asn1 = Asn1js.fromBER(ber);
-        const cert = new Pkijs.Certificate({ schema: asn1.result });
+        const cert = new Pkijs.Certificate({schema: asn1.result});
 
         return cert;
     };
@@ -259,9 +247,9 @@ function CosMobileId () {
                 'Content-Length': Buffer.byteLength(params, 'utf8')
             }
         };
-        
+
         return _apiRequest(params, options)
-            .then(function(result) {
+            .then(function (result) {
                 if (!result.data.sessionID) {
                     return result.data;
                 }
@@ -278,10 +266,10 @@ function CosMobileId () {
 
     const _authenticate = function (nationalIdentityNumber, phoneNumber, language) {
         const sessionHash = _createHash('abc123');
-        console.log(sessionHash);
+        console.log('_authenticate', `sessionHash = "${sessionHash}"`);
         const path = _apiPath + '/authentication';
         language = LANGUAGES[language] || LANGUAGES.en;
-        const hashType = 'sha256'
+        const hashType = 'sha256';
 
         let params = {
             relyingPartyUUID: _replyingPartyUUID,
@@ -294,6 +282,7 @@ function CosMobileId () {
         };
 
         params = JSON.stringify(params);
+        console.log('params', params);
 
         const options = {
             hostname: _hostname,
@@ -309,7 +298,7 @@ function CosMobileId () {
 
         return _apiRequest(params, options)
             .then(function (result) {
-                if (result.data.sessionID) {                    
+                if (result.data.sessionID) {
                     return Promise.resolve({
                         sessionId: result.data.sessionID,
                         challengeID: _getVerificationCode(sessionHash),
@@ -327,14 +316,14 @@ function CosMobileId () {
     };
 
     const _authenticate1 = function (nationalIdentityNumber, phoneNumber, language) {
-        const MidClient = java.import('ee.sk.mid.MidClient');       
+        const MidClient = java.import('ee.sk.mid.MidClient');
         const MidLanguage = java.import('ee.sk.mid.MidLanguage');
         const MidAuthenticationHashToSign = java.import('ee.sk.mid.MidAuthenticationHashToSign');
         const MidAuthenticationRequest = java.import('ee.sk.mid.rest.dao.request.MidAuthenticationRequest');
         const MidDisplayTextFormat = java.import('ee.sk.mid.MidDisplayTextFormat');
         const MidAuthenticationResponseValidator = java.import('ee.sk.mid.MidAuthenticationResponseValidator');
-    /*    const MidAuthenticationResponse = java.import('ee.sk.mid.rest.dao.response.MidAuthenticationResponse');
-        const MidSessionStatus = java. import('ee.sk.mid.rest.dao.MidSessionStatus');*/
+        /*    const MidAuthenticationResponse = java.import('ee.sk.mid.rest.dao.response.MidAuthenticationResponse');
+         const MidSessionStatus = java. import('ee.sk.mid.rest.dao.MidSessionStatus');*/
         const client = MidClient.newBuilderSync()
             .withHostUrlSync("https://tsp.demo.sk.ee/mid-api")
             .withRelyingPartyUUIDSync("00000000-0000-0000-0000-000000000000")
@@ -351,9 +340,9 @@ function CosMobileId () {
             .withHashToSignSync(authenticationHash)
             .withLanguageSync(MidLanguage.ENG)
             .withDisplayTextSync("Log into self-service?")
-            .withDisplayTextFormatSync( MidDisplayTextFormat.GSM7)
+            .withDisplayTextFormatSync(MidDisplayTextFormat.GSM7)
             .buildSync();
-        
+
         const response = client.getMobileIdConnectorSync().authenticateSync(request);
 
         const sessionStatus = client.getSessionStatusPollerSync().fetchFinalSessionStatusSync(response.getSessionIDSync(),
@@ -363,16 +352,16 @@ function CosMobileId () {
         const validator = new MidAuthenticationResponseValidator();
         const authenticationResult = validator.validateSync(authentication);
 
-    console.log('IS VALID', authenticationResult.isValidSync());
-    console.log(authenticationResult.getErrorsSync().isEmptySync());
+        console.log('IS VALID', authenticationResult.isValidSync());
+        console.log(authenticationResult.getErrorsSync().isEmptySync());
     };
 
     const _getSessionStatusData = function (type, sessionId, timeout) {
-        
+
         let path = _apiPath + '/' + type + '/session/:sessionId'.replace(':sessionId', sessionId);
         if (timeout) {
-            path+= '?timeoutMs=' + timeout;
-        } 
+            path += '?timeoutMs=' + timeout;
+        }
         const options = {
             hostname: _hostname,
             path: path,
@@ -386,64 +375,29 @@ function CosMobileId () {
     };
 
     const _validateAuthorization = function (authResponse, sessionHash) {
-        var bigInt = require("big-integer");
-        return new Promise (function (resolve, reject) {
-            fs.writeFileSync('suslik.crt', authResponse.cert);
+        return new Promise(function (resolve, reject) {
             const cert = _prepareCert(authResponse.cert);
-            console.log(cert.subjectPublicKeyInfo);
-            let publicKeyData = cert.subjectPublicKeyInfo.parsedKey.toJSON();
-            console.log(cert.subjectPublicKeyInfo.parsedKey);
-            publicKeyData.kty = "EC";
-            const hashBuffer = Buffer.from(sessionHash, 'hex');
-            const signatureVale = Buffer.from(authResponse.signature.value, 'base64');
 
-            const elements = signatureVale.toJSON().data;
-            var half_length = Math.ceil(elements.length / 2);
-            const rvalues = elements.slice(0,half_length);
-            const svalues = elements.slice(half_length, elements.length);
-            console.log(svalues);
-            var r = new bigInt(Buffer.from(rvalues).toString('hex'), 16);
-            var s = new bigInt(Buffer.from(svalues).toString('hex'), 16);
-            console.log(r, s)
-            var sequence = new Asn1js.Sequence();
-            sequence.valueBlock.value.push(new Asn1js.Integer(r));
-            sequence.valueBlock.value.push(new Asn1js.Integer(s));
-            var sequence_buffer = Buffer.from(sequence.toBER(false));
-            console.log(sequence_buffer);
-          //  return encodeInAsn1(r, s);
+            const publicKeyData = {
+                x: Buffer.from(cert.subjectPublicKeyInfo.parsedKey.x).toString('hex'),
+                y: Buffer.from(cert.subjectPublicKeyInfo.parsedKey.y).toString('hex')
+            };
+            const key = ec.keyFromPublic(publicKeyData, 'hex');
 
-// The converted key and the uncompressed public key should be the same
-     //   console.log(uncompressedKey);
-      //      var key = new ECKey(publicKeyData);
-    //        key = key.asPublicECKey();
-        //    const signature = Buffer.from(authResponse.signature.value, 'base64').toString('hex');
-        //    var sigData = { r: signature.substr(0, signature.length/2),
-         //       s: signature.substr(signature.length/2)
-         ///   };
-         ///   console.log('SIGDATA', sigData);
-       //     const verify = key.createVerify('SHA256');
-        //    verify.update(Buffer.from(sessionHash, 'hex'));
+            // Splits to 2 halfs
+            const m = Buffer.from(authResponse.signature.value, 'base64').toString('hex').match(/([a-f\d]{64})/gi);
 
-            
-            // Import public key
-            var key2 = ec.keyFromPublic(publicKeyData, 'hex');
-            
-            // Signature MUST be either:
-            // 1) DER-encoded signature as hex-string; or
-            // 2) DER-encoded signature as buffer; or
-            // 3) object with two hex-string properties (r and s); or
-            // 4) object with two buffer properties (r and s
-            console.log(key2.verify(Buffer.from(sessionHash, 'hex'), signatureVale));
-         //   const verify = crypto.createVerify('SHA256');
-         //   verify.update(Buffer.from(sessionHash.data, 'hex'));
-            //verify.end();
+            const signature = {
+                r: m[0],
+                s: m[1]
+            };
 
-           // console.log(verify.verify(sequence_buffer));
+            console.log('VERIFY RESULT', key.verify(sessionHash, signature));
         });
     };
 
     const _statusAuth = function (sessionId, sessionHash) {
-        return new Promise (function (resolve, reject) {
+        return new Promise(function (resolve, reject) {
             return _getSessionStatusData('authentication', sessionId)
                 .then(function (result) {
                     const data = result.data;
@@ -456,10 +410,10 @@ function CosMobileId () {
                                         data.personalInfo = personalInfo;
                                         return resolve(data);
                                     });
-                            }).catch(function(e) {
-                                console.log(e);
-                                reject(e);
-                            });
+                            }).catch(function (e) {
+                            console.log(e);
+                            reject(e);
+                        });
                     }
                     if (data.error) {
                         return reject(data);
@@ -477,15 +431,15 @@ function CosMobileId () {
 
         const path = _apiPath + '/signature';
         let params = JSON.stringify({
-                relyingPartyUUID: _replyingPartyUUID,
-                relyingPartyName: _replyingPartyName,
-                phoneNumber,
-                nationalIdentityNumber,
-                language,
-                hash: sessionHash,
-                hashType: hashType.toUpperCase()
+            relyingPartyUUID: _replyingPartyUUID,
+            relyingPartyName: _replyingPartyName,
+            phoneNumber,
+            nationalIdentityNumber,
+            language,
+            hash: sessionHash,
+            hashType: hashType.toUpperCase()
         });
-        
+
         const options = {
             hostname: _hostname,
             path: path,
@@ -498,12 +452,12 @@ function CosMobileId () {
             }
         };
 
-        return _apiRequest (params, options)
+        return _apiRequest(params, options)
             .then(function (result) {
-                return new Promise (function (resolve, reject) {
+                return new Promise(function (resolve, reject) {
                     if (result.data.sessionID) {
                         const verficationCode = _getVerificationCode(sessionHash);
-        
+
                         return resolve({
                             sessionId: result.data.sessionID,
                             challengeID: verficationCode,
@@ -523,7 +477,7 @@ function CosMobileId () {
     };
 
     const _statusSign = function (sessionId) {
-        return new Promise (function (resolve) {
+        return new Promise(function (resolve) {
             return _getSessionStatusData('signature', sessionId)
                 .then(function (result) {
                     const data = result.data;

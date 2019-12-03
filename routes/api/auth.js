@@ -814,6 +814,7 @@ module.exports = function (app) {
         var tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
         var loginMobileFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
 
+        console.log('/STATUS', 'sessionHash', loginMobileFlowData.sessionHash);
         mobileId
             .statusAuth(loginMobileFlowData.sessionId, loginMobileFlowData.sessionHash)
             .then(function (authResult) {
