@@ -16,6 +16,7 @@ module.exports = function (app) {
     var urlLib = app.get('urlLib');
     var emailLib = app.get('email');
     var cosBdoc = app.get('cosBdoc');
+    var cosSignature = app.get('cosSignature');
     var cosActivities = app.get('cosActivities');
     var Promise = app.get('Promise');
     var sanitizeFilename = app.get('sanitizeFilename');
@@ -32,6 +33,7 @@ module.exports = function (app) {
     var URL = require('url');
     var https = require('https');
     var smartId = app.get('smartId');
+    var mobileId = app.get('mobileId');
 
     var loginCheck = app.get('middleware.loginCheck');
     var authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
@@ -5523,9 +5525,9 @@ module.exports = function (app) {
 
         var getCertificatePromise;
         var smartIdcertificate;
-        var isSmartId = false;
+        var mobileIdCertificate;
+        var certFormat = 'base64'
         if (pid && countryCode) {
-            isSmartId = true;
             signingMethod = Vote.SIGNING_METHODS.smartId;
             getCertificatePromise = smartId
                     .getUserCertificate(pid, phoneNumber)
@@ -5538,75 +5540,89 @@ module.exports = function (app) {
                             };
                     });
 
-            
+
         } else if (certificate) {
             signingMethod = Vote.SIGNING_METHODS.idCard;
             getCertificatePromise = Promise.resolve({
                 certificate: certificate,
                 format: 'der'
             });
+
+            certFormat = 'hex';
         } else {
             signingMethod = Vote.SIGNING_METHODS.mid;
-            getCertificatePromise = cosBdoc
-                .getMobileCertificate(pid, phoneNumber, 'sign')
-                .then(function (certInfo) {
-                    switch (certInfo.statusCode) {
-                        case 0:
-                            return {
-                                certificate: certInfo.sign,
-                                format: 'pem'
-                            };
-                        case 101:
-                            res.badRequest('Invalid input parameters.', 20);
+            getCertificatePromise = mobileId
+                .getUserCertificate(pid, phoneNumber)
+                .then(function (result) {
+                    if (result.data.result && result.data.result === 'OK' && result.data.cert) {
+                        mobileIdCertificate = result.data.cert;
 
-                            return Promise.reject();
-                        case 301:
-                            res.badRequest('User is not a Mobile-ID client. Please double check phone number and/or id code.', 21);
+                        return {
+                            certificate: result.data.cert,
+                            format: 'pem'
+                        };
+                    }
 
-                            return Promise.reject();
-                        case 302:
-                            res.badRequest('User certificates are revoked or suspended.', 22);
-
-                            return Promise.reject();
-                        case 303:
-                            res.badRequest('User certificate is not activated.', 23);
-
-                            return Promise.reject();
-                        case 304:
-                            res.badRequest('User certificate is suspended.', 24);
-
-                            return Promise.reject();
-                        case 305:
-                            res.badRequest('User certificate is expired.', 25);
-
-                            return Promise.reject();
-                        default:
-                            logger.error('Unhandled DDS status code', certInfo.statusCode);
-                            res.internalServerError();
-
-                            return Promise.reject();
+                    if (result.data && result.data.error) {
+                        switch (result.data.error) {
+                            case 'phoneNumber must contain of + and numbers(8-30)':
+                                return res.badRequest(result.data.error, 21);
+                            case 'nationalIdentityNumber must contain of 11 digits':
+                                return res.badRequest(result.data.error, 22);
+                            default:
+                                return res.badRequest(result.data.error);
+                        }
+                    }
+                    else if (result.data.value) {
+                        switch (result.data.value) {
+                            case 'NOT_MID_CLIENT':
+                                return res.badRequest('Given user has no active certificates and is not MID client.');
+                            case 'USER_CANCELLED':
+                                return res.badRequest('User has cancelled the signing process')
+                            case 'SIGNATURE_HASH_MISMATCH':
+                                return res.badRequest('Mobile-ID configuration on user\'s SIM card differs from what is configured on service provider\'s side. User needs to contact his/her mobile operator');
+                            default:
+                                return res.badRequest(result.data.value);
+                        }
+                    } else if (result.data.result) {
+                        switch (result.data.result) {
+                            case 'NOT_ACTIVE':
+                                return res.badRequest('Certificate was found but is not active', 23);
+                            case 'NOT_FOUND':
+                                return res.badRequest('No certificate for the user was foun');
+                            default:
+                                return res.badRequest(result.data.result);
+                        }
                     }
                 });
         }
 
             var personalInfoPromise = getCertificatePromise
                 .then(function (certificateInfo) {
-                    if (isSmartId) {
+           //         console.log('certificateInfo', certificateInfo)
+                    if (signingMethod === Vote.SIGNING_METHODS.smartId) {
                         return smartId
                             .getCertUserData(certificateInfo.certificate)
                             .then(function (certificateInfo) {
                                 personalInfo = certificateInfo;
                                 if (personalInfo.pid.indexOf(pid) -1) {
                                     personalInfo.pid = pid;
-                                }   
-                             
+                                }
+
                                 return;
                             });
                     }
-                    return cosBdoc
-                        .getPersonalInfoFromCertificate(certificateInfo.certificate, certificateInfo.format)
-                        .spread(function (status, personalInfoFromCertificate) {
-                            switch (status) { //GOOD, UNKNOWN, EXPIRED, SUSPENDED, REVOKED
+
+                    return mobileId
+                        .getCertUserData(certificateInfo.certificate, certFormat)
+                        .then(function (certificateInfo) {
+                            personalInfo = certificateInfo;
+                            if (signingMethod === Vote.SIGNING_METHODS.mid) {
+                                personalInfo.phoneNumber = phoneNumber;
+                            }
+
+                            return;
+                    /*        switch (status) { //GOOD, UNKNOWN, EXPIRED, SUSPENDED, REVOKED
                                 case 'GOOD':
                                     personalInfo = personalInfoFromCertificate;
                                     if (signingMethod === Vote.SIGNING_METHODS.mid) {
@@ -5632,7 +5648,7 @@ module.exports = function (app) {
                                     res.internalServerError();
 
                                     return Promise.reject();
-                            }
+                            }*/
                         });
                 });
 
@@ -5641,7 +5657,7 @@ module.exports = function (app) {
                     return personalInfoPromise
                         .then(function () {
                             var promisesToResolve = [];
-                            // Authenticated User                            
+                            // Authenticated User
                             if (userId) {
                                 var anotherUserConnectionPromise = UserConnection
                                     .findOne({
@@ -5732,12 +5748,12 @@ module.exports = function (app) {
                                 .all(promisesToResolve)
                                 .then(function () {
                                     switch (signingMethod) {
-                                        case Vote.SIGNING_METHODS.idCard:                                            
-                                            return cosBdoc.signInitIdCard(topicId, voteId, userId, vote.VoteOptions, certificate, t);
+                                        case Vote.SIGNING_METHODS.idCard:
+                                            return cosSignature.signInitIdCard(voteId, userId, vote.VoteOptions, certificate, t);
                                         case Vote.SIGNING_METHODS.smartId:
-                                            return cosBdoc.signInitSmartId(topicId, voteId, userId, vote.VoteOptions, personalInfo.pid, countryCode, smartIdcertificate, t);
+                                            return cosSignature.signInitSmartId(voteId, userId, vote.VoteOptions, personalInfo.pid, countryCode, smartIdcertificate, t);
                                         case Vote.SIGNING_METHODS.mid:
-                                            return cosBdoc.signInitMobile(topicId, voteId, userId, vote.VoteOptions, personalInfo.pid, personalInfo.phoneNumber, t);
+                                            return cosSignature.signInitMobile(voteId, userId, vote.VoteOptions, personalInfo.pid, personalInfo.phoneNumber, mobileIdCertificate, t);
                                         default:
                                             throw new Error('Invalid signing method ' + signingMethod);
                                     }
@@ -5748,9 +5764,12 @@ module.exports = function (app) {
                             if (signInitResponse.sessionId) {
                                 signInitResponse.dataToSign;
                                 sessionData = {
-                                    voteOptions: voteOptions,
+                                    voteOptions: vote.VoteOptions,
+                                    signingMethod,
                                     sessionId: signInitResponse.sessionId,
                                     sessionHash: signInitResponse.sessionHash,
+                                    personalInfo: signInitResponse.personalInfo,
+                                    xades: signInitResponse.xades,
                                     userId: userId, // Required for un-authenticated signing.
                                     voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
                                 };
@@ -5770,18 +5789,20 @@ module.exports = function (app) {
                                     case 0:
                                         // Common to MID and ID-card signing
                                         sessionData = {
-                                            sesscode: signInitResponse.sesscode,
                                             voteOptions: voteOptions,
                                             personalInfo: personalInfo,
+                                            signingMethod,
+                                            signableHash: signInitResponse.signableHash,
+                                            xades: signInitResponse.xades,
                                             userId: userId, // Required for un-authenticated signing.
                                             voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
                                         };
-    
+
                                         // ID card
                                         if (signInitResponse.signatureId) {
                                             sessionData.signatureId = signInitResponse.signatureId;
                                         }
-    
+
                                         // Send JWT with state and expect it back in /sign /status - https://trello.com/c/ZDN2WomW/287-bug-id-card-signing-does-not-work-for-some-users
                                         // Wrapping sessionDataEncrypted in object, otherwise jwt.sign "expiresIn" will not work - https://github.com/auth0/node-jsonwebtoken/issues/166
                                         sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
@@ -5789,11 +5810,11 @@ module.exports = function (app) {
                                             expiresIn: '5m',
                                             algorithm: config.session.algorithm
                                         });
-    
+
                                         if (signingMethod === Vote.SIGNING_METHODS.idCard) {
                                             return res.ok({
-                                                signedInfoDigest: signInitResponse.signedInfoDigest,
-                                                signedInfoHashType: cryptoLib.getHashType(signInitResponse.signedInfoDigest),
+                                                signedInfoDigest: signInitResponse.signableHash,
+                                                signedInfoHashType: cryptoLib.getHashType(signInitResponse.signableHash),
                                                 token: token
                                             }, 1);
                                         } else {
@@ -5804,38 +5825,38 @@ module.exports = function (app) {
                                         }
                                     case 101:
                                         res.badRequest('Invalid input parameters.', 20);
-    
+
                                         return Promise.reject();
                                     case 301:
                                         res.badRequest('User is not a Mobile-ID client. Please double check phone number and/or id code.', 21);
-    
+
                                         return Promise.reject();
                                     case 302:
                                         res.badRequest('User certificates are revoked or suspended.', 22);
-    
+
                                         return Promise.reject();
                                     case 303:
                                         res.badRequest('User certificate is not activated.', 23);
-    
+
                                         return Promise.reject();
                                     case 304:
                                         res.badRequest('User certificate is suspended.', 24);
-    
+
                                         return Promise.reject();
                                     case 305:
                                         res.badRequest('User certificate is expired.', 25);
-    
+
                                         return Promise.reject();
                                     default:
                                         logger.error('Unhandled DDS status code', signInitResponse.statusCode);
                                         res.internalServerError();
-    
+
                                         return Promise.reject();
                                 }
                             }
                         });
                 });
-        
+
     };
 
     /**
@@ -6028,8 +6049,8 @@ module.exports = function (app) {
                         }
                     );
 
-                var signUserBdocPromise = cosBdoc
-                    .signUserBdoc(idSignFlowData.sesscode, idSignFlowData.signatureId, signatureValue)
+                var signUserBdocPromise = cosSignature
+                    .signUserBdoc(idSignFlowData.voteId, idSignFlowData.userId, voteOptions, idSignFlowData.signableHash, idSignFlowData.xades, signatureValue)
                     .then(function (signedDocument) {
                         return VoteUserContainer
                             .upsert(
@@ -6100,26 +6121,27 @@ module.exports = function (app) {
         }
         var statusPromise;
         var userId = req.user ? req.user.id : idSignFlowData.userId;
-        if (idSignFlowData.sessionId) {
-            statusPromise = cosBdoc.getSmartIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.voteId, idSignFlowData.userId, topicId, idSignFlowData.voteOptions);
+        if (idSignFlowData.signingMethod === Vote.SIGNING_METHODS.smartId) {
+            statusPromise = cosSignature.getSmartIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.xades, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions);
         } else {
-            statusPromise = cosBdoc.getMobileSignedDoc(idSignFlowData.sesscode);
+            statusPromise = cosSignature.getMobileIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.xades, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions);
         }
             return Promise.all([statusPromise])
                 .then(function (results) {
-             //       console.log('RESUTLTS', results);
                     var signedDocInfo = results[0];
 
                     return db
                         .transaction(function (t) {
                             // Store vote options
                             var voteOptions = idSignFlowData.voteOptions;
-
                             var optionGroupId = Math.random().toString(36).substring(2, 10);
 
                             var promisesToResolve = [];
 
                             _(voteOptions).forEach(function (o) {
+                                if (!o.optionId && o.id) {
+                                    o.optionId = o.id;
+                                }
                                 o.voteId = voteId;
                                 o.userId = userId;
                                 o.optionGroupId = optionGroupId;
@@ -6226,7 +6248,7 @@ module.exports = function (app) {
                                         userId: userId,
                                         connectionId: UserConnection.CONNECTION_IDS.esteid,
                                         connectionUserId: idSignFlowData.personalInfo.pid,
-                                        connectionData: _.merge(idSignFlowData.personalInfo, signedDocInfo.signerInfo) // When starting signing with Mobile-ID we have no full name, thus we need to fetch and update
+                                        connectionData: idSignFlowData.personalInfo // When starting signing with Mobile-ID we have no full name, thus we need to fetch and update
                                     },
                                     {
                                         transaction: t
@@ -6251,7 +6273,7 @@ module.exports = function (app) {
                                 var userNameUpdatePromise = User
                                     .update(
                                         {
-                                            name: db.fn('initcap', signedDocInfo.signerInfo.firstName + ' ' + signedDocInfo.signerInfo.lastName)
+                                            name: db.fn('initcap', idSignFlowData.personalInfo.firstName + ' ' + idSignFlowData.personalInfo.lastName)
                                         },
                                         {
                                             where: {
@@ -6269,7 +6291,9 @@ module.exports = function (app) {
                             promisesToResolve.push(voteListCreatePromise, voteDelegationDestroyPromise, userConnectionAddPromise, voteUserContainerPromise);
 
                             return Promise.all(promisesToResolve);
-                        });
+                        }).catch(function (e) {
+                            console.log(e);
+                        })
                 }, function (statusCode) {
                     switch (statusCode) {
                         case 'OUTSTANDING_TRANSACTION':

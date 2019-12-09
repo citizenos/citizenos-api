@@ -155,7 +155,7 @@ app.set('ddsClient', require('./libs/ddsClient'));
 app.set('cosEtherpad', require('./libs/cosEtherpad')(app));
 app.set('cosJwt', require('./libs/cosJwt')(app));
 
-//Config smartId 
+//Config smartId
 var smartId = require('./libs/cosSmartId')(app);
 smartId.init({
     hostname: config.services.smartId.hostname,
@@ -168,7 +168,7 @@ smartId.init({
 });
 app.set('smartId', smartId);
 app.set('cosBdoc', require('./libs/cosBdoc')(app));
-//Config mobiilId 
+//Config mobiilId
 var mobileId = require('./libs/cosMobileId')();
 mobileId.init({
     hostname: config.services.mobileId.hostname,
@@ -180,6 +180,7 @@ mobileId.init({
     statusPath: config.services.mobileId.statusPath
 });
 app.set('mobileId', mobileId);
+app.set('cosSignature', require('./libs/cosSignature')(app));
 
 if (typeof config.email === 'string') {
     config.email = JSON.parse(config.email); // Support JSON string from ENV

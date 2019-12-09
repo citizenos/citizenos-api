@@ -6,18 +6,11 @@
 function CosMobileId () {
     const that = this;
     const crypto = require('crypto');
-    const encoder = require('utf8');
     const Promise = require('bluebird');
     const https = require('https');
     const logger = require('log4js');
     const Pkijs = require('pkijs');
     const Asn1js = require('asn1js');
-    const asn1js = require('asn1.js');
-    const fs = require('fs');
-    const WebCrypto = require('node-webcrypto-ossl');
-    const ECKey = require('ec-key');
-    const BN = require('bn.js');
-    const java = require('java');
     const EC = require('elliptic').ec;
     const ec = new EC('p256');
 
@@ -103,7 +96,6 @@ function CosMobileId () {
     const _createHash = function (input = '', hashType) {
         input = input.toString() || crypto.randomBytes(20).toString();
         hashType = hashType || 'sha256';
-        console.log(`_createHash(input = "${input}", hashType = "${hashType}"`);
 
         const hash = crypto.createHash(hashType);
         hash.update(input);
@@ -179,13 +171,13 @@ function CosMobileId () {
         return res;
     };
 
-    const _prepareCert = function (certificateString) {
+    const _prepareCert = function (certificateString, format) {
         if (typeof certificateString !== 'string') {
             throw new Error('Expected PEM as string')
         }
 
         // Now that we have decoded the cert it's now in DER-encoding
-        const der = Buffer.from(certificateString, 'base64');
+        const der = Buffer.from(certificateString, format);
 
         // And massage the cert into a BER encoded one
         const ber = new Uint8Array(der).buffer;
@@ -197,8 +189,8 @@ function CosMobileId () {
         return cert;
     };
 
-    const _getCertUserData = function (certificate) {
-        const cert = _prepareCert(certificate);
+    const _getCertUserData = function (certificate, format) {
+        const cert = _prepareCert(certificate, format);
         const subject = getCertValue('subject', cert);
 
         return Promise.resolve({
@@ -223,50 +215,44 @@ function CosMobileId () {
         return _padLeft(positiveInteger, 4, '0');
     };
 
-    const _certificate = function (nationalIdentityNumber, phoneNumber) {
-        const sessionHash = _createHash();
-        const path = _apiPath + '/certificate';
+    const _getUserCertificate = function (nationalIdentityNumber, phoneNumber) {
+        return new Promise (function (resolve, reject) {
+            const path = _apiPath + '/certificate';
 
-        let params = {
-            relyingPartyUUID: _replyingPartyUUID,
-            relyingPartyName: _replyingPartyName,
-            phoneNumber,
-            nationalIdentityNumber
-        };
+            let params = {
+                relyingPartyUUID: _replyingPartyUUID,
+                relyingPartyName: _replyingPartyName,
+                phoneNumber,
+                nationalIdentityNumber
+            };
 
-        params = JSON.stringify(params);
+            params = JSON.stringify(params);
 
-        const options = {
-            hostname: _hostname,
-            path: path,
-            method: 'POST',
-            port: _port,
-            headers: {
-                'Authorization': 'Bearer ' + _authorizeToken,
-                'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(params, 'utf8')
-            }
-        };
-
-        return _apiRequest(params, options)
-            .then(function (result) {
-                if (!result.data.sessionID) {
-                    return result.data;
+            const options = {
+                hostname: _hostname,
+                path: path,
+                method: 'POST',
+                port: _port,
+                headers: {
+                    'Authorization': 'Bearer ' + _authorizeToken,
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(params, 'utf8')
                 }
+            };
 
-                const verficationCode = _getVerificationCode(sessionHash);
+            return _apiRequest(params, options)
+                .then(function (result) {
+                    if (!result.data && result.data.cert) {
+                        return resolve(result.data.cert);
+                    }
 
-                return {
-                    sessionId: result.data.sessionID,
-                    challengeID: verficationCode,
-                    sessionHash
-                };
-            });
+                    return resolve(result);
+                });
+        });
     };
 
     const _authenticate = function (nationalIdentityNumber, phoneNumber, language) {
-        const sessionHash = _createHash('abc123');
-        console.log('_authenticate', `sessionHash = "${sessionHash}"`);
+        const sessionHash = _createHash();
         const path = _apiPath + '/authentication';
         language = LANGUAGES[language] || LANGUAGES.en;
         const hashType = 'sha256';
@@ -282,7 +268,6 @@ function CosMobileId () {
         };
 
         params = JSON.stringify(params);
-        console.log('params', params);
 
         const options = {
             hostname: _hostname,
@@ -307,53 +292,11 @@ function CosMobileId () {
                 } else if (result.data.error) {
                     let err = new Error(result.data.error);
                     err.code = result.status;
-                    console.log(err);
                     return Promise.reject(err);
                 } else {
                     return Promise.resolve(result);
                 }
             });
-    };
-
-    const _authenticate1 = function (nationalIdentityNumber, phoneNumber, language) {
-        const MidClient = java.import('ee.sk.mid.MidClient');
-        const MidLanguage = java.import('ee.sk.mid.MidLanguage');
-        const MidAuthenticationHashToSign = java.import('ee.sk.mid.MidAuthenticationHashToSign');
-        const MidAuthenticationRequest = java.import('ee.sk.mid.rest.dao.request.MidAuthenticationRequest');
-        const MidDisplayTextFormat = java.import('ee.sk.mid.MidDisplayTextFormat');
-        const MidAuthenticationResponseValidator = java.import('ee.sk.mid.MidAuthenticationResponseValidator');
-        /*    const MidAuthenticationResponse = java.import('ee.sk.mid.rest.dao.response.MidAuthenticationResponse');
-         const MidSessionStatus = java. import('ee.sk.mid.rest.dao.MidSessionStatus');*/
-        const client = MidClient.newBuilderSync()
-            .withHostUrlSync("https://tsp.demo.sk.ee/mid-api")
-            .withRelyingPartyUUIDSync("00000000-0000-0000-0000-000000000000")
-            .withRelyingPartyNameSync("DEMO")
-            .buildSync();
-
-        const authenticationHash = MidAuthenticationHashToSign.generateRandomHashOfDefaultTypeSync();
-        console.log('authenticationHash', authenticationHash);
-        const verificationCode = authenticationHash.calculateVerificationCodeSync();
-        language = LANGUAGES[language] || LANGUAGES.en;
-        const request = MidAuthenticationRequest.newBuilderSync()
-            .withPhoneNumberSync(phoneNumber)
-            .withNationalIdentityNumberSync(nationalIdentityNumber)
-            .withHashToSignSync(authenticationHash)
-            .withLanguageSync(MidLanguage.ENG)
-            .withDisplayTextSync("Log into self-service?")
-            .withDisplayTextFormatSync(MidDisplayTextFormat.GSM7)
-            .buildSync();
-
-        const response = client.getMobileIdConnectorSync().authenticateSync(request);
-
-        const sessionStatus = client.getSessionStatusPollerSync().fetchFinalSessionStatusSync(response.getSessionIDSync(),
-            "/authentication/session/{sessionId}");
-
-        const authentication = client.createMobileIdAuthenticationSync(sessionStatus, authenticationHash);
-        const validator = new MidAuthenticationResponseValidator();
-        const authenticationResult = validator.validateSync(authentication);
-
-        console.log('IS VALID', authenticationResult.isValidSync());
-        console.log(authenticationResult.getErrorsSync().isEmptySync());
     };
 
     const _getSessionStatusData = function (type, sessionId, timeout) {
@@ -392,7 +335,7 @@ function CosMobileId () {
                 s: m[1]
             };
 
-            console.log('VERIFY RESULT', key.verify(sessionHash, signature));
+            return resolve(key.verify(sessionHash, signature));
         });
     };
 
@@ -402,17 +345,18 @@ function CosMobileId () {
                 .then(function (result) {
                     const data = result.data;
                     if (data.state === 'COMPLETE' && data.result === 'OK') {
-                        console.log('RESPONSE: ', result.data);
-                        _validateAuthorization(result.data, sessionHash)
-                            .then(function () {
-                                return _getCertUserData(data.cert)
-                                    .then(function (personalInfo) {
-                                        data.personalInfo = personalInfo;
-                                        return resolve(data);
-                                    });
+                        return _validateAuthorization(result.data, sessionHash)
+                            .then(function (isValid) {
+                                if (isValid) {
+                                    return _getCertUserData(data.cert)
+                                        .then(function (personalInfo) {
+                                            data.personalInfo = personalInfo;
+                                            return resolve(data);
+                                        });
+                                }
                             }).catch(function (e) {
-                            console.log(e);
-                            reject(e);
+                            console.log('ERROR', e);
+                            return reject(e);
                         });
                     }
                     if (data.error) {
@@ -424,8 +368,7 @@ function CosMobileId () {
         });
     };
 
-    const _sign = function (nationalIdentityNumber, phoneNumber, language, dataToSign) {
-        const sessionHash = crypto.createHash('sha256').update(dataToSign).digest('base64');
+    const _signature = function (nationalIdentityNumber, phoneNumber, sessionHash, language) {
         const hashType = 'sha256';
         language = LANGUAGES[language] || LANGUAGES.en;
 
@@ -464,7 +407,7 @@ function CosMobileId () {
                             sessionHash: sessionHash
                         });
                     } else if (result.data.error) {
-                        let err = new Error(result.data.error);
+                        let err = new Error(resconsoult.data.error);
                         err.code = result.statusCode;
 
                         return reject(err);
@@ -482,11 +425,7 @@ function CosMobileId () {
                 .then(function (result) {
                     const data = result.data;
                     if (data.state === 'COMPLETE' && data.result === 'OK') {
-                        return _getCertUserData(data.cert)
-                            .then(function (personalInfo) {
-                                data.personalInfo = personalInfo;
-                                return resolve(data);
-                            });
+                        return resolve(data);
                     }
                     return resolve(data);
                 });
@@ -495,12 +434,12 @@ function CosMobileId () {
 
     return {
         init: _init,
-        certificate: _certificate,
+        getUserCertificate: _getUserCertificate,
         getCertUserData: _getCertUserData,
         getVerificationCode: _getVerificationCode,
         authenticate: _authenticate,
         statusAuth: _statusAuth,
-        sign: _sign,
+        signature: _signature,
         statusSign: _statusSign
     };
 }

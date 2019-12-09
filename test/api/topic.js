@@ -6380,7 +6380,7 @@ suite('Users', function () {
                                 var expectedResponse = {
                                     status: {
                                         code: 40021,
-                                        message: 'User is not a Mobile-ID client. Please double check phone number and/or id code.'
+                                        message: 'phoneNumber must contain of + and numbers(8-30)'
                                     }
                                 };
 
@@ -6390,7 +6390,7 @@ suite('Users', function () {
                             });
                         });
 
-                        test('Fail - 40021 - Invalid PID', function (done) {
+                        test('Fail - 40022 - Invalid PID', function (done) {
                             var phoneNumber = '+37260000007';
                             var pid = '1072';
 
@@ -6406,8 +6406,8 @@ suite('Users', function () {
 
                                 var expectedResponse = {
                                     status: {
-                                        code: 40021,
-                                        message: 'User is not a Mobile-ID client. Please double check phone number and/or id code.'
+                                        code: 40022,
+                                        message: 'nationalIdentityNumber must contain of 11 digits'
                                     }
                                 };
 
@@ -6417,7 +6417,7 @@ suite('Users', function () {
                             });
                         });
 
-                        test('Fail - 40022 - Mobile-ID user certificates are revoked or suspended for Estonian citizen', function (done) {
+                        test('Fail - 40023 - Mobile-ID user certificates are revoked or suspended for Estonian citizen', function (done) {
                             var phoneNumber = '+37200000266';
                             var pid = '60001019939';
 
@@ -6432,8 +6432,8 @@ suite('Users', function () {
 
                                 var expectedResponse = {
                                     status: {
-                                        code: 40022,
-                                        message: 'User certificates are revoked or suspended.'
+                                        code: 40023,
+                                        message: 'Certificate was found but is not active'
                                     }
                                 };
 
@@ -6443,7 +6443,7 @@ suite('Users', function () {
                             });
                         });
 
-                        test('Fail - 40022 - Mobile-ID user certificates are revoked or suspended for Lithuanian citizen', function (done) {
+                        test('Fail - 40023 - Mobile-ID user certificates are revoked or suspended for Lithuanian citizen', function (done) {
                             var phoneNumber = '+37060000266';
                             var pid = '50001018832';
 
@@ -6458,8 +6458,8 @@ suite('Users', function () {
 
                                 var expectedResponse = {
                                     status: {
-                                        code: 40022,
-                                        message: 'User certificates are revoked or suspended.'
+                                        code: 40023,
+                                        message: 'Certificate was found but is not active'
                                     }
                                 };
 
@@ -6469,7 +6469,7 @@ suite('Users', function () {
                             });
                         });
 
-                        test('Fail - 40021 - User certificate is not activated for Estonian citizen.', function (done) {
+                        test('Fail - 40023 - User certificate is not activated for Estonian citizen.', function (done) {
                             var phoneNumber = '+37200000366';
                             var pid = '60001019928';
 
@@ -6485,7 +6485,7 @@ suite('Users', function () {
                                 var expectedResponse = {
                                     status: {
                                         code: 40023,
-                                        message: 'User certificate is not activated.'
+                                        message: 'Certificate was found but is not active'
                                     }
                                 };
 
@@ -6495,7 +6495,7 @@ suite('Users', function () {
                             });
                         });
 
-                        test('Fail - 40022 - Mobile-ID is not activated for Lithuanian citizen', function (done) {
+                        test('Fail - 40023 - Mobile-ID is not activated for Lithuanian citizen', function (done) {
                             var phoneNumber = '+37060000366';
                             var pid = '50001018821';
 
@@ -6511,7 +6511,7 @@ suite('Users', function () {
                                 var expectedResponse = {
                                     status: {
                                         code: 40023,
-                                        message: 'User certificate is not activated.'
+                                        message: 'Certificate was found but is not active'
                                     }
                                 };
 
@@ -6737,12 +6737,11 @@ suite('Users', function () {
                             var response = res.body;
                             assert.equal(response.status.code, 20001);
                             assert.match(response.data.challengeID, /[0-9]{4}/);
-                            console.log(response);
                             done();
                         });
                     });
 
-                    test('Success - Estonian mobile number and PID bdocUri exists', function (done) {
+                    test(' bdocUri exists', function (done) {
                         this.timeout(24000); //eslint-disable-line no-invalid-this
 
                         var countryCode = 'EE';
@@ -6909,7 +6908,7 @@ suite('Users', function () {
                         });
                     });
 
-                    test.skip('Fail - 40021 - User certificate is not activated for Estonian citizen.', function (done) {
+                    test.skip('Fail - 40023 - User certificate is not activated for Estonian citizen.', function (done) {
                         var phoneNumber = '+37200000366';
                         var pid = '60001019928';
 
@@ -6935,7 +6934,7 @@ suite('Users', function () {
                         });
                     });
 
-                    test.skip('Fail - 40022 - Mobile-ID is not activated for Lithuanian citizen', function (done) {
+                    test.skip('Fail - 40023 - Mobile-ID is not activated for Lithuanian citizen', function (done) {
                         var phoneNumber = '+37060000366';
                         var pid = '50001018821';
 

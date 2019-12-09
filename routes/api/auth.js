@@ -509,7 +509,7 @@ module.exports = function (app) {
                     return res.ok('Log in progress', 1);
                 } else if (response.state === 'COMPLETE') {
                     switch (response.result.endResult) {
-                        case 'OK': 
+                        case 'OK':
                             var personalInfo = response.personalInfo;
                         break;
                         case 'USER_REFUSED':
@@ -520,7 +520,7 @@ module.exports = function (app) {
                             res.badRequest('The transaction has expired', 11);
 
                             return;
-                        default: 
+                        default:
                             res.badRequest(response);
                         break;
                     }
@@ -814,7 +814,6 @@ module.exports = function (app) {
         var tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
         var loginMobileFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
 
-        console.log('/STATUS', 'sessionHash', loginMobileFlowData.sessionHash);
         mobileId
             .statusAuth(loginMobileFlowData.sessionId, loginMobileFlowData.sessionHash)
             .then(function (authResult) {

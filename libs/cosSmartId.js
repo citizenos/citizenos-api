@@ -190,7 +190,7 @@ function CosSmartId () {
                     }
                 });
             });
-            
+
             if (params) {
                 request.write(params);  // write data to request body
             }
@@ -252,7 +252,7 @@ function CosSmartId () {
                             sessionId: result.data.sessionID,
                             challengeID: verficationCode,
                             sessionHash: sessionHash
-                        });                        
+                        });
                     } else if (result.data.code && result.data.message) {
                         let e = new Error(result.data.message);
                         e.code = result.data.code;
@@ -262,7 +262,7 @@ function CosSmartId () {
 
                     return reject(result.data);
 
-                    
+
                 });
             });
     };
@@ -285,7 +285,7 @@ function CosSmartId () {
                     }
 
                     return resolve(data);
-                });            
+                });
         });
     };
     /**
@@ -299,7 +299,7 @@ function CosSmartId () {
      */
    /* const _getVoteOptionFileName = function (voteOption) {
         const sanitizedfileName = sanitizeFilename(voteOption.value);
-        
+
         if (!sanitizedfileName.length) {
             throw Error('Nothing left after sanitizing the optionValue: ' + voteOption.value);
         }
@@ -320,31 +320,8 @@ function CosSmartId () {
         return new Promise(function (resolve, reject) {
             return _apiRequest(null, options)
                 .then(function (result) {
-             //       console.log('sessionId', sessionId);
-            //        console.log('status SIGN', sessionId, result);
                     return resolve(result);
                 });
-         /*   const request = https.request(options, function (result) {
-                result.setEncoding('utf8');
-                result.on('data', function (chunk) {
-                    data += chunk;
-                });
-
-                result.on('end', function () {
-                    const finalData = {
-                        data: JSON.parse(data)
-                    }
-
-                    return resolve(finalData);
-                });
-            });
-
-            request.end();
-            request.on('error', function (e) {
-                logger.error('problem with request: ', e.message);
-
-                return reject(e);
-            });*/
         })
     };
 
@@ -359,7 +336,7 @@ function CosSmartId () {
         };
 
         params = JSON.stringify(params);
-        
+
         const options = {
             hostname: _hostname,
             path: path.replace(':countryCode', countryCode).replace(':pid', pid),
@@ -371,6 +348,7 @@ function CosSmartId () {
                 'Content-Length': Buffer.byteLength(params, 'utf8')
             }
         };
+
         return new Promise(function (resolve, reject) {
             let data = '';
             const request = https.request(options, function (result) {
@@ -381,6 +359,7 @@ function CosSmartId () {
 
                 result.on('end', function () {
                     data = JSON.parse(data);
+
                     return _getSessionStatusData(data.sessionID)
                         .then(function (sessionData) {
                             return resolve(sessionData.data.cert.value);
@@ -402,92 +381,6 @@ function CosSmartId () {
             });
         });
     };
-/*
-    const _createUserBdoc = function (topicId, voteId, userId, voteOptions, configuration, transaction) {        
-        let docPath = './files/'+ topicId +'/'+ voteId +'/' + userId;
-        if (!fs.existsSync(docPath)){
-            fs.mkdirSync(docPath);
-        }
-        docPath += '/vote.bdoc';
-        const container = new Bdoc(docPath);
-    //    console.log(container);
-        container.setConfiguration(configuration);
-        const chosenVoteOptionFileNames = voteOptions.map(_getVoteOptionFileName);
-
-        return VoteContainerFile
-            .findAll({
-                where: {
-                    voteId: voteId
-                },
-                transaction: transaction
-            })
-            .each(function (voteContainerFile) {
-                const fileName = voteContainerFile.fileName;
-                const mimeType = voteContainerFile.mimeType;
-                const content = voteContainerFile.content;
-            
-                switch (voteContainerFile.fileName) {
-                    case TOPIC_FILE.name:
-                    case METAINFO_FILE.name:
-                        break;
-                    default:
-                        // Must be option file
-                        if (chosenVoteOptionFileNames.indexOf(fileName)) {
-                            //Skip the option that User did not choose
-                            return;
-                        }
-                }
-
-                container.append(content, {
-                    name: fileName,
-                    mimeType: mimeType
-                });
-            })
-            .then(function () {
-                return new Promise (function (resolve) {
-                    let finalData = '';
-                    const mufileStream = mu
-                        .compileAndRender(USERINFO_FILE.template, {user: {id: userId}});
-                    mufileStream
-                        .on('data', function (data) {
-                            finalData += data.toString();
-                        });
-                    mufileStream
-                        .on('end', function () {
-                            container.append(Buffer.from(finalData), {
-                                name: USERINFO_FILE.name,
-                                mimeType: 'text/html'
-                            });
-                            return resolve();
-                        });
-                });
-            })
-            .then(function () {
-                return new Promise(function (resolve) {
-                   return resolve(container);
-                });
-            }).catch(function (e) {
-                console.log(e)
-            })
-    }*/
-
-    const _prepareCert = function (certificate) {
-        
-        certificate = certificate.split('');
-        if (certificate.indexOf('\n') ===-1) {
-            const certParts = [];
-            while (certificate.length) {
-                certParts.push(certificate.splice(0,64).join(''));
-            }
-            certificate = certParts.join('\n');
-        }
-        
-        if (certificate.indexOf('-----BEGIN CERTIFICATE-----') === -1) {
-            certificate = '-----BEGIN CERTIFICATE-----\n'+certificate+'\n-----END CERTIFICATE-----\n';
-        }
-
-        return certificate;
-    };
 
     const getCertValue = function (key, cert) {
         let res = {};
@@ -501,20 +394,20 @@ function CosSmartId () {
         return res;
     };
 
-    const _getCertUserData = function (certificate) {        
+    const _getCertUserData = function (certificate) {
         if(typeof certificate !== 'string') {
             throw new Error('Expected PEM as string')
         }
-    
+
         // Load certificate in PEM encoding (base64 encoded DER)
         const b64 = certificate.replace(/(-----(BEGIN|END) CERTIFICATE-----|[\n\r])/g, '')
-    
+
         // Now that we have decoded the cert it's now in DER-encoding
         const der = Buffer.from(b64, 'base64')
-    
+
         // And massage the cert into a BER encoded one
         const ber = new Uint8Array(der).buffer
-    
+
         // And now Asn1js can decode things \o/
         const asn1 = Asn1js.fromBER(ber)
         const cert = new Pkijs.Certificate({ schema: asn1.result })
@@ -528,7 +421,7 @@ function CosSmartId () {
         });
     };
 
-    /*const _statusSign = function (sessionId, sessionHash, voteId, userId, topicId, voteOptions) {        
+    /*const _statusSign = function (sessionId, sessionHash, voteId, userId, topicId, voteOptions) {
         return new Promise (function (resolve, reject) {
             return _getSessionStatusData(sessionId)
                 .then(function (result) {
@@ -558,9 +451,9 @@ function CosSmartId () {
                     } else{
                         return resolve(data);
                     }
-                    
+
                 })
-        });        
+        });
     };*/
 
     const _statusSign = function (sessionId) {
@@ -568,7 +461,6 @@ function CosSmartId () {
             return _getSessionStatusData(sessionId)
                 .then(function (result) {
                     const data = result.data;
-                  //  console.log('STATUS SIGN', result);
                     if (data.state === 'COMPLETE' && data.result === 'OK') {
                         return resolve(data);
                     }
@@ -581,7 +473,6 @@ function CosSmartId () {
     const _signature = function (pid, countryCode, sessionHash) {
         countryCode = countryCode || 'EE'; //defaults to Estonia
         const hashType = 'sha256';
-        
         const path = '/smart-id-rp/v1/signature/pno/:countryCode/:pid';
         let params = {
             relyingPartyUUID: _replyingPartyUUID,
@@ -589,9 +480,9 @@ function CosSmartId () {
             hash: sessionHash,
             hashType: hashType.toUpperCase()
         };
-        
+
         params = JSON.stringify(params);
-        
+
         const options = {
             hostname: _hostname,
             path: path.replace(':countryCode', countryCode).replace(':pid', pid),
@@ -624,8 +515,8 @@ function CosSmartId () {
                         return resolve({
                             sessionId: data.sessionID,
                             challengeID: verficationCode,
-                            sessionHash: sessionHash,
-                            
+                            sessionHash,
+
                         });
                     } catch (e) {
                         return reject(e);
