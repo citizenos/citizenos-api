@@ -7,6 +7,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Deployment Status Notifications to Slack
-      uses: citizenos/github-action-deployment-status-notifier-slack@97aefd5
+      uses: citizenos/github-action-deployment-status-notifier-slack@25a6784
       with:
         slack-incoming-webhook-url: ${{secrets.SLACK_INCOMING_WEBHOOK_URL}}
