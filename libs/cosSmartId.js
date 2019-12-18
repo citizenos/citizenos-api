@@ -8,21 +8,14 @@ function CosSmartId () {
     const logger = require('log4js');
     const crypto = require('crypto');
     const Promise = require('bluebird');
-   /// const Bdoc = app.get('Bdoc');
     const encoder = require('utf8');
     const https = require('https');
     const Pkijs = require('pkijs');
     const Asn1js = require('asn1js');
-    const _ = require('lodash');
-    const fs = require('fs');
- /*   var Hades = require("js-undersign")
-    var Tsl = require("js-undersign/lib/tsl")
+    const EC = require('elliptic').ec;
+    const NodeRSA = require('node-rsa');
 
-    var hades = new Hades({
-        tsl: Tsl.parse(fs.readFileSync("./config/tsl/test-estonian-tsl.xml")),
-        timemarkUrl: "http://demo.sk.ee/ocsp "
-    });
-*/
+
     const OID = {
         "2.5.4.3": {
             short: "CN",
@@ -86,47 +79,14 @@ function CosSmartId () {
             long: "UnstructuredName",
         },
     };
-   /* const db = models.sequelize;*/
-/*
-    const VoteContainerFile = models.VoteContainerFile;
-    const VoteUserContainer = models.VoteUserContainer;
-    const VoteOption = models.VoteOption;*/
 
     let _replyingPartyUUID;
     let _replyingPartyName;
     let _authorizeToken;
-    const _dataToSignList = {};
 
     let _hostname;
     let _apiPath;
-    let _client;
-    let _endpointUrl;
     let _port;
-   // const FILE_CREATE_MODE = '0760';
-
-    const TOPIC_FILE = {
-        template: 'bdoc/document.html',
-        name: 'document.docx',
-        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    };
-
-    const METAINFO_FILE = {
-        template: 'bdoc/metainfo.html',
-        name: '__metainfo.html',
-        mimeType: 'text/html'
-    };
-
-    const VOTE_OPTION_FILE = {
-        template: 'bdoc/voteOption.html',
-        name: ':value.html', // ":value" is a placeholder to replace with sanitized file name
-        mimeType: 'text/html'
-    };
-
-    const USERINFO_FILE = {
-        template: 'bdoc/userinfo.html',
-        name: '__userinfo.html',
-        mimeType: 'text/html'
-    };
 
     const _createHash = function (input = '', hashType) {
         input = input.toString() || crypto.randomBytes(20).toString();
@@ -151,13 +111,8 @@ function CosSmartId () {
         }
 
         _apiPath = options.apiPath;
-        _endpointUrl = _buildPath();
 
         return that;
-    };
-
-    const _buildPath = function () {
-        return 'https://' + _hostname + _apiPath;
     };
 
     const _padLeft = function (input, size, padText) {
@@ -267,20 +222,88 @@ function CosSmartId () {
             });
     };
 
-    const _statusAuth = function (sessionId) {
-        return new Promise (function (resolve) {
+    const _prepareCert = function (certificateString, format) {
+        format = format || 'base64';
+        if (typeof certificateString !== 'string') {
+            throw new Error('Expected PEM as string')
+        }
+
+        // Now that we have decoded the cert it's now in DER-encoding
+        const der = Buffer.from(certificateString, format);
+
+        // And massage the cert into a BER encoded one
+        const ber = new Uint8Array(der).buffer;
+
+        // And now Asn1js can decode things \o/
+        const asn1 = Asn1js.fromBER(ber);
+        const cert = new Pkijs.Certificate({schema: asn1.result});
+
+        return cert;
+    };
+
+    const _validateAuthorization = function (authResponse, sessionHash) {
+        return new Promise(function (resolve) {
+            const cert = _prepareCert(authResponse.cert.value, 'base64');
+            if (cert.subjectPublicKeyInfo.parsedKey.x && cert.subjectPublicKeyInfo.parsedKey.y) {
+                const ec = new EC('p256');
+                const publicKeyData = {
+                    x: Buffer.from(cert.subjectPublicKeyInfo.parsedKey.x).toString('hex'),
+                    y: Buffer.from(cert.subjectPublicKeyInfo.parsedKey.y).toString('hex')
+                };
+                const key = ec.keyFromPublic(publicKeyData, 'hex');
+
+                // Splits to 2 halfs
+                const m = Buffer.from(authResponse.signature.value, 'base64').toString('hex').match(/([a-f\d]{64})/gi);
+
+                const signature = {
+                    r: m[0],
+                    s: m[1]
+                };
+
+                return resolve(key.verify(sessionHash, signature));
+            }
+            const parsedData = cert.subjectPublicKeyInfo.parsedKey.toJSON();
+            const publicKey = new NodeRSA(parsedData);
+         //   console.log(authResponse);
+            const verify = crypto.createVerify('sha256WithRSAEncryption');
+            var prefix = [0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20];
+
+            var items = [Buffer.from(prefix), Buffer.from(sessionHash, 'hex')];
+    //       console.log(authResponse.signature.value);
+            verify.update(Buffer.concat(items).toString('hex'));
+    //       console.log(verify.verify(publicKey.exportKey('public'), authResponse.signature.value, 'base64'));
+            const isValid = publicKey.verify(Buffer.concat(items).toString('hex'), Buffer.from(authResponse.signature.value, 'base64'));
+     //       console.log(isValid);// Prints: true or false
+            return resolve(isValid); // this is temporary, validation must be fixed
+        });
+    };
+
+    const _statusAuth = function (sessionId, sessionHash) {
+        return new Promise (function (resolve, reject) {
             _getSessionStatusData(sessionId)
                 .then(function (result) {
                     const data = result.data;
+                   // console.log(data);
                     if (data.state === 'RUNNING') {
                         return resolve(data);
                     }
-                    if (data.result.endResult === 'OK') {
-                        return _getCertUserData(data.cert.value)
-                            .then(function (personalInfo) {
-                                data.personalInfo = personalInfo;
 
-                                return resolve(data);
+                    if (data.result.endResult === 'OK') {
+                     //   console.log(data.result);
+                        return _validateAuthorization(result.data, sessionHash)
+                            .then(function (isValid) {
+                       //         console.log('isValid', isValid);
+                                if (isValid) {
+                                    return _getCertUserData(data.cert.value, 'base64')
+                                        .then(function (personalInfo) {
+                                            data.personalInfo = personalInfo;
+                                            return resolve(data);
+                                        });
+                                }
+                            }).catch(function (e) {
+                                logger.error(e);
+                                console.log('ERROR', e);
+                                return reject(e);
                             });
                     }
 
@@ -288,23 +311,6 @@ function CosSmartId () {
                 });
         });
     };
-    /**
-     * Get the file name for specific VoteOption
-     *
-     * @param {Object} voteOption VoteOption Sequelize instance
-     *
-     * @returns {string} File name
-     *
-     * @private
-     */
-   /* const _getVoteOptionFileName = function (voteOption) {
-        const sanitizedfileName = sanitizeFilename(voteOption.value);
-
-        if (!sanitizedfileName.length) {
-            throw Error('Nothing left after sanitizing the optionValue: ' + voteOption.value);
-        }
-        return VOTE_OPTION_FILE.name.replace(':value', sanitizedfileName);
-    };*/
 
     const _getSessionStatusData = function (sessionId) {
         const path = _apiPath + '/session/:sessionId'.replace(':sessionId', sessionId);
@@ -317,7 +323,7 @@ function CosSmartId () {
             requestOCSP: true
         };
 
-        return new Promise(function (resolve, reject) {
+        return new Promise(function (resolve) {
             return _apiRequest(null, options)
                 .then(function (result) {
                     return resolve(result);
@@ -327,7 +333,7 @@ function CosSmartId () {
 
     const _getUserCertificate = function (pid, countryCode) {
         countryCode = countryCode || 'EE';
-        const path = '/smart-id-rp/v1/certificatechoice/pno/:countryCode/:pid';
+        const path = '/smart-id-rp/v1/certificatechoice/pno/:countryCode/:pid'.replace(':countryCode', countryCode).replace(':pid', pid);
 
         let params = {
             relyingPartyUUID: _replyingPartyUUID,
@@ -339,7 +345,7 @@ function CosSmartId () {
 
         const options = {
             hostname: _hostname,
-            path: path.replace(':countryCode', countryCode).replace(':pid', pid),
+            path,
             method: 'POST',
             port: _port,
             headers: {
@@ -360,10 +366,17 @@ function CosSmartId () {
                 result.on('end', function () {
                     data = JSON.parse(data);
 
-                    return _getSessionStatusData(data.sessionID)
-                        .then(function (sessionData) {
-                            return resolve(sessionData.data.cert.value);
-                        });
+                    if (data.sessionID) {
+                        return _getSessionStatusData(data.sessionID)
+                            .then(function (sessionData) {
+                                if (sessionData.data && sessionData.data.cert)
+                                    return resolve(sessionData.data.cert.value);
+
+                                return resolve(sessionData);
+                            });
+                    }
+
+                    return resolve(data);
                 })
                 result.on('error', function (e) {
                     reject(e);
@@ -394,23 +407,8 @@ function CosSmartId () {
         return res;
     };
 
-    const _getCertUserData = function (certificate) {
-        if(typeof certificate !== 'string') {
-            throw new Error('Expected PEM as string')
-        }
-
-        // Load certificate in PEM encoding (base64 encoded DER)
-        const b64 = certificate.replace(/(-----(BEGIN|END) CERTIFICATE-----|[\n\r])/g, '')
-
-        // Now that we have decoded the cert it's now in DER-encoding
-        const der = Buffer.from(b64, 'base64')
-
-        // And massage the cert into a BER encoded one
-        const ber = new Uint8Array(der).buffer
-
-        // And now Asn1js can decode things \o/
-        const asn1 = Asn1js.fromBER(ber)
-        const cert = new Pkijs.Certificate({ schema: asn1.result })
+    const _getCertUserData = function (certificate, format) {
+        const cert = _prepareCert(certificate, format);
         const subject = getCertValue('subject', cert);
 
         return Promise.resolve({
@@ -420,41 +418,6 @@ function CosSmartId () {
             country: subject.Country
         });
     };
-
-    /*const _statusSign = function (sessionId, sessionHash, voteId, userId, topicId, voteOptions) {
-        return new Promise (function (resolve, reject) {
-            return _getSessionStatusData(sessionId)
-                .then(function (result) {
-                    const data = result.data;
-                    if(data.state === 'COMPLETE') {
-                      /*  return db
-                            .transaction(function (t) {
-                                return VoteOption
-                                    .findAll({
-                                        where: {id: _.map(voteOptions, 'optionId')},
-                                        transaction: t
-                                    })
-                                    .then(function (voteOptions) {
-                                        return _createUserBdoc(topicId, voteId, userId, voteOptions, 'test', t)
-                                            .then(function (bdoc) {
-                                                bdoc.addSignature(data.signature.value, data.cert.value, result.ocsp)
-                                                    .then(function () {
-                                                        bdoc.finalize();
-                                                        return resolve({
-                                                            signedDocData: bdoc.getStream(),
-                                                            signerInfo: {firstName: 'TEST', lastName: 'TEST'}
-                                                        });
-                                                    });
-                                            });
-                                    });
-                            });
-                    } else{
-                        return resolve(data);
-                    }
-
-                })
-        });
-    };*/
 
     const _statusSign = function (sessionId) {
         return new Promise (function (resolve) {

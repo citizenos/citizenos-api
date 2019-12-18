@@ -69,6 +69,7 @@
     "node-forge": "^0.6.38",
     "node-fs": "0.1.7",
     "node-jre": "^0.2.3",
+    "node-rsa": "^1.0.7",
     "node-uuid": "1.4.3",
     "node-webcrypto-ossl": "^1.0.48",
     "nodemailer": "4.6.8",

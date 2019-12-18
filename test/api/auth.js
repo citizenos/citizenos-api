@@ -670,16 +670,16 @@ suite('Auth', function () {
 
                                                         return done();
                                                     }
-                                                
+
                                                 return done();
-                                            });        
+                                            });
                                         }
                                     } else {
                                         clearStatus();
 
                                         return done(new Error('Maximum retries reached'));
                                     }
-                                    
+
                                 });
                             });
                         })
@@ -771,16 +771,16 @@ suite('Auth', function () {
                                                 };
                                                 assert.deepEqual(res.body, expectedResponse);
                                             }
-                                        
+
                                         return done();
-                                    });        
+                                    });
                                 }
                             } else {
                                 clearStatus();
 
                                 return done(new Error('Maximum retries reached'));
                             }
-                            
+
                         });
                     });
                 });
@@ -822,16 +822,16 @@ suite('Auth', function () {
                                                 };
                                                 assert.deepEqual(res.body, expectedResponse);
                                             }
-                                        
+
                                         return done();
-                                    });        
+                                    });
                                 }
                             } else {
                                 clearStatus();
 
                                 return done(new Error('Maximum retries reached'));
                             }
-                            
+
                         });
                     });
                 });
@@ -873,16 +873,16 @@ suite('Auth', function () {
                                                 };
                                                 assert.deepEqual(res.body, expectedResponse);
                                             }
-                                        
+
                                         return done();
-                                    });        
+                                    });
                                 }
                             } else {
                                 clearStatus();
 
                                 return done(new Error('Maximum retries reached'));
                             }
-                            
+
                         });
                     });
                 });
@@ -924,16 +924,16 @@ suite('Auth', function () {
                                                 };
                                                 assert.deepEqual(res.body, expectedResponse);
                                             }
-                                        
+
                                         return done();
-                                    });        
+                                    });
                                 }
                             } else {
                                 clearStatus();
 
                                 return done(new Error('Maximum retries reached'));
                             }
-                            
+
                         });
                     });
                 });

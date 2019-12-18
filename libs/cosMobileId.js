@@ -12,7 +12,6 @@ function CosMobileId () {
     const Pkijs = require('pkijs');
     const Asn1js = require('asn1js');
     const EC = require('elliptic').ec;
-    const ec = new EC('p256');
 
 
     let _replyingPartyUUID;
@@ -216,7 +215,7 @@ function CosMobileId () {
     };
 
     const _getUserCertificate = function (nationalIdentityNumber, phoneNumber) {
-        return new Promise (function (resolve, reject) {
+        return new Promise (function (resolve) {
             const path = _apiPath + '/certificate';
 
             let params = {
@@ -242,7 +241,7 @@ function CosMobileId () {
 
             return _apiRequest(params, options)
                 .then(function (result) {
-                    if (!result.data && result.data.cert) {
+                    if (result.data && result.data.cert) {
                         return resolve(result.data.cert);
                     }
 
@@ -318,8 +317,9 @@ function CosMobileId () {
     };
 
     const _validateAuthorization = function (authResponse, sessionHash) {
-        return new Promise(function (resolve, reject) {
-            const cert = _prepareCert(authResponse.cert);
+        return new Promise(function (resolve) {
+            const cert = _prepareCert(authResponse.cert, 'base64');
+            const ec = new EC('p256');
 
             const publicKeyData = {
                 x: Buffer.from(cert.subjectPublicKeyInfo.parsedKey.x).toString('hex'),
@@ -348,14 +348,14 @@ function CosMobileId () {
                         return _validateAuthorization(result.data, sessionHash)
                             .then(function (isValid) {
                                 if (isValid) {
-                                    return _getCertUserData(data.cert)
+                                    return _getCertUserData(data.cert, 'base64')
                                         .then(function (personalInfo) {
                                             data.personalInfo = personalInfo;
                                             return resolve(data);
                                         });
                                 }
                             }).catch(function (e) {
-                            console.log('ERROR', e);
+                                logger.error('ERROR', e);
                             return reject(e);
                         });
                     }
@@ -407,7 +407,7 @@ function CosMobileId () {
                             sessionHash: sessionHash
                         });
                     } else if (result.data.error) {
-                        let err = new Error(resconsoult.data.error);
+                        let err = new Error(result.data.error);
                         err.code = result.statusCode;
 
                         return reject(err);
@@ -420,14 +420,14 @@ function CosMobileId () {
     };
 
     const _statusSign = function (sessionId) {
-        return new Promise(function (resolve) {
+        return new Promise(function (resolve, reject) {
             return _getSessionStatusData('signature', sessionId)
                 .then(function (result) {
                     const data = result.data;
                     if (data.state === 'COMPLETE' && data.result === 'OK') {
                         return resolve(data);
                     }
-                    return resolve(data);
+                    return reject(data);
                 });
         });
     };

@@ -1,60 +1,97 @@
 'use strict';
 
 module.exports = function (app) {
-    var models = app.get('models');
-    var fs = app.get('fs');
-    var fsExtra = app.get('fsExtra');
-    var mu = app.get('mu');
-    var sanitizeFilename = app.get('sanitizeFilename');
-    var hades = require("./js-undersign/xades");
-    var smartId = app.get('smartId');
-    var mobileId = app.get('mobileId');
-    var Crypto = require("crypto");
-    var Certificate = require("./js-undersign/lib/certificate");
-    var Ocsp = require('./js-undersign/lib/ocsp');
-    var Timestamp = require('./js-undersign/lib/timestamp');
-    var Asic = require('./js-undersign/lib/asic');
-  /*  var certificate = Certificate.parse(Fs.readFileSync("./mary.pem"))
-    var document = Fs.readFileSync("./document.txt")*/
+    const logger = app.get('logger');
+    const models = app.get('models');
+    const util = app.get('util');
+    const fs = app.get('fs');
+    const config = app.get('config');
+    const fsExtra = app.get('fsExtra');
+    const mu = app.get('mu');
+    const sanitizeFilename = app.get('sanitizeFilename');
+    const fastCsv = app.get('fastCsv');
+    const db = models.sequelize;
+    const QueryStream = app.get('QueryStream');
+    const Bdoc = app.get('Bdoc');
+    const SevenZip = app.get('SevenZip');
+    const CosHtmlToDocx = app.get('cosHtmlToDocx');
+    const hades = require('./js-undersign/xades');
+    const smartId = app.get('smartId');
+    const mobileId = app.get('mobileId');
+    const Crypto = require('crypto');
+    const Certificate = require('./js-undersign/lib/certificate');
+    const Ocsp = require('./js-undersign/lib/ocsp');
+    const Timestamp = require('./js-undersign/lib/timestamp');
+    const Asic = require('./js-undersign/lib/asic');
+    const Tsl = require('./js-undersign/lib/tsl');
 
-    var VoteContainerFile = models.VoteContainerFile;
+    const VoteContainerFile = models.VoteContainerFile;
+    const UserConnection = models.UserConnection;
+    const Signature = models.Signature;
 
-    var FILE_CREATE_MODE = '0760';
+    const FILE_CREATE_MODE = '0760';
 
-    var TOPIC_FILE = {
+    const TOPIC_FILE = {
         template: 'bdoc/document.html',
         name: 'document.docx',
         mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     };
 
-    var METAINFO_FILE = {
+    const METAINFO_FILE = {
         template: 'bdoc/metainfo.html',
         name: '__metainfo.html',
         mimeType: 'text/html'
     };
 
-    var VOTE_OPTION_FILE = {
+    const VOTE_OPTION_FILE = {
         template: 'bdoc/voteOption.html',
         name: ':value.html', // ":value" is a placeholder to replace with sanitized file name
         mimeType: 'text/html'
     };
 
-    var USERINFO_FILE = {
+    const USERINFO_FILE = {
         template: 'bdoc/userinfo.html',
         name: '__userinfo.html',
         mimeType: 'text/html'
     };
 
-    var VOTE_RESULTS_FILE = {
+    const VOTE_RESULTS_FILE = {
         name: 'votes.csv',
         mimeType: 'text/csv'
     };
 
-    var USER_BDOC_FILE = {
+    const USER_BDOC_FILE = {
         name: ':pid.bdoc',
         mimeType: 'application/vnd.etsi.asic-e+zip'
     };
 
+
+    /**
+     * Get absolute path to Topic directory where all topic related files are stored
+     *
+     * @param {string} topicId Topic ID
+     *
+     * @returns {string} Absolute path to Topic vote files
+     *
+     * @private
+     */
+    const _getTopicFileDir = function (topicId) {
+        return app.get('FILE_ROOT') + '/' + topicId;
+    };
+
+    /**
+     * Get absolute path to Topic Vote directory where all vote BDOC containers are stored
+     *
+     * @param {string} topicId Topic ID
+     * @param {string} voteId Vote ID
+     *
+     * @returns {string} Absolute path to Topic vote files
+     *
+     * @private
+     */
+    const _getVoteFileDir = function (topicId, voteId) {
+        return _getTopicFileDir(topicId) + '/' + voteId;
+    };
 
     /**
      * Get the file name for specific VoteOption
@@ -65,14 +102,184 @@ module.exports = function (app) {
      *
      * @private
      */
-    var _getVoteOptionFileName = function (voteOption) {
-        var sanitizedfileName = sanitizeFilename(voteOption.value);
+    const _getVoteOptionFileName = function (voteOption) {
+        const sanitizedfileName = sanitizeFilename(voteOption.value);
 
         if (!sanitizedfileName.length) {
             throw Error('Nothing left after sanitizing the optionValue: ' + voteOption.value);
         }
 
         return VOTE_OPTION_FILE.name.replace(':value', sanitizedfileName);
+    };
+
+    /**
+     * Get absolute path to Topic vote files that are to be part of BDOC container
+     *
+     * @param {string} topicId Topic ID
+     * @param {string} voteId Vote ID
+     *
+     * @returns {string} Absolute path to Topic vote files
+     *
+     * @private
+     */
+    const _getVoteFileSourceDir = function (topicId, voteId) {
+        return _getVoteFileDir(topicId, voteId) + '/source';
+    };
+
+    /**
+     * Create the Topic (document) file
+     *
+     * @param {Object} topic Topic Sequelize instance
+     * @param {Object} vote Vote Sequelize instance
+     * @param {Object} transaction Sequelize transaction
+     *
+     * @returns {Promise} Vote container file
+     *
+     * @private
+     */
+    const _createTopicFile = function (topic, vote, transaction) {
+        const destinationDir = _getVoteFileSourceDir(topic.id, vote.id);
+
+        let filePath;
+
+        return fsExtra
+            .mkdirsAsync(destinationDir, FILE_CREATE_MODE)
+            .then(function () {
+                filePath = destinationDir + '/' + TOPIC_FILE.name;
+                const doc = new CosHtmlToDocx(topic.description, topic.title, filePath);
+
+                return doc.processHTML();
+            })
+            .then(function () {
+                const docxReadStream = fs.createReadStream(filePath);
+
+                return util.streamToBuffer(docxReadStream);
+            })
+            .then(function (docxBuffer) {
+                return VoteContainerFile
+                    .create(
+                        {
+                            voteId: vote.id,
+                            fileName: TOPIC_FILE.name,
+                            mimeType: TOPIC_FILE.mimeType,
+                            content: docxBuffer
+                        },
+                        {
+                            transaction: transaction
+                        }
+                    );
+            })
+            .then(function () {
+                // Best effort to remove temporary files, no need to block request
+                return fsExtra
+                    .removeAsync(function () {
+                        return _getTopicFileDir(topic.id);
+                    })
+                    .catch(function () {
+                        logger.warn('Failed to clean up temporary Topic files', destinationDir);
+                    });
+            });
+    };
+
+    /**
+     * Create the metainfo file
+     *
+     * @param {Object} topic Topic Sequelize instance
+     * @param {Object} vote Vote Sequelize instance
+     * @param {Object} transaction Sequelize transaction
+     *
+     * @returns {Promise} Vote container file
+     *
+     * @private
+     */
+    const _createMetainfoFile = function (topic, vote, transaction) {
+        const templateStream = mu.compileAndRender(METAINFO_FILE.template, {
+            topic: topic,
+            vote: vote
+        });
+
+        return util.streamToBuffer(templateStream)
+            .then(function (templateBuffer) {
+                return VoteContainerFile
+                    .create(
+                        {
+                            voteId: vote.id,
+                            fileName: METAINFO_FILE.name,
+                            mimeType: METAINFO_FILE.mimeType,
+                            content: templateBuffer
+                        },
+                        {
+                            transaction: transaction
+                        }
+                    );
+            });
+    };
+
+    /**
+     * Create a file for given VoteOption
+     *
+     * @param {Object} vote Vote Sequelize instance
+     * @param {Object} voteOption Vote option Sequelize instance
+     * @param {Object} transaction Sequelize transaction
+     *
+     * @returns {Promise} Promise
+     * @private
+     */
+    const _createVoteOptionFile = function (vote, voteOption, transaction) {
+        const templateStream = mu.compileAndRender(VOTE_OPTION_FILE.template, voteOption);
+
+        return util.streamToBuffer(templateStream)
+            .then(function (templateBuffer) {
+                return VoteContainerFile
+                    .create(
+                        {
+                            voteId: vote.id,
+                            fileName: _getVoteOptionFileName(voteOption),
+                            mimeType: VOTE_OPTION_FILE.mimeType,
+                            content: templateBuffer
+                        },
+                        {
+                            transaction: transaction
+                        }
+                    );
+            });
+    };
+
+    /**
+     * Create all Vote related files
+     *
+     * Files are:
+     * * document.html - The document (topic) itself. Using document as User friendly name in the container
+     * * option(s).html - One file for each Vote option
+     *
+     * @param {Object} topic Topic Sequelize instance
+     * @param {Object} vote Vote Sequelize instance
+     * @param {Object[]} voteOptions Array of VoteOption Sequelize instances
+     * @param {Object} transaction Sequelize transaction
+     *
+     * @returns {Promise} Promise
+     * @private
+     */
+    const _createVoteFiles = function (topic, vote, voteOptions, transaction) {
+        if (!topic || !vote || !voteOptions) {
+            throw Error('Missing one or more required parameters!');
+        }
+
+        const promisesToResolve = [];
+
+        // Topic (document file)
+        promisesToResolve.push(_createTopicFile(topic, vote, transaction));
+
+        // Metainfo file
+        promisesToResolve.push(_createMetainfoFile(topic, vote, transaction));
+
+        // Each option file
+        voteOptions.forEach(function (voteOption) {
+            promisesToResolve.push(_createVoteOptionFile(vote, voteOption, transaction));
+        });
+
+        return Promise.all(promisesToResolve);
+
     };
 
     const _getUserContainer = function (voteId, userId, voteOptions) {
@@ -184,7 +391,7 @@ module.exports = function (app) {
                 });
             })
             .then(function (files) {
-                var xades = new hades(certificate, files);
+                const xades = new hades(certificate, files);
 
                 return Promise.resolve(xades);
             }).catch(function (e) {
@@ -208,11 +415,11 @@ module.exports = function (app) {
      *
      * @private
      */
-    var _signInitIdCard = function (voteId, userId, voteOptions, certificate, transaction) {
+    const _signInitIdCard = function (voteId, userId, voteOptions, certificate, transaction) {
         return _createUserBdoc(voteId, userId, voteOptions, certificate, 'hex', transaction)
             .then(function (xades) {
                 const cert = new Certificate(Buffer.from(certificate, 'hex'));
-                const issuer = new Certificate(getCertOcspCertificate(cert));
+                const issuer = getCertOcspCertificate(cert);
                 const signableData = xades.signable;
 
                 return Ocsp.request(issuer, cert, {url: 'http://aia.sk.ee/esteid2015', nonce: signableData})
@@ -222,16 +429,19 @@ module.exports = function (app) {
                         return mobileId
                             .getCertUserData(certificate, 'hex')
                             .then(function (personalInfo) {
-                                console.log(personalInfo);
                                 xades = xades.toString();
 
-                                return {
-                                    statusCode: 0,
-                                    personalInfo,
-                                    signableHash: signableData.toString('base64'),
-                                    xades
-                                };
-                            });
+                                return Signature
+                                    .create({data: xades})
+                                    .then(function (signatureData) {
+                                        return {
+                                            statusCode: 0,
+                                            personalInfo,
+                                            signableHash: signableData.toString('hex'),
+                                            signatureId: signatureData.id
+                                        };
+                                    });
+                            })
                         }).catch(function (e) {
                             console.log('ERROR', e);
                         })
@@ -271,10 +481,14 @@ module.exports = function (app) {
                                 return mobileId
                                     .signature(pid, phoneNumber, signableData.toString('base64'))
                                     .then(function (response) {
-                                        response.xades = xades.toString();
-                                        response.personalInfo = personalInfo;
+                                        return Signature
+                                            .create({data: xades.toString()})
+                                            .then(function (signatureData) {
+                                                response.signatureId = signatureData.id
+                                                response.personalInfo = personalInfo;
 
-                                        return response;
+                                                return response;
+                                            });
                                     });
                             });
                     });
@@ -297,7 +511,7 @@ module.exports = function (app) {
      *
      * @private
      */
-    var _signInitSmartId = function (voteId, userId, voteOptions, pid, countryCode, certificate, transaction) {
+    const _signInitSmartId = function (voteId, userId, voteOptions, pid, countryCode, certificate, transaction) {
         return _createUserBdoc(voteId, userId, voteOptions, certificate, 'base64', transaction)
             .then(function (xades) {
                 const cert = new Certificate(Buffer.from(certificate, 'base64'));
@@ -306,7 +520,7 @@ module.exports = function (app) {
                 return Ocsp.request(issuer, cert)
                     .then(function (ocspResult) {
                         xades.setOcspResponse(Ocsp.parse(ocspResult));
-                        var signableData = xades.signable;
+                        const signableData = xades.signable;
 
                         return smartId
                             .getCertUserData(certificate)
@@ -314,91 +528,426 @@ module.exports = function (app) {
                                 return smartId
                                     .signature(pid, countryCode, signableData.toString('base64'))
                                     .then(function (response) {
-                                        response.xades = xades.toString();
-                                        response.personalInfo = personalInfo;
+                                        return Signature
+                                            .create({data: xades.toString()})
+                                            .then(function (signatureData) {
+                                                response.signatureId = signatureData.id
+                                                response.personalInfo = personalInfo;
 
-                                        return response;
+                                                return response;
+                                            });
                                     });
                             });
                         });
             });
     };
 
-    var getCertOcspCertificate = function (cert) {
-        if (!cert.issuer || !cert.issuer.publicKey) {
-            const issuerName = cert.issuerRfc4514Name;
-            const certfileName = issuerName.split(',').find(function (item) {
-                if (item.indexOf('CN=') > -1) {
-                    return item;
-                }
-            }).replace(/ /gi, '_').replace('CN=', '') + '.pem.crt';
-            const exists = fs.existsSync('./config/certs/' + certfileName)
-            if (exists) {
-                const certdata = fs.readFileSync('./config/certs/' + certfileName);
-                const b64 = certdata.toString().replace(/(-----(BEGIN|END) CERTIFICATE-----|[\n\r])/g, '')
-
-                // Now that we have decoded the cert it's now in DER-encoding
-                const der = Buffer.from(b64, 'base64')
-                return new Certificate(der);
-            }
+    const getCertOcspCertificate = function (cert) {
+        if (cert.issuer && cert.issuer.publicKey) {
+            return cert.issuer;
         }
 
-        return cert.issuer;
+        const tslPath = config.certificates.tsl;
+        const tsl = tslPath && Tsl.parse(fs.readFileSync(tslPath))
+        const issuerName = cert.issuerRfc4514Name;
+        const certfileName = issuerName.split(',').find(function (item) {
+            if (item.indexOf('CN=') > -1) {
+                return item;
+            }
+        }).replace(/ /gi, '_').replace('CN=', '') + '.pem.crt';
+        const issuerPath = './config/certificates/' + certfileName;
+        const exists = fs.existsSync(issuerPath);
+        let issuer;
+        if (exists) {
+            issuer = issuerPath && Certificate.parse(fs.readFileSync(issuerPath));
+        }
+
+        if (issuer == null) issuer = tsl.certificates.getIssuer(cert);
+
+        if (issuer == null) throw new Error(
+            "Can't find issuer: " + cert.issuerDistinguishedName.join(", ")
+        );
+
+        return issuer;
     };
 
-    const _handleSigningResult = function (voteId, userId, voteOptions, signableHash, xadesXml, signature) {
-            const xades = hades.parse(xadesXml);
-            xades.setSignature(Buffer.from(signature, 'base64'));
-            return Timestamp.read('http://dd-at.ria.ee/tsa', Buffer.from(signableHash, 'base64'))
-                .then(function (timestamp) {
-                    xades.setTimestamp(timestamp);
+    const _getTimestamp = function (signableHash) {
+        return Timestamp.read(config.xades.timestampURL, Buffer.from(signableHash, 'base64'));
+    }
+    const _handleSigningResult = function (voteId, userId, voteOptions, signableHash, signatureId, signature) {
+        return Signature
+                .findOne({
+                    where: {
+                        id: signatureId
+                    }
+                })
+                .then(function (signatureData) {
+                    const xades = hades.parse(signatureData.data);
+                    xades.setSignature(Buffer.from(signature, 'base64'));
+                    return _getTimestamp(signableHash)
+                        .then(function (timestamp) {
+                            xades.setTimestamp(timestamp);
 
-                    return _getUserContainer(voteId, userId, voteOptions)
-                        .then(function (container) {
-                            return new Promise (function (resolve) {
-                                var chunks = [];
-                                container.addSignature(xades);
-                                var streamData = container.toStream();
+                            return _getUserContainer(voteId, userId, voteOptions)
+                                .then(function (container) {
+                                    return new Promise (function (resolve) {
+                                        const chunks = [];
+                                        container.addSignature(xades);
+                                        const streamData = container.toStream();
 
-                                streamData.on('data', function (data) {
-                                    chunks.push(data);
+                                        streamData.on('data', function (data) {
+                                            chunks.push(data);
+                                        })
+
+                                        streamData.on('end', function () {
+                                            const buff = Buffer.concat(chunks);
+
+                                            return resolve(buff);
+                                        })
+                                        container.end();
+                                    });
                                 })
-
-                                streamData.on('end', function () {
-                                    var buff = Buffer.concat(chunks);
-
-                                    return resolve(buff);
+                                .then(function (container) {
+                                    return {
+                                        signedDocData: container
+                                    }
                                 })
-                                container.end();
-                            });
-                        })
-                        .then(function (container) {
-                            return {
-                                signedDocData: container
-                            }
-                        })
-                        .catch(function (e) {
-                            return Promise.reject(e);
-                        })
+                                .catch(function (e) {
+                                    return Promise.reject(e);
+                                })
+                        });
                 });
     };
 
-    const _getSmartIdSignedDoc = function (sessionId, signableHash, xadesXml, voteId, userId, voteOptions) {
+    const _getSmartIdSignedDoc = function (sessionId, signableHash, signatureId, voteId, userId, voteOptions) {
         return smartId.statusSign(sessionId)
             .then(function(signResult) {
-                return _handleSigningResult(voteId, userId, voteOptions, signableHash, xadesXml, signResult.signature.value);
+                if (signResult.signature) {
+                    return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value);
+                }
+
+                return Promise.reject(signResult);
             });
     };
 
-    const _getMobileIdSignedDoc = function (sessionId, signableHash, xadesXml, voteId, userId, voteOptions) {
+    const _getMobileIdSignedDoc = function (sessionId, signableHash, signatureId, voteId, userId, voteOptions) {
         return mobileId.statusSign(sessionId)
             .then(function(signResult) {
-                return _handleSigningResult(voteId, userId, voteOptions, signableHash, xadesXml, signResult.signature.value);
+                if (signResult.signature) {
+                    return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value);
+                }
+
+                return Promise.reject(signResult);
             });
     };
 
-    var _signUserBdoc = function (voteId, userId, voteOptions, signableHash, xadesXml, signatureValue) {
-        return _handleSigningResult(voteId, userId, voteOptions, signableHash, xadesXml, signatureValue);
+    const _signUserBdoc = function (voteId, userId, voteOptions, signableHash, signatureId, signatureValue) {
+        return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signatureValue);
+    };
+
+    const _generateFinalContainer = function (topicId, voteId, type, wrap) {
+        const voteFileDir = _getVoteFileDir(topicId, voteId);
+        const finalContainerPath = voteFileDir + '/final.' + type;
+        const finalZipPath = voteFileDir + '/final.7z';
+
+        let finalContainerFileStream; // File write stream
+        let finalContainer;
+
+        const finalContainerDownloadPath = wrap ? finalZipPath : finalContainerPath;
+
+        return fs
+            .accessAsync(finalContainerDownloadPath, fs.R_OK)
+            .then(function () {
+                logger.info('_generateFinalContainer', 'Cache hit for final BDOC file', finalContainerDownloadPath);
+
+                return fs.createReadStream(finalContainerDownloadPath);
+            }, function () {
+                logger.info('_generateFinalContainer', 'Cache miss for final BDOC file', finalContainerDownloadPath);
+
+                return fsExtra
+                    .mkdirsAsync(voteFileDir)
+                    .then(function () {
+                        finalContainerFileStream = fs.createWriteStream(finalContainerPath);
+                        finalContainer = new Bdoc(finalContainerFileStream);
+
+                        logger.debug('_generateFinalContainer', 'Vote file dir created', voteFileDir);
+
+                        return VoteContainerFile
+                            .findAll({
+                                where: {
+                                    voteId: voteId
+                                }
+                            });
+                    })
+                    .each(function (voteContainerFile) {
+                        const fileName = voteContainerFile.fileName;
+                        const mimeType = voteContainerFile.mimeType;
+                        const content = voteContainerFile.content;
+
+                        logger.debug('_generateFinalContainer', 'Adding file to final BDOC', fileName, mimeType, content.length);
+
+                        return finalContainer.append(content, {
+                            name: fileName,
+                            mimeType: mimeType
+                        });
+                    })
+                    .then(function () {
+                        if (type === 'bdoc') {
+                            logger.debug('_generateFinalContainer', 'Adding User votes to final BDOC');
+
+                            const connectionManager = db.connectionManager;
+
+                            return connectionManager
+                                .getConnection()
+                                .then(function (connection) {
+                                    logger.debug('_generateFinalContainer', 'Run query stream for User vote containers');
+
+                                    return new Promise(function (resolve, reject) {
+                                        const query = new QueryStream(
+                                            '\
+                                                SELECT \
+                                                    vuc.container, \
+                                                    uc."connectionUserId" \
+                                                FROM "VoteUserContainers" vuc \
+                                                JOIN "UserConnections" uc ON (vuc."userId" = uc."userId") \
+                                                WHERE vuc."voteId" = $1 \
+                                                AND uc."connectionId" = $2 \
+                                            ;',
+                                            [voteId, UserConnection.CONNECTION_IDS.esteid]
+                                        );
+                                        const stream = connection.query(query);
+
+                                        stream.on('data', function (data) {
+                                            logger.debug('_generateFinalContainer', 'Add data', data.container.length);
+
+                                            const pid = data.connectionUserId;
+                                            const userbdocContainer = data.container;
+
+                                            finalContainer.append(userbdocContainer, {
+                                                name: USER_BDOC_FILE.name.replace(':pid', pid),
+                                                mimeType: USER_BDOC_FILE.mimeType
+                                            });
+                                        });
+
+                                        finalContainerFileStream.on('error', function (err) {
+                                            logger.error('_generateFinalContainer', 'Adding files to final BDOC FAILED', err);
+
+                                            return reject(err);
+                                        });
+
+                                        stream.on('error', function (err) {
+                                            connectionManager.releaseConnection(connection);
+
+                                            logger.error('_generateFinalContainer', 'Reading PG query stream failed', err);
+
+                                            return reject(err);
+                                        });
+
+                                        stream.on('end', function () {
+                                            connectionManager.releaseConnection(connection);
+
+                                            logger.debug('_generateFinalContainer', 'Adding files to final BDOC ENDED');
+
+                                            return resolve();
+                                        });
+                                    });
+                                });
+                        }
+                    })
+                    .then(function () {
+                        logger.debug('_generateFinalContainer', 'Generating vote CSV');
+
+                        const connectionManager = db.connectionManager;
+
+                        return connectionManager
+                            .getConnection()
+                            .then(function (connection) {
+                                let fromSql;
+
+                                switch (type) {
+                                    case 'bdoc':
+                                        fromSql = 'uc."connectionUserId" as "PID", \
+                                            (uc."connectionData"::json->>\'firstName\') || \' \' || (uc."connectionData"::json->>\'lastName\') as "fullName", \
+                                            vo.value as "optionValue" \
+                                        FROM votes v \
+                                            JOIN "UserConnections" uc ON (uc."userId" = v."userId" AND uc."connectionId" = \'esteid\') ';
+                                        break;
+                                    case 'zip':
+                                        fromSql = 'v."userId" as "userId", \
+                                            u.name as "name", \
+                                            vo.value as "optionValue" \
+                                        FROM votes v \
+                                            JOIN "Users" u ON (u.id = v."userId") ';
+                                        break;
+                                }
+
+                                fromSql = 'v."userId" as "userId", \
+                                    u.name as "name", \
+                                    vo.value as "optionValue" \
+                                FROM votes v \
+                                    JOIN "Users" u ON (u.id = v."userId")';
+
+                                const query = new QueryStream(
+                                    ' \
+                                        WITH \
+                                            vote_groups("voteId", "userId", "optionGroupId", "updatedAt") AS ( \
+                                                SELECT DISTINCT ON("voteId","userId") \
+                                                    vl."voteId", \
+                                                    vl."userId", \
+                                                    vl."optionGroupId", \
+                                                    vl."updatedAt" \
+                                                FROM "VoteLists" vl \
+                                                WHERE vl."voteId" = $1 \
+                                                AND vl."deletedAt" IS NULL \
+                                                ORDER BY "voteId", "userId", "createdAt" DESC, "optionGroupId" ASC \
+                                            ), \
+                                            votes("voteId", "userId", "optionId", "optionGroupId") AS ( \
+                                                SELECT \
+                                                    vl."voteId", \
+                                                    vl."userId", \
+                                                    vl."optionId", \
+                                                    vl."optionGroupId", \
+                                                    vl."createdAt" \
+                                                FROM "VoteLists" vl \
+                                                JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."userId" = vg."userId" AND vl."optionGroupId" = vg."optionGroupId") \
+                                                WHERE vl."voteId" = $1 \
+                                            ) \
+                                        SELECT \
+                                            row_number() OVER() AS "rowNumber", \
+                                            v."createdAt" as "timestamp", \
+                                            '+ fromSql+ '\
+                                            JOIN "VoteOptions" vo ON (vo."id" = v."optionId") \
+                                        ORDER BY vo.value DESC \
+                                    ;',
+                                    [voteId]
+                                );
+
+                                const stream = connection.query(query);
+
+                                const csvStream = fastCsv.createWriteStream({
+                                    headers: true,
+                                    rowDelimiter: '\r\n'
+                                });
+                                finalContainer.append(csvStream, {
+                                    name: VOTE_RESULTS_FILE.name,
+                                    mimeType: VOTE_RESULTS_FILE.mimeType
+                                });
+
+                                stream.on('data', function (voteResult) {
+                                    voteResult.optionFileName = _getVoteOptionFileName({value: voteResult.optionValue});
+                                    csvStream.write(voteResult);
+                                });
+
+                                stream.on('error', function (err) {
+                                    logger.error('_generateFinalContainer', 'Generating vote CSV FAILED', err);
+
+                                    csvStream.end();
+                                    finalContainer.finalize();
+                                    connectionManager.releaseConnection(connection);
+                                });
+
+                                stream.on('end', function () {
+                                    logger.debug('_generateFinalContainer', 'Generating vote CSV succeeded');
+
+                                    csvStream.end();
+                                    finalContainer.finalize();
+                                    connectionManager.releaseConnection(connection);
+                                });
+
+                                return util.streamToPromise(finalContainerFileStream);
+                            })
+                            .then(function () {
+                                if (wrap) {
+                                    logger.debug('_generateFinalContainer', 'Wrapping final BDOC');
+
+                                    // Wrap the BDOC in 7Zip
+                                    const zip = new SevenZip();
+
+                                    return zip
+                                        .add(finalZipPath, [finalContainerPath])
+                                        .then(function () {
+                                            logger.debug('_generateFinalContainer', 'Wrapping final BDOC succeeded', finalZipPath);
+
+                                            return finalZipPath;
+                                        });
+                                } else {
+                                    logger.debug('_generateFinalContainer', 'Not wrapping final BDOC', finalContainerPath);
+
+                                    return finalContainerPath;
+                                }
+                            })
+                            .then(function (docPath) {
+                                logger.debug('_generateFinalContainer', 'Final BDOC generated successfully', docPath);
+
+                                return fs.createReadStream(docPath);
+                            })
+                            .catch(function (err) {
+                                logger.error('Failed to generate final BDOC', err);
+
+                                // Clean up zip file that was created as it may be corrupted, best effort removing the file
+                                fs.unlink(finalContainerPath);
+                                fs.unlink(finalZipPath);
+
+                                throw err;
+                            });
+                        });
+                });
+    };
+
+    /**
+     * Get the final BDOC container
+     *
+     * @param {string} topicId Topic ID
+     * @param {string} voteId Vote ID
+     * @param {boolean} [wrap=false] Wrap in 7zip archive
+     *
+     * @return {Promise<Stream.Readable>} Final BDOC file stream
+     *
+     * @private
+     */
+    const _getFinalBdoc = function (topicId, voteId, wrap) {
+        return _generateFinalContainer(topicId, voteId, 'bdoc', wrap);
+    };
+
+    /**
+     * Get the final zip container
+     *
+     * @param {string} topicId Topic ID
+     * @param {string} voteId Vote ID
+     *
+     * @return {Promise<Stream.Readable>} Final zip file stream
+     *
+     * @private
+     */
+
+    const _getFinalZip = function (topicId, voteId) {
+        return _generateFinalContainer(topicId, voteId, 'zip');
+    };
+
+    /**
+     * Delete the generated final BDOC container from the disk.
+     *
+     * @param {string} topicId Topic ID
+     * @param {string} voteId Vote ID
+     *
+     * @return {Promise} Deletion result
+     *
+     * @private
+     */
+    const _deleteFinalBdoc = function (topicId, voteId) {
+        const voteFileDir = _getVoteFileDir(topicId, voteId);
+        const finalBdocPath = voteFileDir + '/final.bdoc';
+
+        return fs
+            .statAsync(finalBdocPath)
+            .then(
+                function () {
+                    return fs.unlinkAsync(finalBdocPath);
+                },
+                function () {
+                    return Promise.resolve(); // Well, if it did not exists, we're ok.
+                }
+            );
     };
 
     return {
@@ -408,5 +957,9 @@ module.exports = function (app) {
         signUserBdoc: _signUserBdoc,
         getSmartIdSignedDoc: _getSmartIdSignedDoc,
         getMobileIdSignedDoc: _getMobileIdSignedDoc,
-    }
+        getFinalBdoc: _getFinalBdoc,
+        getFinalZip: _getFinalZip,
+        deleteFinalBdoc: _deleteFinalBdoc,
+        createVoteFiles: _createVoteFiles
+    };
 };

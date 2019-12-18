@@ -15,7 +15,6 @@ module.exports = function (app) {
     var models = app.get('models');
     var db = models.sequelize;
     var Op = db.Sequelize.Op;
-    var cosBdoc = app.get('cosBdoc');
     var cosActivities = app.get('cosActivities');
     var jwt = app.get('jwt');
     var objectEncrypter = app.get('objectEncrypter');
@@ -498,10 +497,10 @@ module.exports = function (app) {
         }
 
         var tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
-        var loginMobileFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
+        var loginSmartIdFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
 
         smartId
-            .statusAuth(loginMobileFlowData.sessionId)
+            .statusAuth(loginSmartIdFlowData.sessionId, loginSmartIdFlowData.sessionHash)
             .then(function (response) {
                 if (response.error) {
                     return res.badRequest(response.error.message, response.error.code);

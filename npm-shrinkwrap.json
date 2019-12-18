@@ -5759,6 +5759,14 @@
         }
       }
     },
+    "node-rsa": {
+      "version": "1.0.7",
+      "resolved": "https://registry.npmjs.org/node-rsa/-/node-rsa-1.0.7.tgz",
+      "integrity": "sha512-idwRXma6scFufZmbaKkHpJoLL93yynRefP6yur13wZ5i9FR35ex451KCoF2OORDeJanyRVahmjjiwmUlCnTqJA==",
+      "requires": {
+        "asn1": "^0.2.4"
+      }
+    },
     "node-uuid": {
       "version": "1.4.3",
       "resolved": "https://registry.npmjs.org/node-uuid/-/node-uuid-1.4.3.tgz",

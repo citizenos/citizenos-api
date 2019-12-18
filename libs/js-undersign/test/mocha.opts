@@ -1,0 +1,5 @@
+--recursive
+--check-leaks
+--require co-mocha
+--require must/register
+--require ./test

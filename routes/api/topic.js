@@ -1470,7 +1470,7 @@ module.exports = function (app) {
                         promisesToResolve.push(topicActivityPromise);
 
                         if (isBackToVoting) {
-                            promisesToResolve.push(cosBdoc.deleteFinalBdoc(topicId, vote.id));
+                            promisesToResolve.push(cosSignature.deleteFinalBdoc(topicId, vote.id));
 
                             var topicEventsDeletePromise = TopicEvent
                                 .destroy({
@@ -5048,7 +5048,7 @@ module.exports = function (app) {
                                     vote.dataValues.VoteOptions.push(option.dataValues);
                                 });
 
-                                return cosBdoc.createVoteFiles(topic, vote, voteOptionsCreated, t);
+                                return cosSignature.createVoteFiles(topic, vote, voteOptionsCreated, t);
                             });
                     });
             })
@@ -5502,7 +5502,6 @@ module.exports = function (app) {
 
     var handleTopicVoteHard = function (vote, req, res) {
         var voteId = vote.id;
-        var topicId = req.params.topicId;
         var userId = req.user ? req.user.id : null;
 
         var voteOptions = req.body.options;
@@ -5530,14 +5529,29 @@ module.exports = function (app) {
         if (pid && countryCode) {
             signingMethod = Vote.SIGNING_METHODS.smartId;
             getCertificatePromise = smartId
-                    .getUserCertificate(pid, phoneNumber)
-                        .then(function (cert) {
-                            smartIdcertificate = cert;
+                    .getUserCertificate(pid, countryCode)
+                        .then(function (result) {
+                            if (result.code === 404) {
+                                res.notFound();
+                                return Promise.reject();
+                            }
 
-                            return {
-                                certificate: cert,
-                                format: 'pem'
-                            };
+                            if (result.code === 400) {
+                                res.badRequest();
+                                return Promise.reject();
+                            }
+
+                            if (typeof result === 'string') {
+                                smartIdcertificate = result;
+
+                                return {
+                                    certificate: result,
+                                    format: 'pem'
+                                };
+                            } else {
+                                logger.error(result);
+                                res.badRequest();
+                            }
                     });
 
 
@@ -5554,15 +5568,6 @@ module.exports = function (app) {
             getCertificatePromise = mobileId
                 .getUserCertificate(pid, phoneNumber)
                 .then(function (result) {
-                    if (result.data.result && result.data.result === 'OK' && result.data.cert) {
-                        mobileIdCertificate = result.data.cert;
-
-                        return {
-                            certificate: result.data.cert,
-                            format: 'pem'
-                        };
-                    }
-
                     if (result.data && result.data.error) {
                         switch (result.data.error) {
                             case 'phoneNumber must contain of + and numbers(8-30)':
@@ -5573,7 +5578,7 @@ module.exports = function (app) {
                                 return res.badRequest(result.data.error);
                         }
                     }
-                    else if (result.data.value) {
+                    else if (result.data && result.data.value) {
                         switch (result.data.value) {
                             case 'NOT_MID_CLIENT':
                                 return res.badRequest('Given user has no active certificates and is not MID client.');
@@ -5584,7 +5589,7 @@ module.exports = function (app) {
                             default:
                                 return res.badRequest(result.data.value);
                         }
-                    } else if (result.data.result) {
+                    } else if (result.data && result.data.result) {
                         switch (result.data.result) {
                             case 'NOT_ACTIVE':
                                 return res.badRequest('Certificate was found but is not active', 23);
@@ -5594,17 +5599,23 @@ module.exports = function (app) {
                                 return res.badRequest(result.data.result);
                         }
                     }
+
+                    mobileIdCertificate = result;
+
+                    return {
+                        certificate: result,
+                        format: 'pem'
+                    };
                 });
         }
 
             var personalInfoPromise = getCertificatePromise
                 .then(function (certificateInfo) {
-           //         console.log('certificateInfo', certificateInfo)
                     if (signingMethod === Vote.SIGNING_METHODS.smartId) {
                         return smartId
                             .getCertUserData(certificateInfo.certificate)
-                            .then(function (certificateInfo) {
-                                personalInfo = certificateInfo;
+                            .then(function (result) {
+                                personalInfo = result;
                                 if (personalInfo.pid.indexOf(pid) -1) {
                                     personalInfo.pid = pid;
                                 }
@@ -5769,7 +5780,7 @@ module.exports = function (app) {
                                     sessionId: signInitResponse.sessionId,
                                     sessionHash: signInitResponse.sessionHash,
                                     personalInfo: signInitResponse.personalInfo,
-                                    xades: signInitResponse.xades,
+                                    signatureId: signInitResponse.signatureId,
                                     userId: userId, // Required for un-authenticated signing.
                                     voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
                                 };
@@ -5793,7 +5804,7 @@ module.exports = function (app) {
                                             personalInfo: personalInfo,
                                             signingMethod,
                                             signableHash: signInitResponse.signableHash,
-                                            xades: signInitResponse.xades,
+                                            signatureId: signInitResponse.signatureId,
                                             userId: userId, // Required for un-authenticated signing.
                                             voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
                                         };
@@ -6050,7 +6061,7 @@ module.exports = function (app) {
                     );
 
                 var signUserBdocPromise = cosSignature
-                    .signUserBdoc(idSignFlowData.voteId, idSignFlowData.userId, voteOptions, idSignFlowData.signableHash, idSignFlowData.xades, signatureValue)
+                    .signUserBdoc(idSignFlowData.voteId, idSignFlowData.userId, voteOptions, idSignFlowData.signableHash, idSignFlowData.signatureId, signatureValue)
                     .then(function (signedDocument) {
                         return VoteUserContainer
                             .upsert(
@@ -6122,9 +6133,9 @@ module.exports = function (app) {
         var statusPromise;
         var userId = req.user ? req.user.id : idSignFlowData.userId;
         if (idSignFlowData.signingMethod === Vote.SIGNING_METHODS.smartId) {
-            statusPromise = cosSignature.getSmartIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.xades, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions);
+            statusPromise = cosSignature.getSmartIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions);
         } else {
-            statusPromise = cosSignature.getMobileIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.xades, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions);
+            statusPromise = cosSignature.getMobileIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions);
         }
             return Promise.all([statusPromise])
                 .then(function (results) {
@@ -6291,10 +6302,9 @@ module.exports = function (app) {
                             promisesToResolve.push(voteListCreatePromise, voteDelegationDestroyPromise, userConnectionAddPromise, voteUserContainerPromise);
 
                             return Promise.all(promisesToResolve);
-                        }).catch(function (e) {
-                            console.log(e);
                         })
-                }, function (statusCode) {
+                }, function (result) {
+                    const statusCode = result.result.endResult;
                     switch (statusCode) {
                         case 'OUTSTANDING_TRANSACTION':
                             res.ok('Signing in progress', 1);
@@ -6335,6 +6345,11 @@ module.exports = function (app) {
                         case 'INTERNAL_ERROR':
                             logger.error('Unknown error when trying to sign with mobile', statusCode);
                             res.internalServerError('DigiDocService error', 1);
+
+                            return Promise.reject();
+                        case 'USER_REFUSED':
+                            logger.error('User has cancelled the signing process', statusCode);
+                            res.badRequest('User has cancelled the signing process', 10);
 
                             return Promise.reject();
                         default:
@@ -6502,12 +6517,12 @@ module.exports = function (app) {
                     res.set('Content-disposition', 'attachment; filename=final.7z');
                     res.set('Content-type', 'application/x-7z-compressed');
 
-                    return cosBdoc.getFinalBdoc(topicId, voteId, true);
+                    return cosSignature.getFinalBdoc(topicId, voteId, true);
                 } else {
                     res.set('Content-disposition', 'attachment; filename=final.bdoc');
                     res.set('Content-type', 'application/vnd.etsi.asic-e+zip');
 
-                    return cosBdoc.getFinalBdoc(topicId, voteId);
+                    return cosSignature.getFinalBdoc(topicId, voteId);
                 }
             })
             .then(function (finalDocStream) {
@@ -6552,7 +6567,7 @@ module.exports = function (app) {
                 res.set('Content-disposition', 'attachment; filename=final.zip');
                 res.set('Content-type', 'application/zip');
 
-                return cosBdoc.getFinalZip(topicId, voteId, true);
+                return cosSignature.getFinalZip(topicId, voteId, true);
             })
             .then(function (finalDocStream) {
                 return finalDocStream.pipe(res);
