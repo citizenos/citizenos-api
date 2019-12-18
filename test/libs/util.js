@@ -66,6 +66,7 @@ suite('Util', function () {
     });
 
     suite('randomNumber', function () {
+        this.timeout(5000);
 
         test('Success', function (done) {
             var min = 23;
@@ -84,6 +85,7 @@ suite('Util', function () {
     suite('randomPid', function () {
 
         test('Success', function (done) {
+            this.timeout(5000);
 
             for (var i = 0; i < 100000; i++) {
                 var str = util.randomPid();

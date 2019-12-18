@@ -6031,7 +6031,7 @@ suite('Users', function () {
                 test('Fail - Bad Request - Vote option too long', function (done) {
                     var options = [
                         {
-                            value: 'This option is too long to be inserted in the database, because we have 100 character limit set. This is too long'
+                            value: 'This option is too long to be inserted in the database, because we have 200 character limit set. This is too long This is too long This is too long This is too long This is too long This is too long This is too long This is too long'
                         },
                         {
                             value: 'Option 3'
@@ -6047,7 +6047,7 @@ suite('Users', function () {
                                 code: 40000
                             },
                             errors: {
-                                value: 'Option value can be 1 to 100 characters long.'
+                                value: 'Option value can be 1 to 200 characters long.'
                             }
                         };
 
@@ -9673,8 +9673,7 @@ suite('Topics', function () {
                     var topicList2 = res.body.data.rows;
 
                     assert.notEqual(topicList2.length, topicList.length);
-
-                    assert(topicList2.length === 0);
+                    assert.equal(topicList2.length, 0);
 
                     done();
                 });

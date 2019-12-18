@@ -1,6 +1,6 @@
 'use strict';
 
-var hooks = require('../../libs/sequelize/hooks');
+const hooks = require('../../libs/sequelize/hooks');
 
 /**
  * VoteOption
@@ -16,9 +16,10 @@ var hooks = require('../../libs/sequelize/hooks');
  */
 module.exports = function (sequelize, DataTypes) {
 
-    var RESERVED_PREFIX = '__';
+    const RESERVED_PREFIX = '__';
+    const VALUE_MAX_LENGTH = 200;
 
-    var VoteOption = sequelize.define(
+    const VoteOption = sequelize.define(
         'VoteOption',
         {
             id: {
@@ -37,13 +38,13 @@ module.exports = function (sequelize, DataTypes) {
                 }
             },
             value: {
-                type: DataTypes.STRING(100),
+                type: DataTypes.STRING(VALUE_MAX_LENGTH),
                 allowNull: false,
                 comment: 'Option value shown to the voter.',
                 validate: {
                     len: {
-                        args: [1, 100],
-                        msg: 'Option value can be 1 to 100 characters long.'
+                        args: [1, VALUE_MAX_LENGTH],
+                        msg: `Option value can be 1 to ${VALUE_MAX_LENGTH} characters long.`
                     }
                 }
             }
@@ -54,7 +55,7 @@ module.exports = function (sequelize, DataTypes) {
     // Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
     VoteOption.prototype.toJSON = function () {
         // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
-        var data = {
+        const data = {
             id: this.dataValues.id,
             value: this.dataValues.value,
             voteCount: this.dataValues.voteCount, // HAX: added by certain queries
@@ -74,6 +75,7 @@ module.exports = function (sequelize, DataTypes) {
     VoteOption.beforeValidate(hooks.trim);
 
     VoteOption.RESERVED_PREFIX = RESERVED_PREFIX;
+    VoteOption.VALUE_MAX_LENGTH = VALUE_MAX_LENGTH;
 
     return VoteOption;
 };

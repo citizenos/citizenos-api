@@ -1,3 +1,7 @@
+## 2019-12-18
+
+* Allow longer vote options. New limit is 200 characters - https://github.com/citizenos/citizenos-fe/issues/105
+
 ## 2019-11-19
 
 * FEATURE: Topic User invite flow API - `/api/users/:userId/topics/:topicId/invites` - https://github.com/citizenos/citizenos-fe/issues/112
