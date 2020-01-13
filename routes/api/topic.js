@@ -15,7 +15,6 @@ module.exports = function (app) {
     var util = app.get('util');
     var urlLib = app.get('urlLib');
     var emailLib = app.get('email');
-    var cosBdoc = app.get('cosBdoc');
     var cosSignature = app.get('cosSignature');
     var cosActivities = app.get('cosActivities');
     var Promise = app.get('Promise');
@@ -5633,33 +5632,6 @@ module.exports = function (app) {
                             }
 
                             return;
-                    /*        switch (status) { //GOOD, UNKNOWN, EXPIRED, SUSPENDED, REVOKED
-                                case 'GOOD':
-                                    personalInfo = personalInfoFromCertificate;
-                                    if (signingMethod === Vote.SIGNING_METHODS.mid) {
-                                        personalInfo.phoneNumber = phoneNumber;
-                                    }
-
-                                    return;
-                                case 'SUSPENDED':
-                                    res.badRequest('User certificate is suspended.', 24);
-
-                                    return Promise.reject();
-                                case 'UNKNOWN':
-                                    res.badRequest('Unknown user certificate.', 26);
-
-                                    return Promise.reject();
-                                case 'EXPIRED':
-                                case 'REVOKED':
-                                    res.badRequest('User certificates are revoked or suspended.', 22);
-
-                                    return Promise.reject();
-                                default:
-                                    logger.error('Unexpected certificate status from DDS', status);
-                                    res.internalServerError();
-
-                                    return Promise.reject();
-                            }*/
                         });
                 });
 
@@ -6350,6 +6322,11 @@ module.exports = function (app) {
                         case 'USER_REFUSED':
                             logger.error('User has cancelled the signing process', statusCode);
                             res.badRequest('User has cancelled the signing process', 10);
+
+                            return Promise.reject();
+                        case 'TIMEOUT':
+                            logger.error('There was a timeout, i.e. end user did not confirm or refuse the operation within maximum time frame allowed (can change, around two minutes).', statusCode);
+                            res.badRequest('There was a timeout, i.e. end user did not confirm or refuse the operation within maximum time frame allowed (can change, around two minutes).', 10);
 
                             return Promise.reject();
                         default:

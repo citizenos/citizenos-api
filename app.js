@@ -164,10 +164,10 @@ smartId.init({
     authorizeToken: config.services.smartId.authorizeToken,
     relyingPartyUUID: config.services.smartId.relyingPartyUUID,
     replyingPartyName: config.services.smartId.replyingPartyName,
-    statusPath: config.services.smartId.statusPath
+    statusPath: config.services.smartId.statusPath,
+    issuers: config.services.signature.certificates.issuers
 });
 app.set('smartId', smartId);
-app.set('cosBdoc', require('./libs/cosBdoc')(app));
 //Config mobiilId
 var mobileId = require('./libs/cosMobileId')();
 mobileId.init({
@@ -177,7 +177,8 @@ mobileId.init({
     authorizeToken: config.services.mobileId.authorizeToken,
     relyingPartyUUID: config.services.mobileId.relyingPartyUUID,
     replyingPartyName: config.services.mobileId.replyingPartyName,
-    statusPath: config.services.mobileId.statusPath
+    statusPath: config.services.mobileId.statusPath,
+    issuers: config.services.signature.certificates.issuers
 });
 app.set('mobileId', mobileId);
 app.set('cosSignature', require('./libs/cosSignature')(app));

@@ -15,15 +15,38 @@ module.exports = function (app) {
     const Bdoc = app.get('Bdoc');
     const SevenZip = app.get('SevenZip');
     const CosHtmlToDocx = app.get('cosHtmlToDocx');
-    const hades = require('./js-undersign/xades');
+    const Hades = require('undersign');
+    const Xades = require('undersign/xades');
     const smartId = app.get('smartId');
     const mobileId = app.get('mobileId');
     const Crypto = require('crypto');
-    const Certificate = require('./js-undersign/lib/certificate');
-    const Ocsp = require('./js-undersign/lib/ocsp');
-    const Timestamp = require('./js-undersign/lib/timestamp');
-    const Asic = require('./js-undersign/lib/asic');
-    const Tsl = require('./js-undersign/lib/tsl');
+    const Certificate = require('undersign/lib/certificate');
+    const Asic = require('undersign/lib/asic');
+    const Tsl = require('undersign/lib/tsl');
+    let tslCertificates;
+
+    const tslPath = config.services.signature.certificates.tsl;
+
+    if (Array.isArray(tslPath)) {
+        tslPath.forEach(function (path) {
+            const tsl = Tsl.parse(fs.readFileSync(path));
+            if (!tslCertificates) {
+                tslCertificates = tsl.certificates;
+            } else {
+                tsl.certificates.forEach(tslCertificates.add.bind(tslCertificates))
+            }
+        });
+    } else {
+        const tsl = tslPath && Tsl.parse(fs.readFileSync(tslPath))
+        tslCertificates = tsl.certificates;
+    }
+
+    const hades = new Hades({
+		certificates: tslCertificates,
+		timemarkUrl: config.services.signature.timemarkUrl,
+		timestampUrl: config.services.signature.timestampUrl
+	});
+
 
     const VoteContainerFile = models.VoteContainerFile;
     const UserConnection = models.UserConnection;
@@ -330,7 +353,7 @@ module.exports = function (app) {
             .then(function () {
                 return container;
             }).catch(function (e) {
-                console.log(e)
+                logger.error(e);
             });
     };
 
@@ -391,11 +414,11 @@ module.exports = function (app) {
                 });
             })
             .then(function (files) {
-                const xades = new hades(certificate, files);
+                const xades = hades.new(certificate, files);
 
                 return Promise.resolve(xades);
             }).catch(function (e) {
-                console.log(e)
+                logger.error(e)
             });
     };
 
@@ -418,34 +441,27 @@ module.exports = function (app) {
     const _signInitIdCard = function (voteId, userId, voteOptions, certificate, transaction) {
         return _createUserBdoc(voteId, userId, voteOptions, certificate, 'hex', transaction)
             .then(function (xades) {
-                const cert = new Certificate(Buffer.from(certificate, 'hex'));
-                const issuer = getCertOcspCertificate(cert);
-                const signableData = xades.signable;
+                const signableData = xades.signableHash;
 
-                return Ocsp.request(issuer, cert, {url: 'http://aia.sk.ee/esteid2015', nonce: signableData})
-                    .then(function (ocspResult) {
-                        xades.setOcspResponse(Ocsp.parse(ocspResult));
+                    return mobileId
+                        .getCertUserData(certificate, 'hex')
+                        .then(function (personalInfo) {
+                            xades = xades.toString();
 
-                        return mobileId
-                            .getCertUserData(certificate, 'hex')
-                            .then(function (personalInfo) {
-                                xades = xades.toString();
-
-                                return Signature
-                                    .create({data: xades})
-                                    .then(function (signatureData) {
-                                        return {
-                                            statusCode: 0,
-                                            personalInfo,
-                                            signableHash: signableData.toString('hex'),
-                                            signatureId: signatureData.id
-                                        };
-                                    });
-                            })
-                        }).catch(function (e) {
-                            console.log('ERROR', e);
+                            return Signature
+                                .create({data: xades})
+                                .then(function (signatureData) {
+                                    return {
+                                        statusCode: 0,
+                                        personalInfo,
+                                        signableHash: signableData.toString('hex'),
+                                        signatureId: signatureData.id
+                                    };
+                                });
                         })
-            });
+                    }).catch(function (e) {
+                        logger.error(e);
+                    });
     };
 
     /**
@@ -467,28 +483,21 @@ module.exports = function (app) {
     const _signInitMobile = function (voteId, userId, voteOptions, pid, phoneNumber, certificate, transaction) {
         return _createUserBdoc(voteId, userId, voteOptions, certificate, 'base64', transaction)
             .then(function (xades) {
-                const cert = new Certificate(Buffer.from(certificate, 'base64'));
-                const issuer = getCertOcspCertificate(cert);
-                const signableData = xades.signable;
+                const signableData = xades.signableHash;
 
-                return Ocsp.request(issuer, cert)
-                    .then(function (ocspResult) {
-                        xades.setOcspResponse(Ocsp.parse(ocspResult));
-
+                return mobileId
+                    .getCertUserData(certificate, 'base64')
+                    .then(function (personalInfo) {
                         return mobileId
-                            .getCertUserData(certificate, 'base64')
-                            .then(function (personalInfo) {
-                                return mobileId
-                                    .signature(pid, phoneNumber, signableData.toString('base64'))
-                                    .then(function (response) {
-                                        return Signature
-                                            .create({data: xades.toString()})
-                                            .then(function (signatureData) {
-                                                response.signatureId = signatureData.id
-                                                response.personalInfo = personalInfo;
+                            .signature(pid, phoneNumber, signableData.toString('base64'))
+                            .then(function (response) {
+                                return Signature
+                                    .create({data: xades.toString()})
+                                    .then(function (signatureData) {
+                                        response.signatureId = signatureData.id
+                                        response.personalInfo = personalInfo;
 
-                                                return response;
-                                            });
+                                        return response;
                                     });
                             });
                     });
@@ -514,66 +523,27 @@ module.exports = function (app) {
     const _signInitSmartId = function (voteId, userId, voteOptions, pid, countryCode, certificate, transaction) {
         return _createUserBdoc(voteId, userId, voteOptions, certificate, 'base64', transaction)
             .then(function (xades) {
-                const cert = new Certificate(Buffer.from(certificate, 'base64'));
-                const issuer = getCertOcspCertificate(cert);
+                const signableData = xades.signableHash;
 
-                return Ocsp.request(issuer, cert)
-                    .then(function (ocspResult) {
-                        xades.setOcspResponse(Ocsp.parse(ocspResult));
-                        const signableData = xades.signable;
-
+                return smartId
+                    .getCertUserData(certificate)
+                    .then(function (personalInfo) {
                         return smartId
-                            .getCertUserData(certificate)
-                            .then(function (personalInfo) {
-                                return smartId
-                                    .signature(pid, countryCode, signableData.toString('base64'))
-                                    .then(function (response) {
-                                        return Signature
-                                            .create({data: xades.toString()})
-                                            .then(function (signatureData) {
-                                                response.signatureId = signatureData.id
-                                                response.personalInfo = personalInfo;
+                            .signature(pid, countryCode, signableData.toString('base64'))
+                            .then(function (response) {
+                                return Signature
+                                    .create({data: xades.toString()})
+                                    .then(function (signatureData) {
+                                        response.signatureId = signatureData.id
+                                        response.personalInfo = personalInfo;
 
-                                                return response;
-                                            });
+                                        return response;
                                     });
                             });
-                        });
-            });
+                    });
+                });
     };
 
-    const getCertOcspCertificate = function (cert) {
-        if (cert.issuer && cert.issuer.publicKey) {
-            return cert.issuer;
-        }
-
-        const tslPath = config.certificates.tsl;
-        const tsl = tslPath && Tsl.parse(fs.readFileSync(tslPath))
-        const issuerName = cert.issuerRfc4514Name;
-        const certfileName = issuerName.split(',').find(function (item) {
-            if (item.indexOf('CN=') > -1) {
-                return item;
-            }
-        }).replace(/ /gi, '_').replace('CN=', '') + '.pem.crt';
-        const issuerPath = './config/certificates/' + certfileName;
-        const exists = fs.existsSync(issuerPath);
-        let issuer;
-        if (exists) {
-            issuer = issuerPath && Certificate.parse(fs.readFileSync(issuerPath));
-        }
-
-        if (issuer == null) issuer = tsl.certificates.getIssuer(cert);
-
-        if (issuer == null) throw new Error(
-            "Can't find issuer: " + cert.issuerDistinguishedName.join(", ")
-        );
-
-        return issuer;
-    };
-
-    const _getTimestamp = function (signableHash) {
-        return Timestamp.read(config.xades.timestampURL, Buffer.from(signableHash, 'base64'));
-    }
     const _handleSigningResult = function (voteId, userId, voteOptions, signableHash, signatureId, signature) {
         return Signature
                 .findOne({
@@ -582,11 +552,12 @@ module.exports = function (app) {
                     }
                 })
                 .then(function (signatureData) {
-                    const xades = hades.parse(signatureData.data);
+                    const xades = Xades.parse(signatureData.data);
                     xades.setSignature(Buffer.from(signature, 'base64'));
-                    return _getTimestamp(signableHash)
-                        .then(function (timestamp) {
-                            xades.setTimestamp(timestamp);
+
+                    return hades.timemark(xades)
+                        .then(function(timemark) {
+                            xades.setOcspResponse(timemark);
 
                             return _getUserContainer(voteId, userId, voteOptions)
                                 .then(function (container) {

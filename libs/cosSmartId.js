@@ -5,7 +5,7 @@
  */
 function CosSmartId () {
     const that = this;
-    const logger = require('log4js');
+    const logger = require('log4js').getLogger();
     const crypto = require('crypto');
     const Promise = require('bluebird');
     const encoder = require('utf8');
@@ -13,8 +13,15 @@ function CosSmartId () {
     const Pkijs = require('pkijs');
     const Asn1js = require('asn1js');
     const EC = require('elliptic').ec;
-    const NodeRSA = require('node-rsa');
+    const forge = require('node-forge');
+    const rsautl = require('rsautl');
 
+    class ValidationError extends Error {
+        constructor(message) {
+            super(message);
+            this.name = "ValidationError";
+        }
+    }
 
     const OID = {
         "2.5.4.3": {
@@ -52,6 +59,10 @@ function CosSmartId () {
             short: "O",
             long: "Organization",
         },
+        "2.5.4.97": {
+            short: "OID",
+            long: "OrganizationIdentifier"
+        },
         "2.5.4.11": {
             short: "OU",
             long: "OrganizationUnit",
@@ -80,6 +91,7 @@ function CosSmartId () {
         },
     };
 
+    let _issuers;
     let _replyingPartyUUID;
     let _replyingPartyName;
     let _authorizeToken;
@@ -103,6 +115,7 @@ function CosSmartId () {
         _replyingPartyUUID = options.relyingPartyUUID;
         _replyingPartyName = options.replyingPartyName;
         _authorizeToken = options.authorizeToken;
+        _issuers = options.issuers;
 
         if (options.hostname) {
             const hostData = options.hostname.split(':');
@@ -241,75 +254,119 @@ function CosSmartId () {
         return cert;
     };
 
-    const _validateAuthorization = function (authResponse, sessionHash) {
-        return new Promise(function (resolve) {
-            const cert = _prepareCert(authResponse.cert.value, 'base64');
-            if (cert.subjectPublicKeyInfo.parsedKey.x && cert.subjectPublicKeyInfo.parsedKey.y) {
-                const ec = new EC('p256');
-                const publicKeyData = {
-                    x: Buffer.from(cert.subjectPublicKeyInfo.parsedKey.x).toString('hex'),
-                    y: Buffer.from(cert.subjectPublicKeyInfo.parsedKey.y).toString('hex')
-                };
-                const key = ec.keyFromPublic(publicKeyData, 'hex');
+    const _validateEC = function (cert,hash, signatureString) {
+        return new Promise (function (resolve, reject) {
+            const ec = new EC('p256');
+            const publicKeyData = {
+                x: Buffer.from(cert.subjectPublicKeyInfo.parsedKey.x).toString('hex'),
+                y: Buffer.from(cert.subjectPublicKeyInfo.parsedKey.y).toString('hex')
+            };
+            const key = ec.keyFromPublic(publicKeyData, 'hex');
 
-                // Splits to 2 halfs
-                const m = Buffer.from(authResponse.signature.value, 'base64').toString('hex').match(/([a-f\d]{64})/gi);
+            // Splits to 2 halfs
+            const m = Buffer.from(signatureString, 'base64').toString('hex').match(/([a-f\d]{64})/gi);
 
-                const signature = {
-                    r: m[0],
-                    s: m[1]
-                };
+            const signature = {
+                r: m[0],
+                s: m[1]
+            };
 
-                return resolve(key.verify(sessionHash, signature));
+            if(key.verify(hash, signature)) {
+                return resolve(true);
+            } else {
+                return reject(new ValidationError("Invalid signature"));
             }
-            const parsedData = cert.subjectPublicKeyInfo.parsedKey.toJSON();
-            const publicKey = new NodeRSA(parsedData);
-         //   console.log(authResponse);
-            const verify = crypto.createVerify('sha256WithRSAEncryption');
-            var prefix = [0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20];
-
-            var items = [Buffer.from(prefix), Buffer.from(sessionHash, 'hex')];
-    //       console.log(authResponse.signature.value);
-            verify.update(Buffer.concat(items).toString('hex'));
-    //       console.log(verify.verify(publicKey.exportKey('public'), authResponse.signature.value, 'base64'));
-            const isValid = publicKey.verify(Buffer.concat(items).toString('hex'), Buffer.from(authResponse.signature.value, 'base64'));
-     //       console.log(isValid);// Prints: true or false
-            return resolve(isValid); // this is temporary, validation must be fixed
         });
     };
 
-    const _statusAuth = function (sessionId, sessionHash) {
+    const _validateRSA = function (cert, hash, signatureString) {
         return new Promise (function (resolve, reject) {
-            _getSessionStatusData(sessionId)
-                .then(function (result) {
-                    const data = result.data;
-                   // console.log(data);
-                    if (data.state === 'RUNNING') {
-                        return resolve(data);
-                    }
+            const publicKey = forge.pki.publicKeyToPem(cert.publicKey);
+            const sha256Prefix = [0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20];
+            const items = [Buffer.from(sha256Prefix), Buffer.from(hash, 'hex')];
 
-                    if (data.result.endResult === 'OK') {
-                     //   console.log(data.result);
-                        return _validateAuthorization(result.data, sessionHash)
-                            .then(function (isValid) {
-                       //         console.log('isValid', isValid);
-                                if (isValid) {
-                                    return _getCertUserData(data.cert.value, 'base64')
-                                        .then(function (personalInfo) {
-                                            data.personalInfo = personalInfo;
-                                            return resolve(data);
-                                        });
-                                }
-                            }).catch(function (e) {
-                                logger.error(e);
-                                console.log('ERROR', e);
-                                return reject(e);
-                            });
-                    }
+            return rsautl.verify(signatureString, publicKey, function (err, verified) {
+                if (err) logger.error('ERROR', err);
+                const verificationResult = Buffer.from(verified).toString('hex');
+                const prefixedHash = Buffer.concat(items).toString('hex')
 
-                    return resolve(data);
-                });
+                if(verificationResult === prefixedHash) {
+                    return resolve(true);
+                } else {
+                    return reject(new ValidationError("Invalid signature"));
+                }
+
+            }, {padding: null, encoding: null});
         });
+    };
+
+    const _validateIssuer = function (cert) {
+        return new Promise(function (resolve, reject) {
+            let IssuerData = {};
+            cert.issuer.typesAndValues.map(function (item) {
+                IssuerData[OID[item.type].short] = item.value.valueBlock.value;
+            });
+
+
+            let isValid = false;
+            _issuers.forEach(function (issuer) {
+                if (JSON.stringify(issuer) === JSON.stringify(IssuerData)) {
+                    isValid = true;
+                }
+            });
+
+            if(!isValid) {
+                logger.error('Invalid issuer: ' + IssuerData);
+                return reject(new ValidationError('Invalid certificate issuer'));
+            }
+
+            return resolve();
+        });
+    };
+
+    const _validateCert = function (cert) {
+        const now = new Date();
+
+        if (now <= new Date(cert.notBefore.value) ||  now >= new Date(cert.notAfter.value)) {
+            return Promise.reject(new ValidationError('Certificate not active'));
+        }
+
+        return _validateIssuer(cert);
+    };
+
+    const _validateAuthorization = function (authResponse, sessionHash) {
+        const cert = _prepareCert(authResponse.cert.value, 'base64');
+
+        return _validateCert(cert)
+            .then(function () {
+                if (cert.subjectPublicKeyInfo.parsedKey.x && cert.subjectPublicKeyInfo.parsedKey.y) {
+                    return _validateEC(cert, sessionHash, authResponse.signature.value);
+                }
+
+                const certPem = forge.pki.certificateFromPem('-----BEGIN CERTIFICATE-----\n' +authResponse.cert.value + '\n-----END CERTIFICATE-----');
+
+                return _validateRSA(certPem, sessionHash, authResponse.signature.value);
+            });
+    };
+
+    const _statusAuth = function (sessionId, sessionHash) {
+        return _getSessionStatusData(sessionId)
+            .then(function (result) {
+                const data = result.data;
+
+                if (data.result.endResult === 'OK') {
+                    return _validateAuthorization(result.data, sessionHash)
+                        .then(function () {
+                            return _getCertUserData(data.cert.value, 'base64')
+                                .then(function (personalInfo) {
+                                    data.personalInfo = personalInfo;
+                                    return data;
+                                });
+                        });
+                } else {
+                    return data;
+                }
+            });
     };
 
     const _getSessionStatusData = function (sessionId) {
@@ -337,8 +394,7 @@ function CosSmartId () {
 
         let params = {
             relyingPartyUUID: _replyingPartyUUID,
-            relyingPartyName: _replyingPartyName,
-            certificateLevel: 'ADVANCED',
+            relyingPartyName: _replyingPartyName
         };
 
         params = JSON.stringify(params);
@@ -365,14 +421,17 @@ function CosSmartId () {
 
                 result.on('end', function () {
                     data = JSON.parse(data);
-
                     if (data.sessionID) {
                         return _getSessionStatusData(data.sessionID)
                             .then(function (sessionData) {
-                                if (sessionData.data && sessionData.data.cert)
-                                    return resolve(sessionData.data.cert.value);
+                                if (sessionData.data && sessionData.data.cert) {
+                                    return _validateCert(_prepareCert(sessionData.data.cert.value, 'base64'))
+                                        .then(function () {
+                                            return resolve(sessionData.data.cert.value);
+                                        });
+                                    }
 
-                                return resolve(sessionData);
+                                    return resolve(sessionData);
                             });
                     }
 
@@ -425,7 +484,10 @@ function CosSmartId () {
                 .then(function (result) {
                     const data = result.data;
                     if (data.state === 'COMPLETE' && data.result === 'OK') {
-                        return resolve(data);
+                        return _validateCert(_prepareCert(data.cert.value, 'base64'))
+                                .then(function () {
+                                    return resolve(data);
+                                });
                     }
 
                     return resolve(data);

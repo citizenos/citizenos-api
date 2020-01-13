@@ -588,7 +588,11 @@ module.exports = function (app) {
                             return res.ok(userData, 2); // Existing User found and logged in
                         }
                     });
-            }, _.noop)
+            }, function (error) {
+                if (error && error.name === 'ValidationError') {
+                    return res.badRequest(error.message);
+                }
+            })
             .error(next);
     });
 
@@ -930,7 +934,11 @@ module.exports = function (app) {
                             return res.ok(userData, 2); // Existing User found and logged in
                         }
                     });
-            }, _.noop)
+            }, function (error) {
+                if (error && error.name === 'ValidationError') {
+                    return res.badRequest(error.message);
+                }
+            })
             .error(next);
     });
 
