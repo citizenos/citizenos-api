@@ -205,11 +205,12 @@ function CosMobileId () {
     const _getCertUserData = function (certificate, format) {
         const cert = _prepareCert(certificate, format);
         const subject = getCertValue('subject', cert);
+        const pid = subject.CommonName.split(',').filter(function (item) {return item !== subject.GivenName && item !== subject.SurName})[0];
 
         return Promise.resolve({
             firstName: subject.GivenName,
             lastName: subject.SurName,
-            pid: subject.DeviceSerialNumber,
+            pid,
             country: subject.Country
         });
     };
@@ -393,7 +394,11 @@ function CosMobileId () {
         });
     };
 
-    const _validateCert = function (cert) {
+    const _validateCert = function (cert, format) {
+        if (typeof cert === 'string' && format) {
+            cert = _prepareCert(cert, format);
+        }
+
         const now = new Date();
 
         if (now <= new Date(cert.notBefore.value) ||  now >= new Date(cert.notAfter.value)) {
@@ -509,7 +514,8 @@ function CosMobileId () {
         authenticate: _authenticate,
         statusAuth: _statusAuth,
         signature: _signature,
-        statusSign: _statusSign
+        statusSign: _statusSign,
+        validateCert: _validateCert
     };
 }
 

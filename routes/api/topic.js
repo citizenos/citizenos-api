@@ -5556,12 +5556,15 @@ module.exports = function (app) {
 
         } else if (certificate) {
             signingMethod = Vote.SIGNING_METHODS.idCard;
-            getCertificatePromise = Promise.resolve({
-                certificate: certificate,
-                format: 'der'
-            });
-
-            certFormat = 'hex';
+            getCertificatePromise = mobileId
+                .validateCert(certificate, 'hex')
+                .then(function () {
+                    certFormat = 'hex';
+                    return {
+                        certificate: certificate,
+                        format: 'der'
+                    };
+                });
         } else {
             signingMethod = Vote.SIGNING_METHODS.mid;
             getCertificatePromise = mobileId
@@ -5838,6 +5841,10 @@ module.exports = function (app) {
                                 }
                             }
                         });
+                }).catch(function (error) {
+                    if (error && error.name === 'ValidationError') {
+                        return res.badRequest(error.message);
+                    }
                 });
 
     };
@@ -6031,22 +6038,34 @@ module.exports = function (app) {
                             transaction: t
                         }
                     );
-
-                var signUserBdocPromise = cosSignature
-                    .signUserBdoc(idSignFlowData.voteId, idSignFlowData.userId, voteOptions, idSignFlowData.signableHash, idSignFlowData.signatureId, signatureValue)
-                    .then(function (signedDocument) {
-                        return VoteUserContainer
-                            .upsert(
-                                {
-                                    userId: userId,
-                                    voteId: voteId,
-                                    container: signedDocument
-                                },
-                                {
-                                    transaction: t
-                                }
-                            );
-                    });
+                const optionIds = voteOptions.map(function (elem) {return elem.optionId});
+                var signUserBdocPromise =
+                    VoteOption
+                        .findAll({
+                            where: {
+                                id: optionIds,
+                                voteId: voteId
+                            }
+                        })
+                        .then(function (voteOptionsResult) {
+                            return cosSignature
+                                .signUserBdoc(idSignFlowData.voteId, idSignFlowData.userId, voteOptionsResult, idSignFlowData.signableHash, idSignFlowData.signatureId, Buffer.from(signatureValue, 'hex').toString('base64'))
+                                .then(function (signedDocument) {
+                                    return VoteUserContainer
+                                        .upsert(
+                                            {
+                                                userId: userId,
+                                                voteId: voteId,
+                                                container: signedDocument.signedDocData
+                                            },
+                                            {
+                                                transaction: t
+                                            }
+                                        );
+                                }).catch(function (e) {
+                                    console.log('ERROR', e)
+                                })
+                            });
 
                 promisesToResolve.push(voteListCreatePromise, voteDelegationDestroyPromise, userConnectionAddPromise, signUserBdocPromise);
 
