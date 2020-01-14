@@ -414,7 +414,7 @@ module.exports = function (app) {
                 });
             })
             .then(function (files) {
-                const xades = hades.new(certificate, files);
+                const xades = hades.new(certificate, files, {policy: "bdoc"});
 
                 return Promise.resolve(xades);
             }).catch(function (e) {
@@ -554,7 +554,6 @@ module.exports = function (app) {
                 .then(function (signatureData) {
                     const xades = Xades.parse(signatureData.data);
                     xades.setSignature(Buffer.from(signature, 'base64'));
-
                     return hades.timemark(xades)
                         .then(function(timemark) {
                             xades.setOcspResponse(timemark);

@@ -3,7 +3,6 @@
 module.exports = function (app) {
 
     var logger = app.get('logger');
-    var _ = app.get('lodash');
     var cryptoLib = app.get('cryptoLib');
     var smartId = app.get('smartId');
     var loginCheck = app.get('middleware.loginCheck');
