@@ -6070,7 +6070,7 @@ module.exports = function (app) {
                                             }
                                         );
                                 }).catch(function (e) {
-                                    logger.error('ERROR: ', e)
+                                    logger.error('ERROR: ', e);
                                 })
                             });
 
