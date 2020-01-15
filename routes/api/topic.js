@@ -5843,7 +5843,14 @@ module.exports = function (app) {
                         });
                 }).catch(function (error) {
                     if (error && error.name === 'ValidationError') {
-                        return res.badRequest(error.message, 32);
+                        switch (error.message) {
+                            case 'Invalid signature':
+                                return res.badRequest(error.message, 32);
+                            case 'Invalid certificate issuer':
+                                return res.badRequest(error.message, 33);
+                            case 'Certificate not active':
+                                return res.badRequest(error.message, 34);
+                        }
                     }
                 });
 
