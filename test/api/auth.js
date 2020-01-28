@@ -579,6 +579,8 @@ suite('Auth', function () {
             });
 
             test('Success - client certificate in X-SSL-Client-Cert header', function (done) {
+                this.timeout(5000); //eslint-disable-line no-invalid-this
+
                 var agent = request.agent(app);
                 var cert = fs.readFileSync('./test/resources/certificates/dds_good_igor_sign.pem', {encoding: 'utf8'}).replace(/\n/g, ''); //eslint-disable-line no-sync
 
