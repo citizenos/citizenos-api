@@ -35,9 +35,14 @@
       "serviceUrl": "CITIZENOS_SERVICES_IDCARD_SERVICE_URL",
       "apiKey": "CITIZENOS_SERVICES_IDCARD_APIKEY"
     },
+    "signature": "CITIZENOS_SERVICES_SIGNATURE",
     "smartId": {
       "relyingPartyUUID": "CITIZENOS_SERVICES_SMARTID_RELYING_PARTY_UUID",
       "replyingPartyName": "CITIZENOS_SERVICES_SMARTID_RELYING_PARTY_NAME"
+    },
+    "mobileId": {
+      "relyingPartyUUID": "CITIZENOS_SERVICES_MOBILEID_RELYING_PARTY_UUID",
+      "replyingPartyName": "CITIZENOS_SERVICES_MOBILEID_RELYING_PARTY_NAME"
     },
     "twitter": {
       "consumer_key": "CITZENOS_SERVICES_TWITTER_CONSUMER_KEY",

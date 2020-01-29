@@ -199,7 +199,6 @@
           }
         ]
       },
-
       "timemarkUrl": "http://demo.sk.ee/ocsp",
 	    "timestampUrl": "http://demo.sk.ee/tsa"
     },
@@ -209,10 +208,9 @@
       "apiPath": "/v1"
     },
     "mobileId": {
-      "hostname": "tsp.demo.sk.ee",
-      "apiPath": "/mid-api",
-      "relyingPartyUUID": "00000000-0000-0000-0000-000000000000",
-      "replyingPartyName": "DEMO"
+      "hostname": "mobiilid.citizenos.com:8001",
+      "authorizeToken": "m3EvIdswsiIpeOXqXb185fgoS9h0zpu5jrweZWLVGeVR5FoQpE",
+      "apiPath": "/mid-api"
     },
     "twitter": {
       "consumer_key": null,
