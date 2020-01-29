@@ -106,12 +106,12 @@
       "rahvaalgatus.ee": {
         "headerBackgroundColor": "#004892",
         "logoWidth": 360,
-        "logoHeight": 51   
+        "logoHeight": 51
       },
       "uuseakus.rahvaalgatus.ee": {
         "headerBackgroundColor": "#004892",
         "logoWidth": 300,
-        "logoHeight": 91   
+        "logoHeight": 91
       }
     }
   },
@@ -126,10 +126,93 @@
       "ssl": true,
       "rejectUnauthorized": true
     },
+    "signature": {
+      "certificates": {
+        "tsl": [
+          "config/tsl/test-estonian-tsl.xml",
+          "config/tsl/estonian-tsl.xml"
+        ],
+        "issuers": [
+          {
+            "C": "EE",
+            "O": "AS Sertifitseerimiskeskus",
+            "OID": "NTREE-10747013",
+            "CN": "TEST of EID-SK 2015"
+          },
+          {
+            "C": "EE",
+            "O": "AS Sertifitseerimiskeskus",
+            "OID": "NTREE-10747013",
+            "CN": "EID-SK 2016"
+          },
+          {
+            "C": "EE",
+            "O": "SK ID Solutions AS",
+            "OID": "NTREE-10747013",
+            "CN": "ESTEID2018"
+          },
+          {
+            "CN": "ESTEID-SK 2011",
+            "O": "AS Sertifitseerimiskeskus",
+            "C": "EE"
+          },
+          {
+            "CN": "EID-SK 2011",
+            "O": "AS Sertifitseerimiskeskus",
+            "C": "EE"
+          },
+          {
+            "CN": "ESTEID-SK 2015",
+            "OID": "NTREE-10747013",
+            "O": "AS Sertifitseerimiskeskus",
+            "C": "EE"
+          },
+          {
+            "C": "EE",
+            "O": "AS Sertifitseerimiskeskus",
+            "OID": "NTREE-10747013",
+            "CN": "TEST of EID-SK 2015"
+          },
+          {
+            "C": "EE",
+            "O": "AS Sertifitseerimiskeskus",
+            "OID": "NTREE-10747013",
+            "CN": "TEST of EID-SK 2016"
+          },
+          {
+            "C": "EE",
+            "O": "AS Sertifitseerimiskeskus",
+            "OID": "NTREE-10747013",
+            "CN": "TEST of ESTEID-SK 2015"
+          },
+          {
+            "C": "EE",
+            "O": "AS Sertifitseerimiskeskus",
+            "OID": "NTREE-10747013",
+            "CN": "TEST of ESTEID-SK 2016"
+          },
+          {
+            "C":"EE",
+            "O":"AS Sertifitseerimiskeskus",
+            "CN":"TEST of EID-SK 2011",
+            "E":"pki@sk.ee"
+          }
+        ]
+      },
+
+      "timemarkUrl": "http://demo.sk.ee/ocsp",
+	    "timestampUrl": "http://demo.sk.ee/tsa"
+    },
     "smartId": {
       "hostname": "smartid.citizenos.com:8001",
       "authorizeToken": "m3EvIdswsiIpeOXqXb185fgoS9h0zpu5jrweZWLVGeVR5FoQpE",
       "apiPath": "/v1"
+    },
+    "mobileId": {
+      "hostname": "tsp.demo.sk.ee",
+      "apiPath": "/mid-api",
+      "relyingPartyUUID": "00000000-0000-0000-0000-000000000000",
+      "replyingPartyName": "DEMO"
     },
     "twitter": {
       "consumer_key": null,

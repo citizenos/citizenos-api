@@ -61,11 +61,53 @@
       "serviceUrl": "https://id-test.citizenos.com:8443/info",
       "apiKey": "ZWeCMMQSoIpOnavNnEo2daBjXbmG3PoEWgNnQ13EtZ9jF43gkInxok5fIioX"
     },
+    "signature": {
+      "certificates": {
+        "tsl": [
+          "config/tsl/test-estonian-tsl.xml",
+          "config/tsl/estonian-tsl.xml"
+        ]
+      },
+      "timemarkUrl": "http://demo.sk.ee/ocsp",
+	    "timestampUrl": "http://demo.sk.ee/tsa"
+    },
     "smartId": {
       "hostname": "sid.demo.sk.ee",
       "apiPath": "/smart-id-rp/v1",
       "relyingPartyUUID": "00000000-0000-0000-0000-000000000000",
-      "replyingPartyName": "DEMO"
+      "replyingPartyName": "DEMO",
+      "issuers": [
+        {
+          "C": "EE",
+          "O": "AS Sertifitseerimiskeskus",
+          "OID": "NTREE-10747013",
+          "CN": "TEST of EID-SK 2015"
+        },
+        {
+          "C": "EE",
+          "O": "AS Sertifitseerimiskeskus",
+          "OID": "NTREE-10747013",
+          "CN": "TEST of EID-SK 2016"
+        }]
+    },
+    "mobileId": {
+      "hostname": "tsp.demo.sk.ee",
+      "apiPath": "/mid-api",
+      "relyingPartyUUID": "00000000-0000-0000-0000-000000000000",
+      "replyingPartyName": "DEMO",
+      "issuers": [
+        {
+          "C": "EE",
+          "O": "AS Sertifitseerimiskeskus",
+          "OID": "NTREE-10747013",
+          "CN": "TEST of ESTEID-SK 2015"
+        },
+        {
+          "C": "EE",
+          "O": "AS Sertifitseerimiskeskus",
+          "OID": "NTREE-10747013",
+          "CN": "TEST of ESTEID-SK 2016"
+        }]
     },
     "twitter": {
       "consumer_key": "kkFbJ3tySB9XIzXDbDQPqedSt",

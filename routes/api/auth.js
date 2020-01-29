@@ -3,7 +3,6 @@
 module.exports = function (app) {
 
     var logger = app.get('logger');
-    var _ = app.get('lodash');
     var cryptoLib = app.get('cryptoLib');
     var smartId = app.get('smartId');
     var loginCheck = app.get('middleware.loginCheck');
@@ -15,7 +14,6 @@ module.exports = function (app) {
     var models = app.get('models');
     var db = models.sequelize;
     var Op = db.Sequelize.Op;
-    var cosBdoc = app.get('cosBdoc');
     var cosActivities = app.get('cosActivities');
     var jwt = app.get('jwt');
     var objectEncrypter = app.get('objectEncrypter');
@@ -25,6 +23,7 @@ module.exports = function (app) {
     var Promise = app.get('Promise');
     var DigiDocServiceClient = app.get('ddsClient');
     var url = app.get('url');
+    var mobileId = app.get('mobileId');
 
     var User = models.User;
     var UserConnection = models.UserConnection;
@@ -480,8 +479,11 @@ module.exports = function (app) {
                 if (e.code === 404) {
                     return res.notFound();
                 }
+                if (e.code === 400) {
+                    return res.badRequest();
+                }
 
-                return next();
+                return next(new Error(e));
             });
     });
 
@@ -494,21 +496,31 @@ module.exports = function (app) {
         }
 
         var tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
-        var loginMobileFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
+        var loginSmartIdFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
 
         smartId
-            .status(loginMobileFlowData.sessionId, loginMobileFlowData.sessionHash, 500)
+            .statusAuth(loginSmartIdFlowData.sessionId, loginSmartIdFlowData.sessionHash)
             .then(function (response) {
-                // TODO: DUPLICATE CODE, also used in /api/auth/id
                 if (response.error) {
                     return res.badRequest(response.error.message, response.error.code);
                 } else if (response.state === 'RUNNING') {
                     return res.ok('Log in progress', 1);
                 } else if (response.state === 'COMPLETE') {
-                    if (response.result.endResult === 'OK') {
-                        var personalInfo = response.result.user;
-                    } else {
-                        return res.badRequest(response.result);
+                    switch (response.result.endResult) {
+                        case 'OK':
+                            var personalInfo = response.personalInfo;
+                        break;
+                        case 'USER_REFUSED':
+                            res.badRequest('User refused', 10);
+
+                            return;
+                        case 'TIMEOUT':
+                            res.badRequest('The transaction has expired', 11);
+
+                            return;
+                        default:
+                            res.badRequest(response);
+                        break;
                     }
                 } else {
                     return res.badRequest(response);
@@ -575,7 +587,11 @@ module.exports = function (app) {
                             return res.ok(userData, 2); // Existing User found and logged in
                         }
                     });
-            }, _.noop)
+            }, function (error) {
+                if (error && error.name === 'ValidationError') {
+                    return res.badRequest(error.message);
+                }
+            })
             .error(next);
     });
 
@@ -758,49 +774,30 @@ module.exports = function (app) {
             return res.badRequest('mID athentication requires users phoneNumber+pid', 1);
         }
 
-        cosBdoc
-            .loginMobileInit(pid, phoneNumber, null)
-            .then(function (loginMobileInitResult) {
-                switch (loginMobileInitResult.statusCode) {
-                    case 0:
-                        // Encrypt session data into token which is required back by /api/auth/mobile/status
-                        var sessionData = {
-                            sesscode: loginMobileInitResult.sesscode,
-                            personalInfo: loginMobileInitResult.personalInfo
-                        };
+        mobileId
+            .authenticate(pid, phoneNumber, null)
+            .then(function (sessionData) {
+                var sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
+                var token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
+                    expiresIn: '5m',
+                    algorithm: config.session.algorithm
+                });
 
-                        var sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
-                        var token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
-                            expiresIn: '5m',
-                            algorithm: config.session.algorithm
-                        });
-
-                        return res.ok({
-                            challengeID: loginMobileInitResult.challengeID,
-                            token: token
-                        }, 1);
-                    case 101:
-                    case 102:
-                        logger.warn('Invalid input parameters', loginMobileInitResult.statusCode, loginMobileInitResult.status);
-
-                        return res.badRequest('Invalid input parameters.', 20);
-                    case 301:
-                        return res.badRequest('User is not a Mobile-ID client. Please double check phone number and/or id code.', 21);
-                    case 302:
-                        return res.badRequest('User certificates are revoked or suspended.', 22);
-                    case 303:
-                        return res.badRequest('User certificate is not activated.', 23);
-                    case 304:
-                        return res.badRequest('User certificate is suspended.', 24);
-                    case 305:
-                        return res.badRequest('User certificate is expired.', 25);
-                    default:
-                        logger.error('Unhandled DDS status code', loginMobileInitResult.statusCode, loginMobileInitResult.status);
-
-                        return res.internalServerError();
-                }
+                return res.ok({
+                    challengeID: sessionData.challengeID,
+                    token: token
+                }, 1);
             })
-            .catch(next);
+            .catch(function (e) {
+                if (e.code === 400) {
+                    return res.badRequest(e.message);
+                }
+                if (e.code === 404) {
+                    return res.notFound();
+                }
+
+                return next(e);
+            });
     });
 
 
@@ -819,17 +816,17 @@ module.exports = function (app) {
         var tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
         var loginMobileFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
 
-        cosBdoc
-            .loginMobileStatus(loginMobileFlowData.sesscode)
-            .then(function (statusCode) {
-                switch (statusCode) {
-                    case 'USER_AUTHENTICATED':
-                        return Promise.resolve(loginMobileFlowData.personalInfo);
+        mobileId
+            .statusAuth(loginMobileFlowData.sessionId, loginMobileFlowData.sessionHash)
+            .then(function (authResult) {
+                switch (authResult.result) {
+                    case 'OK':
+                        return Promise.resolve(authResult.personalInfo);
                     case 'OUTSTANDING_TRANSACTION':
                         res.ok('Log in progress', 1);
 
                         return Promise.reject();
-                    case 'USER_CANCEL':
+                    case 'USER_CANCELLED':
                         res.badRequest('User has cancelled the log in process', 10);
 
                         return Promise.reject();
@@ -837,11 +834,11 @@ module.exports = function (app) {
                         res.badRequest('The transaction has expired', 11);
 
                         return Promise.reject();
-                    case 'NOT_VALID':
+                    case 'SIGNATURE_HASH_MISMATCH':
                         res.badRequest('Signature is not valid', 12);
 
                         return Promise.reject();
-                    case 'MID_NOT_READY':
+                    case 'NOT_MID_CLIENT':
                         res.badRequest('Mobile-ID functionality of the phone is not yet ready', 13);
 
                         return Promise.reject();
@@ -849,7 +846,7 @@ module.exports = function (app) {
                         res.badRequest('Delivery of the message was not successful, mobile phone is probably switched off or out of coverage;', 14);
 
                         return Promise.reject();
-                    case 'SENDING_ERROR':
+                    case 'DELIVERY_ERROR':
                         res.badRequest('Other error when sending message (phone is incapable of receiving the message, error in messaging server etc.)', 15);
 
                         return Promise.reject();
@@ -862,12 +859,12 @@ module.exports = function (app) {
 
                         return Promise.reject();
                     case 'INTERNAL_ERROR':
-                        logger.error('Unknown DDS error when trying to log in with mobile', statusCode);
+                        logger.error('Unknown DDS error when trying to log in with mobile', authResult.result);
                         res.internalServerError('DigiDocService error', 1);
 
                         return Promise.reject();
                     default:
-                        logger.error('Unknown status code when trying to log in with mobile', statusCode);
+                        logger.error('Unknown status code when trying to log in with mobile', authResult.result);
                         res.internalServerError();
 
                         return Promise.reject();
@@ -936,7 +933,11 @@ module.exports = function (app) {
                             return res.ok(userData, 2); // Existing User found and logged in
                         }
                     });
-            }, _.noop)
+            }, function (error) {
+                if (error && error.name === 'ValidationError') {
+                    return res.badRequest(error.message);
+                }
+            })
             .error(next);
     });
 

@@ -1,3 +1,9 @@
+## 2020-01-29
+
+* Move away from digidoc service - https://github.com/citizenos/citizenos-api/issues/144
+* Add Smart-ID vote signing - https://github.com/citizenos/citizenos-api/issues/134
+* Add extra validation to Mobiil-ID and Smart-ID signing - https://github.com/citizenos/citizenos-api/issues/40
+
 ## 2019-12-18
 
 * Allow longer vote options. New limit is 200 characters - https://github.com/citizenos/citizenos-fe/issues/105
@@ -5,7 +11,7 @@
 ## 2019-11-19
 
 * FEATURE: Topic User invite flow API - `/api/users/:userId/topics/:topicId/invites` - https://github.com/citizenos/citizenos-fe/issues/112
-* FEATURE: `CitizenOS-Deprecated` response header sent for deprecated API calls. It is important for API clients to log warnings when receiving such response header - https://github.com/citizenos/citizenos-fe/issues/112 
+* FEATURE: `CitizenOS-Deprecated` response header sent for deprecated API calls. It is important for API clients to log warnings when receiving such response header - https://github.com/citizenos/citizenos-fe/issues/112
 * DEPRECATED: `POST /api/users/:userId/topics/:topicId/members/users`, use new invite API (`POST /api/users/:userId/topics/:topicId/invites` ) and other invite API-s instead - https://github.com/citizenos/citizenos-fe/issues/112
 * DEVELOPMENT: `deprecated` middleware to send `CitizenOS-Deprecated` response header for deprecated API calls - https://github.com/citizenos/citizenos-fe/issues/112
 
@@ -31,7 +37,7 @@
 
 ## 2019-06-04
 
-* Quick fix for app crashing when `DATABASE_OPTIONS_POOL_MAX` env variable is set - https://github.com/citizenos/citizenos-api/issues/137 
+* Quick fix for app crashing when `DATABASE_OPTIONS_POOL_MAX` env variable is set - https://github.com/citizenos/citizenos-api/issues/137
 
 ## 2019-06-03
 
@@ -50,7 +56,7 @@
 
 ## 2019-04-10
 
-* Fix Etherpad sync endpoint, remove rev number to put less stress on etherpad. 
+* Fix Etherpad sync endpoint, remove rev number to put less stress on etherpad.
 * Fix partner topic read test
 * Update morgan
 
@@ -79,13 +85,13 @@
 
 ## 2019-01-22
 
-* Parliament e-mails - configuration `config.features.sendToParliament.sendContainerDownloadLinkToCreator` to choose if BDOC link is sent to Topic creator or not in Parliament e-mails. 
+* Parliament e-mails - configuration `config.features.sendToParliament.sendContainerDownloadLinkToCreator` to choose if BDOC link is sent to Topic creator or not in Parliament e-mails.
 * Update `db/config/database.sql` to be up to date. Was supposed to be updated with changes on 2018-12-18.
 * Make users verify e-mail address if they update it in their profile https://github.com/citizenos/citizenos-api/issues/54
 
 ## 2019-01-16
 
-* Update email layout so partner emails could be modified from config. Related to https://github.com/citizenos/citizenos-api/issues/26 and https://github.com/citizenos/citizenos-api/issues/6. 
+* Update email layout so partner emails could be modified from config. Related to https://github.com/citizenos/citizenos-api/issues/26 and https://github.com/citizenos/citizenos-api/issues/6.
 ```
 {
     "email":{
@@ -140,7 +146,7 @@
 
 ## 2018-12-17
 
-* Generate new and thus invalidate existing password reset code on successful reset - https://github.com/citizenos/citizenos-api/issues/68 
+* Generate new and thus invalidate existing password reset code on successful reset - https://github.com/citizenos/citizenos-api/issues/68
 
 ## 2018-12-13
 

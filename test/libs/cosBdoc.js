@@ -9,7 +9,9 @@ suite('cosBdoc', function () {
     var logger = app.get('logger');
     var Promise = app.get('Promise');
     var fs = app.get('fs');
-    var cosBdoc = app.get('cosBdoc');
+    var cosBdoc = app.get('cosSignature');
+    var smartId = app.get('smartId');
+    var mobileId = app.get('mobileId');
     var util = app.get('util');
     var _ = app.get('lodash');
     var shared = require('../utils/shared');
@@ -75,16 +77,16 @@ suite('cosBdoc', function () {
             fs
                 .readFileAsync('./test/resources/certificates/dds_good_igor_sign_hex_encoded_der.crt')
                 .then(function (certificate) {
-                    return cosBdoc
-                        .getPersonalInfoFromCertificate(certificate.toString());
+                    return smartId
+                        .getCertUserData(certificate.toString(), 'hex');
                 })
-                .spread(function (status, personalInfo) {
-                    assert.equal(status, 'GOOD');
+                .then(function (personalInfo) {
+               //     assert.equal(status, 'GOOD');
                     var expectedPersonalInfo = {
                         lastName: 'ŽAIKOVSKI',
                         firstName: 'IGOR',
                         pid: '37101010021',
-                        countryCode: 'EE'
+                        country: 'EE'
                     };
 
                     assert.deepEqual(personalInfo, expectedPersonalInfo);
@@ -98,21 +100,21 @@ suite('cosBdoc', function () {
 
             var pid = '60001019906';
             var phoneNumber = '+37200000766';
-            var returnCertData = 'sign';
+       //     var returnCertData = 'sign';
 
-            cosBdoc
-                .getMobileCertificate(pid, phoneNumber, returnCertData)
+            mobileId
+                .getUserCertificate(pid, phoneNumber)
                 .then(function (certInfo) {
-                    return cosBdoc
-                        .getPersonalInfoFromCertificate(certInfo.sign, 'pem');
+                    return mobileId
+                        .getCertUserData(certInfo, 'base64');
                 })
-                .spread(function (status, personalInfo) {
-                    assert.equal(status, 'GOOD');
+                .then(function (personalInfo) {
+               //     assert.equal(status, 'GOOD');
                     assert.deepEqual(personalInfo, {
                         pid: '60001019906',
                         firstName: 'MARY ÄNN',
                         lastName: 'O’CONNEŽ-ŠUSLIK TESTNUMBER',
-                        countryCode: 'EE'
+                        country: 'EE'
                     });
 
                     done();
@@ -127,13 +129,11 @@ suite('cosBdoc', function () {
         test('Success', function (done) {
             var pid = '60001019906';
             var phoneNumber = '+37200000766';
-            var returnCertData = 'both';
 
-            cosBdoc
-                .getMobileCertificate(pid, phoneNumber, returnCertData)
+            mobileId
+                .getUserCertificate(pid, phoneNumber)
                 .then(function (certInfo) {
-                    assert.property(certInfo, 'sign');
-                    assert.property(certInfo, 'auth');
+                    assert.equal(typeof certInfo, 'string');
                     done();
                 });
         });

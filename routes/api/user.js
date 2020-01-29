@@ -69,7 +69,7 @@ module.exports = function (app) {
                 if (updateEmail) {
                     UserConnection
                         .update({
-                            connectionData: user 
+                            connectionData: user
                         }, {
                             where: {
                                 connectionId: UserConnection.CONNECTION_IDS.citizenos,
@@ -80,9 +80,9 @@ module.exports = function (app) {
                             const tokenData = {
                                 redirectSuccess: urlLib.getFe() // TODO: Misleading naming, would like to use "redirectUri" (OpenID convention) instead, but needs RAA.ee to update codebase.
                             };
-        
+
                             const token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
-        
+
                             sendEmailPromise = emailLib.sendAccountVerification(user.email, user.emailVerificationCode, token);
                         });
                 }

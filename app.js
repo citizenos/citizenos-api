@@ -19,7 +19,6 @@ var querystring = require('querystring');
 var stream = require('stream');
 var fsExtra = require('fs-extra');
 var sanitizeFilename = require('sanitize-filename');
-var nodeForge = require('node-forge');
 var uuid = require('uuid');
 var jwt = require('jsonwebtoken');
 var objectEncrypter = require('object-encrypter');
@@ -124,7 +123,6 @@ app.set('querystring', querystring);
 app.set('stream', stream);
 app.set('fsExtra', fsExtra);
 app.set('sanitizeFilename', sanitizeFilename);
-app.set('nodeForge', nodeForge);
 app.set('uuid', uuid);
 app.set('jwt', jwt);
 app.set('objectEncrypter', objectEncrypter);
@@ -152,22 +150,32 @@ app.set('cosActivities', require('./libs/cosActivities')(app));
 app.set('urlLib', require('./libs/url')(config));
 app.set('util', require('./libs/util'));
 app.set('ddsClient', require('./libs/ddsClient'));
-app.set('cosBdoc', require('./libs/cosBdoc')(app));
 app.set('cosEtherpad', require('./libs/cosEtherpad')(app));
 app.set('cosJwt', require('./libs/cosJwt')(app));
 
-//Config smartId 
-var smartId = require('./libs/cosSmartId')(app);
+//Config smartId
+var smartId = require('smart-id-rest')();
 smartId.init({
     hostname: config.services.smartId.hostname,
     apiPath: config.services.smartId.apiPath,
-    authPath: config.services.smartId.authPath,
     authorizeToken: config.services.smartId.authorizeToken,
     relyingPartyUUID: config.services.smartId.relyingPartyUUID,
     replyingPartyName: config.services.smartId.replyingPartyName,
-    statusPath: config.services.smartId.statusPath
+    issuers: config.services.signature.certificates.issuers
 });
 app.set('smartId', smartId);
+//Config mobiilId
+var mobileId = require('mobiil-id-rest')();
+mobileId.init({
+    hostname: config.services.mobileId.hostname,
+    apiPath: config.services.mobileId.apiPath,
+    authorizeToken: config.services.mobileId.authorizeToken,
+    relyingPartyUUID: config.services.mobileId.relyingPartyUUID,
+    replyingPartyName: config.services.mobileId.replyingPartyName,
+    issuers: config.services.signature.certificates.issuers
+});
+app.set('mobileId', mobileId);
+app.set('cosSignature', require('./libs/cosSignature')(app));
 
 if (typeof config.email === 'string') {
     config.email = JSON.parse(config.email); // Support JSON string from ENV

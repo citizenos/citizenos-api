@@ -26,7 +26,8 @@ module.exports = function (sequelize, DataTypes) {
 
     var SIGNING_METHODS = {
         mid: 'mid',
-        idCard: 'idCard'
+        idCard: 'idCard',
+        smartId: 'smartId'
     };
 
     var Vote = sequelize.define(

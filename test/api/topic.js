@@ -1076,7 +1076,7 @@ var topicVoteVoteUnauth = function (agent, topicId, voteId, voteList, certificat
     _topicVoteVoteUnauth(agent, topicId, voteId, voteList, certificate, pid, phoneNumber, 200, callback);
 };
 
-var _topicVoteVote = function (agent, userId, topicId, voteId, voteList, certificate, pid, phoneNumber, expectedHttpCode, callback) {
+var _topicVoteVote = function (agent, userId, topicId, voteId, voteList, certificate, pid, phoneNumber, countryCode, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/votes/:voteId'
         .replace(':userId', userId)
         .replace(':topicId', topicId)
@@ -1086,7 +1086,8 @@ var _topicVoteVote = function (agent, userId, topicId, voteId, voteList, certifi
         options: voteList,
         certificate: certificate, // Used only for Vote.AUTH_TYPES.hard
         pid: pid,
-        phoneNumber: phoneNumber
+        phoneNumber: phoneNumber,
+        countryCode: countryCode
     };
 
     agent
@@ -1098,8 +1099,8 @@ var _topicVoteVote = function (agent, userId, topicId, voteId, voteList, certifi
         .end(callback);
 };
 
-var topicVoteVote = function (agent, userId, topicId, voteId, voteList, certificate, pid, phoneNumber, callback) {
-    _topicVoteVote(agent, userId, topicId, voteId, voteList, certificate, pid, phoneNumber, 200, callback);
+var topicVoteVote = function (agent, userId, topicId, voteId, voteList, certificate, pid, phoneNumber, countryCode, callback) {
+    _topicVoteVote(agent, userId, topicId, voteId, voteList, certificate, pid, phoneNumber, countryCode, 200, callback);
 };
 
 var _topicVoteStatus = function (agent, userId, topicId, voteId, token, expectedHttpCode, callback) {
@@ -1892,7 +1893,7 @@ suite('Users', function () {
                             }
                         ];
 
-                        topicVoteVote(voteAgent, creator.id, voteTopic.id, vote.id, voteList, null, pid, phoneNumber, function (err, res) {
+                        topicVoteVote(voteAgent, creator.id, voteTopic.id, vote.id, voteList, null, pid, phoneNumber, null, function (err, res) {
                             if (err) return done(err);
 
                             var response = res.body;
@@ -2505,7 +2506,7 @@ suite('Users', function () {
                                     .parallel(
                                         [
                                             function (cb) {
-                                                topicVoteVote(agent, user.id, topic.id, vote.id, [{optionId: option.id}], null, null, null, cb);
+                                                topicVoteVote(agent, user.id, topic.id, vote.id, [{optionId: option.id}], null, null, null, null, cb);
                                             },
                                             function (cb) {
                                                 var agent2 = request.agent(app);
@@ -2526,7 +2527,7 @@ suite('Users', function () {
                                                         function (err) {
                                                             if (err) return done(err);
 
-                                                            topicVoteVote(agent2, user2.id, topic.id, vote.id, [{optionId: option.id}], null, null, null, cb);
+                                                            topicVoteVote(agent2, user2.id, topic.id, vote.id, [{optionId: option.id}], null, null, null, null, cb);
                                                         }
                                                     );
                                                 });
@@ -6404,7 +6405,7 @@ suite('Users', function () {
                     });
 
                     test('Success - OK - count delegated votes and not delegated votes - Delegation chain U->U1->U2->U3, U4->U5, U6 no delegation', function (done) {
-                        topicVoteVote(agent, user.id, topic.id, vote.id, [{optionId: vote.options.rows[0].id}], null, null, null, function () {
+                        topicVoteVote(agent, user.id, topic.id, vote.id, [{optionId: vote.options.rows[0].id}], null, null, null, null, function () {
                             async
                                 .parallel(
                                     [
@@ -6431,13 +6432,13 @@ suite('Users', function () {
                                             .parallel(
                                                 [
                                                     function (cb) {
-                                                        topicVoteVote(agentToUser3, toUser3.id, topic.id, vote.id, [{optionId: optionId1}], null, null, null, cb);
+                                                        topicVoteVote(agentToUser3, toUser3.id, topic.id, vote.id, [{optionId: optionId1}], null, null, null, null, cb);
                                                     },
                                                     function (cb) {
-                                                        topicVoteVote(agentToUser5, toUser5.id, topic.id, vote.id, [{optionId: optionId2}], null, null, null, cb);
+                                                        topicVoteVote(agentToUser5, toUser5.id, topic.id, vote.id, [{optionId: optionId2}], null, null, null, null, cb);
                                                     },
                                                     function (cb) {
-                                                        topicVoteVote(agentToUser6, toUser6.id, topic.id, vote.id, [{optionId: optionId2}], null, null, null, cb);
+                                                        topicVoteVote(agentToUser6, toUser6.id, topic.id, vote.id, [{optionId: optionId2}], null, null, null, null, cb);
                                                     }
                                                 ],
                                                 function (err) {
@@ -6734,7 +6735,7 @@ suite('Users', function () {
                                     }
                                 ];
 
-                                topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, null, null, function (err) {
+                                topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, null, null, null, function (err) {
                                     if (err) return done(err);
 
                                     topicVoteRead(agent, user.id, topic.id, vote.id, function (err, res) {
@@ -6783,7 +6784,7 @@ suite('Users', function () {
                                         optionId: vote.options.rows[1].id
                                     }
                                 ];
-                                topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, null, null, function (err) {
+                                topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, null, null, null, function (err) {
                                     if (err) return done(err);
 
                                     topicVoteRead(agent, user.id, topic.id, vote.id, function (err, res) {
@@ -6829,7 +6830,7 @@ suite('Users', function () {
                                     }
                                 ];
 
-                                topicVoteVote(agent, user2.id, topic.id, vote.id, voteList, null, null, null, function (err) {
+                                topicVoteVote(agent, user2.id, topic.id, vote.id, voteList, null, null, null, null, function (err) {
                                     if (err) return done(err);
 
                                     topicVoteRead(agent, user2.id, topic.id, vote.id, function (err, res) {
@@ -6881,7 +6882,7 @@ suite('Users', function () {
                                     }
                                 ];
 
-                                _topicVoteVote(agent, user.id, topicWrong.id, vote.id, voteList, null, null, null, 404, done);
+                                _topicVoteVote(agent, user.id, topicWrong.id, vote.id, voteList, null, null, null, null, 404, done);
                             });
                         });
                     });
@@ -6915,7 +6916,7 @@ suite('Users', function () {
                                         optionId: vote.options.rows[1].id
                                     }
                                 ];
-                                _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, null, null, 400, done);
+                                _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, null, null, null, 400, done);
                             });
                         });
                     });
@@ -6943,7 +6944,7 @@ suite('Users', function () {
 
                                 var voteList = [];
 
-                                _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, null, null, 400, done);
+                                _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, null, null, null, 400, done);
                             });
                         });
                     });
@@ -6971,7 +6972,7 @@ suite('Users', function () {
                                     }
                                 ];
 
-                                _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, null, null, 400, done);
+                                _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, null, null, null, 400, done);
                             });
                         });
                     });
@@ -7006,7 +7007,7 @@ suite('Users', function () {
                                 authLib.logout(agent2, function (err) {
                                     if (err) return done(err);
 
-                                    _topicVoteVote(agent2, null, topic.id, vote.id, voteList, null, null, null, 401, function (err, res) {
+                                    _topicVoteVote(agent2, null, topic.id, vote.id, voteList, null, null, null, null, 401, function (err, res) {
                                         if (err) return done(err);
 
                                         var expectedBody = {
@@ -7096,7 +7097,7 @@ suite('Users', function () {
                                 ];
 
                                 var certificate = fs.readFileSync('./test/resources/certificates/dds_good_igor_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
-                                topicVoteVote(agent, user.id, topic.id, vote.id, voteList, certificate, null, null, function (err, res) {
+                                topicVoteVote(agent, user.id, topic.id, vote.id, voteList, certificate, null, null, null, function (err, res) {
                                     if (err) return done(err);
 
                                     var status = res.body.status;
@@ -7163,7 +7164,7 @@ suite('Users', function () {
                                     }
                                 ];
 
-                                _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, null, null, 400, function (err, res) {
+                                _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, null, null, null, 400, function (err, res) {
                                     if (err) return done(err);
 
                                     var expectedBody = {
@@ -7260,7 +7261,7 @@ suite('Users', function () {
                                 }
                             ];
 
-                            topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, function (err, res) {
+                            topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, function (err, res) {
                                 if (err) return done(err);
 
                                 var response = res.body;
@@ -7283,7 +7284,7 @@ suite('Users', function () {
                                 }
                             ];
 
-                            topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, function (err, res) {
+                            topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, function (err, res) {
                                 if (err) return done(err);
 
                                 var response = res.body;
@@ -7344,13 +7345,13 @@ suite('Users', function () {
                                 }
                             ];
 
-                            _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, 400, function (err, res) {
+                            _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 400, function (err, res) {
                                 if (err) return done(err);
 
                                 var expectedResponse = {
                                     status: {
                                         code: 40021,
-                                        message: 'User is not a Mobile-ID client. Please double check phone number and/or id code.'
+                                        message: 'phoneNumber must contain of + and numbers(8-30)'
                                     }
                                 };
 
@@ -7360,7 +7361,7 @@ suite('Users', function () {
                             });
                         });
 
-                        test('Fail - 40021 - Invalid PID', function (done) {
+                        test('Fail - 40022 - Invalid PID', function (done) {
                             var phoneNumber = '+37260000007';
                             var pid = '1072';
 
@@ -7370,14 +7371,14 @@ suite('Users', function () {
                                 }
                             ];
 
-                            _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, 400, function (err, res) {
+                            _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 400, function (err, res) {
                                 if (err) return done(err);
 
 
                                 var expectedResponse = {
                                     status: {
-                                        code: 40021,
-                                        message: 'User is not a Mobile-ID client. Please double check phone number and/or id code.'
+                                        code: 40022,
+                                        message: 'nationalIdentityNumber must contain of 11 digits'
                                     }
                                 };
 
@@ -7387,7 +7388,7 @@ suite('Users', function () {
                             });
                         });
 
-                        test('Fail - 40022 - Mobile-ID user certificates are revoked or suspended for Estonian citizen', function (done) {
+                        test('Fail - 40023 - Mobile-ID user certificates are revoked or suspended for Estonian citizen', function (done) {
                             var phoneNumber = '+37200000266';
                             var pid = '60001019939';
 
@@ -7397,13 +7398,13 @@ suite('Users', function () {
                                 }
                             ];
 
-                            _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, 400, function (err, res) {
+                            _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 400, function (err, res) {
                                 if (err) return done(err);
 
                                 var expectedResponse = {
                                     status: {
-                                        code: 40022,
-                                        message: 'User certificates are revoked or suspended.'
+                                        code: 40023,
+                                        message: 'Certificate was found but is not active'
                                     }
                                 };
 
@@ -7413,7 +7414,7 @@ suite('Users', function () {
                             });
                         });
 
-                        test('Fail - 40022 - Mobile-ID user certificates are revoked or suspended for Lithuanian citizen', function (done) {
+                        test('Fail - 40023 - Mobile-ID user certificates are revoked or suspended for Lithuanian citizen', function (done) {
                             var phoneNumber = '+37060000266';
                             var pid = '50001018832';
 
@@ -7423,13 +7424,13 @@ suite('Users', function () {
                                 }
                             ];
 
-                            _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, 400, function (err, res) {
+                            _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 400, function (err, res) {
                                 if (err) return done(err);
 
                                 var expectedResponse = {
                                     status: {
-                                        code: 40022,
-                                        message: 'User certificates are revoked or suspended.'
+                                        code: 40023,
+                                        message: 'Certificate was found but is not active'
                                     }
                                 };
 
@@ -7439,7 +7440,7 @@ suite('Users', function () {
                             });
                         });
 
-                        test('Fail - 40021 - User certificate is not activated for Estonian citizen.', function (done) {
+                        test('Fail - 40023 - User certificate is not activated for Estonian citizen.', function (done) {
                             var phoneNumber = '+37200000366';
                             var pid = '60001019928';
 
@@ -7449,13 +7450,13 @@ suite('Users', function () {
                                 }
                             ];
 
-                            _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, 400, function (err, res) {
+                            _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 400, function (err, res) {
                                 if (err) return done(err);
 
                                 var expectedResponse = {
                                     status: {
                                         code: 40023,
-                                        message: 'User certificate is not activated.'
+                                        message: 'Certificate was found but is not active'
                                     }
                                 };
 
@@ -7465,7 +7466,7 @@ suite('Users', function () {
                             });
                         });
 
-                        test('Fail - 40022 - Mobile-ID is not activated for Lithuanian citizen', function (done) {
+                        test('Fail - 40023 - Mobile-ID is not activated for Lithuanian citizen', function (done) {
                             var phoneNumber = '+37060000366';
                             var pid = '50001018821';
 
@@ -7475,13 +7476,13 @@ suite('Users', function () {
                                 }
                             ];
 
-                            _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, 400, function (err, res) {
+                            _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 400, function (err, res) {
                                 if (err) return done(err);
 
                                 var expectedResponse = {
                                     status: {
                                         code: 40023,
-                                        message: 'User certificate is not activated.'
+                                        message: 'Certificate was found but is not active'
                                     }
                                 };
 
@@ -7523,7 +7524,7 @@ suite('Users', function () {
                                         connectionUserId: pid
                                     })
                                     .then(function () {
-                                        _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, 400, function (err, res) {
+                                        _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 400, function (err, res) {
                                             if (err) return done(err);
 
                                             var expectedResponse = {
@@ -7559,7 +7560,7 @@ suite('Users', function () {
                                         }
                                     ];
 
-                                    _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, 400, function (err, res) {
+                                    _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 400, function (err, res) {
                                         if (err) return done(err);
 
                                         var expectedResponse = {
@@ -7641,8 +7642,427 @@ suite('Users', function () {
                         });
 
                     });
-                });
 
+                    suite('Smart-ID', function () {
+
+                        var vote;
+
+                        setup(function (done) {
+
+                            var options = [
+                                {
+                                    value: 'Option 1'
+                                },
+                                {
+                                    value: 'Option 2'
+                                },
+                                {
+                                    value: 'Option 3'
+                                }
+                            ];
+
+                            topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard, function (err, res) {
+                                if (err) return done(err);
+
+                                vote = res.body.data;
+
+                                topicVoteRead(agent, user.id, topic.id, vote.id, function (err, res) {
+                                    if (err) return done(err);
+
+                                    vote = res.body.data;
+
+                                    done();
+                                });
+                            });
+                        });
+
+                        teardown(function (done) {
+                            UserConnection
+                                .destroy({
+                                    where: {
+                                        connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
+                                        connectionUserId: ['PNOEE-10101010016', 'PNOEE-10101010005',  '10101010016', '10101010005', '11412090004']
+                                    },
+                                    force: true
+                                })
+                                .then(function () {
+                                    done();
+                                })
+                                .catch(done);
+                        });
+
+                        test('Success - Estonian PID', function (done) {
+                            UserConnection
+                                .destroy({
+                                    where: {
+                                        connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
+                                        connectionUserId: ['PNOEE-10101010016', 'PNOEE-10101010005',  '10101010016', '10101010005', '11412090004']
+                                    },
+                                    force: true
+                                })
+                                .then(function () {
+                                    var countryCode = 'EE';
+                                    var pid = '10101010005';
+
+                                    var voteList = [
+                                        {
+                                            optionId: vote.options.rows[0].id
+                                        }
+                                    ];
+
+                                    _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, 200, function (err, res) {
+                                        if (err) return done(err);
+
+                                        var response = res.body;
+                                        assert.equal(response.status.code, 20001);
+                                        assert.match(response.data.challengeID, /[0-9]{4}/);
+                                        done();
+                                    });
+                                });
+                        });
+
+                        test('Success - Latvian PID', function (done) {
+                            var countryCode = 'LV';
+                            var pid = '010101-10006';
+
+                            var voteList = [
+                                {
+                                    optionId: vote.options.rows[0].id
+                                }
+                            ];
+
+                            topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, function (err, res) {
+                                if (err) return done(err);
+
+                                var response = res.body;
+                                assert.equal(response.status.code, 20001);
+                                assert.match(response.data.challengeID, /[0-9]{4}/);
+                                done();
+                            });
+                        });
+
+                        test('Success - Lithuanian PID', function (done) {
+                            var countryCode = 'LT';
+                            var pid = '10101010005';
+
+                            var voteList = [
+                                {
+                                    optionId: vote.options.rows[0].id
+                                }
+                            ];
+
+                            topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, function (err, res) {
+                                if (err) return done(err);
+
+                                var response = res.body;
+                                assert.equal(response.status.code, 20001);
+                                assert.match(response.data.challengeID, /[0-9]{4}/);
+                                done();
+                            });
+                        });
+
+                        test('bdocUri exists', function (done) {
+                            this.timeout(24000); //eslint-disable-line no-invalid-this
+
+                            var countryCode = 'EE';
+                            var pid = '10101010005';
+
+                            var voteList = [
+                                {
+                                    optionId: vote.options.rows[0].id
+                                }
+                            ];
+
+                            topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, function (err, res) {
+                                if (err) return done(err);
+
+                                var response = res.body;
+                                assert.equal(response.status.code, 20001);
+                                assert.match(response.data.challengeID, /[0-9]{4}/);
+
+                                var bdocpathExpected = '/api/users/self/topics/:topicId/votes/:voteId/downloads/bdocs/user'
+                                    .replace(':topicId', topic.id)
+                                    .replace(':voteId', vote.id);
+                                var called = 0;
+                                var replied = 0;
+
+                                var getStatus = setInterval(function () {
+                                    if (called === replied) {
+                                        called++;
+                                        topicVoteStatus(agent, user.id, topic.id, vote.id, response.data.token, function (err, res) {
+                                            if (err) done(err);
+
+                                            replied++;
+                                            var statusresponse = res.body;
+                                            if (statusresponse.status.code === 20001 && statusresponse.status.message === 'Signing in progress') {
+                                                // FIXME: Interesting empty block
+                                            } else {
+                                                clearStatus(); //eslint-disable-line no-use-before-define
+
+                                                assert.equal(statusresponse.status.code, 20002);
+                                                assert.property(statusresponse.data, 'bdocUri');
+
+                                                var bdocUri = statusresponse.data.bdocUri;
+
+                                                // Check for a valid token
+                                                var token = bdocUri.slice(bdocUri.indexOf('token=') + 6);
+                                                var tokenData = cosJwt.verifyTokenRestrictedUse(token, 'GET ' + bdocpathExpected);
+
+                                                assert.equal(tokenData.userId, user.id);
+
+                                                done();
+                                            }
+                                        });
+                                    }
+                                }, 2000);
+
+                                var clearStatus = function () {
+                                    clearInterval(getStatus);
+                                };
+                            });
+
+                        });
+
+                        test('Fail - 40000 - Invalid country code', function (done) {
+                            var countryCode = 'OO';
+                            var pid = '10101010004';
+
+                            var voteList = [
+                                {
+                                    optionId: vote.options.rows[0].id
+                                }
+                            ];
+
+                            _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, 400, function (err, res) {
+                                if (err) return done(err);
+
+                                var expectedResponse = {
+                                    status: {
+                                        code: 40000,
+                                        message: 'Bad request'
+                                    }
+                                };
+
+                                assert.deepEqual(res.body, expectedResponse);
+
+                                done();
+                            });
+                        });
+
+                        test('Fail - 40400 - Invalid PID', function (done) {
+                            var countryCode = 'EE';
+                            var pid = '1072';
+
+                            var voteList = [
+                                {
+                                    optionId: vote.options.rows[0].id
+                                }
+                            ];
+
+                            _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, 404, function (err, res) {
+                                if (err) return done(err);
+
+
+                                var expectedResponse = {
+                                    status: {
+                                        code: 40400,
+                                        message: 'Not Found'
+                                    }
+                                };
+
+                                assert.deepEqual(res.body, expectedResponse);
+
+                                done();
+                            });
+                        });
+
+                        test('Fail - 40010 - User has cancelled the signing process', function (done) {
+                            var countryCode = 'EE';
+                            var pid = '10101010016';
+
+                            var voteList = [
+                                {
+                                    optionId: vote.options.rows[0].id
+                                }
+                            ];
+
+                            _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, 200, function (err, res) {
+                                if (err) return done(err);
+
+                                var response = res.body;
+                                assert.equal(response.status.code, 20001);
+                                assert.match(response.data.challengeID, /[0-9]{4}/);
+
+                                var called = 0;
+                                var replied = 0;
+
+                                var getStatus = setInterval(function () {
+                                    if (called === replied) {
+                                        called++;
+                                        _topicVoteStatus(agent, user.id, topic.id, vote.id, response.data.token, 400, function (err, res) {
+                                            if (err) return done(err);
+
+                                            replied++;
+                                            var statusresponse = res.body;
+                                            if (statusresponse.status.code === 20001 && statusresponse.status.message === 'Signing in progress') {
+                                                // FIXME: Interesting empty block
+                                            } else {
+                                                clearStatus(); //eslint-disable-line no-use-before-define
+
+                                                var expectedResponse = {
+                                                    status:
+                                                    {
+                                                        code: 40010,
+                                                        message: 'User has cancelled the signing process'
+                                                    }
+                                                }
+                                                assert.equal(statusresponse.status.code, 40010);
+                                                assert.deepEqual(res.body, expectedResponse);
+
+                                                done();
+                                            }
+                                        });
+                                    }
+                                }, 2000);
+
+                                var clearStatus = function () {
+                                    clearInterval(getStatus);
+                                };
+                            });
+                        });
+
+                        test('Fail - 40010 - User has cancelled the signing process Latvian PID', function (done) {
+                            var countryCode = 'LV';
+                            var pid = '010101-10014';
+
+                            var voteList = [
+                                {
+                                    optionId: vote.options.rows[0].id
+                                }
+                            ];
+
+                            _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, 200, function (err, res) {
+                                if (err) return done(err);
+
+                                var response = res.body;
+                                assert.equal(response.status.code, 20001);
+                                assert.match(response.data.challengeID, /[0-9]{4}/);
+
+                                var called = 0;
+                                var replied = 0;
+
+                                var getStatus = setInterval(function () {
+                                    if (called === replied) {
+                                        called++;
+                                        _topicVoteStatus(agent, user.id, topic.id, vote.id, response.data.token, 400, function (err, res) {
+                                            if (err) return done(err);
+
+                                            replied++;
+                                            var statusresponse = res.body;
+                                            if (statusresponse.status.code === 20001 && statusresponse.status.message === 'Signing in progress') {
+                                                // FIXME: Interesting empty block
+                                            } else {
+                                                clearStatus(); //eslint-disable-line no-use-before-define
+
+                                                var expectedResponse = {
+                                                    status:
+                                                    {
+                                                        code: 40010,
+                                                        message: 'User has cancelled the signing process'
+                                                    }
+                                                }
+                                                assert.equal(statusresponse.status.code, 40010);
+                                                assert.deepEqual(res.body, expectedResponse);
+
+                                                done();
+                                            }
+                                        });
+                                    }
+                                }, 2000);
+
+                                var clearStatus = function () {
+                                    clearInterval(getStatus);
+                                };
+                            });
+                        });
+
+                        test('Fail - 40030 - Personal ID already connected to another user account.', function (done) {
+                            var countryCode = 'EE';
+                            var pid = '10101010005';
+
+                            var voteList = [
+                                {
+                                    optionId: vote.options.rows[0].id
+                                }
+                            ];
+
+                            userLib.createUser(request.agent(app), null, null, null, function (err, res) {
+                                if (err) return done(err);
+
+                                var createdUser = res;
+
+                                UserConnection
+                                    .create({
+                                        userId: createdUser.id,
+                                        connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                        connectionUserId: pid
+                                    })
+                                    .then(function () {
+                                        _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, 400, function (err, res) {
+                                            if (err) return done(err);
+
+                                            var expectedResponse = {
+                                                status: {
+                                                    code: 40030,
+                                                    message: 'Personal ID already connected to another user account.'
+                                                }
+                                            };
+
+                                            assert.deepEqual(res.body, expectedResponse);
+
+                                            done();
+                                        });
+                                    });
+                            });
+                        });
+
+                        test('Fail - 40031 - User account already connected to another PID.', function (done) {
+                            // Originally set by a successful Vote, but taking a shortcut for faster test runs
+                            UserConnection
+                                .create({
+                                    userId: user.id,
+                                    connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                    connectionUserId: '11412090004'
+                                })
+                                .then(function () {
+                                    var countryCode = 'EE';
+                                    var pid = '10101010005';
+
+                                    var voteList = [
+                                        {
+                                            optionId: vote.options.rows[0].id
+                                        }
+                                    ];
+
+                                    _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, 400, function (err, res) {
+                                        if (err) return done(err);
+
+                                        var expectedResponse = {
+                                            status: {
+                                                code: 40031,
+                                                message: 'User account already connected to another PID.'
+                                            }
+                                        };
+
+                                        assert.deepEqual(res.body, expectedResponse);
+
+                                        done();
+                                    });
+                                });
+                        });
+
+                    });
+                });
             });
 
         });
