@@ -521,8 +521,10 @@ module.exports = function (app) {
      * @private
      */
     const _signInitSmartId = function (voteId, userId, voteOptions, pid, countryCode, certificate, transaction) {
+        logger.debug('SIGN INIT SMART-ID');
         return _createUserBdoc(voteId, userId, voteOptions, certificate, 'base64', transaction)
             .then(function (xades) {
+                logger.debug('CONTAINER CREATED');
                 const signableData = xades.signableHash;
 
                 return smartId
@@ -541,7 +543,9 @@ module.exports = function (app) {
                                     });
                             });
                     });
-                });
+                }).catch(function (e) {
+                    logger.error('SOMETHING WENT WRONG', e);
+                })
     };
 
     const _handleSigningResult = function (voteId, userId, voteOptions, signableHash, signatureId, signature) {
