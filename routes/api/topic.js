@@ -5950,6 +5950,7 @@ module.exports = function (app) {
 
 
         } else if (certificate) {
+            logger.debug('CERTIFICATE', certificate);
             signingMethod = Vote.SIGNING_METHODS.idCard;
             getCertificatePromise = mobileId
                 .validateCert(certificate, 'hex')
