@@ -75,6 +75,7 @@ if (typeof config.logging === 'string') {
 }
 log4js.configure(config.logging.log4js);
 var logger = log4js.getLogger(app.settings.env);
+logger.level = 'debug';
 app.set('logger', logger);
 app.set('config', config);
 
