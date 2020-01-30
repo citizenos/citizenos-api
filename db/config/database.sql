@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 10.10 (Ubuntu 10.10-1.pgdg16.04+1)
--- Dumped by pg_dump version 10.10 (Ubuntu 10.10-1.pgdg16.04+1)
+-- Dumped from database version 10.10 (Ubuntu 10.10-0ubuntu0.18.04.1)
+-- Dumped by pg_dump version 10.10 (Ubuntu 10.10-0ubuntu0.18.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -28,20 +28,6 @@ CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
 --
 
 COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
-
-
---
--- Name: pg_stat_statements; Type: EXTENSION; Schema: -; Owner: -
---
-
-CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA public;
-
-
---
--- Name: EXTENSION pg_stat_statements; Type: COMMENT; Schema: -; Owner: -
---
-
-COMMENT ON EXTENSION pg_stat_statements IS 'track execution statistics of all SQL statements executed';
 
 
 --
@@ -246,15 +232,6 @@ CREATE TYPE public."enum_Votes_type" AS ENUM (
 );
 
 
---
--- Name: ueberdb_insert_or_update(character varying, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.ueberdb_insert_or_update(character varying, text) RETURNS void
-    LANGUAGE plpgsql
-    AS $_$ BEGIN   IF EXISTS( SELECT * FROM store WHERE key = $1 ) THEN     UPDATE store SET value = $2 WHERE key = $1;   ELSE     INSERT INTO store(key,value) VALUES( $1, $2 );   END IF;   RETURN; END; $_$;
-
-
 SET default_tablespace = '';
 
 SET default_with_oids = false;
@@ -266,15 +243,29 @@ SET default_with_oids = false;
 CREATE TABLE public."Activities" (
     id uuid NOT NULL,
     data jsonb NOT NULL,
-    "createdAt" timestamp with time zone NOT NULL,
-    "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone,
     "actorType" text,
     "actorId" text,
     "topicIds" text[] DEFAULT ARRAY[]::text[],
     "groupIds" text[] DEFAULT ARRAY[]::text[],
-    "userIds" text[] DEFAULT ARRAY[]::text[]
+    "userIds" text[] DEFAULT ARRAY[]::text[],
+    "createdAt" timestamp with time zone NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL,
+    "deletedAt" timestamp with time zone
 );
+
+
+--
+-- Name: COLUMN "Activities".id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Activities".id IS 'Id of the Activity';
+
+
+--
+-- Name: COLUMN "Activities".data; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Activities".data IS 'Activity content';
 
 
 --
@@ -296,6 +287,41 @@ CREATE TABLE public."Attachments" (
 
 
 --
+-- Name: COLUMN "Attachments".name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Attachments".name IS 'file name to display';
+
+
+--
+-- Name: COLUMN "Attachments".type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Attachments".type IS 'Files type';
+
+
+--
+-- Name: COLUMN "Attachments".size; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Attachments".size IS 'file size in bytes';
+
+
+--
+-- Name: COLUMN "Attachments".link; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Attachments".link IS 'files location';
+
+
+--
+-- Name: COLUMN "Attachments"."creatorId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Attachments"."creatorId" IS 'User ID of the reporter.';
+
+
+--
 -- Name: CommentReports; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -303,6 +329,20 @@ CREATE TABLE public."CommentReports" (
     "commentId" uuid NOT NULL,
     "reportId" uuid NOT NULL
 );
+
+
+--
+-- Name: COLUMN "CommentReports"."commentId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."CommentReports"."commentId" IS 'To what Comment the Report belongs to';
+
+
+--
+-- Name: COLUMN "CommentReports"."reportId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."CommentReports"."reportId" IS 'Which Report belongs to the Comment';
 
 
 --
@@ -320,6 +360,27 @@ CREATE TABLE public."CommentVotes" (
 
 
 --
+-- Name: COLUMN "CommentVotes"."commentId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."CommentVotes"."commentId" IS 'Comment ID';
+
+
+--
+-- Name: COLUMN "CommentVotes"."creatorId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."CommentVotes"."creatorId" IS 'User ID of the creator of the Topic.';
+
+
+--
+-- Name: COLUMN "CommentVotes".value; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."CommentVotes".value IS 'Vote value. Numeric, can be negative on down-vote.';
+
+
+--
 -- Name: Comments; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -327,19 +388,75 @@ CREATE TABLE public."Comments" (
     id uuid NOT NULL,
     type public."enum_Comments_type" NOT NULL,
     "parentId" uuid NOT NULL,
+    "parentVersion" bigint DEFAULT 0 NOT NULL,
     subject character varying(128),
     text character varying(2048) NOT NULL,
     "creatorId" uuid NOT NULL,
-    "createdAt" timestamp with time zone NOT NULL,
-    "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone,
     "deletedById" uuid,
     "deletedReasonType" public."enum_Comments_deletedReasonType",
     "deletedReasonText" character varying(2048),
     "deletedByReportId" uuid,
     edits jsonb,
-    "parentVersion" bigint DEFAULT 0 NOT NULL
+    "createdAt" timestamp with time zone NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL,
+    "deletedAt" timestamp with time zone
 );
+
+
+--
+-- Name: COLUMN "Comments"."parentId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Comments"."parentId" IS 'Parent comment id. Replies to comments have a parent.';
+
+
+--
+-- Name: COLUMN "Comments"."parentVersion"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Comments"."parentVersion" IS 'Edit version';
+
+
+--
+-- Name: COLUMN "Comments"."creatorId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Comments"."creatorId" IS 'User ID of the creator of the Topic.';
+
+
+--
+-- Name: COLUMN "Comments"."deletedById"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Comments"."deletedById" IS 'User ID of the person who deleted the Comment';
+
+
+--
+-- Name: COLUMN "Comments"."deletedReasonType"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Comments"."deletedReasonType" IS 'Delete reason type which is provided in case deleted by moderator due to a user report';
+
+
+--
+-- Name: COLUMN "Comments"."deletedReasonText"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Comments"."deletedReasonText" IS 'Free text with reason why the comment was deleted';
+
+
+--
+-- Name: COLUMN "Comments"."deletedByReportId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Comments"."deletedByReportId" IS 'Report ID due to which comment was deleted';
+
+
+--
+-- Name: COLUMN "Comments".edits; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Comments".edits IS 'Comment versions in JSONB array';
 
 
 --
@@ -357,6 +474,27 @@ CREATE TABLE public."GroupMembers" (
 
 
 --
+-- Name: COLUMN "GroupMembers"."groupId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."GroupMembers"."groupId" IS 'Group id';
+
+
+--
+-- Name: COLUMN "GroupMembers"."userId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."GroupMembers"."userId" IS 'User id';
+
+
+--
+-- Name: COLUMN "GroupMembers".level; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."GroupMembers".level IS 'Levels - read, admin';
+
+
+--
 -- Name: Groups; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -365,12 +503,47 @@ CREATE TABLE public."Groups" (
     "parentId" uuid,
     name character varying(255) NOT NULL,
     "creatorId" uuid NOT NULL,
+    visibility public."enum_Groups_visibility" DEFAULT 'private'::public."enum_Groups_visibility" NOT NULL,
+    "sourcePartnerId" uuid,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone,
-    visibility public."enum_Groups_visibility" DEFAULT 'private'::public."enum_Groups_visibility" NOT NULL,
-    "sourcePartnerId" uuid
+    "deletedAt" timestamp with time zone
 );
+
+
+--
+-- Name: COLUMN "Groups"."parentId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Groups"."parentId" IS 'Parent Groups id.';
+
+
+--
+-- Name: COLUMN "Groups".name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Groups".name IS 'Name of the Group.';
+
+
+--
+-- Name: COLUMN "Groups"."creatorId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Groups"."creatorId" IS 'User ID of the creator of the Group.';
+
+
+--
+-- Name: COLUMN "Groups".visibility; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Groups".visibility IS 'Who can see (read) the Group apart from the Members.';
+
+
+--
+-- Name: COLUMN "Groups"."sourcePartnerId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Groups"."sourcePartnerId" IS 'The Partner id of the site from which the Group was created';
 
 
 --
@@ -378,13 +551,27 @@ CREATE TABLE public."Groups" (
 --
 
 CREATE TABLE public."Moderators" (
+    id uuid DEFAULT (md5(((random())::text || (clock_timestamp())::text)))::uuid NOT NULL,
     "userId" uuid NOT NULL,
     "partnerId" uuid,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone,
-    id uuid DEFAULT (md5(((random())::text || (clock_timestamp())::text)))::uuid NOT NULL
+    "deletedAt" timestamp with time zone
 );
+
+
+--
+-- Name: COLUMN "Moderators"."userId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Moderators"."userId" IS 'Id of the User of the Moderator';
+
+
+--
+-- Name: COLUMN "Moderators"."partnerId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Moderators"."partnerId" IS 'Which Partner moderator represents. One User can be a moderator of many Partners';
 
 
 --
@@ -403,13 +590,34 @@ CREATE TABLE public."Partners" (
 
 
 --
+-- Name: COLUMN "Partners".id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Partners".id IS 'Partner id. Open ID client_id.';
+
+
+--
+-- Name: COLUMN "Partners".website; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Partners".website IS 'Partner website';
+
+
+--
+-- Name: COLUMN "Partners"."redirectUriRegexp"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Partners"."redirectUriRegexp" IS 'Partner callback (callback_uri) validation regexp. Also may be used to check request Origin and Referer if present.';
+
+
+--
 -- Name: Reports; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public."Reports" (
     id uuid NOT NULL,
     type public."enum_Reports_type" NOT NULL,
-    text character varying(2048),
+    text character varying(2048) NOT NULL,
     "creatorId" uuid NOT NULL,
     "creatorIp" character varying(45) NOT NULL,
     "createdAt" timestamp with time zone NOT NULL,
@@ -419,12 +627,67 @@ CREATE TABLE public."Reports" (
 
 
 --
+-- Name: COLUMN "Reports".type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Reports".type IS 'Report reason - verbal abuse, obscene content, hate speech etc..';
+
+
+--
+-- Name: COLUMN "Reports".text; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Reports".text IS 'Additional comment for the report to provide more details on the violation.';
+
+
+--
+-- Name: COLUMN "Reports"."creatorId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Reports"."creatorId" IS 'User ID of the reporter.';
+
+
+--
+-- Name: COLUMN "Reports"."creatorIp"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Reports"."creatorIp" IS 'IP address of the reporter';
+
+
+--
 -- Name: SequelizeMeta; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public."SequelizeMeta" (
     name character varying(255) NOT NULL
 );
+
+
+--
+-- Name: Signatures; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."Signatures" (
+    id uuid NOT NULL,
+    data text NOT NULL,
+    "createdAt" timestamp with time zone NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL,
+    "deletedAt" timestamp with time zone
+);
+
+
+--
+-- Name: COLUMN "Signatures".id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Signatures".id IS 'Id of the Signature';
+
+
+--
+-- Name: COLUMN "Signatures".data; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Signatures".data IS 'Signature xml';
 
 
 --
@@ -438,6 +701,20 @@ CREATE TABLE public."TopicAttachments" (
 
 
 --
+-- Name: COLUMN "TopicAttachments"."topicId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicAttachments"."topicId" IS 'To what Topic this Attachment belongs to.';
+
+
+--
+-- Name: COLUMN "TopicAttachments"."attachmentId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicAttachments"."attachmentId" IS 'Which Attachment belongs to this Topic.';
+
+
+--
 -- Name: TopicComments; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -445,6 +722,20 @@ CREATE TABLE public."TopicComments" (
     "topicId" uuid NOT NULL,
     "commentId" uuid NOT NULL
 );
+
+
+--
+-- Name: COLUMN "TopicComments"."topicId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicComments"."topicId" IS 'To what Topic this Comment belongs to.';
+
+
+--
+-- Name: COLUMN "TopicComments"."commentId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicComments"."commentId" IS 'Which Comment belongs to this Topic.';
 
 
 --
@@ -463,13 +754,51 @@ CREATE TABLE public."TopicEvents" (
 
 
 --
+-- Name: COLUMN "TopicEvents".id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicEvents".id IS 'Event id';
+
+
+--
+-- Name: COLUMN "TopicEvents"."topicId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicEvents"."topicId" IS 'To what Topic this Comment belongs to.';
+
+
+--
+-- Name: COLUMN "TopicEvents".subject; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicEvents".subject IS 'Subject of the Event.';
+
+
+--
+-- Name: COLUMN "TopicEvents".text; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicEvents".text IS 'Text of the Event.';
+
+
+--
+-- Name: TopicFavourites; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."TopicFavourites" (
+    "topicId" uuid NOT NULL,
+    "userId" uuid NOT NULL
+);
+
+
+--
 -- Name: TopicInviteUsers; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public."TopicInviteUsers" (
+    "userId" uuid NOT NULL,
     id uuid NOT NULL,
     "creatorId" uuid NOT NULL,
-    "userId" uuid NOT NULL,
     "topicId" uuid NOT NULL,
     level public."enum_TopicInviteUsers_level" DEFAULT 'read'::public."enum_TopicInviteUsers_level" NOT NULL,
     "createdAt" timestamp with time zone NOT NULL,
@@ -479,17 +808,17 @@ CREATE TABLE public."TopicInviteUsers" (
 
 
 --
--- Name: COLUMN "TopicInviteUsers"."creatorId"; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public."TopicInviteUsers"."creatorId" IS 'User who created the invite.';
-
-
---
 -- Name: COLUMN "TopicInviteUsers"."userId"; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public."TopicInviteUsers"."userId" IS 'User who is invited.';
+
+
+--
+-- Name: COLUMN "TopicInviteUsers"."creatorId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicInviteUsers"."creatorId" IS 'User who created the invite.';
 
 
 --
@@ -521,6 +850,27 @@ CREATE TABLE public."TopicMemberGroups" (
 
 
 --
+-- Name: COLUMN "TopicMemberGroups"."groupId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicMemberGroups"."groupId" IS 'Group to whom the membership was given.';
+
+
+--
+-- Name: COLUMN "TopicMemberGroups"."topicId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicMemberGroups"."topicId" IS 'Topic to which member belongs.';
+
+
+--
+-- Name: COLUMN "TopicMemberGroups".level; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicMemberGroups".level IS 'User membership level.';
+
+
+--
 -- Name: TopicMemberUsers; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -535,6 +885,27 @@ CREATE TABLE public."TopicMemberUsers" (
 
 
 --
+-- Name: COLUMN "TopicMemberUsers"."userId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicMemberUsers"."userId" IS 'User whom the membership was given.';
+
+
+--
+-- Name: COLUMN "TopicMemberUsers"."topicId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicMemberUsers"."topicId" IS 'Topic to which member belongs.';
+
+
+--
+-- Name: COLUMN "TopicMemberUsers".level; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicMemberUsers".level IS 'User membership level.';
+
+
+--
 -- Name: TopicPins; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -545,15 +916,24 @@ CREATE TABLE public."TopicPins" (
 
 
 --
+-- Name: COLUMN "TopicPins"."topicId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicPins"."topicId" IS 'To what Topic this Pin belongs to.';
+
+
+--
+-- Name: COLUMN "TopicPins"."userId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicPins"."userId" IS 'Which User this Pin belongs to.';
+
+
+--
 -- Name: TopicReports; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public."TopicReports" (
-    id uuid NOT NULL,
-    type public."enum_TopicReports_type" NOT NULL,
-    text character varying(2048) NOT NULL,
-    "creatorId" uuid NOT NULL,
-    "creatorIp" character varying(45) NOT NULL,
     "topicId" uuid NOT NULL,
     "moderatedById" uuid,
     "moderatedAt" timestamp with time zone,
@@ -561,38 +941,15 @@ CREATE TABLE public."TopicReports" (
     "moderatedReasonText" character varying(2048),
     "resolvedById" uuid,
     "resolvedAt" timestamp with time zone,
+    id uuid NOT NULL,
+    type public."enum_TopicReports_type" NOT NULL,
+    text character varying(2048) NOT NULL,
+    "creatorId" uuid NOT NULL,
+    "creatorIp" character varying(45) NOT NULL,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
     "deletedAt" timestamp with time zone
 );
-
-
---
--- Name: COLUMN "TopicReports".type; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public."TopicReports".type IS 'Report reason - verbal abuse, obscene content, hate speech etc..';
-
-
---
--- Name: COLUMN "TopicReports".text; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public."TopicReports".text IS 'Additional comment for the report to provide more details on the violation.';
-
-
---
--- Name: COLUMN "TopicReports"."creatorId"; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public."TopicReports"."creatorId" IS 'User ID of the reporter.';
-
-
---
--- Name: COLUMN "TopicReports"."creatorIp"; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public."TopicReports"."creatorIp" IS 'IP address of the reporter';
 
 
 --
@@ -645,6 +1002,34 @@ COMMENT ON COLUMN public."TopicReports"."resolvedAt" IS 'Time when the Report wa
 
 
 --
+-- Name: COLUMN "TopicReports".type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicReports".type IS 'Report reason - verbal abuse, obscene content, hate speech etc..';
+
+
+--
+-- Name: COLUMN "TopicReports".text; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicReports".text IS 'Additional comment for the report to provide more details on the violation.';
+
+
+--
+-- Name: COLUMN "TopicReports"."creatorId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicReports"."creatorId" IS 'User ID of the reporter.';
+
+
+--
+-- Name: COLUMN "TopicReports"."creatorIp"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicReports"."creatorIp" IS 'IP address of the reporter';
+
+
+--
 -- Name: TopicVotes; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -658,6 +1043,20 @@ CREATE TABLE public."TopicVotes" (
 
 
 --
+-- Name: COLUMN "TopicVotes"."topicId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicVotes"."topicId" IS 'To what Topic this Vote belongs to.';
+
+
+--
+-- Name: COLUMN "TopicVotes"."voteId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicVotes"."voteId" IS 'Which Vote belongs to this Topic.';
+
+
+--
 -- Name: Topics; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -667,18 +1066,95 @@ CREATE TABLE public."Topics" (
     description text,
     status public."enum_Topics_status" DEFAULT 'inProgress'::public."enum_Topics_status" NOT NULL,
     visibility public."enum_Topics_visibility" DEFAULT 'private'::public."enum_Topics_visibility" NOT NULL,
-    "creatorId" uuid NOT NULL,
-    "createdAt" timestamp with time zone NOT NULL,
-    "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone,
     categories character varying(255)[] DEFAULT (ARRAY[]::character varying[])::character varying(255)[],
+    "sourcePartnerId" uuid,
+    "sourcePartnerObjectId" character varying(255),
+    "creatorId" uuid NOT NULL,
     "tokenJoin" character varying(8) NOT NULL,
     "padUrl" character varying(255) NOT NULL,
     "endsAt" timestamp with time zone,
-    "sourcePartnerId" uuid,
     hashtag character varying(60) DEFAULT NULL::character varying,
-    "sourcePartnerObjectId" character varying(255)
+    "createdAt" timestamp with time zone NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL,
+    "deletedAt" timestamp with time zone
 );
+
+
+--
+-- Name: COLUMN "Topics".title; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics".title IS 'Title of the Topic.';
+
+
+--
+-- Name: COLUMN "Topics".description; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics".description IS 'Short description of what the Topic is about.';
+
+
+--
+-- Name: COLUMN "Topics".status; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics".status IS 'Topic statuses.';
+
+
+--
+-- Name: COLUMN "Topics".visibility; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics".visibility IS 'Who can see (read) the Topic apart from the Members.';
+
+
+--
+-- Name: COLUMN "Topics"."sourcePartnerId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics"."sourcePartnerId" IS 'The Partner id of the site from which the Topic was created';
+
+
+--
+-- Name: COLUMN "Topics"."sourcePartnerObjectId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics"."sourcePartnerObjectId" IS 'The Partner object/entity id for mapping';
+
+
+--
+-- Name: COLUMN "Topics"."creatorId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics"."creatorId" IS 'User ID of the creator of the Topic.';
+
+
+--
+-- Name: COLUMN "Topics"."tokenJoin"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics"."tokenJoin" IS 'Token for joining the Topic. Used for sharing public urls for Users to join the Topic.';
+
+
+--
+-- Name: COLUMN "Topics"."padUrl"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics"."padUrl" IS 'Etherpad Pad absolute url.';
+
+
+--
+-- Name: COLUMN "Topics"."endsAt"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics"."endsAt" IS 'Deadline for the Topic. If NULL then no deadline at all.';
+
+
+--
+-- Name: COLUMN "Topics".hashtag; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics".hashtag IS 'Hashtag to search related content from external sources.';
 
 
 --
@@ -697,6 +1173,34 @@ CREATE TABLE public."UserConnections" (
 
 
 --
+-- Name: COLUMN "UserConnections"."userId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."UserConnections"."userId" IS 'Id of the User whom the connection belongs to.';
+
+
+--
+-- Name: COLUMN "UserConnections"."connectionId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."UserConnections"."connectionId" IS 'User connection identificator.';
+
+
+--
+-- Name: COLUMN "UserConnections"."connectionUserId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."UserConnections"."connectionUserId" IS 'User id in the connected system. For Facebook their user id, for Google their user id and so on, PID for Estonian ID infra etc.';
+
+
+--
+-- Name: COLUMN "UserConnections"."connectionData"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."UserConnections"."connectionData" IS 'Connection specific data you want to store.';
+
+
+--
 -- Name: UserConsents; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -710,6 +1214,20 @@ CREATE TABLE public."UserConsents" (
 
 
 --
+-- Name: COLUMN "UserConsents"."userId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."UserConsents"."userId" IS 'Id of the User whom the connection belongs to.';
+
+
+--
+-- Name: COLUMN "UserConsents"."partnerId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."UserConsents"."partnerId" IS 'Partner id (client_id).';
+
+
+--
 -- Name: Users; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -717,21 +1235,91 @@ CREATE TABLE public."Users" (
     id uuid NOT NULL,
     name character varying(255),
     company character varying(255),
+    language character varying(5) DEFAULT 'en'::character varying,
     email character varying(254),
     password character varying(64),
     "passwordResetCode" uuid,
     "emailIsVerified" boolean DEFAULT false NOT NULL,
     "emailVerificationCode" uuid NOT NULL,
-    "createdAt" timestamp with time zone NOT NULL,
-    "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone,
-    language character varying(5) DEFAULT 'en'::character varying,
     source public."enum_Users_source" NOT NULL,
     "sourceId" character varying(255),
     "imageUrl" character varying(255),
+    "createdAt" timestamp with time zone NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL,
+    "deletedAt" timestamp with time zone,
     "termsVersion" character varying(255),
     "termsAcceptedAt" timestamp with time zone
 );
+
+
+--
+-- Name: COLUMN "Users".name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Users".name IS 'Full name of the user.';
+
+
+--
+-- Name: COLUMN "Users".company; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Users".company IS 'Company name.';
+
+
+--
+-- Name: COLUMN "Users".language; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Users".language IS 'Language code.';
+
+
+--
+-- Name: COLUMN "Users".email; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Users".email IS 'User registration email.';
+
+
+--
+-- Name: COLUMN "Users".password; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Users".password IS 'Password hash. NULL if User was created on invitation and has not registered.';
+
+
+--
+-- Name: COLUMN "Users"."emailIsVerified"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Users"."emailIsVerified" IS 'Flag indicating if e-mail verification has been completed.';
+
+
+--
+-- Name: COLUMN "Users"."emailVerificationCode"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Users"."emailVerificationCode" IS 'E-mail verification code that is sent out with e-mail as a link.';
+
+
+--
+-- Name: COLUMN "Users".source; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Users".source IS 'User creation source.';
+
+
+--
+-- Name: COLUMN "Users"."sourceId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Users"."sourceId" IS 'User id in the source system. For Facebook their user id, for Google their user id and so on. Null is allowed as there is not point for CitizenOS to provide one.';
+
+
+--
+-- Name: COLUMN "Users"."imageUrl"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Users"."imageUrl" IS 'User profile image url.';
 
 
 --
@@ -765,6 +1353,34 @@ CREATE TABLE public."VoteContainerFiles" (
 
 
 --
+-- Name: COLUMN "VoteContainerFiles"."voteId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."VoteContainerFiles"."voteId" IS 'To what Vote these files belong to.';
+
+
+--
+-- Name: COLUMN "VoteContainerFiles"."fileName"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."VoteContainerFiles"."fileName" IS 'File name as it will appear in the BDOC container.';
+
+
+--
+-- Name: COLUMN "VoteContainerFiles"."mimeType"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."VoteContainerFiles"."mimeType" IS 'Mime type of the file.';
+
+
+--
+-- Name: COLUMN "VoteContainerFiles".content; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."VoteContainerFiles".content IS 'File content.';
+
+
+--
 -- Name: VoteDelegations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -780,10 +1396,32 @@ CREATE TABLE public."VoteDelegations" (
 
 
 --
+-- Name: COLUMN "VoteDelegations"."voteId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."VoteDelegations"."voteId" IS 'To what Vote the delegation applies.';
+
+
+--
+-- Name: COLUMN "VoteDelegations"."toUserId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."VoteDelegations"."toUserId" IS 'To which User the Vote was delegated.';
+
+
+--
+-- Name: COLUMN "VoteDelegations"."byUserId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."VoteDelegations"."byUserId" IS 'The User who delegated the Vote.';
+
+
+--
 -- Name: VoteDelegations_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public."VoteDelegations_id_seq"
+    AS integer
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -815,10 +1453,39 @@ CREATE TABLE public."VoteLists" (
 
 
 --
+-- Name: COLUMN "VoteLists"."voteId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."VoteLists"."voteId" IS 'To what Vote this option belongs to.';
+
+
+--
+-- Name: COLUMN "VoteLists"."userId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."VoteLists"."userId" IS 'Id of the User Who cast the Vote.';
+
+
+--
+-- Name: COLUMN "VoteLists"."optionId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."VoteLists"."optionId" IS 'The VoteOption selected by the voter.';
+
+
+--
+-- Name: COLUMN "VoteLists"."optionGroupId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."VoteLists"."optionGroupId" IS 'To recognise which votes were given in the same request needed to adequately count votes later.';
+
+
+--
 -- Name: VoteLists_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public."VoteLists_id_seq"
+    AS integer
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -840,11 +1507,25 @@ ALTER SEQUENCE public."VoteLists_id_seq" OWNED BY public."VoteLists".id;
 CREATE TABLE public."VoteOptions" (
     id uuid NOT NULL,
     "voteId" uuid NOT NULL,
-    value character varying(100) NOT NULL,
+    value character varying(200) NOT NULL,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
     "deletedAt" timestamp with time zone
 );
+
+
+--
+-- Name: COLUMN "VoteOptions"."voteId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."VoteOptions"."voteId" IS 'To what Vote this option belongs to.';
+
+
+--
+-- Name: COLUMN "VoteOptions".value; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."VoteOptions".value IS 'Option value shown to the voter.';
 
 
 --
@@ -862,6 +1543,27 @@ CREATE TABLE public."VoteUserContainers" (
 
 
 --
+-- Name: COLUMN "VoteUserContainers"."userId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."VoteUserContainers"."userId" IS 'Id of the User Who cast the Vote.';
+
+
+--
+-- Name: COLUMN "VoteUserContainers"."voteId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."VoteUserContainers"."voteId" IS 'To what Vote this signed container belongs to.';
+
+
+--
+-- Name: COLUMN "VoteUserContainers".container; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."VoteUserContainers".container IS 'BDOC containing the signed vote.';
+
+
+--
 -- Name: Votes; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -873,21 +1575,60 @@ CREATE TABLE public."Votes" (
     "endsAt" timestamp with time zone,
     description character varying(255) DEFAULT NULL::character varying,
     type public."enum_Votes_type" DEFAULT 'regular'::public."enum_Votes_type" NOT NULL,
+    "authType" public."enum_Votes_authType" DEFAULT 'soft'::public."enum_Votes_authType" NOT NULL,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone,
-    "authType" public."enum_Votes_authType" DEFAULT 'soft'::public."enum_Votes_authType" NOT NULL
+    "deletedAt" timestamp with time zone
 );
 
 
 --
--- Name: store; Type: TABLE; Schema: public; Owner: -
+-- Name: COLUMN "Votes"."minChoices"; Type: COMMENT; Schema: public; Owner: -
 --
 
-CREATE TABLE public.store (
-    key character varying(100) NOT NULL,
-    value text NOT NULL
-);
+COMMENT ON COLUMN public."Votes"."minChoices" IS 'Minimum number of choices a Voter has to choose when voting.';
+
+
+--
+-- Name: COLUMN "Votes"."maxChoices"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Votes"."maxChoices" IS 'Maximum number of choices a Voter can choose when voting.';
+
+
+--
+-- Name: COLUMN "Votes"."delegationIsAllowed"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Votes"."delegationIsAllowed" IS 'Flag indicating if vote delegation is allowed.';
+
+
+--
+-- Name: COLUMN "Votes"."endsAt"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Votes"."endsAt" IS 'Deadline when voting closes. If NULL then no deadline at all.';
+
+
+--
+-- Name: COLUMN "Votes".description; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Votes".description IS 'Vote description.';
+
+
+--
+-- Name: COLUMN "Votes".type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Votes".type IS 'Vote type. Used to decide visual layout.';
+
+
+--
+-- Name: COLUMN "Votes"."authType"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Votes"."authType" IS 'Authorization types. Soft - user has to be logged in to Vote. Hard - user has to digitally sign a vote.';
 
 
 --
@@ -993,6 +1734,14 @@ ALTER TABLE ONLY public."SequelizeMeta"
 
 
 --
+-- Name: Signatures Signatures_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Signatures"
+    ADD CONSTRAINT "Signatures_pkey" PRIMARY KEY (id);
+
+
+--
 -- Name: TopicAttachments TopicAttachments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1017,11 +1766,11 @@ ALTER TABLE ONLY public."TopicEvents"
 
 
 --
--- Name: TopicPins TopicFavourites_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: TopicFavourites TopicFavourites_pkey1; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public."TopicPins"
-    ADD CONSTRAINT "TopicFavourites_pkey" PRIMARY KEY ("topicId", "userId");
+ALTER TABLE ONLY public."TopicFavourites"
+    ADD CONSTRAINT "TopicFavourites_pkey1" PRIMARY KEY ("topicId", "userId");
 
 
 --
@@ -1049,11 +1798,19 @@ ALTER TABLE ONLY public."TopicMemberUsers"
 
 
 --
+-- Name: TopicPins TopicPins_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicPins"
+    ADD CONSTRAINT "TopicPins_pkey" PRIMARY KEY ("topicId", "userId");
+
+
+--
 -- Name: TopicReports TopicReports_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public."TopicReports"
-    ADD CONSTRAINT "TopicReports_pkey" PRIMARY KEY (id, "topicId");
+    ADD CONSTRAINT "TopicReports_pkey" PRIMARY KEY ("topicId", id);
 
 
 --
@@ -1182,14 +1939,6 @@ ALTER TABLE ONLY public."VoteUserContainers"
 
 ALTER TABLE ONLY public."Votes"
     ADD CONSTRAINT "Votes_pkey" PRIMARY KEY (id);
-
-
---
--- Name: store store_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.store
-    ADD CONSTRAINT store_pkey PRIMARY KEY (key);
 
 
 --
@@ -1466,27 +2215,11 @@ ALTER TABLE ONLY public."TopicEvents"
 
 
 --
--- Name: TopicPins TopicFavourites_topicId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."TopicPins"
-    ADD CONSTRAINT "TopicFavourites_topicId_fkey" FOREIGN KEY ("topicId") REFERENCES public."Topics"(id);
-
-
---
--- Name: TopicPins TopicFavourites_userId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."TopicPins"
-    ADD CONSTRAINT "TopicFavourites_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."Users"(id);
-
-
---
 -- Name: TopicInviteUsers TopicInviteUsers_creatorId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public."TopicInviteUsers"
-    ADD CONSTRAINT "TopicInviteUsers_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES public."Users"(id);
+    ADD CONSTRAINT "TopicInviteUsers_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES public."Users"(id) ON UPDATE CASCADE;
 
 
 --
@@ -1494,7 +2227,7 @@ ALTER TABLE ONLY public."TopicInviteUsers"
 --
 
 ALTER TABLE ONLY public."TopicInviteUsers"
-    ADD CONSTRAINT "TopicInviteUsers_topicId_fkey" FOREIGN KEY ("topicId") REFERENCES public."Topics"(id);
+    ADD CONSTRAINT "TopicInviteUsers_topicId_fkey" FOREIGN KEY ("topicId") REFERENCES public."Topics"(id) ON UPDATE CASCADE;
 
 
 --
@@ -1502,7 +2235,7 @@ ALTER TABLE ONLY public."TopicInviteUsers"
 --
 
 ALTER TABLE ONLY public."TopicInviteUsers"
-    ADD CONSTRAINT "TopicInviteUsers_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."Users"(id);
+    ADD CONSTRAINT "TopicInviteUsers_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."Users"(id) ON UPDATE CASCADE;
 
 
 --
@@ -1538,6 +2271,22 @@ ALTER TABLE ONLY public."TopicMemberUsers"
 
 
 --
+-- Name: TopicPins TopicPins_topicId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicPins"
+    ADD CONSTRAINT "TopicPins_topicId_fkey" FOREIGN KEY ("topicId") REFERENCES public."Topics"(id);
+
+
+--
+-- Name: TopicPins TopicPins_userId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicPins"
+    ADD CONSTRAINT "TopicPins_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."Users"(id);
+
+
+--
 -- Name: TopicReports TopicReports_creatorId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1566,7 +2315,7 @@ ALTER TABLE ONLY public."TopicReports"
 --
 
 ALTER TABLE ONLY public."TopicReports"
-    ADD CONSTRAINT "TopicReports_topicId_fkey" FOREIGN KEY ("topicId") REFERENCES public."Topics"(id);
+    ADD CONSTRAINT "TopicReports_topicId_fkey" FOREIGN KEY ("topicId") REFERENCES public."Topics"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -1713,7 +2462,9 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 20181213213857-create-topic-favourite.js
 20190131123024-alter-topic-title-limit.js
 20190529193321-topic-report.js
-20190627132611-alter-partner-terms-link.js
 20190616115724-alter-user-accpet-terms.js
+20190627132611-alter-partner-terms-link.js
 20191119124917-create-topic-invite-user.js
+20191218091941-update-vote-option-max-value.js
+20200130121507-create-signature.js
 \.
