@@ -6065,7 +6065,12 @@ module.exports = function (app) {
                                         transaction: t
                                     })
                                     .then(function (userConnection) {
-                                        if (userConnection && userConnection.connectionUserId !== personalInfo.pid) {
+                                        let personId = personalInfo.pid;
+                                        if(personalInfo.pid.indexOf('PNO') > -1) {
+                                            personId = personId.split('-')[1];
+                                        }
+                                        const idPattern = new RegExp('(PNO'+personalInfo.country+'-)?' + personId);
+                                        if (userConnection && !idPattern.test(userConnection.connectionUserId)) {
                                             res.badRequest('User account already connected to another PID.', 31);
                                             return Promise.reject();
                                         }
@@ -6358,9 +6363,13 @@ module.exports = function (app) {
                             transaction: t
                         })
                         .then(function (userConnection) {
-                            if (userConnection && userConnection.connectionUserId !== idSignFlowData.personalInfo.pid) {
+                            let personId = idSignFlowData.personalInfo.pid;
+                            if(idSignFlowData.personalInfo.pid.indexOf('PNO') > -1) {
+                                personId = personId.split('-')[1];
+                            }
+                            const idPattern = new RegExp('(PNO'+idSignFlowData.personalInfo.country+'-)?' + personId);
+                            if (userConnection && !idPattern.test(userConnection.connectionUserId)) {
                                 res.badRequest('User account already connected to another PID.', 31);
-
                                 return Promise.reject();
                             }
                         });
@@ -6536,7 +6545,6 @@ module.exports = function (app) {
             return Promise.all([statusPromise])
                 .then(function (results) {
                     var signedDocInfo = results[0];
-
                     return db
                         .transaction(function (t) {
                             // Store vote options
@@ -6581,16 +6589,19 @@ module.exports = function (app) {
                                         transaction: t
                                     })
                                     .then(function (userConnection) {
-                                        if (userConnection && userConnection.connectionUserId !== idSignFlowData.personalInfo.pid) {
+                                        let personId = idSignFlowData.personalInfo.pid;
+                                        if(idSignFlowData.personalInfo.pid.indexOf('PNO') > -1) {
+                                            personId = personId.split('-')[1];
+                                        }
+                                        const idPattern = new RegExp('(PNO'+idSignFlowData.personalInfo.country+'-)?' + personId);
+                                        if (userConnection && !idPattern.test(userConnection.connectionUserId)) {
                                             res.badRequest('User account already connected to another PID.', 31);
-
                                             return Promise.reject();
                                         }
                                     });
 
                                 promisesToResolve.push(anotherUserConnectionPromise, userConnectionPromise);
                             }
-
                             var voteListCreatePromise = VoteList
                                 .bulkCreate(
                                     voteOptions,

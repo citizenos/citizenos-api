@@ -89,12 +89,14 @@
           {
             "CN": "ESTEID-SK 2011",
             "O": "AS Sertifitseerimiskeskus",
-            "C": "EE"
+            "C": "EE",
+            "E": "pki@sk.ee"
           },
           {
             "CN": "EID-SK 2011",
             "O": "AS Sertifitseerimiskeskus",
-            "C": "EE"
+            "C": "EE",
+            "E": "pki@sk.ee"
           },
           {
             "CN": "ESTEID-SK 2015",
