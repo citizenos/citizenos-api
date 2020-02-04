@@ -487,6 +487,93 @@ module.exports = function (app) {
             });
     });
 
+    const _getUserByPersonalId = async function (personalInfo, connectionId, req, transaction) {
+        let t;
+        let toCommit = false;
+        let personId = personalInfo.pid;
+        if(personalInfo.pid.indexOf('PNO') > -1) {
+            personId = personId.split('-')[1];
+        }
+        const idPattern = new RegExp('(PNO'+personalInfo.country+'-)?' + personId);
+  //      if (userConnection && !idPattern.test(userConnection.connectionUserId)) {
+        if (!transaction) {
+            t =  await db.transaction();
+            toCommit = true;
+        } else {
+            t = transaction;
+        }
+        try {
+            return UserConnection
+                    .findOne({
+                        where: {
+                            connectionId: {
+                                [Op.in]: [
+                                    UserConnection.CONNECTION_IDS.esteid,
+                                    UserConnection.CONNECTION_IDS.smartid
+                                ]
+                            },
+                            connectionUserId: {
+                                [Op.like]: '%' + personId + '%',
+                            }
+                        },
+                        include: [User],
+                        transaction: t
+                    })
+                    .then(function (userConnectionInfo) {
+                        if (!userConnectionInfo) {
+                            return User
+                                .create(
+                                    {
+                                        name: db.fn('initcap', personalInfo.firstName + ' ' + personalInfo.lastName),
+                                        source: User.SOURCES.citizenos
+                                    },
+                                    {
+                                        transaction: t
+                                    }
+                                )
+                                .then(function (user) {
+                                    return cosActivities
+                                        .createActivity(user, null, {type: 'System', ip: req.ip}, req.method + ' ' + req.path, transaction)
+                                        .then(function () {
+                                            return UserConnection
+                                                .create(
+                                                    {
+                                                        userId: user.id,
+                                                        connectionId: connectionId,
+                                                        connectionUserId: personalInfo.pid,
+                                                        connectionData: personalInfo
+                                                    },
+                                                    {
+                                                        transaction: t
+                                                    }
+                                                )
+                                                .then(function () {
+                                                    if (toCommit) t.commit();
+                                                    var userData = user.toJSON();
+                                                    userData.termsVersion = user.dataValues.termsVersion;
+                                                    userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
+
+                                                    return [userData, 3]; // New user was created
+                                                });
+                                        });
+                                });
+                        } else {
+                            if (toCommit) t.commit();
+                            if (userConnectionInfo && idPattern.test(userConnectionInfo.connectionUserId)) {
+                                var user = userConnectionInfo.User;
+                                var userData = user.toJSON();
+                                userData.termsVersion = user.dataValues.termsVersion;
+                                userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
+
+                                return [userData, 2]; // Existing User found and logged in
+                            }
+                        }
+                    });
+                } catch (error) {
+                    if (toCommit) t.rollback();
+                    logger.error(error);
+                }
+    };
 
     app.get('/api/auth/smartid/status', function (req, res, next) {
         var token = req.query.token;
@@ -526,66 +613,13 @@ module.exports = function (app) {
                     return res.badRequest(response);
                 }
 
-                return UserConnection
-                    .findOne({
-                        where: {
-                            connectionId: {
-                                [Op.in]: [
-                                    UserConnection.CONNECTION_IDS.esteid,
-                                    UserConnection.CONNECTION_IDS.smartid
-                                ]
-                            },
-                            connectionUserId: personalInfo.pid
-                        },
-                        include: [User]
-                    })
-                    .then(function (userConnectionInfo) {
-                        if (!userConnectionInfo) {
-                            return db.transaction(function (t) {
-                                return User
-                                    .create(
-                                        {
-                                            name: db.fn('initcap', personalInfo.firstName + ' ' + personalInfo.lastName),
-                                            source: User.SOURCES.citizenos
-                                        },
-                                        {
-                                            transaction: t
-                                        }
-                                    )
-                                    .then(function (user) {
-                                        return UserConnection
-                                            .create(
-                                                {
-                                                    userId: user.id,
-                                                    connectionId: UserConnection.CONNECTION_IDS.smartid,
-                                                    connectionUserId: personalInfo.pid,
-                                                    connectionData: personalInfo
-                                                },
-                                                {
-                                                    transaction: t
-                                                }
-                                            )
-                                            .then(function () {
-                                                return user;
-                                            });
-                                    });
-                            }).then(function (user) {
-                                setAuthCookie(req, res, user.id);
-                                var userData = user.toJSON();
-                                userData.termsVersion = user.dataValues.termsVersion;
-                                userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
+                return _getUserByPersonalId(personalInfo, UserConnection.CONNECTION_IDS.smartid, req)
+                    .then(function (userData) {
+                        const user = userData[0];
+                        const created = userData[1];
+                        setAuthCookie(req, res, user.id);
 
-                                return res.ok(userData, 3); // New user was created
-                            });
-                        } else {
-                            var user = userConnectionInfo.User;
-                            setAuthCookie(req, res, user.id);
-                            var userData = user.toJSON();
-                            userData.termsVersion = user.dataValues.termsVersion;
-                            userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
-
-                            return res.ok(userData, 2); // Existing User found and logged in
-                        }
+                        return res.ok(user, created);
                     });
             }, function (error) {
                 if (error && error.name === 'ValidationError') {
@@ -687,65 +721,15 @@ module.exports = function (app) {
                 }
             })
             .then(function (personalInfo) {
-                // TODO: DUPLICATE CODE, also used in /api/auth/mobile/status
-                return UserConnection
-                    .findOne({
-                        where: {
-                            connectionId: {
-                                [Op.in]: [
-                                    UserConnection.CONNECTION_IDS.esteid,
-                                    UserConnection.CONNECTION_IDS.smartid
-                                ]
-                            },
-                            connectionUserId: personalInfo.pid
-                        },
-                        include: [User]
-                    })
-                    .then(function (userConnectionInfo) {
-                        if (!userConnectionInfo) {
-                            return db.transaction(function (t) {
-                                return User
-                                    .create(
-                                        {
-                                            name: db.fn('initcap', personalInfo.firstName + ' ' + personalInfo.lastName),
-                                            source: User.SOURCES.citizenos
-                                        },
-                                        {
-                                            transaction: t
-                                        }
-                                    )
-                                    .then(function (user) {
-                                        return UserConnection
-                                            .create({
-                                                userId: user.id,
-                                                connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                                connectionUserId: personalInfo.pid,
-                                                connectionData: personalInfo
-                                            }, {transaction: t})
-                                            .then(function () {
-                                                return [user, true];
-                                            });
-                                    });
-                            });
-                        } else {
-                            var user = userConnectionInfo.User;
+                return _getUserByPersonalId(personalInfo, UserConnection.CONNECTION_IDS.esteid, req)
+                    .then(function (userData) {
+                        const user = userData[0];
+                        const created = userData[1];
+                        setAuthCookie(req, res, user.id);
 
-                            return [user, false];
-                        }
+                        return res.ok(user, created);
                     });
-            })
-            .then(function (userInfo) {
-                var user = userInfo[0];
-                var created = userInfo[1];
-
-                setAuthCookie(req, res, user.id);
-                if (created) {
-                    return res.ok(user, 3); // New user was created
-                } else {
-                    return res.ok(user, 2); // Existing user
-                }
-            })
-            .catch(next);
+            }).catch(next);
     };
 
     /**
@@ -872,66 +856,13 @@ module.exports = function (app) {
             })
             .then(function (personalInfo) {
                 // TODO: DUPLICATE CODE, also used in /api/auth/id
-                return UserConnection
-                    .findOne({
-                        where: {
-                            connectionId: {
-                                [Op.in]: [
-                                    UserConnection.CONNECTION_IDS.esteid,
-                                    UserConnection.CONNECTION_IDS.smartid
-                                ]
-                            },
-                            connectionUserId: personalInfo.pid
-                        },
-                        include: [User]
-                    })
-                    .then(function (userConnectionInfo) {
-                        if (!userConnectionInfo) {
-                            return db.transaction(function (t) {
-                                return User
-                                    .create(
-                                        {
-                                            name: db.fn('initcap', personalInfo.firstName + ' ' + personalInfo.lastName),
-                                            source: User.SOURCES.citizenos
-                                        },
-                                        {
-                                            transaction: t
-                                        }
-                                    )
-                                    .then(function (user) {
-                                        return UserConnection
-                                            .create(
-                                                {
-                                                    userId: user.id,
-                                                    connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                                    connectionUserId: personalInfo.pid,
-                                                    connectionData: personalInfo
-                                                },
-                                                {
-                                                    transaction: t
-                                                }
-                                            )
-                                            .then(function () {
-                                                return user;
-                                            });
-                                    });
-                            }).then(function (user) {
-                                setAuthCookie(req, res, user.id);
-                                var userData = user.toJSON();
-                                userData.termsVersion = user.dataValues.termsVersion;
-                                userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
+                return _getUserByPersonalId(personalInfo, UserConnection.CONNECTION_IDS.esteid, req)
+                    .then(function (userData) {
+                        const user = userData[0];
+                        const created = userData[1];
+                        setAuthCookie(req, res, user.id);
 
-                                return res.ok(userData, 3); // New user was created
-                            });
-                        } else {
-                            var user = userConnectionInfo.User;
-                            setAuthCookie(req, res, user.id);
-                            var userData = user.toJSON();
-                            userData.termsVersion = user.dataValues.termsVersion;
-                            userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
-
-                            return res.ok(userData, 2); // Existing User found and logged in
-                        }
+                        return res.ok(user, created);
                     });
             }, function (error) {
                 if (error && error.name === 'ValidationError') {
@@ -1209,4 +1140,7 @@ module.exports = function (app) {
         handleOpenIdErrorRedirect(res, redirectUri, 'access_denied', 'The resource owner or authorization server denied the request.', stateCookieData.state);
     });
 
+    return {
+        getUserByPersonalId: _getUserByPersonalId
+    }
 };

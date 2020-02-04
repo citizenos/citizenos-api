@@ -40,7 +40,7 @@ module.exports = function (app) {
     const partnerParser = app.get('middleware.partnerParser');
     const DEPRECATED = app.get('middleware.deprecated'); // CAPS for ease of spotting in the code
     const asyncMiddleware = app.get('middleware.asyncMiddleware');
-
+    const authUser = require('./auth')(app);
     const User = models.User;
     const UserConnection = models.UserConnection;
     const Group = models.Group;
@@ -5894,6 +5894,44 @@ module.exports = function (app) {
             });
     };
 
+    const _checkAuthenticatedUser = function (userId, personalInfo, transaction) {
+        const anotherUserConnectionPromise = UserConnection
+            .findOne({
+                where: {
+                    connectionId: UserConnection.CONNECTION_IDS.esteid,
+                    connectionUserId: personalInfo.pid
+                },
+                transaction
+            })
+            .then(function (userConnection) {
+                if (userConnection && userConnection.userId !== userId) {
+                    return Promise.reject(new Error('Personal ID already connected to another user account.'));
+                }
+            });
+
+        const userConnectionPromise = UserConnection
+            .findOne({
+                where: {
+                    connectionId: UserConnection.CONNECTION_IDS.esteid,
+                    userId: userId
+                },
+                transaction
+            })
+            .then(function (userConnection) {
+                let personId = personalInfo.pid;
+                if(personalInfo.pid.indexOf('PNO') > -1) {
+                    personId = personId.split('-')[1];
+                }
+                const idPattern = new RegExp('(PNO'+personalInfo.country+'-)?' + personId);
+                if (userConnection && !idPattern.test(userConnection.connectionUserId)) {
+                    return Promise.reject(new Error('User account already connected to another PID.'));
+                }
+            });
+
+        return Promise.all([anotherUserConnectionPromise, userConnectionPromise]);
+
+    };
+
     var handleTopicVoteHard = function (vote, req, res) {
         var voteId = vote.id;
         var userId = req.user ? req.user.id : null;
@@ -6040,90 +6078,13 @@ module.exports = function (app) {
                             var promisesToResolve = [];
                             // Authenticated User
                             if (userId) {
-                                var anotherUserConnectionPromise = UserConnection
-                                    .findOne({
-                                        where: {
-                                            connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                            connectionUserId: personalInfo.pid
-                                        },
-                                        transaction: t
-                                    })
-                                    .then(function (userConnection) {
-                                        if (userConnection && userConnection.userId !== userId) {
-                                            res.badRequest('Personal ID already connected to another user account.', 30);
-
-                                            return Promise.reject();
-                                        }
-                                    });
-
-                                var userConnectionPromise = UserConnection
-                                    .findOne({
-                                        where: {
-                                            connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                            userId: userId
-                                        },
-                                        transaction: t
-                                    })
-                                    .then(function (userConnection) {
-                                        let personId = personalInfo.pid;
-                                        if(personalInfo.pid.indexOf('PNO') > -1) {
-                                            personId = personId.split('-')[1];
-                                        }
-                                        const idPattern = new RegExp('(PNO'+personalInfo.country+'-)?' + personId);
-                                        if (userConnection && !idPattern.test(userConnection.connectionUserId)) {
-                                            res.badRequest('User account already connected to another PID.', 31);
-                                            return Promise.reject();
-                                        }
-                                    });
-
-                                promisesToResolve.push(anotherUserConnectionPromise, userConnectionPromise);
+                                const loggedInUserPromise = _checkAuthenticatedUser(userId, personalInfo, t);
+                                promisesToResolve.push(loggedInUserPromise);
                             } else { // Un-authenticated User, find or create one.
-                                // TODO: DUPLICATE CODE, also used in /api/auth/id
-                                var userPromise = UserConnection
-                                    .findOne({
-                                        where: {
-                                            connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                            connectionUserId: personalInfo.pid
-                                        },
-                                        include: [User],
-                                        transaction: t
-                                    })
-                                    .then(function (userConnectionInfo) {
-                                        if (!userConnectionInfo) {
-                                            return User
-                                                .create(
-                                                    {
-                                                        name: db.fn('initcap', personalInfo.firstName + ' ' + personalInfo.lastName),
-                                                        source: User.SOURCES.citizenos
-                                                    },
-                                                    {
-                                                        transaction: t
-                                                    }
-                                                )
-                                                .then(function (user) {
-                                                    cosActivities
-                                                        .createActivity(user, null, {type: 'System', ip: req.ip}, req.method + ' ' + req.path, t)
-                                                        .then(function () {
-                                                            return UserConnection
-                                                                .create(
-                                                                    {
-                                                                        userId: user.id,
-                                                                        connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                                                        connectionUserId: personalInfo.pid,
-                                                                        connectionData: personalInfo
-                                                                    },
-                                                                    {
-                                                                        transaction: t
-                                                                    }
-                                                                )
-                                                                .then(function () {
-                                                                    userId = user.id;
-                                                                });
-                                                        });
-                                                });
-                                        } else { // User existed before
-                                            userId = userConnectionInfo.User.id;
-                                        }
+                                const userPromise = authUser.getUserByPersonalId(personalInfo, UserConnection.CONNECTION_IDS.esteid, req, t)
+                                    .then(function (userData) {
+                                        const user = userData[0];
+                                        userId = user.id;
                                     });
 
                                 promisesToResolve.push(userPromise);
@@ -6142,6 +6103,13 @@ module.exports = function (app) {
                                             return cosSignature.signInitMobile(voteId, userId, vote.VoteOptions, personalInfo.pid, personalInfo.phoneNumber, mobileIdCertificate, t);
                                         default:
                                             throw new Error('Invalid signing method ' + signingMethod);
+                                    }
+                                }).catch(function (e) {
+                                    switch(e.message) {
+                                        case 'Personal ID already connected to another user account.':
+                                            return res.badRequest(e.message, 30)
+                                        case 'User account already connected to another PID.':
+                                            return res.badRequest(e.message, 31);
                                     }
                                 });
                         })
@@ -6338,43 +6306,8 @@ module.exports = function (app) {
 
                 // Authenticated User signing, check the user connection
                 if (req.user) {
-                    var anotherUserConnectionPromise = UserConnection
-                        .findOne({
-                            where: {
-                                connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                connectionUserId: idSignFlowData.personalInfo.pid
-                            },
-                            transaction: t
-                        })
-                        .then(function (userConnection) {
-                            if (userConnection && userConnection.userId !== userId) {
-                                res.badRequest('Personal ID already connected to another user account.', 30);
-
-                                return Promise.reject();
-                            }
-                        });
-
-                    var userConnectionPromise = UserConnection
-                        .findOne({
-                            where: {
-                                connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                userId: userId
-                            },
-                            transaction: t
-                        })
-                        .then(function (userConnection) {
-                            let personId = idSignFlowData.personalInfo.pid;
-                            if(idSignFlowData.personalInfo.pid.indexOf('PNO') > -1) {
-                                personId = personId.split('-')[1];
-                            }
-                            const idPattern = new RegExp('(PNO'+idSignFlowData.personalInfo.country+'-)?' + personId);
-                            if (userConnection && !idPattern.test(userConnection.connectionUserId)) {
-                                res.badRequest('User account already connected to another PID.', 31);
-                                return Promise.reject();
-                            }
-                        });
-
-                    promisesToResolve.push(anotherUserConnectionPromise, userConnectionPromise);
+                    const loggedInUserPromise = _checkAuthenticatedUser(userId, idSignFlowData.personalInfo, t);
+                    promisesToResolve.push(loggedInUserPromise);
                 }
 
                 var voteListCreatePromise = VoteList
@@ -6483,7 +6416,14 @@ module.exports = function (app) {
 
                 promisesToResolve.push(voteListCreatePromise, voteDelegationDestroyPromise, userConnectionAddPromise, signUserBdocPromise);
 
-                return Promise.all(promisesToResolve);
+                return Promise.all(promisesToResolve).catch(function (e) {
+                    switch(e.message) {
+                        case 'Personal ID already connected to another user account.':
+                            return res.badRequest(e.message, 30)
+                        case 'User account already connected to another PID.':
+                            return res.badRequest(e.message, 31);
+                    }
+                });
             })
             .spread(function () {
                 return res.ok({
@@ -6564,43 +6504,9 @@ module.exports = function (app) {
 
                             // Authenticated User signing, check the user connection
                             if (req.user) {
-                                var anotherUserConnectionPromise = UserConnection
-                                    .findOne({
-                                        where: {
-                                            connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                            connectionUserId: idSignFlowData.personalInfo.pid
-                                        },
-                                        transaction: t
-                                    })
-                                    .then(function (userConnection) {
-                                        if (userConnection && userConnection.userId !== userId) {
-                                            res.badRequest('Personal ID already connected to another user account.', 30);
+                                const loggedInUserPromise = _checkAuthenticatedUser(userId, idSignFlowData.personalInfo, t)
 
-                                            return Promise.reject();
-                                        }
-                                    });
-
-                                var userConnectionPromise = UserConnection
-                                    .findOne({
-                                        where: {
-                                            connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                            userId: userId
-                                        },
-                                        transaction: t
-                                    })
-                                    .then(function (userConnection) {
-                                        let personId = idSignFlowData.personalInfo.pid;
-                                        if(idSignFlowData.personalInfo.pid.indexOf('PNO') > -1) {
-                                            personId = personId.split('-')[1];
-                                        }
-                                        const idPattern = new RegExp('(PNO'+idSignFlowData.personalInfo.country+'-)?' + personId);
-                                        if (userConnection && !idPattern.test(userConnection.connectionUserId)) {
-                                            res.badRequest('User account already connected to another PID.', 31);
-                                            return Promise.reject();
-                                        }
-                                    });
-
-                                promisesToResolve.push(anotherUserConnectionPromise, userConnectionPromise);
+                                promisesToResolve.push(loggedInUserPromise);
                             }
                             var voteListCreatePromise = VoteList
                                 .bulkCreate(
@@ -6708,7 +6614,14 @@ module.exports = function (app) {
 
                             promisesToResolve.push(voteListCreatePromise, voteDelegationDestroyPromise, userConnectionAddPromise, voteUserContainerPromise);
 
-                            return Promise.all(promisesToResolve);
+                            return Promise.all(promisesToResolve).catch(function (e) {
+                                switch(e.message) {
+                                    case 'Personal ID already connected to another user account.':
+                                        return res.badRequest(e.message, 30)
+                                    case 'User account already connected to another PID.':
+                                        return res.badRequest(e.message, 31);
+                                }
+                            });
                         })
                 }, function (result) {
                     const statusCode = result.result.endResult;

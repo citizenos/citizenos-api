@@ -62,6 +62,7 @@ module.exports = function (app) {
 
             })
             .then(function (results) {
+                if (!results[1]) return res.ok();
                 const user = results[1][0];
 
                 let sendEmailPromise = Promise.resolve();
