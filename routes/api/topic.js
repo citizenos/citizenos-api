@@ -71,13 +71,13 @@ module.exports = function (app) {
     const TopicPin = models.TopicPin;
 
     const _hasPermission = function (topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelf, partnerId) {
-        var LEVELS = {
+        const LEVELS = {
             none: 0, // Enables to override inherited permissions.
             read: 1,
             edit: 2,
             admin: 3
         };
-        var minRequiredLevel = level;
+        const minRequiredLevel = level;
 
         // TODO: That casting to "enum_TopicMemberUsers_level". Sequelize does not support naming enums, through inheritance I have 2 enums that are the same but with different name thus different type in PG. Feature request - https://github.com/sequelize/sequelize/issues/2577
         return db
@@ -130,11 +130,11 @@ module.exports = function (app) {
             )
             .then(function (result) {
                 if (result && result[0]) {
-                    var isPublic = result[0].isPublic;
-                    var status = result[0].status;
-                    var hasDirectAccess = result[0].hasDirectAccess;
-                    var level = result[0].level;
-                    var sourcePartnerId = result[0].sourcePartnerId;
+                    const isPublic = result[0].isPublic;
+                    const status = result[0].status;
+                    const hasDirectAccess = result[0].hasDirectAccess;
+                    const level = result[0].level;
+                    const sourcePartnerId = result[0].sourcePartnerId;
                     if (hasDirectAccess || (allowPublic && isPublic) || allowSelf) {
                         // If Topic status is not in the allowed list, deny access.
                         if (topicStatusesAllowed && !(topicStatusesAllowed.indexOf(status) > -1)) {
@@ -158,7 +158,7 @@ module.exports = function (app) {
                             return Promise.reject();
                         }
 
-                        var authorizationResult = {
+                        const authorizationResult = {
                             topic: {
                                 id: topicId,
                                 isPublic: isPublic,
@@ -193,9 +193,9 @@ module.exports = function (app) {
      */
     const hasPermission = function (level, allowPublic, topicStatusesAllowed, allowSelf) {
         return function (req, res, next) {
-            var userId = req.user.id;
-            var partnerId = req.user.partnerId;
-            var topicId = req.params.topicId;
+            const userId = req.user.id;
+            const partnerId = req.user.partnerId;
+            const topicId = req.params.topicId;
 
             allowPublic = allowPublic ? allowPublic : false;
 
@@ -204,7 +204,7 @@ module.exports = function (app) {
             }
 
             topicStatusesAllowed = topicStatusesAllowed ? topicStatusesAllowed : null;
-            var allowSelfDelete = allowSelf ? allowSelf : null;
+            let allowSelfDelete = allowSelf ? allowSelf : null;
             if (allowSelfDelete && req.user.id !== req.params.memberId) {
                 allowSelfDelete = false;
             }
@@ -285,8 +285,8 @@ module.exports = function (app) {
                 )
                 .then(function (result) {
                     if (result && result[0]) {
-                        var isUserModerator = result[0].userId === userId;
-                        var isTopicModerator = result[0].topicId === topicId;
+                        const isUserModerator = result[0].userId === userId;
+                        const isTopicModerator = result[0].topicId === topicId;
 
                         if (isUserModerator && isTopicModerator) {
                             return resolve({isModerator: result[0].partnerId ? result[0].partnerId : true});
@@ -308,8 +308,8 @@ module.exports = function (app) {
      */
     const isModerator = function () {
         return function (req, res, next) {
-            var topicId = req.params.topicId;
-            var userId;
+            const topicId = req.params.topicId;
+            let userId;
 
             if (req.user) {
                 userId = req.user.id;
@@ -345,10 +345,10 @@ module.exports = function (app) {
      *
      * @returns {Function} Express middleware function
      */
-    var hasPermissionModerator = function () {
+    const hasPermissionModerator = function () {
         return function (req, res, next) {
-            var topicId = req.params.topicId;
-            var userId;
+            const topicId = req.params.topicId;
+            let userId;
 
             if (req.user) {
                 userId = req.user.id;
@@ -374,8 +374,8 @@ module.exports = function (app) {
 
     const isCommentCreator = function () {
         return function (req, res, next) {
-            var userId = req.user.id;
-            var commentId = req.params.commentId;
+            const userId = req.user.id;
+            const commentId = req.params.commentId;
 
             Comment
                 .findOne({
@@ -397,7 +397,7 @@ module.exports = function (app) {
     };
 
     const getVoteResults = function (voteId, userId) {
-        var includeVoted = '';
+        let includeVoted = '';
         if (userId) {
             includeVoted = ',(SELECT true FROM votes WHERE "userId" = :userId AND "optionId" = v."optionId") as "selected" ';
         }
@@ -509,14 +509,14 @@ module.exports = function (app) {
     };
 
     const getBdocURL = function (params) {
-        var userId = params.userId;
-        var topicId = params.topicId;
-        var voteId = params.voteId;
-        var type = params.type;
+        const userId = params.userId;
+        const topicId = params.topicId;
+        const voteId = params.voteId;
+        const type = params.type;
 
-        var path;
-        var tokenPayload = {};
-        var tokenOptions = {
+        let path;
+        const tokenPayload = {};
+        const tokenOptions = {
             expiresIn: '1d'
         };
 
@@ -541,7 +541,7 @@ module.exports = function (app) {
             .replace(':topicId', topicId)
             .replace(':voteId', voteId);
 
-        var urlOptions = {
+        const urlOptions = {
             token: cosJwt.getTokenRestrictedUse(tokenPayload, 'GET ' + path, tokenOptions)
         };
 
@@ -553,14 +553,14 @@ module.exports = function (app) {
     };
 
     const getZipURL = function (params) {
-        var userId = params.userId;
-        var topicId = params.topicId;
-        var voteId = params.voteId;
-        var type = params.type;
+        const userId = params.userId;
+        const topicId = params.topicId;
+        const voteId = params.voteId;
+        const type = params.type;
 
-        var path;
-        var tokenPayload = {};
-        var tokenOptions = {
+        let path;
+        const tokenPayload = {};
+        const tokenOptions = {
             expiresIn: '1d'
         }
 
@@ -575,7 +575,7 @@ module.exports = function (app) {
             .replace(':topicId', topicId)
             .replace(':voteId', voteId);
 
-        var urlOptions = {
+        const urlOptions = {
             token: cosJwt.getTokenRestrictedUse(tokenPayload, 'GET ' + path, tokenOptions)
         }
 
@@ -585,8 +585,8 @@ module.exports = function (app) {
     };
 
     const _topicReadUnauth = function (topicId, include) {
-        var join = '';
-        var returncolumns = '';
+        let join = '';
+        let returncolumns = '';
 
         if (include) {
             if (include.indexOf('vote') > -1) {
@@ -729,8 +729,8 @@ module.exports = function (app) {
     };
 
     const _topicReadAuth = async function (topicId, include, user, partner) {
-        var join = '';
-        var returncolumns = '';
+        let join = '';
+        let returncolumns = '';
 
         if (include && !Array.isArray(include)) {
             include = [include];
@@ -947,15 +947,15 @@ module.exports = function (app) {
                     return getVoteResults(topic.vote.id, user.id)
                         .then(
                             function (result) {
-                                var options = [];
+                                const options = [];
                                 topic.vote.options.forEach(function (option) {
                                     option = option.split(':');
-                                    var o = {
+                                    const o = {
                                         id: option[0],
                                         value: option[1]
                                     };
                                     if (result) {
-                                        var res = _.find(result, {'optionId': o.id});
+                                        const res = _.find(result, {'optionId': o.id});
                                         if (res) {
                                             o.voteCount = parseInt(res.voteCount, 10);
                                             if (res.selected) {
@@ -998,9 +998,9 @@ module.exports = function (app) {
     };
 
     const getAllVotesResults = function (userId) {
-        var where = '';
-        var join = '';
-        var select = '';
+        let where = '';
+        let join = '';
+        let select = '';
         if (!userId) {
             where = ' AND t.visibility = \'' + Topic.VISIBILITY.public + '\' ';
         } else {
@@ -1027,7 +1027,7 @@ module.exports = function (app) {
                     ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId) \
             ';
         }
-        var query = ' \
+        const query = ' \
                         CREATE OR REPLACE FUNCTION pg_temp.delegations(uuid) \
                             RETURNS TABLE("voteId" uuid, "toUserId" uuid, "byUserId" uuid, depth INT) \
                                 AS $$ \
@@ -1226,7 +1226,7 @@ module.exports = function (app) {
             );
         }
 
-        var resObject = topic.toJSON();
+        const resObject = topic.toJSON();
 
         resObject.padUrl = cosEtherpad.getUserAccessUrl(topic, user.id, user.name, user.language, req.locals.partner);
         resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
@@ -1264,8 +1264,8 @@ module.exports = function (app) {
     }));
 
     app.get('/api/topics/:topicId', function (req, res, next) {
-        var include = req.query.include;
-        var topicId = req.params.topicId;
+        let include = req.query.include;
+        const topicId = req.params.topicId;
 
         if (include && !Array.isArray(include)) {
             include = [include];
@@ -1274,21 +1274,21 @@ module.exports = function (app) {
         _topicReadUnauth(topicId, include)
             .then(function (result) {
                 if (result && result.length && result[0]) {
-                    var topic = result[0];
+                    const topic = result[0];
                     topic.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
                     if (include && include.indexOf('vote') > -1 && topic.vote && topic.vote.id) {
                         return getVoteResults(topic.vote.id)
                             .then(
                                 function (result) {
-                                    var options = [];
+                                    const options = [];
                                     topic.vote.options.forEach(function (option) {
                                         option = option.split(':');
-                                        var o = {
+                                        const o = {
                                             id: option[0],
                                             value: option[1]
                                         };
                                         if (result) {
-                                            var res = _.find(result, {'optionId': o.id});
+                                            const res = _.find(result, {'optionId': o.id});
                                             if (res) {
                                                 o.voteCount = res.voteCount;
                                             }
@@ -1326,13 +1326,13 @@ module.exports = function (app) {
             .catch(next);
     });
 
-    var _topicUpdate = function (req, res) {
-        var topicId = req.params.topicId;
-        var contact = req.body.contact; // TODO: This logic is specific to Rahvaalgatus.ee, with next Partner we have to make it more generic - https://trello.com/c/Sj3XRF5V/353-raa-ee-followup-email-to-riigikogu-and-token-access-to-events-api
-        var statusNew = req.body.status;
+    const _topicUpdate = function (req, res) {
+        const topicId = req.params.topicId;
+        const contact = req.body.contact; // TODO: This logic is specific to Rahvaalgatus.ee, with next Partner we have to make it more generic - https://trello.com/c/Sj3XRF5V/353-raa-ee-followup-email-to-riigikogu-and-token-access-to-events-api
+        const statusNew = req.body.status;
 
-        var isBackToVoting = false;
-        var isSendToParliament = false;
+        let isBackToVoting = false;
+        let isSendToParliament = false;
 
         return Topic
             .findOne({
@@ -1346,11 +1346,9 @@ module.exports = function (app) {
                     return Promise.reject();
                 }
 
-                var statuses = _.values(Topic.STATUSES);
-
+                const statuses = _.values(Topic.STATUSES);
+                const vote = topic.Votes[0];
                 if (statusNew && statusNew !== topic.status) {
-                    var vote = topic.Votes[0];
-
                     // The only flow that allows going back in status flow is reopening for voting
                     if (statusNew === Topic.STATUSES.voting && topic.status === Topic.STATUSES.followUp) {
                         if (!vote) {
@@ -1364,7 +1362,7 @@ module.exports = function (app) {
                         if (vote.authType === Vote.AUTH_TYPES.hard) {
                             return getVoteResults(vote.id)
                                 .then(function (voteResults) {
-                                    var optionMax = _.maxBy(voteResults, 'voteCount');
+                                    const optionMax = _.maxBy(voteResults, 'voteCount');
                                     if (optionMax && optionMax.voteCount >= config.features.sendToParliament.voteCountMin) {
                                         res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew + ' when the Topic has been sent to Parliament');
 
@@ -1390,7 +1388,7 @@ module.exports = function (app) {
 
                             return getVoteResults(vote.id)
                                 .then(function (voteResults) {
-                                    var optionMax = _.maxBy(voteResults, 'voteCount');
+                                    const optionMax = _.maxBy(voteResults, 'voteCount');
                                     if (optionMax && optionMax.voteCount >= config.features.sendToParliament.voteCountMin) {
                                         isSendToParliament = true;
 
@@ -1413,9 +1411,9 @@ module.exports = function (app) {
             })
             .spread(function (topic, vote) {
                 // NOTE: Description is handled separately below
-                var fieldsAllowedToUpdate = ['visibility', 'status', 'categories', 'endsAt', 'hashtag', 'sourcePartnerObjectId'];
+                const fieldsAllowedToUpdate = ['visibility', 'status', 'categories', 'endsAt', 'hashtag', 'sourcePartnerObjectId'];
 
-                var fieldsToUpdate = [];
+                const fieldsToUpdate = [];
                 Object.keys(req.body).forEach(function (key) {
                     if (fieldsAllowedToUpdate.indexOf(key) >= 0) {
                         fieldsToUpdate.push(key);
@@ -1424,9 +1422,9 @@ module.exports = function (app) {
 
                 return db
                     .transaction(function (t) {
-                        var promisesToResolve = [];
+                        const promisesToResolve = [];
 
-                        var topicUpdatePromise = topic
+                        const topicUpdatePromise = topic
                             .update(
                                 req.body,
                                 {
@@ -1442,7 +1440,7 @@ module.exports = function (app) {
 
                         promisesToResolve.push(topicUpdatePromise);
 
-                        var topicActivityPromise = cosActivities
+                        const topicActivityPromise = cosActivities
                             .updateActivity(
                                 topic,
                                 null,
@@ -1461,7 +1459,7 @@ module.exports = function (app) {
                         if (isBackToVoting) {
                             promisesToResolve.push(cosSignature.deleteFinalBdoc(topicId, vote.id));
 
-                            var topicEventsDeletePromise = TopicEvent
+                            const topicEventsDeletePromise = TopicEvent
                                 .destroy({
                                     where: {
                                         topicId: topicId
@@ -1475,7 +1473,7 @@ module.exports = function (app) {
 
 
                         if (req.body.description) {
-                            var epUpdateTopicPromise = cosEtherpad
+                            const epUpdateTopicPromise = cosEtherpad
                                 .updateTopic(
                                     topicId,
                                     req.body.description
@@ -1507,16 +1505,16 @@ module.exports = function (app) {
                             logger.info('Sending to Parliament', req.method, req.path);
 
                             // TODO: This should be and stay in sync with the expiry set by getBdocURL
-                            var downloadTokenExpiryDays = 30;
-                            var linkDownloadBdocFinalExpiryDate = new Date(new Date().getTime() + downloadTokenExpiryDays * 24 * 60 * 60 * 1000);
+                            const downloadTokenExpiryDays = 30;
+                            const linkDownloadBdocFinalExpiryDate = new Date(new Date().getTime() + downloadTokenExpiryDays * 24 * 60 * 60 * 1000);
 
-                            var pathAddEvent = '/api/topics/:topicId/events' // COS API url for adding events with token
+                            const pathAddEvent = '/api/topics/:topicId/events' // COS API url for adding events with token
                                 .replace(':topicId', topicId);
 
-                            var linkAddEvent = config.features.sendToParliament.urlPrefix + '/initiatives/:topicId/events/new'.replace(':topicId', topicId);
+                            let linkAddEvent = config.features.sendToParliament.urlPrefix + '/initiatives/:topicId/events/new'.replace(':topicId', topicId);
                             linkAddEvent += '?' + querystring.stringify({token: cosJwt.getTokenRestrictedUse({}, 'POST ' + pathAddEvent)});
 
-                            var downloadUriBdocFinal = getBdocURL({
+                            const downloadUriBdocFinal = getBdocURL({
                                 topicId: topicId,
                                 voteId: vote.id,
                                 type: 'goverment'
@@ -1565,7 +1563,7 @@ module.exports = function (app) {
                 }
             })
             .then(function (topic) {
-                var tokenJoin = Topic.generateTokenJoin();
+                const tokenJoin = Topic.generateTokenJoin();
                 topic.tokenJoin = tokenJoin;
 
                 return db
@@ -1607,10 +1605,10 @@ module.exports = function (app) {
                 }
 
                 return db.transaction(function (t) {
-                    var deleteTopicEtherpadPromise = cosEtherpad.deleteTopic(topic.id);
+                    const deleteTopicEtherpadPromise = cosEtherpad.deleteTopic(topic.id);
 
                     // Delete TopicMembers beforehand. Sequelize does not cascade and set "deletedAt" for related objects if "paranoid: true".
-                    var deleteTopicDb = TopicMemberUser
+                    const deleteTopicDb = TopicMemberUser
                         .destroy({
                             where: {
                                 topicId: topic.id
@@ -1654,21 +1652,21 @@ module.exports = function (app) {
      * Get all Topics User belongs to
      */
     app.get('/api/users/:userId/topics', loginCheck(['partner']), function (req, res, next) {
-        var userId = req.user.id;
-        var partnerId = req.user.partnerId;
-        var include = req.query.include;
+        const userId = req.user.id;
+        const partnerId = req.user.partnerId;
+        let include = req.query.include;
 
-        var visibility = req.query.visibility;
-        var creatorId = req.query.creatorId;
-        var statuses = req.query.statuses;
-        var pinned = req.query.pinned;
+        const visibility = req.query.visibility;
+        const creatorId = req.query.creatorId;
+        let statuses = req.query.statuses;
+        const pinned = req.query.pinned;
         if (statuses && !Array.isArray(statuses)) {
             statuses = [statuses];
         }
 
-        var voteResultsPromise = false;
-        var join = '';
-        var returncolumns = '';
+        let voteResultsPromise = false;
+        let join = '';
+        let returncolumns = '';
 
         if (!Array.isArray(include)) {
             include = [include];
@@ -1714,7 +1712,7 @@ module.exports = function (app) {
             ';
         }
 
-        var where = ' t."deletedAt" IS NULL \
+        let where = ' t."deletedAt" IS NULL \
                     AND t.title IS NOT NULL \
                     AND COALESCE(tmup.level, tmgp.level, \'none\')::"enum_TopicMemberUsers_level" > \'none\' ';
 
@@ -1745,7 +1743,7 @@ module.exports = function (app) {
 
         // TODO: NOT THE MOST EFFICIENT QUERY IN THE WORLD, tune it when time.
         // TODO: That casting to "enum_TopicMemberUsers_level". Sequelize does not support naming enums, through inheritance I have 2 enums that are the same but with different name thus different type in PG. Feature request - https://github.com/sequelize/sequelize/issues/2577
-        var query = '\
+        const query = '\
                 SELECT \
                      t.id, \
                      t.title, \
@@ -1883,7 +1881,7 @@ module.exports = function (app) {
                 ORDER BY "pinned" DESC, "order" ASC, t."updatedAt" DESC \
             ;';
 
-        var topicsPromise = db
+        const topicsPromise = db
             .query(
                 query,
                 {
@@ -1903,10 +1901,10 @@ module.exports = function (app) {
         Promise
             .all([topicsPromise, voteResultsPromise])
             .spread(function (rows, voteResults) {
-                var rowCount = rows.length;
+                const rowCount = rows.length;
 
                 // Sequelize returns empty array for no results.
-                var result = {
+                const result = {
                     count: rowCount,
                     rows: []
                 };
@@ -1917,14 +1915,14 @@ module.exports = function (app) {
 
                         if (include.indexOf('vote') > -1) {
                             if (topic.vote.id) {
-                                var options = [];
+                                const options = [];
                                 if (topic.vote.options) {
                                     topic.vote.options.forEach(function (voteOption) {
-                                        var o = {};
-                                        var optText = voteOption.split(':');
+                                        const o = {};
+                                        const optText = voteOption.split(':');
                                         o.id = optText[0];
                                         o.value = optText[1];
-                                        var result = 0;
+                                        let result = 0;
                                         if (voteResults) {
                                             result = _.find(voteResults, {'optionId': optText[0]});
                                             if (result) {
@@ -1960,23 +1958,23 @@ module.exports = function (app) {
      * Topic list
      */
     app.get('/api/topics', function (req, res, next) {
-        var limitMax = 500;
-        var limitDefault = 26;
-        var join = '';
-        var returncolumns = '';
-        var voteResultsPromise = false;
+        const limitMax = 500;
+        const limitDefault = 26;
+        let join = '';
+        let returncolumns = '';
+        let voteResultsPromise = false;
 
-        var offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
-        var limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+        const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
+        let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
 
         if (limit > limitMax) limit = limitDefault;
 
-        var statuses = req.query.statuses;
+        let statuses = req.query.statuses;
         if (statuses && !Array.isArray(statuses)) {
             statuses = [statuses];
         }
 
-        var include = req.query.include;
+        let include = req.query.include;
         if (!Array.isArray(include)) {
             include = [include];
         }
@@ -2022,12 +2020,12 @@ module.exports = function (app) {
             }
         }
 
-        var categories = req.query.categories;
+        let categories = req.query.categories;
         if (categories && !Array.isArray(categories)) {
             categories = [categories];
         }
 
-        var where = ' t.visibility = \'' + Topic.VISIBILITY.public + '\' \
+        let where = ' t.visibility = \'' + Topic.VISIBILITY.public + '\' \
             AND t.title IS NOT NULL \
             AND t."deletedAt" IS NULL ';
 
@@ -2039,7 +2037,7 @@ module.exports = function (app) {
             where += ' AND t.status IN (:statuses)';
         }
 
-        var sourcePartnerId = req.query.sourcePartnerId;
+        let sourcePartnerId = req.query.sourcePartnerId;
         if (sourcePartnerId) {
             if (!Array.isArray(sourcePartnerId)) {
                 sourcePartnerId = [sourcePartnerId];
@@ -2047,12 +2045,12 @@ module.exports = function (app) {
             where += ' AND t."sourcePartnerId" IN (:partnerId)';
         }
 
-        var title = req.query.title;
+        const title = req.query.title;
         if (title) {
             where += ' AND t.title LIKE \'%:title%\' ';
         }
 
-        var query = '\
+        const query = '\
                 SELECT \
                     t.id, \
                     t.title, \
@@ -2162,7 +2160,7 @@ module.exports = function (app) {
                 LIMIT :limit OFFSET :offset \
             ;';
 
-        var topicsPromise = db
+        const topicsPromise = db
             .query(
                 query,
                 {
@@ -2186,7 +2184,7 @@ module.exports = function (app) {
                     return res.notFound();
                 }
 
-                var countTotal = 0;
+                let countTotal = 0;
                 if (topics && topics.length) {
                     countTotal = topics[0].countTotal;
                     topics.forEach(function (topic) {
@@ -2195,15 +2193,15 @@ module.exports = function (app) {
                         delete topic.countTotal;
 
                         if (include && include.indexOf('vote') > -1 && topic.vote.id) {
-                            var options = [];
+                            const options = [];
                             if (topic.vote.options) {
                                 topic.vote.options.forEach(function (voteOption) {
-                                    var o = {};
-                                    var optText = voteOption.split(':');
+                                    const o = {};
+                                    const optText = voteOption.split(':');
                                     o.id = optText[0];
                                     o.value = optText[1];
                                     if (voteResults) {
-                                        var result = _.find(voteResults, {'optionId': optText[0]});
+                                        const result = _.find(voteResults, {'optionId': optText[0]});
                                         if (result) {
                                             o.voteCount = parseInt(result.voteCount, 10);
                                         }
@@ -2223,7 +2221,7 @@ module.exports = function (app) {
                 }
 
                 // Sequelize returns empty array for no results.
-                var result = {
+                const result = {
                     countTotal: countTotal,
                     count: topics.length,
                     rows: topics
@@ -2297,7 +2295,7 @@ module.exports = function (app) {
 
             // The leftovers are e-mails for which User did not exist
             if (validEmailMembers.length) {
-                var usersToCreate = [];
+                const usersToCreate = [];
                 _(validEmailMembers).forEach(function (m) {
                     usersToCreate.push({
                         email: m.userId,
@@ -2328,12 +2326,12 @@ module.exports = function (app) {
 
             if (createdUsers && createdUsers.length) {
                 _(createdUsers).forEach(function (u) {
-                    var member = {
+                    const member = {
                         userId: u.id
                     };
 
                     // Sequelize defaultValue has no effect if "undefined" or "null" is set for attribute...
-                    var level = _.find(validEmailMembers, {userId: u.email}).level;
+                    const level = _.find(validEmailMembers, {userId: u.email}).level;
                     if (level) {
                         member.level = level;
                     }
@@ -2414,7 +2412,7 @@ module.exports = function (app) {
      * Get all members of the Topic
      */
     app.get('/api/users/:userId/topics/:topicId/members', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), function (req, res, next) {
-        var response = {
+        const response = {
             groups: {
                 count: 0,
                 rows: []
@@ -2425,7 +2423,7 @@ module.exports = function (app) {
             }
         };
 
-        var groupsPromise = db
+        const groupsPromise = db
             .query(
                 '\
                 SELECT \
@@ -2464,7 +2462,7 @@ module.exports = function (app) {
                 }
             );
 
-        var usersPromise = db
+        const usersPromise = db
             .query(
                 '\
                 SELECT \
@@ -2519,8 +2517,8 @@ module.exports = function (app) {
         Promise
             .all([groupsPromise, usersPromise])
             .then(function (results) {
-                var groups = results[0];
-                var users = results[1];
+                const groups = results[0];
+                const users = results[1];
 
                 if (groups && groups.length) {
                     response.groups.count = groups.length;
@@ -2541,7 +2539,7 @@ module.exports = function (app) {
      * Get all member Users of the Topic
      */
     app.get('/api/users/:userId/topics/:topicId/members/users', loginCheck(['partner']), isModerator(), hasPermission(TopicMemberUser.LEVELS.read), function (req, res, next) {
-        var dataForModerator = '';
+        let dataForModerator = '';
         if (req.user && req.user.moderator) {
             dataForModerator = '\
             tm.email, \
@@ -2623,9 +2621,9 @@ module.exports = function (app) {
                 }
             )
             .then(function (usersGroups) {
-                var users = [];
+                const users = [];
                 usersGroups.forEach(function (userRow) {
-                    var user = _.find(users, function (o) {
+                    let user = _.find(users, function (o) {
                         return o.id === userRow.id;
                     });
 
@@ -2708,19 +2706,19 @@ module.exports = function (app) {
             .catch(next);
     });
 
-    var checkPermissionsForGroups = function (groupIds, userId, level) {
+    const checkPermissionsForGroups = function (groupIds, userId, level) {
         if (!Array.isArray(groupIds)) {
             groupIds = [groupIds];
         }
 
-        var LEVELS = {
+        const LEVELS = {
             none: 0, // Enables to override inherited permissions.
             read: 1,
             edit: 2,
             admin: 3
         };
 
-        var minRequiredLevel = level || 'read';
+        const minRequiredLevel = level || 'read';
 
         return db
             .query(
@@ -2756,7 +2754,7 @@ module.exports = function (app) {
                     }
 
                     result.forEach(function (row) {
-                        var blevel = row.level;
+                        const blevel = row.level;
 
                         if (LEVELS[minRequiredLevel] > LEVELS[blevel]) {
                             logger.warn('Access denied to topic due to member without permissions trying to delete user! ', 'userId:', userId);
@@ -2776,14 +2774,14 @@ module.exports = function (app) {
      * Create new member Groups to a Topic
      */
     app.post('/api/users/:userId/topics/:topicId/members/groups', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), function (req, res, next) {
-        var members = req.body;
-        var topicId = req.params.topicId;
+        let members = req.body;
+        const topicId = req.params.topicId;
 
         if (!Array.isArray(members)) {
             members = [members];
         }
 
-        var groupIds = [];
+        const groupIds = [];
         members.forEach(function (member) {
             groupIds.push(member.groupId);
         });
@@ -2793,8 +2791,8 @@ module.exports = function (app) {
                 if (allowedGroups && allowedGroups[0]) {
                     return db
                         .transaction(function (t) {
-                            var findOrCreateTopicMemberGroups = allowedGroups.map(function (group) {
-                                var member = _.find(members, function (o) {
+                            const findOrCreateTopicMemberGroups = allowedGroups.map(function (group) {
+                                const member = _.find(members, function (o) {
                                     return o.groupId === group.id;
                                 });
 
@@ -2822,17 +2820,17 @@ module.exports = function (app) {
                                             transaction: t
                                         })
                                         .then(function (topic) {
-                                            var groupIdsToInvite = [];
-                                            var memberGroupActivities = [];
+                                            const groupIdsToInvite = [];
+                                            const memberGroupActivities = [];
 
                                             memberGroups.forEach(function (memberGroup, i) {
                                                 groupIdsToInvite.push(members[i].groupId);
-                                                var groupData = _.find(allowedGroups, function (item) {
+                                                const groupData = _.find(allowedGroups, function (item) {
                                                     return item.id === members[i].groupId;
                                                 });
-                                                var group = Group.build(groupData);
+                                                const group = Group.build(groupData);
 
-                                                var addActivity = cosActivities.addActivity(
+                                                const addActivity = cosActivities.addActivity(
                                                     topic,
                                                     {
                                                         type: 'User',
@@ -2877,12 +2875,12 @@ module.exports = function (app) {
      * Update User membership information
      */
     app.put('/api/users/:userId/topics/:topicId/members/users/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), function (req, res, next) {
-        var newLevel = req.body.level;
-        var memberId = req.params.memberId;
-        var topicId = req.params.topicId;
+        const newLevel = req.body.level;
+        const memberId = req.params.memberId;
+        const topicId = req.params.topicId;
 
-        var promises = [];
-        var userAdminFindPromise = TopicMemberUser
+        const promises = [];
+        const userAdminFindPromise = TopicMemberUser
             .findAll({
                 where: {
                     topicId: topicId,
@@ -2892,7 +2890,7 @@ module.exports = function (app) {
                 raw: true
             });
         promises.push(userAdminFindPromise);
-        var userFindPromise = TopicMemberUser
+        const userFindPromise = TopicMemberUser
             .findOne({
                 where: {
                     topicId: topicId,
@@ -2903,8 +2901,8 @@ module.exports = function (app) {
         Promise
             .all(promises)
             .then(function (results) {
-                var topicAdminMembers = results[0];
-                var topicMemberUser = results[1];
+                const topicAdminMembers = results[0];
+                const topicMemberUser = results[1];
                 if (topicAdminMembers && topicAdminMembers.length === 1 && _.find(topicAdminMembers, {userId: memberId})) {
                     return res.badRequest('Cannot revoke admin permissions from the last admin member.');
                 }
@@ -2951,9 +2949,9 @@ module.exports = function (app) {
      * Update Group membership information
      */
     app.put('/api/users/:userId/topics/:topicId/members/groups/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), function (req, res, next) {
-        var newLevel = req.body.level;
-        var memberId = req.params.memberId;
-        var topicId = req.params.topicId;
+        const newLevel = req.body.level;
+        const memberId = req.params.memberId;
+        const topicId = req.params.topicId;
 
         checkPermissionsForGroups(memberId, req.user.id)
             .then(
@@ -3010,8 +3008,8 @@ module.exports = function (app) {
      * Delete User membership information
      */
     app.delete('/api/users/:userId/topics/:topicId/members/users/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, null, true), function (req, res, next) {
-        var topicId = req.params.topicId;
-        var memberId = req.params.memberId;
+        const topicId = req.params.topicId;
+        const memberId = req.params.memberId;
 
         TopicMemberUser
             .findAll({
@@ -3078,11 +3076,11 @@ module.exports = function (app) {
                         }
                     )
                     .then(function (topicMemberUser) {
-                        var topic = Topic.build(topicMemberUser.Topic);
-                        var user = User.build(topicMemberUser.User);
+                        const topic = Topic.build(topicMemberUser.Topic);
+                        const user = User.build(topicMemberUser.User);
                         topic.dataValues.id = topicId;
                         user.dataValues.id = memberId;
-                        var activityPromise;
+                        let activityPromise;
 
                         return db
                             .transaction(function (t) {
@@ -3153,8 +3151,8 @@ module.exports = function (app) {
      * Delete Group membership information
      */
     app.delete('/api/users/:userId/topics/:topicId/members/groups/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), function (req, res, next) {
-        var topicId = req.params.topicId;
-        var memberId = req.params.memberId;
+        const topicId = req.params.topicId;
+        const memberId = req.params.memberId;
 
         checkPermissionsForGroups(memberId, req.user.id)
             .then(
@@ -3206,9 +3204,9 @@ module.exports = function (app) {
                                 }
                             )
                             .then(function (topicMemberGroup) {
-                                var topic = Topic.build(topicMemberGroup.Topic);
+                                const topic = Topic.build(topicMemberGroup.Topic);
                                 topic.dataValues.id = topicId;
-                                var group = Group.build(topicMemberGroup.Group);
+                                const group = Group.build(topicMemberGroup.Group);
                                 group.dataValues.id = memberId;
 
                                 return db
@@ -3334,7 +3332,7 @@ module.exports = function (app) {
 
             // The leftovers are e-mails for which User did not exist
             if (validEmailMembers.length) {
-                var usersToCreate = [];
+                const usersToCreate = [];
                 _(validEmailMembers).forEach(function (m) {
                     usersToCreate.push({
                         email: m.userId,
@@ -3366,12 +3364,12 @@ module.exports = function (app) {
             // Go through the newly created users and add them to the validUserIdMembers list so that they get invited
             if (createdUsers && createdUsers.length) {
                 _(createdUsers).forEach(function (u) {
-                    var member = {
+                    const member = {
                         userId: u.id
                     };
 
                     // Sequelize defaultValue has no effect if "undefined" or "null" is set for attribute...
-                    var level = _.find(validEmailMembers, {userId: u.email}).level;
+                    const level = _.find(validEmailMembers, {userId: u.email}).level;
                     if (level) {
                         member.level = level;
                     }
@@ -3677,8 +3675,8 @@ module.exports = function (app) {
      * TODO: API url is fishy.. maybe should be POST /api/topics/:joinToken/members
      */
     app.post('/api/topics/join/:tokenJoin', loginCheck(['partner']), function (req, res, next) {
-        var tokenJoin = req.params.tokenJoin;
-        var userId = req.user.id;
+        const tokenJoin = req.params.tokenJoin;
+        const userId = req.user.id;
 
         Topic
             .findOne({
@@ -3730,7 +3728,7 @@ module.exports = function (app) {
                             }
                         });
                 }).then(function () {
-                    var resObject = topic.toJSON();
+                    const resObject = topic.toJSON();
                     resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
 
                     return res.ok(resObject);
@@ -3745,14 +3743,14 @@ module.exports = function (app) {
      */
 
     app.post('/api/users/:userId/topics/:topicId/attachments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit), function (req, res, next) {
-        var topicId = req.params.topicId;
-        var name = req.body.name;
-        var type = req.body.type;
-        var source = req.body.source;
-        var size = req.body.size;
-        var link = req.body.link;
+        const topicId = req.params.topicId;
+        const name = req.body.name;
+        const type = req.body.type;
+        const source = req.body.source;
+        const size = req.body.size;
+        const link = req.body.link;
 
-        var attachmentLimit = config.attachments.limit || 5;
+        const attachmentLimit = config.attachments.limit || 5;
 
         Topic
             .findOne({
@@ -3769,7 +3767,7 @@ module.exports = function (app) {
                     return res.badRequest('Topic attachment limit reached', 2);
                 }
 
-                var attachment = Attachment.build({
+                const attachment = Attachment.build({
                     name: name,
                     type: type,
                     size: size,
@@ -3818,9 +3816,9 @@ module.exports = function (app) {
     });
 
     app.put('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit), function (req, res, next) {
-        var newName = req.body.name;
+        const newName = req.body.name;
 
-        var updateAttachment = {};
+        const updateAttachment = {};
 
         if (newName) {
             updateAttachment.name = newName;
@@ -3837,7 +3835,7 @@ module.exports = function (app) {
 
                 return db
                     .transaction(function (t) {
-                        var topic = attachment.Topics[0];
+                        const topic = attachment.Topics[0];
                         delete attachment.Topics;
 
                         return cosActivities
@@ -3892,7 +3890,7 @@ module.exports = function (app) {
             });
     });
 
-    var topicAttachmentsList = function (req, res, next) {
+    const topicAttachmentsList = function (req, res, next) {
 
         db
             .query(
@@ -3935,7 +3933,7 @@ module.exports = function (app) {
     app.get('/api/users/:userId/topics/:topicId/attachments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), topicAttachmentsList);
     app.get('/api/topics/:topicId/attachments', hasVisibility(Topic.VISIBILITY.public), topicAttachmentsList);
 
-    var readAttachment = function (req, res, next) {
+    const readAttachment = function (req, res, next) {
         Attachment
             .findOne({
                 where: {
@@ -3944,14 +3942,14 @@ module.exports = function (app) {
             })
             .then(function (attachment) {
                 if (attachment && attachment.source === Attachment.SOURCES.upload && req.query.download) {
-                    var fileUrl = URL.parse(attachment.link);
-                    var filename = attachment.name;
+                    const fileUrl = URL.parse(attachment.link);
+                    let filename = attachment.name;
 
                     if (filename.split('.').length <= 1) {
                         filename += '.' + attachment.type;
                     }
 
-                    var options = {
+                    const options = {
                         hostname: fileUrl.hostname,
                         path: fileUrl.path,
                         port: fileUrl.port
@@ -3979,7 +3977,7 @@ module.exports = function (app) {
     app.get('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), readAttachment);
     app.get('/api/topics/:topicId/attachments/:attachmentId', hasVisibility(Topic.VISIBILITY.public), readAttachment);
 
-    var topicReportsCreate = async function (req, res) {
+    const topicReportsCreate = async function (req, res) {
         const topicId = req.params.topicId;
 
         const activeReportsCount = await TopicReport
@@ -4141,7 +4139,7 @@ module.exports = function (app) {
             return res.badRequest(null, 1, {text: 'Parameter "text" has to be between 10 and 4000 characters'});
         }
 
-        var topicReport = await TopicReport.findOne({
+        const topicReport = await TopicReport.findOne({
             where: {
                 topicId: topicId,
                 id: reportId
@@ -4191,12 +4189,12 @@ module.exports = function (app) {
      * Create Topic Comment
      */
     app.post('/api/users/:userId/topics/:topicId/comments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), function (req, res, next) {
-        var type = req.body.type;
-        var parentId = req.body.parentId;
-        var parentVersion = req.body.parentVersion;
-        var subject = req.body.subject;
-        var text = req.body.text;
-        var edits = [
+        let type = req.body.type;
+        const parentId = req.body.parentId;
+        const parentVersion = req.body.parentVersion;
+        let subject = req.body.subject;
+        const text = req.body.text;
+        const edits = [
             {
                 text: text,
                 subject: subject,
@@ -4211,7 +4209,7 @@ module.exports = function (app) {
             edits[0].type = type;
         }
 
-        var comment = Comment.build({
+        let comment = Comment.build({
             type: type,
             subject: subject,
             text: text,
@@ -4230,7 +4228,7 @@ module.exports = function (app) {
                     .save({transaction: t})
                     .then(function () {
                         //comment.edits.createdAt = JSON.stringify(comment.createdAt);
-                        var commentCreateActivityPromise = Topic
+                        const commentCreateActivityPromise = Topic
                             .findOne({
                                 where: {
                                     id: req.params.topicId
@@ -4282,7 +4280,7 @@ module.exports = function (app) {
 
                             });
 
-                        var topicCommentPromise = TopicComment
+                        const topicCommentPromise = TopicComment
                             .create(
                                 {
                                     topicId: req.params.topicId,
@@ -4293,7 +4291,7 @@ module.exports = function (app) {
                                 }
                             );
 
-                        var updateCreatedAtPromise = db
+                        const updateCreatedAtPromise = db
                             .query(
                                 '\
                                    UPDATE "Comments" \
@@ -4333,16 +4331,16 @@ module.exports = function (app) {
             });
     });
 
-    var topicCommentsList = function (req, res, next) {
-        var orderByValues = {
+    const topicCommentsList = function (req, res, next) {
+        const orderByValues = {
             rating: 'rating',
             popularity: 'popularity',
             date: 'date'
         };
 
-        var orderByComments = '"createdAt" DESC';
-        var orderByReplies = '"createdAt" ASC';
-        var dataForModerator = '';
+        let orderByComments = '"createdAt" DESC';
+        let orderByReplies = '"createdAt" ASC';
+        let dataForModerator = '';
         if (req.user && req.user.moderator) {
             dataForModerator = '\
             , \'email\', u.email \
@@ -4364,7 +4362,7 @@ module.exports = function (app) {
             // Do nothing
         }
 
-        var query = '\
+        const query = '\
             CREATE OR REPLACE FUNCTION pg_temp.editCreatedAtToJson(jsonb) \
                 RETURNS jsonb \
                 AS $$ SELECT array_to_json(array(SELECT jsonb_build_object(\'subject\', r.subject, \'text\', r.text,\'createdAt\', to_char(r."createdAt" at time zone \'UTC\', :dateFormat), \'type\', r.type) FROM jsonb_to_recordset($1) as r(subject text, text text, "createdAt" timestamptz, type text)))::jsonb \
@@ -4648,8 +4646,8 @@ module.exports = function (app) {
                 }
             )
             .then(function (comments) {
-                var countPro = 0;
-                var countCon = 0;
+                let countPro = 0;
+                let countCon = 0;
 
                 if (comments.length) {
                     countPro = comments[0].countPro;
@@ -4741,10 +4739,10 @@ module.exports = function (app) {
 //WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition.
 //NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
     app.put('/api/users/:userId/topics/:topicId/comments/:commentId', function (req, res, next) {
-        var subject = req.body.subject;
-        var text = req.body.text;
-        var type = req.body.type;
-        var commentId = req.params.commentId;
+        const subject = req.body.subject;
+        const text = req.body.text;
+        let type = req.body.type;
+        const commentId = req.params.commentId;
 
         Comment
             .findOne({
@@ -4754,8 +4752,8 @@ module.exports = function (app) {
                 include: [Topic]
             })
             .then(function (comment) {
-                var now = moment().format();
-                var edits = comment.edits;
+                const now = moment().format();
+                const edits = comment.edits;
 
                 if (text === comment.text && subject === comment.subject && type === comment.type) {
                     return res.ok();
@@ -4776,7 +4774,7 @@ module.exports = function (app) {
 
                 return db
                     .transaction(function (t) {
-                        var topic = comment.Topics[0];
+                        const topic = comment.Topics[0];
                         delete comment.Topic;
 
                         return cosActivities
@@ -4823,8 +4821,8 @@ module.exports = function (app) {
             .catch(next);
     });
 
-    var topicCommentsReportsCreate = function (req, res, next) {
-        var commentId = req.params.commentId;
+    const topicCommentsReportsCreate = function (req, res, next) {
+        const commentId = req.params.commentId;
 
         return Comment
             .findOne({
@@ -4937,7 +4935,7 @@ module.exports = function (app) {
                     return res.notFound();
                 }
 
-                var commentReport = results[0];
+                const commentReport = results[0];
 
                 return res.ok(commentReport);
             })
@@ -4945,8 +4943,8 @@ module.exports = function (app) {
     });
 
     app.post('/api/topics/:topicId/comments/:commentId/reports/:reportId/moderate', authTokenRestrictedUse, function (req, res, next) {
-        var eventTokenData = req.locals.tokenDecoded;
-        var type = req.body.type;
+        const eventTokenData = req.locals.tokenDecoded;
+        const type = req.body.type;
 
         if (!type) {
             return res.badRequest({type: 'Property type is required'});
@@ -4978,14 +4976,14 @@ module.exports = function (app) {
                 }
             )
             .then(function (results) {
-                var commentReport = results[0];
+                const commentReport = results[0];
 
                 if (!commentReport) {
                     return res.notFound();
                 }
 
-                var comment = commentReport.comment;
-                var report = commentReport.report;
+                const comment = commentReport.comment;
+                const report = commentReport.report;
 
                 // If Comment has been updated since the Report was made, deny moderation cause the text may have changed.
                 if (comment.updatedAt.getTime() > report.createdAt.getTime()) {
@@ -5000,7 +4998,7 @@ module.exports = function (app) {
                         include: [Topic]
                     })
                     .then(function (comment) {
-                        var topic = comment.dataValues.Topics[0];
+                        const topic = comment.dataValues.Topics[0];
                         delete comment.dataValues.Topics;
                         comment.deletedById = eventTokenData.userId;
                         comment.deletedAt = db.fn('NOW');
@@ -5056,9 +5054,9 @@ module.exports = function (app) {
             .catch(next);
     });
 
-    var topicMentionsList = function (req, res, next) {
-        var hashtag = null;
-        var queryurl = 'search/tweets';
+    const topicMentionsList = function (req, res, next) {
+        let hashtag = null;
+        let queryurl = 'search/tweets';
 
 
         if (req.query && req.query.test === 'error') { // For testing purposes
@@ -5120,14 +5118,14 @@ module.exports = function (app) {
                 return Promise.reject(err);
             })
             .spread(function (data) {
-                var mentions = [];
+                const mentions = [];
                 if (data && data.statuses) {
                     logger.info('Twitter response', req.method, req.path, req.user, data.statuses.length);
                     _.forEach(data.statuses, function (m) {
-                        var mTimeStamp = moment(m.created_at, 'ddd MMM DD HH:mm:ss ZZ YYYY');
+                        let mTimeStamp = moment(m.created_at, 'ddd MMM DD HH:mm:ss ZZ YYYY');
                         mTimeStamp = mTimeStamp.format();
 
-                        var status = {
+                        const status = {
                             id: m.id,
                             text: encoder.decode(m.text),
                             creator: {
@@ -5143,7 +5141,7 @@ module.exports = function (app) {
                         mentions.push(status);
                     });
 
-                    var cachedMentions = {
+                    const cachedMentions = {
                         count: mentions.length,
                         rows: mentions,
                         createdAt: moment().format(),
@@ -5182,7 +5180,7 @@ module.exports = function (app) {
      * Create a Comment Vote
      */
     app.post('/api/topics/:topicId/comments/:commentId/votes', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), function (req, res, next) {
-        var value = parseInt(req.body.value, 10);
+        const value = parseInt(req.body.value, 10);
 
         Comment
             .findOne({
@@ -5285,27 +5283,27 @@ module.exports = function (app) {
      * Create a Vote
      */
     app.post('/api/users/:userId/topics/:topicId/votes', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress]), function (req, res, next) {
-        var voteOptions = req.body.options;
+        const voteOptions = req.body.options;
 
         if (!voteOptions || !Array.isArray(voteOptions) || voteOptions.length < 2) {
             return res.badRequest('At least 2 vote options are required', 1);
         }
 
-        var authType = req.body.authType || Vote.AUTH_TYPES.soft;
-        var delegationIsAllowed = req.body.delegationIsAllowed || false;
+        const authType = req.body.authType || Vote.AUTH_TYPES.soft;
+        const delegationIsAllowed = req.body.delegationIsAllowed || false;
 
         // We cannot allow too similar options, otherwise the options are not distinguishable in the signed file
         if (authType === Vote.AUTH_TYPES.hard) {
-            var voteOptionValues = _.map(voteOptions, 'value').map(function (value) {
+            const voteOptionValues = _.map(voteOptions, 'value').map(function (value) {
                 return sanitizeFilename(value).toLowerCase();
             });
 
-            var uniqueValues = _.uniq(voteOptionValues);
+            const uniqueValues = _.uniq(voteOptionValues);
             if (uniqueValues.length !== voteOptions.length) {
                 return res.badRequest('Vote options are too similar', 2);
             }
 
-            var reservedPrefix = VoteOption.RESERVED_PREFIX;
+            const reservedPrefix = VoteOption.RESERVED_PREFIX;
             uniqueValues.forEach(function (value) {
                 if (value.substr(0, 2) === reservedPrefix) {
                     return res.badRequest('Vote option not allowed due to usage of reserved prefix "' + reservedPrefix + '"', 4);
@@ -5318,7 +5316,7 @@ module.exports = function (app) {
             return res.badRequest('Delegation is not allowed for authType "' + authType + '"', 3);
         }
 
-        var vote = Vote.build({
+        const vote = Vote.build({
             minChoices: req.body.minChoices || 1,
             maxChoices: req.body.maxChoices || 1,
             delegationIsAllowed: req.body.delegationIsAllowed || false,
@@ -5339,7 +5337,7 @@ module.exports = function (app) {
             .then(function (topic) {
                 return db
                     .transaction(function (t) {
-                        var voteOptionsCreated;
+                        let voteOptionsCreated;
 
                         return cosActivities
                             .createActivity(
@@ -5358,10 +5356,10 @@ module.exports = function (app) {
                                     .save({transaction: t});
                             })
                             .then(function () {
-                                var voteOptionPromises = [];
+                                const voteOptionPromises = [];
                                 _(voteOptions).forEach(function (o) {
                                     o.voteId = vote.id;
-                                    var vopt = VoteOption.build(o);
+                                    const vopt = VoteOption.build(o);
                                     voteOptionPromises.push(vopt.validate());
                                 });
 
@@ -5457,11 +5455,11 @@ module.exports = function (app) {
      * Read a Vote
      */
     app.get('/api/users/:userId/topics/:topicId/votes/:voteId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), function (req, res, next) {
-        var topicId = req.params.topicId;
-        var voteId = req.params.voteId;
-        var userId = req.user.id;
+        const topicId = req.params.topicId;
+        const voteId = req.params.voteId;
+        const userId = req.user.id;
 
-        var voteInfoPromise = Vote
+        const voteInfoPromise = Vote
             .findOne({
                 where: {id: voteId},
                 include: [
@@ -5487,7 +5485,7 @@ module.exports = function (app) {
                 ]
             });
 
-        var voteResultsPromise = db
+        const voteResultsPromise = db
             .query(
                 ' \
                         WITH \
@@ -5599,10 +5597,10 @@ module.exports = function (app) {
                     return res.notFound();
                 }
 
-                var hasVoted = false;
+                let hasVoted = false;
                 if (voteResults) {
                     voteInfo.dataValues.VoteOptions.forEach(function (option) {
-                        var result = _.find(voteResults, {optionId: option.id});
+                        const result = _.find(voteResults, {optionId: option.id});
 
                         if (result) {
 
@@ -5631,7 +5629,7 @@ module.exports = function (app) {
                     if (!voteInfo.dataValues.downloads) {
                         voteInfo.dataValues.downloads = {};
                     }
-                    var voteFinalURLParams = {
+                    const voteFinalURLParams = {
                         userId: userId,
                         topicId: topicId,
                         voteId: voteId,
@@ -5653,11 +5651,11 @@ module.exports = function (app) {
      * Update a Vote
      */
     app.put('/api/users/:userId/topics/:topicId/votes/:voteId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), function (req, res, next) {
-        var topicId = req.params.topicId;
-        var voteId = req.params.voteId;
+        const topicId = req.params.topicId;
+        const voteId = req.params.voteId;
 
         // Make sure the Vote is actually related to the Topic through which the permission was granted.
-        var fields = ['endsAt'];
+        const fields = ['endsAt'];
 
         Topic
             .findOne({
@@ -5680,7 +5678,7 @@ module.exports = function (app) {
                     return Promise.reject();
                 }
 
-                var vote = topic.Votes[0];
+                const vote = topic.Votes[0];
 
                 return db.transaction(function (t) {
                     fields.forEach(function (field) {
@@ -5719,11 +5717,11 @@ module.exports = function (app) {
      * Read a public Topics Vote
      */
     app.get('/api/topics/:topicId/votes/:voteId', hasVisibility(Topic.VISIBILITY.public), function (req, res, next) {
-        var topicId = req.params.topicId;
-        var voteId = req.params.voteId;
+        const topicId = req.params.topicId;
+        const voteId = req.params.voteId;
 
         // TODO: Can be done in 1 query.
-        var voteInfoPromise = Vote
+        const voteInfoPromise = Vote
             .findOne({
                 where: {id: voteId},
                 include: [
@@ -5735,7 +5733,7 @@ module.exports = function (app) {
                 ]
             });
 
-        var voteResultsPromise = getVoteResults(voteId);
+        const voteResultsPromise = getVoteResults(voteId);
 
         Promise
             .all([voteInfoPromise, voteResultsPromise])
@@ -5746,7 +5744,7 @@ module.exports = function (app) {
 
                 if (voteResults) {
                     _(voteInfo.dataValues.VoteOptions).forEach(function (option) {
-                        var result = _.find(voteResults, {optionId: option.id});
+                        const result = _.find(voteResults, {optionId: option.id});
                         if (result) {
                             option.dataValues.voteCount = parseInt(result.voteCount, 10); //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
                             if (result.selected) {
@@ -5761,11 +5759,11 @@ module.exports = function (app) {
             .catch(next);
     });
 
-    var handleTopicVotePreconditions = function (req, res) {
-        var topicId = req.params.topicId;
-        var voteId = req.params.voteId;
+    const handleTopicVotePreconditions = function (req, res) {
+        const topicId = req.params.topicId;
+        const voteId = req.params.voteId;
 
-        var voteOptions = req.body.options;
+        const voteOptions = req.body.options;
 
         return Vote
             .findOne({
@@ -5807,19 +5805,19 @@ module.exports = function (app) {
             });
     };
 
-    var handleTopicVoteSoft = function (vote, req, res) {
-        var voteId = vote.id;
-        var userId = req.user.id;
-        var topicId = req.params.topicId;
+    const handleTopicVoteSoft = function (vote, req, res) {
+        const voteId = vote.id;
+        const userId = req.user.id;
+        const topicId = req.params.topicId;
 
-        var voteOptions = req.body.options;
-        var target = vote.toJSON();
+        const voteOptions = req.body.options;
+        const target = vote.toJSON();
         target['@type'] = 'Vote';
 
         return db
             .transaction(function (t) {
                 // Store vote options
-                var optionGroupId = Math.random().toString(36).substring(2, 10);
+                const optionGroupId = Math.random().toString(36).substring(2, 10);
 
                 _(voteOptions).forEach(function (o) {
                     o.voteId = voteId;
@@ -5827,7 +5825,7 @@ module.exports = function (app) {
                     o.optionGroupId = optionGroupId;
                 });
 
-                var voteListCreatePromise = VoteList
+                const voteListCreatePromise = VoteList
                     .bulkCreate(
                         voteOptions,
                         {
@@ -5844,8 +5842,8 @@ module.exports = function (app) {
                                 transaction: t
                             })
                             .then(function (topic) {
-                                var vl = [];
-                                var tc = _.cloneDeep(topic.dataValues);
+                                const vl = [];
+                                let tc = _.cloneDeep(topic.dataValues);
                                 tc.description = null;
                                 tc = Topic.build(tc);
 
@@ -5877,7 +5875,7 @@ module.exports = function (app) {
                     });
 
                 // Delete delegation if you are voting
-                var voteDelegationDestroyPromise = VoteDelegation
+                const voteDelegationDestroyPromise = VoteDelegation
                     .destroy({
                         where: {
                             voteId: voteId,
@@ -5932,21 +5930,21 @@ module.exports = function (app) {
 
     };
 
-    var handleTopicVoteHard = function (vote, req, res) {
-        var voteId = vote.id;
-        var userId = req.user ? req.user.id : null;
+    const handleTopicVoteHard = function (vote, req, res) {
+        const voteId = vote.id;
+        let userId = req.user ? req.user.id : null;
 
-        var voteOptions = req.body.options;
+        const voteOptions = req.body.options;
 
         //idCard
-        var certificate = req.body.certificate;
+        const certificate = req.body.certificate;
         //mID
-        var pid = req.body.pid;
-        var phoneNumber = req.body.phoneNumber;
+        const pid = req.body.pid;
+        const phoneNumber = req.body.phoneNumber;
         //smart-ID
-        var countryCode = req.body.countryCode;
-        var personalInfo;
-        var signingMethod;
+        const countryCode = req.body.countryCode;
+        let personalInfo;
+        let signingMethod;
 
         if (!certificate && !(pid && (phoneNumber || countryCode))) {
             res.badRequest('Vote with hard authentication requires users certificate when signing with ID card OR phoneNumber+pid when signing with mID', 9);
@@ -5954,10 +5952,10 @@ module.exports = function (app) {
             return Promise.reject();
         }
 
-        var getCertificatePromise;
-        var smartIdcertificate;
-        var mobileIdCertificate;
-        var certFormat = 'base64'
+        let getCertificatePromise;
+        let smartIdcertificate;
+        let mobileIdCertificate;
+        let certFormat = 'base64'
         if (pid && countryCode) {
             signingMethod = Vote.SIGNING_METHODS.smartId;
             getCertificatePromise = smartId
@@ -6044,7 +6042,7 @@ module.exports = function (app) {
                 });
         }
 
-            var personalInfoPromise = getCertificatePromise
+            const personalInfoPromise = getCertificatePromise
                 .then(function (certificateInfo) {
                     if (signingMethod === Vote.SIGNING_METHODS.smartId) {
                         return smartId
@@ -6075,7 +6073,7 @@ module.exports = function (app) {
                 .transaction(function (t) { // One big transaction, we don't want created User data to lay around in DB if the process failed.
                     return personalInfoPromise
                         .then(function () {
-                            var promisesToResolve = [];
+                            const promisesToResolve = [];
                             // Authenticated User
                             if (userId) {
                                 const loggedInUserPromise = _checkAuthenticatedUser(userId, personalInfo, t);
@@ -6114,7 +6112,7 @@ module.exports = function (app) {
                                 });
                         })
                         .then(function (signInitResponse) {
-                            var sessionData, token, sessionDataEncrypted;
+                            let sessionData, token, sessionDataEncrypted;
                             if (signInitResponse.sessionId) {
                                 signInitResponse.dataToSign;
                                 sessionData = {
@@ -6245,12 +6243,12 @@ module.exports = function (app) {
     });
 
 
-    var handleTopicVoteSign = function (req, res, next) {
-        var topicId = req.params.topicId;
-        var voteId = req.params.voteId;
+    const handleTopicVoteSign = function (req, res, next) {
+        const topicId = req.params.topicId;
+        const voteId = req.params.voteId;
 
-        var token = req.body.token;
-        var signatureValue = req.body.signatureValue;
+        const token = req.body.token;
+        const signatureValue = req.body.signatureValue;
 
         if (!token) {
             logger.warn('Missing requried parameter "token"', req.ip, req.path, req.headers);
@@ -6262,8 +6260,8 @@ module.exports = function (app) {
             return res.badRequest('Missing signature', 1);
         }
 
-        var tokenData;
-        var idSignFlowData;
+        let tokenData;
+        let idSignFlowData;
 
         try {
             tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
@@ -6280,7 +6278,7 @@ module.exports = function (app) {
             }
         }
 
-        var userId = req.user ? req.user.id : idSignFlowData.userId; // Auth has User in session, but un-authenticated in idSignFlowData
+        const userId = req.user ? req.user.id : idSignFlowData.userId; // Auth has User in session, but un-authenticated in idSignFlowData
 
         // POST /votes/:voteId checks that Vote belongs to Topic using "handleTopicVotePreconditions". It sets it in the sign flow data so we would not have to call "handleTopicVotePreconditions" again.
         if (voteId !== idSignFlowData.voteId) {
@@ -6292,11 +6290,11 @@ module.exports = function (app) {
         return db
             .transaction(function (t) {
                 // Store vote options
-                var voteOptions = idSignFlowData.voteOptions;
+                const voteOptions = idSignFlowData.voteOptions;
 
-                var optionGroupId = Math.random().toString(36).substring(2, 10);
+                const optionGroupId = Math.random().toString(36).substring(2, 10);
 
-                var promisesToResolve = [];
+                const promisesToResolve = [];
 
                 _(voteOptions).forEach(function (o) {
                     o.voteId = voteId;
@@ -6310,7 +6308,7 @@ module.exports = function (app) {
                     promisesToResolve.push(loggedInUserPromise);
                 }
 
-                var voteListCreatePromise = VoteList
+                const voteListCreatePromise = VoteList
                     .bulkCreate(
                         voteOptions,
                         {
@@ -6327,8 +6325,8 @@ module.exports = function (app) {
                                 transaction: t
                             })
                             .then(function (topic) {
-                                var vl = [];
-                                var tc = _.cloneDeep(topic.dataValues);
+                                const vl = [];
+                                let tc = _.cloneDeep(topic.dataValues);
                                 tc.description = null;
                                 tc = Topic.build(tc);
 
@@ -6339,7 +6337,7 @@ module.exports = function (app) {
                                     vl[key] = el;
                                 });
 
-                                var actor = {
+                                const actor = {
                                     type: 'User',
                                     ip: req.ip
                                 };
@@ -6363,7 +6361,7 @@ module.exports = function (app) {
                     });
 
                 // Delete delegation if you are voting - TODO: why is this here? You cannot delegate when authType === 'hard'
-                var voteDelegationDestroyPromise = VoteDelegation
+                const voteDelegationDestroyPromise = VoteDelegation
                     .destroy({
                         where: {
                             voteId: voteId,
@@ -6373,7 +6371,7 @@ module.exports = function (app) {
                         transaction: t
                     });
 
-                var userConnectionAddPromise = UserConnection
+                const userConnectionAddPromise = UserConnection
                     .upsert(
                         {
                             userId: userId,
@@ -6386,7 +6384,7 @@ module.exports = function (app) {
                         }
                     );
                 const optionIds = voteOptions.map(function (elem) {return elem.optionId});
-                var signUserBdocPromise =
+                const signUserBdocPromise =
                     VoteOption
                         .findAll({
                             where: {
@@ -6446,11 +6444,11 @@ module.exports = function (app) {
     app.post('/api/users/:userId/topics/:topicId/votes/:voteId/sign', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.voting]), handleTopicVoteSign);
 
 
-    var handleTopicVoteStatus = function (req, res) {
-        var topicId = req.params.topicId;
-        var voteId = req.params.voteId;
+    const handleTopicVoteStatus = function (req, res) {
+        const topicId = req.params.topicId;
+        const voteId = req.params.voteId;
 
-        var token = req.query.token;
+        const token = req.query.token;
 
         if (!token) {
             logger.warn('Missing requried parameter "token"', req.ip, req.path, req.headers);
@@ -6458,8 +6456,8 @@ module.exports = function (app) {
             return res.badRequest('Missing required parameter "token"');
         }
 
-        var tokenData;
-        var idSignFlowData;
+        let tokenData;
+        let idSignFlowData;
 
         try {
             tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
@@ -6475,8 +6473,8 @@ module.exports = function (app) {
                 return res.unauthorised('Invalid JWT token');
             }
         }
-        var statusPromise;
-        var userId = req.user ? req.user.id : idSignFlowData.userId;
+        let statusPromise;
+        const userId = req.user ? req.user.id : idSignFlowData.userId;
         if (idSignFlowData.signingMethod === Vote.SIGNING_METHODS.smartId) {
             statusPromise = cosSignature.getSmartIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions);
         } else {
@@ -6484,14 +6482,14 @@ module.exports = function (app) {
         }
             return Promise.all([statusPromise])
                 .then(function (results) {
-                    var signedDocInfo = results[0];
+                    const signedDocInfo = results[0];
                     return db
                         .transaction(function (t) {
                             // Store vote options
-                            var voteOptions = idSignFlowData.voteOptions;
-                            var optionGroupId = Math.random().toString(36).substring(2, 10);
+                            const voteOptions = idSignFlowData.voteOptions;
+                            const optionGroupId = Math.random().toString(36).substring(2, 10);
 
-                            var promisesToResolve = [];
+                            const promisesToResolve = [];
 
                             _(voteOptions).forEach(function (o) {
                                 if (!o.optionId && o.id) {
@@ -6508,7 +6506,7 @@ module.exports = function (app) {
 
                                 promisesToResolve.push(loggedInUserPromise);
                             }
-                            var voteListCreatePromise = VoteList
+                            const voteListCreatePromise = VoteList
                                 .bulkCreate(
                                     voteOptions,
                                     {
@@ -6524,8 +6522,8 @@ module.exports = function (app) {
                                             transaction: t
                                         })
                                         .then(function (topic) {
-                                            var vl = [];
-                                            var tc = _.cloneDeep(topic.dataValues);
+                                            const vl = [];
+                                            let tc = _.cloneDeep(topic.dataValues);
                                             tc.description = null;
                                             tc = Topic.build(tc);
 
@@ -6535,7 +6533,7 @@ module.exports = function (app) {
                                                 el = VoteList.build(el.dataValues);
                                                 vl[key] = el;
                                             });
-                                            var actor = {type: 'User', ip: req.ip};
+                                            const actor = {type: 'User', ip: req.ip};
                                             if (userId) {
                                                 actor.id = userId;
                                             }
@@ -6556,7 +6554,7 @@ module.exports = function (app) {
                                 });
 
                             // Delete delegation if you are voting - TODO: why is this here? You cannot delegate for authType === 'hard' anyway
-                            var voteDelegationDestroyPromise = VoteDelegation
+                            const voteDelegationDestroyPromise = VoteDelegation
                                 .destroy({
                                     where: {
                                         voteId: voteId,
@@ -6566,7 +6564,7 @@ module.exports = function (app) {
                                     transaction: t
                                 });
 
-                            var userConnectionAddPromise = UserConnection
+                            const userConnectionAddPromise = UserConnection
                                 .upsert(
                                     {
                                         userId: userId,
@@ -6579,7 +6577,7 @@ module.exports = function (app) {
                                     }
                                 );
 
-                            var voteUserContainerPromise = VoteUserContainer
+                            const voteUserContainerPromise = VoteUserContainer
                                 .upsert(
                                     {
                                         userId: userId,
@@ -6594,7 +6592,7 @@ module.exports = function (app) {
 
                             if (!req.user) {
                                 // When starting signing with Mobile-ID we have no full name, thus we need to fetch and update
-                                var userNameUpdatePromise = User
+                                const userNameUpdatePromise = User
                                     .update(
                                         {
                                             name: db.fn('initcap', idSignFlowData.personalInfo.firstName + ' ' + idSignFlowData.personalInfo.lastName)
@@ -6766,9 +6764,9 @@ module.exports = function (app) {
      * TODO: Deprecate /api/users/:userId/topics/:topicId/votes/:voteId/downloads/bdocs/user
      */
     app.get(['/api/users/:userId/topics/:topicId/votes/:voteId/downloads/bdocs/user', '/api/topics/:topicId/votes/:voteId/downloads/bdocs/user'], authTokenRestrictedUse, function (req, res, next) {
-        var voteId = req.params.voteId;
-        var downloadTokenData = req.locals.tokenDecoded;
-        var userId = downloadTokenData.userId;
+        const voteId = req.params.voteId;
+        const downloadTokenData = req.locals.tokenDecoded;
+        const userId = downloadTokenData.userId;
 
         //TODO: Make use of streaming once Sequelize supports it - https://github.com/sequelize/sequelize/issues/2454
         VoteUserContainer
@@ -6785,10 +6783,10 @@ module.exports = function (app) {
                     return Promise.reject();
                 }
 
-                var container = voteUserContainer.dataValues.container;
+                const container = voteUserContainer.dataValues.container;
                 delete voteUserContainer.dataValues.container;
 
-                var actor = {
+                const actor = {
                     type: 'User',
                     ip: req.ip
                 };
@@ -6812,9 +6810,9 @@ module.exports = function (app) {
             .catch(next);
     });
 
-    var topicDownloadBdocFinal = function (req, res, next) {
-        var topicId = req.params.topicId;
-        var voteId = req.params.voteId;
+    const topicDownloadBdocFinal = function (req, res, next) {
+        const topicId = req.params.topicId;
+        const voteId = req.params.voteId;
 
         Topic
             .findOne({
@@ -6832,7 +6830,7 @@ module.exports = function (app) {
                 ]
             })
             .then(function (topic) {
-                var vote = topic.Votes[0];
+                const vote = topic.Votes[0];
 
                 // TODO: Once we implement the the "endDate>now -> followUp" we can remove Topic.STATUSES.voting check
                 if ((vote.endsAt && vote.endsAt.getTime() > new Date().getTime() && topic.status === Topic.STATUSES.voting) || topic.status === Topic.STATUSES.voting) {
@@ -6863,9 +6861,9 @@ module.exports = function (app) {
      * Download final vote Zip container
      */
 
-    var topicDownloadZipFinal = function (req, res, next) {
-        var topicId = req.params.topicId;
-        var voteId = req.params.voteId;
+    const topicDownloadZipFinal = function (req, res, next) {
+        const topicId = req.params.topicId;
+        const voteId = req.params.voteId;
 
         Topic
             .findOne({
@@ -6883,7 +6881,7 @@ module.exports = function (app) {
                 ]
             })
             .then(function (topic) {
-                var vote = topic.Votes[0];
+                const vote = topic.Votes[0];
 
                 // TODO: Once we implement the the "endDate>now -> followUp" we can remove Topic.STATUSES.voting check
                 if ((vote.endsAt && vote.endsAt.getTime() > new Date().getTime() && topic.status === Topic.STATUSES.voting) || topic.status === Topic.STATUSES.voting) {
@@ -6925,10 +6923,10 @@ module.exports = function (app) {
      * Delegate a Vote
      */
     app.post('/api/users/:userId/topics/:topicId/votes/:voteId/delegations', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.voting]), function (req, res, next) {
-        var topicId = req.params.topicId;
-        var voteId = req.params.voteId;
+        const topicId = req.params.topicId;
+        const voteId = req.params.voteId;
 
-        var toUserId = req.body.userId;
+        const toUserId = req.body.userId;
 
         if (req.user.id === toUserId) {
             return res.badRequest('Cannot delegate to self.');
@@ -7025,7 +7023,7 @@ module.exports = function (app) {
                                         )
                                         .then(
                                             function (result) {
-                                                var delegation = VoteDelegation.build(result[0][0]);
+                                                const delegation = VoteDelegation.build(result[0][0]);
 
                                                 return cosActivities
                                                     .createActivity(
@@ -7074,9 +7072,9 @@ module.exports = function (app) {
      * Delete Vote delegation
      */
     app.delete('/api/users/:userId/topics/:topicId/votes/:voteId/delegations', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.voting]), function (req, res, next) {
-        var topicId = req.params.topicId;
-        var voteId = req.params.voteId;
-        var userId = req.user.id;
+        const topicId = req.params.topicId;
+        const voteId = req.params.voteId;
+        const userId = req.user.id;
 
         Vote
             .findOne({
@@ -7136,8 +7134,8 @@ module.exports = function (app) {
             .catch(next);
     });
 
-    var topicEventsCreate = function (req, res, next) {
-        var topicId = req.params.topicId;
+    const topicEventsCreate = function (req, res, next) {
+        const topicId = req.params.topicId;
 
         return Topic
             .findOne({
@@ -7160,7 +7158,7 @@ module.exports = function (app) {
                                 }
                             )
                             .then(function (event) {
-                                var actor = {
+                                const actor = {
                                     type: 'User',
                                     ip: req.ip
                                 };
@@ -7199,8 +7197,8 @@ module.exports = function (app) {
     app.post('/api/topics/:topicId/events', authTokenRestrictedUse, topicEventsCreate);
 
 
-    var topicEventsList = function (req, res, next) {
-        var topicId = req.params.topicId;
+    const topicEventsList = function (req, res, next) {
+        const topicId = req.params.topicId;
 
         TopicEvent
             .findAll({
@@ -7233,8 +7231,8 @@ module.exports = function (app) {
      * Delete event
      */
     app.delete('/api/users/:userId/topics/:topicId/events/:eventId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.followUp]), function (req, res, next) {
-        var topicId = req.params.topicId;
-        var eventId = req.params.eventId;
+        const topicId = req.params.topicId;
+        const eventId = req.params.eventId;
 
         TopicEvent
             .findOne({
@@ -7273,8 +7271,8 @@ module.exports = function (app) {
     });
 
     app.post('/api/users/:userId/topics/:topicId/pin', loginCheck(['partner']), function (req, res, next) {
-        var userId = req.user.id;
-        var topicId = req.params.topicId;
+        const userId = req.user.id;
+        const topicId = req.params.topicId;
 
         return db
             .transaction(function (t) {
@@ -7321,8 +7319,8 @@ module.exports = function (app) {
     });
 
     app.delete('/api/users/:userId/topics/:topicId/pin', loginCheck(['partner']), function (req, res, next) {
-        var userId = req.user.id;
-        var topicId = req.params.topicId;
+        const userId = req.user.id;
+        const topicId = req.params.topicId;
 
         TopicPin
             .findOne({

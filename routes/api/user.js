@@ -1,21 +1,21 @@
 'use strict';
 
 module.exports = function (app) {
-    var models = app.get('models');
-    var db = models.sequelize;
+    const models = app.get('models');
+    const db = models.sequelize;
 
-    var loginCheck = app.get('middleware.loginCheck');
-    var emailLib = app.get('email');
-    var config = app.get('config');
-    var cosActivities = app.get('cosActivities');
-    var urlLib = app.get('urlLib');
-    var jwt = app.get('jwt');
-    var uuid = app.get('uuid');
-    var moment = app.get('moment');
+    const loginCheck = app.get('middleware.loginCheck');
+    const emailLib = app.get('email');
+    const config = app.get('config');
+    const cosActivities = app.get('cosActivities');
+    const urlLib = app.get('urlLib');
+    const jwt = app.get('jwt');
+    const uuid = app.get('uuid');
+    const moment = app.get('moment');
 
-    var User = models.User;
-    var UserConsent = models.UserConsent;
-    var UserConnection = models.UserConnection;
+    const User = models.User;
+    const UserConsent = models.UserConsent;
+    const UserConnection = models.UserConnection;
 
     /**
      * Update User info
@@ -26,7 +26,7 @@ module.exports = function (app) {
         if (!req.user.partnerId) { // Allow only our own app change the password
             fields.push('password');
         }
-        var updateEmail = false;
+        let updateEmail = false;
 
         User
             .findOne({
@@ -181,8 +181,8 @@ module.exports = function (app) {
      * Create UserConsent
      */
     app.post('/api/users/:userId/consents', loginCheck(), function (req, res, next) {
-        var userId = req.user.id;
-        var partnerId = req.body.partnerId;
+        const userId = req.user.id;
+        const partnerId = req.body.partnerId;
 
         db
             .transaction(function (t) {
@@ -195,7 +195,7 @@ module.exports = function (app) {
                     })
                     .then(function (created) {
                         if (created) {
-                            var userConsent = UserConsent.build({
+                            const userConsent = UserConsent.build({
                                 userId: userId,
                                 partnerId: partnerId
                             });
@@ -221,7 +221,7 @@ module.exports = function (app) {
      * Read User consents
      */
     app.get('/api/users/:userId/consents', loginCheck(), function (req, res, next) {
-        var userId = req.user.id;
+        const userId = req.user.id;
 
         db
             .query(
@@ -258,8 +258,8 @@ module.exports = function (app) {
      * Delete User consent
      */
     app.delete('/api/users/:userId/consents/:partnerId', loginCheck(), function (req, res, next) {
-        var userId = req.user.id;
-        var partnerId = req.params.partnerId;
+        const userId = req.user.id;
+        const partnerId = req.params.partnerId;
 
         db
             .transaction(function (t) {
@@ -278,7 +278,7 @@ module.exports = function (app) {
                         }
                     )
                     .then(function () {
-                        var consent = UserConsent.build({
+                        const consent = UserConsent.build({
                             userId: userId,
                             partnerId: partnerId
                         });

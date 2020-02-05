@@ -4868,9 +4868,9 @@
       }
     },
     "mobiil-id-rest": {
-      "version": "1.0.1",
-      "resolved": "https://registry.npmjs.org/mobiil-id-rest/-/mobiil-id-rest-1.0.1.tgz",
-      "integrity": "sha512-jJaX4dDiYx3N9WTpkoThyeIivaJCUJ6hYKjFkk6E58pUOgH4bqMG//WYUr5x6CDlFeZeabJPcSyvo7o6Wp5yxA==",
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/mobiil-id-rest/-/mobiil-id-rest-1.0.2.tgz",
+      "integrity": "sha512-zycIOXlBvfXmqM1R7BD1gwlRSmSOX2Q5ycXhIcloy8jqJVJfrwhuF9AQf1QwIb+MHjJ6tbYzo/Ao1PCQvGdv2Q==",
       "requires": {
         "asn1js": "2.0.26",
         "bluebird": "3.7.2",
@@ -6931,9 +6931,9 @@
       "integrity": "sha512-JDhEpTKzXusOqXZ0BUIdH+CjFdO/CR3tLlf5CN34IypI+xMmXW1uB16OOY8z3cICbJlDAVJzNbwBhNO0wt9OAw=="
     },
     "smart-id-rest": {
-      "version": "1.0.1",
-      "resolved": "https://registry.npmjs.org/smart-id-rest/-/smart-id-rest-1.0.1.tgz",
-      "integrity": "sha512-OibNkmR8vmKJ/aB3nj7pnKaTzGMnAyJpN54xL6EgVrSJKKfoxOgVGdgxY/d8OZcjhvKvtCEW3gADRA25aYMqzw==",
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/smart-id-rest/-/smart-id-rest-1.0.2.tgz",
+      "integrity": "sha512-+JYJeh9PUYOTzEcbEX7IGnCjQx2dE7s8uUV3ysaSaRRmayNrA35rr7Fkm8rEWWmukNTIgtbwJCe+qMbiFsYzOA==",
       "requires": {
         "asn1js": "2.0.26",
         "bluebird": "3.7.2",
