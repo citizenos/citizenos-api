@@ -6931,8 +6931,9 @@
       "integrity": "sha512-JDhEpTKzXusOqXZ0BUIdH+CjFdO/CR3tLlf5CN34IypI+xMmXW1uB16OOY8z3cICbJlDAVJzNbwBhNO0wt9OAw=="
     },
     "smart-id-rest": {
-      "version": "1.0.3",
-      "resolved": "git+https://github.com/citizenos/smart-id-rest.git#7fc7f6a7a2863a1a0ce5960e33f2768a389e34ce",
+      "version": "1.0.4",
+      "resolved": "https://registry.npmjs.org/smart-id-rest/-/smart-id-rest-1.0.4.tgz",
+      "integrity": "sha512-cN9hzcNdMUpFD1/ALvch8XTN5kqMNY3HtzFFacuvO7qTdzwWauXCLm74D0vX7skTflSCD5GYsYijhkGMg9XP4A==",
       "requires": {
         "asn1js": "2.0.26",
         "bluebird": "3.7.2",
@@ -7935,8 +7936,8 @@
       }
     },
     "undersign": {
-      "version": "git+https://github.com/rahvaalgatus/undersign.git#27c2bdab5968140ee38852c68a6cf82d62a86366",
-      "from": "git+https://github.com/rahvaalgatus/undersign.git#27c2bdab5968140ee38852c68a6cf82d62a86366",
+      "version": "git+https://github.com/rahvaalgatus/undersign.git#36301795db94f94b23081dcef2b8bb485a0ffd41",
+      "from": "git+https://github.com/rahvaalgatus/undersign.git#36301795db94f94b23081dcef2b8bb485a0ffd41",
       "requires": {
         "asn1.js": "^5",
         "asn1.js-rfc2560": "^5",
