@@ -35,7 +35,13 @@
       "serviceUrl": "CITIZENOS_SERVICES_IDCARD_SERVICE_URL",
       "apiKey": "CITIZENOS_SERVICES_IDCARD_APIKEY"
     },
-    "signature": "CITIZENOS_SERVICES_SIGNATURE",
+    "signature": {
+      "certificates": {
+        "tls": "CITIZENOS_SERVICES_SIGNATURE_CERTIFICATES_TLS"
+      },
+      "timemarkUrl": "CITIZENOS_SERVICES_SIGNATURE_TIMEMARK_URL",
+      "timestampUrl": "CITIZENOS_SERVICES_SIGNATURE_TIMESTAMP_URL"
+    },
     "smartId": {
       "relyingPartyUUID": "CITIZENOS_SERVICES_SMARTID_RELYING_PARTY_UUID",
       "replyingPartyName": "CITIZENOS_SERVICES_SMARTID_RELYING_PARTY_NAME"

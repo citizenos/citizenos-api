@@ -140,13 +140,15 @@
 	    "timestampUrl": "http://demo.sk.ee/tsa"
     },
     "smartId": {
-      "hostname": "sid.demo.sk.ee",
+      "hostname": "demosmartid.citizenos.com:8001",
+      "authorizeToken": "m3EvIdswsiIpeOXqXb185fgoS9h0zpu5jrweZWLVGeVR5FoQpE",
       "apiPath": "/smart-id-rp/v1",
       "relyingPartyUUID": "00000000-0000-0000-0000-000000000000",
       "replyingPartyName": "DEMO"
     },
     "mobileId": {
-      "hostname": "tsp.demo.sk.ee",
+      "hostname": "demomobiilid.citizenos.com:8001",
+      "authorizeToken": "m3EvIdswsiIpeOXqXb185fgoS9h0zpu5jrweZWLVGeVR5FoQpE",
       "apiPath": "/mid-api",
       "relyingPartyUUID": "00000000-0000-0000-0000-000000000000",
       "replyingPartyName": "DEMO"
