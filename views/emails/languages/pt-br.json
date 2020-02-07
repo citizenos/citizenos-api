@@ -1,0 +1,75 @@
+{
+  "LAYOUT": {
+    "LINK_TO_PLATFORM": "Link para a plataforma",
+    "LINK_PRIVACY_POLICY": "Política de Privacidade",
+    "EMPOWERED_BY": "Disponibilizado por"
+  },
+  "ACCOUNT_VERIFICATION": {
+    "SUBJECT": "Ative sua conta Citizen OS"
+  },
+  "INVITE_GROUP": {
+    "SUBJECT": "{{fromUser.name}} está convidando você para se juntar ao nosso grupo “{{group.name}}” no Citizen OS"
+  },
+  "INVITE_TOPIC": {
+    "SUBJECT": "{{fromUser.name}} está convidando você a tomar uma decisão colaborativa",
+    "SUBJECT_rahvaalgatus_ee": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust",
+    "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust",
+    "SUBJECT_rahvaalgatus_test": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust"
+  },
+  "PASSWORD_RESET": {
+    "SUBJECT": "Redefinir sua senha da conta Citizen OS"
+  },
+  "REPORT_TOPIC_REPORT_REPORTER": {
+    "SUBJECT": "Obrigado, recebemos sua denúncia (#{{report.id}})"
+  },
+  "REPORT_TOPIC_REPORT_MEMBER": {
+    "SUBJECT": "Denúncia #{{report.id}}: seu tópico no Citizen OS pode conter uma violação de diretrizes"
+  },
+  "REPORT_TOPIC_REPORT_MODERATOR": {
+    "SUBJECT": "Um tópico no Citizen OS foi denunciado (#{{report.id}}). Por favor, avalie-o"
+  },
+  "REPORT_TOPIC_MODERATE_REPORTER": {
+    "SUBJECT": "Sua denúncia do Citizen OS #{{report.id}} foi avaliada"
+  },
+  "REPORT_TOPIC_MODERATE_MEMBER": {
+    "SUBJECT": "Denúncia #{{report.id}}: seu tópico no Citizen OS foi avaliado por um moderador"
+  },
+  "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
+    "SUBJECT": "Um tópico denunciado (#{{report.id}}) no Citizen OS foi revisado. Por favor, avalie-o"
+  },
+  "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
+    "SUBJECT": "Denúncia #{{report.id}}: o acesso ao seu tópico no Citizen OS foi restaurado."
+  },
+  "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
+    "SUBJECT": "Sua denúncia (#{{report.id}}) no Citizen OS foi resolvida"
+  },
+  "REPORT": {
+    "REPORT_TYPE": {
+      "ABUSE": "É abusivo ou insultante",
+      "OBSCENE": "Contém descrições obscenas",
+      "SPAM": "Contém spam ou não é relacionado ao tópico",
+      "HATE": "Contém discurso de ódio",
+      "NETIQUETTE": "Viola a etiqueta",
+      "DUPLICATE": "É um conteúdo duplicado"
+    }
+  },
+  "REPORT_COMMENT": {
+    "REPORT_TYPE": {
+      "ABUSE": "É abusivo ou insultante",
+      "OBSCENE": "Contém descrições obscenas",
+      "SPAM": "Contém spam ou não é relacionado ao tópico",
+      "HATE": "Contém discurso de ódio",
+      "NETIQUETTE": "Viola a etiqueta",
+      "DUPLICATE": "É um conteúdo duplicado"
+    }
+  },
+  "REPORT_COMMENT_CREATOR": {
+    "SUBJECT": "Seu comentário foi denunciado pela comunidade como sendo inapropriado"
+  },
+  "REPORT_COMMENT_MODERATOR": {
+    "SUBJECT": "Um comentário foi denunciado pela comunidade como sendo inapropriado"
+  },
+  "TO_PARLIAMENT": {
+    "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
+  }
+}
