@@ -1,0 +1,40 @@
+<table border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+
+        <tr>
+            <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
+                <p style="font-family: Noto-Serif;font-size:20px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Seu comentário foi denunciado como sendo inapropriado por alguém da comunidade</p>
+            </td>
+        </tr>
+
+        <tr>
+            <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
+                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#252525;">Você escreveu:</p>
+                {{#comment.subject}}
+                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#707070; font-style: italic">"{{comment.subject}}"</p>
+                {{/comment.subject}}
+                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight: bold;background-color: #FFFFFF; color:#707070; font-style: italic">"{{comment.text}}"</p>
+            </td>
+        </tr>
+
+        <tr>
+            <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
+                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold; background-color: #FFFFFF; color:#252525;">A justificativa da denúncia feita pelo usuário da plataforma foi:</p>
+                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold; background-color: #FFFFFF; color:#252525; font-style: italic">{{report.type}}</p>
+                {{#report.text}}
+                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold; background-color: #FFFFFF; color:#707070; font-style: italic">"{{report.text}}"</p>
+                {{/report.text}}
+            </td>
+        </tr>
+
+        <tr>
+            <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
+                <p style="font-family: Open Sans,sans-serif;font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Veja o que você pode fazer:</p>
+                <ul>
+                    <li style="font-family: Open Sans,sans-serif;font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#0680fc; margin-bottom: 17px;"><a href="{{linkViewTopic}}" style="color:#0680FC; text-decoration: none; font-family: Open Sans,sans-serif;">Editar ou excluir seu comentário</a></li>
+                    <li style="font-family: Open Sans,sans-serif;font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#252525; margin-bottom: 17px;">Deixá-lo como está, embora os moderadores da comunidade poderão decidir ocultá-lo por padrão (os usuários receberão um aviso antes de ver seu comentário).</li>
+                </ul>
+            </td>
+        </tr>
+    </tbody>
+</table>
