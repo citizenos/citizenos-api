@@ -50,7 +50,7 @@
     "lodash": "4.17.13",
     "log4js": "4.1.0",
     "mimeparse": "0.1.4",
-    "mobiil-id-rest": "1.0.3",
+    "mobiil-id-rest": "git+https://github.com/citizenos/mobiil-id-rest.git#10e7e8d5f37d3bab8f08ab6a9b037a286d94c563",
     "moment": "2.21.0",
     "morgan": "1.9.1",
     "mu2": "0.5.21",

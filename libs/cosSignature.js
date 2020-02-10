@@ -595,6 +595,7 @@ module.exports = function (app) {
                 if (signResult.signature) {
                     return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value);
                 }
+                logger.error(signResult);
 
                 return Promise.reject(signResult);
             });
@@ -606,6 +607,7 @@ module.exports = function (app) {
                 if (signResult.signature) {
                     return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value);
                 }
+                logger.error(signResult);
 
                 return Promise.reject(signResult);
             });
