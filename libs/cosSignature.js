@@ -590,7 +590,7 @@ module.exports = function (app) {
     };
 
     const _getSmartIdSignedDoc = function (sessionId, signableHash, signatureId, voteId, userId, voteOptions) {
-        return smartId.statusSign(sessionId)
+        return smartId.statusSign(sessionId, 5000)
             .then(function(signResult) {
                 if (signResult.signature) {
                     return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value);

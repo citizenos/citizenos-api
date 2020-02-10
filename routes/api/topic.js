@@ -6622,9 +6622,19 @@ module.exports = function (app) {
                             });
                         })
                 }, function (result) {
-                    const statusCode = result.result.endResult;
+                    let statusCode
+                    if (result.result && result.result.endResult) {
+                        statusCode = result.result.endResult;
+                    } else {
+                        statusCode = result.state;
+                    }
+
                     switch (statusCode) {
                         case 'OUTSTANDING_TRANSACTION':
+                            res.ok('Signing in progress', 1);
+
+                            return Promise.reject();
+                        case 'RUNNING':
                             res.ok('Signing in progress', 1);
 
                             return Promise.reject();

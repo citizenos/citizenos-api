@@ -4868,8 +4868,9 @@
       }
     },
     "mobiil-id-rest": {
-      "version": "git+https://github.com/citizenos/mobiil-id-rest.git#da201843a9d151c74315923ffca341a1ce143236",
-      "from": "git+https://github.com/citizenos/mobiil-id-rest.git#da201843a9d151c74315923ffca341a1ce143236",
+      "version": "1.0.4",
+      "resolved": "https://registry.npmjs.org/mobiil-id-rest/-/mobiil-id-rest-1.0.4.tgz",
+      "integrity": "sha512-CpJMvBIYV0qtZS1hPAyCTA4/wxUO3wqW1FKqKnUxKLLDC6zNEl616goHZiZOerD0keqF0ZwpfY5/akh4ExpIrA==",
       "requires": {
         "asn1js": "2.0.26",
         "bluebird": "3.7.2",
@@ -6930,9 +6931,9 @@
       "integrity": "sha512-JDhEpTKzXusOqXZ0BUIdH+CjFdO/CR3tLlf5CN34IypI+xMmXW1uB16OOY8z3cICbJlDAVJzNbwBhNO0wt9OAw=="
     },
     "smart-id-rest": {
-      "version": "1.0.4",
-      "resolved": "https://registry.npmjs.org/smart-id-rest/-/smart-id-rest-1.0.4.tgz",
-      "integrity": "sha512-cN9hzcNdMUpFD1/ALvch8XTN5kqMNY3HtzFFacuvO7qTdzwWauXCLm74D0vX7skTflSCD5GYsYijhkGMg9XP4A==",
+      "version": "1.0.5",
+      "resolved": "https://registry.npmjs.org/smart-id-rest/-/smart-id-rest-1.0.5.tgz",
+      "integrity": "sha512-fI1VVQwX/sVSHi35gx4tpqdeNTrx3N1kDTH50w2PItmYtHV0hf7QzLZ5gfhKvXcuHRMma9yhcph9frIZ8k14xg==",
       "requires": {
         "asn1js": "2.0.26",
         "bluebird": "3.7.2",
