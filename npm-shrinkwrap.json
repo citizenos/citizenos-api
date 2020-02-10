@@ -4868,8 +4868,8 @@
       }
     },
     "mobiil-id-rest": {
-      "version": "git+https://github.com/citizenos/mobiil-id-rest.git#10e7e8d5f37d3bab8f08ab6a9b037a286d94c563",
-      "from": "git+https://github.com/citizenos/mobiil-id-rest.git#10e7e8d5f37d3bab8f08ab6a9b037a286d94c563",
+      "version": "git+https://github.com/citizenos/mobiil-id-rest.git#da201843a9d151c74315923ffca341a1ce143236",
+      "from": "git+https://github.com/citizenos/mobiil-id-rest.git#da201843a9d151c74315923ffca341a1ce143236",
       "requires": {
         "asn1js": "2.0.26",
         "bluebird": "3.7.2",

@@ -602,7 +602,7 @@ module.exports = function (app) {
     };
 
     const _getMobileIdSignedDoc = function (sessionId, signableHash, signatureId, voteId, userId, voteOptions) {
-        return mobileId.statusSign(sessionId)
+        return mobileId.statusSign(sessionId, 5000)
             .then(function(signResult) {
                 if (signResult.signature) {
                     return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value);
