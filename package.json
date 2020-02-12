@@ -8,6 +8,7 @@
     "start": "NODE_ENV=development node ./bin/www",
     "debug": "node --expose-gc --debug ./bin/www",
     "test": "NODE_ENV=test FORCE_DB_SYNC=0 NODE_TLS_REJECT_UNAUTHORIZED=0 ./node_modules/.bin/mocha --expose-gc --async-only --check-leaks --trace-deprecation --reporter spec --no-exit --recursive --ui tdd test/",
+    "eslint": "./node_modules/.bin/grunt eslint",
     "dbcreate": "echo ${DATABASE_URL?\"ERROR: Need to set DATABASE_URL environment variable!\"} && createdb -E utf8 \"${DATABASE_URL##*/}\" && psql -f db/config/database.sql \"$DATABASE_URL\"",
     "dbdump": "pg_dump --schema-only --no-privileges --no-owner ${DATABASE_URL?\"ERROR: Need to set DATABASE_URL environment variable!\"} > db/config/database.sql && pg_dump --data-only --table '\"SequelizeMeta\"' $DATABASE_URL | sed -ne '/^COPY/,/\\\\./p' >> db/config/database.sql",
     "dbstatus": "./node_modules/.bin/sequelize db:migrate:status",

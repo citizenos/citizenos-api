@@ -7681,7 +7681,7 @@ suite('Users', function () {
                                 .destroy({
                                     where: {
                                         connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
-                                        connectionUserId: ['PNOEE-10101010016', 'PNOEE-10101010005',  '10101010016', '10101010005', '11412090004']
+                                        connectionUserId: ['PNOEE-10101010016', 'PNOEE-10101010005', '10101010016', '10101010005', '11412090004']
                                     },
                                     force: true
                                 })
@@ -7696,7 +7696,7 @@ suite('Users', function () {
                                 .destroy({
                                     where: {
                                         connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
-                                        connectionUserId: ['PNOEE-10101010016', 'PNOEE-10101010005',  '10101010016', '10101010005', '11412090004']
+                                        connectionUserId: ['PNOEE-10101010016', 'PNOEE-10101010005', '10101010016', '10101010005', '11412090004']
                                     },
                                     force: true
                                 })
@@ -7877,6 +7877,8 @@ suite('Users', function () {
                         });
 
                         test('Fail - 40010 - User has cancelled the signing process', function (done) {
+                            this.timeout(15000); // eslint-disable-line no-invalid-this
+
                             var countryCode = 'EE';
                             var pid = '10101010016';
 
@@ -7911,10 +7913,10 @@ suite('Users', function () {
 
                                                 var expectedResponse = {
                                                     status:
-                                                    {
-                                                        code: 40010,
-                                                        message: 'User has cancelled the signing process'
-                                                    }
+                                                        {
+                                                            code: 40010,
+                                                            message: 'User has cancelled the signing process'
+                                                        }
                                                 }
                                                 assert.equal(statusresponse.status.code, 40010);
                                                 assert.deepEqual(res.body, expectedResponse);
@@ -7932,6 +7934,8 @@ suite('Users', function () {
                         });
 
                         test('Fail - 40010 - User has cancelled the signing process Latvian PID', function (done) {
+                            this.timeout(15000); //eslint-disable-line no-invalid-this
+
                             var countryCode = 'LV';
                             var pid = '010101-10014';
 
@@ -7966,10 +7970,10 @@ suite('Users', function () {
 
                                                 var expectedResponse = {
                                                     status:
-                                                    {
-                                                        code: 40010,
-                                                        message: 'User has cancelled the signing process'
-                                                    }
+                                                        {
+                                                            code: 40010,
+                                                            message: 'User has cancelled the signing process'
+                                                        }
                                                 }
                                                 assert.equal(statusresponse.status.code, 40010);
                                                 assert.deepEqual(res.body, expectedResponse);

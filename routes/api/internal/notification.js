@@ -5,19 +5,28 @@
  */
 
 module.exports = function (app) {
-    var cosEtherpad = app.get('cosEtherpad');
-    var Promise = app.get('Promise');
-    var authApiKey = app.get('middleware.authApiKey');
+    const logger = app.get('logger');
+    const cosEtherpad = app.get('cosEtherpad');
+    const Promise = app.get('Promise');
+    const authApiKey = app.get('middleware.authApiKey');
 
     /**
      * Callback API for Pad change events
      */
     app.post('/api/internal/notifications/pads/update', authApiKey, function (req, res, next) {
-        var pads = req.body.pads;
-        var promisesToResolve = [];
+        const pads = req.body.pads;
+        const promisesToResolve = [];
 
         // padID === topicId
-        var padIds = Object.keys(pads);
+        const padIds = Object.keys(pads);
+
+        // Sometimes EP calls the hook without Pad IDs, needs to be investigated and fixed, but meanwhile don't throw an error but warn and log body for debugging
+        if (!pads) {
+            logger.warn('Etherpad sync called without padIds', req.path, req.body);
+
+            return res.ok();
+        }
+
         padIds.forEach(function (topicId) {
             pads[padIds].forEach(function (pdata) {
                 return cosEtherpad

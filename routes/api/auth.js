@@ -221,7 +221,12 @@ module.exports = function (app) {
             .then(function (user) {
                 return res.ok('Check your email ' + user.email + ' to verify your account.', user.toJSON());
             })
-            .catch(next);
+            .catch(function (err) {
+                if (err) {
+                    return next(err);
+                }
+                // Ignore, headers are supposed to be sent before, not sure it's the right way to do things tho. I guess we should reject Promise with some error which then convertss to HTTP response?
+            });
     });
 
     /**
@@ -491,88 +496,91 @@ module.exports = function (app) {
         let t;
         let toCommit = false;
         let personId = personalInfo.pid;
-        if(personalInfo.pid.indexOf('PNO') > -1) {
+        if (personalInfo.pid.indexOf('PNO') > -1) {
             personId = personId.split('-')[1];
         }
-        const idPattern = new RegExp('(PNO'+personalInfo.country+'-)?' + personId);
-  //      if (userConnection && !idPattern.test(userConnection.connectionUserId)) {
+        const idPattern = new RegExp('(PNO' + personalInfo.country + '-)?' + personId);
+
         if (!transaction) {
-            t =  await db.transaction();
+            t = await db.transaction();
             toCommit = true;
         } else {
             t = transaction;
         }
         try {
             return UserConnection
-                    .findOne({
-                        where: {
-                            connectionId: {
-                                [Op.in]: [
-                                    UserConnection.CONNECTION_IDS.esteid,
-                                    UserConnection.CONNECTION_IDS.smartid
-                                ]
-                            },
-                            connectionUserId: {
-                                [Op.like]: '%' + personId + '%',
-                            }
+                .findOne({
+                    where: {
+                        connectionId: {
+                            [Op.in]: [
+                                UserConnection.CONNECTION_IDS.esteid,
+                                UserConnection.CONNECTION_IDS.smartid
+                            ]
                         },
-                        include: [User],
-                        transaction: t
-                    })
-                    .then(function (userConnectionInfo) {
-                        if (!userConnectionInfo) {
-                            return User
-                                .create(
-                                    {
-                                        name: db.fn('initcap', personalInfo.firstName + ' ' + personalInfo.lastName),
-                                        source: User.SOURCES.citizenos
-                                    },
-                                    {
-                                        transaction: t
-                                    }
-                                )
-                                .then(function (user) {
-                                    return cosActivities
-                                        .createActivity(user, null, {type: 'System', ip: req.ip}, req.method + ' ' + req.path, transaction)
-                                        .then(function () {
-                                            return UserConnection
-                                                .create(
-                                                    {
-                                                        userId: user.id,
-                                                        connectionId: connectionId,
-                                                        connectionUserId: personalInfo.pid,
-                                                        connectionData: personalInfo
-                                                    },
-                                                    {
-                                                        transaction: t
-                                                    }
-                                                )
-                                                .then(function () {
-                                                    if (toCommit) t.commit();
-                                                    var userData = user.toJSON();
-                                                    userData.termsVersion = user.dataValues.termsVersion;
-                                                    userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
-
-                                                    return [userData, 3]; // New user was created
-                                                });
-                                        });
-                                });
-                        } else {
-                            if (toCommit) t.commit();
-                            if (userConnectionInfo && idPattern.test(userConnectionInfo.connectionUserId)) {
-                                var user = userConnectionInfo.User;
-                                var userData = user.toJSON();
-                                userData.termsVersion = user.dataValues.termsVersion;
-                                userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
-
-                                return [userData, 2]; // Existing User found and logged in
-                            }
+                        connectionUserId: {
+                            [Op.like]: '%' + personId + '%',
                         }
-                    });
-                } catch (error) {
-                    if (toCommit) t.rollback();
-                    logger.error(error);
-                }
+                    },
+                    include: [User],
+                    transaction: t
+                })
+                .then(function (userConnectionInfo) {
+                    if (!userConnectionInfo) {
+                        return User
+                            .create(
+                                {
+                                    name: db.fn('initcap', personalInfo.firstName + ' ' + personalInfo.lastName),
+                                    source: User.SOURCES.citizenos
+                                },
+                                {
+                                    transaction: t
+                                }
+                            )
+                            .then(function (user) {
+                                return cosActivities
+                                    .createActivity(user, null, {
+                                        type: 'System',
+                                        ip: req.ip
+                                    }, req.method + ' ' + req.path, transaction)
+                                    .then(function () {
+                                        return UserConnection
+                                            .create(
+                                                {
+                                                    userId: user.id,
+                                                    connectionId: connectionId,
+                                                    connectionUserId: personalInfo.pid,
+                                                    connectionData: personalInfo
+                                                },
+                                                {
+                                                    transaction: t
+                                                }
+                                            )
+                                            .then(function () {
+                                                if (toCommit) t.commit();
+                                                var userData = user.toJSON();
+                                                userData.termsVersion = user.dataValues.termsVersion;
+                                                userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
+
+                                                return [userData, 3]; // New user was created
+                                            });
+                                    });
+                            });
+                    } else {
+                        if (toCommit) t.commit();
+                        if (userConnectionInfo && idPattern.test(userConnectionInfo.connectionUserId)) {
+                            var user = userConnectionInfo.User;
+                            var userData = user.toJSON();
+                            userData.termsVersion = user.dataValues.termsVersion;
+                            userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
+
+                            return [userData, 2]; // Existing User found and logged in
+                        }
+                    }
+                });
+        } catch (error) {
+            if (toCommit) t.rollback();
+            logger.error(error);
+        }
     };
 
     app.get('/api/auth/smartid/status', function (req, res, next) {
@@ -596,7 +604,7 @@ module.exports = function (app) {
                     switch (response.result.endResult) {
                         case 'OK':
                             var personalInfo = response.personalInfo;
-                        break;
+                            break;
                         case 'USER_REFUSED':
                             res.badRequest('User refused', 10);
 
@@ -607,7 +615,7 @@ module.exports = function (app) {
                             return;
                         default:
                             res.badRequest(response);
-                        break;
+                            break;
                     }
                 } else {
                     return res.badRequest(response);
