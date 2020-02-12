@@ -2857,17 +2857,18 @@ module.exports = function (app) {
                     return Promise.reject();
                 }
             })
-            .then(
-                function () {
-                    return res.created();
-                },
-                function (err) {
-                    logger.error(err);
+            .then(function () {
+                return res.created();
+            })
+            .catch(function (err) {
+                if (err) {
+                    logger.error('Adding Group to Topic failed', req.path, err);
 
-                    return res.forbidden();
+                    return next(err);
                 }
-            )
-            .catch(next);
+
+                return res.forbidden();
+            });
     });
 
 
