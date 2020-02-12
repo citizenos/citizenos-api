@@ -16,9 +16,9 @@ module.exports = function (app) {
             // Extra long one liner with useful info so that we can do easier parsing and alerting
             logger.error(
                 'CSP report:',
-                cspReport,
+                JSON.stringify(cspReport),
                 'Headers:',
-                headers
+                JSON.stringify(headers)
             );
         } else {
             logger.error('CSP report endpoint called with invalid payload', req.body, req.headers);
