@@ -2,7 +2,7 @@
 
 module.exports = function (app) {
     var models = app.get('models');
-    
+
     var Topic = models.Topic;
     var Partner = models.Partner;
 
@@ -17,7 +17,11 @@ module.exports = function (app) {
                 }
             })
             .then(function (partner) {
-                return res.ok(partner.toJSON());
+                if (partner) {
+                    return res.ok(partner.toJSON());
+                } else {
+                    return res.notFound();
+                }
             })
             .catch(next);
     });

@@ -89,6 +89,10 @@ suite('Partners', function () {
                 done();
             });
         });
+
+        test('Fail - 40400 - Not found', function (done) {
+            _partnerRead(request.agent(app), 'b4ab4adb-f76c-4093-a0be-2006ad66ab0f', 404,done);
+        });
     });
 
     suite('Topics', function () {

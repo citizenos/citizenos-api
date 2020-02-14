@@ -228,9 +228,9 @@ module.exports = function (app) {
                 if (activity.data[field] && activity.data[field]['@type']) {
                     switch (activity.data[field]['@type']) {
                         case 'Topic':
-                            delete activity.data[field].creator;
-                            delete activity.data[field].description;
-                            delete activity.data[field].tokenJoin;
+                            delete returnActivity.data[field].creator;
+                            delete returnActivity.data[field].description;
+                            delete returnActivity.data[field].tokenJoin;
                             if (field === 'origin' && activity.data.type === 'Update') break;
                             var topic = _.find(activity.topics, function (t) {return t.id === activity.data[field].id});
                             object = Topic.build(topic).toJSON();
@@ -241,7 +241,7 @@ module.exports = function (app) {
                             delete object.tokenJoin;
                             break;
                         case 'Group':
-                            delete activity.data[field].creator;
+                            delete returnActivity.data[field].creator;
                             if (field === 'origin' && activity.data.type === 'Update') break;
                             var g  = _.find(activity.groups, function (t) {return t.id === activity.data[field].id});
                             object = Group.build(g).toJSON();
@@ -254,7 +254,7 @@ module.exports = function (app) {
                             delete object.creator;
                             break;
                         case 'User':
-                            delete activity.data[field].language;
+                            delete returnActivity.data[field].language;
                             if (field === 'origin' && activity.data.type === 'Update') break;
                             var u  = _.find(activity.users, function (t) {return t.id === activity.data[field].id});
                             object = User.build(u).toJSON();

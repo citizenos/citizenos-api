@@ -612,7 +612,7 @@ suite('Auth', function () {
                 });
 
                 test('Success - 20001 - Estonian mobile number and PID', function (done) {
-                    this.timeout(5000); //eslint-disable-line no-invalid-this
+                    this.timeout(10000); //eslint-disable-line no-invalid-this
 
                     var phoneNumber = '+37200000766';
                     var pid = '60001019906';
