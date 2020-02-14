@@ -15,36 +15,6 @@ var activitiesRead = function (agent, userId, filters, callback) {
     _activitiesRead(agent, userId, filters, 200, callback);
 };
 
-var _activitiesReadTestOld = function (agent, userId, filters, expectedHttpCode, callback) {
-    var path = '/api/test/old/users/:userId/activities'.replace(':userId', userId);
-
-    agent
-        .get(path)
-        .query(filters)
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
-};
-
-var activitiesReadTestOld = function (agent, userId, filters, callback) {
-    _activitiesReadTestOld(agent, userId, filters, 200, callback);
-};
-
-var _activitiesReadTest = function (agent, userId, filters, expectedHttpCode, callback) {
-    var path = '/api/test/users/:userId/activities'.replace(':userId', userId);
-
-    agent
-        .get(path)
-        .query(filters)
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
-};
-
-var activitiesReadTest = function (agent, userId, filters, callback) {
-    _activitiesReadTest(agent, userId, filters, 200, callback);
-};
-
 var _activitiesUnreadCountRead = function (agent, userId, expectedHttpCode, callback) {
     var path = '/api/users/:userId/activities/unread'.replace(':userId', userId);
 
