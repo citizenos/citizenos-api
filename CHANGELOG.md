@@ -1,3 +1,8 @@
+## 2020-02-14
+
+* https://github.com/citizenos/citizenos-api/issues/161
+* Fixed some tests that were randomly failing
+
 ## 2020-01-29
 
 * Move away from digidoc service - https://github.com/citizenos/citizenos-api/issues/144

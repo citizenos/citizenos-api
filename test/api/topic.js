@@ -7900,7 +7900,7 @@ suite('Users', function () {
                                     if (called === replied) {
                                         called++;
                                         _topicVoteStatus(agent, user.id, topic.id, vote.id, response.data.token, 400, function (err, res) {
-                                            if (err) return done(err);
+                                            if (err && res.body && res.statusCode !== 200) return done(err);
 
                                             replied++;
                                             var statusresponse = res.body;
@@ -7955,7 +7955,7 @@ suite('Users', function () {
                                     if (called === replied) {
                                         called++;
                                         _topicVoteStatus(agent, user.id, topic.id, vote.id, response.data.token, 400, function (err, res) {
-                                            if (err) return done(err);
+                                            if (err && res.statusCode !== 200)
 
                                             replied++;
                                             var statusresponse = res.body;

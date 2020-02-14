@@ -1491,10 +1491,10 @@ suite('Users', function () {
                 suite('Delete', function () {
                     var agent = request.agent(app);
 
-                    var creatorEmail = 'test_gmembersgd_c_' + new Date().getTime() + '@test.ee';
+                    var creatorEmail = 'test_gmembersgd_c__' + new Date().getTime() + '@test.ee';
                     var creatorPassword = 'testPassword123';
 
-                    var memberEmail = 'test_gmembersgd_m_' + new Date().getTime() + '@test.ee';
+                    var memberEmail = 'test_gmembersgd_m__' + new Date().getTime() + '@test.ee';
                     var memberPassword = 'testPassword123';
 
                     var creator;

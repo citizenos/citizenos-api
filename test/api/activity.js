@@ -15,6 +15,36 @@ var activitiesRead = function (agent, userId, filters, callback) {
     _activitiesRead(agent, userId, filters, 200, callback);
 };
 
+var _activitiesReadTestOld = function (agent, userId, filters, expectedHttpCode, callback) {
+    var path = '/api/test/old/users/:userId/activities'.replace(':userId', userId);
+
+    agent
+        .get(path)
+        .query(filters)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var activitiesReadTestOld = function (agent, userId, filters, callback) {
+    _activitiesReadTestOld(agent, userId, filters, 200, callback);
+};
+
+var _activitiesReadTest = function (agent, userId, filters, expectedHttpCode, callback) {
+    var path = '/api/test/users/:userId/activities'.replace(':userId', userId);
+
+    agent
+        .get(path)
+        .query(filters)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+        .end(callback);
+};
+
+var activitiesReadTest = function (agent, userId, filters, callback) {
+    _activitiesReadTest(agent, userId, filters, 200, callback);
+};
+
 var _activitiesUnreadCountRead = function (agent, userId, expectedHttpCode, callback) {
     var path = '/api/users/:userId/activities/unread'.replace(':userId', userId);
 
@@ -232,7 +262,7 @@ suite('Activities', function () {
                     if (activity.data.object['@type'] === 'User') {
                         assert.notProperty(activity.data.object, 'email');
                         assert.notProperty(activity.data.object, 'imageUrl');
-                        assert.notProperty(activity.data.object, 'language');                            
+                        assert.notProperty(activity.data.object, 'language');
                     } else {
                         assert.equal(activity.data.object.id, topic.id);
                         assert.equal(activity.data.object.sourcePartnerId, partner.id);
@@ -258,7 +288,7 @@ suite('Activities', function () {
                     if (activity.data.object['@type'] === 'User') {
                         assert.notProperty(activity.data.object, 'email');
                         assert.notProperty(activity.data.object, 'imageUrl');
-                        assert.notProperty(activity.data.object, 'language');                            
+                        assert.notProperty(activity.data.object, 'language');
                     } else {
                         assert.equal(activity.data.object.id, topic.id);
                         assert.equal(activity.data.object.sourcePartnerId, partner.id);
@@ -284,7 +314,7 @@ suite('Activities', function () {
                     if (activity.data.object['@type'] === 'User') {
                         assert.notProperty(activity.data.object, 'email');
                         assert.notProperty(activity.data.object, 'imageUrl');
-                        assert.notProperty(activity.data.object, 'language');                            
+                        assert.notProperty(activity.data.object, 'language');
                     } else {
                         assert.equal(activity.data.object.id, topic.id);
                         assert.equal(activity.data.object.sourcePartnerId, partner.id);
@@ -308,7 +338,7 @@ suite('Activities', function () {
                     if (activity.data.object['@type'] === 'User') {
                         assert.notProperty(activity.data.object, 'email');
                         assert.notProperty(activity.data.object, 'imageUrl');
-                        assert.notProperty(activity.data.object, 'language');                            
+                        assert.notProperty(activity.data.object, 'language');
                     }
                 });
 
@@ -318,7 +348,7 @@ suite('Activities', function () {
             });
         });
     });
-    
+
     suite('Count', function () {
         var agent = request.agent(app);
         var agent2 = request.agent(app);
@@ -419,15 +449,15 @@ suite('Activities', function () {
 
                     activitiesUnreadCountRead(agent, {sourcePartnerId: partner.id}, function (err, res) {
                         if (err) return done(err);
-        
+
                         var count = res.body.data.count;
-        
+
                         assert.equal(count, 2);
                         done();
                     });
                 });
             });
-            
+
         });
 
         test('Success - user has viewed all activities', function (done) {
@@ -443,14 +473,14 @@ suite('Activities', function () {
                 });
                 activitiesUnreadCountRead(agent, {sourcePartnerId: partner.id}, function (err, res) {
                     if (err) return done(err);
-    
+
                     var count = res.body.data.count;
-    
+
                     assert.equal(count, 0);
                     done();
                 });
             });
-            
+
         });
 
         test('Fail - user not logged in', function (done) {
@@ -467,7 +497,7 @@ suite('Activities', function () {
                 assert.deepEqual(message, expectedResult);
                 done();
             });
-            
+
         });
     });
 });

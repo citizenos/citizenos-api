@@ -26,9 +26,9 @@ module.exports = function (app) {
      * Read (List) public Topic Activities
      */
 
-    var activitiesDataFunction = ' \
-    CREATE OR REPLACE FUNCTION pg_temp.getActivityData(uuid) \
-        RETURNS TABLE (id uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone, actor jsonb, object jsonb, origin jsonb, target jsonb) \
+    var activitiesDataFunction = '\
+    CREATE OR REPLACE FUNCTION pg_temp.getActivityData(uuid, text[], text[], text[]) \
+        RETURNS TABLE (id uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone, topicIds text[], topics jsonb, groups jsonb, users jsonb) \
         AS $$ \
         SELECT DISTINCT \
         a.id, \
@@ -36,115 +36,23 @@ module.exports = function (app) {
         a."createdAt", \
         a."updatedAt", \
         a."deletedAt", \
-        CASE \
-            WHEN u.id IS NOT NULL THEN to_jsonb(u.*) \
-            WHEN a.data #>> \'{actor, type}\' = \'System\' THEN \'{"type": "System"}\' \
-            ELSE NULL \
-        END AS actor, \
-        CASE \
-            WHEN uo.id IS NOT NULL THEN to_jsonb(uo.*) \
-            WHEN go.id IS NOT NULL THEN to_jsonb(go.*) \
-            WHEN tobj.id IS NOT NULL THEN to_jsonb(tobj.*) \
-            WHEN tvco."voteId" IS NOT NULL THEN to_jsonb(tvco.*) \
-            ELSE NULL \
-        END AS object, \
-        CASE \
-            WHEN torig.id IS NOT NULL THEN to_jsonb(torig.*) \
-            WHEN origg.id IS NOT NULL THEN to_jsonb(origg.*) \
-            WHEN tmuorig."topicId" IS NOT NULL THEN to_jsonb(tmuorig.*) \
-            WHEN gmuorig."userId" IS NOT NULL THEN to_jsonb(gmuorig.*) \
-            WHEN tmgorig."groupId" IS NOT NULL THEN to_jsonb(tmgorig.*) \
-            ELSE NULL \
-        END AS origin, \
-        CASE \
-            WHEN targu.id IS NOT NULL THEN to_jsonb(targu.*) \
-            WHEN targg.id IS NOT NULL THEN to_jsonb(targg.*) \
-            WHEN targt.id IS NOT NULL THEN to_jsonb(targt.*) \
-            WHEN targtc.id IS NOT NULL THEN to_jsonb(targtc.*) \
-            ELSE NULL \
-        END AS target \
+        string_to_array(array_to_string($2, \',\'), \',\') AS "topicIds", \
+        jsonb_agg(t.*) AS topics, \
+        jsonb_agg(g.*) AS groups, \
+        jsonb_agg(u.*) AS users \
         FROM \
             "Activities" a \
-        LEFT JOIN \
-            (SELECT \'User\' AS "type", u.id, u.name, u.company FROM "Users" u) u ON (a.data#>>\'{actor, type}\' = \'User\' OR a.data#>>\'{actor, type}\' = \'Moderator\') AND u.id::text = a.data#>>\'{actor, id}\' \
-        LEFT JOIN \
-            (SELECT \'Topic\' AS "@type", t.* FROM "Topics" t) tobj ON a.data#>>\'{object, @type}\' = \'Topic\' AND tobj.id::text = a.data#>>\'{object, id}\' \
-        LEFT JOIN \
-            (SELECT \'Group\' AS "@type", g.* FROM "Groups" g) go ON a.data#>>\'{object, @type}\' = \'Group\' AND go.id::text = a.data#>>\'{object, id}\' \
-        LEFT JOIN \
-            (SELECT \'User\' as "@type", id, name, company FROM "Users") uo ON a.data#>>\'{object, @type}\' = \'User\' AND uo.id::text = a.data#>>\'{object, id}\' \
-        LEFT JOIN ( \
-            SELECT \
-            a.id AS "activityId", \
-            jpr.*, \
-            tv."topicId" AS "topicId", \
-            t.title AS "topicTitle" \
-                FROM "Activities" a \
-                JOIN jsonb_to_record(a.data) AS jpr("@type" text, "userId" text, "voteId" text, "createdAt" text, "updatedAt" text, "deletedAt" text) ON a.id = a.id \
-                JOIN "TopicVotes" tv ON tv."voteId"::text = data#>>\'{object, id}\' \
-                JOIN "Topics" t ON t.id = tv."topicId" \
-                WHERE a.data#>>\'{object, @type}\' = \'VoteUserContainer\' \
-            ) tvco ON a.data#>>\'{object, @type}\' = \'VoteUserContainer\' AND tvco."activityId" = a.id \
-        LEFT JOIN \
-            (SELECT \'Group\' as "@type", g.* FROM "Groups" g) origg ON a.data#>>\'{origin, @type}\' = \'Group\' AND origg.id::text = a.data#>>\'{origin, id}\' \
-        LEFT JOIN ( \
-            SELECT \
-                a.id AS "activityId", \
-                jpr.*, \
-                u.name AS "userName", \
-                t.title AS "topicTitle" \
-            FROM "Activities" a \
-            JOIN jsonb_to_record(a.data) AS jpr("@type" text, "level" text, "userId" text, "topicId" text, "createdAt" text, "updatedAt" text, "deletedAt" text) ON a.id = a.id \
-            JOIN "Users" u ON u.id::text = data#>>\'{origin, userId}\' \
-            JOIN "Topics" t ON t.id::text = data#>>\'{origin, topicId}\' \
-            WHERE a.data#>>\'{origin, @type}\' = \'TopicMemberUser\' \
-        ) tmuorig ON a.data#>>\'{origin, @type}\' = \'TopicMemberUser\' AND tmuorig."activityId" = a.id \
-        LEFT JOIN ( \
-            SELECT \
-                a.id AS "activityId", \
-                jpr.*, \
-                g.name AS "groupName", \
-                t.title AS "topicTitle" \
-            FROM "Activities" a \
-            JOIN jsonb_to_record(a.data) AS jpr("@type" text, "level" text, "groupId" text, "topicId" text, "createdAt" text, "updatedAt" text, "deletedAt" text) ON a.id = a.id \
-            JOIN "Groups" g ON g.id::text = data#>>\'{origin, groupId}\' \
-            JOIN "Topics" t ON t.id::text = data#>>\'{origin, topicId}\' \
-            WHERE a.data#>>\'{origin, @type}\' = \'TopicMemberGroup\' \
-        ) tmgorig ON a.data#>>\'{origin, @type}\' = \'TopicMemberGroup\' AND tmuorig."activityId" = a.id \
-        LEFT JOIN ( \
-            SELECT \
-                a.id AS "activityId", \
-                jpr.*, \
-                u.name AS "userName", \
-                g.name AS "groupName" \
-            FROM "Activities" a \
-            JOIN jsonb_to_record(a.data) AS jpr("@type" text, "level" text, "userId" text, "groupId" text, "createdAt" text, "updatedAt" text, "deletedAt" text) ON a.id = a.id \
-            JOIN "Users" u ON u.id::text = data#>>\'{origin, userId}\' \
-            JOIN "Groups" g ON g.id::text = data#>>\'{origin, groupId}\' \
-            WHERE a.data#>>\'{origin, @type}\' = \'GroupMember\' \
-        ) gmuorig ON a.data#>>\'{origin, @type}\' = \'GroupMember\' AND tmuorig."activityId" = a.id \
-        LEFT JOIN \
-            (SELECT \'User\' AS "@type", u.* FROM "Users" u) targu ON a.data#>>\'{target, @type}\' = \'User\' AND targu.id::text = a.data#>>\'{target, id}\' \
-        LEFT JOIN \
-            (SELECT \'Group\' AS "@type", g.* FROM "Groups" g) targg ON a.data#>>\'{target, @type}\' = \'Group\' AND targg.id::text = a.data#>>\'{target, id}\' \
-        LEFT JOIN\
-            (SELECT \'Topic\' AS "@type", t.* FROM "Topics" t) targt ON a.data#>>\'{target, @type}\' = \'Topic\' AND targt.id::text = a.data#>>\'{target, id}\' \
-        LEFT JOIN ( \
-            SELECT \
-                a.id AS "activityId", \
-                \'Comment\' AS "@type", \
-                c.*, \
-                tc."topicId" \
-            FROM "Activities" a \
-            JOIN "Comments" c ON a.data#>>\'{target, @type}\' = \'Comment\' AND c."id"::text = a.data#>>\'{target, id}\' \
-            JOIN "TopicComments" tc ON tc."commentId" = c.id \
-        ) targtc ON a.data#>>\'{target, @type}\' = \'Comment\' AND targtc."id"::text = a.data#>>\'{target, id}\' \
-        LEFT JOIN \
-            "Topics" torig ON a.data#>>\'{origin, @type}\' = \'Topic\' AND torig.id::text = a.data#>>\'{origin, id}\' \
-    WHERE a.id = $1 \
-    LIMIT 1 \
-    ;$$ \
-    LANGUAGE SQL IMMUTABLE ;\
+            LEFT JOIN \
+                "Topics" t ON ARRAY[t.id::text] <@ string_to_array(array_to_string($2, \',\'), \',\') \
+            LEFT JOIN \
+                "Groups" g ON ARRAY[g.id::text] <@ string_to_array(array_to_string($3, \',\'), \',\') \
+            LEFT JOIN \
+                "Users" u ON ARRAY[u.id::text] <@ string_to_array(array_to_string($4, \',\'), \',\') \
+        WHERE a.id = $1 \
+        GROUP BY a.id \
+        LIMIT 1 \
+        ;$$ \
+        LANGUAGE SQL IMMUTABLE ;\
     ';
 
     var buildActivityFeedIncludeString = function (req, visibility) {
@@ -176,6 +84,9 @@ module.exports = function (app) {
             var viewActivity = 'SELECT \
                 va.id, \
                 va.data, \
+                va."topicIds", \
+                va."groupIds", \
+                va."userIds", \
                 va."createdAt", \
                 va."updatedAt", \
                 va."deletedAt" \
@@ -194,6 +105,9 @@ module.exports = function (app) {
                     includedSql.push('SELECT \
                         ua.id, \
                         ua.data, \
+                        ua."topicIds", \
+                        ua."groupIds", \
+                        ua."userIds", \
                         ua."createdAt", \
                         ua."updatedAt", \
                         ua."deletedAt" \
@@ -205,6 +119,9 @@ module.exports = function (app) {
                     includedSql.push('SELECT \
                         guaaa.id, \
                         guaaa.data, \
+                        guaaa."topicIds", \
+                        guaaa."groupIds", \
+                        guaaa."userIds", \
                         guaaa."createdAt", \
                         guaaa."updatedAt", \
                         guaaa."deletedAt" \
@@ -216,6 +133,9 @@ module.exports = function (app) {
                     includedSql.push('SELECT \
                         guta.id, \
                         guta.data, \
+                        guta."topicIds", \
+                        guta."groupIds", \
+                        guta."userIds", \
                         guta."createdAt", \
                         guta."updatedAt", \
                         guta."deletedAt" \
@@ -227,6 +147,9 @@ module.exports = function (app) {
                     includedSql.push('SELECT \
                         guga.id, \
                         guga.data, \
+                        guga."topicIds", \
+                        guga."groupIds", \
+                        guga."userIds", \
                         guga."createdAt", \
                         guga."updatedAt", \
                         guga."deletedAt" \
@@ -238,6 +161,9 @@ module.exports = function (app) {
                     includedSql.push('SELECT \
                         guta.id, \
                         guta.data, \
+                        guta."topicIds", \
+                        guta."groupIds", \
+                        guta."userIds", \
                         guta."createdAt", \
                         guta."updatedAt", \
                         guta."deletedAt" \
@@ -249,6 +175,9 @@ module.exports = function (app) {
                     includedSql.push('SELECT \
                         guga.id, \
                         guga.data, \
+                        guga."topicIds", \
+                        guga."groupIds", \
+                        guga."userIds", \
                         guga."createdAt", \
                         guga."updatedAt", \
                         guga."deletedAt" \
@@ -268,7 +197,15 @@ module.exports = function (app) {
         var returnList = [];
         activities.forEach(function (activity) {
             var returnActivity = _.cloneDeep(activity);
-
+            delete activity.data.actor.ip;
+            activity.actor = activity.data.actor;
+      //      returnActivity.context = activity.data.context;
+       //     delete returnActivity.data.context;
+            if (activity.data.actor.type === 'User') {
+                var actor = _.find(activity.users, function(o) { return o.id === activity.data.actor.id; });
+                activity.actor.company = actor.company;
+                activity.actor.name = actor.name;
+            }
             if (activity.data.object[0] && activity.data.object[0]['@type'] === 'VoteList') {
                 returnActivity.data.actor = {
                     name: 'User',
@@ -288,55 +225,74 @@ module.exports = function (app) {
             var extraFields = ['object', 'origin', 'target'];
             extraFields.forEach(function (field) {
                 var object = null;
-                if (activity[field] && activity[field]['@type']) {
-                    switch (activity[field]['@type']) {
+                if (activity.data[field] && activity.data[field]['@type']) {
+                    switch (activity.data[field]['@type']) {
                         case 'Topic':
-                            object = Topic.build(activity[field]).toJSON();
-                            object['@type'] = activity[field]['@type'];
-                            object.creatorId = activity[field].creatorId;
+                            delete activity.data[field].creator;
+                            delete activity.data[field].description;
+                            delete activity.data[field].tokenJoin;
+                            if (field === 'origin' && activity.data.type === 'Update') break;
+                            var topic = _.find(activity.topics, function (t) {return t.id === activity.data[field].id});
+                            object = Topic.build(topic).toJSON();
+                            object['@type'] = activity.data[field]['@type'];
+                            object.creatorId = topic.creatorId;
                             delete object.creator;
                             delete object.description;
+                            delete object.tokenJoin;
                             break;
                         case 'Group':
-                            object = Group.build(activity[field]).toJSON();
-                            object['@type'] = activity[field]['@type'];
-                            object.createdAt = activity[field].createdAt;
-                            object.creatorId = activity[field].creatorId;
-                            object.updatedAt = activity[field].updatedAt;
-                            object.deletedAt = activity[field].deletedAt;
-                            object.sourcePartnerId = activity[field].sourcePartnerId;
+                            delete activity.data[field].creator;
+                            if (field === 'origin' && activity.data.type === 'Update') break;
+                            var g  = _.find(activity.groups, function (t) {return t.id === activity.data[field].id});
+                            object = Group.build(g).toJSON();
+                            object['@type'] = activity.data[field]['@type'];
+                            object.createdAt = activity.data[field].createdAt;
+                            object.creatorId = activity.data[field].creatorId;
+                            object.updatedAt = activity.data[field].updatedAt;
+                            object.deletedAt = activity.data[field].deletedAt;
+                            object.sourcePartnerId = activity.data[field].sourcePartnerId;
                             delete object.creator;
                             break;
                         case 'User':
-                            if (field !== 'origin') {
-                                object = User.build(activity[field]).toJSON();
-                                object['@type'] = activity[field]['@type'];
-                                if (activity.data[field].level) { // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
-                                    object.level = activity.data[field].level;
-                                }
-                                if (activity.data[field].inviteId) { // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
-                                    object.inviteId = activity.data[field].inviteId;
-                                }
-                                delete object.language;
+                            delete activity.data[field].language;
+                            if (field === 'origin' && activity.data.type === 'Update') break;
+                            var u  = _.find(activity.users, function (t) {return t.id === activity.data[field].id});
+                            object = User.build(u).toJSON();
+                            object['@type'] = activity.data[field]['@type'];
+                            if (activity.data[field].level) { // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
+                                object.level = activity.data[field].level;
                             }
+                            if (activity.data[field].inviteId) { // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
+                                object.inviteId = activity.data[field].inviteId;
+                            }
+
+                            delete object.email;
+                            delete object.imageUrl;
+                            delete object.language;
                             break;
                         case 'VoteUserContainer':
-                            object = VoteUserContainer.build(activity[field]).toJSON();
-                            object['@type'] = activity[field]['@type'];
+                            object = VoteUserContainer.build(activity.data[field]).toJSON();
+                            object['@type'] = activity.data[field]['@type'];
                             break;
                         case 'TopicMemberUser':
-                            object = TopicMemberUser.build(activity[field]).toJSON();
-                            object['@type'] = activity[field]['@type'];
+                            object = TopicMemberUser.build(activity.data[field]).toJSON();
+                            object['@type'] = activity.data[field]['@type'];
                             break;
                         case 'TopicMemberGroup':
-                            object = TopicMemberGroup.build(activity[field]).toJSON();
-                            object['@type'] = activity[field]['@type'];
+                            object = TopicMemberGroup.build(activity.data[field]).toJSON();
+                            object['@type'] = activity.data[field]['@type'];
                             break;
                         case 'GroupMember':
-                            object = GroupMember.build(activity[field]).toJSON();
-                            object['@type'] = activity[field]['@type'];
+                            object = GroupMember.build(activity.data[field]).toJSON();
+                            object['@type'] = activity.data[field]['@type'];
                             break;
                         default:
+                    }
+                } else if (activity.data.object && activity.data.object.object) {
+                    if (activity.data.object.object['@type'] === 'Topic') {
+                        delete returnActivity.data.object.object.creator;
+                        delete returnActivity.data.object.object.description;
+                        delete returnActivity.data.object.object.tokenJoin;
                     }
                 }
                 if (object) {
@@ -344,10 +300,10 @@ module.exports = function (app) {
                 }
             });
 
-            delete returnActivity.actor;
-            delete returnActivity.object;
-            delete returnActivity.origin;
-            delete returnActivity.target;
+            delete returnActivity.topicids;
+            delete returnActivity.topics;
+            delete returnActivity.users;
+            delete returnActivity.groups;
 
             returnList.push(returnActivity);
         });
@@ -411,7 +367,7 @@ module.exports = function (app) {
                         ad.* \
                     FROM \
                     (SELECT \
-                        a.id \
+                        a.id, a."topicIds", a."groupIds", a."userIds" \
                         FROM \
                         "Activities" a \
                         JOIN "Topics" t ON t.id = :topicId \
@@ -429,7 +385,7 @@ module.exports = function (app) {
                         a.data#>>\'{object, @type}\' = \'Activity\' \
                         ORDER BY a."updatedAt" DESC \
                         LIMIT :limit OFFSET :offset) a \
-                    JOIN pg_temp.getActivityData(a.id) ad ON ad."id" = a.id \
+                    JOIN pg_temp.getActivityData(a.id, a."topicIds", a."groupIds", a."userIds") ad ON ad."id" = a.id \
                     ORDER BY ad."updatedAt" DESC \
                     ;',
                     {
@@ -479,6 +435,16 @@ module.exports = function (app) {
                 }
             })
             .catch(next);
+    });
+
+    app.get('/api/test/users/:userId/activities', function (req, res, next) {
+        req.user = {id: req.params.userId};
+        return activitiesList(req, res, next);
+    });
+
+    app.get('/api/test/old/users/:userId/activities', function (req, res, next) {
+        req.user = {id: req.params.userId};
+        return activitiesList(req, res, next);
     });
 
     app.get('/api/users/:userId/topics/:topicId/activities', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), function (req, res, next) {
@@ -577,11 +543,14 @@ module.exports = function (app) {
             LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION pg_temp.getUserTopicActivities(uuid) \
-                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
+                RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
                 AS $$ \
                     SELECT \
                         a.id, \
                         a.data, \
+                        a."topicIds", \
+                        a."groupIds", \
+                        a."userIds", \
                         a."createdAt", \
                         a."updatedAt", \
                         a."deletedAt" \
@@ -595,11 +564,14 @@ module.exports = function (app) {
             LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION pg_temp.getUserGroupActivities(uuid) \
-                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
+                RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
                 AS $$ \
                     SELECT \
                         a.id, \
                         a.data, \
+                        a."topicIds", \
+                        a."groupIds", \
+                        a."userIds", \
                         a."createdAt", \
                         a."updatedAt", \
                         a."deletedAt" \
@@ -613,11 +585,14 @@ module.exports = function (app) {
             LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION  pg_temp.getUserActivities(uuid) \
-                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
+                RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
                 AS $$ \
                     SELECT \
                         a.id, \
                         a.data, \
+                        a."topicIds", \
+                        a."groupIds", \
+                        a."userIds", \
                         a."createdAt", \
                         a."updatedAt", \
                         a."deletedAt" \
@@ -630,11 +605,14 @@ module.exports = function (app) {
             LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION  pg_temp.getUserAsActorActivities(uuid) \
-                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
+                RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
                 AS $$ \
                     SELECT \
                         a.id, \
                         a.data, \
+                        a."topicIds", \
+                        a."groupIds", \
+                        a."userIds", \
                         a."createdAt", \
                         a."updatedAt", \
                         a."deletedAt" \
@@ -730,7 +708,7 @@ module.exports = function (app) {
     });
 
     var activitiesList = function (req, res, next, visibility) {
-        var limitMax = 50;
+        var limitMax = 200;
         var limitDefault = 10;
         var allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User', 'VoteList'];
         var userId;
@@ -883,11 +861,14 @@ module.exports = function (app) {
             LANGUAGE SQL IMMUTABLE; \
                 \
             CREATE OR REPLACE FUNCTION pg_temp.getPublicTopicActivities() \
-                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
+                RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
                 AS $$ \
                     SELECT \
                         a.id, \
                         a.data, \
+                        a."topicIds", \
+                        a."groupIds", \
+                        a."userIds", \
                         a."createdAt", \
                         a."updatedAt", \
                         a."deletedAt" \
@@ -900,11 +881,14 @@ module.exports = function (app) {
             LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION pg_temp.getPublicGroupActivities() \
-                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
+                RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
                 AS $$ \
                     SELECT \
                         a.id, \
                         a.data, \
+                        a."topicIds", \
+                        a."groupIds", \
+                        a."userIds", \
                         a."createdAt", \
                         a."updatedAt", \
                         a."deletedAt" \
@@ -917,11 +901,14 @@ module.exports = function (app) {
             LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION pg_temp.getUserTopicActivities(uuid) \
-                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
+                RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
                 AS $$ \
                     SELECT \
                         a.id, \
                         a.data, \
+                        a."topicIds", \
+                        a."groupIds", \
+                        a."userIds", \
                         a."createdAt", \
                         a."updatedAt", \
                         a."deletedAt" \
@@ -934,11 +921,14 @@ module.exports = function (app) {
             LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION pg_temp.getUserGroupActivities(uuid) \
-                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
+                RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
                 AS $$ \
                     SELECT \
                         a.id, \
                         a.data, \
+                        a."topicIds", \
+                        a."groupIds", \
+                        a."userIds", \
                         a."createdAt", \
                         a."updatedAt", \
                         a."deletedAt" \
@@ -951,11 +941,14 @@ module.exports = function (app) {
             LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION  pg_temp.getUserActivities(uuid) \
-                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
+                RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
                 AS $$ \
                     SELECT \
                         a.id, \
                         a.data, \
+                        a."topicIds", \
+                        a."groupIds", \
+                        a."userIds", \
                         a."createdAt", \
                         a."updatedAt", \
                         a."deletedAt" \
@@ -967,11 +960,14 @@ module.exports = function (app) {
             LANGUAGE SQL IMMUTABLE; \
             \
             CREATE OR REPLACE FUNCTION  pg_temp.getUserAsActorActivities(uuid) \
-                RETURNS TABLE ("id" uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
+                RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
                 AS $$ \
                     SELECT \
                         a.id, \
                         a.data, \
+                        a."topicIds", \
+                        a."groupIds", \
+                        a."userIds", \
                         a."createdAt", \
                         a."updatedAt", \
                         a."deletedAt" \
@@ -994,7 +990,7 @@ module.exports = function (app) {
                     ORDER BY a."updatedAt" DESC \
                     LIMIT :limit OFFSET :offset \
                 ) uac \
-            JOIN pg_temp.getActivityData(uac.id) ad ON ad."id" = uac.id \
+            JOIN pg_temp.getActivityData(uac.id, uac."topicIds", uac."groupIds", uac."userIds") ad ON ad."id" = uac.id \
                 ORDER BY ad."updatedAt" DESC \
             ;';
 
@@ -1096,7 +1092,7 @@ module.exports = function (app) {
                         ad.* \
                     FROM \
                     ( \
-                        SELECT a.id \
+                        SELECT a.id, a."topicIds", a."groupIds", a."userIds" \
                         FROM \
                         "Activities" a \
                         JOIN "Groups" g ON g.id = :groupId \
@@ -1113,8 +1109,8 @@ module.exports = function (app) {
                         a.data#>>\'{object, @type}\' = \'Activity\' \
                         ORDER BY a."updatedAt" DESC \
                         LIMIT :limit OFFSET :offset \
-                    ) \
-                    JOIN pg_temp.getActivityData(a.id) ON ad.id = a.id \
+                    ) a \
+                    JOIN pg_temp.getActivityData(a.id, a."topicIds", a."groupIds", a."userIds") ad ON ad.id = a.id \
                     ORDER BY ad."updatedAt" DESC \
             ;', {
                     replacements: {
