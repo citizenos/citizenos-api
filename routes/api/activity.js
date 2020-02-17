@@ -5,28 +5,28 @@
  */
 
 module.exports = function (app) {
-    var models = app.get('models');
-    var db = models.sequelize;
-    var _ = app.get('lodash');
-    var cosActivities = app.get('cosActivities');
-    var loginCheck = app.get('middleware.loginCheck');
-    var topicLib = require('./topic')(app);
-    var groupLib = require('./group')(app);
+    const models = app.get('models');
+    const db = models.sequelize;
+    const _ = app.get('lodash');
+    const cosActivities = app.get('cosActivities');
+    const loginCheck = app.get('middleware.loginCheck');
+    const topicLib = require('./topic')(app);
+    const groupLib = require('./group')(app);
 
-    var Activity = models.Activity;
-    var Group = models.Group;
-    var User = models.User;
-    var Topic = models.Topic;
-    var GroupMember = models.GroupMember;
-    var TopicMemberUser = models.TopicMemberUser;
-    var TopicMemberGroup = models.TopicMemberGroup;
-    var VoteUserContainer = models.VoteUserContainer;
+    const Activity = models.Activity;
+    const Group = models.Group;
+    const User = models.User;
+    const Topic = models.Topic;
+    const GroupMember = models.GroupMember;
+    const TopicMemberUser = models.TopicMemberUser;
+    const TopicMemberGroup = models.TopicMemberGroup;
+    const VoteUserContainer = models.VoteUserContainer;
 
     /**
      * Read (List) public Topic Activities
      */
 
-    var activitiesDataFunction = '\
+    const activitiesDataFunction = '\
     CREATE OR REPLACE FUNCTION pg_temp.getActivityData(uuid, text[], text[], text[]) \
         RETURNS TABLE (id uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone, topicIds text[], topics jsonb, groups jsonb, users jsonb) \
         AS $$ \
@@ -55,16 +55,16 @@ module.exports = function (app) {
         LANGUAGE SQL IMMUTABLE ;\
     ';
 
-    var buildActivityFeedIncludeString = function (req, visibility) {
-        var queryInclude = req.query.include || [];
+    const buildActivityFeedIncludeString = function (req, visibility) {
+        let queryInclude = req.query.include || [];
 
         if (queryInclude && !Array.isArray(queryInclude)) {
             queryInclude = [queryInclude];
         }
-        var allowedIncludeAuth = ['userTopics', 'userGroups', 'user', 'self'];
-        var allowedInclude = ['publicTopics', 'publicGroups'];
+        const allowedIncludeAuth = ['userTopics', 'userGroups', 'user', 'self'];
+        const allowedInclude = ['publicTopics', 'publicGroups'];
 
-        var include = queryInclude.filter(function (item, key, input) {
+        let include = queryInclude.filter(function (item, key, input) {
             if (visibility && visibility === 'public') {
                 return allowedInclude.indexOf(item) > -1 && (input.indexOf(item) === key);
             } else {
@@ -78,10 +78,10 @@ module.exports = function (app) {
             }
         }
 
-        var includedSql = [];
+        const includedSql = [];
 
         if (req.user && req.user.id && (!visibility || visibility !== 'public')) {
-            var viewActivity = 'SELECT \
+            const viewActivity = 'SELECT \
                 va.id, \
                 va.data, \
                 va."topicIds", \
@@ -193,16 +193,14 @@ module.exports = function (app) {
         return includedSql.join(' UNION ');
     };
 
-    var parseActivitiesResults = function (activities) {
-        var returnList = [];
+    const parseActivitiesResults = function (activities) {
+        const returnList = [];
         activities.forEach(function (activity) {
-            var returnActivity = _.cloneDeep(activity);
+            const returnActivity = _.cloneDeep(activity);
             delete activity.data.actor.ip;
             activity.actor = activity.data.actor;
-      //      returnActivity.context = activity.data.context;
-       //     delete returnActivity.data.context;
             if (activity.data.actor.type === 'User') {
-                var actor = _.find(activity.users, function(o) { return o.id === activity.data.actor.id; });
+                const actor = _.find(activity.users, function(o) { return o.id === activity.data.actor.id; });
                 activity.actor.company = actor.company;
                 activity.actor.name = actor.name;
             }
@@ -222,9 +220,12 @@ module.exports = function (app) {
                 returnActivity.data.actor = activity.actor;
             }
 
-            var extraFields = ['object', 'origin', 'target'];
+            const extraFields = ['object', 'origin', 'target'];
             extraFields.forEach(function (field) {
-                var object = null;
+                let object = null;
+                let topic;
+                let group;
+                let user;
                 if (activity.data[field] && activity.data[field]['@type']) {
                     switch (activity.data[field]['@type']) {
                         case 'Topic':
@@ -232,7 +233,7 @@ module.exports = function (app) {
                             delete returnActivity.data[field].description;
                             delete returnActivity.data[field].tokenJoin;
                             if (field === 'origin' && activity.data.type === 'Update') break;
-                            var topic = _.find(activity.topics, function (t) {return t.id === activity.data[field].id});
+                            topic = _.find(activity.topics, function (t) {return t.id === activity.data[field].id});
                             object = Topic.build(topic).toJSON();
                             object['@type'] = activity.data[field]['@type'];
                             object.creatorId = topic.creatorId;
@@ -243,8 +244,8 @@ module.exports = function (app) {
                         case 'Group':
                             delete returnActivity.data[field].creator;
                             if (field === 'origin' && activity.data.type === 'Update') break;
-                            var g  = _.find(activity.groups, function (t) {return t.id === activity.data[field].id});
-                            object = Group.build(g).toJSON();
+                            group  = _.find(activity.groups, function (t) {return t.id === activity.data[field].id});
+                            object = Group.build(group).toJSON();
                             object['@type'] = activity.data[field]['@type'];
                             object.createdAt = activity.data[field].createdAt;
                             object.creatorId = activity.data[field].creatorId;
@@ -256,8 +257,8 @@ module.exports = function (app) {
                         case 'User':
                             delete returnActivity.data[field].language;
                             if (field === 'origin' && activity.data.type === 'Update') break;
-                            var u  = _.find(activity.users, function (t) {return t.id === activity.data[field].id});
-                            object = User.build(u).toJSON();
+                            user  = _.find(activity.users, function (t) {return t.id === activity.data[field].id});
+                            object = User.build(user).toJSON();
                             object['@type'] = activity.data[field]['@type'];
                             if (activity.data[field].level) { // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
                                 object.level = activity.data[field].level;
@@ -315,44 +316,44 @@ module.exports = function (app) {
         return returnList;
     };
 
-    var topicActivitiesList = function (req, res, next, visibility) {
-        var limitMax = 50;
-        var limitDefault = 10;
-        var topicId = req.params.topicId;
-        var userId = null;
+    const topicActivitiesList = function (req, res, next, visibility) {
+        const limitMax = 50;
+        const limitDefault = 10;
+        const topicId = req.params.topicId;
+        let userId = null;
         if (req.user && !visibility) {
             userId = req.user.id;
         }
-        var offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
-        var limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
-        var visibilityCondition = '';
+        const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
+        let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+        let visibilityCondition = '';
         if (visibility) {
             visibilityCondition = 't.visibility = :visibility AND';
         }
 
         if (limit > limitMax) limit = limitDefault;
 
-        var allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User', 'VoteList'];
-        var queryFilters = req.query.filter || [];
+        const allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User', 'VoteList'];
+        let queryFilters = req.query.filter || [];
         if (queryFilters && !Array.isArray(queryFilters)) {
             queryFilters = [queryFilters];
         }
 
-        var filters = queryFilters.filter(function (item, key, input) {
+        const filters = queryFilters.filter(function (item, key, input) {
             return allowedFilters.indexOf(item) > -1 && (input.indexOf(item) === key);
         });
 
-        var filterSql = '';
+        let filterSql = '';
 
         if (filters.length) {
-            var filtersEscaped = filters.map(function (filter) {
+            const filtersEscaped = filters.map(function (filter) {
                 return db.escape(filter);
             });
             filterSql += 'AND a.data#>>\'{object, @type}\' IN (' + filtersEscaped.join(',') + ') OR a.data#>>\'{object, 0, @type}\' IN (' + filtersEscaped.join(',') + ') ';
         }
 
         return db.transaction(function (t) {
-            var activity = Activity.build({
+            const activity = Activity.build({
                 data: {
                     offset: offset,
                     limit: limit
@@ -456,18 +457,18 @@ module.exports = function (app) {
     });
 
     app.get('/api/users/:userId/activities/unread', loginCheck(['partner']), function (req, res, next) {
-        var userId = req.user.id;
-        var sourcePartnerId = req.query.sourcePartnerId;
+        const userId = req.user.id;
+        const sourcePartnerId = req.query.sourcePartnerId;
 
         // All partners should see only Topics created by their site, but our own app sees all.
-        var wherePartnerTopics = '';
-        var wherePartnerGroups = '';
+        let wherePartnerTopics = '';
+        let wherePartnerGroups = '';
         if (sourcePartnerId) {
             wherePartnerTopics = ' AND t."sourcePartnerId" = :sourcePartnerId ';
             wherePartnerGroups = ' AND g."sourcePartnerId" = :sourcePartnerId ';
         }
 
-        var query = '\
+        const query = '\
             CREATE OR REPLACE FUNCTION pg_temp.getUserTopics(uuid) \
                 RETURNS TABLE("topicId" uuid) \
                 AS $$ \
@@ -707,34 +708,34 @@ module.exports = function (app) {
 
     });
 
-    var activitiesList = function (req, res, next, visibility) {
-        var limitMax = 200;
-        var limitDefault = 10;
-        var allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User', 'VoteList'];
-        var userId;
+    const activitiesList = function (req, res, next, visibility) {
+        const limitMax = 50;
+        const limitDefault = 10;
+        const allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User', 'VoteList'];
+        let userId;
 
         if (req.user) {
             userId = req.user.id;
         }
-        var sourcePartnerId = req.query.sourcePartnerId;
-        var page = parseInt(req.query.page, 10);
-        var offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
-        var limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+        const sourcePartnerId = req.query.sourcePartnerId;
+        const page = parseInt(req.query.page, 10);
+        let offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
+        let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
 
-        var includeSql = buildActivityFeedIncludeString(req, visibility);
-        var queryFilters = req.query.filter || [];
+        const includeSql = buildActivityFeedIncludeString(req, visibility);
+        let queryFilters = req.query.filter || [];
         if (queryFilters && !Array.isArray(queryFilters)) {
             queryFilters = [queryFilters];
         }
 
-        var filters = queryFilters.filter(function (item, key, input) {
+        const filters = queryFilters.filter(function (item, key, input) {
             return allowedFilters.indexOf(item) > -1 && (input.indexOf(item) === key);
         });
 
-        var where = '';
+        let where = '';
 
         if (filters.length) {
-            var filtersEscaped = filters.map(function (filter) {
+            const filtersEscaped = filters.map(function (filter) {
                 return db.escape(filter);
             });
             where += 'a.data#>>\'{object, @type}\' IN (' + filtersEscaped.join(',') + ') OR a.data#>>\'{object, 0, @type}\' IN (' + filtersEscaped.join(',') + ') ';
@@ -752,14 +753,14 @@ module.exports = function (app) {
         if (limit > limitMax) limit = limitDefault;
 
         // All partners should see only Topics created by their site, but our own app sees all.
-        var wherePartnerTopics = '';
-        var wherePartnerGroups = '';
+        let wherePartnerTopics = '';
+        let wherePartnerGroups = '';
         if (sourcePartnerId) {
             wherePartnerTopics = ' AND t."sourcePartnerId" = :sourcePartnerId ';
             wherePartnerGroups = ' AND g."sourcePartnerId" = :sourcePartnerId ';
         }
 
-        var query = '\
+        const query = '\
             ' + activitiesDataFunction + '\
             CREATE OR REPLACE FUNCTION pg_temp.getPublicTopics() \
                 RETURNS TABLE("topicId" uuid) \
@@ -994,10 +995,12 @@ module.exports = function (app) {
                 ORDER BY ad."updatedAt" DESC \
             ;';
 
+        let activity;
+
         return db
             .transaction(function (t) {
                 if (userId) {
-                    var activity = Activity.build({
+                    activity = Activity.build({
                         data: {
                             offset: offset,
                             limit: limit
@@ -1041,7 +1044,7 @@ module.exports = function (app) {
                             });
                     });
             }).then(function (results) {
-                var finalResults = parseActivitiesResults(results);
+                const finalResults = parseActivitiesResults(results);
 
                 return res.ok(finalResults);
             })
@@ -1060,17 +1063,17 @@ module.exports = function (app) {
      * Read (List) public Group Activities
      */
 
-    var groupActivitiesList = function (req, res, next, visibility) {
-        var limitMax = 50;
-        var limitDefault = 10;
-        var groupId = req.params.groupId;
-        var userId = null;
+    const groupActivitiesList = function (req, res, next, visibility) {
+        const limitMax = 50;
+        const limitDefault = 10;
+        const groupId = req.params.groupId;
+        let userId = null;
         if (req.user && !visibility) {
             userId = req.user.id;
         }
-        var offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
-        var limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
-        var visibilityCondition = '';
+        const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
+        let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+        let visibilityCondition = '';
         if (visibility) {
             visibilityCondition = 'g.visibility = :visibility AND';
         }
@@ -1078,7 +1081,7 @@ module.exports = function (app) {
         if (limit > limitMax) limit = limitDefault;
 
         return db.transaction(function (t) {
-            var activity = Activity.build({
+            const activity = Activity.build({
                 data: {
                     offset: offset,
                     limit: limit
