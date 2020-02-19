@@ -42,14 +42,12 @@ module.exports = function (sequelize, DataTypes) {
                 values: _.values(CONNECTION_IDS),
                 allowNull: false,
                 comment: 'User connection identificator.',
-                primaryKey: true,
-                unique: 'uniqueConnectionIdAndConnectionUserId'
+                primaryKey: true
             },
             connectionUserId: {
                 type: DataTypes.STRING,
                 allowNull: false,
-                comment: 'User id in the connected system. For Facebook their user id, for Google their user id and so on, PID for Estonian ID infra etc.',
-                unique: 'uniqueConnectionIdAndConnectionUserId'
+                comment: 'User id in the connected system. For Facebook their user id, for Google their user id and so on, PID for Estonian ID infra etc.'
             },
             connectionData: {
                 type: DataTypes.JSON,
