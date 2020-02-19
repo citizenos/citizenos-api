@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 10.10 (Ubuntu 10.10-0ubuntu0.18.04.1)
--- Dumped by pg_dump version 10.10 (Ubuntu 10.10-0ubuntu0.18.04.1)
+-- Dumped from database version 10.12 (Ubuntu 10.12-0ubuntu0.18.04.1)
+-- Dumped by pg_dump version 10.12 (Ubuntu 10.12-0ubuntu0.18.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -230,6 +230,15 @@ CREATE TYPE public."enum_Votes_type" AS ENUM (
     'regular',
     'multiple'
 );
+
+
+--
+-- Name: ueberdb_insert_or_update(character varying, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.ueberdb_insert_or_update(character varying, text) RETURNS void
+    LANGUAGE plpgsql
+    AS $_$ BEGIN   IF EXISTS( SELECT * FROM store WHERE key = $1 ) THEN     UPDATE store SET value = $2 WHERE key = $1;   ELSE     INSERT INTO store(key,value) VALUES( $1, $2 );   END IF;   RETURN; END; $_$;
 
 
 SET default_tablespace = '';
@@ -582,10 +591,10 @@ CREATE TABLE public."Partners" (
     id uuid NOT NULL,
     website character varying(255) NOT NULL,
     "redirectUriRegexp" character varying(255) NOT NULL,
+    "linkPrivacyPolicy" text,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone,
-    "linkPrivacyPolicy" text
+    "deletedAt" timestamp with time zone
 );
 
 
@@ -1244,11 +1253,11 @@ CREATE TABLE public."Users" (
     source public."enum_Users_source" NOT NULL,
     "sourceId" character varying(255),
     "imageUrl" character varying(255),
+    "termsVersion" character varying(255),
+    "termsAcceptedAt" timestamp with time zone,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone,
-    "termsVersion" character varying(255),
-    "termsAcceptedAt" timestamp with time zone
+    "deletedAt" timestamp with time zone
 );
 
 
@@ -1632,6 +1641,16 @@ COMMENT ON COLUMN public."Votes"."authType" IS 'Authorization types. Soft - user
 
 
 --
+-- Name: store; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.store (
+    key character varying(100) NOT NULL,
+    value text NOT NULL
+);
+
+
+--
 -- Name: VoteDelegations id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1838,14 +1857,6 @@ ALTER TABLE ONLY public."Topics"
 
 
 --
--- Name: UserConnections UserConnections_connectionId_connectionUserId_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."UserConnections"
-    ADD CONSTRAINT "UserConnections_connectionId_connectionUserId_key" UNIQUE ("connectionId", "connectionUserId");
-
-
---
 -- Name: UserConnections UserConnections_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1939,6 +1950,14 @@ ALTER TABLE ONLY public."VoteUserContainers"
 
 ALTER TABLE ONLY public."Votes"
     ADD CONSTRAINT "Votes_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: store store_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.store
+    ADD CONSTRAINT store_pkey PRIMARY KEY (key);
 
 
 --
@@ -2467,4 +2486,5 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 20191119124917-create-topic-invite-user.js
 20191218091941-update-vote-option-max-value.js
 20200130121507-create-signature.js
+202002192021-alter-user-connection.js
 \.

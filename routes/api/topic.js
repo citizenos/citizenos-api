@@ -5893,44 +5893,6 @@ module.exports = function (app) {
             });
     };
 
-    const _checkAuthenticatedUser = function (userId, personalInfo, transaction) {
-        const anotherUserConnectionPromise = UserConnection
-            .findOne({
-                where: {
-                    connectionId: UserConnection.CONNECTION_IDS.esteid,
-                    connectionUserId: personalInfo.pid
-                },
-                transaction
-            })
-            .then(function (userConnection) {
-                if (userConnection && userConnection.userId !== userId) {
-                    return Promise.reject(new Error('Personal ID already connected to another user account.'));
-                }
-            });
-
-        const userConnectionPromise = UserConnection
-            .findOne({
-                where: {
-                    connectionId: UserConnection.CONNECTION_IDS.esteid,
-                    userId: userId
-                },
-                transaction
-            })
-            .then(function (userConnection) {
-                let personId = personalInfo.pid;
-                if (personalInfo.pid.indexOf('PNO') > -1) {
-                    personId = personId.split('-')[1];
-                }
-                const idPattern = new RegExp('(PNO' + personalInfo.country + '-)?' + personId);
-                if (userConnection && !idPattern.test(userConnection.connectionUserId)) {
-                    return Promise.reject(new Error('User account already connected to another PID.'));
-                }
-            });
-
-        return Promise.all([anotherUserConnectionPromise, userConnectionPromise]);
-
-    };
-
     const handleTopicVoteHard = function (vote, req, res) {
         const voteId = vote.id;
         let userId = req.user ? req.user.id : null;
@@ -6076,10 +6038,7 @@ module.exports = function (app) {
                     .then(function () {
                         const promisesToResolve = [];
                         // Authenticated User
-                        if (userId) {
-                            const loggedInUserPromise = _checkAuthenticatedUser(userId, personalInfo, t);
-                            promisesToResolve.push(loggedInUserPromise);
-                        } else { // Un-authenticated User, find or create one.
+                        if (!userId) { // Un-authenticated User, find or create one.
                             const userPromise = authUser.getUserByPersonalId(personalInfo, UserConnection.CONNECTION_IDS.esteid, req, t)
                                 .then(function (userData) {
                                     const user = userData[0];
@@ -6308,12 +6267,6 @@ module.exports = function (app) {
                     o.optionGroupId = optionGroupId;
                 });
 
-                // Authenticated User signing, check the user connection
-                if (req.user) {
-                    const loggedInUserPromise = _checkAuthenticatedUser(userId, idSignFlowData.personalInfo, t);
-                    promisesToResolve.push(loggedInUserPromise);
-                }
-
                 const voteListCreatePromise = VoteList
                     .bulkCreate(
                         voteOptions,
@@ -6508,12 +6461,6 @@ module.exports = function (app) {
                             o.optionGroupId = optionGroupId;
                         });
 
-                        // Authenticated User signing, check the user connection
-                        if (req.user) {
-                            const loggedInUserPromise = _checkAuthenticatedUser(userId, idSignFlowData.personalInfo, t)
-
-                            promisesToResolve.push(loggedInUserPromise);
-                        }
                         const voteListCreatePromise = VoteList
                             .bulkCreate(
                                 voteOptions,
@@ -6564,17 +6511,6 @@ module.exports = function (app) {
 
                             });
 
-                        // Delete delegation if you are voting - TODO: why is this here? You cannot delegate for authType === 'hard' anyway
-                        const voteDelegationDestroyPromise = VoteDelegation
-                            .destroy({
-                                where: {
-                                    voteId: voteId,
-                                    byUserId: userId
-                                },
-                                force: true,
-                                transaction: t
-                            });
-
                         const userConnectionAddPromise = UserConnection
                             .upsert(
                                 {
@@ -6587,6 +6523,16 @@ module.exports = function (app) {
                                     transaction: t
                                 }
                             );
+                        // Delete delegation if you are voting - TODO: why is this here? You cannot delegate for authType === 'hard' anyway
+                        const voteDelegationDestroyPromise = VoteDelegation
+                            .destroy({
+                                where: {
+                                    voteId: voteId,
+                                    byUserId: userId
+                                },
+                                force: true,
+                                transaction: t
+                            });
 
                         const voteUserContainerPromise = VoteUserContainer
                             .upsert(

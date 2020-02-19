@@ -677,13 +677,18 @@ module.exports = function (app) {
                                     return new Promise(function (resolve, reject) {
                                         const query = new QueryStream(
                                             '\
-                                                SELECT \
-                                                    vuc.container, \
-                                                    uc."connectionUserId" \
-                                                FROM "VoteUserContainers" vuc \
-                                                JOIN "UserConnections" uc ON (vuc."userId" = uc."userId") \
-                                                WHERE vuc."voteId" = $1 \
-                                                AND uc."connectionId" = $2 \
+                                                SELECT DISTINCT ON (o."connectionUserId") \
+                                                    o.* \
+                                                    FROM ( \
+                                                        SELECT \
+                                                            vuc.container, \
+                                                            uc."connectionUserId" \
+                                                        FROM "VoteUserContainers" vuc \
+                                                        JOIN "UserConnections" uc ON (vuc."userId" = uc."userId") \
+                                                        WHERE vuc."voteId" = $1 \
+                                                        AND uc."connectionId" = $2 \
+                                                        ORDER BY vuc."updatedAt" DESC \
+                                                    ) o \
                                             ;',
                                             [voteId, UserConnection.CONNECTION_IDS.esteid]
                                         );

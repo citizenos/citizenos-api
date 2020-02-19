@@ -521,6 +521,7 @@ module.exports = function (app) {
                             [Op.like]: '%' + personId + '%',
                         }
                     },
+                    order: [['createdAt', 'ASC']],
                     include: [User],
                     transaction: t
                 })
@@ -863,7 +864,6 @@ module.exports = function (app) {
                 }
             })
             .then(function (personalInfo) {
-                // TODO: DUPLICATE CODE, also used in /api/auth/id
                 return _getUserByPersonalId(personalInfo, UserConnection.CONNECTION_IDS.esteid, req)
                     .then(function (userData) {
                         const user = userData[0];
