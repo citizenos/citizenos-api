@@ -5893,6 +5893,47 @@ module.exports = function (app) {
             });
     };
 
+    const _checkAuthenticatedUser = function (userId, personalInfo, transaction) {
+        return  UserConnection
+            .findOne({
+                where: {
+                    connectionId: {
+                        [Op.in]: [
+                            UserConnection.CONNECTION_IDS.esteid,
+                            UserConnection.CONNECTION_IDS.smartid
+                        ]
+                    },
+                    userId: userId
+                },
+                transaction
+            })
+            .then(function (userConnection) {
+                if (userConnection) {
+                    let personId = personalInfo.pid;
+                    let connectionUserId = userConnection.connectionUserId;
+                    if (personalInfo.pid.indexOf('PNO') > -1) {
+                        personId = personId.split('-')[1];
+                    }
+
+                    if (connectionUserId.indexOf('PNO') > -1) {
+                        connectionUserId = connectionUserId.split('-')[1];
+                    }
+
+                    if (!userConnection.connectionData || (userConnection.connectionData.country && userConnection.connectionData.countryCode)) {
+                        if (userConnection.connectionUserId !== idPattern) {
+                            return Promise.reject(new Error('User account already connected to another PID.'));
+                        }
+                    }
+
+                    const idPattern = 'PNO' + personalInfo.country + '-' + personId;
+                    const connectionUserPattern = 'PNO' + (userConnection.connectionData.country || userConnection.connectionData.countryCode) + '-' + connectionUserId;
+                    if (connectionUserPattern !== idPattern) {
+                        return Promise.reject(new Error('User account already connected to another PID.'));
+                    }
+                }
+            });
+    };
+
     const handleTopicVoteHard = function (vote, req, res) {
         const voteId = vote.id;
         let userId = req.user ? req.user.id : null;
@@ -6038,7 +6079,10 @@ module.exports = function (app) {
                     .then(function () {
                         const promisesToResolve = [];
                         // Authenticated User
-                        if (!userId) { // Un-authenticated User, find or create one.
+                        if (userId) {
+                            const loggedInUserPromise = _checkAuthenticatedUser(userId, personalInfo, t);
+                            promisesToResolve.push(loggedInUserPromise);
+                        } else { // Un-authenticated User, find or create one.
                             const userPromise = authUser.getUserByPersonalId(personalInfo, UserConnection.CONNECTION_IDS.esteid, req, t)
                                 .then(function (userData) {
                                     const user = userData[0];
@@ -6267,6 +6311,11 @@ module.exports = function (app) {
                     o.optionGroupId = optionGroupId;
                 });
 
+                if (req.user) {
+                    const loggedInUserPromise = _checkAuthenticatedUser(userId, idSignFlowData.personalInfo, t);
+                    promisesToResolve.push(loggedInUserPromise);
+                }
+
                 const voteListCreatePromise = VoteList
                     .bulkCreate(
                         voteOptions,
@@ -6330,12 +6379,17 @@ module.exports = function (app) {
                         transaction: t
                     });
 
+                let connectionUserId = idSignFlowData.personalInfo.pid;
+                if (connectionUserId.indexOf('PNO')  === -1) {
+                    connectionUserId = 'PNO' + idSignFlowData.personalInfo.country + '-' + connectionUserId;
+                }
+
                 const userConnectionAddPromise = UserConnection
                     .upsert(
                         {
                             userId: userId,
                             connectionId: UserConnection.CONNECTION_IDS.esteid,
-                            connectionUserId: idSignFlowData.personalInfo.pid,
+                            connectionUserId,
                             connectionData: idSignFlowData.personalInfo
                         },
                         {
@@ -6461,6 +6515,13 @@ module.exports = function (app) {
                             o.optionGroupId = optionGroupId;
                         });
 
+                        // Authenticated User signing, check the user connection
+                        if (req.user) {
+                            const loggedInUserPromise = _checkAuthenticatedUser(userId, idSignFlowData.personalInfo, t)
+
+                            promisesToResolve.push(loggedInUserPromise);
+                        }
+
                         const voteListCreatePromise = VoteList
                             .bulkCreate(
                                 voteOptions,
@@ -6511,12 +6572,17 @@ module.exports = function (app) {
 
                             });
 
+                        let connectionUserId = idSignFlowData.personalInfo.pid;
+                        if (connectionUserId.indexOf('PNO')  === -1) {
+                            connectionUserId = 'PNO' + idSignFlowData.personalInfo.country + '-' + connectionUserId;
+                        }
+
                         const userConnectionAddPromise = UserConnection
                             .upsert(
                                 {
                                     userId: userId,
                                     connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId: idSignFlowData.personalInfo.pid,
+                                    connectionUserId,
                                     connectionData: idSignFlowData.personalInfo // When starting signing with Mobile-ID we have no full name, thus we need to fetch and update
                                 },
                                 {

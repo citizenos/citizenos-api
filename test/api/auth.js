@@ -568,7 +568,7 @@ suite('Auth', function () {
                     .destroy({
                         where: {
                             connectionId: UserConnection.CONNECTION_IDS.esteid,
-                            connectionUserId: ['37101010021']
+                            connectionUserId: ['PNOEE-37101010021']
                         },
                         force: true
                     })
@@ -601,7 +601,7 @@ suite('Auth', function () {
                         .destroy({
                             where: {
                                 connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                connectionUserId: ['60001019906']
+                                connectionUserId: ['PNOEE-60001019906']
                             },
                             force: true
                         })
@@ -621,7 +621,7 @@ suite('Auth', function () {
                         .destroy({
                             where: {
                                 connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                connectionUserId: [pid] // Remove the good user so that test would run multiple times. Also other tests use same numbers
+                                connectionUserId: ['PNOEE-'+pid] // Remove the good user so that test would run multiple times. Also other tests use same numbers
                             },
                             force: true
                         })
@@ -962,7 +962,7 @@ suite('Auth', function () {
                             .destroy({
                                 where: {
                                     connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId: ['60001019906']
+                                    connectionUserId: ['PNOEE-60001019906']
                                 },
                                 force: true
                             })
@@ -1074,7 +1074,7 @@ suite('Auth', function () {
                             .destroy({
                                 where: {
                                     connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId: ['60001019906']
+                                    connectionUserId: ['PNOEE-60001019906']
                                 },
                                 force: true
                             })
@@ -1161,7 +1161,7 @@ suite('Auth', function () {
                         .destroy({
                             where: {
                                 connectionId: UserConnection.CONNECTION_IDS.smartid,
-                                connectionUserId: [pid] // Remove the good user so that test would run multiple times. Also other tests use same numbers
+                                connectionUserId: ['PNOEE-' + pid] // Remove the good user so that test would run multiple times. Also other tests use same numbers
                             },
                             force: true
                         })
@@ -1224,7 +1224,7 @@ suite('Auth', function () {
                             .destroy({
                                 where: {
                                     connectionId: UserConnection.CONNECTION_IDS.smartid,
-                                    connectionUserId: [pid] // Remove the good user so that test would run multiple times. Also other tests use same numbers
+                                    connectionUserId: ['PNOEE-' + pid] // Remove the good user so that test would run multiple times. Also other tests use same numbers
                                 },
                                 force: true
                             })
