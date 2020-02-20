@@ -2066,6 +2066,7 @@ module.exports = function (app) {
                     t."sourcePartnerObjectId", \
                     c.id as "creator.id", \
                     c.name as "creator.name", \
+                    COALESCE(ta."lastActivity", t."updatedAt") as "lastActivity", \
                     c.company as "creator.company", \
                     muc.count as "members.users.count", \
                     COALESCE(mgc.count, 0) as "members.groups.count", \
@@ -2154,9 +2155,13 @@ module.exports = function (app) {
                         LEFT JOIN "Votes" v \
                                 ON v.id = tv."voteId" \
                     ) AS tv ON (tv."topicId" = t.id) \
+                    LEFT JOIN ( \
+                        SELECT t.id, MAX(a."updatedAt") as "lastActivity" \
+                        FROM "Topics" t JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds" GROUP BY t.id \
+                    ) ta ON (ta.id = t.id) \
                     ' + join + ' \
                 WHERE ' + where + ' \
-                ORDER BY "order" ASC, t."updatedAt" DESC \
+                ORDER BY "order" ASC, "lastActivity" DESC \
                 LIMIT :limit OFFSET :offset \
             ;';
 
