@@ -2066,7 +2066,7 @@ module.exports = function (app) {
                     t."sourcePartnerObjectId", \
                     c.id as "creator.id", \
                     c.name as "creator.name", \
-                    ta."lastActivity", \
+                    COALESCE(ta."lastActivity", t."updatedAt") as "lastActivity", \
                     c.company as "creator.company", \
                     muc.count as "members.users.count", \
                     COALESCE(mgc.count, 0) as "members.groups.count", \
@@ -2161,7 +2161,7 @@ module.exports = function (app) {
                     ) ta ON (ta.id = t.id) \
                     ' + join + ' \
                 WHERE ' + where + ' \
-                ORDER BY "order" ASC, ta."lastActivity" DESC \
+                ORDER BY "order" ASC, "lastActivity" DESC \
                 LIMIT :limit OFFSET :offset \
             ;';
 
