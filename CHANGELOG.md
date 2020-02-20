@@ -1,3 +1,9 @@
+## 2020-02-20
+
+* Update "UserConnection" "connectionUserId" values to have PNO prefix Where "connectionId" esteid or smartid
+* Allow users to sign votes under multiple accounts if that account does not have different connection with esteid or smartid
+* Add lastActivity field to public topics list /api/topics https://github.com/citizenos/citizenos-fe/issues/231
+
 ## 2020-02-14
 
 * https://github.com/citizenos/citizenos-api/issues/161
