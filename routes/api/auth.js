@@ -549,7 +549,7 @@ module.exports = function (app) {
                                                 {
                                                     userId: user.id,
                                                     connectionId: connectionId,
-                                                    connectionUserId: personalInfo.pid,
+                                                    connectionUserId: 'PNO' + personalInfo.country + '-' + personId,
                                                     connectionData: personalInfo
                                                 },
                                                 {
