@@ -2,36 +2,36 @@
 
 module.exports = function (app) {
 
-    var logger = app.get('logger');
-    var cryptoLib = app.get('cryptoLib');
-    var smartId = app.get('smartId');
-    var loginCheck = app.get('middleware.loginCheck');
-    var emailLib = app.get('email');
-    var validator = app.get('validator');
-    var util = app.get('util');
-    var config = app.get('config');
-    var passport = app.get('passport');
-    var models = app.get('models');
-    var db = models.sequelize;
-    var Op = db.Sequelize.Op;
-    var cosActivities = app.get('cosActivities');
-    var jwt = app.get('jwt');
-    var objectEncrypter = app.get('objectEncrypter');
-    var querystring = app.get('querystring');
-    var urlLib = app.get('urlLib');
-    var superagent = app.get('superagent');
-    var Promise = app.get('Promise');
-    var DigiDocServiceClient = app.get('ddsClient');
-    var url = app.get('url');
-    var mobileId = app.get('mobileId');
+    const logger = app.get('logger');
+    const cryptoLib = app.get('cryptoLib');
+    const smartId = app.get('smartId');
+    const loginCheck = app.get('middleware.loginCheck');
+    const emailLib = app.get('email');
+    const validator = app.get('validator');
+    const util = app.get('util');
+    const config = app.get('config');
+    const passport = app.get('passport');
+    const models = app.get('models');
+    const db = models.sequelize;
+    const Op = db.Sequelize.Op;
+    const cosActivities = app.get('cosActivities');
+    const jwt = app.get('jwt');
+    const objectEncrypter = app.get('objectEncrypter');
+    const querystring = app.get('querystring');
+    const urlLib = app.get('urlLib');
+    const superagent = app.get('superagent');
+    const Promise = app.get('Promise');
+    const DigiDocServiceClient = app.get('ddsClient');
+    const url = app.get('url');
+    const mobileId = app.get('mobileId');
 
-    var User = models.User;
-    var UserConnection = models.UserConnection;
-    var UserConsent = models.UserConsent;
-    var Partner = models.Partner;
+    const User = models.User;
+    const UserConnection = models.UserConnection;
+    const UserConsent = models.UserConsent;
+    const Partner = models.Partner;
 
-    var COOKIE_NAME_OPENID_AUTH_STATE = 'cos.authStateOpenId';
-    var COOKIE_NAME_COS_AUTH_STATE = 'cos.authState';
+    const COOKIE_NAME_OPENID_AUTH_STATE = 'cos.authStateOpenId';
+    const COOKIE_NAME_COS_AUTH_STATE = 'cos.authState';
 
     /**
      * Set state cookie with all in req.query when it does not exist
@@ -43,9 +43,9 @@ module.exports = function (app) {
      *
      * @returns {void}
      */
-    var setStateCookie = function (req, res, cookieName, allowOverwrite) {
+    const setStateCookie = function (req, res, cookieName, allowOverwrite) {
         if (!req.cookies[cookieName] || allowOverwrite) {
-            var stateCookieData = jwt.sign(req.query, config.session.privateKey, {algorithm: config.session.algorithm});
+            const stateCookieData = jwt.sign(req.query, config.session.privateKey, {algorithm: config.session.algorithm});
             res.cookie(cookieName, stateCookieData, Object.assign({secure: req.secure}, config.session.cookie));
         }
     };
@@ -58,10 +58,10 @@ module.exports = function (app) {
      *
      * @returns {object|null} State from cookie or null if it does not exist or verification fails.
      */
-    var getStateCookie = function (req, cookieName) {
-        var stateCookie = req.cookies[cookieName]; // FIXME: cookie name from config?
+    const getStateCookie = function (req, cookieName) {
+        const stateCookie = req.cookies[cookieName]; // FIXME: cookie name from config?
         if (stateCookie) { // Don't use the state cookie when req.query parameters are there. For the case a new authorization is started.
-            var stateCookieData;
+            let stateCookieData;
             try {
                 stateCookieData = jwt.verify(stateCookie, config.session.publicKey, {algorithms: [config.session.algorithm]});
             } catch (e) {
@@ -86,14 +86,14 @@ module.exports = function (app) {
      *
      * @returns {void}
      */
-    var clearStateCookie = function (res, cookieName) {
+    const clearStateCookie = function (res, cookieName) {
         res.clearCookie(cookieName, {
             path: config.session.cookie.path,
             domain: config.session.cookie.domain
         });
     };
 
-    var handleOpenIdErrorRedirect = function (res, redirectUri, error, errorDescription, state, errorUri) {
+    const handleOpenIdErrorRedirect = function (res, redirectUri, error, errorDescription, state, errorUri) {
 
         clearStateCookie(res, COOKIE_NAME_OPENID_AUTH_STATE);
 
@@ -101,7 +101,7 @@ module.exports = function (app) {
             redirectUri += '#';
         }
 
-        var errorObj = {
+        const errorObj = {
             error: error,
             error_description: errorDescription
         };
@@ -118,12 +118,12 @@ module.exports = function (app) {
     };
 
     app.post('/api/auth/signup', function (req, res, next) {
-        var email = req.body.email || ''; // HACK: Sequelize validate() is not run if value is "null". Also cannot use allowNull: false as I don' want constraint in DB. https://github.com/sequelize/sequelize/issues/2643
-        var password = req.body.password || ''; // HACK: Sequelize validate() is not run if value is "null". Also cannot use allowNull: false as I don' want constraint in DB. https://github.com/sequelize/sequelize/issues/2643
-        var name = req.body.name || util.emailToDisplayName(req.body.email);
-        var company = req.body.company;
-        var language = req.body.language;
-        var redirectSuccess = req.body.redirectSuccess;
+        const email = req.body.email || ''; // HACK: Sequelize validate() is not run if value is "null". Also cannot use allowNull: false as I don' want constraint in DB. https://github.com/sequelize/sequelize/issues/2643
+        const password = req.body.password || ''; // HACK: Sequelize validate() is not run if value is "null". Also cannot use allowNull: false as I don' want constraint in DB. https://github.com/sequelize/sequelize/issues/2643
+        const name = req.body.name || util.emailToDisplayName(req.body.email);
+        const company = req.body.company;
+        const language = req.body.language;
+        const redirectSuccess = req.body.redirectSuccess;
 
         return User
             .findOne({
@@ -159,7 +159,7 @@ module.exports = function (app) {
                                 transaction: t
                             })
                             .spread(function (user, created) {
-                                var activityPromise = [];
+                                const activityPromise = [];
 
                                 if (created) {
                                     logger.info('Created a new user', user.id);
@@ -201,11 +201,11 @@ module.exports = function (app) {
             .then(function (user) {
                 if (user) {
                     // Store redirect url in the token so that /api/auth/verify/:code could redirect to the url late
-                    var tokenData = {
+                    const tokenData = {
                         redirectSuccess: redirectSuccess ? redirectSuccess : urlLib.getFe() // TODO: Misleading naming, would like to use "redirectUri" (OpenID convention) instead, but needs RAA.ee to update codebase.
                     };
 
-                    var token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
+                    const token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
 
                     return emailLib
                         .sendAccountVerification(user.email, user.emailVerificationCode, token)
@@ -239,8 +239,8 @@ module.exports = function (app) {
      *
      * @see http://expressjs.com/en/4x/api.html#res
      */
-    var setAuthCookie = function (req, res, userId) {
-        var authToken = jwt.sign({
+    const setAuthCookie = function (req, res, userId) {
+        const authToken = jwt.sign({
             id: userId,
             scope: 'all'
         }, config.session.privateKey, {
@@ -250,7 +250,7 @@ module.exports = function (app) {
         res.cookie(config.session.name, authToken, Object.assign({secure: req.secure}, config.session.cookie));
     };
 
-    var clearSessionCookies = function (req, res) {
+    const clearSessionCookies = function (req, res) {
         res.clearCookie(config.session.name, {
             path: config.session.cookie.path,
             domain: config.session.cookie.domain
@@ -281,12 +281,12 @@ module.exports = function (app) {
     });
 
     app.get('/api/auth/verify/:code', function (req, res, next) {
-        var code = req.params.code;
-        var token = req.query.token;
+        const code = req.params.code;
+        const token = req.query.token;
 
-        var redirectSuccess = urlLib.getFe('/');
+        let redirectSuccess = urlLib.getFe('/');
         if (token) {
-            var tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+            const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
             if (tokenData.redirectSuccess) {
                 redirectSuccess = tokenData.redirectSuccess;
             }
@@ -333,8 +333,8 @@ module.exports = function (app) {
 
 
     app.post('/api/auth/password', loginCheck(), function (req, res, next) {
-        var currentPassword = req.body.currentPassword;
-        var newPassword = req.body.newPassword;
+        const currentPassword = req.body.currentPassword;
+        const newPassword = req.body.newPassword;
 
         User
             .findOne({
@@ -361,7 +361,7 @@ module.exports = function (app) {
 
 
     app.post('/api/auth/password/reset/send', function (req, res, next) {
-        var email = req.body.email;
+        const email = req.body.email;
 
         if (!validator.isEmail(email)) {
             return res.badRequest({email: 'Invalid email'});
@@ -397,9 +397,9 @@ module.exports = function (app) {
 
 
     app.post('/api/auth/password/reset', function (req, res, next) {
-        var email = req.body.email;
-        var password = req.body.password;
-        var passwordResetCode = req.body.passwordResetCode;
+        const email = req.body.email;
+        const password = req.body.password;
+        const passwordResetCode = req.body.passwordResetCode;
 
         User
             .findOne({
@@ -448,7 +448,7 @@ module.exports = function (app) {
 
                     return res.notFound();
                 }
-                var userData = user.toJSON();
+                const userData = user.toJSON();
                 userData.termsVersion = user.dataValues.termsVersion;
                 userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
 
@@ -459,8 +459,8 @@ module.exports = function (app) {
 
 
     app.post('/api/auth/smartid/init', function (req, res, next) {
-        var pid = req.body.pid;
-        var countryCode = req.body.countryCode;
+        const pid = req.body.pid;
+        const countryCode = req.body.countryCode;
 
         if (!pid) {
             return res.badRequest('Smart-ID athentication requires users pid', 1);
@@ -469,8 +469,8 @@ module.exports = function (app) {
         smartId
             .authenticate(pid, countryCode)
             .then(function (sessionData) {
-                var sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
-                var token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
+                const sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
+                const token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
                     expiresIn: '5m',
                     algorithm: config.session.algorithm
                 });
@@ -558,7 +558,7 @@ module.exports = function (app) {
                                             )
                                             .then(function () {
                                                 if (toCommit) t.commit();
-                                                var userData = user.toJSON();
+                                                const userData = user.toJSON();
                                                 userData.termsVersion = user.dataValues.termsVersion;
                                                 userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
 
@@ -569,8 +569,8 @@ module.exports = function (app) {
                     } else {
                         if (toCommit) t.commit();
                         if (userConnectionInfo && idPattern.test(userConnectionInfo.connectionUserId)) {
-                            var user = userConnectionInfo.User;
-                            var userData = user.toJSON();
+                            const user = userConnectionInfo.User;
+                            const userData = user.toJSON();
                             userData.termsVersion = user.dataValues.termsVersion;
                             userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
 
@@ -585,17 +585,18 @@ module.exports = function (app) {
     };
 
     app.get('/api/auth/smartid/status', function (req, res, next) {
-        var token = req.query.token;
+        const token = req.query.token;
+        const timeoutMs = req.query.timeoutMs || 5000;
 
         if (!token) {
             return res.badRequest('Smart-ID signing has not been started. "token" is required.', 2);
         }
 
-        var tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
-        var loginSmartIdFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
-
+        const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+        const loginSmartIdFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
+        let personalInfo;
         smartId
-            .statusAuth(loginSmartIdFlowData.sessionId, loginSmartIdFlowData.sessionHash)
+            .statusAuth(loginSmartIdFlowData.sessionId, loginSmartIdFlowData.sessionHash, timeoutMs)
             .then(function (response) {
                 if (response.error) {
                     return res.badRequest(response.error.message, response.error.code);
@@ -604,7 +605,7 @@ module.exports = function (app) {
                 } else if (response.state === 'COMPLETE') {
                     switch (response.result.endResult) {
                         case 'OK':
-                            var personalInfo = response.personalInfo;
+                            personalInfo = response.personalInfo;
                             break;
                         case 'USER_REFUSED':
                             res.badRequest('User refused', 10);
@@ -638,9 +639,9 @@ module.exports = function (app) {
             .error(next);
     });
 
-    var idCardAuth = function (req, res, next) {
-        var token = req.query.token || req.body.token; // Token to access the ID info service
-        var cert = req.headers['x-ssl-client-cert'];
+    const idCardAuth = function (req, res, next) {
+        const token = req.query.token || req.body.token; // Token to access the ID info service
+        const cert = req.headers['x-ssl-client-cert'];
 
         if (config.services.idCard && cert) {
             logger.error('X-SSL-Client-Cert header is not allowed when ID-card service is enabled. IF you trust your proxy, sending the X-SSL-Client-Cert, delete the services.idCard from your configuration.');
@@ -654,14 +655,14 @@ module.exports = function (app) {
             return res.badRequest('Missing required parameter "token" OR certificate in X-SSL-Client-Cert header. One must be provided!');
         }
 
-        var checkCertificatePromise = null;
+        let checkCertificatePromise;
 
         if (cert) {
-            var ddsClient = new DigiDocServiceClient(config.services.digiDoc.serviceWsdlUrl, config.services.digiDoc.serviceName, config.services.digiDoc.token);
+            const ddsClient = new DigiDocServiceClient(config.services.digiDoc.serviceWsdlUrl, config.services.digiDoc.serviceName, config.services.digiDoc.token);
             checkCertificatePromise = ddsClient
                 .checkCertificate(cert, false)
                 .spread(function (checkCertificateResult) {
-                    var data = {
+                    const data = {
                         status: checkCertificateResult.Status.$value
                     };
 
@@ -701,7 +702,7 @@ module.exports = function (app) {
 
         checkCertificatePromise
             .then(function (res) {
-                var status = res.status;
+                const status = res.status;
 
                 switch (status) { //GOOD, UNKNOWN, EXPIRED, SUSPENDED, REVOKED
                     case 'GOOD':
@@ -760,8 +761,8 @@ module.exports = function (app) {
      * Initializes Mobiil-ID authentication. For login, client is supposed to poll /api/auth/mid/status to check if authentication succeeded
      */
     app.post('/api/auth/mobile/init', function (req, res, next) {
-        var pid = req.body.pid;
-        var phoneNumber = req.body.phoneNumber;
+        const pid = req.body.pid;
+        const phoneNumber = req.body.phoneNumber;
 
         if (!pid || !phoneNumber) {
             return res.badRequest('mID athentication requires users phoneNumber+pid', 1);
@@ -770,8 +771,8 @@ module.exports = function (app) {
         mobileId
             .authenticate(pid, phoneNumber, null)
             .then(function (sessionData) {
-                var sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
-                var token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
+                const sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
+                const token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
                     expiresIn: '5m',
                     algorithm: config.session.algorithm
                 });
@@ -800,39 +801,47 @@ module.exports = function (app) {
      * Authentication is initialized with /api/auth/mid/init, after that client is polling this endpoint for authentication status. In case of success, User session is created and logged in.
      */
     app.get('/api/auth/mobile/status', function (req, res, next) {
-        var token = req.query.token;
-
+        const token = req.query.token;
+        const timeoutMs = req.query.timeoutMs || 5000;
         if (!token) {
             return res.badRequest('Mobile ID signing has not been started. "token" is required.', 2);
         }
 
-        var tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
-        var loginMobileFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
+        const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+        const loginMobileFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
 
         mobileId
-            .statusAuth(loginMobileFlowData.sessionId, loginMobileFlowData.sessionHash)
+            .statusAuth(loginMobileFlowData.sessionId, loginMobileFlowData.sessionHash, timeoutMs)
             .then(function (authResult) {
-                switch (authResult.result) {
+                let statusCode
+                if (authResult.result) {
+                    statusCode = authResult.result;
+                } else {
+                    statusCode = authResult.state;
+                }
+
+                switch (statusCode) {
+                    case 'RUNNING':
+                        res.ok('Log in progress', 1);
+
+                        return Promise.reject();
                     case 'OK':
                         return Promise.resolve(authResult.personalInfo);
-                    case 'OUTSTANDING_TRANSACTION':
-                        res.ok('Log in progress', 1);
+                    case 'TIMEOUT':
+                        logger.error('There was a timeout, i.e. end user did not confirm or refuse the operation within maximum time frame allowed (can change, around two minutes).', statusCode);
+                        res.badRequest('There was a timeout, i.e. end user did not confirm or refuse the operation within maximum time frame allowed (can change, around two minutes).', 10);
+
+                        return Promise.reject();
+                    case 'NOT_MID_CLIENT':
+                        res.badRequest('Mobile-ID functionality of the phone is not yet ready', 13);
 
                         return Promise.reject();
                     case 'USER_CANCELLED':
                         res.badRequest('User has cancelled the log in process', 10);
 
                         return Promise.reject();
-                    case 'EXPIRED_TRANSACTION':
-                        res.badRequest('The transaction has expired', 11);
-
-                        return Promise.reject();
                     case 'SIGNATURE_HASH_MISMATCH':
                         res.badRequest('Signature is not valid', 12);
-
-                        return Promise.reject();
-                    case 'NOT_MID_CLIENT':
-                        res.badRequest('Mobile-ID functionality of the phone is not yet ready', 13);
 
                         return Promise.reject();
                     case 'PHONE_ABSENT':
@@ -845,15 +854,6 @@ module.exports = function (app) {
                         return Promise.reject();
                     case 'SIM_ERROR':
                         res.badRequest('SIM application error.', 16);
-
-                        return Promise.reject();
-                    case 'REVOKED_CERTIFICATE':
-                        res.badRequest('Certificate has been revoked', 17);
-
-                        return Promise.reject();
-                    case 'INTERNAL_ERROR':
-                        logger.error('Unknown DDS error when trying to log in with mobile', authResult.result);
-                        res.internalServerError('DigiDocService error', 1);
 
                         return Promise.reject();
                     default:
@@ -881,12 +881,12 @@ module.exports = function (app) {
     });
 
 
-    var handleCallbackRedirect = function (req, res) {
+    const handleCallbackRedirect = function (req, res) {
         if (getStateCookie(req, COOKIE_NAME_OPENID_AUTH_STATE)) { // We are in the middle of OpenID authorization flow
             // This is used to get rid of Referer header from FB/Google callback. If I sent 302, the referer would be FB/Google and XSRF check on the /api/auth/openid/authorize would fail.
             res.status(200).send('<!doctype html><html><head><meta http-equiv="refresh" content="0;URL=\'/api/auth/openid/authorize\'" /></head><body></body></html>');
         } else {
-            var stateData = getStateCookie(req, COOKIE_NAME_COS_AUTH_STATE);
+            const stateData = getStateCookie(req, COOKIE_NAME_COS_AUTH_STATE);
             if (stateData && stateData.redirectSuccess) {
                 clearStateCookie(res, COOKIE_NAME_COS_AUTH_STATE);
                 res.redirect(stateData.redirectSuccess); // TODO: Validate return url? Is it sufficient to check that Origin and callback are to the same domain?
@@ -958,31 +958,31 @@ module.exports = function (app) {
      * @see http://openid.net/specs/openid-connect-implicit-1_0.html#rfc.section.2.1.1
      */
     app.get('/api/auth/openid/authorize', function (req, res, next) {
-        var reqQuery = req.query;
+        let reqQuery = req.query;
 
         // We store original authorization state in a state cookie so that after whatever login/register flow, we know where it all began.
         // This means that every login/register will redirect back to this endpoint again and this is the only place where flow decisions are made.
-        var stateCookieData = getStateCookie(req, COOKIE_NAME_OPENID_AUTH_STATE);
+        const stateCookieData = getStateCookie(req, COOKIE_NAME_OPENID_AUTH_STATE);
         if (stateCookieData && !Object.keys(req.query).length) { // Ignore cookie when request parameters are provided, means new authorization flow has been started
             reqQuery = stateCookieData;
         }
 
         // Ugh, using camelCase in all the other places, but OpenID/OAuth dictates snake_case.
-        var responseType = reqQuery.response_type; //id_token token
-        var clientId = reqQuery.client_id;
-        var redirectUri = reqQuery.redirect_uri;
-        var scope = reqQuery.scope;
-        var nonce = reqQuery.nonce;
-        var state = reqQuery.state;
-        var uiLocales = reqQuery.ui_locales ? reqQuery.ui_locales.split(' ')[0] : 'en';
-        var referer = req.headers.referer;
+        const responseType = reqQuery.response_type; //id_token token
+        const clientId = reqQuery.client_id;
+        const redirectUri = reqQuery.redirect_uri;
+        const scope = reqQuery.scope;
+        const nonce = reqQuery.nonce;
+        const state = reqQuery.state;
+        const uiLocales = reqQuery.ui_locales ? reqQuery.ui_locales.split(' ')[0] : 'en';
+        const referer = req.headers.referer;
 
         /**
          * If "client_id" OR "redirect_uri" is invalid, thou shall not redirect to "redirect_uri"
          *
          * @see https://tools.ietf.org/html/rfc6749#section-4.1.2.1
          */
-        var uuidV4Regexp = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+        const uuidV4Regexp = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
         if (!clientId || !uuidV4Regexp.test(clientId)) {
             return res.status(400).send('Invalid or missing "client_id" parameter value.');
         }
@@ -998,13 +998,13 @@ module.exports = function (app) {
                     return res.status(400).send('Invalid partner configuration. Please contact system administrator.');
                 }
 
-                var partnerUriRegexp = new RegExp(partner.redirectUriRegexp, 'i');
+                const partnerUriRegexp = new RegExp(partner.redirectUriRegexp, 'i');
 
                 // Check referer IF it exists, not always true. May help in some XSRF scenarios.
                 if (referer && !partnerUriRegexp.test(referer)) {
-                    var refererHostname = url.parse(referer).hostname;
-                    var feHostname = url.parse(urlLib.getFe()).hostname;
-                    var apiHostname = url.parse(urlLib.getApi()).hostname;
+                    const refererHostname = url.parse(referer).hostname;
+                    const feHostname = url.parse(urlLib.getFe()).hostname;
+                    const apiHostname = url.parse(urlLib.getApi()).hostname;
 
                     if (refererHostname !== feHostname && refererHostname !== apiHostname) {
                         logger.warn('Possible XSRF attempt! Referer header does not match expected partner URI scheme', referer, req.path, reqQuery, !partnerUriRegexp.test(referer), refererHostname, apiHostname, feHostname);
@@ -1069,7 +1069,7 @@ module.exports = function (app) {
                             // User connection exits
                             if (count) {
                                 // IF User is logged in to CitizenOS AND has agreed before -> redirect_uri
-                                var accessToken = jwt.sign(
+                                const accessToken = jwt.sign(
                                     {
                                         id: req.user.id,
                                         partnerId: clientId,
@@ -1081,10 +1081,10 @@ module.exports = function (app) {
                                         algorithm: config.session.algorithm
                                     }
                                 );
-                                var accessTokenHash = cryptoLib.getAtHash(accessToken, 'sha' + config.session.algorithm.match(/[0-9]*$/)[0]);
+                                const accessTokenHash = cryptoLib.getAtHash(accessToken, 'sha' + config.session.algorithm.match(/[0-9]*$/)[0]);
 
                                 // ID Token - http://openid.net/specs/openid-connect-implicit-1_0.html#IDToken
-                                var idToken = jwt.sign(
+                                const idToken = jwt.sign(
                                     {
                                         iss: urlLib.getApi(), // issuer
                                         sub: req.user.id, // subject
@@ -1097,7 +1097,7 @@ module.exports = function (app) {
                                     {algorithm: config.session.algorithm}
                                 );
 
-                                var params = {
+                                const params = {
                                     access_token: accessToken,
                                     id_token: idToken,
                                     state: state
@@ -1135,14 +1135,14 @@ module.exports = function (app) {
      * Cancel Open ID authorization flow
      */
     app.get('/api/auth/openid/cancel', function (req, res) {
-        var stateCookieData = getStateCookie(req, COOKIE_NAME_OPENID_AUTH_STATE);
+        const stateCookieData = getStateCookie(req, COOKIE_NAME_OPENID_AUTH_STATE);
         if (!stateCookieData) {
             logger.warn('Open ID authorization flow has not been started', req.path, req.cookies);
 
             return res.badRequest('Open ID Authorization flow has not been started.');
         }
 
-        var redirectUri = stateCookieData.redirect_uri;
+        const redirectUri = stateCookieData.redirect_uri;
 
         clearStateCookie(res, COOKIE_NAME_COS_AUTH_STATE);
         handleOpenIdErrorRedirect(res, redirectUri, 'access_denied', 'The resource owner or authorization server denied the request.', stateCookieData.state);

@@ -589,8 +589,8 @@ module.exports = function (app) {
                 });
     };
 
-    const _getSmartIdSignedDoc = function (sessionId, signableHash, signatureId, voteId, userId, voteOptions) {
-        return smartId.statusSign(sessionId, 5000)
+    const _getSmartIdSignedDoc = function (sessionId, signableHash, signatureId, voteId, userId, voteOptions, timeoutMs) {
+        return smartId.statusSign(sessionId, timeoutMs)
             .then(function(signResult) {
                 if (signResult.signature) {
                     return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value);
@@ -601,8 +601,8 @@ module.exports = function (app) {
             });
     };
 
-    const _getMobileIdSignedDoc = function (sessionId, signableHash, signatureId, voteId, userId, voteOptions) {
-        return mobileId.statusSign(sessionId, 5000)
+    const _getMobileIdSignedDoc = function (sessionId, signableHash, signatureId, voteId, userId, voteOptions, timeoutMs) {
+        return mobileId.statusSign(sessionId, timeoutMs)
             .then(function(signResult) {
                 if (signResult.signature) {
                     return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value);
