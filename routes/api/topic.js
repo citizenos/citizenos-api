@@ -6469,6 +6469,7 @@ module.exports = function (app) {
         const voteId = req.params.voteId;
 
         const token = req.query.token;
+        const timeoutMs = req.query.timeoutMs || 5000;
 
         if (!token) {
             logger.warn('Missing requried parameter "token"', req.ip, req.path, req.headers);
@@ -6496,10 +6497,11 @@ module.exports = function (app) {
         let statusPromise;
         const userId = req.user ? req.user.id : idSignFlowData.userId;
         if (idSignFlowData.signingMethod === Vote.SIGNING_METHODS.smartId) {
-            statusPromise = cosSignature.getSmartIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions);
+            statusPromise = cosSignature.getSmartIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions, timeoutMs);
         } else {
-            statusPromise = cosSignature.getMobileIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions);
+            statusPromise = cosSignature.getMobileIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions, timeoutMs);
         }
+
         return Promise.all([statusPromise])
             .then(function (results) {
                 const signedDocInfo = results[0];
@@ -6653,32 +6655,30 @@ module.exports = function (app) {
                 let statusCode
                 if (result.result && result.result.endResult) {
                     statusCode = result.result.endResult;
+                } else if (result.result && !result.result.endResult) {
+                    statusCode = result.result;
                 } else {
                     statusCode = result.state;
                 }
 
                 switch (statusCode) {
-                    case 'OUTSTANDING_TRANSACTION':
-                        res.ok('Signing in progress', 1);
-
-                        return Promise.reject();
                     case 'RUNNING':
                         res.ok('Signing in progress', 1);
 
                         return Promise.reject();
-                    case 'USER_CANCEL':
+                    case 'USER_CANCELLED':
                         res.badRequest('User has cancelled the signing process', 10);
 
                         return Promise.reject();
-                    case 'EXPIRED_TRANSACTION':
-                        res.badRequest('The transaction has expired', 11);
+                    case 'USER_REFUSED':
+                            res.badRequest('User has cancelled the signing process', 10);
 
-                        return Promise.reject();
-                    case 'NOT_VALID':
+                            return Promise.reject();
+                    case 'SIGNATURE_HASH_MISMATCH':
                         res.badRequest('Signature is not valid', 12);
 
                         return Promise.reject();
-                    case 'MID_NOT_READY':
+                    case 'NOT_MID_CLIENT':
                         res.badRequest('Mobile-ID functionality of the phone is not yet ready', 13);
 
                         return Promise.reject();
@@ -6686,26 +6686,12 @@ module.exports = function (app) {
                         res.badRequest('Delivery of the message was not successful, mobile phone is probably switched off or out of coverage;', 14);
 
                         return Promise.reject();
-                    case 'SENDING_ERROR':
+                    case 'DELIVERY_ERROR':
                         res.badRequest('Other error when sending message (phone is incapable of receiving the message, error in messaging server etc.)', 15);
 
                         return Promise.reject();
                     case 'SIM_ERROR':
                         res.badRequest('SIM application error.', 16);
-
-                        return Promise.reject();
-                    case 'REVOKED_CERTIFICATE':
-                        res.badRequest('Certificate has been revoked', 17);
-
-                        return Promise.reject();
-                    case 'INTERNAL_ERROR':
-                        logger.error('Unknown error when trying to sign with mobile', statusCode);
-                        res.internalServerError('DigiDocService error', 1);
-
-                        return Promise.reject();
-                    case 'USER_REFUSED':
-                        logger.error('User has cancelled the signing process', statusCode);
-                        res.badRequest('User has cancelled the signing process', 10);
 
                         return Promise.reject();
                     case 'TIMEOUT':
@@ -6714,7 +6700,7 @@ module.exports = function (app) {
 
                         return Promise.reject();
                     default:
-                        logger.error('Unknown status code when trying to sign with mobile', statusCode);
+                        logger.error('Unknown status code when trying to sign with mobile', statusCode, result);
                         res.internalServerError();
 
                         return Promise.reject();
