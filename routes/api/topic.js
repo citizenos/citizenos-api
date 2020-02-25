@@ -6751,28 +6751,10 @@ module.exports = function (app) {
                 }
 
                 const container = voteUserContainer.dataValues.container;
-                delete voteUserContainer.dataValues.container;
 
-                const actor = {
-                    type: 'User',
-                    ip: req.ip
-                };
-                if (userId) {
-                    actor.id = userId;
-                }
-
-                return cosActivities
-                    .viewActivity(
-                        voteUserContainer,
-                        actor,
-                        req.method + ' ' + req.path
-                    )
-                    .then(function () {
-                        res.set('Content-disposition', 'attachment; filename=vote.bdoc');
-                        res.set('Content-type', 'application/vnd.etsi.asic-e+zip');
-                        res.send(container);
-                    });
-
+                res.set('Content-disposition', 'attachment; filename=vote.bdoc');
+                res.set('Content-type', 'application/vnd.etsi.asic-e+zip');
+                res.send(container);
             })
             .catch(next);
     });
