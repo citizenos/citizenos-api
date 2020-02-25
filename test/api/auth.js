@@ -568,7 +568,7 @@ suite('Auth', function () {
                     .destroy({
                         where: {
                             connectionId: UserConnection.CONNECTION_IDS.esteid,
-                            connectionUserId: ['37101010021']
+                            connectionUserId: ['PNOEE-37101010021']
                         },
                         force: true
                     })
@@ -601,7 +601,7 @@ suite('Auth', function () {
                         .destroy({
                             where: {
                                 connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                connectionUserId: ['60001019906']
+                                connectionUserId: ['PNOEE-60001019906']
                             },
                             force: true
                         })
@@ -612,7 +612,7 @@ suite('Auth', function () {
                 });
 
                 test('Success - 20001 - Estonian mobile number and PID', function (done) {
-                    this.timeout(10000); //eslint-disable-line no-invalid-this
+                    this.timeout(15000); //eslint-disable-line no-invalid-this
 
                     var phoneNumber = '+37200000766';
                     var pid = '60001019906';
@@ -621,7 +621,7 @@ suite('Auth', function () {
                         .destroy({
                             where: {
                                 connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                connectionUserId: [pid] // Remove the good user so that test would run multiple times. Also other tests use same numbers
+                                connectionUserId: ['PNOEE-'+pid] // Remove the good user so that test would run multiple times. Also other tests use same numbers
                             },
                             force: true
                         })
@@ -657,6 +657,7 @@ suite('Auth', function () {
                                                     }
 
                                                     if (res.body.status.code === 20003) {
+                                                        clearStatus();
                                                         assert.property(res.body.data, 'id');
                                                         delete res.body.data.id;
                                                         assert.deepEqual(res.body.data, {
@@ -668,7 +669,6 @@ suite('Auth', function () {
                                                             termsVersion: null,
                                                             termsAcceptedAt: null
                                                         });
-                                                        clearStatus();
 
                                                         return done();
                                                     }
@@ -682,7 +682,7 @@ suite('Auth', function () {
                                         return done(new Error('Maximum retries reached'));
                                     }
 
-                                });
+                                }, 2000);
                             });
                         })
                         .catch(done);
@@ -962,7 +962,7 @@ suite('Auth', function () {
                             .destroy({
                                 where: {
                                     connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId: ['60001019906']
+                                    connectionUserId: ['PNOEE-60001019906']
                                 },
                                 force: true
                             })
@@ -1074,7 +1074,7 @@ suite('Auth', function () {
                             .destroy({
                                 where: {
                                     connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId: ['60001019906']
+                                    connectionUserId: ['PNOEE-60001019906']
                                 },
                                 force: true
                             })
@@ -1161,7 +1161,7 @@ suite('Auth', function () {
                         .destroy({
                             where: {
                                 connectionId: UserConnection.CONNECTION_IDS.smartid,
-                                connectionUserId: [pid] // Remove the good user so that test would run multiple times. Also other tests use same numbers
+                                connectionUserId: ['PNOEE-' + pid] // Remove the good user so that test would run multiple times. Also other tests use same numbers
                             },
                             force: true
                         })
@@ -1224,7 +1224,7 @@ suite('Auth', function () {
                             .destroy({
                                 where: {
                                     connectionId: UserConnection.CONNECTION_IDS.smartid,
-                                    connectionUserId: [pid] // Remove the good user so that test would run multiple times. Also other tests use same numbers
+                                    connectionUserId: ['PNOEE-' + pid] // Remove the good user so that test would run multiple times. Also other tests use same numbers
                                 },
                                 force: true
                             })

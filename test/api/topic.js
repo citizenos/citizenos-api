@@ -1873,7 +1873,7 @@ suite('Users', function () {
                             .destroy({
                                 where: {
                                     connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId: ['60001019906']
+                                    connectionUserId: ['PNOEE-60001019906']
                                 },
                                 force: true
                             })
@@ -6661,7 +6661,7 @@ suite('Users', function () {
                 var topic2;
                 var vote;
 
-                suiteSetup(function (done) {
+                setup(function (done) {
                     async
                         .parallel(
                             [
@@ -7079,7 +7079,7 @@ suite('Users', function () {
                                     .destroy({
                                         where: {
                                             connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                            connectionUserId: ['37101010021']
+                                            connectionUserId: ['PNOEE-37101010021']
                                         },
                                         force: true
                                     })
@@ -7240,8 +7240,13 @@ suite('Users', function () {
                             UserConnection
                                 .destroy({
                                     where: {
-                                        connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                        connectionUserId: ['60001019906']
+                                        connectionId: {
+                                            [db.Sequelize.Op.in]: [
+                                                UserConnection.CONNECTION_IDS.esteid,
+                                                UserConnection.CONNECTION_IDS.smartid
+                                            ]
+                                        },
+                                        connectionUserId: ['PNOEE-600010199060', 'PNOEE-11412090004', 'PNOEE-51001091072']
                                     },
                                     force: true
                                 })
@@ -7305,36 +7310,6 @@ suite('Users', function () {
                                         });
                                     });
                             });
-                        });
-
-                        test('Success - User account already connected to another PID.', function (done) {
-                            // Originally set by a successful Vote, but taking a shortcut for faster test runs
-                            UserConnection
-                                .create({
-                                    userId: user.id,
-                                    connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId: '11412090004'
-                                })
-                                .then(function () {
-                                    var phoneNumber = '+37060000007';
-                                    var pid = '51001091072';
-
-                                    var voteList = [
-                                        {
-                                            optionId: vote.options.rows[0].id
-                                        }
-                                    ];
-
-                                    topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, function (err, res) {
-                                        if (err) return done(err);
-
-                                        var response = res.body;
-                                        assert.equal(response.status.code, 20001);
-                                        assert.match(response.data.challengeID, /[0-9]{4}/);
-
-                                        done();
-                                    });
-                                });
                         });
 
                         test('Success - Estonian mobile number and PID bdocUri exists', function (done) {
@@ -7557,6 +7532,46 @@ suite('Users', function () {
                             });
                         });
 
+                        test('Fail - 40031 - User account already connected to another PID.', function (done) {
+                            // Originally set by a successful Vote, but taking a shortcut for faster test runs
+                            UserConnection
+                                .create({
+                                    userId: user.id,
+                                    connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                    connectionUserId: 'PNOEE-11412090004',
+                                    connectionData: {
+                                        name: 'TEST' + new Date().getTime(),
+                                        country: 'EE',
+                                        pid: '11412090004'
+                                    }
+                                })
+                                .then(function () {
+                                    var phoneNumber = '+37060000007';
+                                    var pid = '51001091072';
+
+                                    var voteList = [
+                                        {
+                                            optionId: vote.options.rows[0].id
+                                        }
+                                    ];
+
+                                    _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 400, function (err, res) {
+                                        if (err) return done(err);
+
+                                        var expectedResponse = {
+                                            status: {
+                                                code: 40031,
+                                                message: 'User account already connected to another PID.'
+                                            }
+                                        };
+
+                                        assert.deepEqual(res.body, expectedResponse);
+
+                                        done();
+                                    });
+                                });
+                        });
+
                         test.skip('Fail - 40024 - User certificate is suspended', function (done) {
                             //TODO: No test phone numbers available for errorcode = 304 - http://id.ee/?id=36373
                             done();
@@ -7670,7 +7685,7 @@ suite('Users', function () {
                                 .destroy({
                                     where: {
                                         connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
-                                        connectionUserId: ['PNOEE-10101010016', 'PNOEE-10101010005', '10101010016', '10101010005', '11412090004']
+                                        connectionUserId: ['PNOEE-10101010016', 'PNOEE-10101010005', 'PNOEE-11412090004']
                                     },
                                     force: true
                                 })
@@ -7685,7 +7700,7 @@ suite('Users', function () {
                                 .destroy({
                                     where: {
                                         connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
-                                        connectionUserId: ['PNOEE-10101010016', 'PNOEE-10101010005', '10101010016', '10101010005', '11412090004']
+                                        connectionUserId: ['PNOEE-10101010016', 'PNOEE-10101010005', 'PNOEE-11412090004']
                                     },
                                     force: true
                                 })
@@ -7782,35 +7797,6 @@ suite('Users', function () {
                                         });
                                     });
                             });
-                        });
-
-                        test('Success - User account already connected to another PID.', function (done) {
-                            // Originally set by a successful Vote, but taking a shortcut for faster test runs
-                            UserConnection
-                                .create({
-                                    userId: user.id,
-                                    connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId: '11412090004'
-                                })
-                                .then(function () {
-                                    var countryCode = 'EE';
-                                    var pid = '10101010005';
-
-                                    var voteList = [
-                                        {
-                                            optionId: vote.options.rows[0].id
-                                        }
-                                    ];
-
-                                    topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, function (err, res) {
-                                        if (err) return done(err);
-
-                                        var response = res.body;
-                                        assert.equal(response.status.code, 20001);
-                                        assert.match(response.data.challengeID, /[0-9]{4}/);
-                                        done();
-                                    });
-                                });
                         });
 
                         test('bdocUri exists', function (done) {
@@ -8011,7 +7997,7 @@ suite('Users', function () {
                                     if (called === replied) {
                                         called++;
                                         _topicVoteStatus(agent, user.id, topic.id, vote.id, response.data.token, 400, function (err, res) {
-                                            if (err && res.statusCode !== 200)
+                                            if (err && res.body && res.statusCode !== 200) return done(err);
 
                                             replied++;
                                             var statusresponse = res.body;
@@ -8042,6 +8028,45 @@ suite('Users', function () {
                             });
                         });
 
+                        test('Fail - 40031 - User account already connected to another PID.', function (done) {
+                            // Originally set by a successful Vote, but taking a shortcut for faster test runs
+                            UserConnection
+                                .create({
+                                    userId: user.id,
+                                    connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                    connectionUserId: 'PNOEE-11412090004',
+                                    connectionData: {
+                                        name: 'TEst name',
+                                        pid: '11412090004',
+                                        country: 'EE'
+                                    }
+                                })
+                                .then(function () {
+                                    var countryCode = 'EE';
+                                    var pid = '10101010005';
+
+                                    var voteList = [
+                                        {
+                                            optionId: vote.options.rows[0].id
+                                        }
+                                    ];
+
+                                    _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, 400, function (err, res) {
+                                        if (err) return done(err);
+
+                                        var expectedResponse = {
+                                            status: {
+                                                code: 40031,
+                                                message: 'User account already connected to another PID.'
+                                            }
+                                        };
+
+                                        assert.deepEqual(res.body, expectedResponse);
+
+                                        done();
+                                    });
+                                });
+                        });
                     });
                 });
             });

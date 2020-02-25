@@ -589,8 +589,8 @@ module.exports = function (app) {
                 });
     };
 
-    const _getSmartIdSignedDoc = function (sessionId, signableHash, signatureId, voteId, userId, voteOptions) {
-        return smartId.statusSign(sessionId, 5000)
+    const _getSmartIdSignedDoc = function (sessionId, signableHash, signatureId, voteId, userId, voteOptions, timeoutMs) {
+        return smartId.statusSign(sessionId, timeoutMs)
             .then(function(signResult) {
                 if (signResult.signature) {
                     return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value);
@@ -601,8 +601,8 @@ module.exports = function (app) {
             });
     };
 
-    const _getMobileIdSignedDoc = function (sessionId, signableHash, signatureId, voteId, userId, voteOptions) {
-        return mobileId.statusSign(sessionId, 5000)
+    const _getMobileIdSignedDoc = function (sessionId, signableHash, signatureId, voteId, userId, voteOptions, timeoutMs) {
+        return mobileId.statusSign(sessionId, timeoutMs)
             .then(function(signResult) {
                 if (signResult.signature) {
                     return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value);
@@ -743,26 +743,32 @@ module.exports = function (app) {
 
                                 switch (type) {
                                     case 'bdoc':
-                                        fromSql = 'uc."connectionUserId" as "PID", \
-                                            (uc."connectionData"::json->>\'firstName\') || \' \' || (uc."connectionData"::json->>\'lastName\') as "fullName", \
-                                            vo.value as "optionValue" \
-                                        FROM votes v \
-                                            JOIN "UserConnections" uc ON (uc."userId" = v."userId" AND uc."connectionId" = \'esteid\') ';
+                                        fromSql = 'SELECT DISTINCT ON (o."PID") \
+                                            o.* FROM ( \
+                                            SELECT \
+                                            row_number() OVER() AS "rowNumber", \
+                                            v."createdAt" as "timestamp", \
+                                            uc."connectionUserId" as "PID", \
+                                                (uc."connectionData"::json->>\'firstName\') || \' \' || (uc."connectionData"::json->>\'lastName\') as "fullName", \
+                                                vo.value as "optionValue" \
+                                            FROM votes v \
+                                                JOIN "UserConnections" uc ON (uc."userId" = v."userId" AND uc."connectionId" = \'esteid\') \
+                                            JOIN "VoteOptions" vo ON (vo."id" = v."optionId") \
+                                        ORDER BY v."createdAt" DESC) o ';
                                         break;
                                     case 'zip':
-                                        fromSql = 'v."userId" as "userId", \
+                                        fromSql = 'SELECT \
+                                            row_number() OVER() AS "rowNumber", \
+                                            v."createdAt" as "timestamp", \
+                                            v."userId" as "userId", \
                                             u.name as "name", \
                                             vo.value as "optionValue" \
                                         FROM votes v \
-                                            JOIN "Users" u ON (u.id = v."userId") ';
+                                            JOIN "Users" u ON (u.id = v."userId") \
+                                            JOIN "VoteOptions" vo ON (vo."id" = v."optionId") \
+                                        ORDER BY vo.value DESC ';
                                         break;
                                 }
-
-                                fromSql = 'v."userId" as "userId", \
-                                    u.name as "name", \
-                                    vo.value as "optionValue" \
-                                FROM votes v \
-                                    JOIN "Users" u ON (u.id = v."userId")';
 
                                 const query = new QueryStream(
                                     ' \
@@ -789,12 +795,7 @@ module.exports = function (app) {
                                                 JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."userId" = vg."userId" AND vl."optionGroupId" = vg."optionGroupId") \
                                                 WHERE vl."voteId" = $1 \
                                             ) \
-                                        SELECT \
-                                            row_number() OVER() AS "rowNumber", \
-                                            v."createdAt" as "timestamp", \
                                             '+ fromSql+ '\
-                                            JOIN "VoteOptions" vo ON (vo."id" = v."optionId") \
-                                        ORDER BY vo.value DESC \
                                     ;',
                                     [voteId]
                                 );
