@@ -78,7 +78,7 @@
     "superagent": "3.8.3",
     "swagger-ui-express": "3.0.10",
     "twit": "2.2.11",
-    "undersign": "git+https://github.com/rahvaalgatus/undersign.git#36301795db94f94b23081dcef2b8bb485a0ffd41",
+    "undersign": "git+https://github.com/citizenos/js-undersign.git#06e5690c8a5c19f290b6a73839f946b96acf911b",
     "utf8": "2.1.2",
     "uuid": "2.0.1",
     "validator": "3.22.1"
