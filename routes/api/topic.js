@@ -2161,7 +2161,7 @@ module.exports = function (app) {
                     ) ta ON (ta.id = t.id) \
                     ' + join + ' \
                 WHERE ' + where + ' \
-                ORDER BY "order" ASC, "lastActivity" DESC \
+                ORDER BY "lastActivity" DESC \
                 LIMIT :limit OFFSET :offset \
             ;';
 
