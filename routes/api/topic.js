@@ -1660,6 +1660,8 @@ module.exports = function (app) {
         const creatorId = req.query.creatorId;
         let statuses = req.query.statuses;
         const pinned = req.query.pinned;
+        const hasVoted = req.query.hasVoted; // Filter out Topics where User has participated in the voting process.
+
         if (statuses && !Array.isArray(statuses)) {
             statuses = [statuses];
         }
@@ -1733,11 +1735,19 @@ module.exports = function (app) {
             where += 'AND tp."topicId" = t.id AND tp."userId" = :userId';
         }
 
+        if (['true', '1'].includes(hasVoted)) {
+            where += 'AND EXISTS (SELECT TRUE FROM "VoteLists" vl WHERE vl."voteId" = tv."voteId" AND vl."userId" = :userId LIMIT 1)';
+        } else if (['false', '0'].includes(hasVoted)) {
+            where += 'AND tv."voteId" IS NOT NULL AND t.status = \'voting\'::"enum_Topics_status" AND NOT EXISTS (SELECT TRUE FROM "VoteLists" vl WHERE vl."voteId" = tv."voteId" AND vl."userId" = :userId LIMIT 1)';
+        } else {
+            logger.warn(`Ignored parameter "voted" as invalid value "${hasVoted}" was provided`);
+        }
+
         if (creatorId) {
             if (creatorId === userId) {
                 where += ' AND c.id =:creatorId ';
             } else {
-                res.badRequest('No rights!');
+                return res.badRequest('No rights!');
             }
         }
 
@@ -5899,7 +5909,7 @@ module.exports = function (app) {
     };
 
     const _checkAuthenticatedUser = function (userId, personalInfo, transaction) {
-        return  UserConnection
+        return UserConnection
             .findOne({
                 where: {
                     connectionId: {
@@ -6385,7 +6395,7 @@ module.exports = function (app) {
                     });
 
                 let connectionUserId = idSignFlowData.personalInfo.pid;
-                if (connectionUserId.indexOf('PNO')  === -1) {
+                if (connectionUserId.indexOf('PNO') === -1) {
                     connectionUserId = 'PNO' + idSignFlowData.personalInfo.country + '-' + connectionUserId;
                 }
 
@@ -6580,7 +6590,7 @@ module.exports = function (app) {
                             });
 
                         let connectionUserId = idSignFlowData.personalInfo.pid;
-                        if (connectionUserId.indexOf('PNO')  === -1) {
+                        if (connectionUserId.indexOf('PNO') === -1) {
                             connectionUserId = 'PNO' + idSignFlowData.personalInfo.country + '-' + connectionUserId;
                         }
 
@@ -6671,9 +6681,9 @@ module.exports = function (app) {
 
                         return Promise.reject();
                     case 'USER_REFUSED':
-                            res.badRequest('User has cancelled the signing process', 10);
+                        res.badRequest('User has cancelled the signing process', 10);
 
-                            return Promise.reject();
+                        return Promise.reject();
                     case 'SIGNATURE_HASH_MISMATCH':
                         res.badRequest('Signature is not valid', 12);
 

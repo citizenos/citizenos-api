@@ -173,7 +173,7 @@ var topicDelete = function (agent, userId, topicId, callback) {
     _topicDelete(agent, userId, topicId, 200, callback);
 };
 
-var _topicList = function (agent, userId, include, visibility, statuses, creatorId, expectedHttpCode, callback) {
+var _topicList = function (agent, userId, include, visibility, statuses, creatorId, hasVoted, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics'.replace(':userId', userId);
 
     agent
@@ -183,15 +183,16 @@ var _topicList = function (agent, userId, include, visibility, statuses, creator
             include: include,
             visibility: visibility,
             statuses: statuses,
-            creatorId: creatorId
+            creatorId: creatorId,
+            hasVoted: hasVoted
         })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/)
         .end(callback);
 };
 
-var topicList = function (agent, userId, include, visibility, statuses, creatorId, callback) {
-    _topicList(agent, userId, include, visibility, statuses, creatorId, 200, callback);
+var topicList = function (agent, userId, include, visibility, statuses, creatorId, hasVoted, callback) {
+    _topicList(agent, userId, include, visibility, statuses, creatorId, hasVoted, 200, callback);
 };
 
 var _topicsListUnauth = function (agent, statuses, categories, orderBy, offset, limit, sourcePartnerId, include, expectedHttpCode, callback) {
@@ -1401,7 +1402,6 @@ module.exports.topicCreate = topicCreate;
 module.exports.topicRead = topicRead;
 module.exports.topicUpdate = topicUpdate;
 module.exports.topicDelete = topicDelete;
-module.exports.topicList = topicList;
 
 module.exports.topicCommentCreate = topicCommentCreate;
 
@@ -2995,7 +2995,7 @@ suite('Users', function () {
                         assert.equal(comment2.text, text);
                         assert.equal(comment2.creator.id, creator.id);
 
-                        topicList(agentCreator, creator.id, null, null, null, null, function (err, res) {
+                        topicList(agentCreator, creator.id, null, null, null, null, null, function (err, res) {
                             if (err) return done(err);
 
                             var list = res.body.data;
@@ -3066,7 +3066,7 @@ suite('Users', function () {
                                 topicDelete(agentUser, user.id, deletedTopic.id, function (err) {
                                     if (err) return done(err);
 
-                                    topicList(agentUser, user.id, null, null, null, null, function (err, res) {
+                                    topicList(agentUser, user.id, null, null, null, null, null, function (err, res) {
                                         if (err) return done(err);
 
                                         var list = res.body.data;
@@ -3114,7 +3114,7 @@ suite('Users', function () {
                             }
                         )
                         .then(function () {
-                            topicList(agentUser, user.id, null, Topic.VISIBILITY.private, null, null, function (err, res) {
+                            topicList(agentUser, user.id, null, Topic.VISIBILITY.private, null, null, null, function (err, res) {
                                 if (err) return done(err);
 
                                 var list = res.body.data;
@@ -3153,7 +3153,7 @@ suite('Users', function () {
                             }
                         )
                         .then(function () {
-                            topicList(agentUser, user.id, null, Topic.VISIBILITY.public, null, null, function (err, res) {
+                            topicList(agentUser, user.id, null, Topic.VISIBILITY.public, null, null, null, function (err, res) {
                                 if (err) return done(err);
 
                                 var list = res.body.data;
@@ -3192,7 +3192,7 @@ suite('Users', function () {
                             }
                         )
                         .then(function () {
-                            topicList(agentCreator, creator.id, null, null, null, creator.id, function (err, res) {
+                            topicList(agentCreator, creator.id, null, null, null, creator.id, null, function (err, res) {
                                 if (err) return done(err);
 
                                 var list = res.body.data;
@@ -3232,7 +3232,7 @@ suite('Users', function () {
                             }
                         )
                         .then(function () {
-                            topicList(agentUser, user.id, null, null, 'inProgress', null, function (err, res) {
+                            topicList(agentUser, user.id, null, null, 'inProgress', null, null, function (err, res) {
                                 if (err) return done(err);
 
                                 var list = res.body.data;
@@ -3273,7 +3273,7 @@ suite('Users', function () {
                             }
                         )
                         .then(function () {
-                            topicList(agentUser, user.id, null, null, 'voting', null, function (err, res) {
+                            topicList(agentUser, user.id, null, null, 'voting', null, null, function (err, res) {
                                 if (err) return done(err);
 
                                 var list = res.body.data;
@@ -3314,7 +3314,7 @@ suite('Users', function () {
                             }
                         )
                         .then(function () {
-                            topicList(agentUser, user.id, null, null, 'followUp', null, function (err, res) {
+                            topicList(agentUser, user.id, null, null, 'followUp', null, null, function (err, res) {
                                 if (err) return done(err);
 
                                 var list = res.body.data;
@@ -3355,7 +3355,7 @@ suite('Users', function () {
                             }
                         )
                         .then(function () {
-                            topicList(agentUser, user.id, null, null, 'closed', null, function (err, res) {
+                            topicList(agentUser, user.id, null, null, 'closed', null, null, function (err, res) {
                                 if (err) return done(err);
 
                                 var list = res.body.data;
@@ -3370,6 +3370,218 @@ suite('Users', function () {
                             });
                         });
                 });
+            });
+
+            test('Success - list only topics that User has voted on - voted=true', function (done) {
+                // Create 2 topics 1 in voting, but not voted, 1 voted. Topic list should return only 1 that User has voted on
+                async
+                    .parallel(
+                        [
+                            function (cb) {
+                                topicCreate(agentCreator, creator.id, Topic.VISIBILITY.private, null, null, '<html><head></head><body><h2>TEST User HAS NOT VOTED on this topic</h2></body></html>', null, cb);
+                            },
+                            function (cb) {
+                                topicCreate(agentCreator, creator.id, Topic.VISIBILITY.private, null, null, '<html><head></head><body><h2>TEST User HAS VOTED on this topic</h2></body></html>', null, cb);
+                            }
+                        ],
+                        function (err, res) {
+                            if (err) return done(err);
+
+                            const topicWithVoteNotVoted = res[0].body.data;
+                            const topicWithVoteAndVoted = res[1].body.data;
+
+                            async
+                                .parallel(
+                                    [
+                                        function (cb) {
+                                            const options = [
+                                                {
+                                                    value: 'Option 1'
+                                                },
+                                                {
+                                                    value: 'Option 2'
+                                                },
+                                                {
+                                                    value: 'Option 3'
+                                                }
+                                            ];
+
+                                            topicVoteCreate(agentCreator, user.id, topicWithVoteNotVoted.id, options, null, null, null, null, `Vote for test topic ${topicWithVoteNotVoted.title}`, null, null, cb);
+                                        },
+                                        function (cb) {
+                                            const options = [
+                                                {
+                                                    value: 'Option 1'
+                                                },
+                                                {
+                                                    value: 'Option 2'
+                                                },
+                                                {
+                                                    value: 'Option 3'
+                                                }
+                                            ];
+
+                                            topicVoteCreate(agentCreator, user.id, topicWithVoteAndVoted.id, options, null, null, null, null, `Vote for test topic ${topicWithVoteAndVoted.title}`, null, null, cb);
+                                        },
+                                        function (cb) {
+                                            // Add topic to the group so the User has access through the Group
+                                            const topicMemberGroup = {
+                                                groupId: group.id,
+                                                level: TopicMemberGroup.LEVELS.edit
+                                            };
+
+                                            topicMemberGroupsCreate(agentCreator, creator.id, topicWithVoteNotVoted.id, topicMemberGroup, cb);
+                                        },
+                                        function (cb) {
+                                            // Add topic to the group so the User has access through the Group
+                                            const topicMemberGroup = {
+                                                groupId: group.id,
+                                                level: TopicMemberGroup.LEVELS.edit
+                                            };
+
+                                            topicMemberGroupsCreate(agentCreator, creator.id, topicWithVoteAndVoted.id, topicMemberGroup, cb);
+                                        }
+                                    ],
+                                    function (err, res) {
+                                        if (err) return done(err);
+
+                                        const vote = res[1].body.data; // Vote
+
+                                        const voteList = [
+                                            {
+                                                optionId: vote.options.rows[0].id
+                                            }
+                                        ];
+
+                                        topicVoteVote(agentUser, user.id, topicWithVoteAndVoted.id, vote.id, voteList, null, null, null, null, function (err) {
+                                            if (err) return done(err);
+
+                                            topicList(agentUser, user.id, null, null, null, null, true, function (err, res) {
+                                                if (err) return done(err);
+
+                                                const resData = res.body.data;
+
+                                                assert.equal(resData.count, 1);
+                                                assert.equal(resData.rows.length, 1);
+
+                                                const resTopic = resData.rows[0];
+
+                                                assert.equal(resTopic.id, topicWithVoteAndVoted.id);
+
+                                                done();
+                                            });
+                                        });
+                                    }
+                                )
+
+                        }
+                    );
+            });
+
+            test('Success - list only topics that User has NOT voted on - voted=false ', function (done) {
+                // Create 2 topics 1 in voting, but not voted, 1 voted. Topic list should return only 1 that User has NOT voted on
+                async
+                    .parallel(
+                        [
+                            function (cb) {
+                                topicCreate(agentCreator, creator.id, Topic.VISIBILITY.private, null, null, '<html><head></head><body><h2>TEST User HAS NOT VOTED on this topic</h2></body></html>', null, cb);
+                            },
+                            function (cb) {
+                                topicCreate(agentCreator, creator.id, Topic.VISIBILITY.private, null, null, '<html><head></head><body><h2>TEST User HAS VOTED on this topic</h2></body></html>', null, cb);
+                            }
+                        ],
+                        function (err, res) {
+                            if (err) return done(err);
+
+                            const topicWithVoteNotVoted = res[0].body.data;
+                            const topicWithVoteAndVoted = res[1].body.data;
+
+                            async
+                                .parallel(
+                                    [
+                                        function (cb) {
+                                            const options = [
+                                                {
+                                                    value: 'Option 1'
+                                                },
+                                                {
+                                                    value: 'Option 2'
+                                                },
+                                                {
+                                                    value: 'Option 3'
+                                                }
+                                            ];
+
+                                            topicVoteCreate(agentCreator, user.id, topicWithVoteNotVoted.id, options, null, null, null, null, `Vote for test topic ${topicWithVoteNotVoted.title}`, null, null, cb);
+                                        },
+                                        function (cb) {
+                                            const options = [
+                                                {
+                                                    value: 'Option 1'
+                                                },
+                                                {
+                                                    value: 'Option 2'
+                                                },
+                                                {
+                                                    value: 'Option 3'
+                                                }
+                                            ];
+
+                                            topicVoteCreate(agentCreator, user.id, topicWithVoteAndVoted.id, options, null, null, null, null, `Vote for test topic ${topicWithVoteAndVoted.title}`, null, null, cb);
+                                        },
+                                        function (cb) {
+                                            // Add topic to the group so the User has access through the Group
+                                            const topicMemberGroup = {
+                                                groupId: group.id,
+                                                level: TopicMemberGroup.LEVELS.edit
+                                            };
+
+                                            topicMemberGroupsCreate(agentCreator, creator.id, topicWithVoteNotVoted.id, topicMemberGroup, cb);
+                                        },
+                                        function (cb) {
+                                            // Add topic to the group so the User has access through the Group
+                                            const topicMemberGroup = {
+                                                groupId: group.id,
+                                                level: TopicMemberGroup.LEVELS.edit
+                                            };
+
+                                            topicMemberGroupsCreate(agentCreator, creator.id, topicWithVoteAndVoted.id, topicMemberGroup, cb);
+                                        }
+                                    ],
+                                    function (err, res) {
+                                        if (err) return done(err);
+
+                                        const vote = res[1].body.data; // Vote
+
+                                        const voteList = [
+                                            {
+                                                optionId: vote.options.rows[0].id
+                                            }
+                                        ];
+
+                                        topicVoteVote(agentUser, user.id, topicWithVoteAndVoted.id, vote.id, voteList, null, null, null, null, function (err) {
+                                            if (err) return done(err);
+
+                                            topicList(agentUser, user.id, null, null, null, null, false, function (err, res) {
+                                                if (err) return done(err);
+
+                                                const resData = res.body.data;
+
+                                                assert.equal(resData.count, 1);
+                                                assert.equal(resData.rows.length, 1);
+
+                                                const resTopic = resData.rows[0];
+
+                                                assert.equal(resTopic.id, topicWithVoteNotVoted.id);
+
+                                                done();
+                                            });
+                                        });
+                                    }
+                                )
+
+                        }
+                    );
             });
 
             suite('Include', function () {
@@ -3448,7 +3660,7 @@ suite('Users', function () {
                 });
 
                 test('Success - include vote', function (done) {
-                    topicList(agent, user.id, ['vote'], null, null, null, function (err, res) {
+                    topicList(agent, user.id, ['vote'], null, null, null, null, function (err, res) {
                         if (err) return done(err);
 
                         var list = res.body.data.rows;
@@ -3465,7 +3677,7 @@ suite('Users', function () {
                             }
                         });
 
-                        topicList(agent, user.id, null, null, null, null, function (err, res) {
+                        topicList(agent, user.id, null, null, null, null, null, function (err, res) {
                             if (err) return done(err);
 
                             var list2 = res.body.data.rows;
@@ -3506,7 +3718,7 @@ suite('Users', function () {
                             assert.equal(event.text, text);
                             assert.property(event, 'createdAt');
                             assert.property(event, 'id');
-                            topicList(agent, user.id, ['event'], null, null, null, function (err, res) {
+                            topicList(agent, user.id, ['event'], null, null, null, null, function (err, res) {
                                 if (err) return done(err);
 
                                 var list = res.body.data.rows;
@@ -3520,7 +3732,7 @@ suite('Users', function () {
                                     }
                                 });
 
-                                topicList(agent, user.id, null, null, null, null, function (err, res) {
+                                topicList(agent, user.id, null, null, null, null, null, function (err, res) {
                                     if (err) return done(err);
 
                                     var list2 = res.body.data.rows;
@@ -3563,7 +3775,7 @@ suite('Users', function () {
                             assert.equal(event.text, text);
                             assert.property(event, 'createdAt');
                             assert.property(event, 'id');
-                            topicList(agent, user.id, ['vote', 'event'], null, null, null, function (err, res) {
+                            topicList(agent, user.id, ['vote', 'event'], null, null, null, null, function (err, res) {
                                 if (err) return done(err);
 
                                 var list = res.body.data.rows;
@@ -3578,7 +3790,7 @@ suite('Users', function () {
                                     }
                                 });
 
-                                topicList(agent, user.id, null, null, null, null, function (err, res) {
+                                topicList(agent, user.id, null, null, null, null, null, function (err, res) {
                                     if (err) return done(err);
 
                                     var list2 = res.body.data.rows;
@@ -3609,7 +3821,7 @@ suite('Users', function () {
             suite('Levels', function () {
 
                 test('Success - User has "edit" via Group', function (done) {
-                    topicList(agentUser, user.id, null, null, null, null, function (err, res) {
+                    topicList(agentUser, user.id, null, null, null, null, null, function (err, res) {
                         if (err) return done(err);
                         var topicList = res.body.data;
 
@@ -3637,7 +3849,7 @@ suite('Users', function () {
                     topicMemberUsersCreate(agentCreator, creator.id, topic.id, topicMemberUser, function (err) {
                         if (err) return done(err);
 
-                        topicList(agentUser, user.id, null, null, null, null, function (err, res) {
+                        topicList(agentUser, user.id, null, null, null, null, null, function (err, res) {
                             if (err) return done(err);
 
                             var topicList = res.body.data;
@@ -3668,7 +3880,7 @@ suite('Users', function () {
                     topicMemberUsersCreate(agentCreator, creator.id, topic.id, topicMemberUser, function (err) {
                         if (err) return done(err);
 
-                        topicList(agentUser, user.id, null, null, null, null, function (err, res) {
+                        topicList(agentUser, user.id, null, null, null, null, null, function (err, res) {
                             if (err) return done(err);
 
                             var topicList = res.body.data;
@@ -3686,7 +3898,7 @@ suite('Users', function () {
                     groupLib.membersDelete(agentCreator, creator.id, group.id, user.id, function (err) {
                         if (err) return done(err);
 
-                        topicList(agentUser, user.id, null, null, null, null, function (err, res) {
+                        topicList(agentUser, user.id, null, null, null, null, null, function (err, res) {
                             if (err) return done(err);
 
                             var topicList = res.body.data;
@@ -3712,7 +3924,7 @@ suite('Users', function () {
                         groupLib.membersDelete(agentCreator, creator.id, group.id, user.id, function (err) {
                             if (err) return done(err);
 
-                            topicList(agentUser, user.id, null, null, null, null, function (err, res) {
+                            topicList(agentUser, user.id, null, null, null, null, null, function (err, res) {
                                 if (err) return done(err);
 
                                 var topicList = res.body.data;
