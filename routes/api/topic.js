@@ -1738,7 +1738,7 @@ module.exports = function (app) {
         if (['true', '1'].includes(hasVoted)) {
             where += 'AND EXISTS (SELECT TRUE FROM "VoteLists" vl WHERE vl."voteId" = tv."voteId" AND vl."userId" = :userId LIMIT 1)';
         } else if (['false', '0'].includes(hasVoted)) {
-            where += 'AND tv."voteId" IS NOT NULL AND NOT EXISTS (SELECT TRUE FROM "VoteLists" vl WHERE vl."voteId" = tv."voteId" AND vl."userId" = :userId LIMIT 1)';
+            where += 'AND tv."voteId" IS NOT NULL AND t.status = \'voting\'::"enum_Topics_status" AND NOT EXISTS (SELECT TRUE FROM "VoteLists" vl WHERE vl."voteId" = tv."voteId" AND vl."userId" = :userId LIMIT 1)';
         } else {
             logger.warn(`Ignored parameter "voted" as invalid value "${hasVoted}" was provided`);
         }
