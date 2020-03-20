@@ -46,7 +46,8 @@
       "path": "/api",
       "httpOnly": true,
       "maxAge": 1209600000,
-      "domain": false
+      "domain": false,
+      "sameSite": "Lax"
     }
   },
   "api": {
