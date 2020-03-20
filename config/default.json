@@ -47,7 +47,7 @@
       "httpOnly": true,
       "maxAge": 1209600000,
       "domain": false,
-      "sameSite": "Lax"
+      "sameSite": "None"
     }
   },
   "api": {
