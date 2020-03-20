@@ -34,7 +34,7 @@
     "campaign-nodemailer": "1.1.0",
     "campaign-terminal": "1.0.4",
     "config": "1.20.1",
-    "cookie-parser": "1.4.4",
+    "cookie-parser": "1.4.5",
     "cors": "2.7.1",
     "debug": "2.6.9",
     "docx": "git+https://github.com/citizenos/docx.git#8b29efc4bca266a434c08445bd0be9cea43df96c",

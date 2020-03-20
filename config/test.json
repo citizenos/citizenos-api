@@ -29,7 +29,8 @@
     "cookie": {
       "httpOnly": true,
       "maxAge": 1209600000,
-      "domain": false
+      "domain": false,
+      "sameSite": "None"
     }
   },
   "api": {
