@@ -948,6 +948,8 @@ module.exports = function (app) {
                         .then(
                             function (result) {
                                 const options = [];
+                                let hasVoted = false;
+
                                 topic.vote.options.forEach(function (option) {
                                     option = option.split(':');
                                     const o = {
@@ -960,19 +962,24 @@ module.exports = function (app) {
                                             o.voteCount = parseInt(res.voteCount, 10);
                                             if (res.selected) {
                                                 o.selected = res.selected;
-                                                topic.vote.downloads = {
-                                                    bdocVote: getBdocURL({
-                                                        userId: user.id,
-                                                        topicId: topicId,
-                                                        voteId: topic.vote.id,
-                                                        type: 'user'
-                                                    })
-                                                };
+                                                hasVoted = true;
                                             }
                                         }
                                     }
                                     options.push(o);
                                 });
+
+                                if (topic.vote.authType === Vote.AUTH_TYPES.hard && hasVoted) {
+                                    topic.vote.downloads = {
+                                        bdocVote: getBdocURL({
+                                            userId: user.id,
+                                            topicId: topicId,
+                                            voteId: topic.vote.id,
+                                            type: 'user'
+                                        })
+                                    };
+                                }
+
                                 topic.vote.options = {
                                     count: options.length,
                                     rows: options

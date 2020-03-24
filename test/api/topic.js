@@ -6007,6 +6007,51 @@ suite('Users', function () {
                     });
                 });
 
+                test('Success - multiple choice', function (done) {
+                    let options = [
+                        {
+                            value: 'Option 1'
+                        },
+                        {
+                            value: 'Option 2'
+                        },
+                        {
+                            value: 'Option 3'
+                        }
+                    ];
+
+                    let description = 'Vote description';
+                    let minChoices = 1;
+                    let maxChoices = 2;
+
+                    topicVoteCreate(agent, user.id, topic.id, options, minChoices, maxChoices, null, null, description, null, null, function (err, res) {
+                        if (err) return done(err);
+
+                        var vote = res.body.data;
+
+                        assert.property(vote, 'id');
+                        assert.equal(vote.minChoices, minChoices);
+                        assert.equal(vote.maxChoices, maxChoices);
+                        assert.equal(vote.delegationIsAllowed, false);
+                        assert.isNull(vote.endsAt);
+                        assert.equal(vote.description, description);
+                        assert.equal(vote.authType, Vote.AUTH_TYPES.soft);
+
+                        // Topic should end up in "voting" status
+                        Topic
+                            .findOne({
+                                where: {
+                                    id: topic.id
+                                }
+                            })
+                            .then(function (t) {
+                                assert.equal(t.status, Topic.STATUSES.voting);
+                                done();
+                            })
+                            .catch(done);
+                    });
+                });
+
                 test('Success - authType === hard', function (done) {
                     var options = [
                         {
@@ -6967,8 +7012,8 @@ suite('Users', function () {
                         });
                     });
 
-                    test('Success - multiple choice', function (done) {
-                        var options = [
+                    test('Success - multiple choice - vote and re-vote', function (done) {
+                        let options = [
                             {
                                 value: 'Option 1'
                             },
@@ -6983,33 +7028,76 @@ suite('Users', function () {
                         topicVoteCreate(agent, user.id, topic.id, options, 1, 2, false, null, null, null, null, function (err, res) {
                             if (err) return done(err);
 
-                            var vote = res.body.data;
+                            let vote = res.body.data;
                             topicVoteRead(agent, user.id, topic.id, vote.id, function (err, res) {
                                 if (err) return done(err);
-                                var vote = res.body.data;
+                                const vote = res.body.data;
 
-                                var voteList = [
+                                const voteList = [
                                     {
-                                        optionId: vote.options.rows[0].id
+                                        optionId: _.find(vote.options.rows, {value: options[0].value}).id
                                     },
                                     {
-                                        optionId: vote.options.rows[1].id
+                                        optionId: _.find(vote.options.rows, {value: options[1].value}).id
                                     }
                                 ];
+
+                                // Vote for the 1st time
                                 topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, null, null, null, function (err) {
                                     if (err) return done(err);
 
                                     topicVoteRead(agent, user.id, topic.id, vote.id, function (err, res) {
                                         if (err) return done(err);
 
-                                        var vote = res.body.data;
+                                        const vote = res.body.data;
 
                                         _(voteList).forEach(function (voteOption) {
-                                            var option = _.find(vote.options.rows, {id: voteOption.optionId});
+                                            const option = _.find(vote.options.rows, {id: voteOption.optionId});
                                             assert.equal(option.voteCount, 1);
                                         });
 
-                                        done();
+                                        // Vote for the 2nd time, change your vote, by choosing 1
+                                        const voteList2 = [
+                                            {
+                                                optionId: _.find(vote.options.rows, {value: options[2].value}).id
+                                            }
+                                        ];
+
+                                        topicVoteVote(agent, user.id, topic.id, vote.id, voteList2, null, null, null, null, function (err) {
+                                            if (err) return done(err);
+
+                                            topicVoteRead(agent, user.id, topic.id, vote.id, function (err, res) {
+                                                if (err) return done(err);
+
+                                                const vote = res.body.data;
+
+                                                // Check that the 2nd vote was counted
+                                                _(voteList2).forEach(function (voteOption) {
+                                                    const option = _.find(vote.options.rows, {id: voteOption.optionId});
+                                                    assert.equal(option.voteCount, 1);
+                                                    assert.isTrue(option.selected);
+                                                });
+
+                                                // Check that the 1st vote was overwritten
+                                                _(voteList).forEach(function (voteOption) {
+                                                    const option = _.find(vote.options.rows, {id: voteOption.optionId});
+                                                    assert.notProperty(option, 'voteCount');
+                                                    assert.notProperty(option, 'selected');
+                                                });
+
+                                                // Verify the result of topic information, see that vote result is the same
+                                                const include = ['vote'];
+                                                topicRead(agent, user.id, topic.id, include, function (err, res) {
+                                                    if (err) return done(err);
+
+                                                    const topicVote = res.body.data.vote;
+
+                                                    assert.deepEqual(topicVote, vote);
+
+                                                    done();
+                                                });
+                                            });
+                                        });
                                     });
                                 });
                             });
@@ -7414,7 +7502,6 @@ suite('Users', function () {
 
                     });
 
-
                     suite('Mobiil-ID', function () {
 
                         var vote;
@@ -7794,7 +7881,6 @@ suite('Users', function () {
                             done();
                         });
                     });
-
 
                     suite('Downloads', function () {
 
