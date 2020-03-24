@@ -7059,6 +7059,9 @@ suite('Users', function () {
                                         // Vote for the 2nd time, change your vote, by choosing 1
                                         const voteList2 = [
                                             {
+                                                optionId: _.find(vote.options.rows, {value: options[1].value}).id
+                                            },
+                                            {
                                                 optionId: _.find(vote.options.rows, {value: options[2].value}).id
                                             }
                                         ];
@@ -7079,11 +7082,9 @@ suite('Users', function () {
                                                 });
 
                                                 // Check that the 1st vote was overwritten
-                                                _(voteList).forEach(function (voteOption) {
-                                                    const option = _.find(vote.options.rows, {id: voteOption.optionId});
-                                                    assert.notProperty(option, 'voteCount');
-                                                    assert.notProperty(option, 'selected');
-                                                });
+                                                const optionOverwritten = _.find(vote.options.rows, {id: voteList[0].optionId});
+                                                assert.notProperty(optionOverwritten, 'voteCount');
+                                                assert.notProperty(optionOverwritten, 'selected');
 
                                                 // Verify the result of topic information, see that vote result is the same
                                                 const include = ['vote'];
@@ -7573,6 +7574,165 @@ suite('Users', function () {
                                 assert.match(response.data.challengeID, /[0-9]{4}/);
 
                                 done();
+                            });
+                        });
+
+                        test('Success - Estonian mobile number and PID - multiple choice - vote and re-vote', function (done) {
+                            this.timeout(30000);
+
+                            const phoneNumber = '+37200000766';
+                            const pid = '60001019906';
+
+                            let options = [
+                                {
+                                    value: 'Option 1'
+                                },
+                                {
+                                    value: 'Option 2'
+                                },
+                                {
+                                    value: 'Option 3'
+                                }
+                            ];
+
+                            // Got to create a separate topic as the one in set-up is also sent to voting and I want multiple choice one
+                            topicCreate(agent, user.id, null, null, null, null, null, function(err, res) {
+                                const topic = res.body.data;
+
+                                topicVoteCreate(agent, user.id, topic.id, options, 1, 2, false, null, null, null, Vote.AUTH_TYPES.hard, function (err, res) {
+                                    if (err) return done(err);
+
+                                    const vote = res.body.data;
+
+                                    topicVoteRead(agent, user.id, topic.id, vote.id, function (err, res) {
+
+                                        if (err) return done(err);
+
+                                        const vote = res.body.data;
+
+                                        const voteList = [
+                                            {
+                                                optionId: _.find(vote.options.rows, {value: options[0].value}).id
+                                            },
+                                            {
+                                                optionId: _.find(vote.options.rows, {value: options[1].value}).id
+                                            }
+                                        ];
+
+                                        // Vote for the 1st time
+                                        topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, function (err, res) {
+                                            if (err) return done(err);
+
+                                            const response = res.body;
+
+                                            assert.equal(response.status.code, 20001);
+                                            assert.match(response.data.challengeID, /[0-9]{4}/);
+
+                                            let called = 0;
+                                            let replied = 0;
+
+                                            const getStatus = setInterval(function () {
+                                                if (called <= replied) {
+                                                    called++;
+                                                    topicVoteStatus(agent, user.id, topic.id, vote.id, response.data.token, function (err, res) {
+                                                        if (err) return done(err);
+
+                                                        replied++;
+
+                                                        var statusresponse = res.body;
+                                                        if (statusresponse.status.code === 20001 && statusresponse.status.message === 'Signing in progress') {
+                                                            // TODO: Interesting empty if block
+                                                        } else {
+                                                            clearInterval(getStatus);
+
+                                                            topicVoteRead(agent, user.id, topic.id, vote.id, function (err, res) {
+                                                                if (err) return done(err);
+
+                                                                const vote = res.body.data;
+
+                                                                _(voteList).forEach(function (voteOption) {
+                                                                    const option = _.find(vote.options.rows, {id: voteOption.optionId});
+                                                                    assert.equal(option.voteCount, 1);
+                                                                });
+
+                                                                // Vote for the 2nd time, change your vote, by choosing 1
+                                                                const voteList2 = [
+                                                                    {
+                                                                        optionId: _.find(vote.options.rows, {value: options[1].value}).id
+                                                                    },
+                                                                    {
+                                                                        optionId: _.find(vote.options.rows, {value: options[2].value}).id
+                                                                    }
+                                                                ];
+
+                                                                topicVoteVote(agent, user.id, topic.id, vote.id, voteList2, null, pid, phoneNumber, null, function (err, res) {
+                                                                    if (err) return done(err);
+
+                                                                    const response = res.body;
+
+                                                                    assert.equal(response.status.code, 20001);
+                                                                    assert.match(response.data.challengeID, /[0-9]{4}/);
+
+                                                                    let called = 0;
+                                                                    let replied = 0;
+
+                                                                    const getStatus = setInterval(function () {
+                                                                        if (called <= replied) {
+                                                                            called++;
+                                                                            topicVoteStatus(agent, user.id, topic.id, vote.id, response.data.token, function (err, res) {
+                                                                                if (err) return done(err);
+
+                                                                                replied++;
+
+                                                                                const statusresponse = res.body;
+                                                                                if (statusresponse.status.code === 20001 && statusresponse.status.message === 'Signing in progress') {
+                                                                                    // TODO: Interesting empty if block
+                                                                                } else {
+                                                                                    clearInterval(getStatus);
+
+                                                                                    topicVoteRead(agent, user.id, topic.id, vote.id, function (err, res) {
+                                                                                        if (err) return done(err);
+
+                                                                                        const vote = res.body.data;
+
+                                                                                        // Check that the 2nd vote was counted
+                                                                                        _(voteList2).forEach(function (voteOption) {
+                                                                                            const option = _.find(vote.options.rows, {id: voteOption.optionId});
+                                                                                            assert.equal(option.voteCount, 1);
+                                                                                            assert.isTrue(option.selected);
+                                                                                        });
+
+                                                                                        // Check that the 1st vote was overwritten
+                                                                                        const optionOverwritten = _.find(vote.options.rows, {id: voteList[0].optionId});
+                                                                                        assert.notProperty(optionOverwritten, 'voteCount');
+                                                                                        assert.notProperty(optionOverwritten, 'selected');
+
+                                                                                        // Verify the result of topic information, see that vote result is the same
+                                                                                        const include = ['vote'];
+                                                                                        topicRead(agent, user.id, topic.id, include, function (err, res) {
+                                                                                            if (err) return done(err);
+
+                                                                                            const topicVote = res.body.data.vote;
+
+                                                                                            assert.deepEqual(topicVote, vote);
+
+                                                                                            done();
+                                                                                        });
+                                                                                    });
+                                                                                }
+                                                                            });
+                                                                        }
+                                                                    }, 1000);
+                                                                });
+                                                            });
+                                                        }
+                                                    });
+                                                }
+                                            }, 1000);
+
+                                        });
+                                    });
+                                });
                             });
                         });
 
