@@ -5214,6 +5214,33 @@ suite('Users', function () {
                         });
                     });
 
+                    test('Success - 20100 - invite 100 users at once with e-mail', function (done) {
+                        this.timeout(10000);
+
+                        const membersToInvite = [];
+                        for (let i = 0; i < 100; i++) {
+                            membersToInvite.push({
+                                userId: `test100invites${new Date().getTime()}_${i}@citizenostest.com`,
+                                level: TopicMemberUser.LEVELS.read
+                            });
+                        }
+
+                        topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, membersToInvite, function (err, res) {
+                            if (err) return done(err);
+
+                            topicInviteUsersList(agentCreator, userCreator.id, topic.id, function (err, res) {
+                                if (err) return done(err);
+
+                                let invitesRes = res.body.data;
+
+                                assert.equal(invitesRes.count, 100);
+                                assert.equal(invitesRes.rows.length, 100);
+
+                                done();
+                            });
+                        });
+                    });
+
                     test('Fail - 40001 - Invite yourself', function (done) {
                         const invitation = {
                             userId: userCreator.id,
