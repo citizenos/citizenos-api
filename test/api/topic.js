@@ -5225,7 +5225,7 @@ suite('Users', function () {
                             });
                         }
 
-                        topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, membersToInvite, function (err, res) {
+                        topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, membersToInvite, function (err) {
                             if (err) return done(err);
 
                             topicInviteUsersList(agentCreator, userCreator.id, topic.id, function (err, res) {
