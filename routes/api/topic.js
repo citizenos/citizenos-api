@@ -6669,7 +6669,7 @@ module.exports = function (app) {
                         });
                     })
             }, function (result) {
-                let statusCode
+                let statusCode;
                 if (result.result && result.result.endResult) {
                     statusCode = result.result.endResult;
                 } else if (result.result && !result.result.endResult) {
