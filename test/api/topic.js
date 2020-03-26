@@ -7157,8 +7157,7 @@ suite('Users', function () {
                 var user;
                 var user2;
                 var topic;
-                var topic2;
-                var vote;
+                var topicPublic;
 
                 setup(function (done) {
                     async
@@ -7197,7 +7196,7 @@ suite('Users', function () {
                                 if (err) return done(err);
 
                                 topic = results[0].body.data;
-                                topic2 = results[1].body.data;
+                                topicPublic = results[1].body.data;
 
                                 done();
                             }
@@ -7206,8 +7205,8 @@ suite('Users', function () {
 
                 suite('authType === soft', function () {
 
-                    test('Success', function (done) {
-                        var options = [
+                    test('Success', async function () {
+                        const options = [
                             {
                                 value: 'Option 1'
                             },
@@ -7219,43 +7218,25 @@ suite('Users', function () {
                             }
                         ];
 
-                        topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null, function (err, res) {
-                            if (err) return done(err);
+                        const vote = (await topicVoteCreatePromised(agent, user.id, topic.id, options, null, null, null, null, null, null, null)).body.data;
+                        const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, vote.id)).body.data;
 
-                            vote = res.body.data;
+                        const voteList = [
+                            {
+                                optionId: voteRead.options.rows[0].id
+                            }
+                        ];
+                        await topicVoteVotePromised(agent, user.id, topic.id, vote.id, voteList, null, null, null, null);
+                        const voteReadAfterVote = (await topicVoteReadPromised(agent, user.id, topic.id, vote.id)).body.data;
 
-                            topicVoteRead(agent, user.id, topic.id, vote.id, function (err, res) {
-                                if (err) return done(err);
-
-                                vote = res.body.data;
-                                var voteList = [
-                                    {
-                                        optionId: vote.options.rows[0].id
-                                    }
-                                ];
-
-                                topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, null, null, null, function (err) {
-                                    if (err) return done(err);
-
-                                    topicVoteRead(agent, user.id, topic.id, vote.id, function (err, res) {
-                                        if (err) return done(err);
-
-                                        var vote = res.body.data;
-
-                                        _(voteList).forEach(function (voteOption) {
-                                            var option = _.find(vote.options.rows, {id: voteOption.optionId});
-                                            assert.equal(option.voteCount, 1);
-                                        });
-
-                                        done();
-                                    });
-                                });
-                            });
+                        _(voteList).forEach(function (voteOption) {
+                            const option = _.find(voteReadAfterVote.options.rows, {id: voteOption.optionId});
+                            assert.equal(option.voteCount, 1);
                         });
                     });
 
-                    test('Success - multiple choice - vote and re-vote', function (done) {
-                        let options = [
+                    test('Success - multiple choice - vote and re-vote', async function () {
+                        const options = [
                             {
                                 value: 'Option 1'
                             },
@@ -7267,88 +7248,59 @@ suite('Users', function () {
                             }
                         ];
 
-                        topicVoteCreate(agent, user.id, topic.id, options, 1, 2, false, null, null, null, null, function (err, res) {
-                            if (err) return done(err);
+                        const vote = (await topicVoteCreatePromised(agent, user.id, topic.id, options, 1, 2, false, null, null, null, null)).body.data;
+                        const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, vote.id)).body.data;
 
-                            let vote = res.body.data;
-                            topicVoteRead(agent, user.id, topic.id, vote.id, function (err, res) {
-                                if (err) return done(err);
-                                const vote = res.body.data;
+                        const voteList1 = [
+                            {
+                                optionId: _.find(voteRead.options.rows, {value: options[0].value}).id
+                            },
+                            {
+                                optionId: _.find(voteRead.options.rows, {value: options[1].value}).id
+                            }
+                        ];
 
-                                const voteList = [
-                                    {
-                                        optionId: _.find(vote.options.rows, {value: options[0].value}).id
-                                    },
-                                    {
-                                        optionId: _.find(vote.options.rows, {value: options[1].value}).id
-                                    }
-                                ];
+                        await topicVoteVotePromised(agent, user.id, topic.id, vote.id, voteList1, null, null, null, null);
+                        const voteReadAfterVote1 = (await topicVoteReadPromised(agent, user.id, topic.id, vote.id)).body.data;
 
-                                // Vote for the 1st time
-                                topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, null, null, null, function (err) {
-                                    if (err) return done(err);
-
-                                    topicVoteRead(agent, user.id, topic.id, vote.id, function (err, res) {
-                                        if (err) return done(err);
-
-                                        const vote = res.body.data;
-
-                                        _(voteList).forEach(function (voteOption) {
-                                            const option = _.find(vote.options.rows, {id: voteOption.optionId});
-                                            assert.equal(option.voteCount, 1);
-                                        });
-
-                                        // Vote for the 2nd time, change your vote, by choosing 1
-                                        const voteList2 = [
-                                            {
-                                                optionId: _.find(vote.options.rows, {value: options[1].value}).id
-                                            },
-                                            {
-                                                optionId: _.find(vote.options.rows, {value: options[2].value}).id
-                                            }
-                                        ];
-
-                                        topicVoteVote(agent, user.id, topic.id, vote.id, voteList2, null, null, null, null, function (err) {
-                                            if (err) return done(err);
-
-                                            topicVoteRead(agent, user.id, topic.id, vote.id, function (err, res) {
-                                                if (err) return done(err);
-
-                                                const vote = res.body.data;
-
-                                                // Check that the 2nd vote was counted
-                                                _(voteList2).forEach(function (voteOption) {
-                                                    const option = _.find(vote.options.rows, {id: voteOption.optionId});
-                                                    assert.equal(option.voteCount, 1);
-                                                    assert.isTrue(option.selected);
-                                                });
-
-                                                // Check that the 1st vote was overwritten
-                                                const optionOverwritten = _.find(vote.options.rows, {id: voteList[0].optionId});
-                                                assert.notProperty(optionOverwritten, 'voteCount');
-                                                assert.notProperty(optionOverwritten, 'selected');
-
-                                                // Verify the result of topic information, see that vote result is the same
-                                                const include = ['vote'];
-                                                topicRead(agent, user.id, topic.id, include, function (err, res) {
-                                                    if (err) return done(err);
-
-                                                    const topicVote = res.body.data.vote;
-
-                                                    assert.deepEqual(topicVote, vote);
-
-                                                    done();
-                                                });
-                                            });
-                                        });
-                                    });
-                                });
-                            });
+                        _(voteList1).forEach(function (voteOption) {
+                            const option = _.find(voteReadAfterVote1.options.rows, {id: voteOption.optionId});
+                            assert.equal(option.voteCount, 1);
                         });
+
+                        // Vote for the 2nd time, change your vote, by choosing 1
+                        const voteList2 = [
+                            {
+                                optionId: _.find(vote.options.rows, {value: options[1].value}).id
+                            },
+                            {
+                                optionId: _.find(vote.options.rows, {value: options[2].value}).id
+                            }
+                        ];
+
+                        await topicVoteVotePromised(agent, user.id, topic.id, vote.id, voteList2, null, null, null, null);
+                        const voteReadAfterVote2 = (await topicVoteReadPromised(agent, user.id, topic.id, vote.id)).body.data;
+
+                        // Check that the 2nd vote was counted
+                        _(voteList2).forEach(function (voteOption) {
+                            const option = _.find(voteReadAfterVote2.options.rows, {id: voteOption.optionId});
+                            assert.equal(option.voteCount, 1);
+                            assert.isTrue(option.selected);
+                        });
+
+                        // Check that the 1st vote was overwritten
+                        const optionOverwritten = _.find(voteReadAfterVote2.options.rows, {id: voteList1[0].optionId});
+                        assert.notProperty(optionOverwritten, 'voteCount');
+                        assert.notProperty(optionOverwritten, 'selected');
+
+                        // Verify the result of topic information, see that vote result is the same
+                        const topicReadAfterVote = (await topicReadPromised(agent, user.id, topic.id, ['vote'])).body.data;
+
+                        assert.deepEqual(topicReadAfterVote.vote, voteReadAfterVote2);
                     });
 
-                    test('Success - public topic user with logged in', function (done) {
-                        var options = [
+                    test('Success - public topic user with logged in', async function () {
+                        const options = [
                             {
                                 value: 'Option 1'
                             },
@@ -7360,74 +7312,33 @@ suite('Users', function () {
                             }
                         ];
 
-                        topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null, function (err, res) {
-                            if (err) return done(err);
 
-                            vote = res.body.data;
-                            topicVoteRead(agent, user.id, topic.id, vote.id, function (err, res) {
-                                if (err) return done(err);
-                                vote = res.body.data;
-                                var voteList = [
-                                    {
-                                        optionId: vote.options.rows[0].id
-                                    }
-                                ];
+                        const vote = (await topicVoteCreatePromised(agent, user.id, topicPublic.id, options, null, null, null, null, null, null, null)).body.data;
+                        const voteRead = (await topicVoteReadPromised(agent, user.id, topicPublic.id, vote.id)).body.data;
 
-                                topicVoteVote(agent, user2.id, topic.id, vote.id, voteList, null, null, null, null, function (err) {
-                                    if (err) return done(err);
+                        const voteList1 = [
+                            {
+                                optionId: voteRead.options.rows[0].id
+                            }
+                        ];
 
-                                    topicVoteRead(agent, user2.id, topic.id, vote.id, function (err, res) {
-                                        if (err) return done(err);
+                        await topicVoteVotePromised(agent2, user2.id, topicPublic.id, vote.id, voteList1, null, null, null, null);
+                        const voteReadAfterVote1 = (await topicVoteReadPromised(agent2, user2.id, topicPublic.id, vote.id)).body.data;
 
-                                        var vote = res.body.data;
-
-                                        _(voteList).forEach(function (voteOption) {
-                                            var option = _.find(vote.options.rows, {id: voteOption.optionId});
-                                            assert.equal(option.voteCount, 1);
-                                        });
-
-                                        done();
-                                    });
-                                });
-                            });
-                        });
+                        voteReadAfterVote1.options.rows.forEach(function (voteOption) {
+                            if (voteOption.id === voteList1[0].optionId) {
+                                assert.equal(voteOption.voteCount, 1);
+                                assert.isTrue(voteOption.selected);
+                            } else {
+                                assert.notProperty(voteOption, 'voteCount');
+                                assert.notProperty(voteOption, 'selected');
+                            }
+                        })
                     });
 
-                    test('Fail - Not Found - trying to vote on a Topic while the Vote actually does not belong to the Topic', function (done) {
-                        topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
-                            if (err) return done(err);
-
-                            var topicWrong = res.body.data;
-
-                            var options = [
-                                {
-                                    value: 'Option 1'
-                                },
-                                {
-                                    value: 'Option 2'
-                                },
-                                {
-                                    value: 'Option 3'
-                                }
-                            ];
-
-                            // Create a Vote for the wrong Topic, so that the Topic status check would pass
-                            topicVoteCreate(agent, user.id, topicWrong.id, options, null, null, null, null, null, null, null, function (err) {
-                                if (err) return done(err);
-
-                                var voteList = [
-                                    {
-                                        optionId: vote.options.rows[0].id
-                                    }
-                                ];
-
-                                _topicVoteVote(agent, user.id, topicWrong.id, vote.id, voteList, null, null, null, null, 404, done);
-                            });
-                        });
-                    });
-
-                    test('Fail - Bad Request - too many options chosen', function (done) {
-                        var options = [
+                    test('Fail - Not Found - trying to vote on a Topic while the Vote actually does not belong to the Topic', async function () {
+                        const topicWrong = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
+                        const options = [
                             {
                                 value: 'Option 1'
                             },
@@ -7439,29 +7350,23 @@ suite('Users', function () {
                             }
                         ];
 
-                        topicVoteCreate(agent, user.id, topic.id, options, 1, 1, false, null, null, null, null, function (err, res) {
-                            if (err) return done(err);
+                        const topicVoteWrong = (await topicVoteCreatePromised(agent, user.id, topicWrong.id, options, null, null, null, null, null, null, null)).body.data;
+                        const topicVoteRight = (await topicVoteCreatePromised(agent, user.id, topic.id, options, null, null, null, null, null, null, null)).body.data;
+                        const topicVoteReadRight = (await topicVoteReadPromised(agent, user.id, topic.id, topicVoteRight.id)).body.data;
 
-                            var vote = res.body.data;
-                            topicVoteRead(agent, user.id, topic.id, vote.id, function (err, res) {
-                                if (err) return done(err);
-                                var vote = res.body.data;
+                        const voteList1 = [
+                            {
+                                optionId: topicVoteReadRight.options.rows[0].id
+                            }
+                        ];
 
-                                var voteList = [
-                                    {
-                                        optionId: vote.options.rows[0].id
-                                    },
-                                    {
-                                        optionId: vote.options.rows[1].id
-                                    }
-                                ];
-                                _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, null, null, null, 400, done);
-                            });
-                        });
+                        // Try out wrong topicId & voteId combos
+                        await _topicVoteVotePromised(agent, user.id, topicWrong.id, topicVoteRight.id, voteList1, null, null, null, null, 404);
+                        await _topicVoteVotePromised(agent, user.id, topic.id, topicVoteWrong.id, voteList1, null, null, null, null, 404);
                     });
 
-                    test('Fail - Bad Request - not enough options chosen', function (done) {
-                        var options = [
+                    test('Fail - Bad Request - too many options chosen', async function () {
+                        const options = [
                             {
                                 value: 'Option 1'
                             },
@@ -7473,51 +7378,32 @@ suite('Users', function () {
                             }
                         ];
 
-                        topicVoteCreate(agent, user.id, topic.id, options, 1, 1, false, null, null, null, null, function (err, res) {
-                            if (err) return done(err);
 
-                            var vote = res.body.data;
-                            topicVoteRead(agent, user.id, topic.id, vote.id, function (err, res) {
-                                if (err) return done(err);
-                                var vote = res.body.data;
+                        const voteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, options, 1, 1, false, null, null, null, null)).body.data;
+                        const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
 
-                                var voteList = [];
-
-                                _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, null, null, null, 400, done);
-                            });
-                        });
-                    });
-
-                    test('Fail - Bad Request - vote has ended (NOW > endsAt)', function (done) {
-                        var options = [
+                        const voteList1 = [
                             {
-                                value: 'Option 1'
+                                optionId: voteRead.options.rows[0].id
                             },
                             {
-                                value: 'Option 2'
+                                optionId: voteRead.options.rows[1].id
                             }
                         ];
-                        topicVoteCreate(agent, user.id, topic.id, options, null, null, null, new Date(), null, null, null, function (err, res) {
-                            if (err) return done(err);
 
-                            vote = res.body.data;
-                            topicVoteRead(agent, user.id, topic.id, vote.id, function (err, res) {
-                                if (err) return done(err);
-                                vote = res.body.data;
+                        const voteResult = (await _topicVoteVotePromised(agent, user.id, topic.id, voteRead.id, voteList1, null, null, null, null, 400)).body;
+                        const voteResultExpected = {
+                            status: {
+                                code: 40000,
+                                message: 'The options must be an array of minimum 1 and maximum 1 options.'
+                            }
+                        };
 
-                                var voteList = [
-                                    {
-                                        optionId: vote.options.rows[0].id
-                                    }
-                                ];
-
-                                _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, null, null, null, 400, done);
-                            });
-                        });
+                        assert.deepEqual(voteResult, voteResultExpected);
                     });
 
-                    test('Fail - Public topic, user not logged in', function (done) {
-                        var options = [
+                    test('Fail - Bad Request - not enough options chosen', async function () {
+                        const options = [
                             {
                                 value: 'Option 1'
                             },
@@ -7529,45 +7415,95 @@ suite('Users', function () {
                             }
                         ];
 
-                        topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null, function (err, res) {
-                            if (err) return done(err);
 
-                            vote = res.body.data;
-                            topicVoteRead(agent, user.id, topic.id, vote.id, function (err, res) {
-                                if (err) return done(err);
-                                vote = res.body.data;
+                        const voteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, options, 1, 1, false, null, null, null, null)).body.data;
+                        const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
 
-                                var voteList = [
-                                    {
-                                        optionId: vote.options.rows[0].id
-                                    }
-                                ];
+                        const voteList1 = [];
 
-                                authLib.logout(agent2, function (err) {
-                                    if (err) return done(err);
+                        const voteResult = (await _topicVoteVotePromised(agent, user.id, topic.id, voteRead.id, voteList1, null, null, null, null, 400)).body;
+                        const voteResultExpected = {
+                            status: {
+                                code: 40000,
+                                message: 'The options must be an array of minimum 1 and maximum 1 options.'
+                            }
+                        };
 
-                                    _topicVoteVote(agent2, null, topic.id, vote.id, voteList, null, null, null, null, 401, function (err, res) {
-                                        if (err) return done(err);
-
-                                        var expectedBody = {
-                                            status: {
-                                                code: 40100,
-                                                message: 'Unauthorized'
-                                            }
-                                        };
-
-                                        assert.deepEqual(res.body, expectedBody);
-
-                                        done();
-                                    });
-                                });
-                            });
-                        });
+                        assert.deepEqual(voteResult, voteResultExpected);
                     });
 
-                    test.skip('Fail - Bad Request - option id does not belong to the Vote', function (done) {
+                    test('Fail - Bad Request - vote has ended (NOW > endsAt)', async function () {
+                        const options = [
+                            {
+                                value: 'Option 1'
+                            },
+                            {
+                                value: 'Option 2'
+                            },
+                            {
+                                value: 'Option 3'
+                            }
+                        ];
+
+                        const voteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, options, 1, 1, false, new Date(), null, null, null)).body.data;
+                        const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
+
+                        const voteList1 = [
+                            {
+                                optionId: voteRead.options.rows[0].id
+                            }
+                        ];
+
+                        const voteResult = (await _topicVoteVotePromised(agent, user.id, topic.id, voteRead.id, voteList1, null, null, null, null, 400)).body;
+                        const voteResultExpected = {
+                            status: {
+                                code: 40000,
+                                message: 'The Vote has ended.'
+                            }
+                        };
+
+                        assert.deepEqual(voteResult, voteResultExpected);
+                    });
+
+                    test('Fail - Public topic, user not logged in', async function () {
+                        const options = [
+                            {
+                                value: 'Option 1'
+                            },
+                            {
+                                value: 'Option 2'
+                            },
+                            {
+                                value: 'Option 3'
+                            }
+                        ];
+
+                        const voteCreated = (await topicVoteCreatePromised(agent, user.id, topicPublic.id, options, null, null, null, null, null, null, null)).body.data;
+                        const voteRead = (await topicVoteReadPromised(agent, user.id, topicPublic.id, voteCreated.id)).body.data;
+
+                        const voteList1 = [
+                            {
+                                optionId: voteRead.options.rows[0].id
+                            }
+                        ];
+
+                        // Log out the user
+                        await authLib.logoutPromised(agent2);
+
+                        const voteResult = (await _topicVoteVotePromised(agent2, user2.id, topicPublic.id, voteRead.id, voteList1, null, null, null, null, 401)).body;
+                        const voteResultExpected = {
+                            status: {
+                                code: 40100,
+                                message: 'Unauthorized'
+                            }
+                        };
+
+                        assert.deepEqual(voteResult, voteResultExpected);
+                    });
+
+                    test.skip('Fail - Bad Request - option id does not belong to the Vote', async function () {
                         //TODO: Check that you cannot vote for options that do not belong to the Vote
-                        done();
+                        throw new Error('NOT IMPLEMENTED!');
                     });
 
                 });
@@ -7600,7 +7536,7 @@ suite('Users', function () {
                                                 topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard, cb);
                                             },
                                             function (cb) {
-                                                topicVoteCreate(agent, user.id, topic2.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard, cb);
+                                                topicVoteCreate(agent, user.id, topicPublic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard, cb);
                                             }
                                         ],
                                         function (err, results) {
@@ -7659,7 +7595,7 @@ suite('Users', function () {
                                 ];
 
                                 var certificate = fs.readFileSync('./test/resources/certificates/dds_good_igor_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
-                                topicVoteVoteUnauth(reqAgent, topic2.id, vote2.id, voteList, certificate, null, null, function (err, res) {
+                                topicVoteVoteUnauth(reqAgent, topicPublic.id, vote2.id, voteList, certificate, null, null, function (err, res) {
                                     if (err) return done(err);
 
                                     var status = res.body.status;

@@ -193,6 +193,17 @@ var logout = function (agent, callback) {
         .end(callback);
 };
 
+const logoutPromised = function (agent) {
+    const path = '/api/auth/logout';
+
+    return agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .expect(200)
+        .expect('Content-Type', /json/)
+        .expect('set-cookie', /express_sid=;/)// FIXME: Hate this - https://trello.com/c/CkkFUz5D/235-ep-api-authorization-the-way-ep-session-is-invalidated-on-logout
+};
+
 /**
  * Sign up - call '/api/auth/signup' API endpoint
  *
@@ -415,6 +426,7 @@ var openIdAuthorize = function (agent, responseType, clientId, redirectUri, scop
 //Export the above function call so that other tests could use it to prepare data.
 module.exports.login = login;
 module.exports.logout = logout;
+module.exports.logoutPromised = logoutPromised;
 module.exports.signup = signup;
 module.exports.verify = verify;
 module.exports.passwordSet = passwordSet;
