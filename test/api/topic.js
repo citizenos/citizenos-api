@@ -1268,6 +1268,7 @@ const topicVoteStatusPromised = async function (agent, topicId, voteId, userId, 
                     } else {
                         // Its HTTP 200 and NOT 20001 - Signing in progress, so we have our result, WE'RE DONE HERE
                         clearInterval(statusInterval);
+
                         return resolve(topicVoteStatusResponse);
                     }
                 } else {
@@ -1384,6 +1385,26 @@ var _topicVoteDownloadBdocUserUnauth = function (agent, topicId, voteId, token, 
 //TODO: Missing test to use it?
 var topicVoteDownloadBdocUserUnauth = function (agent, topicId, voteId, token, callback) { //eslint-disable-line no-unused-vars
     return _topicVoteDownloadBdocUserUnauth(agent, topicId, voteId, token, 200, callback);
+};
+
+
+const _topicVoteDownloadBdocUserPromised = async function (agent, topicId, voteId, token, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/votes/:voteId/downloads/bdocs/user'
+        .replace(':userId', 'self')
+        .replace(':topicId', topicId)
+        .replace(':voteId', voteId);
+
+    return agent
+        .get(path)
+        .query({token: token})
+        .send()
+        .expect(expectedHttpCode)
+        .expect('Content-Type', 'application/vnd.etsi.asic-e+zip')
+        .expect('Content-Disposition', 'attachment; filename=vote.bdoc');
+};
+
+const topicVoteDownloadBdocUserPromised = async function (agent, topicId, voteId, token) {
+    return _topicVoteDownloadBdocUserPromised(agent, topicId, voteId, token, 200);
 };
 
 var _topicVoteDelegationCreate = function (agent, userId, topicId, voteId, toUserId, expectedHttpCode, callback) {
@@ -8134,10 +8155,83 @@ suite('Users', function () {
 
                         suite('Bdocs', function () {
 
+                            suite('User', function () {
+                                const phoneNumber = '+37200000766';
+                                const pid = '60001019906';
+
+                                test('Success', async function () {
+                                    this.timeout(20000);
+
+                                    let options = [
+                                        {
+                                            value: 'Option 1'
+                                        },
+                                        {
+                                            value: 'Option 2'
+                                        },
+                                        {
+                                            value: 'Option 3'
+                                        }
+                                    ];
+
+                                    const voteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, options, 1, 2, false, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                                    const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
+
+                                    // Vote for the first time
+                                    // Vote for the first time
+                                    const voteList1 = [
+                                        {
+                                            optionId: _.find(voteRead.options.rows, {value: options[0].value}).id
+                                        },
+                                        {
+                                            optionId: _.find(voteRead.options.rows, {value: options[1].value}).id
+                                        }
+                                    ];
+
+                                    const voteVoteResult1 = (await topicVoteVotePromised(agent, user.id, topic.id, voteRead.id, voteList1, null, pid, phoneNumber, null)).body;
+                                    await topicVoteStatusPromised(agent, user.id, topic.id, voteRead.id, voteVoteResult1.data.token);
+
+                                    // Vote for the 2nd time, change your vote, by choosing 1
+                                    const voteList2 = [
+                                        {
+                                            optionId: _.find(voteRead.options.rows, {value: options[1].value}).id
+                                        },
+                                        {
+                                            optionId: _.find(voteRead.options.rows, {value: options[2].value}).id
+                                        }
+                                    ];
+
+                                    const voteVoteResult2 = (await topicVoteVotePromised(agent, user.id, topic.id, voteRead.id, voteList2, null, pid, phoneNumber, null)).body;
+                                    await topicVoteStatusPromised(agent, user.id, topic.id, voteRead.id, voteVoteResult2.data.token);
+                                    const voteReadAfterVote2 = (await topicVoteReadPromised(agent, user.id, topic.id, voteRead.id)).body.data;
+
+                                    // Lets verify the url format and download
+                                    const urlRegex = new RegExp(`^${config.url.api}/api/users/self/topics/${topic.id}/votes/${voteRead.id}/downloads/bdocs/user\\?token=([a-zA-Z_.0-9\\-]{675})$`);
+                                    const matches = voteReadAfterVote2.downloads.bdocVote.match(urlRegex);
+                                    assert.isNotNull(matches);
+
+                                    const token = matches[1];
+                                    await topicVoteDownloadBdocUserPromised(agent, topic.id, voteRead.id, token);
+
+                                    // TODO: Do we want to test the contents of the file here or we should in the bdoc unit tests?
+                                });
+
+                                teardown(async function () {
+                                    await UserConnection
+                                        .destroy({
+                                            where: {
+                                                connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                                connectionUserId: [`PNOEE-${pid}`]
+                                            },
+                                            force: true
+                                        });
+                                });
+                            });
+
                             suite('Final', function () {
 
-                                test.skip('Success', function (done) {
-                                    done();
+                                test('Success', async function () {
+                                    return Promise.reject(new Error('Not implemented'));
                                 });
 
                                 test('Fail - Topic still in voting - End date not set AND Topic.status === Topic.STATUSES.voting', function (done) {
