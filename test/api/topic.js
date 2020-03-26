@@ -132,6 +132,49 @@ var _topicUpdate = function (agent, userId, topicId, status, visibility, categor
         .end(callback);
 };
 
+var topicUpdate = function (agent, userId, topicId, status, visibility, categories, endsAt, contact, callback) {
+    _topicUpdate(agent, userId, topicId, status, visibility, categories, endsAt, contact, 200, callback);
+};
+
+const _topicUpdatePromised = async function (agent, userId, topicId, status, visibility, categories, endsAt, contact, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId);
+
+    // We should fix the undefined vs null problem here...
+    // If I set it to null it should set to null
+    // IF I it's undefined, it should not change the value and not pass to server
+
+    const payload = {
+        visibility: visibility,
+        status: status
+    };
+
+    if (categories) {
+        payload.categories = categories;
+    }
+
+    if (endsAt) {
+        payload.endsAt = endsAt;
+    }
+
+    if (contact) {
+        payload.contact = contact;
+    }
+
+    return agent
+        .put(path)
+        .set('Content-Type', 'application/json')
+        .send(payload)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicUpdatePromised = async function (agent, userId, topicId, status, visibility, categories, endsAt, contact) {
+    return _topicUpdatePromised(agent, userId, topicId, status, visibility, categories, endsAt, contact, 200);
+};
+
+
 var _topicUpdateField = function (agent, userId, topicId, topic, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId'
         .replace(':userId', userId)
@@ -149,10 +192,6 @@ var _topicUpdateField = function (agent, userId, topicId, topic, expectedHttpCod
 
 var topicUpdateField = function (agent, userId, topicId, topic, callback) {
     _topicUpdateField(agent, userId, topicId, topic, 204, callback);
-};
-
-var topicUpdate = function (agent, userId, topicId, status, visibility, categories, endsAt, contact, callback) {
-    _topicUpdate(agent, userId, topicId, status, visibility, categories, endsAt, contact, 200, callback);
 };
 
 // TODO: https://trello.com/c/ezqHssSL/124-refactoring-put-tokenjoin-to-be-part-of-put-topics-topicid
@@ -1405,6 +1444,25 @@ const _topicVoteDownloadBdocUserPromised = async function (agent, topicId, voteI
 
 const topicVoteDownloadBdocUserPromised = async function (agent, topicId, voteId, token) {
     return _topicVoteDownloadBdocUserPromised(agent, topicId, voteId, token, 200);
+};
+
+const _topicVoteDownloadBdocFinalPromised = async function (agent, topicId, voteId, token, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/votes/:voteId/downloads/bdocs/final'
+        .replace(':userId', 'self')
+        .replace(':topicId', topicId)
+        .replace(':voteId', voteId);
+
+    return agent
+        .get(path)
+        .query({token: token})
+        .send()
+        .expect(expectedHttpCode)
+        .expect('Content-Type', 'application/vnd.etsi.asic-e+zip')
+        .expect('Content-Disposition', 'attachment; filename=final.bdoc');
+};
+
+const topicVoteDownloadBdocFinalPromised = async function (agent, topicId, voteId, token) {
+    return _topicVoteDownloadBdocFinalPromised(agent, topicId, voteId, token, 200);
 };
 
 var _topicVoteDelegationCreate = function (agent, userId, topicId, voteId, toUserId, expectedHttpCode, callback) {
@@ -2774,7 +2832,7 @@ suite('Users', function () {
                 });
             });
 
-            test('Fail - update field - status is null - should not modify existing value', function (done) {
+            test('Fail - Bad Request - update field - status is null - should not modify existing value', function (done) {
                 _topicUpdateField(agent, user.id, topic.id, {status: null}, 400, function (err) {
                     if (err) return done(err);
 
@@ -7335,10 +7393,6 @@ suite('Users', function () {
                         });
                     });
 
-                    test.skip('Success - re-vote', function (done) {
-                        done();
-                    });
-
                     test('Fail - Not Found - trying to vote on a Topic while the Vote actually does not belong to the Topic', function (done) {
                         topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
                             if (err) return done(err);
@@ -8160,7 +8214,7 @@ suite('Users', function () {
                                 const pid = '60001019906';
 
                                 test('Success', async function () {
-                                    this.timeout(20000);
+                                    this.timeout(30000);
 
                                     let options = [
                                         {
@@ -8205,13 +8259,14 @@ suite('Users', function () {
                                     await topicVoteStatusPromised(agent, user.id, topic.id, voteRead.id, voteVoteResult2.data.token);
                                     const voteReadAfterVote2 = (await topicVoteReadPromised(agent, user.id, topic.id, voteRead.id)).body.data;
 
-                                    // Lets verify the url format and download
-                                    const urlRegex = new RegExp(`^${config.url.api}/api/users/self/topics/${topic.id}/votes/${voteRead.id}/downloads/bdocs/user\\?token=([a-zA-Z_.0-9\\-]{675})$`);
-                                    const matches = voteReadAfterVote2.downloads.bdocVote.match(urlRegex);
-                                    assert.isNotNull(matches);
+                                    // Verify the url format and download
+                                    const userBdocUrlRegex = new RegExp(`^${config.url.api}/api/users/self/topics/${topic.id}/votes/${voteRead.id}/downloads/bdocs/user\\?token=([a-zA-Z_.0-9\\-]{675})$`);
+                                    const userBdocUrlMatches = voteReadAfterVote2.downloads.bdocVote.match(userBdocUrlRegex);
 
-                                    const token = matches[1];
-                                    await topicVoteDownloadBdocUserPromised(agent, topic.id, voteRead.id, token);
+                                    assert.isNotNull(userBdocUrlMatches);
+
+                                    const userBdocDownloadToken = userBdocUrlMatches[1];
+                                    await topicVoteDownloadBdocUserPromised(agent, topic.id, voteRead.id, userBdocDownloadToken);
 
                                     // TODO: Do we want to test the contents of the file here or we should in the bdoc unit tests?
                                 });
@@ -8229,13 +8284,13 @@ suite('Users', function () {
                             });
 
                             suite('Final', function () {
+                                const phoneNumber = '+37200000766';
+                                const pid = '60001019906';
 
                                 test('Success', async function () {
-                                    return Promise.reject(new Error('Not implemented'));
-                                });
+                                    this.timeout(30000);
 
-                                test('Fail - Topic still in voting - End date not set AND Topic.status === Topic.STATUSES.voting', function (done) {
-                                    var options = [
+                                    let options = [
                                         {
                                             value: 'Option 1'
                                         },
@@ -8247,40 +8302,72 @@ suite('Users', function () {
                                         }
                                     ];
 
-                                    topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard, function (err, res) {
-                                        if (err) return done(err);
+                                    const voteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, options, 1, 2, false, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                                    const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
 
-                                        vote = res.body.data;
-
-                                        _topicVoteDownloadBdocFinal(agent, user.id, topic.id, vote.id, 400, done);
-                                    });
-                                });
-
-                                test('Fail - Topic still in voting - End date not over AND Topic.status === Topic.STATUSES.voting', function (done) {
-                                    var options = [
+                                    // Vote for the first time
+                                    // Vote for the first time
+                                    const voteList1 = [
                                         {
-                                            value: 'Option 1'
+                                            optionId: _.find(voteRead.options.rows, {value: options[0].value}).id
                                         },
                                         {
-                                            value: 'Option 2'
-                                        },
-                                        {
-                                            value: 'Option 3'
+                                            optionId: _.find(voteRead.options.rows, {value: options[1].value}).id
                                         }
                                     ];
 
-                                    var endsAt = new Date();
-                                    endsAt.setDate(endsAt.getDate() + 1);
+                                    const voteVoteResult1 = (await topicVoteVotePromised(agent, user.id, topic.id, voteRead.id, voteList1, null, pid, phoneNumber, null)).body;
+                                    await topicVoteStatusPromised(agent, user.id, topic.id, voteRead.id, voteVoteResult1.data.token);
 
-                                    topicVoteCreate(agent, user.id, topic.id, options, null, null, null, endsAt, null, null, Vote.AUTH_TYPES.hard, function (err, res) {
-                                        if (err) return done(err);
+                                    // Vote for the 2nd time, change your vote, by choosing 1
+                                    const voteList2 = [
+                                        {
+                                            optionId: _.find(voteRead.options.rows, {value: options[1].value}).id
+                                        },
+                                        {
+                                            optionId: _.find(voteRead.options.rows, {value: options[2].value}).id
+                                        }
+                                    ];
 
-                                        vote = res.body.data;
+                                    const voteVoteResult2 = (await topicVoteVotePromised(agent, user.id, topic.id, voteRead.id, voteList2, null, pid, phoneNumber, null)).body;
+                                    await topicVoteStatusPromised(agent, user.id, topic.id, voteRead.id, voteVoteResult2.data.token);
 
-                                        _topicVoteDownloadBdocFinal(agent, user.id, topic.id, vote.id, 400, done);
-                                    });
+                                    // End the voting
+                                    await topicUpdatePromised(agent, user.id, topic.id, Topic.STATUSES.followUp, Topic.VISIBILITY.private, null, null, null);
+
+                                    const voteReadAfterVoteClosed = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
+
+                                    // Verify the user vote container format and download
+                                    const userBdocUrlRegex = new RegExp(`^${config.url.api}/api/users/self/topics/${topic.id}/votes/${voteRead.id}/downloads/bdocs/user\\?token=([a-zA-Z_.0-9\\-]{675})$`);
+                                    const userBdocUrlMatches = voteReadAfterVoteClosed.downloads.bdocVote.match(userBdocUrlRegex);
+
+                                    assert.isNotNull(userBdocUrlMatches);
+
+                                    const userBdocDownloadToken = userBdocUrlMatches[1];
+                                    await topicVoteDownloadBdocUserPromised(agent, topic.id, voteRead.id, userBdocDownloadToken);
+
+                                    // Verify the final vote container format and download
+                                    const finalBdocUrlRegex = new RegExp(`^${config.url.api}/api/users/self/topics/${topic.id}/votes/${voteRead.id}/downloads/bdocs/final\\?token=([a-zA-Z_.0-9\\-]{676})$`);
+                                    const finalBdocUrlMatches = voteReadAfterVoteClosed.downloads.bdocFinal.match(finalBdocUrlRegex);
+
+                                    assert.isNotNull(finalBdocUrlMatches);
+
+                                    const finalBdocDownloadToken = finalBdocUrlMatches[1];
+                                    await topicVoteDownloadBdocFinalPromised(agent, topic.id, voteRead.id, finalBdocDownloadToken);
+
+                                    // TODO: Do we want to test the contents of the file here or we should do it in the bdoc unit tests?
                                 });
 
+                                teardown(async function () {
+                                    await UserConnection
+                                        .destroy({
+                                            where: {
+                                                connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                                connectionUserId: [`PNOEE-${pid}`]
+                                            },
+                                            force: true
+                                        });
+                                });
                             });
 
                         });
@@ -8439,7 +8526,7 @@ suite('Users', function () {
                             });
                         });
 
-                        test('bdocUri exists', function (done) {
+                        test('Success - bdocUri exists', function (done) {
                             this.timeout(24000); //eslint-disable-line no-invalid-this
 
                             var countryCode = 'EE';
