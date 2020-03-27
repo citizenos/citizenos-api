@@ -214,6 +214,9 @@ var topicUpdateTokenJoin = function (agent, userId, topicId, callback) {
 };
 
 // TODO: Should be part of PUT /topics/:topicId
+/**
+ @deprecated Use _topicUpdateStatusPromised instead
+ */
 var _topicUpdateStatus = function (agent, userId, topicId, status, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId'
         .replace(':userId', userId)
@@ -232,8 +235,34 @@ var _topicUpdateStatus = function (agent, userId, topicId, status, expectedHttpC
         .end(callback);
 };
 
+/**
+ @deprecated Use topicUpdateStatusPromised instead
+ */
 var topicUpdateStatus = function (agent, userId, topicId, status, callback) {
     _topicUpdateStatus(agent, userId, topicId, status, 200, callback);
+};
+
+// TODO: Should be part of PUT /topics/:topicId
+const _topicUpdateStatusPromised = function (agent, userId, topicId, status, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId);
+
+    const payload = {
+        status: status
+    };
+
+    return agent
+        .put(path)
+        .set('Content-Type', 'application/json')
+        .send(payload)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+// TODO: Should be part of PUT /topics/:topicId
+const topicUpdateStatusPromised = async function (agent, userId, topicId, status) {
+    return _topicUpdateStatusPromised(agent, userId, topicId, status, 200);
 };
 
 var _topicDelete = function (agent, userId, topicId, expectedHttpCode, callback) {
@@ -298,6 +327,9 @@ var topicsListUnauth = function (agent, status, categories, orderBy, offset, lim
     _topicsListUnauth(agent, status, categories, orderBy, offset, limit, sourcePartnerId, include, 200, callback);
 };
 
+/**
+ * @deprecated Use _topicMemberUsersCreatePromised instead
+ */
 var _topicMemberUsersCreate = function (agent, userId, topicId, members, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/members/users'
         .replace(':userId', userId)
@@ -313,9 +345,31 @@ var _topicMemberUsersCreate = function (agent, userId, topicId, members, expecte
         .end(callback);
 };
 
+/**
+ * @deprecated Use topicMemberUsersCreatePromised instead
+ */
 var topicMemberUsersCreate = function (agent, userId, topicId, members, callback) {
     _topicMemberUsersCreate(agent, userId, topicId, members, 201, callback);
 };
+
+const _topicMemberUsersCreatePromised = async function (agent, userId, topicId, members, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/members/users'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId);
+
+    return agent
+        .post(path)
+        .send(members)
+        .set('Content-Type', 'application/json')
+        .set('Origin', 'https://citizenos.com')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicMemberUsersCreatePromised = async function (agent, userId, topicId, members) {
+    return _topicMemberUsersCreatePromised(agent, userId, topicId, members, 201);
+};
+
 
 var _topicMemberUsersUpdate = function (agent, userId, topicId, memberId, level, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/members/users/:memberId'
@@ -1048,6 +1102,9 @@ var topicMentionListTestUnauth = function (agent, topicId, callback) {
     _topicMentionListTestUnauth(agent, topicId, 200, callback);
 };
 
+/**
+ @deprecated use _topicVoteCreatePromised instead.
+ */
 var _topicVoteCreate = function (agent, userId, topicId, options, minChoices, maxChoices, delegationIsAllowed, endsAt, description, type, authType, expectedHttpCode, callback) {
     authType = authType || null;
     var path = '/api/users/:userId/topics/:topicId/votes'
@@ -1072,6 +1129,9 @@ var _topicVoteCreate = function (agent, userId, topicId, options, minChoices, ma
         .end(callback);
 };
 
+/**
+ @deprecated use topicVoteCreate instead.
+ */
 var topicVoteCreate = function (agent, userId, topicId, options, minChoices, maxChoices, delegationIsAllowed, endsAt, description, type, authType, callback) {
     return _topicVoteCreate(agent, userId, topicId, options, minChoices, maxChoices, delegationIsAllowed, endsAt, description, type, authType, 201, callback);
 };
@@ -1103,6 +1163,9 @@ const topicVoteCreatePromised = async function (agent, userId, topicId, options,
     return _topicVoteCreatePromised(agent, userId, topicId, options, minChoices, maxChoices, delegationIsAllowed, endsAt, description, type, authType, 201);
 };
 
+/**
+ @deprecated use _topicVoteReadPromised instead.
+ */
 var _topicVoteRead = function (agent, userId, topicId, voteId, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/votes/:voteId'
         .replace(':userId', userId)
@@ -1117,6 +1180,9 @@ var _topicVoteRead = function (agent, userId, topicId, voteId, expectedHttpCode,
         .end(callback);
 };
 
+/**
+ @deprecated use topicVoteReadPromised instead.
+ */
 var topicVoteRead = function (agent, userId, topicId, voteId, callback) {
     _topicVoteRead(agent, userId, topicId, voteId, 200, callback);
 };
@@ -1202,6 +1268,9 @@ var topicVoteVoteUnauth = function (agent, topicId, voteId, voteList, certificat
     _topicVoteVoteUnauth(agent, topicId, voteId, voteList, certificate, pid, phoneNumber, 200, callback);
 };
 
+/**
+ @deprecated Use _topicVoteVotePromised instead
+ */
 var _topicVoteVote = function (agent, userId, topicId, voteId, voteList, certificate, pid, phoneNumber, countryCode, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/votes/:voteId'
         .replace(':userId', userId)
@@ -1225,6 +1294,9 @@ var _topicVoteVote = function (agent, userId, topicId, voteId, voteList, certifi
         .end(callback);
 };
 
+/**
+ @deprecated Use topicVoteVotePromised instead
+ */
 var topicVoteVote = function (agent, userId, topicId, voteId, voteList, certificate, pid, phoneNumber, countryCode, callback) {
     _topicVoteVote(agent, userId, topicId, voteId, voteList, certificate, pid, phoneNumber, countryCode, 200, callback);
 };
@@ -1465,6 +1537,9 @@ const topicVoteDownloadBdocFinalPromised = async function (agent, topicId, voteI
     return _topicVoteDownloadBdocFinalPromised(agent, topicId, voteId, token, 200);
 };
 
+/**
+ @deprecated Use _topicVoteDelegationCreatePromised instead
+ */
 var _topicVoteDelegationCreate = function (agent, userId, topicId, voteId, toUserId, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/votes/:voteId/delegations'
         .replace(':userId', userId)
@@ -1480,10 +1555,35 @@ var _topicVoteDelegationCreate = function (agent, userId, topicId, voteId, toUse
         .end(callback);
 };
 
+/**
+ @deprecated Use topicVoteDelegationCreatePromised instead
+ */
 var topicVoteDelegationCreate = function (agent, userId, topicId, voteId, toUserId, callback) {
     _topicVoteDelegationCreate(agent, userId, topicId, voteId, toUserId, 200, callback);
 };
 
+const _topicVoteDelegationCreatePromised = async function (agent, userId, topicId, voteId, toUserId, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/votes/:voteId/delegations'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':voteId', voteId);
+
+    return agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .send({userId: toUserId})
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicVoteDelegationCreatePromised = async function (agent, userId, topicId, voteId, toUserId) {
+    return _topicVoteDelegationCreatePromised(agent, userId, topicId, voteId, toUserId, 200);
+};
+
+
+/**
+ @deprecated Use _topicVoteDelegationDeletePromised instead
+ */
 var _topicVoteDelegationDelete = function (agent, userId, topicId, voteId, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/votes/:voteId/delegations'
         .replace(':userId', userId)
@@ -1498,8 +1598,28 @@ var _topicVoteDelegationDelete = function (agent, userId, topicId, voteId, expec
         .end(callback);
 };
 
+/**
+ @deprecated Use topicVoteDelegationDeletePromised instead
+ */
 var topicVoteDelegationDelete = function (agent, userId, topicId, voteId, callback) {
     _topicVoteDelegationDelete(agent, userId, topicId, voteId, 200, callback);
+};
+
+const _topicVoteDelegationDeletePromised = function async (agent, userId, topicId, voteId, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/votes/:voteId/delegations'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':voteId', voteId);
+
+    return agent
+        .delete(path)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicVoteDelegationDeletePromised = async function (agent, userId, topicId, voteId) {
+    return _topicVoteDelegationDeletePromised(agent, userId, topicId, voteId, 200);
 };
 
 var _topicCommentVotesCreate = function (agent, topicId, commentId, value, expectedHttpCode, callback) {
@@ -6705,9 +6825,9 @@ suite('Users', function () {
 
             suite('Delegations', function () {
 
-                var agent = request.agent(app);
+                const agent = request.agent(app);
 
-                var voteOptions = [
+                const voteOptions = [
                     {
                         value: 'Option 1'
                     },
@@ -6716,435 +6836,269 @@ suite('Users', function () {
                     }
                 ];
 
-                var user;
-                var topic;
-                var vote;
+                let user;
+                let topic;
+                let vote;
 
-                var toUser1;
-                var agentToUser1 = request.agent(app);
+                let toUser1;
+                const agentToUser1 = request.agent(app);
 
-                var toUser2;
-                var agentToUser2 = request.agent(app);
+                let toUser2;
+                const agentToUser2 = request.agent(app);
 
-                var toUser3;
-                var agentToUser3 = request.agent(app);
+                let toUser3;
+                const agentToUser3 = request.agent(app);
 
-                var toUser4;
-                var agentToUser4 = request.agent(app);
+                let toUser4;
+                const agentToUser4 = request.agent(app);
 
-                var toUser5;
-                var agentToUser5 = request.agent(app);
+                let toUser5;
+                const agentToUser5 = request.agent(app);
 
-                var toUser6;
-                var agentToUser6 = request.agent(app);
+                let toUser6;
+                const agentToUser6 = request.agent(app);
 
-                suiteSetup(function (done) {
-                    async
-                        .parallel(
-                            [
-                                function (cb) {
-                                    userLib.createUserAndLogin(agent, null, null, null, cb);
-                                },
-                                function (cb) {
-                                    userLib.createUserAndLogin(agentToUser1, null, null, 'et', cb);
-                                },
-                                function (cb) {
-                                    userLib.createUserAndLogin(agentToUser2, null, null, 'et', cb);
-                                },
-                                function (cb) {
-                                    userLib.createUserAndLogin(agentToUser3, null, null, 'et', cb);
-                                },
-                                function (cb) {
-                                    userLib.createUserAndLogin(agentToUser4, null, null, null, cb);
-                                },
-                                function (cb) {
-                                    userLib.createUserAndLogin(agentToUser5, null, null, null, cb);
-                                },
-                                function (cb) {
-                                    userLib.createUserAndLogin(agentToUser6, null, null, null, cb);
-                                }
-                            ],
-                            function (err, results) {
-                                if (err) return done(err);
+                suiteSetup(async function () {
+                    const usersCreatePromises = [
+                        userLib.createUserAndLoginPromised(agent, null, null, null),
+                        userLib.createUserAndLoginPromised(agentToUser1, null, null, 'et'),
+                        userLib.createUserAndLoginPromised(agentToUser2, null, null, 'et'),
+                        userLib.createUserAndLoginPromised(agentToUser3, null, null, 'et'),
+                        userLib.createUserAndLoginPromised(agentToUser4, null, null, null),
+                        userLib.createUserAndLoginPromised(agentToUser5, null, null, null),
+                        userLib.createUserAndLoginPromised(agentToUser6, null, null, null)
+                    ];
 
-                                user = results[0];
-                                toUser1 = results[1];
-                                toUser2 = results[2];
-                                toUser3 = results[3];
-                                toUser4 = results[4];
-                                toUser5 = results[5];
-                                toUser6 = results[6];
-
-                                done();
-                            }
-                        );
+                    [user, toUser1, toUser2, toUser3, toUser4, toUser5, toUser6] = await Promise.all(usersCreatePromises);
                 });
 
                 suite('Create', function () {
 
-                    setup(function (done) {
-                        topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
-                            if (err) return done(err);
-                            topic = res.body.data;
+                    setup(async function () {
+                        topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
+                        const topicVoteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, voteOptions, null, null, true, null, null, null, null)).body.data;
+                        vote = (await topicVoteReadPromised(agent, user.id, topic.id, topicVoteCreated.id)).body.data;
 
-                            async
-                                .parallel(
-                                    [
-                                        function (cb) {
-                                            topicVoteCreate(agent, user.id, topic.id, voteOptions, null, null, true, null, null, null, null, cb);
-                                        },
-                                        function (cb) {
-                                            var members = [
-                                                {
-                                                    userId: toUser1.id,
-                                                    level: TopicMemberUser.LEVELS.read
-                                                },
-                                                {
-                                                    userId: toUser2.id,
-                                                    level: TopicMemberUser.LEVELS.read
-                                                },
-                                                {
-                                                    userId: toUser3.id,
-                                                    level: TopicMemberUser.LEVELS.read
-                                                },
-                                                {
-                                                    userId: toUser4.id,
-                                                    level: TopicMemberUser.LEVELS.read
-                                                },
-                                                {
-                                                    userId: toUser5.id,
-                                                    level: TopicMemberUser.LEVELS.read
-                                                },
-                                                {
-                                                    userId: toUser6.id,
-                                                    level: TopicMemberUser.LEVELS.read
-                                                }
-                                            ];
-                                            topicMemberUsersCreate(agent, user.id, topic.id, members, cb);
-                                        }
-                                    ],
-                                    function (err, results) {
-                                        if (err) return done(err);
+                        const members = [
+                            {
+                                userId: toUser1.id,
+                                level: TopicMemberUser.LEVELS.read
+                            },
+                            {
+                                userId: toUser2.id,
+                                level: TopicMemberUser.LEVELS.read
+                            },
+                            {
+                                userId: toUser3.id,
+                                level: TopicMemberUser.LEVELS.read
+                            },
+                            {
+                                userId: toUser4.id,
+                                level: TopicMemberUser.LEVELS.read
+                            },
+                            {
+                                userId: toUser5.id,
+                                level: TopicMemberUser.LEVELS.read
+                            },
+                            {
+                                userId: toUser6.id,
+                                level: TopicMemberUser.LEVELS.read
+                            }
+                        ];
 
-                                        var voteCreateResponse = results[0].body.data;
+                        await topicMemberUsersCreatePromised(agent, user.id, topic.id, members);
+                    });
 
-                                        topicVoteRead(agent, user.id, topic.id, voteCreateResponse.id, function (err, res) {
-                                            if (err) return done(err);
+                    test('Success - Created - new delegation', async function () {
+                        await topicVoteDelegationCreatePromised(agent, user.id, topic.id, vote.id, toUser1.id);
+                        const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, vote.id)).body.data;
 
-                                            vote = res.body.data;
+                        assert.deepEqual(voteRead.delegation, toUser1.toJSON());
+                    });
 
-                                            done();
-                                        });
-                                    }
-                                );
+                    test('Success - OK - change delegation', async function () {
+                        const userToReDelegate = await userLib.createUserPromised(request.agent(app), null, null, null);
+
+                        const member = {
+                            userId: userToReDelegate.id,
+                            level: TopicMemberUser.LEVELS.read
+                        };
+                        await topicMemberUsersCreatePromised(agent, user.id, topic.id, member); // Add the userToReDelegate as member cause you can only delegate to Members of the Topic.
+
+                        await topicVoteDelegationCreatePromised(agent, user.id, topic.id, vote.id, toUser1.id); // 1st delegation
+                        await topicVoteDelegationCreatePromised(agent, user.id, topic.id, vote.id, userToReDelegate.id); // Change the delegation
+
+                        const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, vote.id)).body.data;
+
+                        assert.deepEqual(voteRead.delegation, userToReDelegate.toJSON());
+                    });
+
+                    test('Success - OK - count delegated votes and not delegated votes - Delegation chain U->U1->U2->U3, U4->U5, U6 no delegation', async function () {
+                        await topicVoteVotePromised(agent, user.id, topic.id, vote.id, [{optionId: vote.options.rows[0].id}], null, null, null, null);
+
+                        const delegationPromises = [
+                            topicVoteDelegationCreatePromised(agent, user.id, topic.id, vote.id, toUser1.id),
+                            topicVoteDelegationCreatePromised(agentToUser1, toUser1.id, topic.id, vote.id, toUser2.id),
+                            topicVoteDelegationCreatePromised(agentToUser2, toUser2.id, topic.id, vote.id, toUser3.id),
+                            topicVoteDelegationCreatePromised(agentToUser4, toUser4.id, topic.id, vote.id, toUser5.id)
+                        ];
+                        await Promise.all(delegationPromises);
+
+                        const optionId1 = vote.options.rows[0].id;
+                        const optionId2 = vote.options.rows[1].id;
+
+                        const votePromises = [
+                            topicVoteVotePromised(agentToUser3, toUser3.id, topic.id, vote.id, [{optionId: optionId1}], null, null, null, null),
+                            topicVoteVotePromised(agentToUser5, toUser5.id, topic.id, vote.id, [{optionId: optionId2}], null, null, null, null),
+                            topicVoteVotePromised(agentToUser6, toUser6.id, topic.id, vote.id, [{optionId: optionId2}], null, null, null, null)
+                        ];
+                        await Promise.all(votePromises);
+
+                        const voteReadAfterVote = (await topicVoteReadPromised(agentToUser6, toUser6.id, topic.id, vote.id)).body.data;
+                        const voteReadAfterVoteOptions = voteReadAfterVote.options.rows;
+
+                        voteReadAfterVoteOptions.forEach(function (option) {
+                            if (option.id === optionId1) {
+                                assert.equal(option.voteCount, 4);
+                                assert.notProperty(option, 'selected');
+                            } else {
+                                assert.equal(option.voteCount, 3);
+                                assert.isTrue(option.selected);
+                            }
                         });
                     });
 
-                    test('Success - Created - new delegation', function (done) {
-                        topicVoteDelegationCreate(agent, user.id, topic.id, vote.id, toUser1.id, function (err) {
-                            if (err) return done(err);
+                    test('Fail - Bad Request - cyclic delegation - U->U1->U2-->U', async function () {
+                        await topicVoteDelegationCreatePromised(agent, user.id, topic.id, vote.id, toUser1.id);
+                        await topicVoteDelegationCreatePromised(agentToUser1, toUser1.id, topic.id, vote.id, toUser2.id);
+                        const responseDelegation = (await _topicVoteDelegationCreatePromised(agentToUser2, toUser2.id, topic.id, vote.id, user.id, 400)).body;
 
-                            topicVoteRead(agent, user.id, topic.id, vote.id, function (err, res) {
-                                if (err) return done(err);
+                        const responseExpected = {
+                            status: {
+                                code: 40000,
+                                message: 'Sorry, you cannot delegate your vote to this person.'
+                            }
+                        };
 
-                                var vote = res.body.data;
-                                assert.deepEqual(vote.delegation, toUser1.toJSON());
-
-                                done();
-                            });
-                        });
+                        assert.deepEqual(responseDelegation, responseExpected);
                     });
 
-                    test('Success - OK - change delegation', function (done) {
-                        var userToDelegate;
-                        async
-                            .waterfall(
-                                [
-                                    function (cb) {
-                                        userLib.createUser(request.agent(app), null, null, null, cb);
-                                    },
-                                    function (u, cb) {
-                                        userToDelegate = u;
-                                        var member = {
-                                            userId: u.id,
-                                            level: TopicMemberUser.LEVELS.read
-                                        };
-                                        topicMemberUsersCreate(agent, user.id, topic.id, member, cb);
-                                    }
-                                ],
-                                function (err) {
-                                    if (err) return done(err);
+                    test('Fail - Bad Request - no delegation to self', async function () {
+                        const responseDelegation = (await _topicVoteDelegationCreatePromised(agent, user.id, topic.id, vote.id, user.id, 400)).body;
 
-                                    topicVoteDelegationCreate(agent, user.id, topic.id, vote.id, toUser1.id, function (err) {
-                                        if (err) {
-                                            return done(err);
-                                        }
+                        const responseExpected = {
+                            status: {
+                                code: 40000,
+                                message: 'Cannot delegate to self.'
+                            }
+                        };
 
-                                        topicVoteDelegationCreate(agent, user.id, topic.id, vote.id, userToDelegate.id, function (err) {
-                                            if (err) return done(err);
-
-                                            VoteDelegation
-                                                .findOne({
-                                                    where: {
-                                                        voteId: vote.id,
-                                                        toUserId: userToDelegate.id,
-                                                        byUserId: user.id
-                                                    }
-                                                })
-                                                .then(function (delegation) {
-                                                    assert.isNotNull(delegation);
-
-                                                    done();
-                                                })
-                                                .catch(done);
-                                        });
-                                    });
-                                }
-                            );
+                        assert.deepEqual(responseDelegation, responseExpected);
                     });
 
-                    test('Success - OK - count delegated votes and not delegated votes - Delegation chain U->U1->U2->U3, U4->U5, U6 no delegation', function (done) {
-                        topicVoteVote(agent, user.id, topic.id, vote.id, [{optionId: vote.options.rows[0].id}], null, null, null, null, function () {
-                            async
-                                .parallel(
-                                    [
-                                        function (cb) {
-                                            topicVoteDelegationCreate(agent, user.id, topic.id, vote.id, toUser1.id, cb);
-                                        },
-                                        function (cb) {
-                                            topicVoteDelegationCreate(agentToUser1, toUser1.id, topic.id, vote.id, toUser2.id, cb);
-                                        },
-                                        function (cb) {
-                                            topicVoteDelegationCreate(agentToUser2, toUser2.id, topic.id, vote.id, toUser3.id, cb);
-                                        },
-                                        function (cb) {
-                                            topicVoteDelegationCreate(agentToUser4, toUser4.id, topic.id, vote.id, toUser5.id, cb);
-                                        }
-                                    ],
-                                    function (err) {
-                                        if (err) return done(err);
+                    test('Fail - Bad Request - no delegation to User who does not have access to the Topic', async function () {
+                        const userWithNoAccess = await userLib.createUserPromised(request.agent(app), null, null, null);
 
-                                        var optionId1 = vote.options.rows[0].id;
-                                        var optionId2 = vote.options.rows[1].id;
+                        const responseDelegation = (await _topicVoteDelegationCreatePromised(agent, user.id, topic.id, vote.id, userWithNoAccess.id, 400)).body;
 
-                                        async
-                                            .parallel(
-                                                [
-                                                    function (cb) {
-                                                        topicVoteVote(agentToUser3, toUser3.id, topic.id, vote.id, [{optionId: optionId1}], null, null, null, null, cb);
-                                                    },
-                                                    function (cb) {
-                                                        topicVoteVote(agentToUser5, toUser5.id, topic.id, vote.id, [{optionId: optionId2}], null, null, null, null, cb);
-                                                    },
-                                                    function (cb) {
-                                                        topicVoteVote(agentToUser6, toUser6.id, topic.id, vote.id, [{optionId: optionId2}], null, null, null, null, cb);
-                                                    }
-                                                ],
-                                                function (err) {
-                                                    if (err) return done(err);
+                        const responseExpected = {
+                            status: {
+                                code: 40000,
+                                message: 'Cannot delegate Vote to User who does not have access to this Topic.'
+                            }
+                        };
 
-                                                    topicVoteRead(agentToUser6, toUser6.id, topic.id, vote.id, function (err, res) {
-                                                        if (err) return done(err);
-
-                                                        var voteRead = res.body.data;
-                                                        var voteOptions = voteRead.options.rows;
-
-                                                        voteOptions.forEach(function (option) {
-                                                            if (option.id === optionId1) {
-                                                                assert.equal(option.voteCount, 4);
-                                                                assert.notProperty(option, 'selected');
-                                                            } else {
-                                                                assert.equal(option.voteCount, 3);
-                                                                assert.isTrue(option.selected);
-                                                            }
-                                                        });
-
-                                                        done();
-                                                    });
-                                                }
-                                            );
-                                    }
-                                );
-                        });
+                        assert.deepEqual(responseDelegation, responseExpected);
                     });
 
-                    test('Fail - Bad Request - cyclic delegation - U->U1->U2-->U', function (done) {
-                        async
-                            .parallel(
-                                [
-                                    function (cb) {
-                                        topicVoteDelegationCreate(agent, user.id, topic.id, vote.id, toUser1.id, cb);
-                                    },
-                                    function (cb) {
-                                        topicVoteDelegationCreate(agentToUser1, toUser1.id, topic.id, vote.id, toUser2.id, cb);
-                                    }
-                                ],
-                                function (err) {
-                                    if (err) return done(err);
+                    test('Fail - Forbidden - delegation is only allowed when voting is in progress', async function () {
+                        await topicUpdateStatusPromised(agent, user.id, topic.id, Topic.STATUSES.closed);
 
-                                    _topicVoteDelegationCreate(agentToUser2, toUser2.id, topic.id, vote.id, user.id, 400, function (err, res) {
-                                        if (err) return done(err);
-                                        var expected = {
-                                            status: {
-                                                code: 40000,
-                                                message: 'Sorry, you cannot delegate your vote to this person.'
-                                            }
-                                        };
-                                        assert.deepEqual(res.body, expected);
+                        const responseDelegation = (await _topicVoteDelegationCreatePromised(agent, user.id, topic.id, vote.id, toUser1.id, 403)).body;
 
-                                        done();
-                                    });
-                                }
-                            );
-                    });
+                        const responseExpected = {
+                            status: {
+                                code: 40300,
+                                message: 'Insufficient permissions'
+                            }
+                        };
 
-                    test('Fail - Bad Request - no delegation to self', function (done) {
-                        _topicVoteDelegationCreate(agent, user.id, topic.id, vote.id, user.id, 400, function (err, res) {
-                            if (err) return done(err);
-                            var expected = {
-                                status: {
-                                    code: 40000,
-                                    message: 'Cannot delegate to self.'
-                                }
-                            };
-                            assert.deepEqual(res.body, expected);
-                            done();
-                        });
-                    });
-
-                    test('Fail - Bad Request - no delegation to User who does not have access to the Topic', function (done) {
-                        userLib.createUser(request.agent(app), null, null, null, function (err, res) {
-                            if (err) return done(err);
-
-                            var userWithNoAccess = res;
-                            _topicVoteDelegationCreate(agent, user.id, topic.id, vote.id, userWithNoAccess.id, 400, function (err, res) {
-                                if (err) return done(err);
-
-                                var expected = {
-                                    status: {
-                                        code: 40000,
-                                        message: 'Cannot delegate Vote to User who does not have access to this Topic.'
-                                    }
-                                };
-                                assert.deepEqual(res.body, expected);
-
-                                done();
-                            });
-                        });
+                        assert.deepEqual(responseDelegation, responseExpected);
                     });
 
                     test.skip('Fail - Bad Request - delegation is not allowed for the Vote', function (done) {
                         done();
                     });
-
-                    test('Fail - Forbidden - delegation is only allowed when voting is in progress', function (done) {
-                        topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.closed, function (err) {
-                            if (err) return done(err);
-
-                            _topicVoteDelegationCreate(agent, user.id, topic.id, vote.id, toUser1.id, 403, function (err) {
-                                if (err) return done(err);
-
-                                done();
-                            });
-                        });
-                    });
-
                 });
 
                 suite('Delete', function () {
+                    let topic;
+                    let vote;
 
-                    setup(function (done) {
-                        topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
-                            if (err) return done(err);
-                            topic = res.body.data;
+                    setup(async function () {
+                        topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
+                        const topicVoteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, voteOptions, null, null, true, null, null, null, null)).body.data;
+                        vote = (await topicVoteReadPromised(agent, user.id, topic.id, topicVoteCreated.id)).body.data;
 
-                            async
-                                .parallel(
-                                    [
-                                        function (cb) {
-                                            topicVoteCreate(agent, user.id, topic.id, voteOptions, null, null, true, null, null, null, null, cb);
-                                        },
-                                        function (cb) {
-                                            var members = [
-                                                {
-                                                    userId: toUser1.id,
-                                                    level: TopicMemberUser.LEVELS.read
-                                                }
-                                            ];
-                                            topicMemberUsersCreate(agent, user.id, topic.id, members, cb);
-                                        }
-                                    ],
-                                    function (err, results) {
-                                        if (err) return done(err);
-
-                                        var voteCreateResponse = results[0].body.data;
-
-                                        topicVoteRead(agent, user.id, topic.id, voteCreateResponse.id, function (err, res) {
-                                            if (err) return done(err);
-
-                                            vote = res.body.data;
-
-                                            topicVoteDelegationCreate(agent, user.id, topic.id, voteCreateResponse.id, toUser1.id, function (err) {
-                                                if (err) return done(err);
-
-                                                done();
-                                            });
-                                        });
-                                    }
-                                );
-                        });
+                        const members = [
+                            {
+                                userId: toUser1.id,
+                                level: TopicMemberUser.LEVELS.read
+                            }
+                        ];
+                        await topicMemberUsersCreatePromised(agent, user.id, topic.id, members);
+                        await topicVoteDelegationCreatePromised(agent, user.id, topic.id, vote.id, toUser1.id);
                     });
 
-                    test('Success', function (done) {
-                        topicVoteDelegationDelete(agent, user.id, topic.id, vote.id, function (err) {
-                            if (err) return done(err);
+                    test('Success', async function () {
+                        await topicVoteDelegationDeletePromised(agent, user.id, topic.id, vote.id);
+                        const topicVoteReadAfterDelegationDelete = (await topicVoteReadPromised(agent, user.id, topic.id, vote.id)).body.data;
 
-                            topicVoteRead(agent, user.id, topic.id, vote.id, function (err, res) {
-                                if (err) return done(err);
-
-                                var vote = res.body.data;
-
-                                assert.notProperty(vote, 'delegation');
-
-                                done();
-                            });
-                        });
+                        assert.notProperty(topicVoteReadAfterDelegationDelete, 'delegation');
                     });
 
-                    test('Fail - 40000 - Vote end time has passed, cannot delete delegation', function (done) {
+                    test('Fail - 40000 - Vote end time has passed, cannot delete delegation', async function () {
                         //Set the end date to past
-                        var date = new Date();
+                        const date = new Date();
                         date.setDate(date.getDate() - 1);
 
-                        Vote
-                            .update({
+                        await Vote.update(
+                            {
                                 endsAt: date // 1 day in the past
-                            }, {
+                            },
+                            {
                                 where: {
                                     id: vote.id
                                 },
                                 validate: false
-                            })
-                            .then(function () {
-                                _topicVoteDelegationDelete(agent, user.id, topic.id, vote.id, 400, function (err) {
-                                    if (err) return done(err);
+                            }
+                        );
 
-                                    done();
-                                });
-                            })
-                            .catch(done);
+                        const responseDelegationDelete = (await _topicVoteDelegationDeletePromised(agent, user.id, topic.id, vote.id, 400)).body;
+
+                        const responseExpected = {
+                            status: {
+                                code: 40000,
+                                message: 'The Vote has ended.'
+                            }
+                        };
+
+                        assert.deepEqual(responseDelegationDelete, responseExpected);
                     });
 
-                    test('Fail - Forbidden - Voting has ended (Topic.status != voting), cannot delete delegation', function (done) {
-                        topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.followUp, function (err) {
-                            if (err) return done(err);
+                    test('Fail - Forbidden - Voting has ended (Topic.status != voting), cannot delete delegation', async function () {
+                        await topicUpdateStatusPromised(agent, user.id, topic.id, Topic.STATUSES.followUp);
 
-                            _topicVoteDelegationDelete(agent, user.id, topic.id, vote.id, 403, function (err) {
-                                if (err) return done(err);
+                        const responseDelegationDelete = (await _topicVoteDelegationDeletePromised(agent, user.id, topic.id, vote.id, 403)).body;
 
-                                done();
-                            });
-                        });
+                        const responseExpected = {
+                            status: {
+                                code: 40300,
+                                message: 'Insufficient permissions'
+                            }
+                        };
+
+                        assert.deepEqual(responseDelegationDelete, responseExpected);
                     });
 
                 });

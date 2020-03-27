@@ -5,10 +5,10 @@
  */
 
 module.exports = function (app) {
-    var auth = require('../auth');
-    var models = app.get('models');
+    const auth = require('../auth');
+    const models = app.get('models');
 
-    var User = models.User;
+    const User = models.User;
 
     /**
      * Create a user
@@ -23,9 +23,11 @@ module.exports = function (app) {
      * @param {string} [language] ISO 2-letter language code
      * @param {function} callback (req, user)
      *
+     * @deprecated Use _createUserPromised instead.
+     *
      * @returns {void}
      */
-    var _createUser = function (agent, email, password, language, callback) {
+    const _createUser = function (agent, email, password, language, callback) {
         if (!email) {
             var prefix = 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1';
 
@@ -60,6 +62,51 @@ module.exports = function (app) {
     };
 
     /**
+     * Create a User by:
+     *
+     * calling Sing-up API
+     * verifying the e-mail in the DB directly
+     *
+     * @param {object} agent Superagent
+     * @param {string} [email] E-mail
+     * @param {string} [password] Password
+     * @param {string} [language] ISO 2-letter language code
+     *
+     * @returns {Promise<User>} Sequelize User object
+     *
+     * @private
+     */
+    const _createUserPromised = async function (agent, email, password, language) {
+        if (!email) {
+            const prefix = 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1';
+
+            email = prefix + '@test.com';
+            password = prefix;
+        }
+
+        if (!password) {
+            password = email.split('@')[0];
+        }
+
+        await auth.signupPromised(agent, email, password, language);
+
+        const user = await User.update(
+            {
+                emailIsVerified: true
+            },
+            {
+                where: {
+                    email: email
+                },
+                returning: true
+            }
+        );
+
+        return user[1][0];
+    };
+
+
+    /**
      * Create a user and log in
      *
      * Actions performed:
@@ -72,6 +119,8 @@ module.exports = function (app) {
      * @param {string} [password] Password
      * @param {string} [language] ISO 2-letter language code
      * @param {function} callback (req, user)
+     *
+     * @deprecated Use _createUserAndLoginPromised instead.
      *
      * @returns {void}
      */
@@ -95,9 +144,45 @@ module.exports = function (app) {
         });
     };
 
+    /**
+     * Create a user and log in
+     *
+     * Actions performed:
+     * * Sign-Up
+     * * Verify
+     * * Log-in
+     *
+     * @param {object} agent Superagent
+     * @param {string} [email] Email
+     * @param {string} [password] Password
+     * @param {string} [language] ISO 2-letter language code
+     *
+     * @returns {Promise<User>} Sequelize User object
+     *
+     * @private
+     */
+    const _createUserAndLoginPromised = async function (agent, email, password, language) {
+        const user = await _createUserPromised(agent, email, password, language);
+
+        if (!email) {
+            email = user.email;
+        }
+
+        if (!password) {
+            password = user.email.split('@')[0];
+        }
+
+        // Logs in the Agent
+        await auth.loginPromised(agent, email, password, language);
+
+        return user;
+    };
+
     return {
         createUser: _createUser,
-        createUserAndLogin: _createUserAndLogin
+        createUserPromised: _createUserPromised,
+        createUserAndLogin: _createUserAndLogin,
+        createUserAndLoginPromised: _createUserAndLoginPromised
     };
 
 };

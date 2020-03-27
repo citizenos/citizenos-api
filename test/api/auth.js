@@ -33,8 +33,45 @@ var _login = function (agent, email, password, expectedHttpCode, callback) {
     a.end(callback);
 };
 
+
 var login = function (agent, email, password, callback) {
     _login(agent, email, password, 200, callback);
+};
+
+/**
+ * Log in - call '/api/auth/login' API endpoint
+ *
+ * @param {object} agent SuperAgent is in the interface so other tests preparing data could provide their agent. Useful when agent holds a state (for ex session).
+ * @param {string} email E-mail
+ * @param {string} password Password
+ * @param {string} expectedHttpCode Expected HTTP code
+ *
+ * @returns {Promise<Object>} SuperAgent response object
+ *
+ * @private
+ */
+const _loginPromised = async function (agent, email, password, expectedHttpCode) {
+    const path = '/api/auth/login';
+
+    const a = agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .send({
+            email: email,
+            password: password
+        })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+
+    if (expectedHttpCode === 200) {
+        a.expect('set-cookie', /.*\.sid=.*; Path=\/api; Expires=.*; HttpOnly/);
+    }
+
+    return a;
+};
+
+const loginPromised = async function (agent, email, password) {
+    return _loginPromised(agent, email, password, 200);
 };
 
 var _loginId = function (agent, token, clientCert, expectedHttpCode, callback) {
@@ -249,6 +286,25 @@ var signup = function (agent, email, password, language, callback) {
     _signup(agent, email, password, language, 200, callback);
 };
 
+const _signupPromised = function (agent, email, password, language, expectedHttpCode) {
+    const path = '/api/auth/signup';
+
+    return agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .send({
+            email: email,
+            password: password,
+            language: language
+        })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const signupPromised = function (agent, email, password, language) {
+    return _signupPromised(agent, email, password, language, 200);
+};
+
 /**
  * Set password - call '/api/auth/password' API endpoint
  *
@@ -425,9 +481,11 @@ var openIdAuthorize = function (agent, responseType, clientId, redirectUri, scop
 
 //Export the above function call so that other tests could use it to prepare data.
 module.exports.login = login;
+module.exports.loginPromised = loginPromised;
 module.exports.logout = logout;
 module.exports.logoutPromised = logoutPromised;
 module.exports.signup = signup;
+module.exports.signupPromised = signupPromised;
 module.exports.verify = verify;
 module.exports.passwordSet = passwordSet;
 module.exports.passwordResetSend = passwordResetSend;
@@ -633,7 +691,7 @@ suite('Auth', function () {
                         .destroy({
                             where: {
                                 connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                connectionUserId: ['PNOEE-'+pid] // Remove the good user so that test would run multiple times. Also other tests use same numbers
+                                connectionUserId: ['PNOEE-' + pid] // Remove the good user so that test would run multiple times. Also other tests use same numbers
                             },
                             force: true
                         })
@@ -664,26 +722,26 @@ suite('Auth', function () {
                                             calls++;
                                             loginMobileStatus(request.agent(app), response.data.token, function (err, res) {
                                                 replies++;
-                                                    if (err) {
-                                                        return done(err);
-                                                    }
+                                                if (err) {
+                                                    return done(err);
+                                                }
 
-                                                    if (res.body.status.code === 20003) {
-                                                        clearStatus();
-                                                        assert.property(res.body.data, 'id');
-                                                        delete res.body.data.id;
-                                                        assert.deepEqual(res.body.data, {
-                                                            name: 'Mary Änn O’Connež-Šuslik Testnumber',
-                                                            company: null,
-                                                            language: 'en',
-                                                            email: null,
-                                                            imageUrl: null,
-                                                            termsVersion: null,
-                                                            termsAcceptedAt: null
-                                                        });
+                                                if (res.body.status.code === 20003) {
+                                                    clearStatus();
+                                                    assert.property(res.body.data, 'id');
+                                                    delete res.body.data.id;
+                                                    assert.deepEqual(res.body.data, {
+                                                        name: 'Mary Änn O’Connež-Šuslik Testnumber',
+                                                        company: null,
+                                                        language: 'en',
+                                                        email: null,
+                                                        imageUrl: null,
+                                                        termsVersion: null,
+                                                        termsAcceptedAt: null
+                                                    });
 
-                                                        return done();
-                                                    }
+                                                    return done();
+                                                }
 
                                                 return done();
                                             });
@@ -770,21 +828,21 @@ suite('Auth', function () {
                                     calls++;
                                     _loginMobileStatus(request.agent(app), response.token, 400, function (err, res) {
                                         replies++;
-                                            if (err) {
-                                                return done(err);
-                                            }
+                                        if (err) {
+                                            return done(err);
+                                        }
 
-                                            if (res.body.status.code === 40013) {
-                                                clearStatus();
+                                        if (res.body.status.code === 40013) {
+                                            clearStatus();
 
-                                                var expectedResponse = {
-                                                    status: {
-                                                        code: 40013,
-                                                        message: 'Mobile-ID functionality of the phone is not yet ready'
-                                                    }
-                                                };
-                                                assert.deepEqual(res.body, expectedResponse);
-                                            }
+                                            var expectedResponse = {
+                                                status: {
+                                                    code: 40013,
+                                                    message: 'Mobile-ID functionality of the phone is not yet ready'
+                                                }
+                                            };
+                                            assert.deepEqual(res.body, expectedResponse);
+                                        }
 
                                         return done();
                                     });
@@ -821,21 +879,21 @@ suite('Auth', function () {
                                     calls++;
                                     _loginMobileStatus(request.agent(app), response.token, 400, function (err, res) {
                                         replies++;
-                                            if (err) {
-                                                return done(err);
-                                            }
+                                        if (err) {
+                                            return done(err);
+                                        }
 
-                                            if (res.body.status.code === 40013) {
-                                                clearStatus();
+                                        if (res.body.status.code === 40013) {
+                                            clearStatus();
 
-                                                var expectedResponse = {
-                                                    status: {
-                                                        code: 40013,
-                                                        message: 'Mobile-ID functionality of the phone is not yet ready'
-                                                    }
-                                                };
-                                                assert.deepEqual(res.body, expectedResponse);
-                                            }
+                                            var expectedResponse = {
+                                                status: {
+                                                    code: 40013,
+                                                    message: 'Mobile-ID functionality of the phone is not yet ready'
+                                                }
+                                            };
+                                            assert.deepEqual(res.body, expectedResponse);
+                                        }
 
                                         return done();
                                     });
@@ -872,21 +930,21 @@ suite('Auth', function () {
                                     calls++;
                                     _loginMobileStatus(request.agent(app), response.token, 400, function (err, res) {
                                         replies++;
-                                            if (err) {
-                                                return done(err);
-                                            }
+                                        if (err) {
+                                            return done(err);
+                                        }
 
-                                            if (res.body.status.code === 40013) {
-                                                clearStatus();
+                                        if (res.body.status.code === 40013) {
+                                            clearStatus();
 
-                                                var expectedResponse = {
-                                                    status: {
-                                                        code: 40013,
-                                                        message: 'Mobile-ID functionality of the phone is not yet ready'
-                                                    }
-                                                };
-                                                assert.deepEqual(res.body, expectedResponse);
-                                            }
+                                            var expectedResponse = {
+                                                status: {
+                                                    code: 40013,
+                                                    message: 'Mobile-ID functionality of the phone is not yet ready'
+                                                }
+                                            };
+                                            assert.deepEqual(res.body, expectedResponse);
+                                        }
 
                                         return done();
                                     });
@@ -923,21 +981,21 @@ suite('Auth', function () {
                                     calls++;
                                     _loginMobileStatus(request.agent(app), response.token, 400, function (err, res) {
                                         replies++;
-                                            if (err) {
-                                                return done(err);
-                                            }
+                                        if (err) {
+                                            return done(err);
+                                        }
 
-                                            if (res.body.status.code === 40013) {
-                                                clearStatus();
+                                        if (res.body.status.code === 40013) {
+                                            clearStatus();
 
-                                                var expectedResponse = {
-                                                    status: {
-                                                        code: 40013,
-                                                        message: 'Mobile-ID functionality of the phone is not yet ready'
-                                                    }
-                                                };
-                                                assert.deepEqual(res.body, expectedResponse);
-                                            }
+                                            var expectedResponse = {
+                                                status: {
+                                                    code: 40013,
+                                                    message: 'Mobile-ID functionality of the phone is not yet ready'
+                                                }
+                                            };
+                                            assert.deepEqual(res.body, expectedResponse);
+                                        }
 
                                         return done();
                                     });
