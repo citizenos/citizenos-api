@@ -1537,31 +1537,6 @@ const topicVoteDownloadBdocFinalPromised = async function (agent, topicId, voteI
     return _topicVoteDownloadBdocFinalPromised(agent, topicId, voteId, token, 200);
 };
 
-/**
- @deprecated Use _topicVoteDelegationCreatePromised instead
- */
-var _topicVoteDelegationCreate = function (agent, userId, topicId, voteId, toUserId, expectedHttpCode, callback) {
-    var path = '/api/users/:userId/topics/:topicId/votes/:voteId/delegations'
-        .replace(':userId', userId)
-        .replace(':topicId', topicId)
-        .replace(':voteId', voteId);
-
-    agent
-        .post(path)
-        .set('Content-Type', 'application/json')
-        .send({userId: toUserId})
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
-};
-
-/**
- @deprecated Use topicVoteDelegationCreatePromised instead
- */
-var topicVoteDelegationCreate = function (agent, userId, topicId, voteId, toUserId, callback) {
-    _topicVoteDelegationCreate(agent, userId, topicId, voteId, toUserId, 200, callback);
-};
-
 const _topicVoteDelegationCreatePromised = async function (agent, userId, topicId, voteId, toUserId, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/votes/:voteId/delegations'
         .replace(':userId', userId)
@@ -1578,31 +1553,6 @@ const _topicVoteDelegationCreatePromised = async function (agent, userId, topicI
 
 const topicVoteDelegationCreatePromised = async function (agent, userId, topicId, voteId, toUserId) {
     return _topicVoteDelegationCreatePromised(agent, userId, topicId, voteId, toUserId, 200);
-};
-
-
-/**
- @deprecated Use _topicVoteDelegationDeletePromised instead
- */
-var _topicVoteDelegationDelete = function (agent, userId, topicId, voteId, expectedHttpCode, callback) {
-    var path = '/api/users/:userId/topics/:topicId/votes/:voteId/delegations'
-        .replace(':userId', userId)
-        .replace(':topicId', topicId)
-        .replace(':voteId', voteId);
-
-    agent
-        .delete(path)
-        .set('Content-Type', 'application/json')
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
-};
-
-/**
- @deprecated Use topicVoteDelegationDeletePromised instead
- */
-var topicVoteDelegationDelete = function (agent, userId, topicId, voteId, callback) {
-    _topicVoteDelegationDelete(agent, userId, topicId, voteId, 200, callback);
 };
 
 const _topicVoteDelegationDeletePromised = function async (agent, userId, topicId, voteId, expectedHttpCode) {
@@ -1817,7 +1767,6 @@ const Report = models.Report;
 
 const Vote = models.Vote;
 const VoteOption = models.VoteOption;
-const VoteDelegation = models.VoteDelegation;
 
 // API - /api/users*
 suite('Users', function () {
