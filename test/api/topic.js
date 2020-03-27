@@ -6773,9 +6773,6 @@ suite('Users', function () {
             });
 
             suite('Delegations', function () {
-
-                const agent = request.agent(app);
-
                 const voteOptions = [
                     {
                         value: 'Option 1'
@@ -6786,8 +6783,7 @@ suite('Users', function () {
                 ];
 
                 let user;
-                let topic;
-                let vote;
+                const agent = request.agent(app);
 
                 let toUser1;
                 const agentToUser1 = request.agent(app);
@@ -6823,10 +6819,54 @@ suite('Users', function () {
 
                 suite('Create', function () {
 
-                    setup(async function () {
-                        topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
+                    test('Success - Created - new delegation', async function () {
+                        const topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
                         const topicVoteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, voteOptions, null, null, true, null, null, null, null)).body.data;
-                        vote = (await topicVoteReadPromised(agent, user.id, topic.id, topicVoteCreated.id)).body.data;
+                        const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, topicVoteCreated.id)).body.data;
+
+                        const members = [
+                            {
+                                userId: toUser1.id,
+                                level: TopicMemberUser.LEVELS.read
+                            }
+                        ];
+
+                        await topicMemberUsersCreatePromised(agent, user.id, topic.id, members);
+                        await topicVoteDelegationCreatePromised(agent, user.id, topic.id, voteRead.id, toUser1.id);
+                        const voteReadAfterDelegation = (await topicVoteReadPromised(agent, user.id, topic.id, voteRead.id)).body.data;
+
+                        assert.deepEqual(voteReadAfterDelegation.delegation, toUser1.toJSON());
+                    });
+
+                    test('Success - OK - change delegation', async function () {
+                        const topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
+                        const topicVoteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, voteOptions, null, null, true, null, null, null, null)).body.data;
+                        const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, topicVoteCreated.id)).body.data;
+
+                        const members = [
+                            {
+                                userId: toUser1.id,
+                                level: TopicMemberUser.LEVELS.read
+                            },
+                            {
+                                userId: toUser2.id,
+                                level: TopicMemberUser.LEVELS.read
+                            }
+                        ];
+                        await topicMemberUsersCreatePromised(agent, user.id, topic.id, members);
+
+                        await topicVoteDelegationCreatePromised(agent, user.id, topic.id, voteRead.id, toUser1.id); // 1st delegation
+                        await topicVoteDelegationCreatePromised(agent, user.id, topic.id, voteRead.id, toUser2.id); // Change the delegation
+
+                        const voteReadAfterDelegation = (await topicVoteReadPromised(agent, user.id, topic.id, voteRead.id)).body.data;
+
+                        assert.deepEqual(voteReadAfterDelegation.delegation, toUser2.toJSON());
+                    });
+
+                    test('Success - OK - count delegated votes and not delegated votes - Delegation chain U->U1->U2->U3, U4->U5, U6 no delegation', async function () {
+                        const topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
+                        const topicVoteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, voteOptions, null, null, true, null, null, null, null)).body.data;
+                        const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, topicVoteCreated.id)).body.data;
 
                         const members = [
                             {
@@ -6856,54 +6896,28 @@ suite('Users', function () {
                         ];
 
                         await topicMemberUsersCreatePromised(agent, user.id, topic.id, members);
-                    });
 
-                    test('Success - Created - new delegation', async function () {
-                        await topicVoteDelegationCreatePromised(agent, user.id, topic.id, vote.id, toUser1.id);
-                        const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, vote.id)).body.data;
-
-                        assert.deepEqual(voteRead.delegation, toUser1.toJSON());
-                    });
-
-                    test('Success - OK - change delegation', async function () {
-                        const userToReDelegate = await userLib.createUserPromised(request.agent(app), null, null, null);
-
-                        const member = {
-                            userId: userToReDelegate.id,
-                            level: TopicMemberUser.LEVELS.read
-                        };
-                        await topicMemberUsersCreatePromised(agent, user.id, topic.id, member); // Add the userToReDelegate as member cause you can only delegate to Members of the Topic.
-
-                        await topicVoteDelegationCreatePromised(agent, user.id, topic.id, vote.id, toUser1.id); // 1st delegation
-                        await topicVoteDelegationCreatePromised(agent, user.id, topic.id, vote.id, userToReDelegate.id); // Change the delegation
-
-                        const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, vote.id)).body.data;
-
-                        assert.deepEqual(voteRead.delegation, userToReDelegate.toJSON());
-                    });
-
-                    test('Success - OK - count delegated votes and not delegated votes - Delegation chain U->U1->U2->U3, U4->U5, U6 no delegation', async function () {
-                        await topicVoteVotePromised(agent, user.id, topic.id, vote.id, [{optionId: vote.options.rows[0].id}], null, null, null, null);
+                        await topicVoteVotePromised(agent, user.id, topic.id, voteRead.id, [{optionId: voteRead.options.rows[0].id}], null, null, null, null);
 
                         const delegationPromises = [
-                            topicVoteDelegationCreatePromised(agent, user.id, topic.id, vote.id, toUser1.id),
-                            topicVoteDelegationCreatePromised(agentToUser1, toUser1.id, topic.id, vote.id, toUser2.id),
-                            topicVoteDelegationCreatePromised(agentToUser2, toUser2.id, topic.id, vote.id, toUser3.id),
-                            topicVoteDelegationCreatePromised(agentToUser4, toUser4.id, topic.id, vote.id, toUser5.id)
+                            topicVoteDelegationCreatePromised(agent, user.id, topic.id, voteRead.id, toUser1.id),
+                            topicVoteDelegationCreatePromised(agentToUser1, toUser1.id, topic.id, voteRead.id, toUser2.id),
+                            topicVoteDelegationCreatePromised(agentToUser2, toUser2.id, topic.id, voteRead.id, toUser3.id),
+                            topicVoteDelegationCreatePromised(agentToUser4, toUser4.id, topic.id, voteRead.id, toUser5.id)
                         ];
                         await Promise.all(delegationPromises);
 
-                        const optionId1 = vote.options.rows[0].id;
-                        const optionId2 = vote.options.rows[1].id;
+                        const optionId1 = voteRead.options.rows[0].id;
+                        const optionId2 = voteRead.options.rows[1].id;
 
                         const votePromises = [
-                            topicVoteVotePromised(agentToUser3, toUser3.id, topic.id, vote.id, [{optionId: optionId1}], null, null, null, null),
-                            topicVoteVotePromised(agentToUser5, toUser5.id, topic.id, vote.id, [{optionId: optionId2}], null, null, null, null),
-                            topicVoteVotePromised(agentToUser6, toUser6.id, topic.id, vote.id, [{optionId: optionId2}], null, null, null, null)
+                            topicVoteVotePromised(agentToUser3, toUser3.id, topic.id, voteRead.id, [{optionId: optionId1}], null, null, null, null),
+                            topicVoteVotePromised(agentToUser5, toUser5.id, topic.id, voteRead.id, [{optionId: optionId2}], null, null, null, null),
+                            topicVoteVotePromised(agentToUser6, toUser6.id, topic.id, voteRead.id, [{optionId: optionId2}], null, null, null, null)
                         ];
                         await Promise.all(votePromises);
 
-                        const voteReadAfterVote = (await topicVoteReadPromised(agentToUser6, toUser6.id, topic.id, vote.id)).body.data;
+                        const voteReadAfterVote = (await topicVoteReadPromised(agentToUser6, toUser6.id, topic.id, voteRead.id)).body.data;
                         const voteReadAfterVoteOptions = voteReadAfterVote.options.rows;
 
                         voteReadAfterVoteOptions.forEach(function (option) {
@@ -6918,9 +6932,25 @@ suite('Users', function () {
                     });
 
                     test('Fail - Bad Request - cyclic delegation - U->U1->U2-->U', async function () {
-                        await topicVoteDelegationCreatePromised(agent, user.id, topic.id, vote.id, toUser1.id);
-                        await topicVoteDelegationCreatePromised(agentToUser1, toUser1.id, topic.id, vote.id, toUser2.id);
-                        const responseDelegation = (await _topicVoteDelegationCreatePromised(agentToUser2, toUser2.id, topic.id, vote.id, user.id, 400)).body;
+                        const topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
+                        const topicVoteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, voteOptions, null, null, true, null, null, null, null)).body.data;
+
+                        const members = [
+                            {
+                                userId: toUser1.id,
+                                level: TopicMemberUser.LEVELS.read
+                            },
+                            {
+                                userId: toUser2.id,
+                                level: TopicMemberUser.LEVELS.read
+                            }
+                        ];
+
+                        await topicMemberUsersCreatePromised(agent, user.id, topic.id, members);
+
+                        await topicVoteDelegationCreatePromised(agent, user.id, topic.id, topicVoteCreated.id, toUser1.id);
+                        await topicVoteDelegationCreatePromised(agentToUser1, toUser1.id, topic.id, topicVoteCreated.id, toUser2.id);
+                        const responseDelegation = (await _topicVoteDelegationCreatePromised(agentToUser2, toUser2.id, topic.id, topicVoteCreated.id, user.id, 400)).body;
 
                         const responseExpected = {
                             status: {
@@ -6933,7 +6963,10 @@ suite('Users', function () {
                     });
 
                     test('Fail - Bad Request - no delegation to self', async function () {
-                        const responseDelegation = (await _topicVoteDelegationCreatePromised(agent, user.id, topic.id, vote.id, user.id, 400)).body;
+                        const topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
+                        const topicVoteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, voteOptions, null, null, true, null, null, null, null)).body.data;
+
+                        const responseDelegation = (await _topicVoteDelegationCreatePromised(agent, user.id, topic.id, topicVoteCreated.id, user.id, 400)).body;
 
                         const responseExpected = {
                             status: {
@@ -6946,9 +6979,11 @@ suite('Users', function () {
                     });
 
                     test('Fail - Bad Request - no delegation to User who does not have access to the Topic', async function () {
+                        const topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
+                        const topicVoteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, voteOptions, null, null, true, null, null, null, null)).body.data;
                         const userWithNoAccess = await userLib.createUserPromised(request.agent(app), null, null, null);
 
-                        const responseDelegation = (await _topicVoteDelegationCreatePromised(agent, user.id, topic.id, vote.id, userWithNoAccess.id, 400)).body;
+                        const responseDelegation = (await _topicVoteDelegationCreatePromised(agent, user.id, topic.id, topicVoteCreated.id, userWithNoAccess.id, 400)).body;
 
                         const responseExpected = {
                             status: {
@@ -6961,9 +6996,11 @@ suite('Users', function () {
                     });
 
                     test('Fail - Forbidden - delegation is only allowed when voting is in progress', async function () {
+                        const topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
+                        const topicVoteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, voteOptions, null, null, true, null, null, null, null)).body.data;
                         await topicUpdateStatusPromised(agent, user.id, topic.id, Topic.STATUSES.closed);
 
-                        const responseDelegation = (await _topicVoteDelegationCreatePromised(agent, user.id, topic.id, vote.id, toUser1.id, 403)).body;
+                        const responseDelegation = (await _topicVoteDelegationCreatePromised(agent, user.id, topic.id, topicVoteCreated.id, toUser1.id, 403)).body;
 
                         const responseExpected = {
                             status: {
