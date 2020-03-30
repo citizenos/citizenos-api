@@ -7086,12 +7086,6 @@ suite('Users', function () {
                                     throw new Error('SHOULD NEVER HAPPEN!');
                             }
                         });
-
-                        // Tracing Q&A
-                        // 1. Are all votes recorded in the DB - YES
-                        // 2. Are all delegations recorded in the DB - YES
-                        // THEN...
-                        // Vote counting must be wrong...
                     });
 
                     test('Fail - Bad Request - cyclic delegation - U->U1->U2-->U', async function () {
