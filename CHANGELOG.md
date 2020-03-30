@@ -1,3 +1,7 @@
+## 2020-03-30
+
+* Fix vote counting bug for multiple-choice votes with delegation -  https://github.com/citizenos/citizenos-fe/issues/443 https://github.com/citizenos/citizenos-fe/issues/413 
+
 ## 2020-02-20
 
 * Update "UserConnection" "connectionUserId" values to have PNO prefix Where "connectionId" esteid or smartid
