@@ -458,11 +458,12 @@ module.exports = function (app) {
                             JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."userId" = vg."userId" AND vl."optionGroupId" = vg."optionGroupId") \
                             WHERE vl."voteId" =  :voteId \
                         ), \
-                        votes_with_delegations("voteId", "userId", "optionId", depth) AS ( \
+                        votes_with_delegations("voteId", "userId", "optionId", "optionGroupId", depth) AS ( \
                             SELECT \
                                 v."voteId", \
                                 v."userId", \
                                 v."optionId", \
+                                v."optionGroupId", \
                                 id."depth" \
                             FROM votes v \
                             LEFT JOIN indirect_delegations id ON (v."userId" = id."toUserId") \
@@ -479,20 +480,22 @@ module.exports = function (app) {
                         SELECT \
                             COUNT(v."optionId") + 1 as "voteCount", \
                             v."optionId", \
+                            v."optionGroupId", \
                             v."voteId" \
                         FROM votes_with_delegations v \
                         WHERE v.depth IS NOT NULL \
-                        GROUP BY v."optionId", v."voteId" \
+                        GROUP BY v."optionId", v."optionGroupId", v."voteId" \
                         \
                         UNION ALL \
                         \
                         SELECT \
                             COUNT(v."optionId") as "voteCount", \
                             v."optionId", \
+                            v."optionGroupId", \
                             v."voteId" \
                         FROM votes_with_delegations v \
                         WHERE v.depth IS NULL \
-                        GROUP BY v."optionId", v."voteId" \
+                        GROUP BY v."optionId", v."optionGroupId", v."voteId" \
                     ) v \
                     LEFT JOIN "VoteOptions" vo ON (v."optionId" = vo."id") \
                     GROUP BY v."optionId", v."voteId", vo."value" \
@@ -1099,37 +1102,40 @@ module.exports = function (app) {
                                 WHERE vl."voteId" = $1; $$ \
                             LANGUAGE SQL; \
                         CREATE OR REPLACE FUNCTION pg_temp.votes_with_delegations(uuid) \
-                            RETURNS TABLE ("voteId" uuid, "userId" uuid, "optionId" uuid, depth int) \
+                            RETURNS TABLE ("voteId" uuid, "userId" uuid, "optionId" uuid, "optionGroupId" varchar(8), depth int) \
                             AS $$ \
                                 SELECT \
                                     v."voteId", \
                                     v."userId", \
                                     v."optionId", \
+                                    v."optionGroupId", \
                                     id."depth" \
                                 FROM pg_temp.votes($1) v \
                                 LEFT JOIN pg_temp.indirect_delegations($1) id ON (v."userId" = id."toUserId") \
                                 WHERE v."userId" NOT IN (SELECT "byUserId" FROM pg_temp.indirect_delegations($1) WHERE "voteId"=v."voteId"); $$ \
                             LANGUAGE SQL; \
                         CREATE OR REPLACE FUNCTION pg_temp.get_vote_results (uuid) \
-                            RETURNS TABLE ("voteCount" bigint, "optionId" uuid, "voteId" uuid) \
+                            RETURNS TABLE ("voteCount" bigint, "optionId" uuid, "optionGroupId" varchar(8), "voteId" uuid) \
                             AS $$ \
                                 SELECT \
                                     COUNT(v."optionId") + 1 as "voteCount", \
                                     v."optionId", \
+                                    v."optionGroupId", \
                                     v."voteId" \
                                 FROM pg_temp.votes_with_delegations($1) v \
                                 WHERE v.depth IS NOT NULL \
-                                GROUP BY v."optionId", v."voteId" \
+                                GROUP BY v."optionId", v."optionGroupId", v."voteId" \
                                 \
                                 UNION ALL \
                                 \
                                 SELECT \
                                     COUNT(v."optionId") as "voteCount", \
                                     v."optionId", \
+                                    v."optionGroupId", \
                                     v."voteId" \
                                 FROM pg_temp.votes_with_delegations($1) v \
                                 WHERE v.depth IS NULL \
-                                GROUP BY v."optionId", v."voteId"; $$ \
+                                GROUP BY v."optionId", v."optionGroupId", v."voteId"; $$ \
                             LANGUAGE SQL; \
                             \
                         SELECT \
@@ -1149,7 +1155,7 @@ module.exports = function (app) {
                         AND v."voteId" IS NOT NULL \
                         AND vo."value" IS NOT NULL \
                         ' + where + '\
-                        GROUP BY v."optionId",v."voteId", vo."value" \
+                        GROUP BY v."optionId", v."optionGroupId", v."voteId", vo."value" \
                     ;';
 
         return db
@@ -5564,11 +5570,12 @@ module.exports = function (app) {
                                 JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."userId" = vg."userId" AND vl."optionGroupId" = vg."optionGroupId") \
                                 WHERE vl."voteId" =  :voteId \
                             ), \
-                            votes_with_delegations("voteId", "userId", "optionId", depth) AS ( \
+                            votes_with_delegations("voteId", "userId", "optionId", "optionGroupId", depth) AS ( \
                                 SELECT \
                                     v."voteId", \
                                     v."userId", \
                                     v."optionId", \
+                                    v."optionGroupId", \
                                     id."depth" \
                                 FROM votes v \
                                 LEFT JOIN indirect_delegations id ON (v."userId" = id."toUserId") \
@@ -5585,20 +5592,22 @@ module.exports = function (app) {
                             SELECT \
                                 COUNT(v."optionId") + 1 as "voteCount", \
                                 v."optionId", \
+                                v."optionGroupId", \
                                 v."voteId" \
                             FROM votes_with_delegations v \
                             WHERE v.depth IS NOT NULL \
-                            GROUP BY v."optionId", v."voteId" \
+                            GROUP BY v."optionId", v."optionGroupId", v."voteId" \
                             \
                             UNION ALL \
                             \
                             SELECT \
                                 COUNT(v."optionId") as "voteCount", \
                                 v."optionId", \
+                                v."optionGroupId", \
                                 v."voteId" \
                             FROM votes_with_delegations v \
                             WHERE v.depth IS NULL \
-                            GROUP BY v."optionId", v."voteId" \
+                            GROUP BY v."optionId", v."optionGroupId", v."voteId" \
                         ) v \
                         LEFT JOIN "VoteOptions" vo ON (v."optionId" = vo."id") \
                         GROUP BY v."optionId", v."voteId", vo."value" \
