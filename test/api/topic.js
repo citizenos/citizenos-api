@@ -7889,7 +7889,7 @@ suite('Users', function () {
                                                 UserConnection.CONNECTION_IDS.smartid
                                             ]
                                         },
-                                        connectionUserId: ['PNOEE-600010199060', 'PNOEE-11412090004', 'PNOEE-51001091072']
+                                        connectionUserId: ['PNOEE-600010199060', 'PNOEE-11412090004', 'PNOEE-51001091072', 'PNOEE-60001018800']
                                     },
                                     force: true
                                 });
@@ -7898,21 +7898,6 @@ suite('Users', function () {
                         test('Success - Estonian mobile number and PID', async function () {
                             const phoneNumber = '+37200000766';
                             const pid = '60001019906';
-
-                            const options = [
-                                {
-                                    value: 'Option 1'
-                                },
-                                {
-                                    value: 'Option 2'
-                                },
-                                {
-                                    value: 'Option 3'
-                                }
-                            ];
-
-                            const voteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
-                            const vote = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
 
                             const voteList = [
                                 {
@@ -8011,8 +7996,13 @@ suite('Users', function () {
                         });
 
                         test('Success - Personal ID already connected to another user account - vote multiple-choice, re-vote and count', async function () {
-                            var phoneNumber = '+37200000766';
-                            var pid = '60001019906';
+                            this.timeout(40000);
+
+                            const phoneNumberRepeatedVoting = '+37200000766';
+                            const pidRepeatedVoting = '60001019906';
+
+                            const phoneNumberSingleVote = '+37200000566';
+                            const pidSingleVote = '60001018800';
 
                             const options = [
                                 {
@@ -8030,14 +8020,17 @@ suite('Users', function () {
                             const voteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, options, 1, 2, false, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
                             const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
 
-                            const user1 = user;
                             const agentUser1 = agent;
+                            const user1 = user;
 
                             const agentUser2 = request.agent(app);
                             const user2 = await userLib.createUserAndLoginPromised(agentUser2, null, null, null);
 
                             const agentUser3 = request.agent(app);
                             const user3 = await userLib.createUserAndLoginPromised(agentUser3, null, null, null);
+
+                            const agentUser4 = request.agent(app);
+                            const user4 = await userLib.createUserAndLoginPromised(agentUser4, null, null, null);
 
                             const voteListUser1 = [
                                 {
@@ -8057,28 +8050,77 @@ suite('Users', function () {
                                 }
                             ];
 
-                            const voteListUser3 = [ // This should be in the final result as different "userId" is connected to the same PID
+                            const voteListUser3 = [ // This should be counted in the final result as different "userId" is connected to the same PID
                                 {
-                                    optionId: voteRead.options.rows[1].id
+                                    optionId: voteRead.options.rows[0].id
                                 },
                                 {
-                                    optionId: voteRead.options.rows[3].id
+                                    optionId: voteRead.options.rows[2].id
                                 }
                             ];
 
-                            const voteResult1 = (await topicVoteVotePromised(agentUser1, user1.id, topic.id, voteRead.id, voteListUser1, null, pid, phoneNumber)).body.data;
-                            await topicVoteStatusPromised(agent, user1.id, topic.id, voteRead.id, voteResult1.token);
+                            const voteListUser4 = [ // This a person voting with a different PID to mix the water a bit
+                                {
+                                    optionId: voteRead.options.rows[0].id
+                                }
+                            ];
 
-                            const voteResult2 = (await topicVoteVotePromised(agentUser2, user2.id, topic.id, voteRead.id, voteListUser2, null, pid, phoneNumber)).body.data;
-                            await topicVoteStatusPromised(agent, user2.id, topic.id, voteRead.id, voteResult2.token);
+                            const voteResult1 = (await topicVoteVotePromised(agentUser1, user1.id, topic.id, voteRead.id, voteListUser1, null, pidRepeatedVoting, phoneNumberRepeatedVoting)).body.data;
+                            await topicVoteStatusPromised(agentUser1, user1.id, topic.id, voteRead.id, voteResult1.token);
 
-                            const voteResult3 = (await topicVoteVotePromised(agentUser3, user3.id, topic.id, voteRead.id, voteListUser3, null, pid, phoneNumber)).body.data;
-                            await topicVoteStatusPromised(agent, user3.id, topic.id, voteRead.id, voteResult3.token);
+                            const voteResult2 = (await topicVoteVotePromised(agentUser2, user2.id, topic.id, voteRead.id, voteListUser2, null, pidRepeatedVoting, phoneNumberRepeatedVoting)).body.data;
+                            await topicVoteStatusPromised(agentUser2, user2.id, topic.id, voteRead.id, voteResult2.token);
 
+                            const voteResult3 = (await topicVoteVotePromised(agentUser3, user3.id, topic.id, voteRead.id, voteListUser3, null, pidRepeatedVoting, phoneNumberRepeatedVoting)).body.data;
+                            await topicVoteStatusPromised(agentUser3, user3.id, topic.id, voteRead.id, voteResult3.token);
 
-                            // FIXME: Wanna read the vote with User2 instead... vote results should reflect the override by User3
-                            const voteReadAfterVote = (await topicVoteReadPromised(agentUser3, user3.id, topic.id, voteCreated.id)).body.data;
-                            console.log(voteReadAfterVote);
+                            const voteResult4 = (await topicVoteVotePromised(agentUser4, user4.id, topic.id, voteRead.id, voteListUser4, null, pidSingleVote, phoneNumberSingleVote)).body.data;
+                            await topicVoteStatusPromised(agentUser4, user4.id, topic.id, voteRead.id, voteResult4.token);
+
+                            const voteReadAfterVote3 = (await topicVoteReadPromised(agentUser3, user3.id, topic.id, voteCreated.id)).body.data;
+
+                            voteReadAfterVote3.options.rows.forEach(function (option) {
+                                switch (option.id) {
+                                    case voteListUser3[0].optionId:
+                                        assert.equal(option.voteCount, 1 + 1); // U3, U4
+                                        // assert.isTrue(option.selected); // TODO: At the point of writing the test, selected was not present but should be?
+                                        break;
+                                    case voteListUser3[1].optionId:
+                                        assert.equal(option.voteCount, 1); // U3
+                                        // assert.isTrue(option.selected); // TODO: At the point of writing the test, selected was not present but should be?
+                                        break;
+                                    default:
+                                        assert.property(option, 'value');
+                                        assert.notProperty(option, 'voteCount');
+                                }
+                            });
+
+                            // Make sure the results match between different User requests
+                            const voteReadAfterVote2 = (await topicVoteReadPromised(agentUser2, user2.id, topic.id, voteCreated.id)).body.data;
+                            assert.deepEqual(voteReadAfterVote2.options, voteReadAfterVote3.options);
+
+                            // Make sure the results match with result read with Topic
+                            const topicReadAfterVote2 = (await topicReadPromised(agentUser2, user2.id, topic.id, ['vote'])).body.data;
+                            const voteReadWithTopic2 = topicReadAfterVote2.vote;
+
+                            assert.deepEqual(voteReadWithTopic2, voteReadAfterVote2);
+
+                            // FIXME: Delete this debug query one this test starts passing
+                            // SELECT
+                            //     vl.id,
+                            //     vl."userId",
+                            //     vl."optionId",
+                            //     vl."optionGroupId",
+                            //     vo."value",
+                            //     uc."connectionUserId"
+                            // FROM
+                            //     "VoteLists" vl
+                            //     LEFT JOIN "VoteOptions" vo ON (vo.id = vl."optionId")
+                            //     LEFT JOIN "UserConnections" uc ON (uc."userId" = vl."userId")
+                            // WHERE
+                            //     vl."voteId" = '61723aa7-75c1-4bc5-b1ac-86b1f885925c'
+                            // ORDER BY
+                            //     vl.id;
                         });
 
                         test('Success - Estonian mobile number and PID bdocUri exists', function (done) {

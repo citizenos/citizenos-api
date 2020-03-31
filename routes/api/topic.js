@@ -6671,9 +6671,11 @@ module.exports = function (app) {
                         return Promise.all(promisesToResolve).catch(function (e) {
                             switch (e.message) {
                                 case 'Personal ID already connected to another user account.':
-                                    return res.badRequest(e.message, 30)
+                                    res.badRequest(e.message, 30);
+                                    return Promise.reject(e);
                                 case 'User account already connected to another PID.':
-                                    return res.badRequest(e.message, 31);
+                                    res.badRequest(e.message, 31);
+                                    return Promise.reject(e);
                             }
                         });
                     })
