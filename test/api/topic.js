@@ -7858,11 +7858,10 @@ suite('Users', function () {
 
                     suite('Mobiil-ID', function () {
 
-                        var vote;
+                        let vote;
 
-                        setup(function (done) {
-
-                            var options = [
+                        setup(async function () {
+                            const options = [
                                 {
                                     value: 'Option 1'
                                 },
@@ -7874,23 +7873,13 @@ suite('Users', function () {
                                 }
                             ];
 
-                            topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard, function (err, res) {
-                                if (err) return done(err);
 
-                                vote = res.body.data;
-
-                                topicVoteRead(agent, user.id, topic.id, vote.id, function (err, res) {
-                                    if (err) return done(err);
-
-                                    vote = res.body.data;
-
-                                    done();
-                                });
-                            });
+                            const voteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                            vote = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
                         });
 
-                        teardown(function (done) {
-                            UserConnection
+                        teardown(async function () {
+                            return UserConnection
                                 .destroy({
                                     where: {
                                         connectionId: {
@@ -7902,32 +7891,23 @@ suite('Users', function () {
                                         connectionUserId: ['PNOEE-600010199060', 'PNOEE-11412090004', 'PNOEE-51001091072']
                                     },
                                     force: true
-                                })
-                                .then(function () {
-                                    done();
-                                })
-                                .catch(done);
+                                });
                         });
 
-                        test('Success - Estonian mobile number and PID', function (done) {
-                            var phoneNumber = '+37200000766';
-                            var pid = '60001019906';
+                        test('Success - Estonian mobile number and PID', async function () {
+                            const phoneNumber = '+37200000766';
+                            const pid = '60001019906';
 
-                            var voteList = [
+                            const voteList = [
                                 {
                                     optionId: vote.options.rows[0].id
                                 }
                             ];
 
-                            topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, function (err, res) {
-                                if (err) return done(err);
+                            const voteResult = (await topicVoteVotePromised(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null)).body;
 
-                                var response = res.body;
-                                assert.equal(response.status.code, 20001);
-                                assert.match(response.data.challengeID, /[0-9]{4}/);
-
-                                done();
-                            });
+                            assert.equal(voteResult.status.code, 20001);
+                            assert.match(voteResult.data.challengeID, /[0-9]{4}/);
                         });
 
                         test('Success - Estonian mobile number and PID - multiple choice - vote and re-vote', async function () {
@@ -8014,7 +7994,7 @@ suite('Users', function () {
                             assert.deepEqual(topicReadAfterVoting.vote, voteReadAfterVote2);
                         });
 
-                        test('Success - Personal ID already connected to another user account.', function (done) {
+                        test('Success - Personal ID already connected to another user account - vote, re-vote and count', function (done) {
                             var phoneNumber = '+37200000766';
                             var pid = '60001019906';
 
