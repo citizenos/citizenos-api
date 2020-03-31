@@ -7086,6 +7086,48 @@ suite('Users', function () {
                                     throw new Error('SHOULD NEVER HAPPEN!');
                             }
                         });
+
+                        // User will re-vote, thus the delegation will be overriden
+                        const voteList3 = [ // Will override the delegated vote
+                            {
+                                optionId: voteRead.options.rows[2].id
+                            },
+                            {
+                                optionId: voteRead.options.rows[4].id
+                            }
+                        ];
+
+                        await topicVoteVotePromised(agent, user.id, topic.id, voteRead.id, voteList3, null, null, null, null);
+
+                        const voteReadAfterVoteForOverride = (await topicVoteReadPromised(agent, user.id, topic.id, voteRead.id)).body.data;
+                        const voteReadAfterVoteForOverrideOptions = voteReadAfterVoteForOverride.options.rows;
+
+                        voteReadAfterVoteForOverrideOptions.forEach(function (option) {
+                            switch (option.id) {
+                                case voteRead.options.rows[0].id:
+                                    assert.equal(option.voteCount, 2 + 1); // U1->U2->U3
+                                    assert.notProperty(option, 'selected');
+                                    break;
+                                case voteRead.options.rows[1].id:
+                                    assert.equal(option.voteCount, (2 + 1) + (1 + 1) + 1); // U->U1->U2->U3, U4->U5, U6
+                                    assert.notProperty(option, 'selected');
+                                    break;
+                                case voteRead.options.rows[2].id:
+                                    assert.equal(option.voteCount, (1 + 1) + 1); // U4->U5, U
+                                    assert.isTrue(option.selected);
+                                    break;
+                                case voteRead.options.rows[3].id:
+                                    assert.equal(option.voteCount, 1); // U6
+                                    assert.notProperty(option, 'selected');
+                                    break;
+                                case voteRead.options.rows[4].id:
+                                    assert.equal(option.voteCount, 1); // U
+                                    assert.isTrue(option.selected);
+                                    break;
+                                default:
+                                    throw new Error('SHOULD NEVER HAPPEN!');
+                            }
+                        });
                     });
 
                     test('Fail - Bad Request - cyclic delegation - U->U1->U2-->U', async function () {
