@@ -326,7 +326,7 @@ module.exports = function (app) {
                         break;
                     default:
                         // Must be option file
-                        if (chosenVoteOptionFileNames.indexOf(fileName)) {
+                        if (chosenVoteOptionFileNames.indexOf(fileName) === -1) {
                             //Skip the option that User did not choose
                             return;
                         }
