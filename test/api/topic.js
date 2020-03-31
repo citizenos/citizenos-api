@@ -1360,7 +1360,7 @@ const _topicVoteStatusPromised = async function (agent, userId, topicId, voteId,
         .expect('Content-Type', /json/);
 };
 
-const topicVoteStatusPromised = async function (agent, topicId, voteId, userId, token) {
+const topicVoteStatusPromised = async function (agent, userId, topicId, voteId, token) {
     return new Promise(function (resolve, reject) {
         const maxRetries = 20;
         const retryInterval = 1000; // milliseconds;
@@ -1372,7 +1372,7 @@ const topicVoteStatusPromised = async function (agent, topicId, voteId, userId, 
                 if (retries < maxRetries) {
                     retries++;
 
-                    const topicVoteStatusResponse = await _topicVoteStatusPromised(agent, topicId, voteId, userId, token, 200);
+                    const topicVoteStatusResponse = await _topicVoteStatusPromised(agent, userId, topicId, voteId, token, 200);
 
                     if (topicVoteStatusResponse.body.status.code === 20001 && topicVoteStatusResponse.body.status.message === 'Signing in progress') {
                         // Signing is in progress, we shall journey on...
@@ -7861,6 +7861,7 @@ suite('Users', function () {
                         let vote;
 
                         setup(async function () {
+                            // FIXME: Remove once all tests create their own data
                             const options = [
                                 {
                                     value: 'Option 1'
@@ -7897,6 +7898,21 @@ suite('Users', function () {
                         test('Success - Estonian mobile number and PID', async function () {
                             const phoneNumber = '+37200000766';
                             const pid = '60001019906';
+
+                            const options = [
+                                {
+                                    value: 'Option 1'
+                                },
+                                {
+                                    value: 'Option 2'
+                                },
+                                {
+                                    value: 'Option 3'
+                                }
+                            ];
+
+                            const voteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                            const vote = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
 
                             const voteList = [
                                 {
@@ -7994,39 +8010,75 @@ suite('Users', function () {
                             assert.deepEqual(topicReadAfterVoting.vote, voteReadAfterVote2);
                         });
 
-                        test('Success - Personal ID already connected to another user account - vote, re-vote and count', function (done) {
+                        test('Success - Personal ID already connected to another user account - vote multiple-choice, re-vote and count', async function () {
                             var phoneNumber = '+37200000766';
                             var pid = '60001019906';
 
-                            var voteList = [
+                            const options = [
                                 {
-                                    optionId: vote.options.rows[0].id
+                                    value: 'Option 1'
+                                },
+                                {
+                                    value: 'Option 2'
+                                },
+                                {
+                                    value: 'Option 3'
                                 }
                             ];
 
-                            userLib.createUser(request.agent(app), null, null, null, function (err, res) {
-                                if (err) return done(err);
+                            const topic = (await topicCreatePromised(agent, user.id, Topic.VISIBILITY.public, null, null, null, null)).body.data;
+                            const voteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, options, 1, 2, false, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                            const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
 
-                                var createdUser = res;
+                            const user1 = user;
+                            const agentUser1 = agent;
 
-                                UserConnection
-                                    .create({
-                                        userId: createdUser.id,
-                                        connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                        connectionUserId: pid
-                                    })
-                                    .then(function () {
-                                        topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, function (err, res) {
-                                            if (err) return done(err);
+                            const agentUser2 = request.agent(app);
+                            const user2 = await userLib.createUserAndLoginPromised(agentUser2, null, null, null);
 
-                                            var response = res.body;
-                                            assert.equal(response.status.code, 20001);
-                                            assert.match(response.data.challengeID, /[0-9]{4}/);
+                            const agentUser3 = request.agent(app);
+                            const user3 = await userLib.createUserAndLoginPromised(agentUser3, null, null, null);
 
-                                            done();
-                                        });
-                                    });
-                            });
+                            const voteListUser1 = [
+                                {
+                                    optionId: voteRead.options.rows[0].id
+                                },
+                                {
+                                    optionId: voteRead.options.rows[1].id
+                                }
+                            ];
+
+                            const voteListUser2 = [
+                                {
+                                    optionId: voteRead.options.rows[1].id
+                                },
+                                {
+                                    optionId: voteRead.options.rows[2].id
+                                }
+                            ];
+
+                            const voteListUser3 = [ // This should be in the final result as different "userId" is connected to the same PID
+                                {
+                                    optionId: voteRead.options.rows[1].id
+                                },
+                                {
+                                    optionId: voteRead.options.rows[3].id
+                                }
+                            ];
+
+                            const voteResult1 = (await topicVoteVotePromised(agentUser1, user1.id, topic.id, voteRead.id, voteListUser1, null, pid, phoneNumber)).body.data;
+                            await topicVoteStatusPromised(agent, user1.id, topic.id, voteRead.id, voteResult1.token);
+
+                            const voteResult2 = (await topicVoteVotePromised(agentUser2, user2.id, topic.id, voteRead.id, voteListUser2, null, pid, phoneNumber)).body.data;
+                            await topicVoteStatusPromised(agent, user2.id, topic.id, voteRead.id, voteResult2.token);
+
+                            const voteResult3 = (await topicVoteVotePromised(agentUser3, user3.id, topic.id, voteRead.id, voteListUser3, null, pid, phoneNumber)).body.data;
+                            await topicVoteStatusPromised(agent, user3.id, topic.id, voteRead.id, voteResult3.token);
+
+
+                            // FIXME: Wanna read the vote with User2 instead... vote results should reflect the override by User3
+                            const voteReadAfterVote = (await topicVoteReadPromised(agentUser3, user3.id, topic.id, voteCreated.id)).body.data;
+                            console.log(voteReadAfterVote);
                         });
 
                         test('Success - Estonian mobile number and PID bdocUri exists', function (done) {
