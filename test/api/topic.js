@@ -7879,21 +7879,21 @@ suite('Users', function () {
                             vote = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
                         });
 
-                        teardown(async function () {
-                            return UserConnection
-                                .destroy({
-                                    where: {
-                                        connectionId: {
-                                            [db.Sequelize.Op.in]: [
-                                                UserConnection.CONNECTION_IDS.esteid,
-                                                UserConnection.CONNECTION_IDS.smartid
-                                            ]
-                                        },
-                                        connectionUserId: ['PNOEE-600010199060', 'PNOEE-11412090004', 'PNOEE-51001091072', 'PNOEE-60001018800']
-                                    },
-                                    force: true
-                                });
-                        });
+                        // teardown(async function () {
+                        //     return UserConnection
+                        //         .destroy({
+                        //             where: {
+                        //                 connectionId: {
+                        //                     [db.Sequelize.Op.in]: [
+                        //                         UserConnection.CONNECTION_IDS.esteid,
+                        //                         UserConnection.CONNECTION_IDS.smartid
+                        //                     ]
+                        //                 },
+                        //                 connectionUserId: ['PNOEE-600010199060', 'PNOEE-11412090004', 'PNOEE-51001091072', 'PNOEE-60001018800']
+                        //             },
+                        //             force: true
+                        //         });
+                        // });
 
                         test('Success - Estonian mobile number and PID', async function () {
                             const phoneNumber = '+37200000766';
@@ -7998,8 +7998,8 @@ suite('Users', function () {
                         test('Success - Personal ID already connected to another user account - vote multiple-choice, re-vote and count', async function () {
                             this.timeout(40000);
 
-                            const phoneNumberRepeatedVoting = '+37200000766';
-                            const pidRepeatedVoting = '60001019906';
+                            const phoneNumberRepeatedVote = '+37200000766';
+                            const pidRepeatedVote = '60001019906';
 
                             const phoneNumberSingleVote = '+37200000566';
                             const pidSingleVote = '60001018800';
@@ -8022,15 +8022,19 @@ suite('Users', function () {
 
                             const agentUser1 = agent;
                             const user1 = user;
+                            console.log('user1', user1.id);
 
                             const agentUser2 = request.agent(app);
                             const user2 = await userLib.createUserAndLoginPromised(agentUser2, null, null, null);
+                            console.log('user2', user2.id);
 
                             const agentUser3 = request.agent(app);
                             const user3 = await userLib.createUserAndLoginPromised(agentUser3, null, null, null);
+                            console.log('user3', user3.id);
 
                             const agentUser4 = request.agent(app);
                             const user4 = await userLib.createUserAndLoginPromised(agentUser4, null, null, null);
+                            console.log('user4', user4.id);
 
                             const voteListUser1 = [
                                 {
@@ -8065,13 +8069,13 @@ suite('Users', function () {
                                 }
                             ];
 
-                            const voteResult1 = (await topicVoteVotePromised(agentUser1, user1.id, topic.id, voteRead.id, voteListUser1, null, pidRepeatedVoting, phoneNumberRepeatedVoting)).body.data;
+                            const voteResult1 = (await topicVoteVotePromised(agentUser1, user1.id, topic.id, voteRead.id, voteListUser1, null, pidRepeatedVote, phoneNumberRepeatedVote)).body.data;
                             await topicVoteStatusPromised(agentUser1, user1.id, topic.id, voteRead.id, voteResult1.token);
 
-                            const voteResult2 = (await topicVoteVotePromised(agentUser2, user2.id, topic.id, voteRead.id, voteListUser2, null, pidRepeatedVoting, phoneNumberRepeatedVoting)).body.data;
+                            const voteResult2 = (await topicVoteVotePromised(agentUser2, user2.id, topic.id, voteRead.id, voteListUser2, null, pidRepeatedVote, phoneNumberRepeatedVote)).body.data;
                             await topicVoteStatusPromised(agentUser2, user2.id, topic.id, voteRead.id, voteResult2.token);
 
-                            const voteResult3 = (await topicVoteVotePromised(agentUser3, user3.id, topic.id, voteRead.id, voteListUser3, null, pidRepeatedVoting, phoneNumberRepeatedVoting)).body.data;
+                            const voteResult3 = (await topicVoteVotePromised(agentUser3, user3.id, topic.id, voteRead.id, voteListUser3, null, pidRepeatedVote, phoneNumberRepeatedVote)).body.data;
                             await topicVoteStatusPromised(agentUser3, user3.id, topic.id, voteRead.id, voteResult3.token);
 
                             const voteResult4 = (await topicVoteVotePromised(agentUser4, user4.id, topic.id, voteRead.id, voteListUser4, null, pidSingleVote, phoneNumberSingleVote)).body.data;
@@ -8104,23 +8108,6 @@ suite('Users', function () {
                             const voteReadWithTopic2 = topicReadAfterVote2.vote;
 
                             assert.deepEqual(voteReadWithTopic2, voteReadAfterVote2);
-
-                            // FIXME: Delete this debug query one this test starts passing
-                            // SELECT
-                            //     vl.id,
-                            //     vl."userId",
-                            //     vl."optionId",
-                            //     vl."optionGroupId",
-                            //     vo."value",
-                            //     uc."connectionUserId"
-                            // FROM
-                            //     "VoteLists" vl
-                            //     LEFT JOIN "VoteOptions" vo ON (vo.id = vl."optionId")
-                            //     LEFT JOIN "UserConnections" uc ON (uc."userId" = vl."userId")
-                            // WHERE
-                            //     vl."voteId" = '61723aa7-75c1-4bc5-b1ac-86b1f885925c'
-                            // ORDER BY
-                            //     vl.id;
                         });
 
                         test('Success - Estonian mobile number and PID bdocUri exists', function (done) {
