@@ -1,7 +1,7 @@
 {
   "url": {
-    "api": "https://citizenos-citizenos-api-test.herokuapp.com",
-    "fe": "https://citizenos-citizenosfe-web-test.herokuapp.com"
+    "api": "https://test.api.citizenos.com",
+    "fe": "https://test.app.citizenos.com"
   },
   "db": {
     "options": {
