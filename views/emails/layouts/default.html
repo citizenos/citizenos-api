@@ -132,6 +132,23 @@
         #trapped td {
             padding: 20px;
         }
+
+        #templateBody {
+            width: 100%;
+        }
+
+        #footer-mobile tr {
+            width: 100%;
+        }
+
+        #footer-mobile td {
+            padding-top: 10px;
+            padding-bottom: 10px;
+        }
+        #footer-mobile img {
+            margin-right: auto;
+            margin-left: auto;
+        }
     </style>
 </head>
 
@@ -174,31 +191,17 @@
             </tr>
             <tr>
                 <td align="center">
-                    <table id="footer">
+                    <table id="footer-mobile" style="width: 600px;text-align: center;">
                         <tbody>
-                            <tr>
-                                <td>
-                                    <table>
-                                        <tbody>
-                                            <tr>
-                                                <td><a href="{{linkedData.footerLinks.linkToPlatform}}" target="_blank">Link to platform</a></td>
-                                                <td style="padding-left: 13px;"><a href="{{linkedData.footerLinks.linkToPrivacyPolicy}}" target="_blank">Privacy policy</a></td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </td>
-                                <td align="right">
-                                    <a href="https://citizenos.com" target="_blank" style="color: black; text-decoration: none;">
-                                        <table>
-                                            <tbody>
-                                                <tr>
-                                                    <td>Empowered by</td>
-                                                    <td style="padding-left: 13px;"><img width="97" height="18" src="cid:logo_footer.png" alt="logo"/></td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </a>
-                                </td>
+                            <tr style="width: 600px;">
+                                <td style="width: 49%; display: inline-block;"><a href="{{linkedData.footerLinks.linkToPlatform}}" target="_blank">{{{linkedData.translations.LAYOUT.LINK_TO_PLATFORM}}}</a></td>
+                                <td style="width: 49%; display: inline-block;"><a href="{{linkedData.footerLinks.linkToPrivacyPolicy}}" target="_blank">{{{linkedData.translations.LAYOUT.LINK_PRIVACY_POLICY}}}</a></td>
+                            </tr>
+                            <tr style="width: 600px;">
+                                <td style="width: 100%;"><a href="https://citizenos.com" target="_blank" style="color: black; text-decoration: none;">Empowered by</a></td>
+                            </tr>
+                            <tr style="width: 600px;">
+                                <td style="width: 100%;"><a href="https://citizenos.com" target="_blank" ><img width="97" height="18" src="cid:logo_footer.png" alt="logo"/></a></td>
                             </tr>
                         </tbody>
                     </table>

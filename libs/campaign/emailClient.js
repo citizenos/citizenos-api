@@ -1,7 +1,7 @@
 'use strict';
 
-var campaign = require('campaign');
-var nodemailer = require('nodemailer');
+const campaign = require('campaign');
+const nodemailer = require('nodemailer');
 const util = require('util');
 
 /**
@@ -21,16 +21,17 @@ const util = require('util');
  * @see https://github.com/bevacqua/campaign
  */
 
-var emailClient = function (config) {
+const emailClient = function (config) {
 
-    var provider;
+    let provider;
+    let smtp;
 
     switch (config.provider.name) {
         case 'mailgun':
             provider = require('campaign-mailgun')(config.provider.options);
             break;
         case 'nodemailer':
-            var smtp = nodemailer.createTransport(config.provider.options);
+            smtp = nodemailer.createTransport(config.provider.options);
 
             provider = require('campaign-nodemailer')({
                 transport: smtp
@@ -57,7 +58,7 @@ var emailClient = function (config) {
     }
 
     //For full conf - https://github.com/bevacqua/campaign#client-options
-    var client = campaign({
+    const client = campaign({
         provider: provider,
         from: config.from, // The "from" e-mail. Good old "no-reply@mydomain.com".
         templateEngine: require('campaign-mustache'), // Default is Mustache - https://github.com/janl/mustache.js

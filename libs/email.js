@@ -5,33 +5,33 @@
  */
 
 module.exports = function (app) {
-    var emailClient = app.get('emailClient');
-    var logger = app.get('logger');
-    var models = app.get('models');
-    var db = models.sequelize;
-    var Promise = app.get('Promise');
-    var urlLib = app.get('urlLib');
-    var _ = app.get('lodash');
-    var config = app.get('config');
-    var util = app.get('util');
-    var fs = app.get('fs');
-    var path = require('path');
-    var moment = app.get('moment');
-    var url = app.get('url');
-    var cosJwt = app.get('cosJwt');
+    const emailClient = app.get('emailClient');
+    const logger = app.get('logger');
+    const models = app.get('models');
+    const db = models.sequelize;
+    const Promise = app.get('Promise');
+    const urlLib = app.get('urlLib');
+    const _ = app.get('lodash');
+    const config = app.get('config');
+    const util = app.get('util');
+    const fs = app.get('fs');
+    const path = require('path');
+    const moment = app.get('moment');
+    const url = app.get('url');
+    const cosJwt = app.get('cosJwt');
 
-    var User = models.User;
-    var Topic = models.Topic;
-    var Group = models.Group;
-    var TopicMemberUser = models.TopicMemberUser;
+    const User = models.User;
+    const Topic = models.Topic;
+    const Group = models.Group;
+    const TopicMemberUser = models.TopicMemberUser;
 
-    var templateRoot = app.get('EMAIL_TEMPLATE_ROOT');
-    var templateRootLocal = app.get('EMAIL_TEMPLATE_ROOT_LOCAL');
+    const templateRoot = app.get('EMAIL_TEMPLATE_ROOT');
+    const templateRootLocal = app.get('EMAIL_TEMPLATE_ROOT_LOCAL');
 
-    var emailHeaderLogoName = 'logo.png';
-    var emailFooterLogoName = 'logo_footer.png';
-    var emailHeaderLogo = path.join(templateRoot, 'images/logo-email.png');
-    var emailFooterLogo = path.join(templateRoot, 'images/logo-email-small.png');
+    const emailHeaderLogoName = 'logo.png';
+    const emailFooterLogoName = 'logo_footer.png';
+    let emailHeaderLogo = path.join(templateRoot, 'images/logo-email.png');
+    const emailFooterLogo = path.join(templateRoot, 'images/logo-email-small.png');
     if (fs.existsSync(path.join(templateRootLocal, 'images/logo-email.png'))) { //eslint-disable-line no-sync
         emailHeaderLogo = path.join(templateRootLocal, 'images/logo-email.png');
     }
@@ -63,7 +63,7 @@ module.exports = function (app) {
     };
 
 
-    var templateCache = {};
+    const templateCache = {};
 
     /**
      * Resolve template (body and localization strings) based on template name and language.
@@ -77,7 +77,7 @@ module.exports = function (app) {
      *
      * @private
      */
-    var resolveTemplate = function (template, language) {
+    const resolveTemplate = function (template, language) {
         const lang = language ? language.toLowerCase() : 'en';
 
         const pathTemplate = ':templateRoot/build/:template_:language.html'
@@ -242,7 +242,7 @@ module.exports = function (app) {
      *
      * @private
      */
-    var _sendAccountVerification = function (to, emailVerificationCode, token) {
+    const _sendAccountVerification = function (to, emailVerificationCode, token) {
         return User
             .findAll({
                 where: {
@@ -250,16 +250,16 @@ module.exports = function (app) {
                 }
             })
             .then(function (users) {
-                var promisesToResolve = [];
+                const promisesToResolve = [];
 
                 _.forEach(users, function (user) {
-                    var templateObject = resolveTemplate('accountVerification', user.language);
-                    var linkVerify = urlLib.getApi('/api/auth/verify/:code', {code: emailVerificationCode}, {token: token});
+                    const template = resolveTemplate('accountVerification', user.language);
+                    const linkVerify = urlLib.getApi('/api/auth/verify/:code', {code: emailVerificationCode}, {token: token});
 
-                    var emailOptions = Object.assign(
+                    const emailOptions = Object.assign(
                         _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
                         {
-                            subject: templateObject.translations.ACCOUNT_VERIFICATION.SUBJECT,
+                            subject: template.translations.ACCOUNT_VERIFICATION.SUBJECT,
                             to: user.email,
                             //Placeholders
                             toUser: user,
@@ -267,8 +267,9 @@ module.exports = function (app) {
                         }
                     );
 
+                    emailOptions.linkedData.translations = template.translations;
                     // https://github.com/bevacqua/campaign#email-sending-option
-                    var userEmailPromise = emailClient.sendStringAsync(templateObject.body, emailOptions);
+                    const userEmailPromise = emailClient.sendStringAsync(template.body, emailOptions);
 
                     promisesToResolve.push(userEmailPromise);
                 });
@@ -287,7 +288,7 @@ module.exports = function (app) {
      *
      * @private
      */
-    var _sendPasswordReset = function (to, passwordResetCode) {
+    const _sendPasswordReset = function (to, passwordResetCode) {
         return User
             .findAll({
                 where: {
@@ -295,7 +296,7 @@ module.exports = function (app) {
                 }
             })
             .then(function (users) {
-                var promisesToResolve = [];
+                const promisesToResolve = [];
 
                 _.forEach(users, function (user) {
                     const template = resolveTemplate('passwordReset', user.language);
@@ -311,6 +312,7 @@ module.exports = function (app) {
                         }
                     );
 
+                    emailOptions.linkedData.translations = template.translations;
                     const userEmailPromise = emailClient.sendStringAsync(template.body, emailOptions);
 
                     promisesToResolve.push(userEmailPromise);
@@ -332,7 +334,7 @@ module.exports = function (app) {
      *
      * @private
      */
-    var _sendTopicMemberUserCreate = function (toUserIds, fromUserId, topicId, partner) {
+    const _sendTopicMemberUserCreate = function (toUserIds, fromUserId, topicId, partner) {
         if (!toUserIds || !fromUserId || !topicId) {
             return Promise.reject(new Error('Missing one or more required parameters'));
         }
@@ -346,8 +348,8 @@ module.exports = function (app) {
 
             return Promise.resolve();
         }
-        var customStyles = EMAIL_OPTIONS_DEFAULT.styles;
-        var toUsersPromise = User.findAll({
+        let customStyles = EMAIL_OPTIONS_DEFAULT.styles;
+        const toUsersPromise = User.findAll({
             where: {
                 id: toUserIds
             },
@@ -355,13 +357,13 @@ module.exports = function (app) {
             raw: true
         });
 
-        var fromUserPromise = User.findOne({
+        const fromUserPromise = User.findOne({
             where: {
                 id: fromUserId
             }
         });
 
-        var topicPromise = Topic.findOne({
+        const topicPromise = Topic.findOne({
             where: {
                 id: topicId
             }
@@ -370,22 +372,22 @@ module.exports = function (app) {
         return Promise
             .all([toUsersPromise, fromUserPromise, topicPromise])
             .then(function (results) {
-                var toUsers = results[0];
-                var fromUser = results[1].toJSON();
-                var topic = results[2].toJSON();
+                const toUsers = results[0];
+                const fromUser = results[1].toJSON();
+                const topic = results[2].toJSON();
 
                 if (toUsers && toUsers.length) {
-                    var promisesToResolve = [];
+                    const promisesToResolve = [];
 
-                    var from;
-                    var logoFile;
-                    var templateName;
-                    var linkToApplication;
+                    let from;
+                    let logoFile;
+                    let templateName;
+                    let linkToApplication;
 
-                    var sourceSite;
+                    let sourceSite;
 
                     if (partner) {
-                        var hostname = url.parse(partner.website).hostname;
+                        const hostname = url.parse(partner.website).hostname;
                         if (hostname !== url.parse(urlLib.getFe()).hostname) { // For the time CitizenOS is not configured as partner
                             sourceSite = hostname;
                         }
@@ -416,7 +418,7 @@ module.exports = function (app) {
                     //TODO: we can win performance if we collect together all Users with same language and send these with 1 request to mail provider
                     _.forEach(toUsers, function (user) {
                         if (user.email) {
-                            var template = resolveTemplate(templateName, user.language);
+                            let template = resolveTemplate(templateName, user.language);
 
                             // TODO: Ideally needed only in test, we need to rethink partner template handling...
                             if (!template && sourceSite) { // Fall back to top level domain template if subdomain template is missing (initially written for uuseakus.rahvaalgatus.ee and rahvaalgatus.ee
@@ -425,8 +427,8 @@ module.exports = function (app) {
                                 template = resolveTemplate('inviteTopic_' + sourceSite, user.language);
                             }
 
-                            var subject;
-                            var linkViewTopic;
+                            let subject;
+                            let linkViewTopic;
 
                             // Handle Partner links
                             if (!sourceSite) {
@@ -446,6 +448,9 @@ module.exports = function (app) {
 
                             // In case Topic has no title, just show the full url.
                             topic.title = topic.title ? topic.title : linkViewTopic;
+
+                            let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
+                            linkedData.translations = template.translations;
 
                             const emailOptions = {
                                 from: from,
@@ -468,10 +473,10 @@ module.exports = function (app) {
                                 linkToApplication: linkToApplication,
                                 provider: EMAIL_OPTIONS_DEFAULT.provider,
                                 styles: customStyles,
-                                linkedData: EMAIL_OPTIONS_DEFAULT.linkedData
+                                linkedData
                             };
 
-                            var emailPromise = emailClient.sendStringAsync(template.body, emailOptions);
+                            const emailPromise = emailClient.sendStringAsync(template.body, emailOptions);
 
                             promisesToResolve.push(emailPromise);
                         }
@@ -493,7 +498,7 @@ module.exports = function (app) {
      *
      * @private
      */
-    var _sendTopicMemberUserInviteCreate = async function (invites) {
+    const _sendTopicMemberUserInviteCreate = async function (invites) {
         if (!invites || !Array.isArray(invites)) {
             return Promise.reject(new Error('Missing one or more required parameters'));
         }
@@ -555,6 +560,8 @@ module.exports = function (app) {
             // In case Topic has no title, just show the full url.
             topic.title = topic.title ? topic.title : linkViewInvite;
 
+            let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
+            linkedData.translations = template.translations;
             const emailOptions = {
                 // from: from, - comes from emailClient.js configuration
                 subject: subject,
@@ -576,7 +583,8 @@ module.exports = function (app) {
                 linkToApplication: linkToApplication,
                 provider: EMAIL_OPTIONS_DEFAULT.provider,
                 styles: customStyles,
-                linkedData: EMAIL_OPTIONS_DEFAULT.linkedData
+                linkToPlatformText: template.translations.LAYOUT.LINK_TO_PLATFORM,
+                linkedData
             };
 
             return emailClient.sendStringAsync(template.body, emailOptions);
@@ -596,7 +604,7 @@ module.exports = function (app) {
      *
      * @private
      */
-    var _sendTopicMemberGroupCreate = function (toGroupIds, fromUserId, topicId) {
+    const _sendTopicMemberGroupCreate = function (toGroupIds, fromUserId, topicId) {
         if (!toGroupIds || !fromUserId || !topicId) {
             return Promise.reject(new Error('Missing one or more required parameters'));
         }
@@ -611,7 +619,7 @@ module.exports = function (app) {
             return Promise.resolve();
         }
 
-        var toUsersPromise = db
+        const toUsersPromise = db
             .query(
                 '\
                      SELECT DISTINCT ON (gm."userId") \
@@ -635,13 +643,13 @@ module.exports = function (app) {
                 }
             );
 
-        var fromUserPromise = User.findOne({
+        const fromUserPromise = User.findOne({
             where: {
                 id: fromUserId
             }
         });
 
-        var topicPromise = Topic.findOne({
+        const topicPromise = Topic.findOne({
             where: {
                 id: topicId
             }
@@ -650,21 +658,21 @@ module.exports = function (app) {
         return Promise
             .all([toUsersPromise, fromUserPromise, topicPromise])
             .then(function (results) {
-                var toUsers = results[0];
-                var fromUser = results[1].toJSON();
-                var topic = results[2].toJSON();
+                const toUsers = results[0];
+                const fromUser = results[1].toJSON();
+                const topic = results[2].toJSON();
 
                 if (toUsers && toUsers.length) {
-                    var promisesToResolve = [];
+                    const promisesToResolve = [];
 
                     _.forEach(toUsers, function (user) {
                         if (user.email) {
-                            var template = resolveTemplate('inviteTopic', user.language);
+                            const template = resolveTemplate('inviteTopic', user.language);
                             // TODO: Could use Mu here....
-                            var subject = template.translations.INVITE_TOPIC.SUBJECT
+                            const subject = template.translations.INVITE_TOPIC.SUBJECT
                                 .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name));
 
-                            var linkViewTopic = urlLib.getApi('/api/invite/view', null, {
+                            const linkViewTopic = urlLib.getApi('/api/invite/view', null, {
                                 email: user.email,
                                 topicId: topic.id
                             });
@@ -672,7 +680,7 @@ module.exports = function (app) {
                             // In case Topic has no title, just show the full url.
                             topic.title = topic.title ? topic.title : linkViewTopic;
 
-                            var emailOptions = Object.assign(
+                            const emailOptions = Object.assign(
                                 _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
                                 {
                                     subject: subject,
@@ -683,8 +691,8 @@ module.exports = function (app) {
                                     linkViewTopic: linkViewTopic
                                 }
                             );
-
-                            var sendEmailPromise = emailClient.sendStringAsync(template.body, emailOptions);
+                            emailOptions.linkedData.translations = template.translations;
+                            const sendEmailPromise = emailClient.sendStringAsync(template.body, emailOptions);
 
                             promisesToResolve.push(sendEmailPromise);
                         }
@@ -709,7 +717,7 @@ module.exports = function (app) {
      *
      * @private
      */
-    var _sendGroupMemberUserCreate = function (toUserIds, fromUserId, groupId) {
+    const _sendGroupMemberUserCreate = function (toUserIds, fromUserId, groupId) {
         if (!toUserIds || !fromUserId || !groupId) {
             return Promise.reject(new Error('Missing one or more required parameters'));
         }
@@ -724,7 +732,7 @@ module.exports = function (app) {
             return;
         }
 
-        var toUsersPromise = User.findAll({
+        const toUsersPromise = User.findAll({
             where: {
                 id: toUserIds
             },
@@ -732,13 +740,13 @@ module.exports = function (app) {
             raw: true
         });
 
-        var fromUserPromise = User.findOne({
+        const fromUserPromise = User.findOne({
             where: {
                 id: fromUserId
             }
         });
 
-        var groupPromise = Group.findOne({
+        const groupPromise = Group.findOne({
             where: {
                 id: groupId
             }
@@ -747,23 +755,23 @@ module.exports = function (app) {
         return Promise
             .all([toUsersPromise, fromUserPromise, groupPromise])
             .then(function (results) {
-                var toUsers = results[0];
-                var fromUser = results[1].toJSON();
-                var group = results[2].toJSON();
+                const toUsers = results[0];
+                const fromUser = results[1].toJSON();
+                const group = results[2].toJSON();
 
                 if (toUsers && toUsers.length) {
-                    var promisesToResolve = [];
+                    const promisesToResolve = [];
 
                     _.forEach(toUsers, function (user) {
                         if (user.email) {
-                            var template = resolveTemplate('inviteGroup', user.language);
+                            const template = resolveTemplate('inviteGroup', user.language);
 
                             // TODO: could use Mu here...
-                            var subject = template.translations.INVITE_GROUP.SUBJECT
+                            const subject = template.translations.INVITE_GROUP.SUBJECT
                                 .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
                                 .replace('{{group.name}}', util.escapeHtml(group.name));
 
-                            var emailOptions = Object.assign(
+                            const emailOptions = Object.assign(
                                 _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
                                 {
                                     subject: subject,
@@ -782,7 +790,8 @@ module.exports = function (app) {
                                     )
                                 }
                             );
-                            var userEmailPromise = emailClient.sendStringAsync(template.body, emailOptions);
+                            emailOptions.linkedData.translations = template.translations;
+                            const userEmailPromise = emailClient.sendStringAsync(template.body, emailOptions);
 
                             promisesToResolve.push(userEmailPromise);
                         }
@@ -805,7 +814,7 @@ module.exports = function (app) {
      *
      * @private
      */
-    var _sendCommentReport = function (commentId, report) {
+    const _sendCommentReport = function (commentId, report) {
         return db
             .query(
                 ' \
@@ -854,30 +863,31 @@ module.exports = function (app) {
                 }
             })
             .spread(function (commentInfo, moderators) {
-                var promisesToResolve = [];
+                const promisesToResolve = [];
 
                 // Comment creator e-mail - TODO: Comment back in when comment editing goes live!
-                var commentCreatorInformed = true;
+                let commentCreatorInformed = true;
                 if (commentInfo.comment.creator.email) {
-                    var templateObject = resolveTemplate('reportCommentCreator', commentInfo.comment.creator.language);
-                    var linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: commentInfo.topic.id});
+                    const template = resolveTemplate('reportCommentCreator', commentInfo.comment.creator.language);
+                    const linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: commentInfo.topic.id});
 
-                    var emailOptions = Object.assign(
+                    const emailOptions = Object.assign(
                         _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
                         {
-                            subject: templateObject.translations.REPORT_COMMENT_CREATOR.SUBJECT,
+                            subject: template.translations.REPORT_COMMENT_CREATOR.SUBJECT,
                             to: commentInfo.comment.creator.email,
                             //Placeholders
                             comment: commentInfo.comment,
                             report: {
-                                type: templateObject.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
+                                type: template.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
                                 text: report.text
                             },
                             linkViewTopic: linkViewTopic
                         }
                     );
 
-                    var promiseCreatorEmail = emailClient.sendStringAsync(templateObject.body, emailOptions);
+                    emailOptions.linkedData.translations = template.translations;
+                    const promiseCreatorEmail = emailClient.sendStringAsync(template.body, emailOptions);
 
                     promisesToResolve.push(promiseCreatorEmail);
                 } else {
@@ -886,7 +896,7 @@ module.exports = function (app) {
                 }
 
                 if (moderators) {
-                    var linkModerate = urlLib.getFe(
+                    const linkModerate = urlLib.getFe(
                         '/topics/:topicId/comments/:commentId/reports/:reportId/moderate',
                         {
                             topicId: commentInfo.topic.id,
@@ -897,9 +907,9 @@ module.exports = function (app) {
 
                     moderators.forEach(function (moderator) {
                         if (moderator.email) {
-                            var templateObject = resolveTemplate('reportCommentModerator', moderator.language);
+                            const template = resolveTemplate('reportCommentModerator', moderator.language);
 
-                            var token = cosJwt.getTokenRestrictedUse(
+                            const token = cosJwt.getTokenRestrictedUse(
                                 {
                                     userId: moderator.id
                                 },
@@ -915,23 +925,23 @@ module.exports = function (app) {
                                 ]
                             );
 
-                            var emailOptions = Object.assign(
+                            const emailOptions = Object.assign(
                                 _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
                                 {
-                                    subject: templateObject.translations.REPORT_COMMENT_MODERATOR.SUBJECT,
+                                    subject: template.translations.REPORT_COMMENT_MODERATOR.SUBJECT,
                                     to: moderator.email,
                                     //Placeholders...
                                     comment: commentInfo.comment,
                                     report: {
-                                        type: templateObject.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
+                                        type: template.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
                                         text: report.text
                                     },
                                     linkModerate: linkModerate + '?token=' + encodeURIComponent(token),
                                     isUserNotified: commentCreatorInformed
                                 }
                             );
-
-                            var promiseModeratorEmail = emailClient.sendStringAsync(templateObject.body, emailOptions);
+                            emailOptions.linkedData.translations = template.translations;
+                            const promiseModeratorEmail = emailClient.sendStringAsync(template.body, emailOptions);
 
                             promisesToResolve.push(promiseModeratorEmail);
                         }
@@ -954,7 +964,7 @@ module.exports = function (app) {
      * @see Citizen OS Topic moderation 1 - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
      *
      */
-    var _sendTopicReport = async function (topicReport) {
+    const _sendTopicReport = async function (topicReport) {
         const infoFetchPromises = [];
 
         // Get the topic info
@@ -983,9 +993,9 @@ module.exports = function (app) {
 
         if (userReporter.email) {
             // 1.1 To the User (reporter) who reported the topic - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
-            var sendReporterEmail = async function () {
-                const templateObject = resolveTemplate('reportTopicReportReporter', userReporter.language);
-                const subject = templateObject.translations.REPORT_TOPIC_REPORT_REPORTER.SUBJECT
+            const sendReporterEmail = async function () {
+                const template = resolveTemplate('reportTopicReportReporter', userReporter.language);
+                const subject = template.translations.REPORT_TOPIC_REPORT_REPORTER.SUBJECT
                     .replace('{{report.id}}', topicReport.id);
 
                 const emailOptions = Object.assign(
@@ -997,7 +1007,7 @@ module.exports = function (app) {
                         userReporter: userReporter,
                         report: {
                             id: topicReport.id,
-                            type: templateObject.translations.REPORT.REPORT_TYPE[topicReport.type.toUpperCase()],
+                            type: template.translations.REPORT.REPORT_TYPE[topicReport.type.toUpperCase()],
                             text: topicReport.text
                         },
                         topic: topic,
@@ -1005,8 +1015,9 @@ module.exports = function (app) {
                         linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
                     }
                 );
+                emailOptions.linkedData.translations = template.translations;
 
-                return await emailClient.sendStringAsync(templateObject.body, emailOptions);
+                return await emailClient.sendStringAsync(template.body, emailOptions);
             };
             sendEmailPromises.push(sendReporterEmail());
         } else {
@@ -1017,8 +1028,8 @@ module.exports = function (app) {
         topicMemberList.forEach(function (topicMemberUser) {
             if (topicMemberUser.email) {
                 const sendTopicMemberEmail = async function () {
-                    const templateObject = resolveTemplate('reportTopicReportMember', topicMemberUser.language);
-                    const subject = templateObject.translations.REPORT_TOPIC_REPORT_MEMBER.SUBJECT
+                    const template = resolveTemplate('reportTopicReportMember', topicMemberUser.language);
+                    const subject = template.translations.REPORT_TOPIC_REPORT_MEMBER.SUBJECT
                         .replace('{{report.id}}', topicReport.id);
 
                     const emailOptions = Object.assign(
@@ -1030,7 +1041,7 @@ module.exports = function (app) {
                             userMember: topicMemberUser,
                             report: {
                                 id: topicReport.id,
-                                type: templateObject.translations.REPORT.REPORT_TYPE[topicReport.type.toUpperCase()],
+                                type: template.translations.REPORT.REPORT_TYPE[topicReport.type.toUpperCase()],
                                 text: topicReport.text
                             },
                             topic: topic,
@@ -1038,8 +1049,9 @@ module.exports = function (app) {
                             linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
                         }
                     );
+                    emailOptions.linkedData.translations = template.translations;
 
-                    return await emailClient.sendStringAsync(templateObject.body, emailOptions);
+                    return await emailClient.sendStringAsync(template.body, emailOptions);
                 };
                 sendEmailPromises.push(sendTopicMemberEmail());
             } else {
@@ -1051,8 +1063,8 @@ module.exports = function (app) {
         topicModerators.forEach(function (userModerator) {
             if (userModerator.email) {
                 const sendTopicModeratorEmail = async function () {
-                    const templateObject = resolveTemplate('reportTopicReportModerator', userModerator.language);
-                    const subject = templateObject.translations.REPORT_TOPIC_REPORT_MODERATOR.SUBJECT
+                    const template = resolveTemplate('reportTopicReportModerator', userModerator.language);
+                    const subject = template.translations.REPORT_TOPIC_REPORT_MODERATOR.SUBJECT
                         .replace('{{report.id}}', topicReport.id);
 
                     const emailOptions = Object.assign(
@@ -1064,7 +1076,7 @@ module.exports = function (app) {
                             userModerator: userModerator,
                             report: {
                                 id: topicReport.id,
-                                type: templateObject.translations.REPORT.REPORT_TYPE[topicReport.type.toUpperCase()],
+                                type: template.translations.REPORT.REPORT_TYPE[topicReport.type.toUpperCase()],
                                 text: topicReport.text
                             },
                             topic: topic,
@@ -1072,8 +1084,9 @@ module.exports = function (app) {
                             linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
                         }
                     );
+                    emailOptions.linkedData.translations = template.translations;
 
-                    return await emailClient.sendStringAsync(templateObject.body, emailOptions);
+                    return await emailClient.sendStringAsync(template.body, emailOptions);
                 };
                 sendEmailPromises.push(sendTopicModeratorEmail());
             } else {
@@ -1096,7 +1109,7 @@ module.exports = function (app) {
      * @see Citizen OS Topic moderation 2 - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
      *
      */
-    var _sendTopicReportModerate = async function (topicReport) {
+    const _sendTopicReportModerate = async function (topicReport) {
         const infoFetchPromises = [];
         const topic = topicReport.topic;
 
@@ -1118,9 +1131,9 @@ module.exports = function (app) {
 
         // 2.1 To the User (reporter) who reported the topic - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
         if (userReporter.email) {
-            var sendReporterEmail = async function () {
-                const templateObject = resolveTemplate('reportTopicModerateReporter', userReporter.language);
-                const subject = templateObject.translations.REPORT_TOPIC_MODERATE_REPORTER.SUBJECT
+            const sendReporterEmail = async function () {
+                const template = resolveTemplate('reportTopicModerateReporter', userReporter.language);
+                const subject = template.translations.REPORT_TOPIC_MODERATE_REPORTER.SUBJECT
                     .replace('{{report.id}}', topicReport.id);
 
                 const emailOptions = Object.assign(
@@ -1132,17 +1145,18 @@ module.exports = function (app) {
                         userReporter: userReporter,
                         report: {
                             id: topicReport.id,
-                            moderatedReasonType: templateObject.translations.REPORT.REPORT_TYPE[topicReport.moderatedReasonType.toUpperCase()],
+                            moderatedReasonType: template.translations.REPORT.REPORT_TYPE[topicReport.moderatedReasonType.toUpperCase()],
                             moderatedReasonText: topicReport.moderatedReasonText,
-                            createdAt: moment(topicReport.createdAt).locale(templateObject.language).format('LLL Z')
+                            createdAt: moment(topicReport.createdAt).locale(template.language).format('LLL Z')
                         },
                         topic: topic,
                         linkViewTopic: linkViewTopic,
                         linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
                     }
                 );
+                emailOptions.linkedData.translations = template.translations;
 
-                return await emailClient.sendStringAsync(templateObject.body, emailOptions);
+                return await emailClient.sendStringAsync(template.body, emailOptions);
             };
             sendEmailPromiseses.push(sendReporterEmail());
         } else {
@@ -1153,8 +1167,8 @@ module.exports = function (app) {
         topicMemberList.forEach(function (topicMemberUser) {
             if (topicMemberUser.email) {
                 const sendTopicMemberEmail = async function () {
-                    const templateObject = resolveTemplate('reportTopicModerateMember', topicMemberUser.language);
-                    const subject = templateObject.translations.REPORT_TOPIC_MODERATE_MEMBER.SUBJECT
+                    const template = resolveTemplate('reportTopicModerateMember', topicMemberUser.language);
+                    const subject = template.translations.REPORT_TOPIC_MODERATE_MEMBER.SUBJECT
                         .replace('{{report.id}}', topicReport.id);
 
                     const emailOptions = Object.assign(
@@ -1166,17 +1180,18 @@ module.exports = function (app) {
                             userMember: topicMemberUser,
                             report: {
                                 id: topicReport.id,
-                                moderatedReasonType: templateObject.translations.REPORT.REPORT_TYPE[topicReport.moderatedReasonType.toUpperCase()],
+                                moderatedReasonType: template.translations.REPORT.REPORT_TYPE[topicReport.moderatedReasonType.toUpperCase()],
                                 moderatedReasonText: topicReport.moderatedReasonText,
-                                createdAt: moment(topicReport.createdAt).locale(templateObject.language).format('LLL Z')
+                                createdAt: moment(topicReport.createdAt).locale(template.language).format('LLL Z')
                             },
                             topic: topic,
                             linkViewTopic: linkViewTopic,
                             linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
                         }
                     );
+                    emailOptions.linkedData.translations = template.translations;
 
-                    return await emailClient.sendStringAsync(templateObject.body, emailOptions);
+                    return await emailClient.sendStringAsync(template.body, emailOptions);
                 };
                 sendEmailPromiseses.push(sendTopicMemberEmail());
             } else {
@@ -1199,7 +1214,7 @@ module.exports = function (app) {
      *
      * @see Citizen OS Topic moderation 3 - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
      */
-    var _sendTopicReportReview = async function (topicReport, reviewRequestText) {
+    const _sendTopicReportReview = async function (topicReport, reviewRequestText) {
         const topic = await Topic.findOne({
             where: {
                 id: topicReport.topicId
@@ -1214,8 +1229,8 @@ module.exports = function (app) {
         topicModerators.forEach(function (userModerator) {
             if (userModerator.email) {
                 const sendTopicModeratorEmail = async function () {
-                    const templateObject = resolveTemplate('reportTopicReportReviewModerator', userModerator.language);
-                    const subject = templateObject.translations.REPORT_TOPIC_REPORT_REVIEW_MODERATOR.SUBJECT
+                    const template = resolveTemplate('reportTopicReportReviewModerator', userModerator.language);
+                    const subject = template.translations.REPORT_TOPIC_REPORT_REVIEW_MODERATOR.SUBJECT
                         .replace('{{report.id}}', topicReport.id);
 
                     const emailOptions = Object.assign(
@@ -1227,7 +1242,7 @@ module.exports = function (app) {
                             userModerator: userModerator,
                             report: {
                                 id: topicReport.id,
-                                moderatedReasonType: templateObject.translations.REPORT.REPORT_TYPE[topicReport.moderatedReasonType.toUpperCase()],
+                                moderatedReasonType: template.translations.REPORT.REPORT_TYPE[topicReport.moderatedReasonType.toUpperCase()],
                                 moderatedReasonText: topicReport.moderatedReasonText
                             },
                             topic: topic,
@@ -1236,8 +1251,9 @@ module.exports = function (app) {
                             linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
                         }
                     );
+                    emailOptions.linkedData.translations = template.translations;
 
-                    return await emailClient.sendStringAsync(templateObject.body, emailOptions);
+                    return await emailClient.sendStringAsync(template.body, emailOptions);
                 };
                 sendEmailPromises.push(sendTopicModeratorEmail());
             } else {
@@ -1259,7 +1275,7 @@ module.exports = function (app) {
      *
      * @see Citizen OS Topic moderation 4 - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
      */
-    var _sendTopicReportResolve = async function (topicReport) {
+    const _sendTopicReportResolve = async function (topicReport) {
         const infoFetchPromises = [];
 
         // Topic info
@@ -1288,9 +1304,9 @@ module.exports = function (app) {
 
         // 4.1 To the User (reporter) who reported the topic - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
         if (userReporter.email) {
-            var sendReporterEmail = async function () {
-                const templateObject = resolveTemplate('reportTopicReportResolveReporter', userReporter.language);
-                const subject = templateObject.translations.REPORT_TOPIC_REPORT_RESOLVE_REPORTER.SUBJECT
+            const sendReporterEmail = async function () {
+                const template = resolveTemplate('reportTopicReportResolveReporter', userReporter.language);
+                const subject = template.translations.REPORT_TOPIC_REPORT_RESOLVE_REPORTER.SUBJECT
                     .replace('{{report.id}}', topicReport.id);
 
                 const emailOptions = Object.assign(
@@ -1301,15 +1317,16 @@ module.exports = function (app) {
                         //Placeholders
                         userReporter: userReporter,
                         report: {
-                            createdAt: moment(topicReport.createdAt).locale(templateObject.language).format('LLL Z')
+                            createdAt: moment(topicReport.createdAt).locale(template.language).format('LLL Z')
                         },
                         topic: topic,
                         linkViewTopic: linkViewTopic,
                         linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
                     }
                 );
+                emailOptions.linkedData.translations = template.translations;
 
-                return await emailClient.sendStringAsync(templateObject.body, emailOptions);
+                return await emailClient.sendStringAsync(template.body, emailOptions);
             };
             sendEmailPromises.push(sendReporterEmail());
         } else {
@@ -1321,8 +1338,8 @@ module.exports = function (app) {
         topicMemberList.forEach(function (topicMemberUser) {
             if (topicMemberUser.email) {
                 const sendTopicMemberEmail = async function () {
-                    const templateObject = resolveTemplate('reportTopicReportResolveMember', topicMemberUser.language);
-                    const subject = templateObject.translations.REPORT_TOPIC_REPORT_RESOLVE_MEMBER.SUBJECT
+                    const template = resolveTemplate('reportTopicReportResolveMember', topicMemberUser.language);
+                    const subject = template.translations.REPORT_TOPIC_REPORT_RESOLVE_MEMBER.SUBJECT
                         .replace('{{report.id}}', topicReport.id);
 
                     const emailOptions = Object.assign(
@@ -1337,8 +1354,9 @@ module.exports = function (app) {
                             linkViewModerationGuidelines: config.email.linkViewModerationGuidelines
                         }
                     );
+                    emailOptions.linkedData.translations = template.translations;
 
-                    return await emailClient.sendStringAsync(templateObject.body, emailOptions);
+                    return await emailClient.sendStringAsync(template.body, emailOptions);
                 };
                 sendEmailPromises.push(sendTopicMemberEmail());
             } else {
@@ -1364,29 +1382,32 @@ module.exports = function (app) {
      *
      * @private
      */
-    var _sendToParliament = function (topic, contact, linkDownloadBdocFinal, linkDownloadBdocFinalExpiryDate, linkAddEvent) {
+    const _sendToParliament = function (topic, contact, linkDownloadBdocFinal, linkDownloadBdocFinalExpiryDate, linkAddEvent) {
         if (!topic || !contact || !linkDownloadBdocFinal || !linkDownloadBdocFinalExpiryDate || !linkAddEvent) {
             return Promise.reject(new Error('Missing one or more required parameters'));
         }
 
-        var template = resolveTemplate('toParliament', 'et'); // Estonian Gov only accepts et
-        var linkToApplication = config.features.sendToParliament.urlPrefix;
+        const template = resolveTemplate('toParliament', 'et'); // Estonian Gov only accepts et
+        const linkToApplication = config.features.sendToParliament.urlPrefix;
 
-        var from = config.features.sendToParliament.from;
-        var to = config.features.sendToParliament.to;
-        var subject = template.translations.TO_PARLIAMENT.SUBJECT.replace('{{topic.title}}', util.escapeHtml(topic.title));
-        var linkViewTopic = linkToApplication + '/initiatives/:topicId'.replace(':topicId', topic.id);
-        var logoFile = templateRoot + '/images/logo-email_rahvaalgatus.ee.png';
+        const from = config.features.sendToParliament.from;
+        const to = config.features.sendToParliament.to;
+        const subject = template.translations.TO_PARLIAMENT.SUBJECT.replace('{{topic.title}}', util.escapeHtml(topic.title));
+        const linkViewTopic = linkToApplication + '/initiatives/:topicId'.replace(':topicId', topic.id);
+        const logoFile = templateRoot + '/images/logo-email_rahvaalgatus.ee.png';
 
-        var promisesToResolve = [];
-        var customStyles = {
+        const promisesToResolve = [];
+        const customStyles = {
             headerBackgroundColor: '#004892',
             logoWidth: 360,
             logoHeight: 51
         };
 
         // Email to Parliament
-        var emailToParliamentPromise = emailClient
+        let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
+        linkedData.translations = template.translations;
+
+        const emailToParliamentPromise = emailClient
             .sendStringAsync(
                 template.body,
                 {
@@ -1413,7 +1434,7 @@ module.exports = function (app) {
                     contact: contact,
                     provider: EMAIL_OPTIONS_DEFAULT.provider,
                     styles: customStyles,
-                    linkedData: EMAIL_OPTIONS_DEFAULT.linkedData
+                    linkedData
                 }
             )
             .then(function () {
@@ -1428,7 +1449,7 @@ module.exports = function (app) {
         promisesToResolve.push(emailToParliamentPromise);
 
         // Email to Topic creator
-        var emailToTopicCreatorPromise = emailClient
+        const emailToTopicCreatorPromise = emailClient
             .sendStringAsync(
                 template.body,
                 {
@@ -1455,7 +1476,7 @@ module.exports = function (app) {
                     contact: contact,
                     provider: EMAIL_OPTIONS_DEFAULT.provider,
                     styles: customStyles,
-                    linkedData: EMAIL_OPTIONS_DEFAULT.linkedData
+                    linkedData
                 }
             )
             .then(function () {
