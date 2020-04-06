@@ -1,3 +1,8 @@
+## 2020-04-06
+
+* Email layout is wonky on mobile - https://github.com/citizenos/citizenos-api/issues/159
+* Email footer is served in English, instead of 13 languages.- https://github.com/citizenos/citizenos-api/issues/160
+
 ## 2020-02-20
 
 * Update "UserConnection" "connectionUserId" values to have PNO prefix Where "connectionId" esteid or smartid
@@ -6,7 +11,7 @@
 
 ## 2020-02-14
 
-* https://github.com/citizenos/citizenos-api/issues/161
+* Optimize (speed up) activity feed - https://github.com/citizenos/citizenos-api/issues/161
 * Fixed some tests that were randomly failing
 
 ## 2020-01-29
