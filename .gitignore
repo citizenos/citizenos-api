@@ -15,3 +15,5 @@ Thumbs.db
 /config/emails/images/*
 /files/**/
 /public/uploads
+/test/tmp/**
+!/test/tmp/README.md

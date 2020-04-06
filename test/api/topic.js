@@ -174,7 +174,6 @@ const topicUpdatePromised = async function (agent, userId, topicId, status, visi
     return _topicUpdatePromised(agent, userId, topicId, status, visibility, categories, endsAt, contact, 200);
 };
 
-
 var _topicUpdateField = function (agent, userId, topicId, topic, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId'
         .replace(':userId', userId)
@@ -1735,6 +1734,7 @@ const _ = app.get('lodash');
 const cosUtil = app.get('util');
 const async = app.get('async');
 const fs = app.get('fs');
+const SevenZip = app.get('SevenZip');
 const etherpadClient = app.get('etherpadClient');
 const cosEtherpad = app.get('cosEtherpad');
 const jwt = app.get('jwt');
@@ -8419,7 +8419,52 @@ suite('Users', function () {
                                     const userBdocDownloadToken = userBdocUrlMatches[1];
                                     await topicVoteDownloadBdocUserPromised(agent, topic.id, voteRead.id, userBdocDownloadToken);
 
-                                    // TODO: Do we want to test the contents of the file here or we should in the bdoc unit tests?
+                                    const pathUserBdoc = `./test/tmp/user_${voteRead.id}_${user.id}.bdoc`;
+                                    const fileWriteStream = fs.createWriteStream(pathUserBdoc);
+                                    const fileWriteStreamPromised = cosUtil.streamToPromise(fileWriteStream);
+
+                                    request('')
+                                        .get(voteReadAfterVote2.downloads.bdocVote.split('?')[0])
+                                        .query({token: userBdocDownloadToken})
+                                        .pipe(fileWriteStream);
+
+                                    await fileWriteStreamPromised;
+
+                                    const bdocFileList = await new Promise(function (resolve, reject) {
+                                        const files = [];
+
+                                        const listStream = SevenZip.list(pathUserBdoc);
+
+                                        listStream.on('data', function (data) {
+                                            files.push(data);
+                                        });
+
+                                        listStream.on('end', function () {
+                                            resolve(files);
+                                        });
+
+                                        listStream.on('error', function (err) {
+                                            reject(err);
+                                        });
+                                    });
+
+                                    const fileListExpected = [
+                                        'mimetype',
+                                        '__metainfo.html',
+                                        '__userinfo.html',
+                                        `${options[1].value}.html`,
+                                        `${options[2].value}.html`,
+                                        'document.docx',
+                                        'META-INF/manifest.xml',
+                                        'META-INF/signatures-1.xml'
+                                    ];
+
+                                    bdocFileList.forEach(function (f) {
+                                        assert.isTrue(fileListExpected.indexOf(f.file) > -1);
+                                    });
+
+                                    // Clean up
+                                    fs.unlinkSync(pathUserBdoc);
                                 });
 
                                 teardown(async function () {
@@ -8506,7 +8551,53 @@ suite('Users', function () {
                                     const finalBdocDownloadToken = finalBdocUrlMatches[1];
                                     await topicVoteDownloadBdocFinalPromised(agent, topic.id, voteRead.id, finalBdocDownloadToken);
 
-                                    // TODO: Do we want to test the contents of the file here or we should do it in the bdoc unit tests?
+                                    const pathFinalBdoc = `./test/tmp/final_${voteRead.id}_${user.id}.bdoc`;
+                                    const fileWriteStream = fs.createWriteStream(pathFinalBdoc);
+                                    const fileWriteStreamPromised = cosUtil.streamToPromise(fileWriteStream);
+
+                                    request('')
+                                        .get(voteReadAfterVoteClosed.downloads.bdocFinal.split('?')[0])
+                                        .query({token: finalBdocDownloadToken})
+                                        .pipe(fileWriteStream);
+
+                                    await fileWriteStreamPromised;
+
+                                    const bdocFileList = await new Promise(function (resolve, reject) {
+                                        const files = [];
+
+                                        const listStream = SevenZip.list(pathFinalBdoc);
+
+                                        listStream.on('data', function (data) {
+                                            files.push(data);
+                                        });
+
+                                        listStream.on('end', function () {
+                                            resolve(files);
+                                        });
+
+                                        listStream.on('error', function (err) {
+                                            reject(err);
+                                        });
+                                    });
+
+                                    const fileListExpected = [
+                                        'mimetype',
+                                        '__metainfo.html',
+                                        `${options[0].value}.html`,
+                                        `${options[1].value}.html`,
+                                        `${options[2].value}.html`,
+                                        'document.docx',
+                                        `PNOEE-${pid}.bdoc`,
+                                        'votes.csv',
+                                        'META-INF/manifest.xml'
+                                    ];
+
+                                    bdocFileList.forEach(function (f) {
+                                        assert.isTrue(fileListExpected.indexOf(f.file) > -1);
+                                    });
+
+                                    // Clean up
+                                    fs.unlinkSync(pathFinalBdoc);
                                 });
 
                                 teardown(async function () {
