@@ -7330,56 +7330,19 @@ suite('Users', function () {
             });
 
             suite('Vote', function () {
-                var agent = request.agent(app);
-                var agent2 = request.agent(app);
+                const agent = request.agent(app);
+                const agent2 = request.agent(app);
 
-                var user;
-                var user2;
-                var topic;
-                var topicPublic;
+                let user;
+                let user2;
+                let topic;
+                let topicPublic;
 
-                setup(function (done) {
-                    async
-                        .parallel(
-                            [
-                                function (cb) {
-                                    userLib.createUserAndLogin(agent, null, null, null, cb);
-                                },
-                                function (cb) {
-                                    userLib.createUserAndLogin(agent2, null, null, 'et', cb);
-                                }
-                            ],
-                            function (err, results) {
-                                if (err) return done(err);
-
-                                user = results[0];
-                                user2 = results[1];
-
-                                done();
-                            }
-                        );
-                });
-
-                setup(function (done) {
-                    async
-                        .parallel(
-                            [
-                                function (cb) {
-                                    topicCreate(agent, user.id, null, null, null, null, null, cb);
-                                },
-                                function (cb) {
-                                    topicCreate(agent, user.id, Topic.VISIBILITY.public, null, null, null, null, cb);
-                                }
-                            ],
-                            function (err, results) {
-                                if (err) return done(err);
-
-                                topic = results[0].body.data;
-                                topicPublic = results[1].body.data;
-
-                                done();
-                            }
-                        );
+                setup(async function () {
+                    user = await userLib.createUserAndLoginPromised(agent, null, null, null);
+                    user2 = await userLib.createUserAndLoginPromised(agent2, null, null, 'et');
+                    topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
+                    topicPublic = (await topicCreatePromised(agent, user.id, Topic.VISIBILITY.public, null, null, null, null)).body.data;
                 });
 
                 suite('authType === soft', function () {
@@ -7427,8 +7390,8 @@ suite('Users', function () {
                             }
                         ];
 
-                        const vote = (await topicVoteCreatePromised(agent, user.id, topic.id, options, 1, 2, false, null, null, null, null)).body.data;
-                        const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, vote.id)).body.data;
+                        const voteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, options, 1, 2, false, null, null, null, null)).body.data;
+                        const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
 
                         const voteList1 = [
                             {
@@ -7439,8 +7402,8 @@ suite('Users', function () {
                             }
                         ];
 
-                        await topicVoteVotePromised(agent, user.id, topic.id, vote.id, voteList1, null, null, null, null);
-                        const voteReadAfterVote1 = (await topicVoteReadPromised(agent, user.id, topic.id, vote.id)).body.data;
+                        await topicVoteVotePromised(agent, user.id, topic.id, voteCreated.id, voteList1, null, null, null, null);
+                        const voteReadAfterVote1 = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
 
                         _(voteList1).forEach(function (voteOption) {
                             const option = _.find(voteReadAfterVote1.options.rows, {id: voteOption.optionId});
@@ -7450,21 +7413,31 @@ suite('Users', function () {
                         // Vote for the 2nd time, change your vote, by choosing 1
                         const voteList2 = [
                             {
-                                optionId: _.find(vote.options.rows, {value: options[1].value}).id
+                                optionId: _.find(voteCreated.options.rows, {value: options[1].value}).id
                             },
                             {
-                                optionId: _.find(vote.options.rows, {value: options[2].value}).id
+                                optionId: _.find(voteCreated.options.rows, {value: options[2].value}).id
                             }
                         ];
 
-                        await topicVoteVotePromised(agent, user.id, topic.id, vote.id, voteList2, null, null, null, null);
-                        const voteReadAfterVote2 = (await topicVoteReadPromised(agent, user.id, topic.id, vote.id)).body.data;
+                        await topicVoteVotePromised(agent, user.id, topic.id, voteCreated.id, voteList2, null, null, null, null);
+                        const voteReadAfterVote2 = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
 
                         // Check that the 2nd vote was counted
-                        _(voteList2).forEach(function (voteOption) {
-                            const option = _.find(voteReadAfterVote2.options.rows, {id: voteOption.optionId});
-                            assert.equal(option.voteCount, 1);
-                            assert.isTrue(option.selected);
+                        voteReadAfterVote2.options.rows.forEach(function (option) {
+                            switch (option.id) {
+                                case voteList2[0].optionId:
+                                    assert.equal(option.voteCount, 1);
+                                    assert.isTrue(option.selected);
+                                    break;
+                                case voteList2[1].optionId:
+                                    assert.equal(option.voteCount, 1);
+                                    assert.isTrue(option.selected);
+                                    break;
+                                default:
+                                    assert.notProperty(option, 'voteCount');
+                                    assert.notProperty(option, 'selected');
+                            }
                         });
 
                         // Check that the 1st vote was overwritten
@@ -8087,11 +8060,11 @@ suite('Users', function () {
                                 switch (option.id) {
                                     case voteListUser3[0].optionId:
                                         assert.equal(option.voteCount, 1 + 1); // U3, U4
-                                        // assert.isTrue(option.selected); // TODO: At the point of writing the test, selected was not present but should be?
+                                        assert.isTrue(option.selected);
                                         break;
                                     case voteListUser3[1].optionId:
                                         assert.equal(option.voteCount, 1); // U3
-                                        // assert.isTrue(option.selected); // TODO: At the point of writing the test, selected was not present but should be?
+                                        assert.isTrue(option.selected);
                                         break;
                                     default:
                                         assert.property(option, 'value');
@@ -8101,6 +8074,12 @@ suite('Users', function () {
 
                             // Make sure the results match between different User requests
                             const voteReadAfterVote2 = (await topicVoteReadPromised(agentUser2, user2.id, topic.id, voteCreated.id)).body.data;
+
+                            // NOTE: At this point we show "selected" as what the "userId" has selected, we do not check for UserConnections. We MAY want to change this... MAY.
+                            voteReadAfterVote3.options.rows.forEach(function (option) {
+                                delete option.selected;
+                            });
+
                             assert.deepEqual(voteReadAfterVote2.options, voteReadAfterVote3.options);
 
                             // Make sure the results match with result read with Topic

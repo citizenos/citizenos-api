@@ -462,8 +462,8 @@ module.exports = function (app) {
                             AND vl."deletedAt" IS NULL \
                           ORDER BY \
                             "userIdEffective", \
-                            vl."optionGroupId", \
-                            vl."updatedAt" DESC \
+                            vl."updatedAt" DESC, \
+                            vl."optionGroupId" \
                         ), \
                         votes("voteId", "userId", "optionId", "optionGroupId") AS ( \
                             SELECT \
@@ -5591,8 +5591,8 @@ module.exports = function (app) {
                                 AND vl."deletedAt" IS NULL \
                               ORDER BY \
                                 "userIdEffective", \
-                                vl."optionGroupId", \
-                                vl."updatedAt" DESC \
+                                vl."updatedAt" DESC, \
+                                vl."optionGroupId" \
                             ), \
                             votes("voteId", "userId", "optionId", "optionGroupId") AS ( \
                                 SELECT \
