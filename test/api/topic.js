@@ -7995,19 +7995,15 @@ suite('Users', function () {
 
                             const agentUser1 = agent;
                             const user1 = user;
-                            console.log('user1', user1.id);
 
                             const agentUser2 = request.agent(app);
                             const user2 = await userLib.createUserAndLoginPromised(agentUser2, null, null, null);
-                            console.log('user2', user2.id);
 
                             const agentUser3 = request.agent(app);
                             const user3 = await userLib.createUserAndLoginPromised(agentUser3, null, null, null);
-                            console.log('user3', user3.id);
 
                             const agentUser4 = request.agent(app);
                             const user4 = await userLib.createUserAndLoginPromised(agentUser4, null, null, null);
-                            console.log('user4', user4.id);
 
                             const voteListUser1 = [
                                 {
