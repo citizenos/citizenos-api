@@ -8460,7 +8460,7 @@ suite('Users', function () {
                                     ];
 
                                     bdocFileList.forEach(function (f) {
-                                        assert.isTrue(fileListExpected.indexOf(f.file) > -1);
+                                        assert.include(fileListExpected, f.file);
                                     });
 
                                     // Clean up
@@ -8593,7 +8593,7 @@ suite('Users', function () {
                                     ];
 
                                     bdocFileList.forEach(function (f) {
-                                        assert.isTrue(fileListExpected.indexOf(f.file) > -1);
+                                        assert.include(fileListExpected, f.file);
                                     });
 
                                     // Clean up
