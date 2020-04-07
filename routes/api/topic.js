@@ -1031,7 +1031,7 @@ module.exports = function (app) {
         if (!userId) {
             where = ' AND t.visibility = \'' + Topic.VISIBILITY.public + '\' ';
         } else {
-            select = ', v."optionId" = (SELECT "optionId" FROM "VoteLists" WHERE "userId" = :userId AND "voteId" = v."voteId" ORDER BY "createdAt" DESC LIMIT 1) as "selected" ';
+            select = ', (SELECT true FROM pg_temp.votes(v."voteId") WHERE "userId" = :userId AND "optionId" = v."optionId") as "selected" ';
             where = 'AND COALESCE(tmup.level, tmgp.level, \'none\')::"enum_TopicMemberUsers_level" > \'none\'';
             join += 'LEFT JOIN ( \
                         SELECT \
@@ -1096,15 +1096,33 @@ module.exports = function (app) {
                         CREATE OR REPLACE FUNCTION pg_temp.vote_groups(uuid) \
                             RETURNS TABLE ("voteId" uuid, "userId" uuid, "optionGroupId" character varying , "updatedAt" timestamp with time zone) \
                             AS $$ \
-                                SELECT DISTINCT ON("voteId","userId") \
-                                    vl."voteId", \
-                                    vl."userId", \
-                                    vl."optionGroupId", \
-                                    vl."updatedAt" \
-                                FROM "VoteLists" vl \
-                                WHERE vl."voteId" = $1 \
+                              SELECT DISTINCT ON ("userIdEffective") \
+                                  vl."voteId", \
+                                  ( \
+                                     SELECT \
+                                          uco."userId" \
+                                     FROM \
+                                          "VoteLists" vli \
+                                          JOIN "UserConnections" ucs ON (ucs."userId" = vli."userId") \
+                                          JOIN "UserConnections" uco ON (uco."connectionId" = ucs."connectionId" AND uco."connectionUserId" = ucs."connectionUserId") \
+                                          JOIN "VoteLists" vlo ON (vlo."voteId" = vli."voteId" AND vlo."userId" = uco."userId") \
+                                      WHERE vli."userId" = vl."userId" \
+                                      AND vli."voteId" = vl."voteId" \
+                                      ORDER BY vlo."updatedAt" DESC \
+                                      LIMIT 1 \
+                                  ) "userIdEffective", \
+                                  vl."optionGroupId", \
+                                  vl."updatedAt" \
+                              FROM \
+                                  "VoteLists" vl \
+                              WHERE\
+                                  vl."voteId" = $1 \
                                   AND vl."deletedAt" IS NULL \
-                                ORDER BY "voteId", "userId", "createdAt" DESC, "optionGroupId" ASC; $$ \
+                              ORDER BY \
+                                  "userIdEffective", \
+                                  vl."updatedAt" DESC, \
+                                  vl."optionGroupId" \
+                              ; $$ \
                             LANGUAGE SQL; \
                         CREATE OR REPLACE FUNCTION pg_temp.votes(uuid) \
                             RETURNS TABLE ("voteId" uuid, "userId" uuid, "optionId" uuid, "optionGroupId" character varying) \
@@ -1115,7 +1133,7 @@ module.exports = function (app) {
                                     vl."optionId", \
                                     vl."optionGroupId" \
                                 FROM "VoteLists" vl \
-                                JOIN pg_temp.vote_groups($1) vg ON (vl."voteId" = vg."voteId" AND vl."userId" = vg."userId" AND vl."optionGroupId" = vg."optionGroupId") \
+                                JOIN pg_temp.vote_groups($1) vg ON (vl."voteId" = vg."voteId" AND vl."optionGroupId" = vg."optionGroupId") \
                                 WHERE vl."voteId" = $1; $$ \
                             LANGUAGE SQL; \
                         CREATE OR REPLACE FUNCTION pg_temp.votes_with_delegations(uuid) \
@@ -1172,7 +1190,7 @@ module.exports = function (app) {
                         AND v."voteId" IS NOT NULL \
                         AND vo."value" IS NOT NULL \
                         ' + where + '\
-                        GROUP BY v."optionId", v."optionGroupId", v."voteId", vo."value" \
+                        GROUP BY v."optionId", v."voteId", vo."value" \
                     ;';
 
         return db

@@ -281,8 +281,11 @@ var topicDelete = function (agent, userId, topicId, callback) {
     _topicDelete(agent, userId, topicId, 200, callback);
 };
 
-var _topicList = function (agent, userId, include, visibility, statuses, creatorId, hasVoted, expectedHttpCode, callback) {
-    var path = '/api/users/:userId/topics'.replace(':userId', userId);
+/**
+ @deprecated Use _topicListPromised instead
+ */
+const _topicList = function (agent, userId, include, visibility, statuses, creatorId, hasVoted, expectedHttpCode, callback) {
+    const path = '/api/users/:userId/topics'.replace(':userId', userId);
 
     agent
         .get(path)
@@ -299,8 +302,32 @@ var _topicList = function (agent, userId, include, visibility, statuses, creator
         .end(callback);
 };
 
-var topicList = function (agent, userId, include, visibility, statuses, creatorId, hasVoted, callback) {
+/**
+ @deprecated Use topicListPromised instead
+ */
+const topicList = function (agent, userId, include, visibility, statuses, creatorId, hasVoted, callback) {
     _topicList(agent, userId, include, visibility, statuses, creatorId, hasVoted, 200, callback);
+};
+
+const _topicListPromised = async function (agent, userId, include, visibility, statuses, creatorId, hasVoted, expectedHttpCode) {
+    const path = '/api/users/:userId/topics'.replace(':userId', userId);
+
+    return agent
+        .get(path)
+        .set('Content-Type', 'application/json')
+        .query({
+            include: include,
+            visibility: visibility,
+            statuses: statuses,
+            creatorId: creatorId,
+            hasVoted: hasVoted
+        })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicListPromised = async function (agent, userId, include, visibility, statuses, creatorId, hasVoted) {
+    return _topicListPromised(agent, userId, include, visibility, statuses, creatorId, hasVoted, 200);
 };
 
 var _topicsListUnauth = function (agent, statuses, categories, orderBy, offset, limit, sourcePartnerId, include, expectedHttpCode, callback) {
@@ -368,7 +395,6 @@ const _topicMemberUsersCreatePromised = async function (agent, userId, topicId, 
 const topicMemberUsersCreatePromised = async function (agent, userId, topicId, members) {
     return _topicMemberUsersCreatePromised(agent, userId, topicId, members, 201);
 };
-
 
 var _topicMemberUsersUpdate = function (agent, userId, topicId, memberId, level, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/members/users/:memberId'
@@ -7902,7 +7928,7 @@ suite('Users', function () {
                                 }
                             ];
 
-                            const topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
+                            const topic = (await topicCreatePromised(agent, user.id, null, null, null, '<html><head></head><body><h2>TEST VOTE AND RE-VOTE</h2></body></html>', null)).body.data;
                             const voteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, options, 1, 2, false, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
                             const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
 
@@ -7965,7 +7991,25 @@ suite('Users', function () {
                             // Verify the result of topic information, see that vote result is the same
                             const topicReadAfterVoting = (await topicReadPromised(agent, user.id, topic.id, ['vote'])).body.data;
 
+                            // We can verify that both have the "downloads" present, BUT we cannot check that they are the same as JWT issue time is different and that makes tokens different
+                            assert.property(voteReadAfterVote2, 'downloads');
+                            assert.property(voteReadAfterVote2.downloads, 'bdocVote');
+                            delete voteReadAfterVote2.downloads;
+
+                            assert.property(topicReadAfterVoting.vote, 'downloads');
+                            assert.property(topicReadAfterVoting.vote.downloads, 'bdocVote');
+                            delete topicReadAfterVoting.vote.downloads;
+
                             assert.deepEqual(topicReadAfterVoting.vote, voteReadAfterVote2);
+
+                            // Make sure the results match with the result read with Topic list (/api/users/:userId/topics)
+                            const topicList = (await topicListPromised(agent, user.id, ['vote'], null, null, null, null)).body.data;
+                            const topicVotedOn = _.find(topicList.rows, {id: topic.id});
+
+                            // Topic list included votes dont have downloads
+                            delete voteReadAfterVote2.downloads;
+
+                            assert.deepEqual(topicVotedOn.vote, voteReadAfterVote2);
                         });
 
                         test('Success - Personal ID already connected to another user account - vote multiple-choice, re-vote and count', async function () {
@@ -7989,7 +8033,7 @@ suite('Users', function () {
                                 }
                             ];
 
-                            const topic = (await topicCreatePromised(agent, user.id, Topic.VISIBILITY.public, null, null, null, null)).body.data;
+                            const topic = (await topicCreatePromised(agent, user.id, Topic.VISIBILITY.public, null, null, '<html><head></head><body><h2>TEST VOTE AND RE-VOTE</h2></body></html>', null)).body.data;
                             const voteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, options, 1, 2, false, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
                             const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
 
@@ -8083,6 +8127,20 @@ suite('Users', function () {
                             const voteReadWithTopic2 = topicReadAfterVote2.vote;
 
                             assert.deepEqual(voteReadWithTopic2, voteReadAfterVote2);
+
+                            // Make sure the results match with the result read with Topic list (/api/users/:userId/topics)
+                            // In order to do that, to see the topic in Users list, User needs to be a member of the Topic
+                            const members = [
+                                {
+                                    userId: user2.id,
+                                    level: TopicMemberUser.LEVELS.read
+                                }
+                            ];
+                            await topicMemberUsersCreatePromised(agent, user.id, topic.id, members);
+                            const topicList = (await topicListPromised(agentUser2, user2.id, ['vote'], null, null, null, true)).body.data;
+                            const topicVotedOn = _.find(topicList.rows, {id: topic.id});
+
+                            assert.deepEqual(topicVotedOn.vote, voteReadAfterVote2);
                         });
 
                         test('Success - Estonian mobile number and PID bdocUri exists', function (done) {
@@ -8382,7 +8440,6 @@ suite('Users', function () {
                                     const voteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, options, 1, 2, false, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
                                     const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
 
-                                    // Vote for the first time
                                     // Vote for the first time
                                     const voteList1 = [
                                         {
