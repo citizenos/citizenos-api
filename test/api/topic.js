@@ -7860,7 +7860,7 @@ suite('Users', function () {
                         let vote;
 
                         setup(async function () {
-                            // FIXME: Remove once all tests create their own data
+                            // TODO: Remove once all tests create their own data
                             const options = [
                                 {
                                     value: 'Option 1'
@@ -7878,21 +7878,21 @@ suite('Users', function () {
                             vote = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
                         });
 
-                        // teardown(async function () {
-                        //     return UserConnection
-                        //         .destroy({
-                        //             where: {
-                        //                 connectionId: {
-                        //                     [db.Sequelize.Op.in]: [
-                        //                         UserConnection.CONNECTION_IDS.esteid,
-                        //                         UserConnection.CONNECTION_IDS.smartid
-                        //                     ]
-                        //                 },
-                        //                 connectionUserId: ['PNOEE-600010199060', 'PNOEE-11412090004', 'PNOEE-51001091072', 'PNOEE-60001018800']
-                        //             },
-                        //             force: true
-                        //         });
-                        // });
+                        teardown(async function () {
+                            return UserConnection
+                                .destroy({
+                                    where: {
+                                        connectionId: {
+                                            [db.Sequelize.Op.in]: [
+                                                UserConnection.CONNECTION_IDS.esteid,
+                                                UserConnection.CONNECTION_IDS.smartid
+                                            ]
+                                        },
+                                        connectionUserId: ['PNOEE-600010199060', 'PNOEE-11412090004', 'PNOEE-51001091072', 'PNOEE-60001018800']
+                                    },
+                                    force: true
+                                });
+                        });
 
                         test('Success - Estonian mobile number and PID', async function () {
                             const phoneNumber = '+37200000766';
