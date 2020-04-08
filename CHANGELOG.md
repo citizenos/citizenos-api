@@ -3,6 +3,10 @@
 * Email layout is wonky on mobile - https://github.com/citizenos/citizenos-api/issues/159
 * Email footer is served in English, instead of 13 languages.- https://github.com/citizenos/citizenos-api/issues/160
 
+## 2020-03-30
+
+* Fix vote counting bug for multiple-choice votes with delegation -  https://github.com/citizenos/citizenos-fe/issues/443 https://github.com/citizenos/citizenos-fe/issues/413 
+
 ## 2020-02-20
 
 * Update "UserConnection" "connectionUserId" values to have PNO prefix Where "connectionId" esteid or smartid

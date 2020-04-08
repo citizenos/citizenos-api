@@ -42,10 +42,10 @@ module.exports = function (app) {
     }
 
     const hades = new Hades({
-		certificates: tslCertificates,
-		timemarkUrl: config.services.signature.timemarkUrl,
-		timestampUrl: config.services.signature.timestampUrl
-	});
+        certificates: tslCertificates,
+        timemarkUrl: config.services.signature.timemarkUrl,
+        timestampUrl: config.services.signature.timestampUrl
+    });
 
 
     const VoteContainerFile = models.VoteContainerFile;
@@ -326,7 +326,7 @@ module.exports = function (app) {
                         break;
                     default:
                         // Must be option file
-                        if (chosenVoteOptionFileNames.indexOf(fileName)) {
+                        if (chosenVoteOptionFileNames.indexOf(fileName) === -1) {
                             //Skip the option that User did not choose
                             return;
                         }
@@ -334,7 +334,7 @@ module.exports = function (app) {
                 container.add(fileName, content, mimeType);
             })
             .then(function () {
-                return new Promise (function (resolve) {
+                return new Promise(function (resolve) {
                     let finalData = '';
                     const mufileStream = mu
                         .compileAndRender(USERINFO_FILE.template, {user: {id: userId}});
@@ -393,7 +393,7 @@ module.exports = function (app) {
                 });
             })
             .then(function () {
-                return new Promise (function (resolve) {
+                return new Promise(function (resolve) {
                     let finalData = '';
                     const mufileStream = mu
                         .compileAndRender(USERINFO_FILE.template, {user: {id: userId}});
@@ -443,25 +443,25 @@ module.exports = function (app) {
             .then(function (xades) {
                 const signableData = xades.signableHash;
 
-                    return mobileId
-                        .getCertUserData(certificate, 'hex')
-                        .then(function (personalInfo) {
-                            xades = xades.toString();
+                return mobileId
+                    .getCertUserData(certificate, 'hex')
+                    .then(function (personalInfo) {
+                        xades = xades.toString();
 
-                            return Signature
-                                .create({data: xades})
-                                .then(function (signatureData) {
-                                    return {
-                                        statusCode: 0,
-                                        personalInfo,
-                                        signableHash: signableData.toString('hex'),
-                                        signatureId: signatureData.id
-                                    };
-                                });
-                        })
-                    }).catch(function (e) {
-                        logger.error(e);
-                    });
+                        return Signature
+                            .create({data: xades})
+                            .then(function (signatureData) {
+                                return {
+                                    statusCode: 0,
+                                    personalInfo,
+                                    signableHash: signableData.toString('hex'),
+                                    signatureId: signatureData.id
+                                };
+                            });
+                    })
+            }).catch(function (e) {
+                logger.error(e);
+            });
     };
 
     /**
@@ -541,57 +541,57 @@ module.exports = function (app) {
                                     });
                             });
                     });
-                });
+            });
     };
 
     const _handleSigningResult = function (voteId, userId, voteOptions, signableHash, signatureId, signature) {
         return Signature
-                .findOne({
-                    where: {
-                        id: signatureId
-                    }
-                })
-                .then(function (signatureData) {
-                    const xades = Xades.parse(signatureData.data);
-                    xades.setSignature(Buffer.from(signature, 'base64'));
-                    return hades.timemark(xades)
-                        .then(function(timemark) {
-                            xades.setOcspResponse(timemark);
+            .findOne({
+                where: {
+                    id: signatureId
+                }
+            })
+            .then(function (signatureData) {
+                const xades = Xades.parse(signatureData.data);
+                xades.setSignature(Buffer.from(signature, 'base64'));
+                return hades.timemark(xades)
+                    .then(function (timemark) {
+                        xades.setOcspResponse(timemark);
 
-                            return _getUserContainer(voteId, userId, voteOptions)
-                                .then(function (container) {
-                                    return new Promise (function (resolve) {
-                                        const chunks = [];
-                                        container.addSignature(xades);
-                                        const streamData = container.toStream();
+                        return _getUserContainer(voteId, userId, voteOptions)
+                            .then(function (container) {
+                                return new Promise(function (resolve) {
+                                    const chunks = [];
+                                    container.addSignature(xades);
+                                    const streamData = container.toStream();
 
-                                        streamData.on('data', function (data) {
-                                            chunks.push(data);
-                                        })
+                                    streamData.on('data', function (data) {
+                                        chunks.push(data);
+                                    })
 
-                                        streamData.on('end', function () {
-                                            const buff = Buffer.concat(chunks);
+                                    streamData.on('end', function () {
+                                        const buff = Buffer.concat(chunks);
 
-                                            return resolve(buff);
-                                        })
-                                        container.end();
-                                    });
-                                })
-                                .then(function (container) {
-                                    return {
-                                        signedDocData: container
-                                    }
-                                })
-                                .catch(function (e) {
-                                    return Promise.reject(e);
-                                })
-                        });
-                });
+                                        return resolve(buff);
+                                    })
+                                    container.end();
+                                });
+                            })
+                            .then(function (container) {
+                                return {
+                                    signedDocData: container
+                                }
+                            })
+                            .catch(function (e) {
+                                return Promise.reject(e);
+                            })
+                    });
+            });
     };
 
     const _getSmartIdSignedDoc = function (sessionId, signableHash, signatureId, voteId, userId, voteOptions, timeoutMs) {
         return smartId.statusSign(sessionId, timeoutMs)
-            .then(function(signResult) {
+            .then(function (signResult) {
                 if (signResult.signature) {
                     return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value);
                 }
@@ -603,7 +603,7 @@ module.exports = function (app) {
 
     const _getMobileIdSignedDoc = function (sessionId, signableHash, signatureId, voteId, userId, voteOptions, timeoutMs) {
         return mobileId.statusSign(sessionId, timeoutMs)
-            .then(function(signResult) {
+            .then(function (signResult) {
                 if (signResult.signature) {
                     return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value);
                 }
@@ -795,7 +795,7 @@ module.exports = function (app) {
                                                 JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."userId" = vg."userId" AND vl."optionGroupId" = vg."optionGroupId") \
                                                 WHERE vl."voteId" = $1 \
                                             ) \
-                                            '+ fromSql+ '\
+                                            ' + fromSql + '\
                                     ;',
                                     [voteId]
                                 );
@@ -839,10 +839,7 @@ module.exports = function (app) {
                                     logger.debug('_generateFinalContainer', 'Wrapping final BDOC');
 
                                     // Wrap the BDOC in 7Zip
-                                    const zip = new SevenZip();
-
-                                    return zip
-                                        .add(finalZipPath, [finalContainerPath])
+                                    return util.streamToPromise(SevenZip.add(finalZipPath, [finalContainerPath]))
                                         .then(function () {
                                             logger.debug('_generateFinalContainer', 'Wrapping final BDOC succeeded', finalZipPath);
 
@@ -868,8 +865,8 @@ module.exports = function (app) {
 
                                 throw err;
                             });
-                        });
-                });
+                    });
+            });
     };
 
     /**

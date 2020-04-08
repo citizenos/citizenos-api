@@ -438,15 +438,32 @@ module.exports = function (app) {
                             ORDER BY "byUserId", depth DESC \
                         ), \
                         vote_groups("voteId", "userId", "optionGroupId", "updatedAt") AS ( \
-                            SELECT DISTINCT ON("voteId","userId") \
-                                vl."voteId", \
-                                vl."userId", \
-                                vl."optionGroupId", \
-                                vl."updatedAt" \
-                            FROM "VoteLists" vl \
-                            WHERE vl."voteId" = :voteId \
-                              AND vl."deletedAt" IS NULL \
-                            ORDER BY "voteId", "userId", "createdAt" DESC, "optionGroupId" ASC \
+                          SELECT DISTINCT ON ("userIdEffective") \
+                            vl."voteId", \
+                            ( \
+                                   SELECT \
+                                        uco."userId" \
+                                   FROM \
+                                        "VoteLists" vli \
+                                        JOIN "UserConnections" ucs ON (ucs."userId" = vli."userId") \
+                                        JOIN "UserConnections" uco ON (uco."connectionId" = ucs."connectionId" AND uco."connectionUserId" = ucs."connectionUserId") \
+                                        JOIN "VoteLists" vlo ON (vlo."voteId" = vli."voteId" AND vlo."userId" = uco."userId") \
+                                    WHERE vli."userId" = vl."userId" \
+                                    AND vli."voteId" = vl."voteId" \
+                                    ORDER BY vlo."updatedAt" DESC \
+                                    LIMIT 1 \
+                            ) "userIdEffective", \
+                            vl."optionGroupId", \
+                            vl."updatedAt" \
+                          FROM \
+                            "VoteLists" vl \
+                          WHERE\
+                            vl."voteId" = :voteId \
+                            AND vl."deletedAt" IS NULL \
+                          ORDER BY \
+                            "userIdEffective", \
+                            vl."updatedAt" DESC, \
+                            vl."optionGroupId" \
                         ), \
                         votes("voteId", "userId", "optionId", "optionGroupId") AS ( \
                             SELECT \
@@ -455,14 +472,15 @@ module.exports = function (app) {
                                 vl."optionId", \
                                 vl."optionGroupId" \
                             FROM "VoteLists" vl \
-                            JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."userId" = vg."userId" AND vl."optionGroupId" = vg."optionGroupId") \
+                            JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."optionGroupId" = vg."optionGroupId") \
                             WHERE vl."voteId" =  :voteId \
                         ), \
-                        votes_with_delegations("voteId", "userId", "optionId", depth) AS ( \
+                        votes_with_delegations("voteId", "userId", "optionId", "optionGroupId", depth) AS ( \
                             SELECT \
                                 v."voteId", \
                                 v."userId", \
                                 v."optionId", \
+                                v."optionGroupId", \
                                 id."depth" \
                             FROM votes v \
                             LEFT JOIN indirect_delegations id ON (v."userId" = id."toUserId") \
@@ -479,20 +497,22 @@ module.exports = function (app) {
                         SELECT \
                             COUNT(v."optionId") + 1 as "voteCount", \
                             v."optionId", \
+                            v."optionGroupId", \
                             v."voteId" \
                         FROM votes_with_delegations v \
                         WHERE v.depth IS NOT NULL \
-                        GROUP BY v."optionId", v."voteId" \
+                        GROUP BY v."optionId", v."optionGroupId", v."voteId" \
                         \
                         UNION ALL \
                         \
                         SELECT \
                             COUNT(v."optionId") as "voteCount", \
                             v."optionId", \
+                            v."optionGroupId", \
                             v."voteId" \
                         FROM votes_with_delegations v \
                         WHERE v.depth IS NULL \
-                        GROUP BY v."optionId", v."voteId" \
+                        GROUP BY v."optionId", v."optionGroupId", v."voteId" \
                     ) v \
                     LEFT JOIN "VoteOptions" vo ON (v."optionId" = vo."id") \
                     GROUP BY v."optionId", v."voteId", vo."value" \
@@ -948,6 +968,8 @@ module.exports = function (app) {
                         .then(
                             function (result) {
                                 const options = [];
+                                let hasVoted = false;
+
                                 topic.vote.options.forEach(function (option) {
                                     option = option.split(':');
                                     const o = {
@@ -960,19 +982,24 @@ module.exports = function (app) {
                                             o.voteCount = parseInt(res.voteCount, 10);
                                             if (res.selected) {
                                                 o.selected = res.selected;
-                                                topic.vote.downloads = {
-                                                    bdocVote: getBdocURL({
-                                                        userId: user.id,
-                                                        topicId: topicId,
-                                                        voteId: topic.vote.id,
-                                                        type: 'user'
-                                                    })
-                                                };
+                                                hasVoted = true;
                                             }
                                         }
                                     }
                                     options.push(o);
                                 });
+
+                                if (topic.vote.authType === Vote.AUTH_TYPES.hard && hasVoted) {
+                                    topic.vote.downloads = {
+                                        bdocVote: getBdocURL({
+                                            userId: user.id,
+                                            topicId: topicId,
+                                            voteId: topic.vote.id,
+                                            type: 'user'
+                                        })
+                                    };
+                                }
+
                                 topic.vote.options = {
                                     count: options.length,
                                     rows: options
@@ -1004,7 +1031,7 @@ module.exports = function (app) {
         if (!userId) {
             where = ' AND t.visibility = \'' + Topic.VISIBILITY.public + '\' ';
         } else {
-            select = ', v."optionId" = (SELECT "optionId" FROM "VoteLists" WHERE "userId" = :userId AND "voteId" = v."voteId" ORDER BY "createdAt" DESC LIMIT 1) as "selected" ';
+            select = ', (SELECT true FROM pg_temp.votes(v."voteId") WHERE "userId" = :userId AND "optionId" = v."optionId") as "selected" ';
             where = 'AND COALESCE(tmup.level, tmgp.level, \'none\')::"enum_TopicMemberUsers_level" > \'none\'';
             join += 'LEFT JOIN ( \
                         SELECT \
@@ -1069,15 +1096,33 @@ module.exports = function (app) {
                         CREATE OR REPLACE FUNCTION pg_temp.vote_groups(uuid) \
                             RETURNS TABLE ("voteId" uuid, "userId" uuid, "optionGroupId" character varying , "updatedAt" timestamp with time zone) \
                             AS $$ \
-                                SELECT DISTINCT ON("voteId","userId") \
-                                    vl."voteId", \
-                                    vl."userId", \
-                                    vl."optionGroupId", \
-                                    vl."updatedAt" \
-                                FROM "VoteLists" vl \
-                                WHERE vl."voteId" = $1 \
+                              SELECT DISTINCT ON ("userIdEffective") \
+                                  vl."voteId", \
+                                  ( \
+                                     SELECT \
+                                          uco."userId" \
+                                     FROM \
+                                          "VoteLists" vli \
+                                          JOIN "UserConnections" ucs ON (ucs."userId" = vli."userId") \
+                                          JOIN "UserConnections" uco ON (uco."connectionId" = ucs."connectionId" AND uco."connectionUserId" = ucs."connectionUserId") \
+                                          JOIN "VoteLists" vlo ON (vlo."voteId" = vli."voteId" AND vlo."userId" = uco."userId") \
+                                      WHERE vli."userId" = vl."userId" \
+                                      AND vli."voteId" = vl."voteId" \
+                                      ORDER BY vlo."updatedAt" DESC \
+                                      LIMIT 1 \
+                                  ) "userIdEffective", \
+                                  vl."optionGroupId", \
+                                  vl."updatedAt" \
+                              FROM \
+                                  "VoteLists" vl \
+                              WHERE\
+                                  vl."voteId" = $1 \
                                   AND vl."deletedAt" IS NULL \
-                                ORDER BY "voteId", "userId", "createdAt" DESC, "optionGroupId" ASC; $$ \
+                              ORDER BY \
+                                  "userIdEffective", \
+                                  vl."updatedAt" DESC, \
+                                  vl."optionGroupId" \
+                              ; $$ \
                             LANGUAGE SQL; \
                         CREATE OR REPLACE FUNCTION pg_temp.votes(uuid) \
                             RETURNS TABLE ("voteId" uuid, "userId" uuid, "optionId" uuid, "optionGroupId" character varying) \
@@ -1088,41 +1133,44 @@ module.exports = function (app) {
                                     vl."optionId", \
                                     vl."optionGroupId" \
                                 FROM "VoteLists" vl \
-                                JOIN pg_temp.vote_groups($1) vg ON (vl."voteId" = vg."voteId" AND vl."userId" = vg."userId" AND vl."optionGroupId" = vg."optionGroupId") \
+                                JOIN pg_temp.vote_groups($1) vg ON (vl."voteId" = vg."voteId" AND vl."optionGroupId" = vg."optionGroupId") \
                                 WHERE vl."voteId" = $1; $$ \
                             LANGUAGE SQL; \
                         CREATE OR REPLACE FUNCTION pg_temp.votes_with_delegations(uuid) \
-                            RETURNS TABLE ("voteId" uuid, "userId" uuid, "optionId" uuid, depth int) \
+                            RETURNS TABLE ("voteId" uuid, "userId" uuid, "optionId" uuid, "optionGroupId" varchar(8), depth int) \
                             AS $$ \
                                 SELECT \
                                     v."voteId", \
                                     v."userId", \
                                     v."optionId", \
+                                    v."optionGroupId", \
                                     id."depth" \
                                 FROM pg_temp.votes($1) v \
                                 LEFT JOIN pg_temp.indirect_delegations($1) id ON (v."userId" = id."toUserId") \
                                 WHERE v."userId" NOT IN (SELECT "byUserId" FROM pg_temp.indirect_delegations($1) WHERE "voteId"=v."voteId"); $$ \
                             LANGUAGE SQL; \
                         CREATE OR REPLACE FUNCTION pg_temp.get_vote_results (uuid) \
-                            RETURNS TABLE ("voteCount" bigint, "optionId" uuid, "voteId" uuid) \
+                            RETURNS TABLE ("voteCount" bigint, "optionId" uuid, "optionGroupId" varchar(8), "voteId" uuid) \
                             AS $$ \
                                 SELECT \
                                     COUNT(v."optionId") + 1 as "voteCount", \
                                     v."optionId", \
+                                    v."optionGroupId", \
                                     v."voteId" \
                                 FROM pg_temp.votes_with_delegations($1) v \
                                 WHERE v.depth IS NOT NULL \
-                                GROUP BY v."optionId", v."voteId" \
+                                GROUP BY v."optionId", v."optionGroupId", v."voteId" \
                                 \
                                 UNION ALL \
                                 \
                                 SELECT \
                                     COUNT(v."optionId") as "voteCount", \
                                     v."optionId", \
+                                    v."optionGroupId", \
                                     v."voteId" \
                                 FROM pg_temp.votes_with_delegations($1) v \
                                 WHERE v.depth IS NULL \
-                                GROUP BY v."optionId", v."voteId"; $$ \
+                                GROUP BY v."optionId", v."optionGroupId", v."voteId"; $$ \
                             LANGUAGE SQL; \
                             \
                         SELECT \
@@ -1142,7 +1190,7 @@ module.exports = function (app) {
                         AND v."voteId" IS NOT NULL \
                         AND vo."value" IS NOT NULL \
                         ' + where + '\
-                        GROUP BY v."optionId",v."voteId", vo."value" \
+                        GROUP BY v."optionId", v."voteId", vo."value" \
                     ;';
 
         return db
@@ -5537,15 +5585,32 @@ module.exports = function (app) {
                                 ORDER BY "byUserId", depth DESC \
                             ), \
                             vote_groups("voteId", "userId", "optionGroupId", "updatedAt") AS ( \
-                                SELECT DISTINCT ON("voteId","userId") \
-                                    vl."voteId", \
-                                    vl."userId", \
-                                    vl."optionGroupId", \
-                                    vl."updatedAt" \
-                                FROM "VoteLists" vl \
-                                WHERE vl."voteId" = :voteId \
-                                  AND vl."deletedAt" IS NULL \
-                                ORDER BY "voteId", "userId", "createdAt" DESC, "optionGroupId" ASC \
+                              SELECT DISTINCT ON ("userIdEffective") \
+                                vl."voteId", \
+                                ( \
+                                   SELECT \
+                                        uco."userId" \
+                                   FROM \
+                                        "VoteLists" vli \
+                                        JOIN "UserConnections" ucs ON (ucs."userId" = vli."userId") \
+                                        JOIN "UserConnections" uco ON (uco."connectionId" = ucs."connectionId" AND uco."connectionUserId" = ucs."connectionUserId") \
+                                        JOIN "VoteLists" vlo ON (vlo."voteId" = vli."voteId" AND vlo."userId" = uco."userId") \
+                                    WHERE vli."userId" = vl."userId" \
+                                    AND vli."voteId" = vl."voteId" \
+                                    ORDER BY vlo."updatedAt" DESC \
+                                    LIMIT 1 \
+                                ) "userIdEffective", \
+                                vl."optionGroupId", \
+                                vl."updatedAt" \
+                              FROM \
+                                "VoteLists" vl \
+                              WHERE\
+                                vl."voteId" = :voteId \
+                                AND vl."deletedAt" IS NULL \
+                              ORDER BY \
+                                "userIdEffective", \
+                                vl."updatedAt" DESC, \
+                                vl."optionGroupId" \
                             ), \
                             votes("voteId", "userId", "optionId", "optionGroupId") AS ( \
                                 SELECT \
@@ -5554,14 +5619,15 @@ module.exports = function (app) {
                                     vl."optionId", \
                                     vl."optionGroupId" \
                                 FROM "VoteLists" vl \
-                                JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."userId" = vg."userId" AND vl."optionGroupId" = vg."optionGroupId") \
+                                JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."optionGroupId" = vg."optionGroupId") \
                                 WHERE vl."voteId" =  :voteId \
                             ), \
-                            votes_with_delegations("voteId", "userId", "optionId", depth) AS ( \
+                            votes_with_delegations("voteId", "userId", "optionId", "optionGroupId", depth) AS ( \
                                 SELECT \
                                     v."voteId", \
                                     v."userId", \
                                     v."optionId", \
+                                    v."optionGroupId", \
                                     id."depth" \
                                 FROM votes v \
                                 LEFT JOIN indirect_delegations id ON (v."userId" = id."toUserId") \
@@ -5578,20 +5644,22 @@ module.exports = function (app) {
                             SELECT \
                                 COUNT(v."optionId") + 1 as "voteCount", \
                                 v."optionId", \
+                                v."optionGroupId", \
                                 v."voteId" \
                             FROM votes_with_delegations v \
                             WHERE v.depth IS NOT NULL \
-                            GROUP BY v."optionId", v."voteId" \
+                            GROUP BY v."optionId", v."optionGroupId", v."voteId" \
                             \
                             UNION ALL \
                             \
                             SELECT \
                                 COUNT(v."optionId") as "voteCount", \
                                 v."optionId", \
+                                v."optionGroupId", \
                                 v."voteId" \
                             FROM votes_with_delegations v \
                             WHERE v.depth IS NULL \
-                            GROUP BY v."optionId", v."voteId" \
+                            GROUP BY v."optionId", v."optionGroupId", v."voteId" \
                         ) v \
                         LEFT JOIN "VoteOptions" vo ON (v."optionId" = vo."id") \
                         GROUP BY v."optionId", v."voteId", vo."value" \
@@ -6655,14 +6723,16 @@ module.exports = function (app) {
                         return Promise.all(promisesToResolve).catch(function (e) {
                             switch (e.message) {
                                 case 'Personal ID already connected to another user account.':
-                                    return res.badRequest(e.message, 30)
+                                    res.badRequest(e.message, 30);
+                                    return Promise.reject(e);
                                 case 'User account already connected to another PID.':
-                                    return res.badRequest(e.message, 31);
+                                    res.badRequest(e.message, 31);
+                                    return Promise.reject(e);
                             }
                         });
                     })
             }, function (result) {
-                let statusCode
+                let statusCode;
                 if (result.result && result.result.endResult) {
                     statusCode = result.result.endResult;
                 } else if (result.result && !result.result.endResult) {
