@@ -5888,9 +5888,9 @@
       }
     },
     "node-uuid": {
-      "version": "1.4.3",
-      "resolved": "https://registry.npmjs.org/node-uuid/-/node-uuid-1.4.3.tgz",
-      "integrity": "sha1-MZu3pW58tj8AtcDNeFHNS03fHfk="
+      "version": "1.4.8",
+      "resolved": "https://registry.npmjs.org/node-uuid/-/node-uuid-1.4.8.tgz",
+      "integrity": "sha1-sEDrCSOWivq/jTL7HxfxFn/auQc="
     },
     "nodemailer": {
       "version": "4.6.8",
