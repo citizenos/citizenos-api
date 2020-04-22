@@ -5275,6 +5275,7 @@ module.exports = function (app) {
                                     } else {
                                         vote.value = value;
                                     }
+                                    vote.topicId = req.params.topicId;
 
                                     return cosActivities
                                         .updateActivity(vote, comment, {
@@ -5296,12 +5297,14 @@ module.exports = function (app) {
                                             transaction: t
                                         })
                                         .then(function (cv) {
+                                            const c = _.cloneDeep(comment);
+                                            c.topicId = req.params.topicId;
                                             return cosActivities
-                                                .createActivity(cv, comment, {
+                                                .createActivity(cv, c, {
                                                     type: 'User',
                                                     id: req.user.id,
                                                     ip: req.ip
-                                                }, req.method + ' ' + req.params, t);
+                                                }, req.method + ' ' + req.path, t);
                                         });
                                 }
                             })
