@@ -11,6 +11,7 @@
   * [Prerequisites](#prerequisites)
   * [Installing](#installing)
   * [Running](#running)
+  * [Updating](#updating)
   * [Testing](#testing)
   * [Debugging](#debugging)
 - [Contributing](#contributing)
@@ -70,6 +71,14 @@ Examples of Citizen OS API configuration: https://github.com/citizenos/citizenos
 
 * When using over HTTPS you need to add `./config/certs/citizenosCARoot.pem` to your trusted CA certificate store or browsers will complain.
 
+
+### Updating
+
+You need to do the following to update Citizen OS on your server:
+
+* Pull new code from GitHub. Production environments should use `prod` branch.
+* Run migrations on your DB to apply DB changes - https://github.com/citizenos/citizenos-api/wiki/DB-Migrations
+
 ### Testing
 
 * You need an instance of `citizenos-api` and `etherpad-lite` running before you execute tests.
@@ -111,7 +120,6 @@ DB changes require migrations, please read https://github.com/citizenos/citizeno
 ## Improvement ideas
 
 * Support different authentication and signing methods so that anyone could add their country specifics. That takes us to modular architecture where ideally I would like to add new methods by installing a module and configuring it.
-* Generic file storage - don't force the use of AWS as a storage. As a starting point local file storage would be nice for "off the grid" deployments.
 * Implement generic "if this, then that" engine where anyone can plug into Topic state changes with their own custom logic. Right now for example Rahvaalgatus.ee has a flow where a signed document is sent to Parliament via e-mail, but this is very region/partner specific.  
 * Email layout designing should be much simpler. Right now there is hard-coded CitizenOS layout and special layout for Rahvaalgatus.ee. We may consider using MailChimp or other services so that there is a separate service where mails are designed and sent and for which each Partner pays themselves.
 * ...
