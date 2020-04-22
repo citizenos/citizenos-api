@@ -147,11 +147,29 @@ module.exports = function (app) {
             object = [];
             instance.forEach(function (elem) {
                 const o = _.cloneDeep(elem.toJSON());
+                if (!o.topicId && instance.topicId) {
+                    o.topicId = instance.topicId;
+                }
+                if (!o.groupId && instance.groupId) {
+                    o.groupId = instance.groupId;
+                }
+                if (!o.userId && instance.userId) {
+                    o.userId = instance.userId;
+                }
                 o['@type'] = elem._modelOptions.name.singular;
                 object.push(o);
             });
         } else {
             object = instance.toJSON();
+            if (!object.topicId && instance.topicId) {
+                object.topicId = instance.topicId;
+            }
+            if (!object.groupId && instance.groupId) {
+                object.groupId = instance.groupId;
+            }
+            if (!object.userId && instance.userId) {
+                object.userId = instance.userId;
+            }
             object['@type'] = instance._modelOptions.name.singular;
         }
 
@@ -178,6 +196,7 @@ module.exports = function (app) {
 
         const originPrevious = instance.previous();
         const origin = _.clone(instance.toJSON());
+
         _.mapValues(originPrevious, function (val, key) {
             origin[key] = val;
         });
@@ -205,6 +224,17 @@ module.exports = function (app) {
         origin.description = null;
         origin['@type'] = instance._modelOptions.name.singular;
 
+        const object = _.clone(origin);
+
+        if (!object.topicId && instance.topicId) {
+            object.topicId = instance.topicId;
+        }
+        if (!object.groupId && instance.groupId) {
+            object.groupId = instance.groupId;
+        }
+        if (!object.userId && instance.userId) {
+            object.userId = instance.userId;
+        }
         const activity = {
             type: Activity.TYPES.update,
             object: origin,
@@ -351,12 +381,23 @@ module.exports = function (app) {
         }
 
         origin['@type'] = instance._modelOptions.name.singular;
+        const object = _.clone(origin);
+
+        if (!object.topicId && instance.topicId) {
+            object.topicId = instance.topicId;
+        }
+        if (!object.groupId && instance.groupId) {
+            object.groupId = instance.groupId;
+        }
+        if (!object.userId && instance.userId) {
+            object.userId = instance.userId;
+        }
         const activity = {
             type: Activity.TYPES.update,
-            object: origin,
-            origin: origin,
+            object,
+            origin,
             result: changeSet,
-            actor: actor
+            actor
         };
 
         if (target) {
@@ -398,6 +439,16 @@ module.exports = function (app) {
         // }
         const object = instance.toJSON();
         object['@type'] = instance._modelOptions.name.singular;
+
+        if (!object.topicId && instance.topicId) {
+            object.topicId = instance.topicId;
+        }
+        if (!object.groupId && instance.groupId) {
+            object.groupId = instance.groupId;
+        }
+        if (!object.userId && instance.userId) {
+            object.userId = instance.userId;
+        }
 
         const activity = {
             type: Activity.TYPES.add,
@@ -441,6 +492,17 @@ module.exports = function (app) {
         // }
 
         const object = instance.toJSON();
+
+        if (!object.topicId && instance.topicId) {
+            object.topicId = instance.topicId;
+        }
+        if (!object.groupId && instance.groupId) {
+            object.groupId = instance.groupId;
+        }
+        if (!object.userId && instance.userId) {
+            object.userId = instance.userId;
+        }
+
         object['@type'] = instance._modelOptions.name.singular;
 
         const activity = {
@@ -493,6 +555,17 @@ module.exports = function (app) {
          */
 
         const _object = instance.toJSON();
+
+        if (!_object.topicId && instance.topicId) {
+            _object.topicId = instance.topicId;
+        }
+        if (!_object.groupId && instance.groupId) {
+            _object.groupId = instance.groupId;
+        }
+        if (!_object.userId && instance.userId) {
+            _object.userId = instance.userId;
+        }
+
         _object['@type'] = instance._modelOptions.name.singular;
 
         var activity = {
@@ -540,16 +613,29 @@ module.exports = function (app) {
         //        }
         //    }
         //}
+
+        const object = {
+            type: 'Invite',
+            id: instance.id,
+            actor: inviteActor,
+            object: inviteObject.toJSON()
+        };
+
+        if (!object.topicId && instance.topicId) {
+            object.topicId = instance.topicId;
+        }
+        if (!object.groupId && instance.groupId) {
+            object.groupId = instance.groupId;
+        }
+        if (!object.userId && instance.userId) {
+            object.userId = instance.userId;
+        }
+
         const activity = {
             type: 'Accept',
             actor: actor,
             context: context,
-            object: {
-                type: 'Invite',
-                id: instance.id,
-                actor: inviteActor,
-                object: inviteObject.toJSON()
-            }
+            object
         };
 
         activity.object.object['@type'] = inviteObject._modelOptions.name.singular;
@@ -574,6 +660,15 @@ module.exports = function (app) {
         // }
 
         var object = instance.toJSON();
+        if (!object.topicId && instance.topicId) {
+            object.topicId = instance.topicId;
+        }
+        if (!object.groupId && instance.groupId) {
+            object.groupId = instance.groupId;
+        }
+        if (!object.userId && instance.userId) {
+            object.userId = instance.userId;
+        }
         object['@type'] = instance._modelOptions.name.singular;
 
         var activity = {
@@ -605,6 +700,15 @@ module.exports = function (app) {
         // }
 
         const object = instance.toJSON();
+        if (!object.topicId && instance.topicId) {
+            object.topicId = instance.topicId;
+        }
+        if (!object.groupId && instance.groupId) {
+            object.groupId = instance.groupId;
+        }
+        if (!object.userId && instance.userId) {
+            object.userId = instance.userId;
+        }
         object['@type'] = instance._modelOptions.name.singular;
 
         const activity = {
@@ -636,6 +740,15 @@ module.exports = function (app) {
         // }
 
         const object = instance.toJSON();
+        if (!object.topicId && instance.topicId) {
+            object.topicId = instance.topicId;
+        }
+        if (!object.groupId && instance.groupId) {
+            object.groupId = instance.groupId;
+        }
+        if (!object.userId && instance.userId) {
+            object.userId = instance.userId;
+        }
         if (object.offset > 0) {
             return Promise.resolve();
         }
@@ -726,6 +839,15 @@ module.exports = function (app) {
         // }
 
         const object = instance.toJSON();
+        if (!object.topicId && instance.topicId) {
+            object.topicId = instance.topicId;
+        }
+        if (!object.groupId && instance.groupId) {
+            object.groupId = instance.groupId;
+        }
+        if (!object.userId && instance.userId) {
+            object.userId = instance.userId;
+        }
         object['@type'] = instance._modelOptions.name.singular;
 
         const activity = {
@@ -768,11 +890,29 @@ module.exports = function (app) {
             object = [];
             instance.forEach(function (elem) {
                 const o = _.cloneDeep(elem.toJSON());
+                if (!o.topicId && instance.topicId) {
+                    object.topicId = instance.topicId;
+                }
+                if (!o.groupId && instance.groupId) {
+                    o.groupId = instance.groupId;
+                }
+                if (!o.userId && instance.userId) {
+                    o.userId = instance.userId;
+                }
                 o['@type'] = elem._modelOptions.name.singular;
                 object.push(o);
             });
         } else {
             object = instance.toJSON();
+            if (!object.topicId && instance.topicId) {
+                object.topicId = instance.topicId;
+            }
+            if (!object.groupId && instance.groupId) {
+                object.groupId = instance.groupId;
+            }
+            if (!object.userId && instance.userId) {
+                object.userId = instance.userId;
+            }
             object['@type'] = instance._modelOptions.name.singular;
 
         }
