@@ -12,6 +12,20 @@ module.exports = function (app) {
 
     const Activity = models.Activity;
 
+    const _setExtraProperties = function (inputObject, targetObject) {
+        if (!targetObject.topicId && inputObject.topicId) {
+            targetObject.topicId = inputObject.topicId;
+        }
+        if (!targetObject.groupId && inputObject.groupId) {
+            targetObject.groupId = inputObject.groupId;
+        }
+        if (!targetObject.userId && inputObject.userId) {
+            targetObject.userId = inputObject.userId;
+        }
+
+        return targetObject;
+    };
+
     const _saveActivity = function (activity, transaction) { //eslint-disable-line complexity
         const activityObject = {
             data: activity
@@ -147,29 +161,13 @@ module.exports = function (app) {
             object = [];
             instance.forEach(function (elem) {
                 const o = _.cloneDeep(elem.toJSON());
-                if (!o.topicId && instance.topicId) {
-                    o.topicId = instance.topicId;
-                }
-                if (!o.groupId && instance.groupId) {
-                    o.groupId = instance.groupId;
-                }
-                if (!o.userId && instance.userId) {
-                    o.userId = instance.userId;
-                }
+                _setExtraProperties(instance, o);
                 o['@type'] = elem._modelOptions.name.singular;
                 object.push(o);
             });
         } else {
             object = instance.toJSON();
-            if (!object.topicId && instance.topicId) {
-                object.topicId = instance.topicId;
-            }
-            if (!object.groupId && instance.groupId) {
-                object.groupId = instance.groupId;
-            }
-            if (!object.userId && instance.userId) {
-                object.userId = instance.userId;
-            }
+            _setExtraProperties(instance, object);
             object['@type'] = instance._modelOptions.name.singular;
         }
 
@@ -180,8 +178,9 @@ module.exports = function (app) {
         };
 
         if (target) {
-            const targetObject = target.toJSON();
+            let targetObject = target.toJSON();
             targetObject['@type'] = target._modelOptions.name.singular;
+            _setExtraProperties(target, targetObject);
             activity.target = targetObject;
         }
 
@@ -226,15 +225,7 @@ module.exports = function (app) {
 
         const object = _.clone(origin);
 
-        if (!object.topicId && instance.topicId) {
-            object.topicId = instance.topicId;
-        }
-        if (!object.groupId && instance.groupId) {
-            object.groupId = instance.groupId;
-        }
-        if (!object.userId && instance.userId) {
-            object.userId = instance.userId;
-        }
+        _setExtraProperties(instance, object);
         const activity = {
             type: Activity.TYPES.update,
             object: origin,
@@ -245,6 +236,7 @@ module.exports = function (app) {
 
         if (target) {
             const targetObject = target.toJSON();
+            _setExtraProperties(target, targetObject);
             targetObject['@type'] = target._modelOptions.name.singular;
             activity.target = targetObject;
         }
@@ -382,16 +374,8 @@ module.exports = function (app) {
 
         origin['@type'] = instance._modelOptions.name.singular;
         const object = _.clone(origin);
+        _setExtraProperties(instance, object);
 
-        if (!object.topicId && instance.topicId) {
-            object.topicId = instance.topicId;
-        }
-        if (!object.groupId && instance.groupId) {
-            object.groupId = instance.groupId;
-        }
-        if (!object.userId && instance.userId) {
-            object.userId = instance.userId;
-        }
         const activity = {
             type: Activity.TYPES.update,
             object,
@@ -402,6 +386,7 @@ module.exports = function (app) {
 
         if (target) {
             const targetObject = target.toJSON();
+            _setExtraProperties(target, targetObject);
             targetObject['@type'] = target._modelOptions.name.singular;
             activity.target = targetObject;
         }
@@ -439,16 +424,7 @@ module.exports = function (app) {
         // }
         const object = instance.toJSON();
         object['@type'] = instance._modelOptions.name.singular;
-
-        if (!object.topicId && instance.topicId) {
-            object.topicId = instance.topicId;
-        }
-        if (!object.groupId && instance.groupId) {
-            object.groupId = instance.groupId;
-        }
-        if (!object.userId && instance.userId) {
-            object.userId = instance.userId;
-        }
+        _setExtraProperties(instance, object);
 
         const activity = {
             type: Activity.TYPES.add,
@@ -464,6 +440,7 @@ module.exports = function (app) {
 
         if (target) {
             const targetObject = target.toJSON();
+            _setExtraProperties(target, targetObject);
             targetObject['@type'] = target._modelOptions.name.singular;
             activity.target = targetObject;
         }
@@ -492,16 +469,7 @@ module.exports = function (app) {
         // }
 
         const object = instance.toJSON();
-
-        if (!object.topicId && instance.topicId) {
-            object.topicId = instance.topicId;
-        }
-        if (!object.groupId && instance.groupId) {
-            object.groupId = instance.groupId;
-        }
-        if (!object.userId && instance.userId) {
-            object.userId = instance.userId;
-        }
+        _setExtraProperties(instance, object);
 
         object['@type'] = instance._modelOptions.name.singular;
 
@@ -556,15 +524,7 @@ module.exports = function (app) {
 
         const _object = instance.toJSON();
 
-        if (!_object.topicId && instance.topicId) {
-            _object.topicId = instance.topicId;
-        }
-        if (!_object.groupId && instance.groupId) {
-            _object.groupId = instance.groupId;
-        }
-        if (!_object.userId && instance.userId) {
-            _object.userId = instance.userId;
-        }
+        _setExtraProperties(instance, _object);
 
         _object['@type'] = instance._modelOptions.name.singular;
 
@@ -576,6 +536,7 @@ module.exports = function (app) {
 
         if (target) {
             const targetObject = target.toJSON();
+            _setExtraProperties(target, targetObject);
             targetObject['@type'] = target._modelOptions.name.singular;
             if (target.dataValues.level) {
                 targetObject.level = target.dataValues.level;
@@ -620,16 +581,7 @@ module.exports = function (app) {
             actor: inviteActor,
             object: inviteObject.toJSON()
         };
-
-        if (!object.topicId && instance.topicId) {
-            object.topicId = instance.topicId;
-        }
-        if (!object.groupId && instance.groupId) {
-            object.groupId = instance.groupId;
-        }
-        if (!object.userId && instance.userId) {
-            object.userId = instance.userId;
-        }
+        _setExtraProperties(instance, object);
 
         const activity = {
             type: 'Accept',
@@ -700,15 +652,7 @@ module.exports = function (app) {
         // }
 
         const object = instance.toJSON();
-        if (!object.topicId && instance.topicId) {
-            object.topicId = instance.topicId;
-        }
-        if (!object.groupId && instance.groupId) {
-            object.groupId = instance.groupId;
-        }
-        if (!object.userId && instance.userId) {
-            object.userId = instance.userId;
-        }
+        _setExtraProperties(instance, object);
         object['@type'] = instance._modelOptions.name.singular;
 
         const activity = {
@@ -740,15 +684,7 @@ module.exports = function (app) {
         // }
 
         const object = instance.toJSON();
-        if (!object.topicId && instance.topicId) {
-            object.topicId = instance.topicId;
-        }
-        if (!object.groupId && instance.groupId) {
-            object.groupId = instance.groupId;
-        }
-        if (!object.userId && instance.userId) {
-            object.userId = instance.userId;
-        }
+        _setExtraProperties(instance, object);
         if (object.offset > 0) {
             return Promise.resolve();
         }
@@ -839,15 +775,7 @@ module.exports = function (app) {
         // }
 
         const object = instance.toJSON();
-        if (!object.topicId && instance.topicId) {
-            object.topicId = instance.topicId;
-        }
-        if (!object.groupId && instance.groupId) {
-            object.groupId = instance.groupId;
-        }
-        if (!object.userId && instance.userId) {
-            object.userId = instance.userId;
-        }
+        _setExtraProperties(instance, object);
         object['@type'] = instance._modelOptions.name.singular;
 
         const activity = {
@@ -890,29 +818,13 @@ module.exports = function (app) {
             object = [];
             instance.forEach(function (elem) {
                 const o = _.cloneDeep(elem.toJSON());
-                if (!o.topicId && instance.topicId) {
-                    object.topicId = instance.topicId;
-                }
-                if (!o.groupId && instance.groupId) {
-                    o.groupId = instance.groupId;
-                }
-                if (!o.userId && instance.userId) {
-                    o.userId = instance.userId;
-                }
+                _setExtraProperties(instance, o);
                 o['@type'] = elem._modelOptions.name.singular;
                 object.push(o);
             });
         } else {
             object = instance.toJSON();
-            if (!object.topicId && instance.topicId) {
-                object.topicId = instance.topicId;
-            }
-            if (!object.groupId && instance.groupId) {
-                object.groupId = instance.groupId;
-            }
-            if (!object.userId && instance.userId) {
-                object.userId = instance.userId;
-            }
+            _setExtraProperties(instance, object);
             object['@type'] = instance._modelOptions.name.singular;
 
         }
@@ -929,6 +841,7 @@ module.exports = function (app) {
 
         if (target) {
             const targetObject = target.toJSON();
+            _setExtraProperties(target, targetObject);
             targetObject['@type'] = target._modelOptions.name.singular;
             activity.target = targetObject;
         }
