@@ -29,6 +29,7 @@
     * Node.JS >= 6.13.1 (https://github.com/mklement0/n-install) 
     * PostgreSQL >= 9.5
     * Etherpad-Lite - https://github.com/citizenos/etherpad-lite-heroku. See the README.md and use the `config/local.json.example` as a basis to get the right plugin configuration.
+    * OPTIONAL: 7zip (https://www.7-zip.org/) - `7z` executable in PATH. Used to generate BDOC-s wrapped in ZIP, initially used and designed for containers sent to Estonian Parliament. To install on Debian/Ubuntu (`apt-get install p7zip-full`).
 
 ### Installing
 
