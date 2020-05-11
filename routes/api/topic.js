@@ -3591,6 +3591,11 @@ module.exports = function (app) {
         }
 
         if (invite.deletedAt) {
+            const hasAccess = _hasPermission(topicId, invite.userId, TopicMemberUser.LEVELS.read, true);
+            if (hasAccess) {
+                return res.ok(invite, 1); // Invite has already been accepted OR deleted and the person has access
+            }
+
             return res.gone('The invite has been deleted', 1);
         }
 
