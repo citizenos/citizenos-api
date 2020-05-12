@@ -5940,86 +5940,49 @@ suite('Users', function () {
                     let topic;
                     let topicInviteCreated;
 
-                    setup(function (done) {
-                        userLib.createUserAndLogin(agentUserToInvite, null, null, null, function (err, res) {
-                            if (err) return done(err);
-                            userToInvite = res;
+                    setup(async function () {
+                        userToInvite = await userLib.createUserAndLoginPromised(agentUserToInvite, null, null, null);
+                        userCreator = await userLib.createUserAndLoginPromised(agentCreator, null, null, null);
+                        topic = (await topicCreatePromised(agentCreator, userCreator.id, null, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST ACCEPT</h2></body></html>', null)).body.data;
 
-                            userLib.createUserAndLogin(agentCreator, null, null, null, function (err, res) {
-                                if (err) return done(err);
+                        const invitation = {
+                            userId: userToInvite.id,
+                            level: TopicMemberUser.LEVELS.edit
+                        };
 
-                                userCreator = res;
-                                topicCreate(agentCreator, userCreator.id, null, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST ACCEPT</h2></body></html>', null, function (err, res) {
-                                    if (err) return done(err);
-
-                                    topic = res.body.data;
-
-                                    const invitation = {
-                                        userId: userToInvite.id,
-                                        level: TopicMemberUser.LEVELS.edit
-                                    };
-
-                                    topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation, function (err, res) {
-                                        if (err) return done(err);
-
-                                        topicInviteCreated = res.body.data.rows[0];
-
-                                        done();
-                                    });
-                                });
-                            });
-                        });
+                        topicInviteCreated = (await topicInviteUsersCreatePromised(agentCreator, userCreator.id, topic.id, invitation)).body.data.rows[0];
                     });
 
-                    test('Success - 20100 - New member created', function (done) {
-                        topicInviteUsersAccept(agentUserToInvite, userToInvite.id, topic.id, topicInviteCreated.id, function (err, res) {
-                            if (err) return done(err);
+                    test('Success - 20100 - New member created', async function () {
+                        const topicMemberUser = (await topicInviteUsersAcceptPromised(agentUserToInvite, userToInvite.id, topic.id, topicInviteCreated.id)).body.data;
 
-                            var topicMemberUser = res.body.data;
-
-                            assert.equal(topicMemberUser.topicId, topic.id);
-                            assert.equal(topicMemberUser.userId, userToInvite.id);
-                            assert.equal(topicMemberUser.level, topicInviteCreated.level);
-                            assert.property(topicMemberUser, 'createdAt');
-                            assert.property(topicMemberUser, 'updatedAt');
-                            assert.property(topicMemberUser, 'deletedAt');
-
-                            // The invite is supposed to be deleted
-                            _topicInviteUsersRead(agentCreator, topic.id, topicInviteCreated.id, 410, done);
-                        });
+                        assert.equal(topicMemberUser.topicId, topic.id);
+                        assert.equal(topicMemberUser.userId, userToInvite.id);
+                        assert.equal(topicMemberUser.level, topicInviteCreated.level);
+                        assert.property(topicMemberUser, 'createdAt');
+                        assert.property(topicMemberUser, 'updatedAt');
+                        assert.property(topicMemberUser, 'deletedAt');
                     });
 
-                    test('Success - 20000 - User already a Member, but accepts an Invite', function (done) {
-                        topicInviteUsersAccept(agentUserToInvite, userToInvite.id, topic.id, topicInviteCreated.id, function (err) {
-                            if (err) return done(err);
+                    test('Success - 20000 - User already a Member, but accepts an Invite', async function () {
+                        await topicInviteUsersAcceptPromised(agentUserToInvite, userToInvite.id, topic.id, topicInviteCreated.id);
+                        const topicMemberUser = (await _topicInviteUsersAcceptPromised(agentUserToInvite, userToInvite.id, topic.id, topicInviteCreated.id, 200)).body.data;
 
-                            _topicInviteUsersAccept(agentUserToInvite, userToInvite.id, topic.id, topicInviteCreated.id, 200, function (err, res) {
-                                if (err) return done(err);
-
-                                var topicMemberUser = res.body.data;
-
-                                assert.equal(topicMemberUser.topicId, topic.id);
-                                assert.equal(topicMemberUser.userId, userToInvite.id);
-                                assert.equal(topicMemberUser.level, topicInviteCreated.level);
-                                assert.property(topicMemberUser, 'createdAt');
-                                assert.property(topicMemberUser, 'updatedAt');
-                                assert.property(topicMemberUser, 'deletedAt');
-
-                                done();
-                            });
-                        });
+                        assert.equal(topicMemberUser.topicId, topic.id);
+                        assert.equal(topicMemberUser.userId, userToInvite.id);
+                        assert.equal(topicMemberUser.level, topicInviteCreated.level);
+                        assert.property(topicMemberUser, 'createdAt');
+                        assert.property(topicMemberUser, 'updatedAt');
+                        assert.property(topicMemberUser, 'deletedAt');
                     });
 
-                    test('Fail - 40400 - Cannot accept deleted invite', function (done) {
-                        topicInviteUsersDelete(agentCreator, userCreator.id, topic.id, topicInviteCreated.id, function (err) {
-                            if (err) return done(err);
-
-                            _topicInviteUsersAccept(agentUserToInvite, userToInvite.id, topic.id, topicInviteCreated.id, 404, done);
-                        });
+                    test('Fail - 40400 - Cannot accept deleted invite', async function () {
+                        await topicInviteUsersDeletePromised(agentCreator, userCreator.id, topic.id, topicInviteCreated.id);
+                        await _topicInviteUsersAcceptPromised(agentUserToInvite, userToInvite.id, topic.id, topicInviteCreated.id, 404);
                     });
 
-                    test('Fail - 41002 - Cannot accept expired invite', function (done) {
-                        TopicInviteUser
+                    test('Fail - 41002 - Cannot accept expired invite', async function () {
+                        await TopicInviteUser
                             .update(
                                 {
                                     createdAt: db.literal(`NOW() - INTERVAL '${TopicInviteUser.VALID_DAYS + 1}d'`)
@@ -6029,32 +5992,26 @@ suite('Users', function () {
                                         id: topicInviteCreated.id
                                     }
                                 }
-                            )
-                            .then(function () {
-                                _topicInviteUsersAccept(agentUserToInvite, userToInvite.id, topic.id, topicInviteCreated.id, 410, function (err, res) {
-                                    if (err) return done(err);
+                            );
 
-                                    var expectedBody = {
-                                        status: {
-                                            code: 41002,
-                                            message: `The invite has expired. Invites are valid for ${TopicInviteUser.VALID_DAYS} days`
-                                        }
-                                    };
+                        const acceptResult = (await _topicInviteUsersAcceptPromised(agentUserToInvite, userToInvite.id, topic.id, topicInviteCreated.id, 410)).body;
 
-                                    assert.deepEqual(res.body, expectedBody);
+                        const expectedBody = {
+                            status: {
+                                code: 41002,
+                                message: `The invite has expired. Invites are valid for ${TopicInviteUser.VALID_DAYS} days`
+                            }
+                        };
 
-                                    done();
-                                });
-                            })
-                            .catch(done);
+                        assert.deepEqual(acceptResult, expectedBody);
                     });
 
-                    test('Fail - 40100 - Unauthorized', function (done) {
-                        _topicInviteUsersAccept(request.agent(app), '93857ed7-a81a-4187-85de-234f6d06b011', topic.id, topicInviteCreated.id, 401, done);
+                    test('Fail - 40100 - Unauthorized', async function () {
+                        await _topicInviteUsersAcceptPromised(request.agent(app), '93857ed7-a81a-4187-85de-234f6d06b011', topic.id, topicInviteCreated.id, 401);
                     });
 
-                    test('Fail - 40300 - Forbidden - Cannot accept for someone else', function (done) {
-                        _topicInviteUsersAccept(agentCreator, userToInvite.id, topic.id, topicInviteCreated.id, 403, done);
+                    test('Fail - 40300 - Forbidden - Cannot accept for someone else', async function () {
+                        await _topicInviteUsersAcceptPromised(agentCreator, userToInvite.id, topic.id, topicInviteCreated.id, 403);
                     });
                 });
 
