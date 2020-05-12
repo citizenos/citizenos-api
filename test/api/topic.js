@@ -5754,155 +5754,100 @@ suite('Users', function () {
                     let topicInviteCreated3;
                     let topicInviteCreated4;
 
-                    suiteSetup(function (done) {
-                        async
-                            .parallel(
-                                [
-                                    function (cb) {
-                                        userLib.createUser(request.agent(app), null, null, null, cb);
-                                    },
-                                    function (cb) {
-                                        userLib.createUser(request.agent(app), null, null, null, cb);
-                                    },
-                                    function (cb) {
-                                        userLib.createUserAndLogin(agentCreator, null, null, null, cb);
+                    suiteSetup(async function () {
+                        userCreator = await userLib.createUserAndLoginPromised(agentCreator, null, null, null);
+                        userToInvite1 = await userLib.createUserPromised(request.agent(app), null, null, null);
+                        userToInvite2 = await userLib.createUserPromised(request.agent(app), null, null, null);
+
+                        topic = (await topicCreatePromised(agentCreator, userCreator.id, null, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>', null)).body.data;
+
+                        const topicInvite11 = {
+                            userId: userToInvite1.id,
+                            level: TopicMemberUser.LEVELS.read
+                        };
+
+                        const topicInvite12 = {
+                            userId: userToInvite1.id,
+                            level: TopicMemberUser.LEVELS.admin
+                        };
+
+                        const topicInvite21 = {
+                            userId: userToInvite2.id,
+                            level: TopicMemberUser.LEVELS.edit
+                        };
+
+                        const topicInvite22 = {
+                            userId: userToInvite2.id,
+                            level: TopicMemberUser.LEVELS.read
+                        };
+
+                        topicInviteCreated1 = (await topicInviteUsersCreatePromised(agentCreator, userCreator.id, topic.id, topicInvite11)).body.data.rows[0];
+                        topicInviteCreated2 = (await topicInviteUsersCreatePromised(agentCreator, userCreator.id, topic.id, topicInvite12)).body.data.rows[0];
+                        topicInviteCreated3 = (await topicInviteUsersCreatePromised(agentCreator, userCreator.id, topic.id, topicInvite21)).body.data.rows[0];
+                        topicInviteCreated4 = (await topicInviteUsersCreatePromised(agentCreator, userCreator.id, topic.id, topicInvite22)).body.data.rows[0];
+
+                        // Delete an invite
+                        await topicInviteUsersDeletePromised(agentCreator, userCreator.id, topic.id, topicInviteCreated3.id);
+
+                        // Expire an invite
+                        await TopicInviteUser
+                            .update(
+                                {
+                                    createdAt: db.literal(`NOW() - INTERVAL '${TopicInviteUser.VALID_DAYS + 1}d'`)
+                                },
+                                {
+                                    where: {
+                                        id: topicInviteCreated4.id
                                     }
-                                ],
-                                function (err, results) {
-                                    if (err) return done(err);
-
-                                    [userToInvite1, userToInvite2, userCreator] = results;
-
-                                    topicCreate(agentCreator, userCreator.id, null, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>', null, function (err, res) {
-                                        if (err) return done(err);
-
-                                        topic = res.body.data;
-
-                                        const topicInvite11 = {
-                                            userId: userToInvite1.id,
-                                            level: TopicMemberUser.LEVELS.read
-                                        };
-
-                                        const topicInvite12 = {
-                                            userId: userToInvite1.id,
-                                            level: TopicMemberUser.LEVELS.admin
-                                        };
-
-                                        const topicInvite21 = {
-                                            userId: userToInvite2.id,
-                                            level: TopicMemberUser.LEVELS.edit
-                                        };
-
-                                        const topicInvite22 = {
-                                            userId: userToInvite2.id,
-                                            level: TopicMemberUser.LEVELS.read
-                                        };
-
-                                        async
-                                            .series(
-                                                [
-                                                    function (cb) {
-                                                        topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, topicInvite11, cb);
-                                                    },
-                                                    function (cb) {
-                                                        topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, topicInvite12, cb);
-                                                    },
-                                                    function (cb) {
-                                                        topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, topicInvite21, cb);
-                                                    },
-                                                    function (cb) {
-                                                        topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, topicInvite22, cb);
-                                                    }
-                                                ],
-                                                function (err, results) {
-                                                    if (err) return done(err);
-
-                                                    [topicInviteCreated1, topicInviteCreated2, topicInviteCreated3, topicInviteCreated4] = results.map(res => {
-                                                        return res.body.data.rows[0];
-                                                    });
-
-                                                    // Delete an invite
-                                                    topicInviteUsersDelete(agentCreator, userCreator.id, topic.id, topicInviteCreated3.id, function (err) {
-                                                        if (err) return done(err);
-                                                        // Expire an invite
-                                                        TopicInviteUser
-                                                            .update(
-                                                                {
-                                                                    createdAt: db.literal(`NOW() - INTERVAL '${TopicInviteUser.VALID_DAYS + 1}d'`)
-                                                                },
-                                                                {
-                                                                    where: {
-                                                                        id: topicInviteCreated4.id
-                                                                    }
-                                                                }
-                                                            )
-                                                            .then(function () {
-                                                                done();
-                                                            })
-                                                            .catch(done);
-                                                    });
-                                                }
-                                            );
-                                    });
                                 }
                             );
-
                     });
 
-                    test('Success - 20000 - 3 invites - 2 to same person with different level, 1 to other but deleted later, 1 to other but expired', function (done) {
-                        topicInviteUsersList(agentCreator, userCreator.id, topic.id, function (err, res) {
-                            if (err) return done(err);
+                    test('Success - 20000 - 3 invites - 2 to same person with different level, 1 to other but deleted later, 1 to other but expired', async function () {
+                        const invitesListResult = (await topicInviteUsersListPromised(agentCreator, userCreator.id, topic.id)).body.data;
+                        assert.equal(2, invitesListResult.count);
 
-                            const invitesListResult = res.body.data;
-                            assert.equal(2, invitesListResult.count);
+                        const invitesList = invitesListResult.rows;
+                        assert.isArray(invitesList);
+                        assert.equal(2, invitesList.length);
 
-                            const invitesList = invitesListResult.rows;
-                            assert.isArray(invitesList);
-                            assert.equal(2, invitesList.length);
+                        // Make sure the deleted invite is not in the result
+                        assert.isUndefined(invitesList.find(invite => {
+                            return invite.id === topicInviteCreated3.id
+                        }));
 
-                            // Make sure the deleted invite is not in the result
-                            assert.isUndefined(invitesList.find(invite => {
-                                return invite.id === topicInviteCreated3.id
-                            }));
-
-                            // Make sure the double invites are both present
-                            // The list result has User object, otherwise the objects should be equal
-                            const inviteListInvite1 = invitesList.find(invite => {
-                                return invite.id === topicInviteCreated1.id
-                            });
-
-                            const inviteListInivteUser1 = inviteListInvite1.user;
-                            assert.equal(inviteListInivteUser1.id, userToInvite1.id);
-                            assert.equal(inviteListInivteUser1.name, userToInvite1.name);
-                            assert.property(inviteListInivteUser1, 'imageUrl');
-                            delete inviteListInvite1.user;
-                            assert.deepEqual(inviteListInvite1, topicInviteCreated1);
-
-                            // The list result has User object, otherwise the objects should be equal
-                            const inviteListInvite2 = invitesList.find(invite => {
-                                return invite.id === topicInviteCreated2.id
-                            });
-                            const inviteListInivteUser2 = inviteListInvite2.user;
-                            assert.equal(inviteListInivteUser2.id, userToInvite1.id);
-                            assert.equal(inviteListInivteUser2.name, userToInvite1.name);
-                            assert.property(inviteListInivteUser2, 'imageUrl');
-                            delete inviteListInvite2.user;
-                            assert.deepEqual(inviteListInvite2, topicInviteCreated2);
-
-                            done();
+                        // Make sure the double invites are both present
+                        // The list result has User object, otherwise the objects should be equal
+                        const inviteListInvite1 = invitesList.find(invite => {
+                            return invite.id === topicInviteCreated1.id
                         });
-                    });
 
-                    test('Fail - 40100 - Unauthorized', function (done) {
-                        _topicInviteUsersList(request.agent(app), '93857ed7-a81a-4187-85de-234f6d06b011', topic.id, 401, done);
-                    });
+                        const inviteListInivteUser1 = inviteListInvite1.user;
+                        assert.equal(inviteListInivteUser1.id, userToInvite1.id);
+                        assert.equal(inviteListInivteUser1.name, userToInvite1.name);
+                        assert.property(inviteListInivteUser1, 'imageUrl');
+                        delete inviteListInvite1.user;
+                        assert.deepEqual(inviteListInvite1, topicInviteCreated1);
 
-                    test('Fail - 40300 - at least read permissions required', function (done) {
-                        userLib.createUserAndLogin(agentCreator, null, null, null, function (err) {
-                            if (err) return done(err);
-
-                            _topicInviteUsersList(agentCreator, userCreator.id, topic.id, 403, done);
+                        // The list result has User object, otherwise the objects should be equal
+                        const inviteListInvite2 = invitesList.find(invite => {
+                            return invite.id === topicInviteCreated2.id
                         });
+                        const inviteListInivteUser2 = inviteListInvite2.user;
+                        assert.equal(inviteListInivteUser2.id, userToInvite1.id);
+                        assert.equal(inviteListInivteUser2.name, userToInvite1.name);
+                        assert.property(inviteListInivteUser2, 'imageUrl');
+                        delete inviteListInvite2.user;
+                        assert.deepEqual(inviteListInvite2, topicInviteCreated2);
+                    });
+
+                    test('Fail - 40100 - Unauthorized', async function () {
+                        await _topicInviteUsersListPromised(request.agent(app), '93857ed7-a81a-4187-85de-234f6d06b011', topic.id, 401);
+                    });
+
+                    test('Fail - 40300 - at least read permissions required', async function () {
+                        await userLib.createUserAndLoginPromised(agentCreator, null, null, null);
+                        await _topicInviteUsersListPromised(agentCreator, userCreator.id, topic.id, 403);
                     });
 
                 });
