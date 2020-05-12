@@ -5864,94 +5864,65 @@ suite('Users', function () {
                         let topic;
                         let topicInviteCreated;
 
-                        suiteSetup(function (done) {
-                            userLib.createUser(request.agent(app), null, null, null, function (err, res) {
-                                if (err) return done(err);
-                                userToInvite = res;
+                        suiteSetup(async function () {
+                            userToInvite = await userLib.createUserPromised(request.agent(app), null, null, null);
+                            userCreator = await userLib.createUserAndLoginPromised(agentCreator, null, null, null);
+                            topic = (await topicCreatePromised(agentCreator, userCreator.id, null, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>', null)).body.data;
 
-                                userLib.createUserAndLogin(agentCreator, null, null, null, function (err, res) {
-                                    if (err) return done(err);
+                            const invitation = {
+                                userId: userToInvite.id,
+                                level: TopicMemberUser.LEVELS.read
+                            };
 
-                                    userCreator = res;
-                                    topicCreate(agentCreator, userCreator.id, null, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>', null, function (err, res) {
-                                        if (err) return done(err);
+                            topicInviteCreated = (await topicInviteUsersCreatePromised(agentCreator, userCreator.id, topic.id, invitation)).body.data.rows[0];
+                        });
 
-                                        topic = res.body.data;
+                        test('Success - 20000', async function () {
+                            const userDeleteResult = (await topicInviteUsersDeletePromised(agentCreator, userCreator.id, topic.id, topicInviteCreated.id)).body;
 
-                                        const invitation = {
-                                            userId: userToInvite.id,
-                                            level: TopicMemberUser.LEVELS.read
-                                        };
+                            const expectedBody = {
+                                status: {
+                                    code: 20000
+                                }
+                            };
 
-                                        topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation, function (err, res) {
-                                            if (err) return done(err);
+                            assert.deepEqual(userDeleteResult, expectedBody);
 
-                                            topicInviteCreated = res.body.data.rows[0];
-
-                                            done();
-                                        });
-                                    });
+                            const topicInvite = await TopicInviteUser
+                                .findOne({
+                                    where: {
+                                        id: topicInviteCreated.id,
+                                        topicId: topic.id
+                                    },
+                                    paranoid: false
                                 });
-                            });
+
+                            assert.isNotNull(topicInvite, 'deletedAt');
                         });
 
-                        test('Success - 20000', function (done) {
-                            topicInviteUsersDelete(agentCreator, userCreator.id, topic.id, topicInviteCreated.id, function (err, res) {
-                                if (err) return done(err);
+                        test('Fail - 40401 - Invite not found', async function () {
+                            const userDeleteResult = (await _topicInviteUsersDeletePromised(agentCreator, userCreator.id, topic.id, '094ba349-c03e-4fa9-874e-48a978013b2a', 404)).body;
 
-                                const expectedBody = {
-                                    status: {
-                                        code: 20000
-                                    }
-                                };
+                            const expectedBody = {
+                                status: {
+                                    code: 40401,
+                                    message: 'Invite not found'
+                                }
+                            };
 
-                                assert.deepEqual(res.body, expectedBody);
-
-                                TopicInviteUser
-                                    .findOne({
-                                        where: {
-                                            id: topicInviteCreated.id,
-                                            topicId: topic.id
-                                        },
-                                        paranoid: false
-                                    })
-                                    .then(function (topicInvite) {
-                                        assert.isNotNull(topicInvite, 'deletedAt');
-
-                                        done();
-                                    });
-                            });
-                        });
-
-                        test('Fail - 40401 - Invite not found', function (done) {
-                            _topicInviteUsersDelete(agentCreator, userCreator.id, topic.id, '094ba349-c03e-4fa9-874e-48a978013b2a', 404, function (err, res) {
-                                if (err) return done(err);
-
-                                const expectedBody = {
-                                    status: {
-                                        code: 40401,
-                                        message: 'Invite not found'
-                                    }
-                                };
-
-                                assert.deepEqual(res.body, expectedBody);
-
-
-                                done();
-                            });
+                            assert.deepEqual(userDeleteResult, expectedBody);
                         });
 
 
-                        test('Fail - 40100 - Unauthorized', function (done) {
-                            _topicInviteUsersDelete(request.agent(app), '4727aecc-56f7-4802-8f76-2cfaad5cd5f3', topic.id, '094ba349-c03e-4fa9-874e-48a978013b2a', 401, done);
+                        test('Fail - 40100 - Unauthorized', async function () {
+                            await _topicInviteUsersDeletePromised(request.agent(app), '4727aecc-56f7-4802-8f76-2cfaad5cd5f3', topic.id, '094ba349-c03e-4fa9-874e-48a978013b2a', 401);
                         });
 
-                        test('Fail - 40300 - at least admin permissions required', function (done) {
+                        test('Fail - 40300 - at least admin permissions required', async function () {
                             const agentInvalidUser = request.agent(app);
-                            userLib.createUserAndLogin(agentInvalidUser, null, null, null, function (err, res) {
-                                if (err) return done(err);
-                                _topicInviteUsersDelete(agentInvalidUser, res.id, topic.id, '094ba349-c03e-4fa9-874e-48a978013b2a', 403, done);
-                            });
+                            const invalidUser = await userLib.createUserAndLoginPromised(agentInvalidUser, null, null, null);
+
+                            await _topicInviteUsersDeletePromised(agentInvalidUser, invalidUser.id, topic.id, '094ba349-c03e-4fa9-874e-48a978013b2a', 403);
                         });
 
                     });
