@@ -70,7 +70,7 @@ module.exports = function (app) {
     const Attachment = models.Attachment;
     const TopicPin = models.TopicPin;
 
-    const _hasPermission = function (topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelf, partnerId) {
+    const _hasPermission = async function (topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelf, partnerId) {
         const LEVELS = {
             none: 0, // Enables to override inherited permissions.
             read: 1,
@@ -3591,7 +3591,14 @@ module.exports = function (app) {
         }
 
         if (invite.deletedAt) {
-            const hasAccess = _hasPermission(topicId, invite.userId, TopicMemberUser.LEVELS.read, true);
+
+            let hasAccess;
+            try {
+                hasAccess = await _hasPermission(topicId, invite.userId, TopicMemberUser.LEVELS.read, true);
+            } catch (e) {
+                hasAccess = false;
+            }
+
             if (hasAccess) {
                 return res.ok(invite, 1); // Invite has already been accepted OR deleted and the person has access
             }
