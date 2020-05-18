@@ -7166,7 +7166,7 @@ suite('Users', function () {
 
                         const responseExpected = {
                             status: {
-                                code: 40000,
+                                code: 40001,
                                 message: 'The Vote has ended.'
                             }
                         };

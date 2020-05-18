@@ -7163,12 +7163,12 @@ module.exports = function (app) {
     /**
      * Delete Vote delegation
      */
-    app.delete('/api/users/:userId/topics/:topicId/votes/:voteId/delegations', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.voting]), function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/votes/:voteId/delegations', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.voting]), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const voteId = req.params.voteId;
         const userId = req.user.id;
 
-        Vote
+        const vote = await Vote
             .findOne({
                 where: {id: voteId},
                 include: [
@@ -7177,54 +7177,52 @@ module.exports = function (app) {
                         where: {id: topicId}
                     }
                 ]
-            })
-            .then(function (vote) {
-                if (vote.endsAt && new Date() > vote.endsAt) {
-                    res.badRequest('The Vote has ended.');
+            });
 
-                    return Promise.reject();
-                } else {
-                    return vote;
+        if (!vote) {
+            return res.notFound('Vote was not found for given topic', 1);
+        }
+
+        if (vote.endsAt && new Date() > vote.endsAt) {
+            return res.badRequest('The Vote has ended.', 1);
+        }
+
+        const voteDelegation = await VoteDelegation
+            .findOne({
+                where: {
+                    voteId: voteId,
+                    byUserId: userId
                 }
-            })
-            .then(function (vote) {
-                return VoteDelegation
-                    .findOne({
-                        where: {
-                            voteId: voteId,
-                            byUserId: userId
-                        }
-                    })
-                    .then(function (delegation) {
-                        return db
-                            .transaction(function (t) {
-                                return cosActivities
-                                    .deleteActivity(
-                                        delegation,
-                                        vote,
-                                        {
-                                            type: 'User',
-                                            id: req.user.id,
-                                            ip: req.ip
-                                        },
-                                        req.method + ' ' + req.path,
-                                        t
-                                    )
-                                    .then(function () {
-                                        return delegation
-                                            .destroy({
-                                                force: true,
-                                                transaction: t
-                                            });
-                                    });
-                            });
+            });
+
+        if (!voteDelegation) {
+            return res.notFound('Delegation was not found', 2);
+        }
+
+        await db
+            .transaction(async function (t) {
+                await cosActivities
+                    .deleteActivity(
+                        voteDelegation,
+                        vote,
+                        {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
+                await voteDelegation
+                    .destroy({
+                        force: true,
+                        transaction: t
                     });
-            })
-            .then(function () {
-                return res.ok();
-            })
-            .catch(next);
-    });
+            });
+
+        return res.ok();
+    }));
 
     const topicEventsCreate = function (req, res, next) {
         const topicId = req.params.topicId;
