@@ -6673,7 +6673,7 @@ suite('Users', function () {
 
                 suite('Create', function () {
 
-                    test('Success - Created - new delegation', async function () {
+                    test('Success - OK - new delegation', async function () {
                         const topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
                         const voteOptions = [
                             {
@@ -6993,7 +6993,7 @@ suite('Users', function () {
                         });
                     });
 
-                    test('Fail - Bad Request - cyclic delegation - U->U1->U2-->U', async function () {
+                    test('Fail - 40000 - cyclic delegation - U->U1->U2-->U', async function () {
                         const topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
                         const voteOptions = [
                             {
@@ -7032,7 +7032,7 @@ suite('Users', function () {
                         assert.deepEqual(responseDelegation, responseExpected);
                     });
 
-                    test('Fail - Bad Request - no delegation to self', async function () {
+                    test('Fail - 40001 - Cannot delegate to self', async function () {
                         const topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
                         const voteOptions = [
                             {
@@ -7048,7 +7048,7 @@ suite('Users', function () {
 
                         const responseExpected = {
                             status: {
-                                code: 40000,
+                                code: 40001,
                                 message: 'Cannot delegate to self.'
                             }
                         };
@@ -7056,7 +7056,7 @@ suite('Users', function () {
                         assert.deepEqual(responseDelegation, responseExpected);
                     });
 
-                    test('Fail - Bad Request - no delegation to User who does not have access to the Topic', async function () {
+                    test('Fail - 40002 - Cannot delegate Vote to User who does not have access to this Topic', async function () {
                         const topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
                         const voteOptions = [
                             {
@@ -7073,7 +7073,7 @@ suite('Users', function () {
 
                         const responseExpected = {
                             status: {
-                                code: 40000,
+                                code: 40002,
                                 message: 'Cannot delegate Vote to User who does not have access to this Topic.'
                             }
                         };
@@ -7081,7 +7081,7 @@ suite('Users', function () {
                         assert.deepEqual(responseDelegation, responseExpected);
                     });
 
-                    test('Fail - Forbidden - delegation is only allowed when voting is in progress', async function () {
+                    test('Fail - 40300 - delegation is only allowed when voting is in progress', async function () {
                         const topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
                         const voteOptions = [
                             {
