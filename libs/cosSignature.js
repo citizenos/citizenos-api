@@ -739,98 +739,102 @@ module.exports = function (app) {
                         return connectionManager
                             .getConnection()
                             .then(function (connection) {
-                                let fromSql;
+                                if (type !== 'bdoc') {
+                                    let fromSql;
 
-                                switch (type) {
-                                    case 'bdoc':
-                                        fromSql = 'SELECT DISTINCT ON (o."PID") \
-                                            o.* FROM ( \
-                                            SELECT \
-                                            row_number() OVER() AS "rowNumber", \
-                                            v."createdAt" as "timestamp", \
-                                            uc."connectionUserId" as "PID", \
-                                                (uc."connectionData"::json->>\'firstName\') || \' \' || (uc."connectionData"::json->>\'lastName\') as "fullName", \
+                                    switch (type) {
+                                        case 'bdoc':
+                                            fromSql = 'SELECT DISTINCT ON (o."PID") \
+                                                o.* FROM ( \
+                                                SELECT \
+                                                row_number() OVER() AS "rowNumber", \
+                                                v."createdAt" as "timestamp", \
+                                                uc."connectionUserId" as "PID", \
+                                                    (uc."connectionData"::json->>\'firstName\') || \' \' || (uc."connectionData"::json->>\'lastName\') as "fullName", \
+                                                    vo.value as "optionValue" \
+                                                FROM votes v \
+                                                    JOIN "UserConnections" uc ON (uc."userId" = v."userId" AND uc."connectionId" = \'esteid\') \
+                                                JOIN "VoteOptions" vo ON (vo."id" = v."optionId") \
+                                            ORDER BY v."createdAt" DESC) o ';
+                                            break;
+                                        case 'zip':
+                                            fromSql = 'SELECT \
+                                                row_number() OVER() AS "rowNumber", \
+                                                v."createdAt" as "timestamp", \
+                                                v."userId" as "userId", \
+                                                u.name as "name", \
                                                 vo.value as "optionValue" \
                                             FROM votes v \
-                                                JOIN "UserConnections" uc ON (uc."userId" = v."userId" AND uc."connectionId" = \'esteid\') \
-                                            JOIN "VoteOptions" vo ON (vo."id" = v."optionId") \
-                                        ORDER BY v."createdAt" DESC) o ';
-                                        break;
-                                    case 'zip':
-                                        fromSql = 'SELECT \
-                                            row_number() OVER() AS "rowNumber", \
-                                            v."createdAt" as "timestamp", \
-                                            v."userId" as "userId", \
-                                            u.name as "name", \
-                                            vo.value as "optionValue" \
-                                        FROM votes v \
-                                            JOIN "Users" u ON (u.id = v."userId") \
-                                            JOIN "VoteOptions" vo ON (vo."id" = v."optionId") \
-                                        ORDER BY vo.value DESC ';
-                                        break;
+                                                JOIN "Users" u ON (u.id = v."userId") \
+                                                JOIN "VoteOptions" vo ON (vo."id" = v."optionId") \
+                                            ORDER BY vo.value DESC ';
+                                            break;
+                                    }
+
+                                    const query = new QueryStream(
+                                        ' \
+                                            WITH \
+                                                vote_groups("voteId", "userId", "optionGroupId", "updatedAt") AS ( \
+                                                    SELECT DISTINCT ON("voteId","userId") \
+                                                        vl."voteId", \
+                                                        vl."userId", \
+                                                        vl."optionGroupId", \
+                                                        vl."updatedAt" \
+                                                    FROM "VoteLists" vl \
+                                                    WHERE vl."voteId" = $1 \
+                                                    AND vl."deletedAt" IS NULL \
+                                                    ORDER BY "voteId", "userId", "createdAt" DESC, "optionGroupId" ASC \
+                                                ), \
+                                                votes("voteId", "userId", "optionId", "optionGroupId") AS ( \
+                                                    SELECT \
+                                                        vl."voteId", \
+                                                        vl."userId", \
+                                                        vl."optionId", \
+                                                        vl."optionGroupId", \
+                                                        vl."createdAt" \
+                                                    FROM "VoteLists" vl \
+                                                    JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."userId" = vg."userId" AND vl."optionGroupId" = vg."optionGroupId") \
+                                                    WHERE vl."voteId" = $1 \
+                                                ) \
+                                                ' + fromSql + '\
+                                        ;',
+                                        [voteId]
+                                    );
+
+                                    const stream = connection.query(query);
+
+                                    const csvStream = fastCsv.createWriteStream({
+                                        headers: true,
+                                        rowDelimiter: '\r\n'
+                                    });
+                                    finalContainer.append(csvStream, {
+                                        name: VOTE_RESULTS_FILE.name,
+                                        mimeType: VOTE_RESULTS_FILE.mimeType
+                                    });
+
+                                    stream.on('data', function (voteResult) {
+                                        voteResult.optionFileName = _getVoteOptionFileName({value: voteResult.optionValue});
+                                        csvStream.write(voteResult);
+                                    });
+
+                                    stream.on('error', function (err) {
+                                        logger.error('_generateFinalContainer', 'Generating vote CSV FAILED', err);
+
+                                        csvStream.end();
+                                        finalContainer.finalize();
+                                        connectionManager.releaseConnection(connection);
+                                    });
+
+                                    stream.on('end', function () {
+                                        logger.debug('_generateFinalContainer', 'Generating vote CSV succeeded');
+
+                                        csvStream.end();
+                                        finalContainer.finalize();
+                                        connectionManager.releaseConnection(connection);
+                                    });
+                                } else {
+                                    finalContainer.finalize();
                                 }
-
-                                const query = new QueryStream(
-                                    ' \
-                                        WITH \
-                                            vote_groups("voteId", "userId", "optionGroupId", "updatedAt") AS ( \
-                                                SELECT DISTINCT ON("voteId","userId") \
-                                                    vl."voteId", \
-                                                    vl."userId", \
-                                                    vl."optionGroupId", \
-                                                    vl."updatedAt" \
-                                                FROM "VoteLists" vl \
-                                                WHERE vl."voteId" = $1 \
-                                                AND vl."deletedAt" IS NULL \
-                                                ORDER BY "voteId", "userId", "createdAt" DESC, "optionGroupId" ASC \
-                                            ), \
-                                            votes("voteId", "userId", "optionId", "optionGroupId") AS ( \
-                                                SELECT \
-                                                    vl."voteId", \
-                                                    vl."userId", \
-                                                    vl."optionId", \
-                                                    vl."optionGroupId", \
-                                                    vl."createdAt" \
-                                                FROM "VoteLists" vl \
-                                                JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."userId" = vg."userId" AND vl."optionGroupId" = vg."optionGroupId") \
-                                                WHERE vl."voteId" = $1 \
-                                            ) \
-                                            ' + fromSql + '\
-                                    ;',
-                                    [voteId]
-                                );
-
-                                const stream = connection.query(query);
-
-                                const csvStream = fastCsv.createWriteStream({
-                                    headers: true,
-                                    rowDelimiter: '\r\n'
-                                });
-                                finalContainer.append(csvStream, {
-                                    name: VOTE_RESULTS_FILE.name,
-                                    mimeType: VOTE_RESULTS_FILE.mimeType
-                                });
-
-                                stream.on('data', function (voteResult) {
-                                    voteResult.optionFileName = _getVoteOptionFileName({value: voteResult.optionValue});
-                                    csvStream.write(voteResult);
-                                });
-
-                                stream.on('error', function (err) {
-                                    logger.error('_generateFinalContainer', 'Generating vote CSV FAILED', err);
-
-                                    csvStream.end();
-                                    finalContainer.finalize();
-                                    connectionManager.releaseConnection(connection);
-                                });
-
-                                stream.on('end', function () {
-                                    logger.debug('_generateFinalContainer', 'Generating vote CSV succeeded');
-
-                                    csvStream.end();
-                                    finalContainer.finalize();
-                                    connectionManager.releaseConnection(connection);
-                                });
 
                                 return util.streamToPromise(finalContainerFileStream);
                             })
