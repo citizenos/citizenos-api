@@ -70,7 +70,7 @@ module.exports = function (app) {
     const Attachment = models.Attachment;
     const TopicPin = models.TopicPin;
 
-    const _hasPermission = function (topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelf, partnerId) {
+    const _hasPermission = async function (topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelf, partnerId) {
         const LEVELS = {
             none: 0, // Enables to override inherited permissions.
             read: 1,
@@ -3591,6 +3591,18 @@ module.exports = function (app) {
         }
 
         if (invite.deletedAt) {
+
+            let hasAccess;
+            try {
+                hasAccess = await _hasPermission(topicId, invite.userId, TopicMemberUser.LEVELS.read, true);
+            } catch (e) {
+                hasAccess = false;
+            }
+
+            if (hasAccess) {
+                return res.ok(invite, 1); // Invite has already been accepted OR deleted and the person has access
+            }
+
             return res.gone('The invite has been deleted', 1);
         }
 
@@ -7011,161 +7023,28 @@ module.exports = function (app) {
     /**
      * Delegate a Vote
      */
-    app.post('/api/users/:userId/topics/:topicId/votes/:voteId/delegations', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.voting]), function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/votes/:voteId/delegations', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.voting]), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const voteId = req.params.voteId;
 
         const toUserId = req.body.userId;
 
         if (req.user.id === toUserId) {
-            return res.badRequest('Cannot delegate to self.');
+            return res.badRequest('Cannot delegate to self.', 1);
         }
 
-        return _hasPermission(topicId, toUserId, TopicMemberUser.LEVELS.read, false, null, null, req.user.partnerId)
-            .then(
-                function () {
-                    return Vote
-                        .findOne({
-                            where: {id: voteId},
-                            include: [
-                                {
-                                    model: Topic,
-                                    where: {id: topicId}
-                                }
-                            ]
-                        })
-                        .then(function (vote) {
-                            if (!vote) {
-                                res.notFound();
+        let hasAccess;
+        try {
+            hasAccess = await _hasPermission(topicId, toUserId, TopicMemberUser.LEVELS.read, false, null, null, req.user.partnerId);
+        } catch (e) {
+            hasAccess = false;
+        }
 
-                                return Promise.reject();
-                            }
+        if (!hasAccess) {
+            return res.badRequest('Cannot delegate Vote to User who does not have access to this Topic.', 2);
+        }
 
-                            if (vote.endsAt && new Date() > vote.endsAt) {
-                                res.badRequest('The Vote has ended.');
-
-                                return Promise.reject();
-                            }
-
-                            return db
-                                .transaction(function (t) {
-                                    return db
-                                        .query(
-                                            ' \
-                                            WITH \
-                                                RECURSIVE delegation_chains("voteId", "toUserId", "byUserId", depth) AS ( \
-                                                    SELECT \
-                                                        "voteId", \
-                                                        "toUserId", \
-                                                        "byUserId", \
-                                                        1 \
-                                                    FROM "VoteDelegations" vd \
-                                                    WHERE vd."voteId" = :voteId \
-                                                        AND vd."byUserId" = :toUserId \
-                                                        AND vd."deletedAt" IS NULL \
-                                                    \
-                                                    UNION ALL \
-                                                    \
-                                                    SELECT \
-                                                        vd."voteId", \
-                                                        vd."toUserId", \
-                                                        dc."byUserId", \
-                                                        dc.depth + 1 \
-                                                    FROM delegation_chains dc, "VoteDelegations" vd \
-                                                    WHERE vd."voteId" = dc."voteId" \
-                                                        AND vd."byUserId" = dc."toUserId" \
-                                                        AND vd."deletedAt" IS NULL \
-                                                ), \
-                                                cyclicDelegation AS ( \
-                                                    SELECT \
-                                                        0 \
-                                                    FROM delegation_chains \
-                                                    WHERE "byUserId" = :toUserId \
-                                                        AND "toUserId" = :byUserId \
-                                                    LIMIT 1 \
-                                                ), \
-                                                upsert AS ( \
-                                                    UPDATE "VoteDelegations" \
-                                                    SET "toUserId" = :toUserId, \
-                                                        "updatedAt" = CURRENT_TIMESTAMP \
-                                                    WHERE "voteId" = :voteId \
-                                                    AND "byUserId" = :byUserId \
-                                                    AND 1 = 1 / COALESCE((SELECT * FROM cyclicDelegation), 1) \
-                                                    AND "deletedAt" IS NULL \
-                                                    RETURNING * \
-                                                ) \
-                                            INSERT INTO "VoteDelegations" ("voteId", "toUserId", "byUserId", "createdAt", "updatedAt") \
-                                                SELECT :voteId, :toUserId, :byUserId, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP \
-                                                WHERE NOT EXISTS (SELECT * FROM upsert) \
-                                                    AND 1 = 1 / COALESCE((SELECT * FROM cyclicDelegation), 1) \
-                                            RETURNING * \
-                                            ',
-                                            {
-                                                replacements: {
-                                                    voteId: voteId,
-                                                    toUserId: toUserId,
-                                                    byUserId: req.user.id
-                                                },
-                                                raw: true,
-                                                transaction: t
-                                            }
-                                        )
-                                        .then(
-                                            function (result) {
-                                                const delegation = VoteDelegation.build(result[0][0]);
-
-                                                return cosActivities
-                                                    .createActivity(
-                                                        delegation,
-                                                        vote,
-                                                        {
-                                                            type: 'User',
-                                                            id: req.user.id,
-                                                            ip: req.ip
-                                                        },
-                                                        req.method + ' ' + req.path,
-                                                        t
-                                                    );
-                                            },
-                                            function (err) {
-                                                // HACK: Forcing division by zero when cyclic delegation is detected. Cannot use result check as both update and cyclic return [].
-                                                if (err.parent.code === '22012') {
-                                                    // Cyclic delegation detected.
-                                                    return res.badRequest('Sorry, you cannot delegate your vote to this person.');
-                                                }
-                                                // Don't hide other errors
-                                                throw err;
-                                            }
-                                        );
-                                });
-                        });
-                },
-                function (err) {
-                    if (err) {
-                        return next(err);
-                    }
-
-                    return res.badRequest('Cannot delegate Vote to User who does not have access to this Topic.');
-                }
-            )
-            .then(function () {
-                return res.ok();
-            })
-            .catch(function (err) {
-                next(err);
-            });
-    });
-
-
-    /**
-     * Delete Vote delegation
-     */
-    app.delete('/api/users/:userId/topics/:topicId/votes/:voteId/delegations', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.voting]), function (req, res, next) {
-        const topicId = req.params.topicId;
-        const voteId = req.params.voteId;
-        const userId = req.user.id;
-
-        Vote
+        const vote = await Vote
             .findOne({
                 where: {id: voteId},
                 include: [
@@ -7174,54 +7053,176 @@ module.exports = function (app) {
                         where: {id: topicId}
                     }
                 ]
-            })
-            .then(function (vote) {
-                if (vote.endsAt && new Date() > vote.endsAt) {
-                    res.badRequest('The Vote has ended.');
+            });
 
-                    return Promise.reject();
-                } else {
-                    return vote;
+        if (!vote) {
+            return res.notFound();
+        }
+
+        if (vote.endsAt && new Date() > vote.endsAt) {
+            return res.badRequest('The Vote has ended.');
+        }
+
+        await db
+            .transaction(async function (t) {
+                let result;
+
+                try {
+                    result = await db
+                        .query(
+                            ' \
+                            WITH \
+                                RECURSIVE delegation_chains("voteId", "toUserId", "byUserId", depth) AS ( \
+                                    SELECT \
+                                        "voteId", \
+                                        "toUserId", \
+                                        "byUserId", \
+                                        1 \
+                                    FROM "VoteDelegations" vd \
+                                    WHERE vd."voteId" = :voteId \
+                                        AND vd."byUserId" = :toUserId \
+                                        AND vd."deletedAt" IS NULL \
+                                    \
+                                    UNION ALL \
+                                    \
+                                    SELECT \
+                                        vd."voteId", \
+                                        vd."toUserId", \
+                                        dc."byUserId", \
+                                        dc.depth + 1 \
+                                    FROM delegation_chains dc, "VoteDelegations" vd \
+                                    WHERE vd."voteId" = dc."voteId" \
+                                        AND vd."byUserId" = dc."toUserId" \
+                                        AND vd."deletedAt" IS NULL \
+                                ), \
+                                cyclicDelegation AS ( \
+                                    SELECT \
+                                        0 \
+                                    FROM delegation_chains \
+                                    WHERE "byUserId" = :toUserId \
+                                        AND "toUserId" = :byUserId \
+                                    LIMIT 1 \
+                                ), \
+                                upsert AS ( \
+                                    UPDATE "VoteDelegations" \
+                                    SET "toUserId" = :toUserId, \
+                                        "updatedAt" = CURRENT_TIMESTAMP \
+                                    WHERE "voteId" = :voteId \
+                                    AND "byUserId" = :byUserId \
+                                    AND 1 = 1 / COALESCE((SELECT * FROM cyclicDelegation), 1) \
+                                    AND "deletedAt" IS NULL \
+                                    RETURNING * \
+                                ) \
+                            INSERT INTO "VoteDelegations" ("voteId", "toUserId", "byUserId", "createdAt", "updatedAt") \
+                                SELECT :voteId, :toUserId, :byUserId, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP \
+                                WHERE NOT EXISTS (SELECT * FROM upsert) \
+                                    AND 1 = 1 / COALESCE((SELECT * FROM cyclicDelegation), 1) \
+                            RETURNING * \
+                            ',
+                            {
+                                replacements: {
+                                    voteId: voteId,
+                                    toUserId: toUserId,
+                                    byUserId: req.user.id
+                                },
+                                raw: true,
+                                transaction: t
+                            }
+                        );
+                } catch (err) {
+                    // HACK: Forcing division by zero when cyclic delegation is detected. Cannot use result check as both update and cyclic return [].
+                    if (err.parent.code === '22012') {
+                        // Cyclic delegation detected.
+                        return res.badRequest('Sorry, you cannot delegate your vote to this person.');
+                    }
+
+                    // Don't hide other errors
+                    throw err;
                 }
-            })
-            .then(function (vote) {
-                return VoteDelegation
-                    .findOne({
-                        where: {
-                            voteId: voteId,
-                            byUserId: userId
-                        }
-                    })
-                    .then(function (delegation) {
-                        return db
-                            .transaction(function (t) {
-                                return cosActivities
-                                    .deleteActivity(
-                                        delegation,
-                                        vote,
-                                        {
-                                            type: 'User',
-                                            id: req.user.id,
-                                            ip: req.ip
-                                        },
-                                        req.method + ' ' + req.path,
-                                        t
-                                    )
-                                    .then(function () {
-                                        return delegation
-                                            .destroy({
-                                                force: true,
-                                                transaction: t
-                                            });
-                                    });
-                            });
+
+                const delegation = VoteDelegation.build(result[0][0]);
+
+                await cosActivities
+                    .createActivity(
+                        delegation,
+                        vote,
+                        {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
+            });
+
+        return res.ok();
+    }));
+
+
+    /**
+     * Delete Vote delegation
+     */
+    app.delete('/api/users/:userId/topics/:topicId/votes/:voteId/delegations', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.voting]), asyncMiddleware(async function (req, res) {
+        const topicId = req.params.topicId;
+        const voteId = req.params.voteId;
+        const userId = req.user.id;
+
+        const vote = await Vote
+            .findOne({
+                where: {id: voteId},
+                include: [
+                    {
+                        model: Topic,
+                        where: {id: topicId}
+                    }
+                ]
+            });
+
+        if (!vote) {
+            return res.notFound('Vote was not found for given topic', 1);
+        }
+
+        if (vote.endsAt && new Date() > vote.endsAt) {
+            return res.badRequest('The Vote has ended.', 1);
+        }
+
+        const voteDelegation = await VoteDelegation
+            .findOne({
+                where: {
+                    voteId: voteId,
+                    byUserId: userId
+                }
+            });
+
+        if (!voteDelegation) {
+            return res.notFound('Delegation was not found', 2);
+        }
+
+        await db
+            .transaction(async function (t) {
+                await cosActivities
+                    .deleteActivity(
+                        voteDelegation,
+                        vote,
+                        {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
+                await voteDelegation
+                    .destroy({
+                        force: true,
+                        transaction: t
                     });
-            })
-            .then(function () {
-                return res.ok();
-            })
-            .catch(next);
-    });
+            });
+
+        return res.ok();
+    }));
 
     const topicEventsCreate = function (req, res, next) {
         const topicId = req.params.topicId;
