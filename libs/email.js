@@ -231,6 +231,33 @@ module.exports = function (app) {
             );
     };
 
+    const handleAllPromises = function (emailPromises) {
+        var errors = [];
+        var done = [];
+        return Promise.all(emailPromises.map(function (promise) {
+            return Promise
+				.resolve( promise )
+				.reflect();
+        }))
+        .each(function (inspection) {
+            if (inspection.isRejected()) {
+                logger.error('FAILED:', inspection.reason());
+                errors.push({
+                    state: "rejected",
+                    value: inspection.reason()
+                });
+            } else {
+                done.push({
+                    state: "success",
+                    value: inspection.value()
+                });
+            }
+        })
+        .then(function () {
+            return {done, errors};
+        });
+    }
+
     /**
      * Send e-mail verification email.
      *
@@ -274,7 +301,7 @@ module.exports = function (app) {
                     promisesToResolve.push(userEmailPromise);
                 });
 
-                return Promise.all(promisesToResolve);
+                return handleAllPromises(promisesToResolve);
             });
     };
 
@@ -318,7 +345,7 @@ module.exports = function (app) {
                     promisesToResolve.push(userEmailPromise);
                 });
 
-                return Promise.all(promisesToResolve);
+                return handleAllPromises(promisesToResolve);
             });
     };
 
@@ -482,7 +509,7 @@ module.exports = function (app) {
                         }
                     });
 
-                    return Promise.all(promisesToResolve);
+                    return handleAllPromises(promisesToResolve);
                 } else {
                     logger.info('No Topic User invite emails to be sent as filtering resulted in empty e-mail address list.');
                 }
@@ -590,7 +617,7 @@ module.exports = function (app) {
             return emailClient.sendStringAsync(template.body, emailOptions);
         });
 
-        return Promise.all(emailsSendPromises);
+        return handleAllPromises(emailsSendPromises);
     };
 
     /**
@@ -698,7 +725,7 @@ module.exports = function (app) {
                         }
                     });
 
-                    return Promise.all(promisesToResolve);
+                    return handleAllPromises(promisesToResolve);
                 } else {
                     logger.info('No Topic Group member User invite emails to be sent as filtering resulted in empty e-mail address list.');
                 }
@@ -796,6 +823,8 @@ module.exports = function (app) {
                             promisesToResolve.push(userEmailPromise);
                         }
                     });
+
+                    return handleAllPromises(promisesToResolve);
                 } else {
                     logger.info('No Group member User invite emails to be sent as filtering resulted in empty e-mail address list.');
 
@@ -948,7 +977,7 @@ module.exports = function (app) {
                     });
                 }
 
-                return Promise.all(promisesToResolve);
+                return handleAllPromises(promisesToResolve);
             });
     };
 
@@ -1094,7 +1123,7 @@ module.exports = function (app) {
             }
         });
 
-        return Promise.all(sendEmailPromises);
+        return handleAllPromises(sendEmailPromises);
     };
 
     /**
@@ -1199,7 +1228,7 @@ module.exports = function (app) {
             }
         });
 
-        return Promise.all(sendEmailPromiseses);
+        return handleAllPromises(sendEmailPromiseses);
     };
 
     /**
@@ -1364,7 +1393,7 @@ module.exports = function (app) {
             }
         });
 
-        return await Promise.all(sendEmailPromises);
+        return await handleAllPromises(sendEmailPromises);
     };
 
     /**
@@ -1490,7 +1519,7 @@ module.exports = function (app) {
 
         promisesToResolve.push(emailToTopicCreatorPromise);
 
-        return Promise.all(promisesToResolve);
+        return handleAllPromises(promisesToResolve);
     };
 
     return {

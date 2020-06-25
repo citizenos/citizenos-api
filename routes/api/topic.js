@@ -2854,42 +2854,43 @@ module.exports = function (app) {
                 if (allowedGroups && allowedGroups[0]) {
                     return db
                         .transaction(function (t) {
-                            const findOrCreateTopicMemberGroups = allowedGroups.map(function (group) {
-                                const member = _.find(members, function (o) {
-                                    return o.groupId === group.id;
-                                });
+                            return Topic
+                                .findOne({
+                                    where: {
+                                        id: topicId
+                                    },
+                                    transaction: t
+                                })
+                                .then(function (topic) {
+                                    const findOrCreateTopicMemberGroups = allowedGroups.map(function (group) {
+                                        const member = _.find(members, function (o) {
+                                            return o.groupId === group.id;
+                                        });
 
-                                return TopicMemberGroup
-                                    .findOrCreate({
-                                        where: {
-                                            topicId: topicId,
-                                            groupId: member.groupId
-                                        },
-                                        defaults: {
-                                            level: member.level || TopicMemberUser.LEVELS.read
-                                        },
-                                        transaction: t
+                                        return TopicMemberGroup
+                                            .findOrCreate({
+                                                where: {
+                                                    topicId: topicId,
+                                                    groupId: member.groupId
+                                                },
+                                                defaults: {
+                                                    level: member.level || TopicMemberUser.LEVELS.read
+                                                },
+                                                transaction: t
+                                            });
                                     });
-                            });
 
-                            return Promise
-                                .all(findOrCreateTopicMemberGroups)
-                                .then(function (memberGroups) {
-                                    return Topic
-                                        .findOne({
-                                            where: {
-                                                id: topicId
-                                            },
-                                            transaction: t
-                                        })
-                                        .then(function (topic) {
-                                            const groupIdsToInvite = [];
-                                            const memberGroupActivities = [];
-
-                                            memberGroups.forEach(function (memberGroup, i) {
-                                                groupIdsToInvite.push(members[i].groupId);
+                                    const groupIdsToInvite = [];
+                                    const memberGroupActivities = [];
+                                    return Promise
+                                        .all(findOrCreateTopicMemberGroups.map(function (promise) {
+                                            return promise.reflect();
+                                        })).each(function (inspection) {
+                                            if (inspection.isFulfilled()) {
+                                                var memberGroup = inspection.value()[0].toJSON();
+                                                groupIdsToInvite.push(memberGroup.groupId);
                                                 const groupData = _.find(allowedGroups, function (item) {
-                                                    return item.id === members[i].groupId;
+                                                    return item.id === memberGroup.groupId;
                                                 });
                                                 const group = Group.build(groupData);
 
@@ -2906,15 +2907,25 @@ module.exports = function (app) {
                                                     t
                                                 );
                                                 memberGroupActivities.push(addActivity);
-                                            });
 
+                                            } else {
+                                                logger.error('Adding Group failed', inspection.reason());
+                                            }
+                                        }).then(function () {
                                             return Promise
-                                                .all(memberGroupActivities)
-                                                .then(function () {
-                                                    return emailLib.sendTopicMemberGroupCreate(groupIdsToInvite, req.user.id, topicId);
-                                                });
+                                                    .all(memberGroupActivities)
+                                                    .then(function () {
+                                                        return emailLib.sendTopicMemberGroupCreate(groupIdsToInvite, req.user.id, topicId);
+                                                    })
+                                                    .then(function (res) {
+                                                        if (res && res.errors) {
+                                                            logger.error('ERRORS', res.errors);
+                                                        }
+                                                    });
                                         });
-                                });
+
+
+                                    });
                         });
                 } else {
                     return Promise.reject();

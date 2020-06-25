@@ -1847,7 +1847,7 @@ suite('Users', function () {
                     etherpadClient
                         .getHTMLAsync({padID: topic.id})
                         .then(function (getHtmlResult) {
-                            assert.equal(getHtmlResult.html, '<!DOCTYPE HTML><html><body><h1>H1</h1><br><h2>h2</h2><br><h3>h3</h3><br><br><br>script<br><br><br></body></html>');
+                            assert.equal(getHtmlResult.html, '<!DOCTYPE HTML><html><body><h1>H1</h1><br><h2>h2</h2><br><h3>h3</h3><br><br><br>script<br><br></body></html>');
                         })
                         .then(function () {
                             topicRead(agent, user.id, topic.id, null, function (err, res) {
@@ -1855,7 +1855,7 @@ suite('Users', function () {
 
                                 var topicRead = res.body.data;
                                 assert.equal(topicRead.title, 'H1');
-                                assert.equal(topicRead.description, '<!DOCTYPE HTML><html><body><h1>H1</h1><br><h2>h2</h2><br><h3>h3</h3><br><br><br>script<br><br><br></body></html>');
+                                assert.equal(topicRead.description, '<!DOCTYPE HTML><html><body><h1>H1</h1><br><h2>h2</h2><br><h3>h3</h3><br><br><br>script<br><br></body></html>');
 
                                 done();
                             });
@@ -10168,7 +10168,7 @@ suite('Users', function () {
 
                         assert.equal(reportResultTopic.id, topic.id);
                         assert.equal(reportResultTopic.title, topicTitle);
-                        assert.equal(reportResultTopic.description, '<!DOCTYPE HTML><html><body><h1>Topic report test</h1><br>Topic report test desc<br><br><br></body></html>'); // DOH, whatever you do Etherpad adds extra <br>
+                        assert.equal(reportResultTopic.description, topicDescription); // DOH, whatever you do Etherpad adds extra <br>
 
                         done();
                     });
