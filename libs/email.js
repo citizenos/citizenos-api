@@ -93,6 +93,10 @@ module.exports = function (app) {
             .replace(':templateRoot', templateRoot)
             .replace(':language', lang);
 
+        const pathTranslationsFallback = ':templateRoot/languages/:language.json'
+            .replace(':templateRoot', templateRoot)
+            .replace(':language', 'en');
+
         const templateObj = {
             body: null,
             translations: null,
@@ -113,7 +117,13 @@ module.exports = function (app) {
         }
 
         // TODO: Rewrite to async FS operations
-        templateObj.translations = JSON.parse(fs.readFileSync(pathTranslations, {encoding: 'utf8'})); // eslint-disable-line no-sync
+        try {
+            templateObj.translations = JSON.parse(fs.readFileSync(pathTranslations, {encoding: 'utf8'})); // eslint-disable-line no-sync
+        } catch (e) {
+            logger.warn('Could not read translations using fallback instead!', pathTemplate, pathTemplateFallback);
+            templateObj.translations = JSON.parse(fs.readFileSync(pathTranslationsFallback, {encoding: 'utf8'})); // eslint-disable-line no-sync
+        }
+
         templateCache[pathTemplate] = templateObj;
 
         return templateObj;

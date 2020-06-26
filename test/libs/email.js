@@ -31,46 +31,26 @@ suite('Email', function () {
         var reportText = 'Test reporting spam';
 
 
-        suiteSetup(function (done) {
-            userLib.createUserAndLogin(agent, null, null, null, function (err, res) {
-                if (err) {
-                    return done(err);
-                }
+        suiteSetup(async function () {
+            user = await userLib.createUserAndLoginPromised(agent, null, null, null);
+            topic = (await topicLib.topicCreatePromised(agent, user.id, null, null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null)).body.data;
 
-                user = res;
-
-                topicLib.topicCreate(agent, user.id, null, null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null, function (err, res) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    topic = res.body.data;
-
-                    TopicReport
-                        .create({
-                            topicId: topic.id,
-                            type: reportType,
-                            text: reportText,
-                            creatorId: user.id,
-                            creatorIp: '127.0.0.1'
-                        })
-                        .then(function (topicReport) {
-                            report = topicReport;
-
-                            done();
-                        })
-                        .catch(done);
-                });
-            });
+            return TopicReport
+                .create({
+                    topicId: topic.id,
+                    type: reportType,
+                    text: reportText,
+                    creatorId: user.id,
+                    creatorIp: '127.0.0.1'
+                })
+                .then(function (topicReport) {
+                    report = topicReport;
+                })
         });
 
-        test('Success', function (done) {
-            emailLib
-                .sendTopicReport(report)
-                .then(function () {
-                    done();
-                })
-                .catch(done);
+        test('Success', async function () {
+            return emailLib
+                .sendTopicReport(report);
         });
 
     });
