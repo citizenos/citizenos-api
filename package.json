@@ -48,7 +48,7 @@
     "image-size": "0.6.2",
     "json-patch-gen": "1.0.2",
     "jsonwebtoken": "5.7.0",
-    "lodash": "4.17.13",
+    "lodash": "4.17.19",
     "log4js": "4.1.0",
     "mimeparse": "0.1.4",
     "mobiil-id-rest": "1.0.4",
