@@ -32,7 +32,7 @@ const emailToMaskedEmail = function (email) {
 };
 
 const escapeHtml = function (text) {
-    var map = {
+    const map = {
         '&': '&amp;',
         '<': '&lt;',
         '>': '&gt;',
@@ -53,11 +53,11 @@ const escapeHtml = function (text) {
  * @return {string} Random string
  */
 const randomString = function (length) {
-    var charArr = [];
-    var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const charArr = [];
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     length = length ? length : 8;
 
-    for (var i = 0; i < length; i++) {
+    for (let i = 0; i < length; i++) {
         charArr.push(possible.charAt(Math.floor(Math.random() * possible.length))); // Not using string+= as it becomes inefficient for long strings.
     }
 
@@ -103,7 +103,7 @@ const randomPid = function () {
  *
  * @private
  */
-var streamToPromise = function (stream) {
+const streamToPromise = function (stream) {
     return new Promise(function (resolve, reject) {
         stream.on('end', resolve); // Readable stream has "end"
         stream.on('finish', resolve); // Writable stream has "finish"
@@ -120,7 +120,7 @@ var streamToPromise = function (stream) {
  *
  * @private
  */
-var streamToBuffer = function (readableStream) {
+const streamToBuffer = function (readableStream) {
     return new Promise(function (resolve, reject) {
         let buf;
 
@@ -153,7 +153,7 @@ var streamToBuffer = function (readableStream) {
  *
  * @private
  */
-var streamToString = function (readableStream) {
+const streamToString = function (readableStream) {
     return streamToBuffer(readableStream)
         .then(function (buffer) {
             return buffer.toString();

@@ -4048,7 +4048,7 @@ module.exports = function (app) {
 
                     https
                         .get(options, function (externalRes) {
-                            res.setHeader('content-disposition', 'attachment; filename=' + filename);
+                            res.setHeader('content-disposition', 'attachment; filename=' + encodeURIComponent(filename));
                             externalRes.pipe(res);
                         })
                         .on('error', function (err) {
