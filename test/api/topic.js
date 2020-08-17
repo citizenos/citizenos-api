@@ -809,6 +809,29 @@ var topicCommentCreate = function (agent, userId, topicId, parentId, parentVersi
     _topicCommentCreate(agent, userId, topicId, parentId, parentVersion, type, subject, text, 201, callback);
 };
 
+const _topicCommentCreatePromised = async function (agent, userId, topicId, parentId, parentVersion, type, subject, text, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/comments'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId);
+
+    return agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .send({
+            type: type,
+            subject: subject,
+            text: text,
+            parentId: parentId,
+            parentVersion: parentVersion
+        })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+}
+
+const topicCommentCreatePromised = async function (agent, userId, topicId, parentId, parentVersion, type, subject, text) {
+    return _topicCommentCreatePromised(agent, userId, topicId, parentId, parentVersion, type, subject, text, 201);
+};
+
 var _topicCommentEdit = function (agent, userId, topicId, commentId, subject, text, type, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/comments/:commentId'
         .replace(':userId', userId)
@@ -1655,6 +1678,44 @@ var _topicCommentVotesCreate = function (agent, topicId, commentId, value, expec
         .end(callback);
 };
 
+var topicCommentVotesCreate = function (agent, topicId, commentId, value, callback) {
+    _topicCommentVotesCreate(agent, topicId, commentId, value, 200, callback);
+};
+
+const _topicCommentVotesCreatePromised = async function (agent, topicId, commentId, value, expectedHttpCode) {
+    const path = '/api/topics/:topicId/comments/:commentId/votes'
+        .replace(':topicId', topicId)
+        .replace(':commentId', commentId);
+
+    return agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .send({value: value})
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicCommentVotesCreatePromised = async function (agent, topicId, commentId, value) {
+    return _topicCommentVotesCreatePromised(agent, topicId, commentId, value, 200);
+};
+
+const _topicCommentVotesListPromised = async function (agent, userId, topicId, commentId, expectedHttpCode) {
+    let path = '/api/users/:userId/topics/:topicId/comments/:commentId/votes'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':commentId', commentId);
+
+    return agent
+        .get(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+
+const topicCommentVotesListPromised = async function (agent, userId, topicId, commentId) {
+   return _topicCommentVotesListPromised(agent, userId, topicId, commentId, 200);
+};
+
 var _topicEventCreate = function (agent, userId, topicId, subject, text, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/events'
         .replace(':userId', userId)
@@ -1728,10 +1789,6 @@ var _topicEventDelete = function (agent, userId, topicId, eventId, expectedHttpC
 
 var topicEventDelete = function (agent, userId, topicId, eventId, callback) {
     _topicEventDelete(agent, userId, topicId, eventId, 200, callback);
-};
-
-var topicCommentVotesCreate = function (agent, topicId, commentId, value, callback) {
-    _topicCommentVotesCreate(agent, topicId, commentId, value, 200, callback);
 };
 
 var _topicFavouriteCreate = function (agent, userId, topicId, expectedHttpCode, callback) {
@@ -11941,10 +11998,12 @@ suite('Topics', function () {
                             },
                             data: {
                                 up: {
-                                    count: 1
+                                    count: 1,
+                                    selected: true
                                 },
                                 down: {
-                                    count: 0
+                                    count: 0,
+                                    selected: false
                                 }
                             }
                         };
@@ -11965,10 +12024,12 @@ suite('Topics', function () {
                             },
                             data: {
                                 up: {
-                                    count: 0
+                                    count: 0,
+                                    selected: false
                                 },
                                 down: {
-                                    count: 1
+                                    count: 1,
+                                    selected: true
                                 }
                             }
                         };
@@ -11988,10 +12049,12 @@ suite('Topics', function () {
                             },
                             data: {
                                 up: {
-                                    count: 0
+                                    count: 0,
+                                    selected: false
                                 },
                                 down: {
-                                    count: 0
+                                    count: 0,
+                                    selected: false
                                 }
                             }
                         };
@@ -12014,10 +12077,12 @@ suite('Topics', function () {
                                 },
                                 data: {
                                     up: {
-                                        count: 0
+                                        count: 0,
+                                        selected: false
                                     },
                                     down: {
-                                        count: 1
+                                        count: 1,
+                                        selected: true
                                     }
                                 }
                             };
@@ -12041,7 +12106,44 @@ suite('Topics', function () {
                         done();
                     });
                 });
+            });
 
+            suite('List', function () {
+                const creatorAgent = request.agent(app);
+
+                let creator;
+                let topic;
+                let comment;
+
+                suiteSetup(async function () {
+                    creator = await userLib.createUserAndLoginPromised(creatorAgent, null, null, null);
+                });
+
+                setup(async function () {
+                    topic = (await topicCreatePromised(creatorAgent, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business], null, null, null)).body.data;
+                    comment = (await topicCommentCreatePromised(creatorAgent, creator.id, topic.id, null, null, Comment.TYPES.pro, 'Subj', 'Text')).body.data
+                });
+
+                test('Success', async function () {
+                    await topicCommentVotesCreatePromised (creatorAgent, topic.id, comment.id, 1);
+                    const commentVotesList = (await topicCommentVotesListPromised(creatorAgent, creator.id, topic.id, comment.id)).body.data;
+                    const commentVote = commentVotesList.rows[0];
+                    const expected = {
+                        rows: [
+                            {
+                                company: null,
+                                imageUrl: null,
+                                createdAt: commentVote.createdAt,
+                                updatedAt: commentVote.updatedAt,
+                                name: creator.name,
+                                vote: "up"
+                            }
+                      ],
+                        count: 1
+                    };
+
+                    assert.deepEqual(commentVotesList, expected);
+                });
             });
 
         });

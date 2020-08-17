@@ -290,6 +290,7 @@ module.exports = function (app) {
             if (tokenData.redirectSuccess) {
                 redirectSuccess = tokenData.redirectSuccess;
             }
+            console.log('tokenData', tokenData);
         }
 
         User

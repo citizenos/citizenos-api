@@ -4424,11 +4424,12 @@ module.exports = function (app) {
             popularity: 'popularity',
             date: 'date'
         };
-
+        let userId = null;
         let orderByComments = '"createdAt" DESC';
         let orderByReplies = '"createdAt" ASC';
         let dataForModerator = '';
         if (req.user && req.user.moderator) {
+            userId = req.user.id;
             dataForModerator = '\
             , \'email\', u.email \
             , \'pid\', uc."connectionData"::jsonb->>\'pid\' \
@@ -4502,7 +4503,7 @@ module.exports = function (app) {
                                 c."deletedReasonType"::text, \
                                 c."deletedReasonText", \
                                 jsonb_build_object(\'id\', c."deletedByReportId") as report, \
-                                jsonb_build_object(\'up\', jsonb_build_object(\'count\', COALESCE(cvu.sum, 0)), \'down\', jsonb_build_object(\'count\', COALESCE(cvd.sum, 0)), \'count\', COALESCE(cvu.sum, 0) + COALESCE(cvd.sum, 0)) as votes, \
+                                jsonb_build_object(\'up\', jsonb_build_object(\'count\', COALESCE(cvu.sum, 0), \'selected\', COALESCE(cvus.selected, false)), \'down\', jsonb_build_object(\'count\', COALESCE(cvd.sum, 0), \'selected\', COALESCE(cvds.selected, false)), \'count\', COALESCE(cvu.sum, 0) + COALESCE(cvd.sum, 0)) as votes, \
                                 to_char(c."createdAt" at time zone \'UTC\', :dateFormat) as "createdAt", \
                                 to_char(c."updatedAt" at time zone \'UTC\', :dateFormat) as "updatedAt", \
                                 to_char(c."deletedAt" at time zone \'UTC\', :dateFormat) as "deletedAt", \
@@ -4515,8 +4516,14 @@ module.exports = function (app) {
                                     SELECT SUM(value), "commentId" FROM "CommentVotes" WHERE value > 0 GROUP BY "commentId" \
                                 ) cvu ON (cvu."commentId" = c.id) \
                                 LEFT JOIN ( \
+                                    SELECT "commentId", value,  true AS selected FROM "CommentVotes" WHERE value > 0 AND "creatorId"=:userId \
+                                ) cvus ON (cvu."commentId"= cvus."commentId")\
+                                LEFT JOIN ( \
                                     SELECT SUM(ABS(value)), "commentId" FROM "CommentVotes" WHERE value < 0 GROUP BY "commentId" \
                                 ) cvd ON (cvd."commentId" = c.id) \
+                                LEFT JOIN ( \
+                                    SELECT "commentId", true AS selected FROM "CommentVotes" WHERE value < 0 AND "creatorId"=:userId \
+                                ) cvds ON (cvd."commentId"= cvds."commentId")\
                                 WHERE c.id = $1 \
                             UNION ALL \
                             SELECT \
@@ -4534,7 +4541,7 @@ module.exports = function (app) {
                                 c."deletedReasonType"::text, \
                                 c."deletedReasonText", \
                                 jsonb_build_object(\'id\', c."deletedByReportId") as report, \
-                                jsonb_build_object(\'up\', jsonb_build_object(\'count\', COALESCE(cvu.sum, 0)), \'down\', jsonb_build_object(\'count\', COALESCE(cvd.sum, 0)), \'count\', COALESCE(cvu.sum, 0) + COALESCE(cvd.sum, 0)) as votes, \
+                                jsonb_build_object(\'up\', jsonb_build_object(\'count\', COALESCE(cvu.sum, 0), \'selected\', COALESCE(cvus.selected, false)), \'down\', jsonb_build_object(\'count\', COALESCE(cvd.sum, 0), \'selected\', COALESCE(cvds.selected, false)), \'count\', COALESCE(cvu.sum, 0) + COALESCE(cvd.sum, 0)) as votes, \
                                 to_char(c."createdAt" at time zone \'UTC\', :dateFormat) as "createdAt", \
                                 to_char(c."updatedAt" at time zone \'UTC\', :dateFormat) as "updatedAt", \
                                 to_char(c."deletedAt" at time zone \'UTC\', :dateFormat) as "deletedAt", \
@@ -4548,8 +4555,14 @@ module.exports = function (app) {
                                     SELECT SUM(value), "commentId" FROM "CommentVotes" WHERE value > 0 GROUP BY "commentId" \
                                 ) cvu ON (cvu."commentId" = c.id) \
                                 LEFT JOIN ( \
+                                    SELECT "commentId", value, true AS selected FROM "CommentVotes" WHERE value > 0 AND "creatorId"=:userId \
+                                ) cvus ON (cvu."commentId"= cvus."commentId")\
+                                LEFT JOIN ( \
                                     SELECT SUM(ABS(value)), "commentId" FROM "CommentVotes" WHERE value < 0 GROUP BY "commentId" \
                                 ) cvd ON (cvd."commentId" = c.id) \
+                                LEFT JOIN ( \
+                                    SELECT "commentId", true AS selected FROM "CommentVotes" WHERE value < 0 AND "creatorId"=:userId \
+                                ) cvds ON (cvd."commentId"= cvds."commentId")\
                         ), \
                         \
                         maxdepth AS ( \
@@ -4723,6 +4736,7 @@ module.exports = function (app) {
                 {
                     replacements: {
                         topicId: req.params.topicId,
+                        userId: userId,
                         dateFormat: 'YYYY-MM-DDThh24:mi:ss.msZ',
                         limit: req.query.limit || 15,
                         offset: req.query.offset || 0
@@ -5263,6 +5277,46 @@ module.exports = function (app) {
      */
     app.get('/api/topics/:topicId/mentions', hasVisibility(Topic.VISIBILITY.public), topicMentionsList);
 
+    /*
+     * Read (List) Topic Comment votes
+     */
+
+    app.get('/api/users/:userId/topics/:topicId/comments/:commentId/votes', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), function (req, res, next) {
+
+        return db
+            .query(
+                '\
+                SELECT \
+                    u.name, \
+                    u.company, \
+                    u."imageUrl", \
+                    CAST(CASE \
+                        WHEN cv.value=1 Then \'up\' \
+                        ELSE \'down\' END \
+                    AS VARCHAR(5)) AS vote, \
+                    cv."createdAt", \
+                    cv."updatedAt" \
+                    FROM "CommentVotes" cv \
+                    LEFT JOIN "Users" u \
+                    ON \
+                        u.id = cv."creatorId" \
+                    WHERE cv."commentId" = :commentId \
+                    ; \
+                ',
+                {
+                    replacements: {
+                        commentId: req.params.commentId
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                })
+                .then(function (results) {
+                    return res.ok({rows: results, count: results.length});
+                })
+                .catch(next);
+    });
+
     /**
      * Create a Comment Vote
      */
@@ -5337,19 +5391,31 @@ module.exports = function (app) {
                         return db
                             .query(
                                 ' \
-                                SELECT  \
-                                    COALESCE(SUM(cvu.value), 0) as "up.count", \
-                                    COALESCE(ABS(SUM(cvd.value)), 0) as "down.count" \
-                                FROM "TopicComments" tc \
-                                    LEFT JOIN "CommentVotes" cvu ON (tc."commentId" = cvu."commentId" AND cvu.value > 0) \
-                                    LEFT JOIN "CommentVotes" cvd ON (tc."commentId" = cvd."commentId" AND cvd.value < 0) \
-                                WHERE tc."topicId" = :topicId \
-                                  AND tc."commentId" = :commentId \
+                                SELECT \
+                                    tc."up.count", \
+                                    tc."down.count", \
+                                    COALESCE(cvus.selected, false) as "up.selected", \
+                                    COALESCE(cvds.selected, false) as "down.selected" \
+                                    FROM ( \
+                                        SELECT  \
+                                            tc."commentId", \
+                                            COALESCE(SUM(cvu.value), 0) as "up.count", \
+                                            COALESCE(ABS(SUM(cvd.value)), 0) as "down.count" \
+                                        FROM "TopicComments" tc \
+                                            LEFT JOIN "CommentVotes" cvu ON (tc."commentId" = cvu."commentId" AND cvu.value > 0) \
+                                            LEFT JOIN "CommentVotes" cvd ON (tc."commentId" = cvd."commentId" AND cvd.value < 0) \
+                                        WHERE tc."topicId" = :topicId \
+                                        AND tc."commentId" = :commentId \
+                                        GROUP BY tc."commentId" \
+                                    ) tc \
+                                    LEFT JOIN (SELECT "commentId", "creatorId", value, true AS selected FROM "CommentVotes" WHERE value > 0 AND "creatorId" = :userId) cvus ON (tc."commentId" = cvus."commentId") \
+                                    LEFT JOIN (SELECT "commentId", "creatorId", value, true AS selected FROM "CommentVotes" WHERE value < 0 AND "creatorId" = :userId) cvds ON (tc."commentId" = cvds."commentId") \
                                 ',
                                 {
                                     replacements: {
                                         topicId: req.params.topicId,
-                                        commentId: req.params.commentId
+                                        commentId: req.params.commentId,
+                                        userId: req.user.id
                                     },
                                     type: db.QueryTypes.SELECT,
                                     raw: true,
