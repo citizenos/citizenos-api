@@ -4428,13 +4428,16 @@ module.exports = function (app) {
         let orderByComments = '"createdAt" DESC';
         let orderByReplies = '"createdAt" ASC';
         let dataForModerator = '';
-        if (req.user && req.user.moderator) {
+        if (req.user) {
             userId = req.user.id;
-            dataForModerator = '\
-            , \'email\', u.email \
-            , \'pid\', uc."connectionData"::jsonb->>\'pid\' \
-            , \'phoneNumber\', uc."connectionData"::jsonb->>\'phoneNumber\' \
-            ';
+
+            if (req.user.moderator) {
+                dataForModerator = '\
+                , \'email\', u.email \
+                , \'pid\', uc."connectionData"::jsonb->>\'pid\' \
+                , \'phoneNumber\', uc."connectionData"::jsonb->>\'phoneNumber\' \
+                ';
+            }
         }
 
         switch (req.query.orderBy) {
@@ -4555,14 +4558,14 @@ module.exports = function (app) {
                                     SELECT SUM(value), "commentId" FROM "CommentVotes" WHERE value > 0 GROUP BY "commentId" \
                                 ) cvu ON (cvu."commentId" = c.id) \
                                 LEFT JOIN ( \
-                                    SELECT "commentId", value, true AS selected FROM "CommentVotes" WHERE value > 0 AND "creatorId"=:userId \
-                                ) cvus ON (cvu."commentId"= cvus."commentId")\
+                                    SELECT "commentId", value, true AS selected FROM "CommentVotes" WHERE value > 0 AND "creatorId" = :userId \
+                                ) cvus ON (cvus."commentId" = c.id) \
                                 LEFT JOIN ( \
                                     SELECT SUM(ABS(value)), "commentId" FROM "CommentVotes" WHERE value < 0 GROUP BY "commentId" \
                                 ) cvd ON (cvd."commentId" = c.id) \
                                 LEFT JOIN ( \
-                                    SELECT "commentId", true AS selected FROM "CommentVotes" WHERE value < 0 AND "creatorId"=:userId \
-                                ) cvds ON (cvd."commentId"= cvds."commentId")\
+                                    SELECT "commentId", true AS selected FROM "CommentVotes" WHERE value < 0 AND "creatorId" = :userId \
+                                ) cvds ON (cvds."commentId"= c.id)\
                         ), \
                         \
                         maxdepth AS ( \
