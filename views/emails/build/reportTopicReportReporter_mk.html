@@ -6,29 +6,31 @@
     <b>Вашата пријава <span class="blue">#{{report.id}}</span> во врска со темата "<a href="{{linkViewTopic}}">{{topic.title}}</a>" е пратена до Citizen OS-модераторите</b>
 </p>
 
-<h1>Што е следно?</h1>
+<h1>Report summary</h1>
+<p>Topic: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
+<p>Report reference number: <b>{{report.id}}</b>
+<p>Type of violation: <b>"{{report.type}}"</b>
+<p>Your explanation: <b>"{{report.text}}"</b>
+
+<h1>What happens next?</h1>
 <p>
 <ol>
-    <li class="li">Модераторите ќе ја разгледаат пријавата. Ако се потврди дека е направена повреда, пристапот до темата ќе биде ограничен и ќе се појави предупредување за несоодветна содржина.
+    <li class="li">Moderators will review the report. If a violation is confirmed, access to the topic will be restricted and a warning of
+        inappropriate content will be displayed.
     </li>
-    <li class="li">Во меѓувреме, од администраторите и уредниците на пријавената тема ќе биде побарано да ја сменат. Кога ќе се поправи несоодветната содржина на темата, модераторите ќе ја разгледаат уште еднаш и ќе ги отстранат ограничувањата ако се отстранат сите повреди.
+    <li class="li">Meanwhile admins and editors of the reported topic will be asked to modify it. When topic's inappropriate content has been
+        improved, the moderators will once again review and will remove restrictions if all violations have been cleared.
     </li>
     <li class="li">
-        Ќе ве известиме ако:
+        We will notify you if:
         <ul>
-            <li>модераторите применат ограничувања за темата</li>
-            <li>сите повреди се расчистени и сите ограничувања се отстранети.</li>
+            <li>moderators apply restrictions to the topic</li>
+            <li>all violations have been cleared and restrictions removed.</li>
         </ul>
     </li>
 </ol>
 </p>
-<p><a href="{{linkViewModerationGuidelines}}">Повеќе детали за процесот на модерирање на Citizen OS можете да најдете тука.</a></p>
-
-<h1>Резиме на пријавата</h1>
-<p>Тема: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
-<p>Упатувачки број за пријавата: <b>{{report.id}}</b>
-<p>Вид повреда: <b>"{{report.type}}"</b>
-<p>Вашето објаснување: <b>"{{report.text}}"</b>
+<p><a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process here.</a></p>
 
 <hr/>
 <p>
