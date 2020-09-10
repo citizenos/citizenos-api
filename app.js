@@ -149,7 +149,6 @@ app.set('QueryStream', QueryStream);
 app.set('cosActivities', require('./libs/cosActivities')(app));
 app.set('urlLib', require('./libs/url')(config));
 app.set('util', require('./libs/util'));
-app.set('ddsClient', require('./libs/ddsClient'));
 app.set('cosEtherpad', require('./libs/cosEtherpad')(app));
 app.set('cosJwt', require('./libs/cosJwt')(app));
 

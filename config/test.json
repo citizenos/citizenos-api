@@ -64,10 +64,6 @@
     }
   },
   "services": {
-    "digiDoc": {
-      "serviceWsdlUrl": "https://tsp.demo.sk.ee/dds.wsdl",
-      "serviceName": "Testimine"
-    },
     "etherpad": {
       "host": "dev.p.citizenos.com",
       "port": "9001",

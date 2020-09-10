@@ -46,20 +46,12 @@
     }
   },
   "services": {
-    "digiDoc": {
-      "serviceWsdlUrl": "https://tsp.demo.sk.ee/dds.wsdl",
-      "serviceName": "Testimine"
-    },
     "etherpad": {
       "host": "dev.p.citizenos.com",
       "port": "9001",
       "ssl": true,
       "rejectUnauthorized": false,
       "apikey": "LUVORFBXdUhrb0RMLXhzekREcXpjR1NsU1BBeTZRWmJGRUR4blZpX3YzYjJRa3FZ"
-    },
-    "idCard": {
-      "serviceUrl": "https://id-test.citizenos.com:8443/info",
-      "apiKey": "ZWeCMMQSoIpOnavNnEo2daBjXbmG3PoEWgNnQ13EtZ9jF43gkInxok5fIioX"
     },
     "signature": {
       "certificates": {

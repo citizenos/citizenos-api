@@ -117,10 +117,6 @@
     }
   },
   "services": {
-    "digiDoc": {
-      "serviceWsdlUrl": "https://dds.citizenos.com:8000/?wsdl",
-      "serviceName": "CitizenOS"
-    },
     "etherpad": {
       "host": "p.citizenos.com",
       "port": "443",

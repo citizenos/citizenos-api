@@ -91,11 +91,14 @@ var _loginId = function (agent, token, clientCert, expectedHttpCode, callback) {
         a.send({token: token});
     }
 
-    if (expectedHttpCode === 200) {
-        a.expect('set-cookie', /.*\.sid=.*; Path=\/api; Expires=.*; HttpOnly/);
-    }
-
-    a.end(callback);
+    a.end(function (err, res) {
+        if (err) return callback(err);
+        var data = res.body.data;
+        if (data && !data.token && !data.hash) {
+            a.expect('set-cookie', /.*\.sid=.*; Path=\/api; Expires=.*; HttpOnly/);
+        }
+        callback();
+    });
 };
 
 /**

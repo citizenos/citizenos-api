@@ -19,9 +19,9 @@ module.exports = function (app) {
     const objectEncrypter = app.get('objectEncrypter');
     const querystring = app.get('querystring');
     const urlLib = app.get('urlLib');
-    const superagent = app.get('superagent');
     const Promise = app.get('Promise');
-    const DigiDocServiceClient = app.get('ddsClient');
+    const Certificate = require('undersign/lib/certificate');
+    const crypto = require('crypto');
     const url = app.get('url');
     const mobileId = app.get('mobileId');
 
@@ -290,7 +290,6 @@ module.exports = function (app) {
             if (tokenData.redirectSuccess) {
                 redirectSuccess = tokenData.redirectSuccess;
             }
-            console.log('tokenData', tokenData);
         }
 
         User
@@ -642,13 +641,8 @@ module.exports = function (app) {
 
     const idCardAuth = function (req, res, next) {
         const token = req.query.token || req.body.token; // Token to access the ID info service
-        const cert = req.headers['x-ssl-client-cert'];
-
-        if (config.services.idCard && cert) {
-            logger.error('X-SSL-Client-Cert header is not allowed when ID-card service is enabled. IF you trust your proxy, sending the X-SSL-Client-Cert, delete the services.idCard from your configuration.');
-
-            return res.badRequest('X-SSL-Client-Cert header is not allowed when ID-card proxy service is enabled.');
-        }
+        let cert = req.headers['x-ssl-client-cert'];
+        const signature = req.body.signature;
 
         if (!token && !cert) {
             logger.warn('Missing required parameter "token" OR certificate in X-SSL-Client-Cert header. One must be provided!', req.path, req.headers);
@@ -656,49 +650,54 @@ module.exports = function (app) {
             return res.badRequest('Missing required parameter "token" OR certificate in X-SSL-Client-Cert header. One must be provided!');
         }
 
+        if(cert.indexOf('-----BEGIN') > -1) {
+            cert = cert.replace('-----BEGIN CERTIFICATE-----', '').replace('-----END CERTIFICATE-----', '')
+        }
+
         let checkCertificatePromise;
+        if (cert && !signature) {
+            return mobileId
+                .validateCert(cert, 'base64')
+                .then(function () {
+                    const hex = crypto.randomBytes(16).toString('hex');
+                    const sha256 = crypto.createHash('sha256');
+                    sha256.update(hex);
+                    const hash = sha256.digest('hex');
 
-        if (cert) {
-            const ddsClient = new DigiDocServiceClient(config.services.digiDoc.serviceWsdlUrl, config.services.digiDoc.serviceName, config.services.digiDoc.token);
-            checkCertificatePromise = ddsClient
-                .checkCertificate(cert, false)
-                .spread(function (checkCertificateResult) {
-                    const data = {
-                        status: checkCertificateResult.Status.$value
-                    };
+                    const sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt({
+                        hex
+                    })};
 
-                    switch (data.status) { // GOOD, UNKNOWN, EXPIRED, SUSPENDED
-                        case 'GOOD':
-                            data.user = {
-                                pid: checkCertificateResult.UserIDCode.$value,
-                                firstName: checkCertificateResult.UserGivenname.$value,
-                                lastName: checkCertificateResult.UserSurname.$value,
-                                countryCode: checkCertificateResult.UserCountry.$value // UPPERCASE ISO-2 letter
-                            };
-                            break;
-                        case 'SUSPENDED':
-                        case 'EXPIRED':
-                        case 'UNKNOWN':
-                            // Not giving User data for such cases - you're not supposed to use it anyway
-                            logger.warn('Invalid certificate status', data.status);
-                            break;
-                        default:
-                            logger.error('Unexpected certificate status from DDS', data.status);
-                            res.internalServerError();
+                    const token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
+                        expiresIn: '5m',
+                        algorithm: config.session.algorithm
+                    });
 
-                            return Promise.reject();
-                    }
-
-                    return data;
-                });
+                    return res.ok({
+                        token,
+                        hash
+                    });
+                })
+                .catch(next);
         } else {
-            checkCertificatePromise = superagent
-                .get(config.services.idCard.serviceUrl)
-                .query({token: token})
-                .set('X-API-KEY', config.services.idCard.apiKey)
-                .then(function (res) {
-                    return res.body.data;
-                });
+            const certificate = new Certificate(Buffer.from(cert,'base64'));
+            let tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+            let idCardFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
+
+            if (certificate.hasSigned(idCardFlowData.hex, Buffer.from(signature.hex, 'hex'))) {
+                checkCertificatePromise = mobileId
+                        .getCertUserData(cert, 'base64')
+                        .then(function (certificateInfo) {
+                            let personalInfo = certificateInfo;
+                            personalInfo.countryCode = personalInfo.country;
+                            delete personalInfo.country;
+
+                            return {
+                                user: personalInfo,
+                                status: 'GOOD'
+                            }
+                        });
+            }
         }
 
         checkCertificatePromise

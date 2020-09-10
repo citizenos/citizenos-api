@@ -28,13 +28,6 @@
       "port": "CITIZENOS_SERVICES_ETHERPAD_PORT",
       "apikey": "CITIZENOS_SERVICES_ETHERPAD_APIKEY"
     },
-    "digiDoc": {
-      "token": "CITIZENOS_SERVICES_DIGIDOC_TOKEN"
-    },
-    "idCard": {
-      "serviceUrl": "CITIZENOS_SERVICES_IDCARD_SERVICE_URL",
-      "apiKey": "CITIZENOS_SERVICES_IDCARD_APIKEY"
-    },
     "signature": {
       "certificates": {
         "tls": "CITIZENOS_SERVICES_SIGNATURE_CERTIFICATES_TLS"
