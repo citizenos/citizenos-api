@@ -1848,6 +1848,7 @@ module.exports.topicCommentCreate = topicCommentCreate;
 module.exports.topicMemberGroupsCreate = topicMemberGroupsCreate;
 module.exports.topicMemberGroupsCreatePromised = topicMemberGroupsCreatePromised;
 module.exports.topicMemberUsersCreate = topicMemberUsersCreate;
+module.exports.topicMemberUsersCreatePromised = topicMemberUsersCreatePromised;
 
 const chai = require('chai');
 chai.use(require('chai-datetime'));

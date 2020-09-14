@@ -13,10 +13,10 @@
  *
  * @private
  */
-var _login = function (agent, email, password, expectedHttpCode, callback) {
-    var path = '/api/auth/login';
+const _login = function (agent, email, password, expectedHttpCode, callback) {
+    const path = '/api/auth/login';
 
-    var a = agent
+    const a = agent
         .post(path)
         .set('Content-Type', 'application/json')
         .send({
@@ -34,7 +34,7 @@ var _login = function (agent, email, password, expectedHttpCode, callback) {
 };
 
 
-var login = function (agent, email, password, callback) {
+const login = function (agent, email, password, callback) {
     _login(agent, email, password, 200, callback);
 };
 
@@ -74,14 +74,12 @@ const loginPromised = async function (agent, email, password) {
     return _loginPromised(agent, email, password, 200);
 };
 
-var _loginId = function (agent, token, clientCert, expectedHttpCode, callback) {
-    var path = '/api/auth/id';
+const _loginIdPromised = async function (agent, token, clientCert, expectedHttpCode) {
+    const path = '/api/auth/id';
 
-    var a = agent
+    const a = agent
         .post(path)
-        .set('Content-Type', 'application/json')
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/);
+        .set('Content-Type', 'application/json');
 
     if (clientCert) {
         a.set('X-SSL-Client-Cert', clientCert);
@@ -91,15 +89,16 @@ var _loginId = function (agent, token, clientCert, expectedHttpCode, callback) {
         a.send({token: token});
     }
 
-    a.end(function (err, res) {
-        if (err) return callback(err);
-        var data = res.body.data;
+    return a.expect(expectedHttpCode)
+    .expect('Content-Type', /json/)
+    .then(function (res, err) {
+        if (err) return err;
+        const data = res.body.data;
         if (data && !data.token && !data.hash) {
             a.expect('set-cookie', /.*\.sid=.*; Path=\/api; Expires=.*; HttpOnly/);
         }
-        callback();
     });
-};
+}
 
 /**
  * Initialize Mobiil-ID login - call '/api/auth/mobile/init' API endpoint
@@ -114,9 +113,10 @@ var _loginId = function (agent, token, clientCert, expectedHttpCode, callback) {
  *
  * @private
  */
-var _loginMobileInit = function (agent, pid, phoneNumber, expectedHttpCode, callback) {
-    var path = '/api/auth/mobile/init';
-    agent
+
+const _loginMobileInitPromised = async function (agent, pid, phoneNumber, expectedHttpCode) {
+    const path = '/api/auth/mobile/init';
+    return agent
         .post(path)
         .set('Content-Type', 'application/json')
         .send({
@@ -124,12 +124,11 @@ var _loginMobileInit = function (agent, pid, phoneNumber, expectedHttpCode, call
             phoneNumber: phoneNumber
         })
         .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
+        .expect('Content-Type', /json/);
 };
 
-var loginMobileInit = function (agent, pid, phoneNumber, callback) {
-    _loginMobileInit(agent, pid, phoneNumber, 200, callback);
+const loginMobileInitPromised = async function (agent, pid, phoneNumber) {
+    return _loginMobileInitPromised(agent, pid, phoneNumber, 200);
 };
 
 /**
@@ -144,19 +143,19 @@ var loginMobileInit = function (agent, pid, phoneNumber, callback) {
  *
  * @private
  */
-var _loginSmartIdInit = function (agent, pid, expectedHttpCode, callback) {
-    var path = '/api/auth/smartid/init';
-    agent
+
+const _loginSmartIdInitPromised = async function (agent, pid, expectedHttpCode) {
+    const path = '/api/auth/smartid/init';
+    return agent
         .post(path)
         .set('Content-Type', 'application/json')
         .send({pid: pid})
         .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
+        .expect('Content-Type', /json/);
 };
 
-var loginSmartIdInit = function (agent, pid, callback) {
-    _loginSmartIdInit(agent, pid, 200, callback);
+const loginSmartIdInitPromised = async function (agent, pid) {
+    return _loginSmartIdInitPromised(agent, pid, 200);
 };
 
 /**
@@ -171,22 +170,52 @@ var loginSmartIdInit = function (agent, pid, callback) {
  *
  * @private
  */
-var _loginMobileStatus = function (agent, token, expectedHttpCode, callback) {
-    var path = '/api/auth/mobile/status';
-    agent
+
+const _loginMobileStatusPromised = async function (agent, token, expectedHttpCode) {
+    const path = '/api/auth/mobile/status';
+
+    return agent
         .get(path)
         .query({
             token: token
         })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/)
-        .end(callback);
 };
 
-var loginMobileStatus = function (agent, token, callback) {
-    _loginMobileStatus(agent, token, 200, callback);
-};
+const loginMobileStatusPromised = async function (agent, token) {
+    return new Promise(function (resolve, reject) {
+        const maxRetries = 20;
+        const retryInterval = 1000; // milliseconds;
 
+        let retries = 0;
+
+        const statusInterval = setInterval(async function () {
+            try {
+                if (retries < maxRetries) {
+                    retries++;
+
+                    const loginMobileStatusResponse = await _loginMobileStatusPromised(agent, token, 200);
+                    if (loginMobileStatusResponse.body.status.code !== 20001) {
+                        clearInterval(statusInterval);
+                        return resolve(loginMobileStatusResponse);
+                    }
+
+                } else {
+                    clearInterval(statusInterval);
+
+                    return reject(new Error(`loginMobileStatus maximum retry limit ${maxRetries} reached!`));
+                }
+            } catch (err) {
+                // Whatever blows, stop polling
+                clearInterval(statusInterval);
+
+                return reject(err);
+            }
+
+        }, retryInterval);
+    });
+};
 /**
  * Check smart-ID authentication status - call '/api/auth/smartid/status'
  *
@@ -198,21 +227,51 @@ var loginMobileStatus = function (agent, token, callback) {
  *
  * @private
  */
-var _loginSmartIdStatus = function (agent, token, callback) {
-    var path = '/api/auth/smartid/status';
-    agent
+
+const _loginSmartIdStatusPromised = function (agent, token) {
+    const path = '/api/auth/smartid/status';
+
+    return agent
         .get(path)
         .query({
             token: token
         })
-        .expect('Content-Type', /json/)
-        .end(callback);
+        .expect('Content-Type', /json/);
 };
 
-var loginSmartIdStatus = function (agent, token, callback) {
-    _loginSmartIdStatus(agent, token, callback);
-};
+const loginSmartIdStatusPromised = function (agent, token, interval) {
+    return new Promise(function (resolve, reject) {
+        const maxRetries = 20;
+        const retryInterval = interval || 1000; // milliseconds;
 
+        let retries = 0;
+
+        const statusInterval = setInterval(async function () {
+            try {
+                if (retries < maxRetries) {
+                    retries++;
+
+                    const loginSmartIdStatusResponse = await _loginSmartIdStatusPromised(agent, token, 200);
+                    if (loginSmartIdStatusResponse.body.status.code !== 20001) {
+                        clearInterval(statusInterval);
+                        return resolve(loginSmartIdStatusResponse);
+                    }
+
+                } else {
+                    clearInterval(statusInterval);
+
+                    return reject(new Error(`loginSmartIdStatus maximum retry limit ${maxRetries} reached!`));
+                }
+            } catch (err) {
+                // Whatever blows, stop polling
+                clearInterval(statusInterval);
+
+                return reject(err);
+            }
+
+        }, retryInterval);
+    });
+};
 /**
  * Log out - call '/api/auth/logout' API endpoint
  *
@@ -221,8 +280,8 @@ var loginSmartIdStatus = function (agent, token, callback) {
  *
  * @return {void}
  */
-var logout = function (agent, callback) {
-    var path = '/api/auth/logout';
+const logout = function (agent, callback) {
+    const path = '/api/auth/logout';
 
     agent
         .post(path)
@@ -258,8 +317,8 @@ const logoutPromised = function (agent) {
  *
  * @private
  */
-var _signup = function (agent, email, password, language, expectedHttpCode, callback) {
-    var path = '/api/auth/signup';
+const _signup = function (agent, email, password, language, expectedHttpCode, callback) {
+    const path = '/api/auth/signup';
 
     agent
         .post(path)
@@ -285,7 +344,7 @@ var _signup = function (agent, email, password, language, expectedHttpCode, call
  *
  * @return {void}
  */
-var signup = function (agent, email, password, language, callback) {
+const signup = function (agent, email, password, language, callback) {
     _signup(agent, email, password, language, 200, callback);
 };
 
@@ -321,8 +380,8 @@ const signupPromised = function (agent, email, password, language) {
  *
  * @private
  */
-var _passwordSet = function (agent, currentPassword, newPassword, expectedHttpCode, callback) {
-    var path = '/api/auth/password';
+const _passwordSet = function (agent, currentPassword, newPassword, expectedHttpCode, callback) {
+    const path = '/api/auth/password';
 
     agent
         .post(path)
@@ -336,6 +395,19 @@ var _passwordSet = function (agent, currentPassword, newPassword, expectedHttpCo
         .end(callback);
 };
 
+const _passwordSetPromised = async function (agent, currentPassword, newPassword, expectedHttpCode) {
+    const path = '/api/auth/password';
+
+    return agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .send({
+            currentPassword: currentPassword,
+            newPassword: newPassword
+        })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
 /**
  * Set password - call '/api/auth/password' API endpoint
  *
@@ -346,8 +418,12 @@ var _passwordSet = function (agent, currentPassword, newPassword, expectedHttpCo
  *
  * @return {void}
  */
-var passwordSet = function (agent, currentPassword, newPassword, callback) {
+const passwordSet = function (agent, currentPassword, newPassword, callback) {
     _passwordSet(agent, currentPassword, newPassword, 200, callback);
+};
+
+const passwordSetPromised = async function (agent, currentPassword, newPassword) {
+    return _passwordSetPromised(agent, currentPassword, newPassword, 200);
 };
 
 /**
@@ -362,8 +438,8 @@ var passwordSet = function (agent, currentPassword, newPassword, callback) {
  *
  * @private
  */
-var _passwordResetSend = function (agent, email, expectedHttpCode, callback) {
-    var path = '/api/auth/password/reset/send';
+const _passwordResetSend = function (agent, email, expectedHttpCode, callback) {
+    const path = '/api/auth/password/reset/send';
 
     agent
         .post(path)
@@ -374,6 +450,16 @@ var _passwordResetSend = function (agent, email, expectedHttpCode, callback) {
         .end(callback);
 };
 
+const _passwordResetSendPromised = async function (agent, email, expectedHttpCode) {
+    const path = '/api/auth/password/reset/send';
+
+    return agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .send({email: email})
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
 /**
  * Send user password reset email with reset code - call '/api/auth/password/reset' API endpoint
  *
@@ -383,14 +469,18 @@ var _passwordResetSend = function (agent, email, expectedHttpCode, callback) {
  *
  * @return {void}
  */
-var passwordResetSend = function (agent, email, callback) {
+const passwordResetSend = function (agent, email, callback) {
     _passwordResetSend(agent, email, 200, callback);
 };
 
-var _passwordResetComplete = function (agent, email, password, passwordResetCode, expectedHttpCode, callback) {
-    var path = '/api/auth/password/reset';
+const passwordResetSendPromised = function (agent, email) {
+    return _passwordResetSendPromised(agent, email, 200);
+};
 
-    agent
+const _passwordResetCompletePromised = async function (agent, email, password, passwordResetCode, expectedHttpCode) {
+    const path = '/api/auth/password/reset';
+
+    return agent
         .post(path)
         .set('Content-Type', 'application/json')
         .send({
@@ -399,12 +489,11 @@ var _passwordResetComplete = function (agent, email, password, passwordResetCode
             passwordResetCode: passwordResetCode
         })
         .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
+        .expect('Content-Type', /json/);
 };
 
-var passwordResetComplete = function (agent, email, password, passwordResetCode, callback) {
-    _passwordResetComplete(agent, email, password, passwordResetCode, 200, callback);
+const passwordResetCompletePromised = async function (agent, email, password, passwordResetCode) {
+    return _passwordResetCompletePromised(agent, email, password, passwordResetCode, 200);
 };
 
 
@@ -417,8 +506,8 @@ var passwordResetComplete = function (agent, email, password, passwordResetCode,
  *
  * @return {void}
  */
-var verify = function (agent, emailVerificationCode, callback) {
-    var path = '/api/auth/verify/:code'.replace(':code', emailVerificationCode);
+const verify = function (agent, emailVerificationCode, callback) {
+    const path = '/api/auth/verify/:code'.replace(':code', emailVerificationCode);
 
     agent
         .get(path)
@@ -438,8 +527,8 @@ var verify = function (agent, emailVerificationCode, callback) {
  *
  * @private
  */
-var _status = function (agent, expectedHttpCode, callback) {
-    var path = '/api/auth/status';
+const _status = function (agent, expectedHttpCode, callback) {
+    const path = '/api/auth/status';
 
     agent
         .get(path)
@@ -447,6 +536,16 @@ var _status = function (agent, expectedHttpCode, callback) {
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/)
         .end(callback);
+};
+
+const _statusPromised = async function (agent, expectedHttpCode) {
+    const path = '/api/auth/status';
+
+    return agent
+        .get(path)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
 };
 
 /**
@@ -457,14 +556,18 @@ var _status = function (agent, expectedHttpCode, callback) {
  *
  * @return {void}
  */
-var status = function (agent, callback) {
+const status = function (agent, callback) {
     _status(agent, 200, callback);
 };
 
-var _openIdAuthorize = function (agent, responseType, clientId, redirectUri, nonce, scope, state, expectedHttpCode, callback) {
-    var path = '/api/auth/openid/authorize';
+const statusPromised = async function (agent) {
+    return _statusPromised(agent, 200);
+};
 
-    agent
+const _openIdAuthorizePromised = async function (agent, responseType, clientId, redirectUri, nonce, scope, state, expectedHttpCode) {
+    const path = '/api/auth/openid/authorize';
+
+    return agent
         .get(path)
         .query({
             response_type: responseType,
@@ -474,12 +577,11 @@ var _openIdAuthorize = function (agent, responseType, clientId, redirectUri, non
             scope: scope,
             state: state
         })
-        .expect(expectedHttpCode)
-        .end(callback);
+        .expect(expectedHttpCode);
 };
 
-var openIdAuthorize = function (agent, responseType, clientId, redirectUri, scope, state, nonce, callback) {
-    _openIdAuthorize(agent, responseType, clientId, redirectUri, nonce, scope, state, 302, callback);
+const openIdAuthorizePromised = async function (agent, responseType, clientId, redirectUri, scope, state, nonce) {
+    return _openIdAuthorizePromised(agent, responseType, clientId, redirectUri, nonce, scope, state, 302);
 };
 
 //Export the above function call so that other tests could use it to prepare data.
@@ -494,26 +596,28 @@ module.exports.passwordSet = passwordSet;
 module.exports.passwordResetSend = passwordResetSend;
 module.exports.status = status;
 module.exports._status = _status;
+module.exports.statusPromised = statusPromised;
+module.exports._statusPromised = _statusPromised;
 
-var request = require('supertest');
-var app = require('../../app');
-var models = app.get('models');
-var uuid = require('node-uuid');
-var fs = require('fs');
+const request = require('supertest');
+const app = require('../../app');
+const models = app.get('models');
+const uuid = require('node-uuid');
+const fs = require('fs');
 
-var assert = require('chai').assert;
-var config = app.get('config');
-var jwt = app.get('jwt');
-var urlLib = app.get('urlLib');
-var objectEncrypter = app.get('objectEncrypter');
+const assert = require('chai').assert;
+const config = app.get('config');
+const jwt = app.get('jwt');
+const urlLib = app.get('urlLib');
+const objectEncrypter = app.get('objectEncrypter');
 
-var shared = require('../utils/shared');
-var userLib = require('./lib/user')(app);
+const shared = require('../utils/shared');
+const userLib = require('./lib/user')(app);
 
-var User = models.User;
-var UserConnection = models.UserConnection;
-var UserConsent = models.UserConsent;
-var Partner = models.Partner;
+const User = models.User;
+const UserConnection = models.UserConnection;
+const UserConsent = models.UserConsent;
+const Partner = models.Partner;
 
 suite('Auth', function () {
 
@@ -527,43 +631,30 @@ suite('Auth', function () {
 
         suite('Username & password', function () {
 
-            var agent = request.agent(app);
-            var email = 'test_' + new Date().getTime() + '@test.ee';
-            var password = 'Test123';
+            const agent = request.agent(app);
+            const email = 'test_' + new Date().getTime() + '@test.ee';
+            const password = 'Test123';
 
-            suiteSetup(function (done) {
-                userLib.createUser(agent, email, password, null, function (err) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    return done();
-                });
+            suiteSetup(async function () {
+                await userLib.createUserPromised(agent, email, password, null);
             });
 
-            test('Success', function (done) {
-                login(agent, email, password, function (err, res) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    var user = res.body.data;
-                    assert.equal(user.email, email);
-                    assert.property(user, 'id');
-                    assert.notProperty(res.body, 'name'); //TODO: would be nice if null values were not returned in the response
-                    assert.notProperty(user, 'password');
-                    assert.notProperty(user, 'emailIsVerified');
-                    assert.notProperty(user, 'emailVerificationCode');
-                    assert.notProperty(user, 'createdAt');
-                    assert.notProperty(user, 'updatedAt');
-                    assert.notProperty(user, 'deletedAt');
-
-                    return done();
-                });
+            test('Success', async function () {
+                const res = await loginPromised(agent, email, password);
+                const user = res.body.data;
+                assert.equal(user.email, email);
+                assert.property(user, 'id');
+                assert.notProperty(res.body, 'name'); //TODO: would be nice if null values were not returned in the response
+                assert.notProperty(user, 'password');
+                assert.notProperty(user, 'emailIsVerified');
+                assert.notProperty(user, 'emailVerificationCode');
+                assert.notProperty(user, 'createdAt');
+                assert.notProperty(user, 'updatedAt');
+                assert.notProperty(user, 'deletedAt');
             });
 
-            test('Fail - 40001 - account does not exist', function (done) {
-                agent
+            test('Fail - 40001 - account does not exist', async function () {
+                return agent
                     .post('/api/auth/login')
                     .set('Content-Type', 'application/json')
                     .send({
@@ -572,46 +663,30 @@ suite('Auth', function () {
                     })
                     .expect(400)
                     .expect('Content-Type', /json/)
-                    .end(function (err, res) {
-                        if (err) {
-                            return done(err);
-                        }
-
-                        var status = res.body.status;
-
+                    .then(function (res) {
+                        const status = res.body.status;
                         assert.equal(status.code, 40001);
                         assert.equal(status.message, 'The account does not exists.');
-
-                        return done();
                     });
             });
 
-            test('Fail - 40002 - account has not been verified', function (done) {
-                var agent = request.agent(app);
+            test('Fail - 40002 - account has not been verified', async function () {
+                const agent = request.agent(app);
 
-                var email = 'test_notverif_' + new Date().getTime() + '@test.ee';
-                var password = 'Test123';
+                const email = 'test_notverif_' + new Date().getTime() + '@test.ee';
+                const password = 'Test123';
 
 
-                signup(agent, email, password, null, function () {
-                    _login(agent, email, password, 400, function (err, res) {
-                        if (err) {
-                            return done(err);
-                        }
+                await signupPromised(agent, email, password, null);
+                const res = await _loginPromised(agent, email, password, 400);
+                const status = res.body.status;
 
-                        var status = res.body.status;
-
-                        assert.equal(status.code, 40002);
-                        assert.equal(status.message, 'The account verification has not been completed. Please check your e-mail.');
-
-                        return done();
-                    });
-                });
-
+                assert.equal(status.code, 40002);
+                assert.equal(status.message, 'The account verification has not been completed. Please check your e-mail.');
             });
 
-            test('Fail - 40003 - wrong password', function (done) {
-                agent
+            test('Fail - 40003 - wrong password', async function () {
+                return agent
                     .post('/api/auth/login')
                     .set('Content-Type', 'application/json')
                     .send({
@@ -620,48 +695,38 @@ suite('Auth', function () {
                     })
                     .expect(400)
                     .expect('Content-Type', /json/)
-                    .end(function (err, res) {
-                        if (err) {
-                            return done(err);
-                        }
-
-                        var status = res.body.status;
+                    .then(function (res) {
+                        const status = res.body.status;
 
                         assert.equal(status.code, 40003);
                         assert.equal(res.body.errors.password, 'Invalid password');
-
-                        return done();
                     });
             });
         });
 
         suite('ID-card', function () {
-            teardown(function (done) {
-                UserConnection
+            teardown(async function () {
+                return UserConnection
                     .destroy({
                         where: {
                             connectionId: UserConnection.CONNECTION_IDS.esteid,
                             connectionUserId: ['PNOEE-37101010021']
                         },
                         force: true
-                    })
-                    .then(function () {
-                        done();
-                    })
-                    .catch(done);
+                    });
             });
 
-            test('Success - client certificate in X-SSL-Client-Cert header', function (done) {
+            test('Success - client certificate in X-SSL-Client-Cert header', async function () {
                 this.timeout(5000); //eslint-disable-line no-invalid-this
 
-                var agent = request.agent(app);
-                var cert = fs.readFileSync('./test/resources/certificates/dds_good_igor_sign.pem', {encoding: 'utf8'}).replace(/\n/g, ''); //eslint-disable-line no-sync
+                const agent = request.agent(app);
+                const cert = fs.readFileSync('./test/resources/certificates/dds_good_igor_sign.pem', {encoding: 'utf8'}).replace(/\n/g, ''); //eslint-disable-line no-sync
 
-                _loginId(agent, null, cert, 200, done);
+                await _loginIdPromised(agent, null, cert, 200);
             });
 
-            test('Fail - no token or client certificate in header', function (done) {
-                _loginId(request.agent(app), null, null, 400, done);
+            test('Fail - no token or client certificate in header', async function () {
+                await _loginIdPromised(request.agent(app), null, null, 400);
             });
         });
 
@@ -669,552 +734,222 @@ suite('Auth', function () {
 
             suite('Init', function () {
 
-                teardown(function (done) {
-                    UserConnection
+                suiteSetup(async function () {
+                    return UserConnection
                         .destroy({
                             where: {
                                 connectionId: UserConnection.CONNECTION_IDS.esteid,
                                 connectionUserId: ['PNOEE-60001019906']
                             },
                             force: true
-                        })
-                        .then(function () {
-                            done();
-                        })
-                        .catch(done);
+                        });
                 });
 
-                test('Success - 20001 - Estonian mobile number and PID', function (done) {
+                test('Success - 20001 - Estonian mobile number and PID', async function () {
                     this.timeout(15000); //eslint-disable-line no-invalid-this
 
-                    var phoneNumber = '+37200000766';
-                    var pid = '60001019906';
+                    const phoneNumber = '+37200000766';
+                    const pid = '60001019906';
+                    const response = (await loginMobileInitPromised(request.agent(app), pid, phoneNumber)).body;
 
-                    UserConnection
-                        .destroy({
-                            where: {
-                                connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                connectionUserId: ['PNOEE-' + pid] // Remove the good user so that test would run multiple times. Also other tests use same numbers
-                            },
-                            force: true
-                        })
-                        .then(function () {
-                            loginMobileInit(request.agent(app), pid, phoneNumber, function (err, res) {
-                                if (err) {
-                                    return done(err);
-                                }
+                    assert.equal(response.status.code, 20001);
+                    assert.match(response.data.challengeID, /[0-9]{4}/);
+                    const tokenData = jwt.verify(response.data.token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                    const loginMobileFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
+                    assert.property(loginMobileFlowData, 'sessionHash');
 
-                                var response = res.body;
+                    const responseData = (await loginMobileStatusPromised(request.agent(app), response.data.token)).body.data;
 
-                                assert.equal(response.status.code, 20001);
-                                assert.match(response.data.challengeID, /[0-9]{4}/);
-                                var tokenData = jwt.verify(response.data.token, config.session.publicKey, {algorithms: [config.session.algorithm]});
-                                var loginMobileFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
-                                assert.property(loginMobileFlowData, 'sessionHash');
-
-                                var interval;
-                                var calls = 0;
-                                var replies = 0;
-                                var clearStatus = function () {
-                                    clearInterval(interval);
-                                };
-
-                                interval = setInterval(function () { // eslint-disable-line consistent-return
-                                    if (calls < 5) {
-                                        if (calls === replies) {
-                                            calls++;
-                                            loginMobileStatus(request.agent(app), response.data.token, function (err, res) {
-                                                replies++;
-                                                if (err) {
-                                                    return done(err);
-                                                }
-
-                                                if (res.body.status.code === 20003) {
-                                                    clearStatus();
-                                                    assert.property(res.body.data, 'id');
-                                                    delete res.body.data.id;
-                                                    assert.deepEqual(res.body.data, {
-                                                        name: 'Mary Änn O’Connež-Šuslik Testnumber',
-                                                        company: null,
-                                                        language: 'en',
-                                                        email: null,
-                                                        imageUrl: null,
-                                                        termsVersion: null,
-                                                        termsAcceptedAt: null
-                                                    });
-
-                                                    return done();
-                                                }
-
-                                                return done();
-                                            });
-                                        }
-                                    } else {
-                                        clearStatus();
-
-                                        return done(new Error('Maximum retries reached'));
-                                    }
-
-                                }, 2000);
-                            });
-                        })
-                        .catch(done);
-
-                });
-
-                test('Fail - 40021 - Invalid phone number', function (done) {
-                    var phoneNumber = '+372519';
-                    var pid = '51001091072';
-
-                    _loginMobileInit(request.agent(app), pid, phoneNumber, 400, function (err, res) {
-                        if (err) {
-                            return done(err);
-                        }
-
-                        var response = res.body;
-
-                        assert.equal(response.status.code, 40000);
-
-                        var expectedResponse = {
-                            status: {
-                                code: 40000,
-                                message: 'phoneNumber must contain of + and numbers(8-30)'
-                            }
-                        };
-                        assert.deepEqual(res.body, expectedResponse);
-
-                        return done();
+                    assert.property(responseData, 'id');
+                    delete responseData.id;
+                    assert.deepEqual(responseData, {
+                        name: 'Mary Änn O’Connež-Šuslik Testnumber',
+                        company: null,
+                        language: 'en',
+                        email: null,
+                        imageUrl: null,
+                        termsVersion: null,
+                        termsAcceptedAt: null
                     });
+
                 });
 
-                test('Fail - 40021 - Invalid PID', function (done) {
-                    var phoneNumber = '+37260000007';
-                    var pid = '1072';
+                test('Fail - 40021 - Invalid phone number', async function () {
+                    const phoneNumber = '+372519';
+                    const pid = '51001091072';
 
-                    _loginMobileInit(request.agent(app), pid, phoneNumber, 400, function (err, res) {
-                        if (err) {
-                            return done(err);
+                    const response = (await _loginMobileInitPromised(request.agent(app), pid, phoneNumber, 400)).body;
+
+                    assert.equal(response.status.code, 40000);
+
+                    const expectedResponse = {
+                        status: {
+                            code: 40000,
+                            message: 'phoneNumber must contain of + and numbers(8-30)'
                         }
-
-                        var expectedResponse = {
-                            status: {
-                                code: 40000,
-                                message: 'nationalIdentityNumber must contain of 11 digits'
-                            }
-                        };
-
-                        assert.deepEqual(res.body, expectedResponse);
-
-                        return done();
-                    });
+                    };
+                    assert.deepEqual(response, expectedResponse);
                 });
 
-                test('Fail - 40022 - Mobile-ID user certificates are revoked or suspended for Estonian citizen', function (done) {
-                    var phoneNumber = '+37200000266';
-                    var pid = '60001019939';
+                test('Fail - 40021 - Invalid PID', async function () {
+                    const phoneNumber = '+37260000007';
+                    const pid = '1072';
 
-                    loginMobileInit(request.agent(app), pid, phoneNumber, function (err, res) {
-                        if (err) {
-                            return done(err);
+                    const response = (await _loginMobileInitPromised(request.agent(app), pid, phoneNumber, 400)).body;
+                    const expectedResponse = {
+                        status: {
+                            code: 40000,
+                            message: 'nationalIdentityNumber must contain of 11 digits'
                         }
-                        var response = res.body.data;
-                        var interval;
-                        var calls = 0;
-                        var replies = 0;
-                        var clearStatus = function () {
-                            clearInterval(interval);
-                        };
+                    };
 
-                        interval = setInterval(function () { // eslint-disable-line consistent-return
-                            if (calls < 5) {
-                                if (calls === replies) {
-                                    calls++;
-                                    _loginMobileStatus(request.agent(app), response.token, 400, function (err, res) {
-                                        replies++;
-                                        if (err) {
-                                            return done(err);
-                                        }
-
-                                        if (res.body.status.code === 40013) {
-                                            clearStatus();
-
-                                            var expectedResponse = {
-                                                status: {
-                                                    code: 40013,
-                                                    message: 'Mobile-ID functionality of the phone is not yet ready'
-                                                }
-                                            };
-                                            assert.deepEqual(res.body, expectedResponse);
-                                        }
-
-                                        return done();
-                                    });
-                                }
-                            } else {
-                                clearStatus();
-
-                                return done(new Error('Maximum retries reached'));
-                            }
-
-                        });
-                    });
+                    assert.deepEqual(response, expectedResponse);
                 });
 
-                test('Fail - 40022 - Mobile-ID user certificates are revoked or suspended for Lithuanian citizen', function (done) {
-                    var phoneNumber = '+37060000266';
-                    var pid = '50001018832';
+                test('Fail - 40022 - Mobile-ID user certificates are revoked or suspended for Estonian citizen', async function () {
+                    const phoneNumber = '+37200000266';
+                    const pid = '60001019939';
 
-                    loginMobileInit(request.agent(app), pid, phoneNumber, function (err, res) {
-                        if (err) {
-                            return done(err);
+                    const response = (await loginMobileInitPromised(request.agent(app), pid, phoneNumber)).body.data;
+                    const responseData = (await _loginMobileStatusPromised(request.agent(app), response.token, 400)).body;
+                    const expectedResponse = {
+                        status: {
+                            code: 40013,
+                            message: 'Mobile-ID functionality of the phone is not yet ready'
                         }
-                        var response = res.body.data;
-                        var interval;
-                        var calls = 0;
-                        var replies = 0;
-                        var clearStatus = function () {
-                            clearInterval(interval);
-                        };
-
-                        interval = setInterval(function () { // eslint-disable-line consistent-return
-                            if (calls < 5) {
-                                if (calls === replies) {
-                                    calls++;
-                                    _loginMobileStatus(request.agent(app), response.token, 400, function (err, res) {
-                                        replies++;
-                                        if (err) {
-                                            return done(err);
-                                        }
-
-                                        if (res.body.status.code === 40013) {
-                                            clearStatus();
-
-                                            var expectedResponse = {
-                                                status: {
-                                                    code: 40013,
-                                                    message: 'Mobile-ID functionality of the phone is not yet ready'
-                                                }
-                                            };
-                                            assert.deepEqual(res.body, expectedResponse);
-                                        }
-
-                                        return done();
-                                    });
-                                }
-                            } else {
-                                clearStatus();
-
-                                return done(new Error('Maximum retries reached'));
-                            }
-
-                        });
-                    });
+                    };
+                    assert.deepEqual(responseData, expectedResponse);
                 });
 
-                test('Fail - 40023 - User certificate is not activated for Estonian citizen.', function (done) {
-                    var phoneNumber = '+37200001';
-                    var pid = '38002240211';
+                test('Fail - 40022 - Mobile-ID user certificates are revoked or suspended for Lithuanian citizen', async function () {
+                    const phoneNumber = '+37060000266';
+                    const pid = '50001018832';
 
-                    loginMobileInit(request.agent(app), pid, phoneNumber, function (err, res) {
-                        if (err) {
-                            return done(err);
+                    const response = (await loginMobileInitPromised(request.agent(app), pid, phoneNumber)).body.data;
+                    const responseData = (await _loginMobileStatusPromised(request.agent(app), response.token, 400)).body;
+                    const expectedResponse = {
+                        status: {
+                            code: 40013,
+                            message: 'Mobile-ID functionality of the phone is not yet ready'
                         }
-                        var response = res.body.data;
-                        var interval;
-                        var calls = 0;
-                        var replies = 0;
-                        var clearStatus = function () {
-                            clearInterval(interval);
-                        };
-
-                        interval = setInterval(function () { // eslint-disable-line consistent-return
-                            if (calls < 5) {
-                                if (calls === replies) {
-                                    calls++;
-                                    _loginMobileStatus(request.agent(app), response.token, 400, function (err, res) {
-                                        replies++;
-                                        if (err) {
-                                            return done(err);
-                                        }
-
-                                        if (res.body.status.code === 40013) {
-                                            clearStatus();
-
-                                            var expectedResponse = {
-                                                status: {
-                                                    code: 40013,
-                                                    message: 'Mobile-ID functionality of the phone is not yet ready'
-                                                }
-                                            };
-                                            assert.deepEqual(res.body, expectedResponse);
-                                        }
-
-                                        return done();
-                                    });
-                                }
-                            } else {
-                                clearStatus();
-
-                                return done(new Error('Maximum retries reached'));
-                            }
-
-                        });
-                    });
+                    };
+                    assert.deepEqual(responseData, expectedResponse);
                 });
 
-                test('Fail - 40023 - Mobile-ID is not activated for Lithuanian citizen', function (done) {
-                    var phoneNumber = '+37060000001';
-                    var pid = '51001091006';
+                test('Fail - 40023 - User certificate is not activated for Estonian citizen.', async function () {
+                    const phoneNumber = '+37200001';
+                    const pid = '38002240211';
 
-                    loginMobileInit(request.agent(app), pid, phoneNumber, function (err, res) {
-                        if (err) {
-                            return done(err);
+                    const response = (await loginMobileInitPromised(request.agent(app), pid, phoneNumber)).body.data;
+                    const responseData = (await _loginMobileStatusPromised(request.agent(app), response.token, 400)).body;
+
+                    const expectedResponse = {
+                        status: {
+                            code: 40013,
+                            message: 'Mobile-ID functionality of the phone is not yet ready'
                         }
-                        var response = res.body.data;
-                        var interval;
-                        var calls = 0;
-                        var replies = 0;
-                        var clearStatus = function () {
-                            clearInterval(interval);
-                        };
-
-                        interval = setInterval(function () { // eslint-disable-line consistent-return
-                            if (calls < 5) {
-                                if (calls === replies) {
-                                    calls++;
-                                    _loginMobileStatus(request.agent(app), response.token, 400, function (err, res) {
-                                        replies++;
-                                        if (err) {
-                                            return done(err);
-                                        }
-
-                                        if (res.body.status.code === 40013) {
-                                            clearStatus();
-
-                                            var expectedResponse = {
-                                                status: {
-                                                    code: 40013,
-                                                    message: 'Mobile-ID functionality of the phone is not yet ready'
-                                                }
-                                            };
-                                            assert.deepEqual(res.body, expectedResponse);
-                                        }
-
-                                        return done();
-                                    });
-                                }
-                            } else {
-                                clearStatus();
-
-                                return done(new Error('Maximum retries reached'));
-                            }
-
-                        });
-                    });
+                    };
+                    assert.deepEqual(responseData, expectedResponse);
                 });
 
-                test.skip('Fail - 40024 - User certificate is suspended', function (done) {
+                test('Fail - 40023 - Mobile-ID is not activated for Lithuanian citizen', async function () {
+                    const phoneNumber = '+37060000001';
+                    const pid = '51001091006';
+
+                    const response = (await loginMobileInitPromised(request.agent(app), pid, phoneNumber)).body.data;
+                    const responseData = (await _loginMobileStatusPromised(request.agent(app), response.token, 400)).body;
+                    const expectedResponse = {
+                        status: {
+                            code: 40013,
+                            message: 'Mobile-ID functionality of the phone is not yet ready'
+                        }
+                    };
+
+                    assert.deepEqual(responseData, expectedResponse);
+                });
+
+                test.skip('Fail - 40024 - User certificate is suspended', async function () {
                     //TODO: No test phone numbers available for errorcode = 304 - http://id.ee/?id=36373
-                    done();
                 });
 
-                test.skip('Fail - 40025 - User certificate is expired', function (done) {
+                test.skip('Fail - 40025 - User certificate is expired', async function () {
                     //TODO: No test phone numbers available for errorcode = 305 - http://id.ee/?id=36373
-                    done();
                 });
 
             });
 
             suite('Status', function () {
-                var phoneNumber = '+37200000766';
-                var pid = '60001019906';
+                const phoneNumber = '+37200000766';
+                const pid = '60001019906';
 
                 suite('New User', function () {
-                    teardown(function (done) {
-                        UserConnection
+                    suiteSetup(async function () {
+                        return UserConnection
                             .destroy({
                                 where: {
                                     connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId: ['PNOEE-60001019906']
+                                    connectionUserId: ['PNOEE-'+pid]
                                 },
                                 force: true
-                            })
-                            .then(function () {
-                                done();
-                            })
-                            .catch(done);
+                            });
                     });
 
-                    test('Success - 20003 - created', function (done) {
+                    test('Success - 20003 - created',async  function () {
                         this.timeout(35000); //eslint-disable-line no-invalid-this
 
-                        var agent = request.agent(app);
+                        const agent = request.agent(app);
 
-                        loginMobileInit(agent, pid, phoneNumber, function (err, res) { // eslint-disable-line consistent-return
-                            if (err) {
-                                return done(err);
-                            }
+                        const response = (await loginMobileInitPromised(agent, pid, phoneNumber)).body.data;
+                        const userInfoFromMobiilIdStatusResponse = (await loginMobileStatusPromised(agent, response.token)).body;
+                        assert.equal(userInfoFromMobiilIdStatusResponse.status.code, 20003);
+                        const userFromStatus = (await statusPromised(agent)).body.data;
+                        // Makes sure login succeeded AND consistency between /auth/status and /auth/mobile/status endpoints
+                        assert.deepEqual(userFromStatus, userInfoFromMobiilIdStatusResponse.data);
+                        assert.equal(userInfoFromMobiilIdStatusResponse.data.name, 'Mary Änn O’Connež-Šuslik Testnumber'); // Special check for encoding issues
 
-                            var interval;
-                            var calls = 0;
-                            var replies = 0;
-                            var clearStatus = function () {
-                                clearInterval(interval);
-                            };
-
-
-                            interval = setInterval(function () { // eslint-disable-line consistent-return
-                                if (calls < 5) {
-                                    if (calls === replies) {
-                                        calls++;
-                                        loginMobileStatus(agent, res.body.data.token, function (err, res) { // eslint-disable-line consistent-return
-                                            replies++;
-                                            if (err) {
-                                                return done(err);
-                                            }
-
-                                            if (res.body.status.code === 20003) {
-                                                clearStatus();
-
-                                                var userInfoFromMobiilIdStatusResponse = res.body.data;
-
-                                                status(agent, function (err, res) {
-                                                    if (err) {
-                                                        return done(err);
-                                                    }
-
-                                                    // Makes sure login succeeded AND consistency between /auth/status and /auth/mobile/status endpoints
-                                                    assert.deepEqual(res.body.data, userInfoFromMobiilIdStatusResponse);
-                                                    assert.equal(userInfoFromMobiilIdStatusResponse.name, 'Mary Änn O’Connež-Šuslik Testnumber'); // Special check for encoding issues
-
-                                                    return done();
-                                                });
-                                            }
-                                        });
-                                    }
-                                } else {
-                                    clearStatus();
-
-                                    return done(new Error('Maximum retries reached'));
-                                }
-
-                            }, 5000);
-
-                            // Don't leave leave tests hanging on error
-                            setTimeout(function () {
-                                clearStatus();
-                            }, 35000);
-                        });
                     });
                 });
 
 
                 suite('Existing User', function () {
-                    var agent2 = request.agent(app);
+                    const agent2 = request.agent(app);
 
-                    suiteSetup(function (done) {
-                        userLib
-                            .createUser(agent2, null, null, null, function (err, res) {
-                                if (err) {
-                                    return done(err);
+                    suiteSetup(async function () {
+                        const user = await userLib.createUserPromised(agent2, null, null, null);
+                        return UserConnection
+                            .findOrCreate({
+                                where: {
+                                    connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                    connectionUserId: pid
+                                },
+                                defaults: {
+                                    userId: user.id,
+                                    connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                    connectionUserId: pid
                                 }
-
-                                return UserConnection
-                                    .findOrCreate({
-                                        where: {
-                                            connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                            connectionUserId: pid
-                                        },
-                                        defaults: {
-                                            userId: res.id,
-                                            connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                            connectionUserId: pid
-                                        }
-                                    })
-                                    .then(function (user, err) {
-                                        if (err) {
-                                            return done(err);
-                                        }
-
-                                        return done();
-                                    })
-                                    .catch(done);
                             });
                     });
 
-                    teardown(function (done) {
-                        UserConnection
+                    teardown(async function () {
+                        return UserConnection
                             .destroy({
                                 where: {
                                     connectionId: UserConnection.CONNECTION_IDS.esteid,
                                     connectionUserId: ['PNOEE-60001019906']
                                 },
                                 force: true
-                            })
-                            .then(function () {
-                                done();
-                            })
-                            .catch(done);
+                            });
                     });
 
-                    test('Success - 20002 - existing User', function (done) {
+                    test('Success - 20002 - existing User', async function () {
                         this.timeout(35000); //eslint-disable-line no-invalid-this
 
-                        loginMobileInit(agent2, pid, phoneNumber, function (err, res) { // eslint-disable-line consistent-return
-                            if (err) {
-                                return done(err);
-                            }
+                        const response = (await loginMobileInitPromised(agent2, pid, phoneNumber)).body.data;
+                        const userInfoFromMobiilIdStatusResponse = (await loginMobileStatusPromised(agent2, response.token)).body;
+                        assert.equal(userInfoFromMobiilIdStatusResponse.status.code, 20002);
+                        const userFromStatus = (await statusPromised(agent2)).body.data;
 
-                            var interval;
-                            var calls = 0;
-                            var replies = 0;
-                            var clearStatus = function () {
-                                clearInterval(interval);
-                            };
-
-                            interval = setInterval(function () { // eslint-disable-line consistent-return
-                                if (calls < 5) {
-                                    if (calls === replies) {
-                                        calls++;
-                                        loginMobileStatus(agent2, res.body.data.token, function (err, res) { // eslint-disable-line consistent-return
-                                            replies++;
-                                            if (err) {
-                                                clearStatus();
-
-                                                return done(err);
-                                            }
-                                            if (res.body.status.code === 20002) {
-                                                clearStatus();
-
-                                                var userInfoFromMobiilIdStatusResponse = res.body.data;
-
-                                                status(agent2, function (err, res) {
-                                                    if (err) {
-                                                        return done(err);
-                                                    }
-
-                                                    // Makes sure login succeeded AND consistency between /auth/status and /auth/mobile/status endpoints
-                                                    assert.deepEqual(res.body.data, userInfoFromMobiilIdStatusResponse);
-
-                                                    return done();
-                                                });
-                                            } else if (calls === 1) {
-                                                assert.equal(res.body.status.code, 20001);
-                                            }
-                                        });
-                                    }
-                                } else {
-                                    clearStatus();
-
-                                    return done(new Error('Maximum retries reached'));
-                                }
-                            }, 4000);
-
-                            // Don't leave leave tests hanging on error
-                            setTimeout(function () {
-                                clearStatus();
-                            }, 35000);
-                        });
+                        assert.deepEqual(userFromStatus, userInfoFromMobiilIdStatusResponse.data);
                     });
 
                 });
@@ -1225,340 +960,141 @@ suite('Auth', function () {
 
         suite('Smart-ID', function () {
             suite('Init', function () {
-                test('Success - 20001 - Estonian PID', function (done) {
-                    this.timeout(5000); //eslint-disable-line no-invalid-this
-
-                    var pid = '10101010005';
-
-                    UserConnection
+                let pid = '10101010005';
+                teardown(async function () {
+                    return UserConnection
                         .destroy({
                             where: {
                                 connectionId: UserConnection.CONNECTION_IDS.smartid,
                                 connectionUserId: ['PNOEE-' + pid] // Remove the good user so that test would run multiple times. Also other tests use same numbers
                             },
                             force: true
-                        })
-                        .then(function () {
-                            loginSmartIdInit(request.agent(app), pid, function (err, res) {
-                                if (err) {
-                                    return done(err);
-                                }
-
-                                var response = res.body;
-                                assert.equal(response.status.code, 20001);
-                                assert.match(response.data.challengeID, /[0-9]{4}/);
-
-                                var token = response.data.token;
-                                assert.isNotNull(token);
-
-                                var tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
-                                var loginMobileFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
-
-                                assert.property(loginMobileFlowData, 'sessionId');
-                                assert.property(loginMobileFlowData, 'sessionHash');
-                                assert.property(loginMobileFlowData, 'challengeID');
-                                assert.equal(loginMobileFlowData.challengeID, response.data.challengeID);
-
-                                return done();
-                            });
-                        })
-                        .catch(done);
-
+                        });
                 });
 
-                test('Fail - 40400 - Invalid PID', function (done) {
-                    var pid = '1010101';
+                test('Success - 20001 - Estonian PID', async function () {
+                    this.timeout(5000); //eslint-disable-line no-invalid-this
+                    const response = (await loginSmartIdInitPromised(request.agent(app), pid)).body
+                    assert.equal(response.status.code, 20001);
+                    assert.match(response.data.challengeID, /[0-9]{4}/);
 
-                    _loginSmartIdInit(request.agent(app), pid, 404, function (err, res) {
-                        if (err) {
-                            return done(err);
+                    const token = response.data.token;
+                    assert.isNotNull(token);
+
+                    const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                    const loginMobileFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
+
+                    assert.property(loginMobileFlowData, 'sessionId');
+                    assert.property(loginMobileFlowData, 'sessionHash');
+                    assert.property(loginMobileFlowData, 'challengeID');
+                    assert.equal(loginMobileFlowData.challengeID, response.data.challengeID);
+                });
+
+                test('Fail - 40400 - Invalid PID', async function () {
+                    pid = '1010101';
+
+                    const response = (await _loginSmartIdInitPromised(request.agent(app), pid, 404)).body;
+                    const expectedResponse = {
+                        status: {
+                            code: 40400,
+                            message: 'Not Found'
                         }
+                    };
 
-                        var expectedResponse = {
-                            status: {
-                                code: 40400,
-                                message: 'Not Found'
-                            }
-                        };
-
-                        assert.deepEqual(res.body, expectedResponse);
-
-                        return done();
-                    });
+                    assert.deepEqual(response, expectedResponse);
                 });
             });
 
             suite('Status', function () {
-                var pid = '10101010005';
+                let pid = '10101010005';
 
                 suite('New User', function () {
-                    suiteSetup(function (done) {
-                        UserConnection
+                    teardown(async function () {
+                        return UserConnection
                             .destroy({
                                 where: {
                                     connectionId: UserConnection.CONNECTION_IDS.smartid,
                                     connectionUserId: ['PNOEE-' + pid] // Remove the good user so that test would run multiple times. Also other tests use same numbers
                                 },
                                 force: true
-                            })
-                            .then(function () {
-                                return done();
-                            })
-                            .catch(done);
+                            });
                     });
 
-                    test('Success - 20003 - created', function (done) {
+                    test('Success - 20003 - created', async function () {
                         this.timeout(15000); //eslint-disable-line no-invalid-this
 
-                        var agent = request.agent(app);
+                        const agent = request.agent(app);
 
-                        loginSmartIdInit(agent, pid, function (err, res) { // eslint-disable-line consistent-return
-                            if (err) {
-                                return done(err);
-                            }
-
-                            var interval;
-                            var calls = 0;
-                            var replies = 0;
-                            var clearStatus = function () {
-                                clearInterval(interval);
-                            };
-
-                            interval = setInterval(function () { // eslint-disable-line consistent-return
-                                if (calls < 5) {
-                                    if (calls === replies) {
-                                        calls++;
-                                        loginSmartIdStatus(agent, res.body.data.token, function (err, res) { // eslint-disable-line consistent-return
-                                            replies++;
-                                            if (err) {
-                                                return done(err);
-                                            }
-
-                                            if (res.body.status.code === 20003) {
-                                                clearStatus();
-
-                                                var userInfoFromSmartIdStatusResponse = res.body.data;
-
-                                                status(agent, function (err, res) {
-                                                    if (err) {
-                                                        return done(err);
-                                                    }
-
-                                                    // Makes sure login succeeded AND consistency between /auth/status and /auth/mobile/status endpoints
-                                                    assert.deepEqual(res.body.data, userInfoFromSmartIdStatusResponse);
-                                                    assert.equal(userInfoFromSmartIdStatusResponse.name, 'Demo Smart-Id'); // Special check for encoding issues
-
-                                                    return done();
-                                                });
-                                            } else {
-                                                assert.equal(res.body.status.code, 20001);
-                                            }
-                                        });
-                                    }
-                                } else {
-                                    clearStatus();
-
-                                    return done(new Error('Maximum retries reached'));
-                                }
-
-                            }, 2000);
-                            // Don't leave leave tests hanging on error
-                            setTimeout(function () {
-                                clearStatus();
-                            }, 15000);
-                        });
+                        const initResponse  = (await loginSmartIdInitPromised(agent, pid)).body.data;
+                        const userInfoFromSmartIdStatusResponse = (await loginSmartIdStatusPromised(agent, initResponse.token)).body;
+                        assert.equal(userInfoFromSmartIdStatusResponse.status.code, 20003);
+                        const userFromStatus = (await statusPromised(agent)).body.data;
+                        assert.deepEqual(userFromStatus, userInfoFromSmartIdStatusResponse.data);
+                        assert.equal(userInfoFromSmartIdStatusResponse.data.name, 'Demo Smart-Id'); // Special check for encoding issues
                     });
 
-                    test('Fail - 40010 - User refused', function (done) {
+                    test('Fail - 40010 - User refused', async function () {
                         this.timeout(15000); //eslint-disable-line no-invalid-this
+                        pid = '10101010016'
+                        const agent = request.agent(app);
 
-                        var agent = request.agent(app);
-
-                        loginSmartIdInit(agent, '10101010016', function (err, res) { // eslint-disable-line consistent-return
-                            if (err) {
-                                return done(err);
+                        const initResponse  = (await loginSmartIdInitPromised(agent, pid)).body.data;
+                        const smartIdStatusResponse = (await loginSmartIdStatusPromised(agent, initResponse.token)).body;
+                        const expectedResponse = {
+                            status: {
+                                code: 40010,
+                                message: 'User refused'
                             }
-
-                            var interval;
-                            var calls = 0;
-                            var replies = 0;
-                            var clearStatus = function () {
-                                clearInterval(interval);
-                            };
-
-                            interval = setInterval(function () { // eslint-disable-line consistent-return
-                                if (calls < 5) {
-                                    if (calls === replies) {
-                                        calls++;
-                                        _loginSmartIdStatus(agent, res.body.data.token, function (err, res) { // eslint-disable-line consistent-return
-                                            replies++;
-                                            if (err) {
-                                                return done(err);
-                                            }
-
-                                            if (res.body.status.code === 40010) {
-                                                clearStatus();
-                                                var expectedResponse = {
-                                                    status: {
-                                                        code: 40010,
-                                                        message: 'User refused'
-                                                    }
-                                                };
-                                                assert.deepEqual(expectedResponse, res.body);
-
-                                                return done();
-                                            } else {
-                                                assert.equal(res.body.status.code, 20001);
-                                            }
-                                        });
-                                    }
-                                } else {
-                                    clearStatus();
-
-                                    return done(new Error('Maximum retries reached'));
-                                }
-
-                            }, 2000);
-
-                            // Don't leave leave tests hanging on error
-                            setTimeout(function () {
-                                clearStatus();
-                            }, 15000);
-                        });
+                        };
+                        assert.deepEqual(expectedResponse, smartIdStatusResponse);
                     });
 
 
-                    test('Fail - 40011 - Timeout', function (done) {
+                    test('Fail - 40011 - Timeout', async function () {
                         this.timeout(120000); //eslint-disable-line no-invalid-this
+                        pid = '10101010027'
+                        const agent = request.agent(app);
 
-                        var agent = request.agent(app);
-
-                        loginSmartIdInit(agent, '10101010027', function (err, res) { // eslint-disable-line consistent-return
-                            if (err) {
-                                return done(err);
+                        const initResponse  = (await loginSmartIdInitPromised(agent, pid)).body.data;
+                        const smartIdStatusResponse = (await loginSmartIdStatusPromised(agent, initResponse.token, 5000)).body;
+                        const expectedResponse = {
+                            status: {
+                                code: 40011,
+                                message: 'The transaction has expired'
                             }
-
-                            setTimeout(function () {
-                                _loginSmartIdStatus(agent, res.body.data.token, function (err, res) { // eslint-disable-line consistent-return
-                                    if (err) {
-                                        return done(err);
-                                    }
-
-                                    if (res.body.status.code === 40011) {
-                                        var expectedResponse = {
-                                            status: {
-                                                code: 40011,
-                                                message: 'The transaction has expired'
-                                            }
-                                        };
-                                        assert.deepEqual(expectedResponse, res.body);
-
-                                        return done();
-                                    } else {
-                                        assert.equal(res.body.status.code, 20001);
-                                    }
-                                });
-                            }, 100000);
-
-                        });
+                        };
+                        assert.deepEqual(expectedResponse, smartIdStatusResponse);
                     });
                 });
 
 
                 suite('Existing User', function () {
-                    var agent2 = request.agent(app);
+                    const agent2 = request.agent(app);
 
-                    suiteSetup(function (done) {
-                        userLib
-                            .createUser(agent2, null, null, null, function (err, res) {
-                                if (err) {
-                                    return done(err);
-                                }
-
-                                return UserConnection
-                                    .findOrCreate({
-                                        where: {
-                                            connectionId: UserConnection.CONNECTION_IDS.smartid,
-                                            connectionUserId: pid
-                                        },
-                                        defaults: {
-                                            userId: res.id,
-                                            connectionId: UserConnection.CONNECTION_IDS.smartid,
-                                            connectionUserId: pid
-                                        }
-                                    })
-                                    .then(function (user, err) {
-                                        if (err) {
-                                            return done(err);
-                                        }
-
-                                        return done();
-                                    })
-                                    .catch(done);
-                            });
-                    });
-
-                    test('Success - 20002 - existing User', function (done) {
+                    test('Success - 20002 - existing User', async function () {
                         this.timeout(15000); //eslint-disable-line no-invalid-this
+                        pid = '10101010005';
+                        const user = await userLib.createUserPromised(agent2, null, null, null);
 
-                        loginSmartIdInit(agent2, pid, function (err, res) { // eslint-disable-line consistent-return
-                            if (err) {
-                                return done(err);
-                            }
-
-                            var interval;
-                            var calls = 0;
-                            var replies = 0;
-                            var clearStatus = function () {
-                                clearInterval(interval);
-                            };
-
-                            interval = setInterval(function () { // eslint-disable-line consistent-return
-                                if (calls < 5) {
-                                    if (calls === replies) {
-                                        calls++;
-                                        loginSmartIdStatus(agent2, res.body.data.token, function (err, res) { // eslint-disable-line consistent-return
-                                            replies++;
-                                            if (err) {
-                                                clearStatus();
-
-                                                return done(err);
-                                            }
-
-                                            if (res.body.status.code === 20002) {
-                                                clearStatus();
-
-                                                var userInfoFromSmartIdStatusResponse = res.body.data;
-
-                                                status(agent2, function (err, res) {
-                                                    if (err) {
-                                                        return done(err);
-                                                    }
-
-                                                    // Makes sure login succeeded AND consistency between /auth/status and /auth/mobile/status endpoints
-                                                    assert.deepEqual(res.body.data, userInfoFromSmartIdStatusResponse);
-
-                                                    return done();
-                                                });
-                                            } else {
-                                                assert.equal(res.body.status.code, 20001);
-                                            }
-
-
-                                        });
-                                    }
-                                } else {
-                                    clearStatus();
-
-                                    return done(new Error('Maximum retries reached'));
+                        return UserConnection
+                            .findOrCreate({
+                                where: {
+                                    connectionId: UserConnection.CONNECTION_IDS.smartid,
+                                    connectionUserId: pid
+                                },
+                                defaults: {
+                                    userId: user.id,
+                                    connectionId: UserConnection.CONNECTION_IDS.smartid,
+                                    connectionUserId: pid
                                 }
-                            }, 2000);
-
-                            // Don't leave leave tests hanging on error
-                            setTimeout(function () {
-                                clearStatus();
-                            }, 15000);
-                        });
+                            })
+                            .then(async function () {
+                                const initResponse  = (await loginSmartIdInitPromised(agent2, pid)).body.data;
+                                const smartIdStatusResponse = (await loginSmartIdStatusPromised(agent2, initResponse.token, 5000)).body;
+                                assert.equal(smartIdStatusResponse.status.code, 20002);
+                                const userFromStatus = (await statusPromised(agent2)).body.data;
+                                assert.deepEqual(userFromStatus, smartIdStatusResponse.data);
+                            });
                     });
 
                 });
@@ -1569,248 +1105,188 @@ suite('Auth', function () {
 
     suite('Logout', function () {
 
-        test('Success', function (done) {
-            var agent = request.agent(app);
-            var email = 'test_' + new Date().getTime() + '@test.ee';
-            var password = 'Test123';
+        test('Success', async function () {
+            const agent = request.agent(app);
+            const email = 'test_' + new Date().getTime() + '@test.ee';
+            const password = 'Test123';
 
-            userLib.createUserAndLogin(agent, email, password, null, function () {
-                logout(agent, function (err) {
-                    if (err) {
-                        return done(err);
-                    }
+            const user = await userLib.createUserAndLoginPromised(agent, email, password, null);
+            const userFromStatus = (await statusPromised(agent)).body.data;
+            let expectedUser = user.toJSON();
+            expectedUser.termsVersion = user.termsVersion;
+            expectedUser.termsAcceptedAt = user.termsAcceptedAt;
 
-                    return done();
-                });
-            });
+            assert.deepEqual(expectedUser, userFromStatus);
+            await logoutPromised(agent);
+            const statusResponse = (await _statusPromised(agent, 401)).body;
+            const expectedBody = {
+                status: {
+                    code: 40100,
+                    message: 'Unauthorized'
+                }
+            };
+            assert.deepEqual(statusResponse, expectedBody);
         });
 
     });
 
     suite('Signup', function () {
-        var agent = request.agent(app);
+        const agent = request.agent(app);
 
-        test('Success', function (done) {
-            var email = 'test_' + new Date().getTime() + '@test.ee';
-            var password = 'Test123';
+        test('Success', async function () {
+            const email = 'test_' + new Date().getTime() + '@test.ee';
+            const password = 'Test123';
 
-            signup(agent, email, password, null, function (err, res) {
-                if (err) {
-                    return done(err);
-                }
-
-                var user = res.body.data;
-                assert.equal(user.email, email);
-                assert.property(user, 'id');
-                assert.notProperty(user, 'password');
-                assert.notProperty(user, 'emailIsVerified');
-                assert.notProperty(user, 'emailVerificationCode');
-                assert.notProperty(user, 'passwordResetCode');
-                assert.notProperty(user, 'createdAt');
-                assert.notProperty(user, 'updatedAt');
-                assert.notProperty(user, 'deletedAt');
-
-                return done();
-            });
+            const user = (await signupPromised(agent, email, password, null)).body.data;
+            assert.equal(user.email, email);
+            assert.property(user, 'id');
+            assert.notProperty(user, 'password');
+            assert.notProperty(user, 'emailIsVerified');
+            assert.notProperty(user, 'emailVerificationCode');
+            assert.notProperty(user, 'passwordResetCode');
+            assert.notProperty(user, 'createdAt');
+            assert.notProperty(user, 'updatedAt');
+            assert.notProperty(user, 'deletedAt');
         });
 
-        test('Success - invited user - User with NULL password in DB should be able to sign up', function (done) {
+        test('Success - invited user - User with NULL password in DB should be able to sign up', async function () {
             // Users with NULL password are created on User invite
-            var agent = request.agent(app);
+            const agent = request.agent(app);
 
-            var email = 'test_' + new Date().getTime() + '_invited@test.ee';
-            var password = 'Test123';
-            var language = 'et';
+            const email = 'test_' + new Date().getTime() + '_invited@test.ee';
+            const password = 'Test123';
+            const language = 'et';
 
-            User
+            return User
                 .create({
                     email: email,
                     password: null,
                     name: email,
                     source: User.SOURCES.citizenos
                 })
-                .then(function (user) {
-                    signup(agent, user.email, password, language, function (err) {
-                        if (err) {
-                            return done(err);
-                        }
-
-                        return done();
-                    });
-                })
-                .catch(done);
-
-        });
-
-        test('Fail - 40000 - email cannot be null', function (done) {
-            var email = null;
-            var password = 'Test123';
-
-            _signup(agent, email, password, null, 400, function (err, res) {
-                if (err) {
-                    return done(err);
-                }
-
-                var expected = {
-                    status: {
-                        code: 40000
-                    },
-                    errors: {
-                        email: 'Invalid email.'
-                    }
-                };
-
-                assert.deepEqual(res.body, expected);
-
-                return done();
-            });
-        });
-
-        test('Fail - 40000 - invalid email', function (done) {
-            var email = 'this is an invalid email';
-            var password = 'Test123';
-
-            _signup(agent, email, password, null, 400, function (err, res) {
-                if (err) {
-                    return done(err);
-                }
-
-                var expected = {
-                    status: {
-                        code: 40000
-                    },
-                    errors: {
-                        email: 'Invalid email.'
-                    }
-                };
-
-                assert.deepEqual(res.body, expected);
-
-                return done();
-            });
-        });
-
-        test('Fail - 40000 - missing password', function (done) {
-            var email = 'test_' + new Date().getTime() + '@test.ee';
-            var password = null;
-
-            _signup(agent, email, password, null, 400, function (err, res) {
-                if (err) {
-                    return done(err);
-                }
-
-                var expected = {
-                    status: {
-                        code: 40000
-                    },
-                    errors: {
-                        password: 'Password must be at least 6 character long, containing at least 1 digit, 1 lower and upper case character.'
-                    }
-                };
-
-                assert.deepEqual(res.body, expected);
-
-                return done();
-            });
-        });
-
-        test('Fail - 40000 - invalid password', function (done) {
-            var email = 'test_' + new Date().getTime() + '@test.ee';
-            var password = 'nonumbersoruppercase';
-
-            _signup(agent, email, password, null, 400, function (err, res) {
-                if (err) {
-                    return done(err);
-                }
-
-                var expected = {
-                    status: {
-                        code: 40000
-                    },
-                    errors: {
-                        password: 'Password must be at least 6 character long, containing at least 1 digit, 1 lower and upper case character.'
-                    }
-                };
-
-                assert.deepEqual(res.body, expected);
-
-                return done();
-            });
-        });
-
-        test('Fail - 40000 - invalid password and invalid email', function (done) {
-            var email = 'notvalidatall';
-            var password = 'nonumbersoruppercase';
-
-            _signup(agent, email, password, null, 400, function (err, res) {
-                if (err) {
-                    return done(err);
-                }
-
-                var expected = {
-                    status: {
-                        code: 40000
-                    },
-                    errors: {
-                        email: 'Invalid email.',
-                        password: 'Password must be at least 6 character long, containing at least 1 digit, 1 lower and upper case character.'
-                    }
-                };
-
-                assert.deepEqual(res.body, expected);
-
-                return done();
-            });
-        });
-
-        test('Fail - 40001 - email already in use', function (done) {
-            var email = 'test_emailinuse_' + new Date().getTime() + '@test.ee';
-            var password = 'Test123';
-
-            signup(agent, email, password, null, function () {
-                _signup(agent, email, password, null, 400, function (err, res) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    var expect = {
-                        status: {
-                            code: 40001
-                        },
-                        errors: {
-                            email: 'The email address is already in use.'
-                        }
-                    };
-
-                    assert.deepEqual(res.body, expect);
-
-                    return done();
+                .then(async function (user) {
+                    const userSignedup = (await signupPromised(agent,  user.email, password, language)).body.data;
+                    assert.equal(userSignedup.email, email);
+                    assert.equal(userSignedup.language,user.language);
                 });
-            });
+
+        });
+
+        test('Fail - 40000 - email cannot be null', async function () {
+            const email = null;
+            const password = 'Test123';
+
+            const signupResult = (await _signupPromised(agent, email, password, null, 400)).body;
+            const expected = {
+                status: {
+                    code: 40000
+                },
+                errors: {
+                    email: 'Invalid email.'
+                }
+            };
+
+            assert.deepEqual(signupResult, expected);
+        });
+
+        test('Fail - 40000 - invalid email', async function () {
+            const email = 'this is an invalid email';
+            const password = 'Test123';
+
+            const signupResult = (await _signupPromised(agent, email, password, null, 400)).body;
+            const expected = {
+                status: {
+                    code: 40000
+                },
+                errors: {
+                    email: 'Invalid email.'
+                }
+            };
+
+            assert.deepEqual(signupResult, expected);
+        });
+
+        test('Fail - 40000 - missing password', async function () {
+            const email = 'test_' + new Date().getTime() + '@test.ee';
+            const password = null;
+
+            const signupResult = (await _signupPromised(agent, email, password, null, 400)).body;
+            const expected = {
+                status: {
+                    code: 40000
+                },
+                errors: {
+                    password: 'Password must be at least 6 character long, containing at least 1 digit, 1 lower and upper case character.'
+                }
+            };
+
+            assert.deepEqual(signupResult, expected);
+        });
+
+        test('Fail - 40000 - invalid password', async function () {
+            const email = 'test_' + new Date().getTime() + '@test.ee';
+            const password = 'nonumbersoruppercase';
+
+            const signupResult = (await _signupPromised(agent, email, password, null, 400)).body;
+            const expected = {
+                status: {
+                    code: 40000
+                },
+                errors: {
+                    password: 'Password must be at least 6 character long, containing at least 1 digit, 1 lower and upper case character.'
+                }
+            };
+            assert.deepEqual(signupResult, expected);
+        });
+
+        test('Fail - 40000 - invalid password and invalid email', async function () {
+            const email = 'notvalidatall';
+            const password = 'nonumbersoruppercase';
+
+            const signupResult = (await _signupPromised(agent, email, password, null, 400)).body;
+            const expected = {
+                status: {
+                    code: 40000
+                },
+                errors: {
+                    email: "Invalid email.",
+                    password: 'Password must be at least 6 character long, containing at least 1 digit, 1 lower and upper case character.'
+                }
+            };
+            assert.deepEqual(signupResult, expected);
+        });
+
+        test('Fail - 40001 - email already in use', async function () {
+            const email = 'test_emailinuse_' + new Date().getTime() + '@test.ee';
+            const password = 'Test123';
+
+            await signupPromised(agent, email, password, null);
+            const signupResult = (await _signupPromised(agent, email, password, null, 400)).body;
+            const expected = {
+                status: {
+                    code: 40001
+                },
+                errors: {
+                    email: 'The email address is already in use.'
+                }
+            };
+            assert.deepEqual(signupResult, expected);
         });
 
     });
 
     suite('Verify', function () {
-        var agent = request.agent(app);
+        const agent = request.agent(app);
 
         // Success is already tested as a part of 'Login' suite.
-        test.skip('Success - signup sets redirectSuccess and verify should redirect to it', function (done) {
-            done();
+        test.skip('Success - signup sets redirectSuccess and verify should redirect to it', async function () {
         });
 
-        test('Fail - invalid emailVerificationCode', function (done) {
-            agent
+        test('Fail - invalid emailVerificationCode',async function () {
+            return agent
                 .get('/api/auth/verify/thisCodeDoesNotExist')
                 .expect(302)
-                .expect('Location', urlLib.getFe('/', null, {error: 'emailVerificationFailed'}))
-                .end(function (err) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    return done();
-                });
+                .expect('Location', urlLib.getFe('/', null, {error: 'emailVerificationFailed'}));
         });
 
     });
@@ -1818,178 +1294,117 @@ suite('Auth', function () {
     suite('Password', function () {
 
         suite('Set', function () {
-            var agent = request.agent(app);
-            var email = 'test_' + new Date().getTime() + '@test.ee';
-            var password = 'testPassword123';
-            var newPassword = 'newPassword123';
+            const agent = request.agent(app);
+            const email = 'test_' + new Date().getTime() + '@test.ee';
+            const password = 'testPassword123';
+            const newPassword = 'newPassword123';
 
-            suiteSetup(function (done) {
-                userLib.createUserAndLogin(agent, email, password, null, function (err) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    return done();
-                });
+            suiteSetup( async function () {
+                return userLib.createUserAndLoginPromised(agent, email, password, null);
             });
 
-            test('Success', function (done) {
-                passwordSet(agent, password, newPassword, function (err) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    //now try to log in with new password
-                    return login(request.agent(app), email, newPassword, function (err) {
-                        if (err) {
-                            return done(err);
-                        }
-
-                        return done();
-                    });
-                });
+            test('Success', async function () {
+                await passwordSetPromised(agent, password, newPassword);
+                const loginResult = (await loginPromised(request.agent(app), email, newPassword)).body;
+                assert.equal(loginResult.status.code, 20000);
+                assert.equal(loginResult.data.email, email);
             });
 
-            test('Fail - invalid new password which does not contain special characters needed', function (done) {
-                var currentPassword = newPassword;
-                var invalidNewPassword = 'nospecialchars';
-                _passwordSet(agent, currentPassword, invalidNewPassword, 400, function (err, res) {
-                    if (err) {
-                        return done(err);
+            test('Fail - invalid new password which does not contain special characters needed', async function () {
+                const currentPassword = newPassword;
+                const invalidNewPassword = 'nospecialchars';
+                const resultBody = (await _passwordSetPromised(agent, currentPassword, invalidNewPassword, 400)).body;
+
+                const expected = {
+                    status: {
+                        code: 40000
+                    },
+                    errors: {
+                        password: 'Password must be at least 6 character long, containing at least 1 digit, 1 lower and upper case character.'
                     }
+                };
 
-                    var expected = {
-                        status: {
-                            code: 40000
-                        },
-                        errors: {
-                            password: 'Password must be at least 6 character long, containing at least 1 digit, 1 lower and upper case character.'
-                        }
-                    };
-
-                    assert.deepEqual(res.body, expected);
-
-                    return done();
-                });
+                assert.deepEqual(resultBody, expected);
             });
 
-            test('Fail - invalid old password', function (done) {
-                var invalidCurrentPassword = 'thiscannotbevalid';
-                var validNewPassword = 'Test123ASD';
-                _passwordSet(agent, invalidCurrentPassword, validNewPassword, 400, function (err, res) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    assert.equal(res.body.status.message, 'Invalid email or new password.');
-
-                    return done();
-                });
+            test('Fail - invalid old password', async function () {
+                const invalidCurrentPassword = 'thiscannotbevalid';
+                const validNewPassword = 'Test123ASD';
+                const resultBody = (await _passwordSetPromised(agent, invalidCurrentPassword, validNewPassword, 400)).body;
+                assert.equal(resultBody.status.message, 'Invalid email or new password.');
             });
 
-            test('Fail - Unauthorized', function (done) {
-                var agent = request.agent(app);
-                _passwordSet(agent, 'oldPassSomething', 'newPassSomething', 401, function (err) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    return done();
-                });
+            test('Fail - Unauthorized', async function () {
+                const agent = request.agent(app);
+                await _passwordSetPromised(agent, 'oldPassSomething', 'newPassSomething', 401);
             });
 
         });
 
         suite('Reset', function () {
-            var agent = request.agent(app);
-            var email = 'test_reset_' + new Date().getTime() + '@test.ee';
-            var password = 'testPassword123';
-            var language = 'et';
+            const agent = request.agent(app);
+            const email = 'test_reset_' + new Date().getTime() + '@test.ee';
+            const password = 'testPassword123';
+            const language = 'et';
 
-            suiteSetup(function (done) {
-                userLib.createUser(agent, email, password, language, function (err) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    return done();
-                });
+            suiteSetup(async function () {
+                return userLib.createUserPromised(agent, email, password, language);
             });
 
             suite('Send', function () {
-                test('Success', function (done) {
-                    passwordResetSend(agent, email, function () {
-                        User
+                test('Success', async function () {
+                    await passwordResetSendPromised(agent, email);
+
+                    return User
                             .findOne({
                                 where: {
                                     email: email
                                 }
                             })
                             .then(function (user) {
-                                var passwordResetCode = user.passwordResetCode;
+                                const passwordResetCode = user.passwordResetCode;
 
                                 assert.property(user, 'passwordResetCode');
                                 assert.isNotNull(passwordResetCode);
                                 assert.lengthOf(passwordResetCode, 36);
-
-                                done();
                             });
-                    });
                 });
 
-                test('Fail - 40000 - missing email', function (done) {
-                    _passwordResetSend(agent, null, 400, function (err, res) {
-                        if (err) {
-                            return done(err);
+                test('Fail - 40000 - missing email', async function () {
+                    const resetBody = (await _passwordResetSendPromised(agent, null, 400)).body;
+                    const expectedBody = {
+                        status: {
+                            code: 40000
+                        },
+                        errors: {
+                            email: 'Invalid email'
                         }
+                    };
 
-                        var expectedBody = {
-                            status: {
-                                code: 40000
-                            },
-                            errors: {
-                                email: 'Invalid email'
-                            }
-                        };
-
-                        assert.deepEqual(res.body, expectedBody);
-
-                        return done();
-                    });
+                    assert.deepEqual(resetBody, expectedBody);
                 });
 
-                test('Fail - 40001 - non existent email', function (done) {
-                    _passwordResetSend(agent, 'test_this_user_we_dont_have@test.com', 400, function (err, res) {
-                        if (err) {
-                            return done(err);
+                test('Fail - 40001 - non existent email', async function () {
+                    const resetBody = (await _passwordResetSendPromised(agent, 'test_this_user_we_dont_have@test.com', 400)).body;
+                    const expectedBody = {
+                        status: {
+                            code: 40002
+                        },
+                        errors: {
+                            email: 'Account with this email does not exist.'
                         }
+                    };
 
-                        var expectedBody = {
-                            status: {
-                                code: 40002
-                            },
-                            errors: {
-                                email: 'Account with this email does not exist.'
-                            }
-                        };
-
-                        assert.deepEqual(res.body, expectedBody);
-
-                        return done();
-                    });
+                    assert.deepEqual(resetBody, expectedBody);
                 });
             });
 
 
             suite('Complete', function () {
-                var passwordResetCode;
+                let passwordResetCode;
 
-                suiteSetup(function (done) {
-                    passwordResetSend(agent, email, function (err) {
-                        if (err) {
-                            return done(err);
-                        }
-
+                suiteSetup(async function () {
+                    await passwordResetSendPromised(agent, email);
                         return User
                             .findOne({
                                 where: {
@@ -1998,116 +1413,64 @@ suite('Auth', function () {
                             })
                             .then(function (user) {
                                 passwordResetCode = user.passwordResetCode;
-
-                                return done();
                             });
-                    });
                 });
 
-                test('Fail - invalid reset code', function (done) {
-                    _passwordResetComplete(agent, email, password, uuid.v4(), 400, function (err, res) {
-                        if (err) {
-                            return done(err);
+                test('Fail - invalid reset code', async function () {
+                    const resBody = (await _passwordResetCompletePromised(agent, email, password, uuid.v4(), 400)).body
+                    assert.equal(resBody.status.message, 'Invalid email, password or password reset code.');
+                });
+
+                test('Fail - missing reset code', async function () {
+                    const resBody = (await _passwordResetCompletePromised(agent, email, password, null, 400)).body
+                    assert.equal(resBody.status.message, 'Invalid email, password or password reset code.');
+                });
+
+
+                test('Fail - invalid password', async function () {
+                    const resBody = (await _passwordResetCompletePromised(agent, email, 'thispassisnotinvalidformat', passwordResetCode, 400)).body
+                    const expected = {
+                        status: {
+                            code: 40000
+                        },
+                        errors: {
+                            password: 'Password must be at least 6 character long, containing at least 1 digit, 1 lower and upper case character.'
                         }
+                    };
 
-                        assert.equal(res.body.status.message, 'Invalid email, password or password reset code.');
-
-                        return done();
-                    });
+                    assert.deepEqual(resBody, expected);
                 });
 
-                test('Fail - missing reset code', function (done) {
-                    _passwordResetComplete(agent, email, password, null, 400, function (err, res) {
-                        if (err) {
-                            return done(err);
-                        }
-
-                        assert.equal(res.body.status.message, 'Invalid email, password or password reset code.');
-
-                        return done();
-                    });
+                test('Fail - invalid email', async function () {
+                    const resBody = (await _passwordResetCompletePromised(agent, 'test_invalidemail@test.com', password, passwordResetCode, 400)).body
+                    assert.equal(resBody.status.message, 'Invalid email, password or password reset code.');
                 });
 
+                test('Fail - no password reset has been requested by user (passwordResetCode is null)', async function () {
+                    const agent = request.agent(app);
+                    const email = 'test_' + new Date().getTime() + '@test.ee';
+                    const password = 'testPassword123';
 
-                test('Fail - invalid password', function (done) {
-                    _passwordResetComplete(agent, email, 'thispassisnotinvalidformat', passwordResetCode, 400, function (err, res) {
-                        if (err) {
-                            return done(err);
-                        }
+                    await signupPromised(agent, email, password, null);
+                    const resBody = (await _passwordResetCompletePromised(agent, email, password, null, 400)).body
 
-                        var expected = {
-                            status: {
-                                code: 40000
-                            },
-                            errors: {
-                                password: 'Password must be at least 6 character long, containing at least 1 digit, 1 lower and upper case character.'
-                            }
-                        };
-
-                        assert.deepEqual(res.body, expected);
-
-                        return done();
-                    });
+                    assert.equal(resBody.status.message, 'Invalid email, password or password reset code.');
                 });
 
-                test('Fail - invalid email', function (done) {
-                    _passwordResetComplete(agent, 'test_invalidemail@test.com', password, passwordResetCode, 400, function (err, res) {
-                        if (err) {
-                            return done(err);
-                        }
-
-                        assert.equal(res.body.status.message, 'Invalid email, password or password reset code.');
-
-                        return done();
-                    });
-                });
-
-                test('Fail - no password reset has been requested by user (passwordResetCode is null)', function (done) {
-                    var agent = request.agent(app);
-                    var email = 'test_' + new Date().getTime() + '@test.ee';
-                    var password = 'testPassword123';
-
-                    signup(agent, email, password, null, function () {
-                        _passwordResetComplete(agent, email, password, null, 400, function (err, res) {
-                            if (err) {
-                                return done(err);
-                            }
-
-                            assert.equal(res.body.status.message, 'Invalid email, password or password reset code.');
-
-                            return done();
-                        });
-                    });
-                });
-
-                test('Success', function (done) {
-                    passwordResetComplete(agent, email, password, passwordResetCode, function (err) {
-                        if (err) {
-                            return done(err);
-                        }
-
-                        // After the reset, user has to be able to log in with the new credentials
-                        return login(agent, email, password, function (err, res) {
-                            if (err) {
-                                return done(err);
-                            }
-
-                            assert.equal(email, res.body.data.email);
-
-                            return User
-                                .findOne({
-                                    where: {
-                                        email: email
-                                    }
-                                })
-                                .then(function (user) {
-                                    // A new password reset code was to be generated - https://github.com/citizenos/citizenos-api/issues/68
-                                    assert.notEqual(user.passwordResetCode, passwordResetCode);
-
-                                    return done();
-                                });
-                        });
-                    });
+                test('Success', async function () {
+                    await passwordResetCompletePromised(agent, email, password, passwordResetCode);
+                    const loginRes = await loginPromised(agent, email, password);
+                    assert.equal(email, loginRes.body.data.email);
+                    return User
+                            .findOne({
+                                where: {
+                                    email: email
+                                }
+                            })
+                            .then(function (user) {
+                                // A new password reset code was to be generated - https://github.com/citizenos/citizenos-api/issues/68
+                                assert.notEqual(user.passwordResetCode, passwordResetCode);
+                            });
                 });
 
             });
@@ -2117,50 +1480,29 @@ suite('Auth', function () {
     });
 
     suite('Status', function () {
-        var agent = request.agent(app);
-        var email = 'test_status_' + new Date().getTime() + '@test.ee';
-        var password = 'testPassword123';
+        const agent = request.agent(app);
+        const email = 'test_status_' + new Date().getTime() + '@test.ee';
+        const password = 'testPassword123';
 
-        suiteSetup(function (done) {
-            userLib.createUser(agent, email, password, null, function (err) {
-                if (err) {
-                    return done(err);
-                }
-
-                return done();
-            });
+        suiteSetup(async function () {
+            return userLib.createUserPromised(agent, email, password, null);
         });
 
-        test('Success', function (done) {
-            login(agent, email, password, function () {
-                status(agent, function (err, res) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    var user = res.body.data;
-                    assert.equal(user.email, email);
-
-                    return done();
-                });
-            });
+        test('Success', async function () {
+            await loginPromised(agent, email, password);
+            const user  = (await statusPromised(agent)).body.data;
+            assert.equal(user.email, email);
         });
 
-        test('Fail - Unauthorized', function (done) {
-            _status(request.agent(app), 401, function (err) {
-                if (err) {
-                    return done(err);
-                }
-
-                return done();
-            });
+        test('Fail - Unauthorized', async function () {
+            await _statusPromised(request.agent(app), 401);
         });
 
-        test('Fail - Unauthorized - JWT token expired', function (done) {
-            var agent = request.agent(app);
+        test('Fail - Unauthorized - JWT token expired', async function () {
+            const agent = request.agent(app);
 
-            var path = '/api/auth/status';
-            var token = jwt.sign({
+            const path = '/api/auth/status';
+            const token = jwt.sign({
                 id: 'notimportantinthistest',
                 scope: 'all'
             }, config.session.privateKey, {
@@ -2168,234 +1510,137 @@ suite('Auth', function () {
                 algorithm: config.session.algorithm
             });
 
-            agent
+            return agent
                 .get(path)
                 .set('Content-Type', 'application/json')
                 .set('Authorization', 'Bearer ' + token)
                 .expect(401)
                 .expect('Content-Type', /json/)
-                .end(function (err, res) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    var expectedResponse = {
+                .then(function (res) {
+                    const expectedResponse = {
                         status: {
                             code: 40100,
                             message: 'JWT token has expired'
                         }
                     };
                     assert.deepEqual(res.body, expectedResponse);
-
-                    return done();
                 });
         });
 
     });
 
     suite('Open ID', function () {
-        var TEST_RESPONSE_TYPE = 'id_token token';
-        var TEST_PARTNER = {
+        const TEST_RESPONSE_TYPE = 'id_token token';
+        const TEST_PARTNER = {
             id: 'e5fcb764-a635-4858-a496-e43079c7326b',
             website: 'https://citizenospartner.ee',
             redirectUriRegexp: '^https:\\/\\/([^\\.]*\\.)?citizenospartner.ee(:[0-9]{2,5})?\\/.*'
         };
-        var TEST_CALLBACK_URI = 'https://dev.citizenospartner.ee/callback';
+        const TEST_CALLBACK_URI = 'https://dev.citizenospartner.ee/callback';
 
-        var agent = request.agent(app);
+        const agent = request.agent(app);
 
-        suiteSetup(function (done) {
-            shared
-                .syncDb()
-                .then(done)
-                .catch(done);
+        suiteSetup(async function () {
+            return shared
+                .syncDb();
         });
 
         suite('Authorize', function () {
 
-            suiteSetup(function (done) {
-                Partner
-                    .upsert(TEST_PARTNER)
-                    .then(function () {
-                        done();
+            suiteSetup(async function () {
+                return Partner
+                    .upsert(TEST_PARTNER);
+            });
+
+            test('Success - 302 - User is logged in to CitizenOS AND has agreed before -> redirect_uri', async function () {
+                const agent = request.agent(app);
+                const user = await userLib.createUserAndLoginPromised(agent, null, null, null);
+                return UserConsent
+                    .create({
+                        userId: user.id,
+                        partnerId: TEST_PARTNER.id
                     })
-                    .catch(done);
-            });
+                    .then(async function () {
+                        const state = '123213asdasas1231';
+                        const authRes = await openIdAuthorizePromised(agent, TEST_RESPONSE_TYPE, TEST_PARTNER.id, TEST_CALLBACK_URI, 'openid', state, 'dasd12312sdasAA');
 
-            test('Success - 302 - User is logged in to CitizenOS AND has agreed before -> redirect_uri', function (done) {
-                var agent = request.agent(app);
-                userLib.createUserAndLogin(agent, null, null, null, function (err, user) {
-                    if (err) {
-                        return done(err);
-                    }
+                        const uriParts = authRes.headers.location.split('#');
+                        assert.equal(uriParts[0], TEST_CALLBACK_URI);
 
-                    return UserConsent
-                        .create({
-                            userId: user.id,
-                            partnerId: TEST_PARTNER.id
-                        })
-                        .then(function () {
-                            var state = '123213asdasas1231';
-                            openIdAuthorize(agent, TEST_RESPONSE_TYPE, TEST_PARTNER.id, TEST_CALLBACK_URI, 'openid', state, 'dasd12312sdasAA', function (err, authRes) {
-                                if (err) {
-                                    return done(err);
-                                }
-
-                                var uriParts = authRes.headers.location.split('#');
-                                assert.equal(uriParts[0], TEST_CALLBACK_URI);
-
-                                var hashParams = uriParts[1];
-                                var matchExp = new RegExp('^access_token=[^&]*&id_token=[^&]*&state=' + state + '$');
-                                assert.match(hashParams, matchExp);
-
-                                // TODO: Validate contents of ID Token & Access Token
-
-                                return done();
-                            });
-                        })
-                        .catch(done);
-                });
-            });
-
-            test('Success - 302 - User is logged in to CitizenOS AND has NOT agreed before -> /consent -> redirect_uri', function (done) {
-                var agent = request.agent(app);
-                userLib.createUserAndLogin(agent, null, null, null, function (err) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    return openIdAuthorize(agent, TEST_RESPONSE_TYPE, TEST_PARTNER.id, TEST_CALLBACK_URI, 'openid', '123213asdasas1231', 'dasd12312sdasAA', function (err, authRes) {
-                        if (err) {
-                            return done(err);
-                        }
-
-                        var expectedUrl = urlLib.getFe('/:language/partners/:partnerId/consent', {
-                            partnerId: TEST_PARTNER.id,
-                            language: 'en'
-                        });
-
-                        assert.equal(authRes.headers.location, expectedUrl);
-                        // FIXME: Verify OpenID callback parameters!
-                        // FIXME: Check that state cookie is set
-
-                        return done();
+                        const hashParams = uriParts[1];
+                        const matchExp = new RegExp('^access_token=[^&]*&id_token=[^&]*&state=' + state + '$');
+                        assert.match(hashParams, matchExp);
                     });
+            });
+
+            test('Success - 302 - User is logged in to CitizenOS AND has NOT agreed before -> /consent -> redirect_uri', async function () {
+                const agent = request.agent(app);
+                await userLib.createUserAndLoginPromised(agent, null, null, null);
+                const authRes = await openIdAuthorizePromised(agent, TEST_RESPONSE_TYPE, TEST_PARTNER.id, TEST_CALLBACK_URI, 'openid', '123213asdasas1231', 'dasd12312sdasAA');
+                const expectedUrl = urlLib.getFe('/:language/partners/:partnerId/consent', {
+                    partnerId: TEST_PARTNER.id,
+                    language: 'en'
                 });
+
+                assert.equal(authRes.headers.location, expectedUrl);
             });
 
-            test.skip('Success - 302 - User is NOT logged in AND has agreed before -> /login -> redirect_uri', function (done) {
-                done();
+            test.skip('Success - 302 - User is NOT logged in AND has agreed before -> /login -> redirect_uri', async function () {
             });
 
-            test.skip('Success - 302 - User is NOT logged in AND has not agreed before -> /login -> /consent -> redirect_uri', function (done) {
-                done();
+            test.skip('Success - 302 - User is NOT logged in AND has not agreed before -> /login -> /consent -> redirect_uri', async function () {
             });
 
-            test.skip('Success - 302 - User is NOT registered -> /register -> /verify -> /consent -> redirect_uri', function (done) {
-                done();
+            test.skip('Success - 302 - User is NOT registered -> /register -> /verify -> /consent -> redirect_uri', async function () {
             });
 
-            test('Fail - 400 - Invalid or missing "client_id" parameter value', function (done) {
-                _openIdAuthorize(agent, null, null, null, null, null, null, 400, function (err, res) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    assert.equal(res.text, 'Invalid or missing "client_id" parameter value.');
-
-                    return done();
-                });
+            test('Fail - 400 - Invalid or missing "client_id" parameter value', async function () {
+                const authRes = await _openIdAuthorizePromised(agent, null, null, null, null, null, null, 400);
+                assert.equal(authRes.text, 'Invalid or missing "client_id" parameter value.');
             });
 
-            test('Fail - 400 - Invalid partner configuration. Please contact system administrator.', function (done) {
-                _openIdAuthorize(agent, null, uuid.v4(), null, null, null, null, 400, function (err, res) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    assert.equal(res.text, 'Invalid partner configuration. Please contact system administrator.');
-
-                    return done();
-                });
+            test('Fail - 400 - Invalid partner configuration. Please contact system administrator.', async function () {
+                const authRes = await _openIdAuthorizePromised(agent, null,  uuid.v4(), null, null, null, null, 400);
+                assert.equal(authRes.text, 'Invalid partner configuration. Please contact system administrator.');
             });
 
-            test('Fail - 400 - Invalid referer. Referer header does not match expected partner URI scheme.', function (done) {
-                agent
+            test('Fail - 400 - Invalid referer. Referer header does not match expected partner URI scheme.', async function () {
+                return agent
                     .get('/api/auth/openid/authorize')
                     .set('Referer', 'https://invalidtest.ee/invalid/referer')
                     .query({
                         client_id: TEST_PARTNER.id
                     })
                     .expect(400)
-                    .end(function (err, res) {
-                        if (err) {
-                            return done(err);
-                        }
-
+                    .then(function (res) {
                         assert.equal(res.text, 'Invalid referer. Referer header does not match expected partner URI scheme.');
-
-                        return done();
                     });
             });
 
-            test('Fail - 400 - Invalid or missing "redirect_uri" parameter value.', function (done) {
-                _openIdAuthorize(agent, null, TEST_PARTNER.id, 'https://invalidtest.ee/callback', null, null, null, 400, function (err, res) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    assert.equal(res.text, 'Invalid or missing "redirect_uri" parameter value.');
-
-                    return done();
-                });
+            test('Fail - 400 - Invalid or missing "redirect_uri" parameter value.', async function () {
+                const authRes = await _openIdAuthorizePromised(agent, null, TEST_PARTNER.id, 'https://invalidtest.ee/callback', null, null, null, 400);
+                assert.equal(authRes.text, 'Invalid or missing "redirect_uri" parameter value.');
             });
 
-            test('Fail - 400 - Invalid "redirect_uri". Cannot contain fragment component "#".', function (done) {
-                _openIdAuthorize(agent, null, TEST_PARTNER.id, TEST_CALLBACK_URI + '#', null, null, null, 400, function (err, res) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    assert.equal(res.text, 'Invalid "redirect_uri". Cannot contain fragment component "#".');
-
-                    return done();
-                });
+            test('Fail - 400 - Invalid "redirect_uri". Cannot contain fragment component "#".', async function () {
+                const authRes = await _openIdAuthorizePromised(agent, null, TEST_PARTNER.id, TEST_CALLBACK_URI + '#', null, null, null, 400);
+                assert.equal(authRes.text, 'Invalid "redirect_uri". Cannot contain fragment component "#".');
             });
 
-            test('Fail - 302 - Unsupported "response_type" parameter value. Only "token id_token" is supported.', function (done) {
-                openIdAuthorize(agent, 'code', TEST_PARTNER.id, TEST_CALLBACK_URI, null, null, null, function (err, res) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    assert.equal(res.headers.location, TEST_CALLBACK_URI + '#error=unsupported_response_type&error_description=Unsupported%20%22response_type%22%20parameter%20value.%20Only%20%22token%20id_token%22%20is%20supported.');
-
-                    return done();
-                });
+            test('Fail - 302 - Unsupported "response_type" parameter value. Only "token id_token" is supported.', async function () {
+                const authRes = await openIdAuthorizePromised(agent, 'code', TEST_PARTNER.id, TEST_CALLBACK_URI, null, null, null);
+                assert.equal(authRes.headers.location, TEST_CALLBACK_URI + '#error=unsupported_response_type&error_description=Unsupported%20%22response_type%22%20parameter%20value.%20Only%20%22token%20id_token%22%20is%20supported.');
             });
 
-            test('Fail - 302 - Unsupported "scope" parameter value. Only "openid" is supported.', function (done) {
-                openIdAuthorize(agent, TEST_RESPONSE_TYPE, TEST_PARTNER.id, TEST_CALLBACK_URI, 'invalid', null, null, function (err, res) {
-                    if (err) {
-                        return done(err);
-                    }
+            test('Fail - 302 - Unsupported "scope" parameter value. Only "openid" is supported.', async function () {
+                const authRes = await openIdAuthorizePromised(agent, TEST_RESPONSE_TYPE, TEST_PARTNER.id, TEST_CALLBACK_URI, 'invalid', null, null);
+                assert.equal(authRes.headers.location, TEST_CALLBACK_URI + '#error=invalid_scope&error_description=Unsupported%20%22scope%22%20parameter%20value.%20Only%20%22openid%22%20is%20supported.');
 
-                    assert.equal(res.headers.location, TEST_CALLBACK_URI + '#error=invalid_scope&error_description=Unsupported%20%22scope%22%20parameter%20value.%20Only%20%22openid%22%20is%20supported.');
-
-                    return done();
-                });
             });
 
-            test('Fail - 302 - Invalid or missing "nonce" parameter value. "nonce" must be a random string with at least 14 characters of length.', function (done) {
-                openIdAuthorize(agent, TEST_RESPONSE_TYPE, TEST_PARTNER.id, TEST_CALLBACK_URI, 'openid', null, null, function (err, res) {
-                    if (err) {
-                        return done(err);
-                    }
-
-                    assert.equal(res.headers.location, TEST_CALLBACK_URI + '#error=invalid_request&error_description=Invalid%20or%20missing%20%22nonce%22%20parameter%20value.%20%22nonce%22%20must%20be%20a%20random%20string%20with%20at%20least%2014%20characters%20of%20length.&error_uri=http%3A%2F%2Fopenid.net%2Fspecs%2Fopenid-connect-implicit-1_0.html%23RequestParameters');
-
-                    return done();
-                });
+            test('Fail - 302 - Invalid or missing "nonce" parameter value. "nonce" must be a random string with at least 14 characters of length.', async function () {
+                const authRes = await openIdAuthorizePromised(agent, TEST_RESPONSE_TYPE, TEST_PARTNER.id, TEST_CALLBACK_URI, 'openid', null, null);
+                assert.equal(authRes.headers.location, TEST_CALLBACK_URI + '#error=invalid_request&error_description=Invalid%20or%20missing%20%22nonce%22%20parameter%20value.%20%22nonce%22%20must%20be%20a%20random%20string%20with%20at%20least%2014%20characters%20of%20length.&error_uri=http%3A%2F%2Fopenid.net%2Fspecs%2Fopenid-connect-implicit-1_0.html%23RequestParameters');
             });
 
         });

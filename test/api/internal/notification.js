@@ -9,8 +9,7 @@ suite('Internal', function () {
             suite('Update', function () {
 
                 //FIXME: TEST!
-                test.skip('Success', function (done) {
-                    done();
+                test.skip('Success', async function () {
                 });
 
             });

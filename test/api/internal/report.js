@@ -3,20 +3,13 @@
 const request = require('supertest');
 const app = require('../../../app');
 
-const report = function (agent, headers, payload) {
+const report = async function (agent, headers, payload) {
     const path = '/api/internal/report';
-
-    return new Promise(function (resolve, reject) {
-        agent
+    return agent
             .post(path)
             .set(headers)
             .send(JSON.stringify(payload))
-            .expect(200)
-            .end(function (err, res) {
-                if (err) return reject(err);
-                return resolve(res);
-            });
-    });
+            .expect(200);
 };
 
 
@@ -24,7 +17,7 @@ suite('Internal', function () {
 
     suite('Report', function () {
 
-        test('Success', function (done) {
+        test('Success', async function () {
             const agent = request.agent(app);
 
             const headers = {
@@ -64,11 +57,7 @@ suite('Internal', function () {
                 }
             };
 
-            report(agent, headers, cspReport)
-            .then(function(){
-                done();
-            })
-            .catch(done);
+            return report(agent, headers, cspReport);
         });
 
     });

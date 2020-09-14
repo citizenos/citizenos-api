@@ -10,9 +10,8 @@ suite('Internal', function () {
 
                 suite('Read', function () {
 
-                    test.skip('Success', function (done) {
+                    test.skip('Success', async function () {
                         // FIXME: TEST
-                        done();
                     });
 
                 });

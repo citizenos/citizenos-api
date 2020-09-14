@@ -1,90 +1,77 @@
 'use strict';
 
-var _uploadFile = function (agent, userId, file, folderName, expectedHttpCode, callback) {
-    var path = '/api/users/:userId/upload'.replace(':userId', userId);
+const _uploadFile = async function (agent, userId, file, folderName, expectedHttpCode) {
+    const path = '/api/users/:userId/upload'.replace(':userId', userId);
 
-    var request = agent
+    const request = agent
         .post(path);
-        
+
     if (folderName) {
         request.field('folder', folderName);
     }
 
-    request
+    return request
         .attach('file', file)
         .set('Content-Type', 'multipart/form-data')
-        .expect(expectedHttpCode)
-        .end(callback);
+        .expect(expectedHttpCode);
 };
 
-var uploadFile = function (agent, userId, file, folderName, callback) {
-    _uploadFile(agent, userId, file, folderName, 201, callback);
+const uploadFile = async function (agent, userId, file, folderName) {
+    return _uploadFile(agent, userId, file, folderName, 201);
 };
 
 module.exports.uploadFile = uploadFile;
 
-var chai = require('chai');
+const chai = require('chai');
 chai.use(require('chai-datetime'));
 chai.use(require('chai-shallow-deep-equal'));
-var assert = chai.assert;
-var request = require('supertest');
-var app = require('../../app');
-var config = app.get('config');
-var https = require('https');
-var fs = require('fs-extra');
-var path = require('path');
+const assert = chai.assert;
+const request = require('supertest');
+const app = require('../../app');
+const config = app.get('config');
+const https = require('https');
+const fs = require('fs-extra');
+const path = require('path');
 
-var shared = require('../utils/shared');
-var userLib = require('./lib/user')(app);
+const shared = require('../utils/shared');
+const userLib = require('./lib/user')(app);
 
 
 // API - /api/users*
 suite('Users', function () {
 
-    suiteSetup(function (done) {
-        shared
-            .syncDb()
-            .finally(done);
+    suiteSetup(async function () {
+        return shared
+            .syncDb();
     });
 
     // API - /api/users/:userId/activities*
     suite('Upload', function () {
 
         suite('File', function () {
-            var agent = request.agent(app);
+            const agent = request.agent(app);
 
-            var user;
+            let user;
 
-            suiteSetup(function (done) {
-                userLib.createUserAndLogin(agent, null, null, null, function (err, res) {
-                    if (err) return done(err);
-
-                    user = res;
-
-                    done();
-                });
+            suiteSetup(async function () {
+                user = await userLib.createUserAndLoginPromised(agent, null, null, null);
             });
 
-            test('Success', function (done) {
-                var file = path.join(__dirname, '/uploads/test.txt');
-                uploadFile(agent, user.id, file, 'test', function (err, res) {
-                    if (err) return done(err);
-                    var fileUrl = res.body;
-                    assert.include(fileUrl, config.url.api);
-                    
-                    var file = fs.createWriteStream(path.join(__dirname, '/uploads/return.txt'));
+            test('Success', async function () {
+                const file = path.join(__dirname, '/uploads/test.txt');
+                const fileUrl = (await uploadFile(agent, user.id, file, 'test')).body;
+                assert.include(fileUrl, config.url.api);
 
-                    https.get(res.body, function (response) {
-                        var stream = response.pipe(file);
+                const file2 = fs.createWriteStream(path.join(__dirname, '/uploads/return.txt'));
 
-                        stream.on('finish', function () {
-                            fs.readFile(path.join(__dirname, '/uploads/return.txt'), 'utf8', function (err, data) {
-                                if (err) return done(err);
-                                assert.equal('Test file for upload test.', data);
-                                fs.remove(path.join(__dirname, '/uploads/return.txt'));
-                                fs.remove(path.join(__dirname.replace('/test/api', '/public/uploads/'), 'test/'));
-                                done();
-                            });
+                return https.get(fileUrl, function (response) {
+                    const stream = response.pipe(file2);
+
+                    stream.on('finish', function () {
+                        fs.readFile(path.join(__dirname, '/uploads/return.txt'), 'utf8', function (err, data) {
+                            assert.equal('Test file for upload test.', data);
+                            fs.remove(path.join(__dirname, '/uploads/return.txt'));
+                            fs.remove(path.join(__dirname.replace('/test/api', '/public/uploads/'), 'test/'));
                         });
                     });
                 });

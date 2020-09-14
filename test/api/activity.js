@@ -1,68 +1,61 @@
 'use strict';
 
-var _activitiesRead = function (agent, userId, filters, expectedHttpCode, callback) {
-    var path = '/api/users/:userId/activities'.replace(':userId', userId);
+const _activitiesReadPromised = async function (agent, userId, filters, expectedHttpCode) {
+    const path = '/api/users/:userId/activities'.replace(':userId', userId);
 
-    agent
+    return agent
         .get(path)
         .query(filters)
         .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
+        .expect('Content-Type', /json/);
 };
 
-var activitiesRead = function (agent, userId, filters, callback) {
-    _activitiesRead(agent, userId, filters, 200, callback);
+const activitiesReadPromised = async function (agent, userId, filters) {
+    return _activitiesReadPromised(agent, userId, filters, 200);
 };
 
-var _activitiesUnreadCountRead = function (agent, userId, expectedHttpCode, callback) {
-    var path = '/api/users/:userId/activities/unread'.replace(':userId', userId);
+const _activitiesUnreadCountReadPromised = async function (agent, userId, expectedHttpCode) {
+    const path = '/api/users/:userId/activities/unread'.replace(':userId', userId);
 
-    agent
+    return agent
         .get(path)
         .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
+        .expect('Content-Type', /json/);
 };
 
-var activitiesUnreadCountRead = function (agent, userId, callback) {
-    _activitiesUnreadCountRead(agent, userId, 200, callback);
+const activitiesUnreadCountReadPromised = async function (agent, userId) {
+    return _activitiesUnreadCountReadPromised(agent, userId, 200);
 };
 
-var _activitiesReadUnauth = function (agent, filters, expectedHttpCode, callback) {
-    var path = '/api/activities';
+const _activitiesReadUnauthPromised = async function (agent, filters, expectedHttpCode) {
+    const path = '/api/activities';
 
-    agent
+    return agent
         .get(path)
         .query(filters)
         .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
+        .expect('Content-Type', /json/);
 };
 
-var activitiesReadUnauth = function (agent, filters, callback) {
-    _activitiesReadUnauth(agent, filters, 200, callback);
+const activitiesReadUnauthPromised = function (agent, filters) {
+    return _activitiesReadUnauthPromised(agent, filters, 200);
 };
 
-module.exports.activitiesRead = activitiesRead;
-module.exports.activitiesReadUnauth = activitiesReadUnauth;
-
-var chai = require('chai');
+const chai = require('chai');
 chai.use(require('chai-datetime'));
 chai.use(require('chai-shallow-deep-equal'));
-var assert = chai.assert;
-var request = require('supertest');
-var app = require('../../app');
-var models = app.get('models');
+const assert = chai.assert;
+const request = require('supertest');
+const app = require('../../app');
+const models = app.get('models');
 
-var async = app.get('async');
-var shared = require('../utils/shared');
-var userLib = require('./lib/user')(app);
-var topicLib = require('./topic');
+const shared = require('../utils/shared');
+const userLib = require('./lib/user')(app);
+const topicLib = require('./topic');
 
-var Partner = models.Partner;
-var Topic = models.Topic;
-var TopicMemberUser = models.TopicMemberUser;
+const Partner = models.Partner;
+const Topic = models.Topic;
+const TopicMemberUser = models.TopicMemberUser;
 
 
 // API - /api/users*
@@ -78,51 +71,33 @@ suite('Users', function () {
     suite('Activities', function () {
 
         suite('Read', function () {
-            var agent = request.agent(app);
+            const agent = request.agent(app);
 
-            var user;
+            let user;
 
-            suiteSetup(function (done) {
-                userLib.createUserAndLogin(agent, null, null, null, function (err, res) {
-                    if (err) return done(err);
+            suiteSetup(async function () {
+                user = await userLib.createUserAndLoginPromised(agent, null, null, null);
+                await topicLib.topicCreatePromised(agent, user.id, null, null, null, null, null);
+            });
 
-                    user = res;
-
-                    topicLib.topicCreate(agent, user.id, null, null, null, null, null, function (err) {
-                        if (err) return done(err);
-
-                        done();
-                    });
+            test('Success', async function () {
+                const activities = (await activitiesReadPromised(agent, user.id, null)).body.data;
+                assert.equal(activities.length, 3);
+                activities.forEach(function (activity) {
+                    assert.notProperty(activity.data.actor, 'email');
+                    assert.notProperty(activity.data.actor, 'imageUrl');
+                    assert.notProperty(activity.data.actor, 'language');
                 });
             });
 
-            test('Success', function (done) {
-                activitiesRead(agent, user.id, null, function (err, res) {
-                    if (err) return done(err);
+            test('Success - filter', async function () {
+                const activities = (await activitiesReadPromised(agent, user.id, {filter: 'Topic'})).body.data;
 
-                    var activities = res.body.data;
-                    assert.equal(activities.length, 3);
-                    activities.forEach(function (activity) {
-                        assert.notProperty(activity.data.actor, 'email');
-                        assert.notProperty(activity.data.actor, 'imageUrl');
-                        assert.notProperty(activity.data.actor, 'language');
-                    });
-                    done();
-                });
-            });
-
-            test('Success - filter', function (done) {
-                activitiesRead(agent, user.id, {filter: 'Topic'}, function (err, res) {
-                    if (err) return done(err);
-
-                    var activities = res.body.data;
-                    assert.equal(activities.length, 1);
-                    activities.forEach(function (activity) {
-                        assert.notProperty(activity.data.actor, 'email');
-                        assert.notProperty(activity.data.actor, 'imageUrl');
-                        assert.notProperty(activity.data.actor, 'language');
-                    });
-                    done();
+                assert.equal(activities.length, 1);
+                activities.forEach(function (activity) {
+                    assert.notProperty(activity.data.actor, 'email');
+                    assert.notProperty(activity.data.actor, 'imageUrl');
+                    assert.notProperty(activity.data.actor, 'language');
                 });
             });
         });
@@ -132,342 +107,213 @@ suite('Users', function () {
 
 //API: Activities
 suite('Activities', function () {
-    suiteSetup(function (done) {
+    suiteSetup(async function () {
         process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-        shared
-            .syncDb()
-            .then(done)
-            .catch(done);
+        return shared
+            .syncDb();
     });
 
     suite('Read', function () {
-        var agent = request.agent(app);
-        var agent2 = request.agent(app);
+        const agent = request.agent(app);
+        const agent2 = request.agent(app);
 
-        var topic;
-        var user;
-        var user2;
-        var partner;
+        let topic;
+        let user;
+        let user2;
+        let partner;
 
-        suiteSetup(function (done) {
-            userLib.createUserAndLogin(agent, null, null, null, function (err, res) {
-                if (err) return done(err);
+        suiteSetup(async function () {
+            user = await userLib.createUserAndLoginPromised(agent, null, null, null);
+            await topicLib.topicCreatePromised(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null);
+            topic = (await topicLib.topicCreatePromised(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null)).body.data;
+            user2 = userLib.createUserPromised(agent2, null, null, null);
+            return Partner
+                .create({
+                    website: 'notimportant',
+                    redirectUriRegexp: 'notimportant'
+                })
+                .then(function (res) {
+                    partner = res;
 
-                user = res;
-
-                async
-                    .parallel(
+                    return Topic
+                        .update(
+                            {
+                                sourcePartnerId: partner.id
+                            },
+                            {
+                                where: {
+                                    id: topic.id
+                                }
+                            }
+                        );
+                })
+                .then(function () {
+                    return topicLib.topicMemberUsersCreatePromised(
+                        agent,
+                        user.id,
+                        topic.id,
                         [
-                            function (cb) {
-                                topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null, cb);
-                            },
-                            function (cb) {
-                                topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST2</h2></body></html>', null, cb);
-                            },
-                            function (cb) {
-                                userLib.createUser(agent2, null, null, null, cb);
+                            {
+                                userId: user2.id,
+                                level: TopicMemberUser.LEVELS.read
                             }
                         ]
-                        , function (err, results) {
-                            if (err) return done(err);
-
-                            topic = results[1].body.data;
-                            user2 = results[2];
-
-                            Partner
-                                .create({
-                                    website: 'notimportant',
-                                    redirectUriRegexp: 'notimportant'
-                                })
-                                .then(function (res) {
-                                    partner = res;
-
-                                    return Topic
-                                        .update(
-                                            {
-                                                sourcePartnerId: partner.id
-                                            },
-                                            {
-                                                where: {
-                                                    id: topic.id
-                                                }
-                                            }
-                                        );
-                                })
-                                .then(function () {
-                                    topicLib.topicMemberUsersCreate(
-                                        agent,
-                                        user.id,
-                                        topic.id,
-                                        [
-                                            {
-                                                userId: user2.id,
-                                                level: TopicMemberUser.LEVELS.read
-                                            }
-                                        ],
-                                        function (err) {
-                                            if (err) return done(err);
-
-                                            done();
-                                        }
-                                    );
-                                });
-                        }
                     );
+                });
+        });
 
+        test('Success', async function () {
+            const activities = (await activitiesReadUnauthPromised(agent2, {sourcePartnerId: partner.id})).body.data;
+
+            assert.equal(activities.length, 2);
+            activities.forEach(function (activity) {
+                assert.notProperty(activity.data.actor, 'email');
+                assert.notProperty(activity.data.actor, 'imageUrl');
+                assert.notProperty(activity.data.actor, 'language');
+
+                if (activity.data.object['@type'] === 'User') {
+                    assert.notProperty(activity.data.object, 'email');
+                    assert.notProperty(activity.data.object, 'imageUrl');
+                    assert.notProperty(activity.data.object, 'language');
+                } else {
+                    assert.equal(activity.data.object.id, topic.id);
+                    assert.equal(activity.data.object.sourcePartnerId, partner.id);
+                }
             });
         });
 
-        test('Success', function (done) {
-            activitiesReadUnauth(agent2, {sourcePartnerId: partner.id}, function (err, res) {
-                if (err) return done(err);
+        test('Success - filter', async function () {
+            const activities = (await activitiesReadUnauthPromised(agent2, {sourcePartnerId: partner.id, filter: ['User']})).body.data;
+            assert.equal(activities.length, 0);
+            activities.forEach(function (activity) {
+                assert.notProperty(activity.data.actor, 'email');
+                assert.notProperty(activity.data.actor, 'imageUrl');
+                assert.notProperty(activity.data.actor, 'language');
 
-                var activities = res.body.data;
-                assert.equal(activities.length, 3);
-                activities.forEach(function (activity) {
-                    assert.notProperty(activity.data.actor, 'email');
-                    assert.notProperty(activity.data.actor, 'imageUrl');
-                    assert.notProperty(activity.data.actor, 'language');
-
-                    if (activity.data.object['@type'] === 'User') {
-                        assert.notProperty(activity.data.object, 'email');
-                        assert.notProperty(activity.data.object, 'imageUrl');
-                        assert.notProperty(activity.data.object, 'language');
-                    } else {
-                        assert.equal(activity.data.object.id, topic.id);
-                        assert.equal(activity.data.object.sourcePartnerId, partner.id);
-                    }
-                });
-
-                done();
+                if (activity.data.object['@type'] === 'User') {
+                    assert.notProperty(activity.data.object, 'email');
+                    assert.notProperty(activity.data.object, 'imageUrl');
+                    assert.notProperty(activity.data.object, 'language');
+                } else {
+                    assert.equal(activity.data.object.id, topic.id);
+                    assert.equal(activity.data.object.sourcePartnerId, partner.id);
+                }
             });
         });
 
-        test('Success - filter', function (done) {
-            activitiesReadUnauth(agent2, {sourcePartnerId: partner.id, filter: ['User']}, function (err, res) {
-                if (err) return done(err);
+        test('Success - filter with invalid value', async function () {
+            const activities = (await activitiesReadUnauthPromised(agent2, {sourcePartnerId: partner.id, filter: ['Hello', 'Hack']})).body.data;
+            assert.equal(activities.length, 2);
+            activities.forEach(function (activity) {
+                assert.notProperty(activity.data.actor, 'email');
+                assert.notProperty(activity.data.actor, 'imageUrl');
+                assert.notProperty(activity.data.actor, 'language');
 
-                var activities = res.body.data;
-
-                assert.equal(activities.length, 1);
-                activities.forEach(function (activity) {
-                    assert.notProperty(activity.data.actor, 'email');
-                    assert.notProperty(activity.data.actor, 'imageUrl');
-                    assert.notProperty(activity.data.actor, 'language');
-
-                    if (activity.data.object['@type'] === 'User') {
-                        assert.notProperty(activity.data.object, 'email');
-                        assert.notProperty(activity.data.object, 'imageUrl');
-                        assert.notProperty(activity.data.object, 'language');
-                    } else {
-                        assert.equal(activity.data.object.id, topic.id);
-                        assert.equal(activity.data.object.sourcePartnerId, partner.id);
-                    }
-                });
-
-                done();
+                if (activity.data.object['@type'] === 'User') {
+                    assert.notProperty(activity.data.object, 'email');
+                    assert.notProperty(activity.data.object, 'imageUrl');
+                    assert.notProperty(activity.data.object, 'language');
+                } else {
+                    assert.equal(activity.data.object.id, topic.id);
+                    assert.equal(activity.data.object.sourcePartnerId, partner.id);
+                }
             });
         });
 
-        test('Success - filter with invalid value', function (done) {
-            activitiesReadUnauth(agent2, {sourcePartnerId: partner.id, filter: ['Hello', 'Hack']}, function (err, res) {
-                if (err) return done(err);
+        test('Success - without partnerId', async function () {
+            const activities = (await activitiesReadUnauthPromised(agent2, null)).body.data;
+            activities.forEach(function (activity) {
+                assert.notProperty(activity.data.actor, 'email');
+                assert.notProperty(activity.data.actor, 'imageUrl');
+                assert.notProperty(activity.data.actor, 'language');
 
-                var activities = res.body.data;
-
-                assert.equal(activities.length, 3);
-                activities.forEach(function (activity) {
-                    assert.notProperty(activity.data.actor, 'email');
-                    assert.notProperty(activity.data.actor, 'imageUrl');
-                    assert.notProperty(activity.data.actor, 'language');
-
-                    if (activity.data.object['@type'] === 'User') {
-                        assert.notProperty(activity.data.object, 'email');
-                        assert.notProperty(activity.data.object, 'imageUrl');
-                        assert.notProperty(activity.data.object, 'language');
-                    } else {
-                        assert.equal(activity.data.object.id, topic.id);
-                        assert.equal(activity.data.object.sourcePartnerId, partner.id);
-                    }
-                });
-
-                done();
+                if (activity.data.object['@type'] === 'User') {
+                    assert.notProperty(activity.data.object, 'email');
+                    assert.notProperty(activity.data.object, 'imageUrl');
+                    assert.notProperty(activity.data.object, 'language');
+                }
             });
-        });
 
-        test('Success - without partnerId', function (done) {
-            activitiesReadUnauth(agent2, null, function (err, res) {
-                if (err) return done(err);
+            assert.isTrue(activities.length > 0);
 
-                var activities = res.body.data;
-                activities.forEach(function (activity) {
-                    assert.notProperty(activity.data.actor, 'email');
-                    assert.notProperty(activity.data.actor, 'imageUrl');
-                    assert.notProperty(activity.data.actor, 'language');
-
-                    if (activity.data.object['@type'] === 'User') {
-                        assert.notProperty(activity.data.object, 'email');
-                        assert.notProperty(activity.data.object, 'imageUrl');
-                        assert.notProperty(activity.data.object, 'language');
-                    }
-                });
-
-                assert.isTrue(activities.length > 0);
-
-                done();
-            });
         });
     });
 
     suite('Count', function () {
-        var agent = request.agent(app);
-        var agent2 = request.agent(app);
+        const agent = request.agent(app);
+        const agent2 = request.agent(app);
 
-        var topic;
-        var user;
-        var user2;
-        var partner;
+        let topic;
+        let user;
+        let user2;
+        let partner;
 
-        suiteSetup(function (done) {
-            userLib.createUserAndLogin(agent, null, null, null, function (err, res) {
-                if (err) return done(err);
+        suiteSetup(async function () {
+            user = await userLib.createUserAndLoginPromised(agent, null, null, null)
+            await topicLib.topicCreatePromised(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null);
+            topic = (await topicLib.topicCreatePromised(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST2</h2></body></html>', null)).body.data;
+            user2 = await (userLib.createUserPromised(agent2, null, null, null));
+            return Partner
+                .create({
+                    website: 'notimportant',
+                    redirectUriRegexp: 'notimportant'
+                })
+                .then(function (res) {
+                    partner = res;
 
-                user = res;
-
-                async
-                    .parallel(
-                        [
-                            function (cb) {
-                                topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null, cb);
+                    return Topic
+                        .update(
+                            {
+                                sourcePartnerId: partner.id
                             },
-                            function (cb) {
-                                topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST2</h2></body></html>', null, cb);
-                            },
-                            function (cb) {
-                                userLib.createUser(agent2, null, null, null, cb);
+                            {
+                                where: {
+                                    id: topic.id
+                                }
                             }
-                        ]
-                        , function (err, results) {
-                            if (err) return done(err);
-
-                            topic = results[1].body.data;
-                            user2 = results[2];
-
-                            Partner
-                                .create({
-                                    website: 'notimportant',
-                                    redirectUriRegexp: 'notimportant'
-                                })
-                                .then(function (res) {
-                                    partner = res;
-
-                                    return Topic
-                                        .update(
-                                            {
-                                                sourcePartnerId: partner.id
-                                            },
-                                            {
-                                                where: {
-                                                    id: topic.id
-                                                }
-                                            }
-                                        );
-                                })
-                                .then(function () {
-                                    topicLib.topicMemberUsersCreate(
-                                        agent,
-                                        user.id,
-                                        topic.id,
-                                        [
-                                            {
-                                                userId: user2.id,
-                                                level: TopicMemberUser.LEVELS.read
-                                            }
-                                        ],
-                                        function (err) {
-                                            if (err) return done(err);
-
-                                            done();
-                                        }
-                                    );
-                                });
-                        }
-                    );
-
-            });
-        });
-
-        test('Success - count 0 - user has never viewed activity feed', function (done) {
-            activitiesUnreadCountRead(agent, {sourcePartnerId: partner.id}, function (err, res) {
-                if (err) return done(err);
-
-                var count = res.body.data.count;
-
-                assert.equal(count, 0);
-                done();
-            });
-        });
-
-        test('Success', function (done) {
-            activitiesRead(agent, user.id, null, function (err, res) {
-                if (err) return done(err);
-
-                var activities = res.body.data;
-                assert.isTrue(activities.length > 0);
-                topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST3</h2></body></html>', null, function (err) {
-                    if (err) return done(err);
-
-                    activitiesUnreadCountRead(agent, {sourcePartnerId: partner.id}, function (err, res) {
-                        if (err) return done(err);
-
-                        var count = res.body.data.count;
-
-                        assert.equal(count, 2);
-                        done();
-                    });
+                        );
+                })
+                .then(function () {
+                    return topicLib.topicMemberUsersCreatePromised(agent, user.id,topic.id,[{userId: user2.id,level: TopicMemberUser.LEVELS.read}]);
                 });
-            });
-
         });
 
-        test('Success - user has viewed all activities', function (done) {
-            activitiesRead(agent, user.id, null, function (err, res) {
-                if (err) return done(err);
-
-                var activities = res.body.data;
-                assert.isTrue(activities.length > 0);
-                activities.forEach(function (activity) {
-                    assert.notProperty(activity.data.actor, 'email');
-                    assert.notProperty(activity.data.actor, 'imageUrl');
-                    assert.notProperty(activity.data.actor, 'language');
-                });
-                activitiesUnreadCountRead(agent, {sourcePartnerId: partner.id}, function (err, res) {
-                    if (err) return done(err);
-
-                    var count = res.body.data.count;
-
-                    assert.equal(count, 0);
-                    done();
-                });
-            });
-
+        test('Success - count 0 - user has never viewed activity feed', async function () {
+            const count = (await activitiesUnreadCountReadPromised (agent, {sourcePartnerId: partner.id})).body.data.count;
+            assert.equal(count, 0);
         });
 
-        test('Fail - user not logged in', function (done) {
-            _activitiesRead(agent2, user.id, null, 401, function (err, res) {
-                if (err) return done(err);
+        test('Success', async function () {
+            const activities = (await activitiesReadPromised(agent, user.id, null)).body.data
+            assert.isTrue(activities.length > 0);
+            await topicLib.topicCreatePromised(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST3</h2></body></html>', null);
 
-                var message = res.body;
-                var expectedResult = {
-                    status: {
-                        code: 40100,
-                        message: 'Unauthorized'
-                    }
-                };
-                assert.deepEqual(message, expectedResult);
-                done();
+            const count = (await activitiesUnreadCountReadPromised(agent, {sourcePartnerId: partner.id})).body.data.count;
+            assert.equal(count, 2);
+        });
+
+        test('Success - user has viewed all activities', async function () {
+            const activities = (await activitiesReadPromised(agent, user.id, null)).body.data;
+            assert.isTrue(activities.length > 0);
+            activities.forEach(function (activity) {
+                assert.notProperty(activity.data.actor, 'email');
+                assert.notProperty(activity.data.actor, 'imageUrl');
+                assert.notProperty(activity.data.actor, 'language');
             });
 
+            const count = (await activitiesUnreadCountReadPromised(agent, {sourcePartnerId: partner.id})).body.data.count;
+            assert.equal(count, 0);
+        });
+
+        test('Fail - user not logged in', async function () {
+            const message = (await _activitiesReadPromised(agent2, user.id, null, 401)).body
+            const expectedResult = {
+                status: {
+                    code: 40100,
+                    message: 'Unauthorized'
+                }
+            };
+            assert.deepEqual(message, expectedResult);
         });
     });
 });
