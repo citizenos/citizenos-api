@@ -200,7 +200,6 @@ module.exports = function (app) {
 
         // Remove all HTML tags
         title = title.replace(/<[^>]*>/gm, '');
-        
         // Etherpad has HTML encoded everything, we want it stored not encoded
         title = encoder.decode(title);
 
@@ -211,7 +210,7 @@ module.exports = function (app) {
         // Replace all whitespace characters with ' '
         title = title.replace(/[​\s]+/g, ' '); //eslint-disable-line no-irregular-whitespace
 
-        return title;
+        return title.trim();
     };
 
     var _syncTopicWithPad = function (topicId, context, actor, rev) {
