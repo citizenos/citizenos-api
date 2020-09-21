@@ -50,7 +50,7 @@ module.exports = function (app) {
 
         Promise
             .all(promisesToResolve)
-            .spread(function (userByEmail, userLoggedIn) {
+            .then(function ([userByEmail, userLoggedIn]) {
                 if (userLoggedIn && userLoggedIn.email !== req.query.email) {
                     // TODO: Duplicate code with POST /api/auth/logout
                     // Log out the currently logged in User

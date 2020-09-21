@@ -697,9 +697,7 @@ module.exports = function (app) {
                 });
 
                 return Promise
-                    .all(findOrCreatePromises.map(function (promise) {
-                        return promise.reflect();
-                    }))
+                    .allSettled(findOrCreatePromises)
                     .then(function (newMembers) {
                         return Group
                             .findOne({

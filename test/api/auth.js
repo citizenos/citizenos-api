@@ -974,7 +974,7 @@ suite('Auth', function () {
 
                 test('Success - 20001 - Estonian PID', async function () {
                     this.timeout(5000); //eslint-disable-line no-invalid-this
-                    const response = (await loginSmartIdInitPromised(request.agent(app), pid)).body
+                    const response = (await loginSmartIdInitPromised(request.agent(app), pid)).body;
                     assert.equal(response.status.code, 20001);
                     assert.match(response.data.challengeID, /[0-9]{4}/);
 

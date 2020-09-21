@@ -11,6 +11,9 @@
         "force": true,
         "logging": true
       },
+      "dialectOptions": {
+        "ssl": false
+      },
       "define": {
         "syncOnAssociation": true
       },

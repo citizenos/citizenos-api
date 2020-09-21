@@ -158,9 +158,10 @@ module.exports = function (app) {
                                 },
                                 transaction: t
                             })
-                            .spread(function (user, created) {
+                            .then(function (result) {
+                                let user = result[0];
+                                let created = result[1];
                                 const activityPromise = [];
-
                                 if (created) {
                                     logger.info('Created a new user', user.id);
                                     activityPromise.push(cosActivities.createActivity(user, null, {
@@ -362,8 +363,7 @@ module.exports = function (app) {
 
     app.post('/api/auth/password/reset/send', function (req, res, next) {
         const email = req.body.email;
-
-        if (!validator.isEmail(email)) {
+        if (!email || !validator.isEmail(email)) {
             return res.badRequest({email: 'Invalid email'});
         }
 
@@ -488,7 +488,7 @@ module.exports = function (app) {
                     return res.badRequest();
                 }
 
-                return next(new Error(e));
+                return next(e);
             });
     });
 
@@ -636,7 +636,7 @@ module.exports = function (app) {
                     return res.badRequest(error.message);
                 }
             })
-            .error(next);
+            .catch(next);
     });
 
     const idCardAuth = function (req, res, next) {
@@ -877,7 +877,7 @@ module.exports = function (app) {
                     return res.badRequest(error.message);
                 }
             })
-            .error(next);
+            .catch(next);
     });
 
 

@@ -24,7 +24,9 @@
       },
       "omitNull": false,
       "dialectOptions": {
-        "ssl": true
+        "ssl": {
+          "rejectUnauthorized": false
+        }
       },
       "pool": {
         "min": 0,

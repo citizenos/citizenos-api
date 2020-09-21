@@ -7753,7 +7753,7 @@ suite('Users', function () {
                                 });
                         });
 
-                        test('Success - Estonian mobile number and PID', async function () {
+                        test('Success - Estonian mobile number and PID2', async function () {
                             const phoneNumber = '+37200000766';
                             const pid = '60001019906';
 
@@ -7764,7 +7764,6 @@ suite('Users', function () {
                             ];
 
                             const voteResult = (await topicVoteVotePromised(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null)).body;
-
                             assert.equal(voteResult.status.code, 20001);
                             assert.match(voteResult.data.challengeID, /[0-9]{4}/);
                         });

@@ -1374,7 +1374,7 @@ module.exports = function (app) {
             .catch(next);
     });
 
-    const _topicUpdate = function (req, res) {
+    const _topicUpdate = async function (req, res) {
         const topicId = req.params.topicId;
         const contact = req.body.contact; // TODO: This logic is specific to Rahvaalgatus.ee, with next Partner we have to make it more generic - https://trello.com/c/Sj3XRF5V/353-raa-ee-followup-email-to-riigikogu-and-token-access-to-events-api
         const statusNew = req.body.status;
@@ -1382,197 +1382,189 @@ module.exports = function (app) {
         let isBackToVoting = false;
         let isSendToParliament = false;
 
-        return Topic
+        const topic = await Topic
             .findOne({
                 where: {id: topicId},
                 include: [Vote]
-            })
-            .then(function (topic) {
-                if (!topic) {
-                    res.badRequest();
+            });
+
+        if (!topic) {
+            res.badRequest();
+
+            return Promise.reject();
+        }
+
+        const statuses = _.values(Topic.STATUSES);
+        const vote = topic.Votes[0];
+        if (statusNew && statusNew !== topic.status) {
+            // The only flow that allows going back in status flow is reopening for voting
+            if (statusNew === Topic.STATUSES.voting && topic.status === Topic.STATUSES.followUp) {
+                if (!vote) {
+                    res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew + ' when the Topic has no Vote created');
 
                     return Promise.reject();
                 }
 
-                const statuses = _.values(Topic.STATUSES);
-                const vote = topic.Votes[0];
-                if (statusNew && statusNew !== topic.status) {
-                    // The only flow that allows going back in status flow is reopening for voting
-                    if (statusNew === Topic.STATUSES.voting && topic.status === Topic.STATUSES.followUp) {
-                        if (!vote) {
-                            res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew + ' when the Topic has no Vote created');
-
-                            return Promise.reject();
-                        }
-
-                        // TODO: This logic is specific to Rahvaalgatus.ee, with next Partner we have to make it more generic - https://trello.com/c/Sj3XRF5V/353-raa-ee-followup-email-to-riigikogu-and-token-access-to-events-api
-                        // Do not allow going back to voting once the Topic has been sent to Parliament
-                        if (vote.authType === Vote.AUTH_TYPES.hard) {
-                            return getVoteResults(vote.id)
-                                .then(function (voteResults) {
-                                    const optionMax = _.maxBy(voteResults, 'voteCount');
-                                    if (optionMax && optionMax.voteCount >= config.features.sendToParliament.voteCountMin) {
-                                        res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew + ' when the Topic has been sent to Parliament');
-
-                                        return Promise.reject();
-                                    } else {
-                                        isBackToVoting = true;
-
-                                        return Promise.resolve([topic, vote]);
-                                    }
-                                });
-                        }
-
-                        isBackToVoting = true;
-                    } else if (statusNew === Topic.STATUSES.followUp && vote) { // User closes the Vote
-                        // TODO: This logic is specific to Rahvaalgatus.ee, with next Partner we have to make it more generic - https://trello.com/c/Sj3XRF5V/353-raa-ee-followup-email-to-riigikogu-and-token-access-to-events-api
-                        if (vote.authType === Vote.AUTH_TYPES.hard && contact) {
-                            // TODO: Return proper field errors as for Sequelize errors
-                            if (!contact.name || !contact.email || !contact.phone || !validator.isEmail(contact.email)) {
-                                res.badRequest('Invalid contact info. Missing or invalid name, email or phone');
+                // TODO: This logic is specific to Rahvaalgatus.ee, with next Partner we have to make it more generic - https://trello.com/c/Sj3XRF5V/353-raa-ee-followup-email-to-riigikogu-and-token-access-to-events-api
+                // Do not allow going back to voting once the Topic has been sent to Parliament
+                if (vote.authType === Vote.AUTH_TYPES.hard) {
+                    await getVoteResults(vote.id)
+                        .then(function (voteResults) {
+                            const optionMax = _.maxBy(voteResults, 'voteCount');
+                            if (optionMax && optionMax.voteCount >= config.features.sendToParliament.voteCountMin) {
+                                res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew + ' when the Topic has been sent to Parliament');
 
                                 return Promise.reject();
+                            } else {
+                                isBackToVoting = true;
                             }
+                        });
+                }
 
-                            return getVoteResults(vote.id)
-                                .then(function (voteResults) {
-                                    const optionMax = _.maxBy(voteResults, 'voteCount');
-                                    if (optionMax && optionMax.voteCount >= config.features.sendToParliament.voteCountMin) {
-                                        isSendToParliament = true;
-
-                                        return Promise.resolve([topic, vote]);
-                                    } else {
-                                        res.badRequest('Not enough votes to send to Parliament. Votes required - ' + config.features.sendToParliament.voteCountMin, 10);
-
-                                        return Promise.reject();
-                                    }
-                                });
-                        }
-                    } else if (statuses.indexOf(topic.status) > statuses.indexOf(statusNew) || [Topic.STATUSES.voting].indexOf(statusNew) > -1) { // You are not allowed to go "back" in the status flow nor you are allowed to set "voting" directly, it can only be done creating a Vote.
-                        res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew);
+                isBackToVoting = true;
+            } else if (statusNew === Topic.STATUSES.followUp && vote) { // User closes the Vote
+                // TODO: This logic is specific to Rahvaalgatus.ee, with next Partner we have to make it more generic - https://trello.com/c/Sj3XRF5V/353-raa-ee-followup-email-to-riigikogu-and-token-access-to-events-api
+                if (vote.authType === Vote.AUTH_TYPES.hard && contact) {
+                    // TODO: Return proper field errors as for Sequelize errors
+                    if (!contact.name || !contact.email || !contact.phone || !validator.isEmail(contact.email)) {
+                        res.badRequest('Invalid contact info. Missing or invalid name, email or phone');
 
                         return Promise.reject();
                     }
+
+                    await getVoteResults(vote.id)
+                        .then(function (voteResults) {
+                            const optionMax = _.maxBy(voteResults, 'voteCount');
+                            if (optionMax && optionMax.voteCount >= config.features.sendToParliament.voteCountMin) {
+                                isSendToParliament = true;
+                            } else {
+                                res.badRequest('Not enough votes to send to Parliament. Votes required - ' + config.features.sendToParliament.voteCountMin, 10);
+
+                                return Promise.reject();
+                            }
+                        });
+                }
+            } else if (statuses.indexOf(topic.status) > statuses.indexOf(statusNew) || [Topic.STATUSES.voting].indexOf(statusNew) > -1) { // You are not allowed to go "back" in the status flow nor you are allowed to set "voting" directly, it can only be done creating a Vote.
+                res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew);
+
+                return Promise.reject();
+            }
+        }
+
+        // NOTE: Description is handled separately below
+        const fieldsAllowedToUpdate = ['visibility', 'status', 'categories', 'endsAt', 'hashtag', 'sourcePartnerObjectId'];
+
+        const fieldsToUpdate = [];
+        Object.keys(req.body).forEach(function (key) {
+            if (fieldsAllowedToUpdate.indexOf(key) >= 0) {
+                fieldsToUpdate.push(key);
+            }
+        });
+
+        return db
+            .transaction(function (t) {
+                const promisesToResolve = [];
+
+                const topicUpdatePromise = topic
+                    .update(
+                        req.body,
+                        {
+                            fields: fieldsToUpdate,
+                            where: {
+                                id: topicId
+                            }
+                        },
+                        {
+                            transaction: t
+                        }
+                    );
+
+                promisesToResolve.push(topicUpdatePromise);
+
+                const topicActivityPromise = cosActivities
+                    .updateActivity(
+                        topic,
+                        null,
+                        {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        },
+                        null,
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
+                promisesToResolve.push(topicActivityPromise);
+
+                if (isBackToVoting) {
+                    promisesToResolve.push(cosSignature.deleteFinalBdoc(topicId, vote.id));
+
+                    const topicEventsDeletePromise = TopicEvent
+                        .destroy({
+                            where: {
+                                topicId: topicId
+                            },
+                            force: true,
+                            transaction: t
+                        });
+
+                    promisesToResolve.push(topicEventsDeletePromise);
                 }
 
-                return Promise.resolve([topic, vote]);
+
+                if (req.body.description) {
+                    const epUpdateTopicPromise = cosEtherpad
+                        .updateTopic(
+                            topicId,
+                            req.body.description
+                        );
+                    promisesToResolve.push(epUpdateTopicPromise);
+                }
+
+                return Promise.all(promisesToResolve);
             })
-            .spread(function (topic, vote) {
-                // NOTE: Description is handled separately below
-                const fieldsAllowedToUpdate = ['visibility', 'status', 'categories', 'endsAt', 'hashtag', 'sourcePartnerObjectId'];
+            .then(function () {
+                if (req.body.description) {
+                    return cosEtherpad
+                        .syncTopicWithPad(
+                            topicId,
+                            req.method + ' ' + req.path,
+                            {
+                                type: 'User',
+                                id: req.user.id,
+                                ip: req.ip
+                            }
+                        );
+                } else {
+                    return Promise.resolve();
+                }
+            })
+            .then(function () {
+                // TODO: This logic is specific to Rahvaalgatus.ee, with next Partner we have to make it more generic - https://trello.com/c/Sj3XRF5V/353-raa-ee-followup-email-to-riigikogu-and-token-access-to-events-api
+                if (isSendToParliament) {
+                    logger.info('Sending to Parliament', req.method, req.path);
 
-                const fieldsToUpdate = [];
-                Object.keys(req.body).forEach(function (key) {
-                    if (fieldsAllowedToUpdate.indexOf(key) >= 0) {
-                        fieldsToUpdate.push(key);
-                    }
-                });
+                    // TODO: This should be and stay in sync with the expiry set by getBdocURL
+                    const downloadTokenExpiryDays = 30;
+                    const linkDownloadBdocFinalExpiryDate = new Date(new Date().getTime() + downloadTokenExpiryDays * 24 * 60 * 60 * 1000);
 
-                return db
-                    .transaction(function (t) {
-                        const promisesToResolve = [];
+                    const pathAddEvent = '/api/topics/:topicId/events' // COS API url for adding events with token
+                        .replace(':topicId', topicId);
 
-                        const topicUpdatePromise = topic
-                            .update(
-                                req.body,
-                                {
-                                    fields: fieldsToUpdate,
-                                    where: {
-                                        id: topicId
-                                    }
-                                },
-                                {
-                                    transaction: t
-                                }
-                            );
+                    let linkAddEvent = config.features.sendToParliament.urlPrefix + '/initiatives/:topicId/events/new'.replace(':topicId', topicId);
+                    linkAddEvent += '?' + querystring.stringify({token: cosJwt.getTokenRestrictedUse({}, 'POST ' + pathAddEvent)});
 
-                        promisesToResolve.push(topicUpdatePromise);
-
-                        const topicActivityPromise = cosActivities
-                            .updateActivity(
-                                topic,
-                                null,
-                                {
-                                    type: 'User',
-                                    id: req.user.id,
-                                    ip: req.ip
-                                },
-                                null,
-                                req.method + ' ' + req.path,
-                                t
-                            );
-
-                        promisesToResolve.push(topicActivityPromise);
-
-                        if (isBackToVoting) {
-                            promisesToResolve.push(cosSignature.deleteFinalBdoc(topicId, vote.id));
-
-                            const topicEventsDeletePromise = TopicEvent
-                                .destroy({
-                                    where: {
-                                        topicId: topicId
-                                    },
-                                    force: true,
-                                    transaction: t
-                                });
-
-                            promisesToResolve.push(topicEventsDeletePromise);
-                        }
-
-
-                        if (req.body.description) {
-                            const epUpdateTopicPromise = cosEtherpad
-                                .updateTopic(
-                                    topicId,
-                                    req.body.description
-                                );
-                            promisesToResolve.push(epUpdateTopicPromise);
-                        }
-
-                        return Promise.all(promisesToResolve);
-                    })
-                    .then(function () {
-                        if (req.body.description) {
-                            return cosEtherpad
-                                .syncTopicWithPad(
-                                    topicId,
-                                    req.method + ' ' + req.path,
-                                    {
-                                        type: 'User',
-                                        id: req.user.id,
-                                        ip: req.ip
-                                    }
-                                );
-                        } else {
-                            return Promise.resolve();
-                        }
-                    })
-                    .then(function () {
-                        // TODO: This logic is specific to Rahvaalgatus.ee, with next Partner we have to make it more generic - https://trello.com/c/Sj3XRF5V/353-raa-ee-followup-email-to-riigikogu-and-token-access-to-events-api
-                        if (isSendToParliament) {
-                            logger.info('Sending to Parliament', req.method, req.path);
-
-                            // TODO: This should be and stay in sync with the expiry set by getBdocURL
-                            const downloadTokenExpiryDays = 30;
-                            const linkDownloadBdocFinalExpiryDate = new Date(new Date().getTime() + downloadTokenExpiryDays * 24 * 60 * 60 * 1000);
-
-                            const pathAddEvent = '/api/topics/:topicId/events' // COS API url for adding events with token
-                                .replace(':topicId', topicId);
-
-                            let linkAddEvent = config.features.sendToParliament.urlPrefix + '/initiatives/:topicId/events/new'.replace(':topicId', topicId);
-                            linkAddEvent += '?' + querystring.stringify({token: cosJwt.getTokenRestrictedUse({}, 'POST ' + pathAddEvent)});
-
-                            const downloadUriBdocFinal = getBdocURL({
-                                topicId: topicId,
-                                voteId: vote.id,
-                                type: 'goverment'
-                            });
-
-                            return emailLib.sendToParliament(topic, contact, downloadUriBdocFinal, linkDownloadBdocFinalExpiryDate, linkAddEvent);
-                        }
-
-                        return Promise.resolve();
+                    const downloadUriBdocFinal = getBdocURL({
+                        topicId: topicId,
+                        voteId: vote.id,
+                        type: 'goverment'
                     });
+
+                    return emailLib.sendToParliament(topic, contact, downloadUriBdocFinal, linkDownloadBdocFinalExpiryDate, linkAddEvent);
+                }
+
+                return Promise.resolve();
             });
     };
 
@@ -1958,7 +1950,7 @@ module.exports = function (app) {
 
         Promise
             .all([topicsPromise, voteResultsPromise])
-            .spread(function (rows, voteResults) {
+            .then(function ([rows, voteResults]) {
                 const rowCount = rows.length;
 
                 // Sequelize returns empty array for no results.
@@ -2242,7 +2234,7 @@ module.exports = function (app) {
 
         Promise
             .all([topicsPromise, voteResultsPromise])
-            .spread(function (topics, voteResults) {
+            .then(function ([topics, voteResults]) {
                 if (!topics) {
                     return res.notFound();
                 }
@@ -2422,10 +2414,8 @@ module.exports = function (app) {
                     });
             });
 
-            const findOrCreateMembersResult = await Promise.all(
-                findOrCreateMembersPromises.map(function (promise) {
-                    return promise.reflect(); // http://bluebirdjs.com/docs/api/reflect.html
-                })
+            const findOrCreateMembersResult = await Promise.allSettled(
+                findOrCreateMembersPromises
             );
 
             const topic = await Topic
@@ -2883,9 +2873,8 @@ module.exports = function (app) {
                                     const groupIdsToInvite = [];
                                     const memberGroupActivities = [];
                                     return Promise
-                                        .all(findOrCreateTopicMemberGroups.map(function (promise) {
-                                            return promise.reflect();
-                                        })).each(function (inspection) {
+                                        .allSettled(findOrCreateTopicMemberGroups)
+                                        .each(function (inspection) {
                                             if (inspection.isFulfilled()) {
                                                 var memberGroup = inspection.value()[0].toJSON();
                                                 groupIdsToInvite.push(memberGroup.groupId);
@@ -3788,7 +3777,7 @@ module.exports = function (app) {
                             },
                             transaction: t
                         })
-                        .spread(function (memberUser, created) {
+                        .then(function ([memberUser, created]) {
                             if (created) {
                                 return User
                                     .findOne({
@@ -4401,7 +4390,7 @@ module.exports = function (app) {
                     });
 
             })
-            .spread(function (tc, c) {
+            .then(function ([tc, c]) {
                 c[0][0].edits.forEach(function (edit) {
                     edit.createdAt = new Date(edit.createdAt).toJSON();
                 });
@@ -4871,7 +4860,8 @@ module.exports = function (app) {
                     createdAt: now,
                     type: type
                 });
-                comment.edits = edits;
+                comment.set('edits', null);
+                comment.set('edits', edits);
                 comment.subject = subject;
                 comment.text = text;
                 comment.type = type;
@@ -5138,7 +5128,7 @@ module.exports = function (app) {
                                                     transaction: t
                                                 }
                                             )
-                                            .spread(function (updated, comment) {
+                                            .then(function ([updated, comment]) {
                                                 comment = Comment.build(comment.dataValues);
 
                                                 return cosActivities
@@ -5212,7 +5202,7 @@ module.exports = function (app) {
                     return [{cache: mentions}];
                 }
             })
-            .error(function (err) {
+            .catch(function (err) {
                 if (err.twitterReply) {
                     logger.error('Twitter error', req.method, req.path, req.user, err);
 
@@ -5221,7 +5211,7 @@ module.exports = function (app) {
 
                 return Promise.reject(err);
             })
-            .spread(function (data) {
+            .then(function ([data]) {
                 const mentions = [];
                 if (data && data.statuses) {
                     logger.info('Twitter response', req.method, req.path, req.user, data.statuses.length);
@@ -5771,7 +5761,7 @@ module.exports = function (app) {
 
         Promise
             .all([voteInfoPromise, voteResultsPromise])
-            .spread(function (voteInfo, voteResults) {
+            .then(function ([voteInfo, voteResults]) {
                 if (!voteInfo) {
                     return res.notFound();
                 }
@@ -5916,7 +5906,7 @@ module.exports = function (app) {
 
         Promise
             .all([voteInfoPromise, voteResultsPromise])
-            .spread(function (voteInfo, voteResults) {
+            .then(function ([voteInfo, voteResults]) {
                 if (!voteInfo) {
                     return res.notFound();
                 }
@@ -6133,7 +6123,6 @@ module.exports = function (app) {
 
             return Promise.reject();
         }
-
         let getCertificatePromise;
         let smartIdcertificate;
         let mobileIdCertificate;
@@ -6284,111 +6273,111 @@ module.exports = function (app) {
                                     default:
                                         throw new Error('Invalid signing method ' + signingMethod);
                                 }
-                            }).catch(function (e) {
-                                switch (e.message) {
-                                    case 'Personal ID already connected to another user account.':
-                                        return res.badRequest(e.message, 30)
-                                    case 'User account already connected to another PID.':
-                                        return res.badRequest(e.message, 31);
-                                }
-                            });
-                    })
-                    .then(function (signInitResponse) {
-                        let sessionData, token, sessionDataEncrypted;
-                        if (signInitResponse.sessionId) {
-                            signInitResponse.dataToSign;
-                            sessionData = {
-                                voteOptions: vote.VoteOptions,
-                                signingMethod,
-                                sessionId: signInitResponse.sessionId,
-                                sessionHash: signInitResponse.sessionHash,
-                                personalInfo: signInitResponse.personalInfo,
-                                signatureId: signInitResponse.signatureId,
-                                userId: userId, // Required for un-authenticated signing.
-                                voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
-                            };
-
-
-                            sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
-                            token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
-                                expiresIn: '5m',
-                                algorithm: config.session.algorithm
-                            });
-                            return res.ok({
-                                challengeID: signInitResponse.challengeID,
-                                token: token
-                            }, 1);
-                        } else {
-                            switch (signInitResponse.statusCode) {
-                                case 0:
-                                    // Common to MID and ID-card signing
+                            })
+                            .then(function (signInitResponse) {
+                                let sessionData, token, sessionDataEncrypted;
+                                if (signInitResponse.sessionId) {
+                                    signInitResponse.dataToSign;
                                     sessionData = {
-                                        voteOptions: voteOptions,
-                                        personalInfo: personalInfo,
+                                        voteOptions: vote.VoteOptions,
                                         signingMethod,
-                                        signableHash: signInitResponse.signableHash,
+                                        sessionId: signInitResponse.sessionId,
+                                        sessionHash: signInitResponse.sessionHash,
+                                        personalInfo: signInitResponse.personalInfo,
                                         signatureId: signInitResponse.signatureId,
                                         userId: userId, // Required for un-authenticated signing.
                                         voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
                                     };
 
-                                    // ID card
-                                    if (signInitResponse.signatureId) {
-                                        sessionData.signatureId = signInitResponse.signatureId;
-                                    }
 
-                                    // Send JWT with state and expect it back in /sign /status - https://trello.com/c/ZDN2WomW/287-bug-id-card-signing-does-not-work-for-some-users
-                                    // Wrapping sessionDataEncrypted in object, otherwise jwt.sign "expiresIn" will not work - https://github.com/auth0/node-jsonwebtoken/issues/166
                                     sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
                                     token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
                                         expiresIn: '5m',
                                         algorithm: config.session.algorithm
                                     });
+                                    return res.ok({
+                                        challengeID: signInitResponse.challengeID,
+                                        token: token
+                                    }, 1);
+                                } else {
+                                    switch (signInitResponse.statusCode) {
+                                        case 0:
+                                            // Common to MID and ID-card signing
+                                            sessionData = {
+                                                voteOptions: voteOptions,
+                                                personalInfo: personalInfo,
+                                                signingMethod,
+                                                signableHash: signInitResponse.signableHash,
+                                                signatureId: signInitResponse.signatureId,
+                                                userId: userId, // Required for un-authenticated signing.
+                                                voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
+                                            };
 
-                                    if (signingMethod === Vote.SIGNING_METHODS.idCard) {
-                                        return res.ok({
-                                            signedInfoDigest: signInitResponse.signableHash,
-                                            signedInfoHashType: cryptoLib.getHashType(signInitResponse.signableHash),
-                                            token: token
-                                        }, 1);
-                                    } else {
-                                        return res.ok({
-                                            challengeID: signInitResponse.challengeID,
-                                            token: token
-                                        }, 1);
+                                            // ID card
+                                            if (signInitResponse.signatureId) {
+                                                sessionData.signatureId = signInitResponse.signatureId;
+                                            }
+
+                                            // Send JWT with state and expect it back in /sign /status - https://trello.com/c/ZDN2WomW/287-bug-id-card-signing-does-not-work-for-some-users
+                                            // Wrapping sessionDataEncrypted in object, otherwise jwt.sign "expiresIn" will not work - https://github.com/auth0/node-jsonwebtoken/issues/166
+                                            sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
+                                            token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
+                                                expiresIn: '5m',
+                                                algorithm: config.session.algorithm
+                                            });
+
+                                            if (signingMethod === Vote.SIGNING_METHODS.idCard) {
+                                                return res.ok({
+                                                    signedInfoDigest: signInitResponse.signableHash,
+                                                    signedInfoHashType: cryptoLib.getHashType(signInitResponse.signableHash),
+                                                    token: token
+                                                }, 1);
+                                            } else {
+                                                return res.ok({
+                                                    challengeID: signInitResponse.challengeID,
+                                                    token: token
+                                                }, 1);
+                                            }
+                                        case 101:
+                                            res.badRequest('Invalid input parameters.', 20);
+
+                                            return Promise.reject();
+                                        case 301:
+                                            res.badRequest('User is not a Mobile-ID client. Please double check phone number and/or id code.', 21);
+
+                                            return Promise.reject();
+                                        case 302:
+                                            res.badRequest('User certificates are revoked or suspended.', 22);
+
+                                            return Promise.reject();
+                                        case 303:
+                                            res.badRequest('User certificate is not activated.', 23);
+
+                                            return Promise.reject();
+                                        case 304:
+                                            res.badRequest('User certificate is suspended.', 24);
+
+                                            return Promise.reject();
+                                        case 305:
+                                            res.badRequest('User certificate is expired.', 25);
+
+                                            return Promise.reject();
+                                        default:
+                                            logger.error('Unhandled DDS status code', signInitResponse.statusCode);
+                                            res.internalServerError();
+
+                                            return Promise.reject();
                                     }
-                                case 101:
-                                    res.badRequest('Invalid input parameters.', 20);
-
-                                    return Promise.reject();
-                                case 301:
-                                    res.badRequest('User is not a Mobile-ID client. Please double check phone number and/or id code.', 21);
-
-                                    return Promise.reject();
-                                case 302:
-                                    res.badRequest('User certificates are revoked or suspended.', 22);
-
-                                    return Promise.reject();
-                                case 303:
-                                    res.badRequest('User certificate is not activated.', 23);
-
-                                    return Promise.reject();
-                                case 304:
-                                    res.badRequest('User certificate is suspended.', 24);
-
-                                    return Promise.reject();
-                                case 305:
-                                    res.badRequest('User certificate is expired.', 25);
-
-                                    return Promise.reject();
-                                default:
-                                    logger.error('Unhandled DDS status code', signInitResponse.statusCode);
-                                    res.internalServerError();
-
-                                    return Promise.reject();
+                                }
+                            });
+                        }).catch(function (e) {
+                            switch (e.message) {
+                                case 'Personal ID already connected to another user account.':
+                                    return res.badRequest(e.message, 30)
+                                case 'User account already connected to another PID.':
+                                    return res.badRequest(e.message, 31);
                             }
-                        }
-                    });
+                        });
             }).catch(function (error) {
                 if (error && error.name === 'ValidationError') {
                     switch (error.message) {
@@ -6616,7 +6605,7 @@ module.exports = function (app) {
                     }
                 });
             })
-            .spread(function () {
+            .then(function () {
                 return res.ok({
                     bdocUri: getBdocURL({
                         userId: userId,
@@ -7454,7 +7443,7 @@ module.exports = function (app) {
                         },
                         transaction: t
                     })
-                    .spread(function (topicPin, created) {
+                    .then(function ([topicPin, created]) {
                         if (created) {
                             return Topic
                                 .findOne({

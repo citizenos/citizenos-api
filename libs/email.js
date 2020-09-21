@@ -244,11 +244,7 @@ module.exports = function (app) {
     const handleAllPromises = function (emailPromises) {
         var errors = [];
         var done = [];
-        return Promise.all(emailPromises.map(function (promise) {
-            return Promise
-				.resolve( promise )
-				.reflect();
-        }))
+        return Promise.allSettled(emailPromises)
         .each(function (inspection) {
             if (inspection.isRejected()) {
                 logger.error('FAILED:', inspection.reason());
@@ -883,7 +879,7 @@ module.exports = function (app) {
                     nest: true
                 }
             )
-            .spread(function (commentInfo) {
+            .then(function ([commentInfo]) {
                 if (commentInfo.topic.visibility === Topic.VISIBILITY.public) {
                     logger.debug('Topic is public, sending e-mails to registered partner moderators', commentInfo);
 
@@ -901,7 +897,7 @@ module.exports = function (app) {
                         });
                 }
             })
-            .spread(function (commentInfo, moderators) {
+            .then(function ([commentInfo, moderators]) {
                 const promisesToResolve = [];
 
                 // Comment creator e-mail - TODO: Comment back in when comment editing goes live!

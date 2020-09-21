@@ -48,7 +48,7 @@ logger.info(
     dbConfSanitized
 );
 
-var sequelize;
+let sequelize;
 if (config.db.url) {
     sequelize = new Sequelize(config.db.url, dbOptions);
 } else {
@@ -73,7 +73,7 @@ fs
         return (file.indexOf('.') !== 0) && (file !== basename) && (file.slice(-3) === '.js') && file.indexOf('_') !== 0;
     })
     .forEach((file) => {
-        const model = sequelize.import(path.join(__dirname, file));
+        const model = require(path.join(__dirname, file))(sequelize, Sequelize.DataTypes);
         db[model.name] = model;
     });
 

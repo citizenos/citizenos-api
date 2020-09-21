@@ -35,7 +35,7 @@ module.exports = function (app) {
                     nest: true
                 }
             )
-            .spread(function (results) {
+            .then(function ([results]) {
                 return res.ok(results);
             })
             .catch(next);

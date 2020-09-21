@@ -162,13 +162,13 @@ module.exports = function (app) {
             instance.forEach(function (elem) {
                 const o = _.cloneDeep(elem.toJSON());
                 _setExtraProperties(instance, o);
-                o['@type'] = elem._modelOptions.name.singular;
+                o['@type'] = elem.constructor.name;
                 object.push(o);
             });
         } else {
             object = instance.toJSON();
             _setExtraProperties(instance, object);
-            object['@type'] = instance._modelOptions.name.singular;
+            object['@type'] = instance.constructor.name;
         }
 
         const activity = {
@@ -179,7 +179,7 @@ module.exports = function (app) {
 
         if (target) {
             let targetObject = target.toJSON();
-            targetObject['@type'] = target._modelOptions.name.singular;
+            targetObject['@type'] = target.constructor.name;
             _setExtraProperties(target, targetObject);
             activity.target = targetObject;
         }
@@ -221,7 +221,7 @@ module.exports = function (app) {
         });
 
         origin.description = null;
-        origin['@type'] = instance._modelOptions.name.singular;
+        origin['@type'] = instance.constructor.name;
 
         const object = _.clone(origin);
 
@@ -237,7 +237,7 @@ module.exports = function (app) {
         if (target) {
             const targetObject = target.toJSON();
             _setExtraProperties(target, targetObject);
-            targetObject['@type'] = target._modelOptions.name.singular;
+            targetObject['@type'] = target.constructor.name;
             activity.target = targetObject;
         }
 
@@ -372,7 +372,7 @@ module.exports = function (app) {
             return Promise.resolve();
         }
 
-        origin['@type'] = instance._modelOptions.name.singular;
+        origin['@type'] = instance.constructor.name;
         const object = _.clone(origin);
         _setExtraProperties(instance, object);
 
@@ -387,7 +387,7 @@ module.exports = function (app) {
         if (target) {
             const targetObject = target.toJSON();
             _setExtraProperties(target, targetObject);
-            targetObject['@type'] = target._modelOptions.name.singular;
+            targetObject['@type'] = target.constructor.name;
             activity.target = targetObject;
         }
 
@@ -423,7 +423,7 @@ module.exports = function (app) {
         // }
         // }
         const object = instance.toJSON();
-        object['@type'] = instance._modelOptions.name.singular;
+        object['@type'] = instance.constructor.name;
         _setExtraProperties(instance, object);
 
         const activity = {
@@ -434,14 +434,14 @@ module.exports = function (app) {
 
         if (origin) {
             const originObject = origin.toJSON();
-            originObject['@type'] = origin._modelOptions.name.singular;
+            originObject['@type'] = origin.constructor.name;
             activity.origin = originObject;
         }
 
         if (target) {
             const targetObject = target.toJSON();
             _setExtraProperties(target, targetObject);
-            targetObject['@type'] = target._modelOptions.name.singular;
+            targetObject['@type'] = target.constructor.name;
             activity.target = targetObject;
         }
 
@@ -471,7 +471,7 @@ module.exports = function (app) {
         const object = instance.toJSON();
         _setExtraProperties(instance, object);
 
-        object['@type'] = instance._modelOptions.name.singular;
+        object['@type'] = instance.constructor.name;
 
         const activity = {
             type: Activity.TYPES.delete,
@@ -481,7 +481,7 @@ module.exports = function (app) {
 
         if (origin) {
             const originObject = origin.toJSON();
-            originObject['@type'] = origin._modelOptions.name.singular;
+            originObject['@type'] = origin.constructor.name;
 
             activity.origin = originObject;
         }
@@ -526,7 +526,7 @@ module.exports = function (app) {
 
         _setExtraProperties(instance, _object);
 
-        _object['@type'] = instance._modelOptions.name.singular;
+        _object['@type'] = instance.constructor.name;
 
         var activity = {
             type: Activity.TYPES.invite,
@@ -537,7 +537,7 @@ module.exports = function (app) {
         if (target) {
             const targetObject = target.toJSON();
             _setExtraProperties(target, targetObject);
-            targetObject['@type'] = target._modelOptions.name.singular;
+            targetObject['@type'] = target.constructor.name;
             if (target.dataValues.level) {
                 targetObject.level = target.dataValues.level;
             }
@@ -590,7 +590,7 @@ module.exports = function (app) {
             object
         };
 
-        activity.object.object['@type'] = inviteObject._modelOptions.name.singular;
+        activity.object.object['@type'] = inviteObject.constructor.name;
 
         return _saveActivity(activity, transaction);
     };
@@ -621,7 +621,7 @@ module.exports = function (app) {
         if (!object.userId && instance.userId) {
             object.userId = instance.userId;
         }
-        object['@type'] = instance._modelOptions.name.singular;
+        object['@type'] = instance.constructor.name;
 
         var activity = {
             type: Activity.TYPES.leave,
@@ -653,7 +653,7 @@ module.exports = function (app) {
 
         const object = instance.toJSON();
         _setExtraProperties(instance, object);
-        object['@type'] = instance._modelOptions.name.singular;
+        object['@type'] = instance.constructor.name;
 
         const activity = {
             type: Activity.TYPES.view,
@@ -688,7 +688,7 @@ module.exports = function (app) {
         if (object.offset > 0) {
             return Promise.resolve();
         }
-        object['@type'] = instance._modelOptions.name.singular;
+        object['@type'] = instance.constructor.name;
 
         const activity = {
             type: Activity.TYPES.view,
@@ -776,7 +776,7 @@ module.exports = function (app) {
 
         const object = instance.toJSON();
         _setExtraProperties(instance, object);
-        object['@type'] = instance._modelOptions.name.singular;
+        object['@type'] = instance.constructor.name;
 
         const activity = {
             type: Activity.TYPES.join,
@@ -819,18 +819,18 @@ module.exports = function (app) {
             instance.forEach(function (elem) {
                 const o = _.cloneDeep(elem.toJSON());
                 _setExtraProperties(instance, o);
-                o['@type'] = elem._modelOptions.name.singular;
+                o['@type'] = elem.constructor.name;
                 object.push(o);
             });
         } else {
             object = instance.toJSON();
             _setExtraProperties(instance, object);
-            object['@type'] = instance._modelOptions.name.singular;
+            object['@type'] = instance.constructor.name;
 
         }
 
         const replyTo = inReplyTo.toJSON();
-        replyTo['@type'] = inReplyTo._modelOptions.name.singular;
+        replyTo['@type'] = inReplyTo.constructor.name;
 
         const activity = {
             type: Activity.TYPES.create,
@@ -842,7 +842,7 @@ module.exports = function (app) {
         if (target) {
             const targetObject = target.toJSON();
             _setExtraProperties(target, targetObject);
-            targetObject['@type'] = target._modelOptions.name.singular;
+            targetObject['@type'] = target.constructor.name;
             activity.target = targetObject;
         }
 

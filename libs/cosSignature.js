@@ -305,121 +305,114 @@ module.exports = function (app) {
 
     };
 
-    const _getUserContainer = function (voteId, userId, voteOptions) {
+    const _getUserContainer = async function (voteId, userId, voteOptions) {
         const container = new Asic();
         const chosenVoteOptionFileNames = voteOptions.map(_getVoteOptionFileName);
 
-        return VoteContainerFile
+        const voteContainerFiles = await VoteContainerFile
             .findAll({
                 where: {
                     voteId: voteId
                 }
             })
-            .each(function (voteContainerFile) {
-                const fileName = voteContainerFile.fileName;
-                const mimeType = voteContainerFile.mimeType;
-                const content = voteContainerFile.content;
+        voteContainerFiles.forEach(function (voteContainerFile) {
+            const fileName = voteContainerFile.fileName;
+            const mimeType = voteContainerFile.mimeType;
+            const content = voteContainerFile.content;
 
-                switch (voteContainerFile.fileName) {
-                    case TOPIC_FILE.name:
-                    case METAINFO_FILE.name:
-                        break;
-                    default:
-                        // Must be option file
-                        if (chosenVoteOptionFileNames.indexOf(fileName) === -1) {
-                            //Skip the option that User did not choose
-                            return;
-                        }
-                }
-                container.add(fileName, content, mimeType);
-            })
-            .then(function () {
-                return new Promise(function (resolve) {
-                    let finalData = '';
-                    const mufileStream = mu
-                        .compileAndRender(USERINFO_FILE.template, {user: {id: userId}});
-                    mufileStream
-                        .on('data', function (data) {
-                            finalData += data.toString();
-                        });
-                    mufileStream
-                        .on('end', function () {
-                            container.add(USERINFO_FILE.name, finalData, 'text/html');
+            switch (voteContainerFile.fileName) {
+                case TOPIC_FILE.name:
+                case METAINFO_FILE.name:
+                    break;
+                default:
+                    // Must be option file
+                    if (chosenVoteOptionFileNames.indexOf(fileName) === -1) {
+                        //Skip the option that User did not choose
+                        return;
+                    }
+            }
+            container.add(fileName, content, mimeType);
+        });
 
-                            return resolve(container);
-                        });
+        return new Promise(function (resolve) {
+            let finalData = '';
+            const mufileStream = mu
+                .compileAndRender(USERINFO_FILE.template, {user: {id: userId}});
+            mufileStream
+                .on('data', function (data) {
+                    finalData += data.toString();
                 });
-            })
-            .then(function () {
-                return container;
-            }).catch(function (e) {
-                logger.error(e);
-            });
+            mufileStream
+                .on('end', function () {
+                    container.add(USERINFO_FILE.name, finalData, 'text/html');
+
+                    return resolve(container);
+                });
+        });
     };
 
-    const _createUserBdoc = function (voteId, userId, voteOptions, cert, certFormat, transaction) {
+    const _createUserBdoc = async function (voteId, userId, voteOptions, cert, certFormat, transaction) {
         let containerFiles = [];
         const certificate = new Certificate(Buffer.from(cert, certFormat));
         const chosenVoteOptionFileNames = voteOptions.map(_getVoteOptionFileName);
 
-        return VoteContainerFile
+        const voteContainerFiles = await VoteContainerFile
             .findAll({
                 where: {
                     voteId: voteId
                 },
                 transaction: transaction
             })
-            .each(function (voteContainerFile) {
-                const fileName = voteContainerFile.fileName;
-                const mimeType = voteContainerFile.mimeType;
-                const content = voteContainerFile.content;
 
-                switch (voteContainerFile.fileName) {
-                    case TOPIC_FILE.name:
-                    case METAINFO_FILE.name:
-                        break;
-                    default:
-                        // Must be option file
-                        if (chosenVoteOptionFileNames.indexOf(fileName) === -1) {
-                            //Skip the option that User did not choose
-                            return;
-                        }
-                }
+        voteContainerFiles.forEach(function (voteContainerFile) {
+            const fileName = voteContainerFile.fileName;
+            const mimeType = voteContainerFile.mimeType;
+            const content = voteContainerFile.content;
+            switch (voteContainerFile.fileName) {
+                case TOPIC_FILE.name:
+                case METAINFO_FILE.name:
+                    break;
+                default:
+                    // Must be option file
+                    if (chosenVoteOptionFileNames.indexOf(fileName) === -1) {
+                        //Skip the option that User did not choose
+                        return;
+                    }
+            }
 
-                containerFiles.push({
-                    path: fileName,
-                    type: mimeType,
-                    hash: Crypto.createHash('sha256').update(content).digest()
-                });
-            })
-            .then(function () {
-                return new Promise(function (resolve) {
-                    let finalData = '';
-                    const mufileStream = mu
-                        .compileAndRender(USERINFO_FILE.template, {user: {id: userId}});
-                    mufileStream
-                        .on('data', function (data) {
-                            finalData += data.toString();
-                        });
-                    mufileStream
-                        .on('end', function () {
-                            containerFiles.push({
-                                path: USERINFO_FILE.name,
-                                type: 'text/html',
-                                hash: Crypto.createHash('sha256').update(Buffer.from(finalData)).digest()
-                            });
-
-                            return resolve(containerFiles);
-                        });
-                });
-            })
-            .then(function (files) {
-                const xades = hades.new(certificate, files, {policy: "bdoc"});
-
-                return Promise.resolve(xades);
-            }).catch(function (e) {
-                logger.error(e)
+            containerFiles.push({
+                path: fileName,
+                type: mimeType,
+                hash: Crypto.createHash('sha256').update(content).digest()
             });
+        })
+
+        return new Promise(function (resolve) {
+            let finalData = '';
+            const mufileStream = mu
+                .compileAndRender(USERINFO_FILE.template, {user: {id: userId}});
+            mufileStream
+                .on('data', function (data) {
+                    finalData += data.toString();
+                });
+            mufileStream
+                .on('end', function () {
+                    containerFiles.push({
+                        path: USERINFO_FILE.name,
+                        type: 'text/html',
+                        hash: Crypto.createHash('sha256').update(Buffer.from(finalData)).digest()
+                    });
+
+                    return resolve(containerFiles);
+                });
+        }).then(function (files) {
+            const xades = hades.new(certificate, files, {policy: "bdoc"});
+
+            return Promise.resolve(xades);
+        }).catch(function (e) {
+            logger.error(e)
+        });
+
     };
 
 
@@ -651,17 +644,19 @@ module.exports = function (app) {
                                 }
                             });
                     })
-                    .each(function (voteContainerFile) {
-                        const fileName = voteContainerFile.fileName;
-                        const mimeType = voteContainerFile.mimeType;
-                        const content = voteContainerFile.content;
+                    .then(function (voteContainerFiles) {
+                        voteContainerFiles.forEach(function (voteContainerFile) {
+                            const fileName = voteContainerFile.fileName;
+                            const mimeType = voteContainerFile.mimeType;
+                            const content = voteContainerFile.content;
 
-                        logger.debug('_generateFinalContainer', 'Adding file to final BDOC', fileName, mimeType, content.length);
+                            logger.debug('_generateFinalContainer', 'Adding file to final BDOC', fileName, mimeType, content.length);
 
-                        return finalContainer.append(content, {
-                            name: fileName,
-                            mimeType: mimeType
-                        });
+                            return finalContainer.append(content, {
+                                name: fileName,
+                                mimeType: mimeType
+                            });
+                        })
                     })
                     .then(function () {
                         if (type === 'bdoc') {
@@ -803,7 +798,7 @@ module.exports = function (app) {
 
                                     const stream = connection.query(query);
 
-                                    const csvStream = fastCsv.createWriteStream({
+                                    const csvStream = fastCsv.format({
                                         headers: true,
                                         rowDelimiter: '\r\n'
                                     });

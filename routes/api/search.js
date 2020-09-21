@@ -55,7 +55,7 @@ module.exports = function (app) {
 
         Promise
             .all([findUserPromise, findGroupPromise])
-            .spread(function (users, groups) {
+            .then(function ([users, groups]) {
                 return res.ok({
                     users: {
                         count: users.length,
@@ -98,12 +98,12 @@ module.exports = function (app) {
             if (!Array.isArray(queryStatuses)) {
                 queryStatuses = [queryStatuses];
             }
-            
+
             statuses = queryStatuses.filter(function (status) {
                 return Object.keys(Topic.STATUSES).indexOf(status) > -1;
             });
         }
-        
+
         if (include && !Array.isArray(include)) {
             include = [include];
         } else if (!include) {
@@ -161,7 +161,7 @@ module.exports = function (app) {
                         if (statuses && statuses.length) {
                             myTopicWhere += ' AND t.status IN (:statuses)';
                         }
-                
+
                         if (pinned) {
                             myTopicWhere += 'AND tp."topicId" = t.id AND tp."userId" = :userId';
                         }

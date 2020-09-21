@@ -89,11 +89,11 @@ module.exports = function (app) {
                                         },
                                         transaction: t
                                     })
-                                    .spread(function (user, created) {
+                                    .then(function ([user, created]) {
                                         var activityPromise = [];
                                         if (created) {
                                             logger.info('Created a new user with Google', user.id);
-                                            
+
                                             activityPromise.push(cosActivities.createActivity(user, null, {
                                                 type: 'User',
                                                 id: user.id,
@@ -157,10 +157,10 @@ module.exports = function (app) {
                             return [user, false];
                         }
                     })
-                    .spread(function (user) {
+                    .then(function ([user]) {
                         if (user) {
                             done(null, user.toJSON());
-                        } else {                            
+                        } else {
                             done(null, null);
                         }
                     })
@@ -219,11 +219,11 @@ module.exports = function (app) {
                                         },
                                         transaction: t
                                     })
-                                    .spread(function (user, created) {
+                                    .then(function ([user, created]) {
                                         var activityPromise = [];
                                         if (created) {
                                             logger.info('Created a new user with Google', user.id);
-                                            
+
                                             activityPromise.push(cosActivities.createActivity(user, null, {
                                                 type: 'User',
                                                 id: user.id,
@@ -289,7 +289,7 @@ module.exports = function (app) {
                             return [user, false];
                         }
                     })
-                    .spread(function (user) {
+                    .then(function ([user]) {
                         done(null, user.toJSON());
                     })
                     .catch(done);
@@ -346,7 +346,7 @@ module.exports = function (app) {
                             }, false);
                         }
                     });
-                
+
             }
         ));
     };
