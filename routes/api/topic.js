@@ -5294,6 +5294,7 @@ module.exports = function (app) {
                     ON \
                         u.id = cv."creatorId" \
                     WHERE cv."commentId" = :commentId \
+                    AND cv.value <> 0 \
                     ; \
                 ',
                 {

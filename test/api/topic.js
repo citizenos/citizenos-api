@@ -12110,6 +12110,7 @@ suite('Topics', function () {
 
             suite('List', function () {
                 const creatorAgent = request.agent(app);
+                const creatorAgent2 = request.agent(app);
 
                 let creator;
                 let topic;
@@ -12117,6 +12118,7 @@ suite('Topics', function () {
 
                 suiteSetup(async function () {
                     creator = await userLib.createUserAndLoginPromised(creatorAgent, null, null, null);
+                    await userLib.createUserAndLoginPromised(creatorAgent2, null, null, null);
                 });
 
                 setup(async function () {
@@ -12126,6 +12128,7 @@ suite('Topics', function () {
 
                 test('Success', async function () {
                     await topicCommentVotesCreatePromised (creatorAgent, topic.id, comment.id, 1);
+                    await topicCommentVotesCreatePromised (creatorAgent2, topic.id, comment.id, 0); //Add cleared vote that should not be returned;
                     const commentVotesList = (await topicCommentVotesListPromised(creatorAgent, creator.id, topic.id, comment.id)).body.data;
                     const commentVote = commentVotesList.rows[0];
                     const expected = {
