@@ -341,7 +341,7 @@ const topicList = function (agent, userId, include, visibility, statuses, creato
     _topicList(agent, userId, include, visibility, statuses, creatorId, hasVoted, 200, callback);
 };
 
-const _topicListPromised = async function (agent, userId, include, visibility, statuses, creatorId, hasVoted, expectedHttpCode) {
+const _topicListPromised = async function (agent, userId, include, visibility, statuses, creatorId, hasVoted, showModerated, expectedHttpCode) {
     const path = '/api/users/:userId/topics'.replace(':userId', userId);
 
     return agent
@@ -352,14 +352,15 @@ const _topicListPromised = async function (agent, userId, include, visibility, s
             visibility: visibility,
             statuses: statuses,
             creatorId: creatorId,
-            hasVoted: hasVoted
+            hasVoted: hasVoted,
+            showModerated: showModerated
         })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
 
-const topicListPromised = async function (agent, userId, include, visibility, statuses, creatorId, hasVoted) {
-    return _topicListPromised(agent, userId, include, visibility, statuses, creatorId, hasVoted, 200);
+const topicListPromised = async function (agent, userId, include, visibility, statuses, creatorId, hasVoted, showModerated) {
+    return _topicListPromised(agent, userId, include, visibility, statuses, creatorId, hasVoted, showModerated, 200);
 };
 
 var _topicsListUnauth = function (agent, statuses, categories, orderBy, offset, limit, sourcePartnerId, include, expectedHttpCode, callback) {
@@ -707,6 +708,25 @@ var topicReportCreate = function (agent, topicId, type, text, callback) {
     _topicReportCreate(agent, topicId, type, text, 200, callback);
 };
 
+const _topicReportCreatePromised = async function (agent, topicId, type, text, expectedHttpCode) {
+    const path = '/api/topics/:topicId/reports'
+        .replace(':topicId', topicId);
+
+    return agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .send({
+            type: type,
+            text: text
+        })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicReportCreatePromised = async function (agent, topicId, type, text) {
+    return _topicReportCreatePromised(agent, topicId, type, text, 200);
+};
+
 var _topicReportRead = function (agent, topicId, reportId, expectedHttpCode, callback) {
     var path = '/api/topics/:topicId/reports/:reportId'
         .replace(':topicId', topicId)
@@ -721,6 +741,21 @@ var _topicReportRead = function (agent, topicId, reportId, expectedHttpCode, cal
 
 var topicReportRead = function (agent, topicId, reportId, callback) {
     _topicReportRead(agent, topicId, reportId, 200, callback);
+};
+
+const _topicReportReadPromised = async function (agent, topicId, reportId, expectedHttpCode) {
+    const path = '/api/topics/:topicId/reports/:reportId'
+        .replace(':topicId', topicId)
+        .replace(':reportId', reportId);
+
+    return agent
+        .get(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicReportReadPromised = async function (agent, topicId, reportId) {
+    return _topicReportReadPromised(agent, topicId, reportId, 200);
 };
 
 var _topicReportModerate = function (agent, topicId, reportId, type, text, expectedHttpCode, callback) {
@@ -742,6 +777,26 @@ var _topicReportModerate = function (agent, topicId, reportId, type, text, expec
 
 var topicReportModerate = function (agent, topicId, reportId, type, text, callback) {
     _topicReportModerate(agent, topicId, reportId, type, text, 200, callback);
+};
+
+const _topicReportModeratePromised = async function (agent, topicId, reportId, type, text, expectedHttpCode) {
+    const path = '/api/topics/:topicId/reports/:reportId/moderate'
+        .replace(':topicId', topicId)
+        .replace(':reportId', reportId);
+
+    return agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .send({
+            type: type,
+            text: text
+        })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicReportModeratePromised = async function (agent, topicId, reportId, type, text) {
+    return _topicReportModeratePromised(agent, topicId, reportId, type, text, 200);
 };
 
 var _topicReportsReview = function (agent, userId, topicId, reportId, text, expectedHttpCode, callback) {
@@ -905,12 +960,12 @@ var topicCommentDelete = function (agent, userId, topicId, commentId, callback) 
     _topicCommentDelete(agent, userId, topicId, commentId, 200, callback);
 };
 
-var _topicCommentReportCreate = function (agent, topicId, commentId, type, text, expectedHttpCode, callback) {
-    var path = '/api/topics/:topicId/comments/:commentId/reports'
+const _topicCommentReportCreatePromised = async function (agent, topicId, commentId, type, text, expectedHttpCode) {
+    const path = '/api/topics/:topicId/comments/:commentId/reports'
         .replace(':topicId', topicId)
         .replace(':commentId', commentId);
 
-    agent
+    return agent
         .post(path)
         .set('Content-Type', 'application/json')
         .send({
@@ -918,39 +973,37 @@ var _topicCommentReportCreate = function (agent, topicId, commentId, type, text,
             text: text
         })
         .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
+        .expect('Content-Type', /json/);
 };
 
-var topicCommentReportCreate = function (agent, topicId, commentId, type, text, callback) {
-    _topicCommentReportCreate(agent, topicId, commentId, type, text, 200, callback);
+const topicCommentReportCreatePromised = async function (agent, topicId, commentId, type, text) {
+    return _topicCommentReportCreatePromised(agent, topicId, commentId, type, text, 200);
 };
 
-var _topicCommentReportRead = function (agent, topicId, commentId, reportId, token, expectedHttpCode, callback) {
-    var path = '/api/topics/:topicId/comments/:commentId/reports/:reportId'
+const _topicCommentReportReadPromised = async function (agent, topicId, commentId, reportId, token, expectedHttpCode) {
+    const path = '/api/topics/:topicId/comments/:commentId/reports/:reportId'
         .replace(':topicId', topicId)
         .replace(':commentId', commentId)
         .replace(':reportId', reportId);
 
-    agent
+    return agent
         .get(path)
         .set('Authorization', 'Bearer ' + token)
         .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
+        .expect('Content-Type', /json/);
 };
 
-var topicCommentReportRead = function (agent, topicId, commentId, reportId, token, callback) {
-    _topicCommentReportRead(agent, topicId, commentId, reportId, token, 200, callback);
+const topicCommentReportReadPromised = async function (agent, topicId, commentId, reportId, token) {
+    return _topicCommentReportReadPromised(agent, topicId, commentId, reportId, token, 200);
 };
 
-var _topicCommentReportModerate = function (agent, topicId, commentId, reportId, token, type, text, expectedHttpCode, callback) {
-    var path = '/api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
+const _topicCommentReportModeratePromised = async function (agent, topicId, commentId, reportId, token, type, text, expectedHttpCode) {
+    const path = '/api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
         .replace(':topicId', topicId)
         .replace(':commentId', commentId)
         .replace(':reportId', reportId);
 
-    agent
+    return agent
         .post(path)
         .set('Content-Type', 'application/json')
         .set('Authorization', 'Bearer ' + token)
@@ -959,12 +1012,11 @@ var _topicCommentReportModerate = function (agent, topicId, commentId, reportId,
             text: text
         })
         .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
+        .expect('Content-Type', /json/);
 };
 
-var topicCommentReportModerate = function (agent, topicId, commentId, reportId, token, type, text, callback) {
-    _topicCommentReportModerate(agent, topicId, commentId, reportId, token, type, text, 200, callback);
+const topicCommentReportModeratePromised = async function (agent, topicId, commentId, reportId, token, type, text) {
+    return _topicCommentReportModeratePromised(agent, topicId, commentId, reportId, token, type, text, 200);
 };
 
 var _topicAttachmentAdd = function (agent, userId, topicId, name, link, source, type, size, expectedHttpCode, callback) {
@@ -3231,720 +3283,503 @@ suite('Users', function () {
         });
 
         suite('List', function () {
-            var agentCreator;
-            var agentUser;
+            let agentCreator;
+            let agentUser;
 
-            var creator;
-            var user;
-            var topic;
-            var group;
+            let creator;
+            let user;
+            let topic;
+            let group;
 
-            setup(function (done) {
+            setup(async function () {
                 agentCreator = request.agent(app);
                 agentUser = request.agent(app);
+                creator = await userLib.createUserAndLoginPromised(agentCreator, null, null, null);
+                user = await userLib.createUserAndLoginPromised(agentUser, null, null, null);
+                group = (await groupLib.createPromised(agentCreator, creator.id, 'Group', null, null)).body.data;
+                const topicRes = (await topicCreatePromised(agentCreator, creator.id, Topic.VISIBILITY.private, null, null, null, null)).body.data;
+                const title = 'T title';
+                const description = 'T desc';
+                topic = (await Topic.update(
+                    {
+                        title: title,
+                        description: description
+                    },
+                    {
+                        where: {
+                            id: topicRes.id
+                        },
+                        limit: 1,
+                        returning: true
+                    }
+                ))[1][0];
+                // Add Group to Topic members and User to that Group
+                const topicMemberGroup = {
+                    groupId: group.id,
+                    level: TopicMemberGroup.LEVELS.edit
+                };
 
-                async
-                    .parallel(
-                        [
-                            function (cb) {
-                                userLib.createUserAndLogin(agentCreator, null, null, null, cb);
-                            },
-                            function (cb) {
-                                userLib.createUserAndLogin(agentUser, null, null, null, cb);
-                            }
-                        ],
-                        function (err, results) {
-                            if (err) return done(err);
+                const groupMemberUser = {
+                    userId: user.id,
+                    level: GroupMember.LEVELS.read
+                };
+                await topicMemberGroupsCreatePromised(agentCreator, creator.id, topic.id, topicMemberGroup);
+                return  groupLib.membersCreatePromised(agentCreator, creator.id, group.id, groupMemberUser);
+            });
 
-                            creator = results[0];
-                            user = results[1];
+            test('Success', async function () {
+                const type = Comment.TYPES.pro;
+                const type2 = Comment.TYPES.con;
+                const subject = 'TEST';
+                const text = 'THIS IS A TEST';
+                const comment = (await topicCommentCreatePromised(agentCreator, creator.id, topic.id, null, null, Comment.TYPES.pro, subject, text)).body.data;
+                assert.property(comment, 'id');
+                assert.equal(comment.type, type);
+                assert.equal(comment.subject, subject);
+                assert.equal(comment.text, text);
+                assert.equal(comment.creator.id, creator.id);
 
-                            async
-                                .parallel(
-                                    [
-                                        function (cb) {
-                                            groupLib.create(agentCreator, creator.id, 'Group', null, null, cb);
-                                        },
-                                        function (cb) {
-                                            topicCreate(agentCreator, creator.id, Topic.VISIBILITY.private, null, null, null, null, function (err, res) {
-                                                if (err) return cb(err);
+                const comment2 = (await topicCommentCreatePromised(agentCreator, creator.id, topic.id, null, null, Comment.TYPES.con, subject, text)).body.data;
 
-                                                // Add title & description in DB. NULL title topics are not to be returned.
-                                                var title = 'T title';
-                                                var description = 'T desc';
+                assert.property(comment2, 'id');
+                assert.equal(comment2.type, type2);
+                assert.equal(comment2.subject, subject);
+                assert.equal(comment2.text, text);
+                assert.equal(comment2.creator.id, creator.id);
 
-                                                Topic
-                                                    .update(
-                                                        {
-                                                            title: title,
-                                                            description: description
-                                                        },
-                                                        {
-                                                            where: {
-                                                                id: res.body.data.id
-                                                            },
-                                                            limit: 1,
-                                                            returning: true
-                                                        }
-                                                    )
-                                                    .then(
-                                                        function (updateResult) {
-                                                            cb(null, updateResult[1][0].toJSON());
-                                                        },
-                                                        cb
-                                                    );
-                                            });
-                                        }
-                                    ],
-                                    function (err, results) {
-                                        if (err) return done(err);
-                                        group = results[0].body.data;
-                                        topic = results[1];
+                const list = (await topicListPromised(agentCreator, creator.id, null, null, null, null, null, null)).body.data;
+                assert.equal(list.count, 1);
 
-                                        // Add Group to Topic members and User to that Group
-                                        var topicMemberGroup = {
-                                            groupId: group.id,
-                                            level: TopicMemberGroup.LEVELS.edit
-                                        };
+                const rows = list.rows;
+                assert.equal(rows.length, 1);
 
-                                        var groupMemberUser = {
-                                            userId: user.id,
-                                            level: GroupMember.LEVELS.read
-                                        };
+                const topicRead = rows[0];
+                assert.equal(topicRead.id, topic.id);
+                assert.equal(topicRead.title, topic.title);
+                assert.equal(topicRead.description, topic.description);
+                assert.equal(topicRead.status, topic.status);
+                assert.equal(topicRead.visibility, topic.visibility);
+                assert.property(topicRead, 'createdAt');
+                assert.notProperty(topicRead, 'events');
 
-                                        async
-                                            .parallel(
-                                                [
-                                                    function (cb) {
-                                                        topicMemberGroupsCreate(agentCreator, creator.id, topic.id, topicMemberGroup, cb);
-                                                    },
-                                                    function (cb) {
-                                                        groupLib.membersCreate(agentCreator, creator.id, group.id, groupMemberUser, cb);
-                                                    }
-                                                ],
-                                                done
-                                            );
-                                    }
-                                );
+                const creator1 = topicRead.creator;
+                assert.equal(creator1.id, topic.creatorId);
+
+                const members = topicRead.members;
+                assert.equal(members.users.count, 2);
+                assert.equal(members.groups.count, 1);
+
+                const permission = topicRead.permission;
+                assert.equal(permission.level, TopicMemberUser.LEVELS.admin);
+
+                const comments = topicRead.comments;
+                assert.equal(comments.count, 2);
+                assert.equal(comments.lastCreatedAt, comment2.createdAt);
+            });
+
+            test('Success - without deleted topics', async function () {
+                let deletedTopic = (await topicCreatePromised(agentUser, user.id, Topic.VISIBILITY.public, null, null, null, null)).body.data;
+
+                // Add title & description in DB. NULL title topics are not to be returned.
+                const title = 'Deleted Topic';
+                const description = 'Deleted topic desc';
+
+                await Topic.update(
+                    {
+                        title: title,
+                        description: description
+                    },
+                    {
+                        where: {
+                            id: deletedTopic.id
                         }
-                    );
-            });
+                    }
+                );
 
-            test('Success', function (done) {
-                var type = Comment.TYPES.pro;
-                var type2 = Comment.TYPES.con;
-                var subject = 'TEST';
-                var text = 'THIS IS A TEST';
-                var comment, comment2;
-                topicCommentCreate(agentCreator, creator.id, topic.id, null, null, Comment.TYPES.pro, subject, text, function (err, res) {
-                    if (err) return done(err);
+                deletedTopic = (await topicReadPromised(agentUser, user.id, deletedTopic.id, null)).body.data;
+                await topicDeletePromised(agentUser, user.id, deletedTopic.id);
+                const list = (await topicListPromised(agentUser, user.id, null, null, null, null, null, null)).body.data
+                assert.equal(list.count, 1);
 
-                    comment = res.body.data;
+                const topicList = list.rows;
 
-                    assert.property(comment, 'id');
-                    assert.equal(comment.type, type);
-                    assert.equal(comment.subject, subject);
-                    assert.equal(comment.text, text);
-                    assert.equal(comment.creator.id, creator.id);
+                assert.equal(list.count, topicList.length);
 
-                    topicCommentCreate(agentCreator, creator.id, topic.id, null, null, Comment.TYPES.con, subject, text, function (err, res) {
-                        if (err) return done(err);
-
-                        comment2 = res.body.data;
-
-                        assert.property(comment2, 'id');
-                        assert.equal(comment2.type, type2);
-                        assert.equal(comment2.subject, subject);
-                        assert.equal(comment2.text, text);
-                        assert.equal(comment2.creator.id, creator.id);
-
-                        topicList(agentCreator, creator.id, null, null, null, null, null, function (err, res) {
-                            if (err) return done(err);
-
-                            var list = res.body.data;
-                            assert.equal(list.count, 1);
-
-                            var rows = list.rows;
-                            assert.equal(rows.length, 1);
-
-                            var topicRead = rows[0];
-                            assert.equal(topicRead.id, topic.id);
-                            assert.equal(topicRead.title, topic.title);
-                            assert.equal(topicRead.description, topic.description);
-                            assert.equal(topicRead.status, topic.status);
-                            assert.equal(topicRead.visibility, topic.visibility);
-                            assert.property(topicRead, 'createdAt');
-                            assert.notProperty(topicRead, 'events');
-
-                            var creator = topicRead.creator;
-                            assert.equal(creator.id, topic.creator.id);
-
-                            var members = topicRead.members;
-                            assert.equal(members.users.count, 2);
-                            assert.equal(members.groups.count, 1);
-
-                            var permission = topicRead.permission;
-                            assert.equal(permission.level, TopicMemberUser.LEVELS.admin);
-
-                            var comments = topicRead.comments;
-                            assert.equal(comments.count, 2);
-                            assert.equal(comments.lastCreatedAt, comment2.createdAt);
-
-                            done();
-                        });
-                    });
+                topicList.forEach(function (resTopic) {
+                    assert.notEqual(deletedTopic.id, resTopic.id);
                 });
             });
 
-            test('Success - without deleted topics', function (done) {
-                var deletedTopic;
+            test('Success - without moderated topics', async function () {
+                const agentModerator = request.agent(app);
+                const agentReporter = request.agent(app);
+                const emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                const emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                const userModerator = await userLib.createUserAndLoginPromised(agentModerator, emailModerator, null, null);
+                await userLib.createUserAndLoginPromised(agentReporter, emailReporter, null, null);
 
-                topicCreate(agentUser, user.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
-                    if (err) return done(err);
+                await Moderator.create({
+                    userId: userModerator.id
+                });
+                const moderatedTopic = (await topicCreatePromised(agentUser, user.id, Topic.VISIBILITY.public, null, null, null, null)).body.data;
+                await Topic.update(
+                    {
+                        title: "Moderated TOPIC",
+                        description: "Moderated TOPIC"
+                    },
+                    {
+                        where: {
+                            id: moderatedTopic.id
+                        },
+                        limit: 1,
+                        returning: true
+                    }
+                );
 
-                    deletedTopic = res.body.data;
+                const report = (await topicReportCreatePromised(agentReporter, moderatedTopic.id, Report.TYPES.spam, 'Topic spam report test')).body.data;
+                const moderateType = Report.TYPES.spam;
+                const moderateText = 'Report create moderation text';
+
+                await topicReportModeratePromised(agentModerator, moderatedTopic.id, report.id, moderateType, moderateText);
+
+                const list = (await topicListPromised(agentUser, user.id, null, null, null, null, null, null)).body.data
+                assert.equal(list.count, 1);
+
+                const topicList = list.rows;
+
+                assert.equal(list.count, topicList.length);
+                topicList.forEach(function (resTopic) {
+                    assert.notEqual(moderatedTopic.id, resTopic.id);
+                });
+
+            });
+
+            test('Success - moderated topics', async function () {
+                const agentModerator = request.agent(app);
+                const agentReporter = request.agent(app);
+                const emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                const emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@topicreportest.com';
+                const userModerator = await userLib.createUserAndLoginPromised(agentModerator, emailModerator, null, null);
+                await userLib.createUserAndLoginPromised(agentReporter, emailReporter, null, null);
+
+                await Moderator.create({
+                    userId: userModerator.id
+                });
+                const moderatedTopic = (await topicCreatePromised(agentUser, user.id, Topic.VISIBILITY.public, null, null, null, null)).body.data;
+                await Topic.update(
+                    {
+                        title: "Moderated TOPIC",
+                        description: "Moderated TOPIC"
+                    },
+                    {
+                        where: {
+                            id: moderatedTopic.id
+                        },
+                        limit: 1,
+                        returning: true
+                    }
+                );
+                const report = (await topicReportCreatePromised(agentReporter, moderatedTopic.id, Report.TYPES.spam, 'Topic spam report test')).body.data;
+                const moderateType = Report.TYPES.spam;
+                const moderateText = 'Report create moderation text';
+
+                await topicReportModeratePromised(agentModerator, moderatedTopic.id, report.id, moderateType, moderateText);
+                const list = (await topicListPromised(agentUser, user.id, null, null, null, null, null, true)).body.data;
+                assert.equal(list.count, 1);
+
+                const topicList = list.rows;
+
+                assert.equal(list.count, topicList.length);
+                topicList.forEach(function (resTopic) {
+                    assert.equal(moderatedTopic.id, resTopic.id);
+                });
+
+            });
+
+            test('Success - visibility private', async function () {
+                const publicTopic = (await topicCreatePromised(agentUser, user.id, Topic.VISIBILITY.public, null, null, null, null)).body.data;
+
+                // Add title & description in DB. NULL title topics are not to be returned.
+                const title = 'Public Topic';
+                const description = 'Public topic desc';
+
+                await Topic.update(
+                    {
+                        title: title,
+                        description: description
+                    },
+                    {
+                        where: {
+                            id: publicTopic.id
+                        }
+                    }
+                );
+
+                const list = (await topicListPromised(agentUser, user.id, null, Topic.VISIBILITY.private, null, null, null, null)).body.data;
+                assert.equal(list.count, 1);
+                const rows = list.rows;
+
+                rows.forEach(function (topicItem) {
+                    assert.equal(topicItem.visibility, Topic.VISIBILITY.private);
+                });
+            });
+
+            test('Success - visibility public', async function () {
+                const publicTopic = (await topicCreatePromised(agentUser, user.id, Topic.VISIBILITY.public, null, null, null, null)).body.data;
 
                     // Add title & description in DB. NULL title topics are not to be returned.
-                    var title = 'Deleted Topic';
-                    var description = 'Deleted topic desc';
+                const title = 'Public Topic';
+                const description = 'Public topic desc';
 
-                    Topic
-                        .update(
-                            {
-                                title: title,
-                                description: description
-                            },
-                            {
-                                where: {
-                                    id: deletedTopic.id
-                                }
-                            }
-                        )
-                        .then(function () {
-                            topicRead(agentUser, user.id, deletedTopic.id, null, function (err, res) {
-                                if (err) return done(err);
+                await Topic.update(
+                    {
+                        title: title,
+                        description: description
+                    },
+                    {
+                        where: {
+                            id: publicTopic.id
+                        }
+                    }
+                );
+                const list = (await topicListPromised(agentUser, user.id, null, Topic.VISIBILITY.public, null, null, null, null)).body.data;
+                assert.equal(list.count, 1);
+                const rows = list.rows;
 
-                                deletedTopic = res.body.data;
-
-                                topicDelete(agentUser, user.id, deletedTopic.id, function (err) {
-                                    if (err) return done(err);
-
-                                    topicList(agentUser, user.id, null, null, null, null, null, function (err, res) {
-                                        if (err) return done(err);
-
-                                        var list = res.body.data;
-                                        assert.equal(list.count, 1);
-
-                                        var topicList = res.body.data.rows;
-
-                                        assert.equal(res.body.data.count, topicList.length);
-
-                                        topicList.forEach(function (resTopic) {
-                                            assert.notEqual(deletedTopic.id, resTopic.id);
-                                        });
-                                        done();
-
-                                    });
-
-                                });
-
-                            });
-                        })
-                        .catch(done);
+                rows.forEach(function (topicItem) {
+                    assert.equal(topicItem.visibility, Topic.VISIBILITY.public);
                 });
             });
 
-            test('Success - visibility private', function (done) {
-                topicCreate(agentUser, user.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
-                    if (err) return done(err);
+            test('Success - only users topics', async function () {
+                const publicTopic = (await topicCreatePromised(agentUser, user.id, Topic.VISIBILITY.public, null, null, null, null)).body.data;
 
-                    var publicTopic = res.body.data;
+                // Add title & description in DB. NULL title topics are not to be returned.
+                const title = 'Public Topic';
+                const description = 'Public topic desc';
 
-                    // Add title & description in DB. NULL title topics are not to be returned.
-                    var title = 'Public Topic';
-                    var description = 'Public topic desc';
+                await Topic.update(
+                    {
+                        title: title,
+                        description: description
+                    },
+                    {
+                        where: {
+                            id: publicTopic.id
+                        }
+                    }
+                );
 
-                    Topic
-                        .update(
-                            {
-                                title: title,
-                                description: description
-                            },
-                            {
-                                where: {
-                                    id: publicTopic.id
-                                }
-                            }
-                        )
-                        .then(function () {
-                            topicList(agentUser, user.id, null, Topic.VISIBILITY.private, null, null, null, function (err, res) {
-                                if (err) return done(err);
+                const list = (await topicListPromised(agentCreator, creator.id, null, null, null, creator.id, null, null)).body.data;
+                assert.equal(list.count, 1);
+                const rows = list.rows;
 
-                                var list = res.body.data;
-                                assert.equal(list.count, 1);
-                                var rows = list.rows;
-
-                                rows.forEach(function (topicItem) {
-                                    assert.equal(topicItem.visibility, Topic.VISIBILITY.private);
-                                });
-                                done();
-                            });
-                        });
+                rows.forEach(function (topicItem) {
+                    assert.equal(topicItem.creator.id, creator.id);
+                    assert.notEqual(topicItem.creator.id, user.id);
                 });
             });
 
-            test('Success - visibility public', function (done) {
-                topicCreate(agentUser, user.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
-                    if (err) return done(err);
+            test('Success - status inProgress', async function () {
+                const publicTopic = (await topicCreatePromised(agentUser, user.id, null, null, null, null, null)).body.data;
+                // Add title & description in DB. NULL title topics are not to be returned.
+                const title = 'Public Topic';
+                const description = 'Public topic desc';
 
-                    var publicTopic = res.body.data;
+                await Topic.update(
+                    {
+                        title: title,
+                        description: description
+                    },
+                    {
+                        where: {
+                            id: publicTopic.id
+                        }
+                    }
+                );
 
-                    // Add title & description in DB. NULL title topics are not to be returned.
-                    var title = 'Public Topic';
-                    var description = 'Public topic desc';
+                const list = (await topicListPromised(agentUser, user.id, null, null, 'inProgress', null, null, null)).body.data;
+                assert.equal(list.count, 2);
+                const rows = list.rows;
 
-                    Topic
-                        .update(
-                            {
-                                title: title,
-                                description: description
-                            },
-                            {
-                                where: {
-                                    id: publicTopic.id
-                                }
-                            }
-                        )
-                        .then(function () {
-                            topicList(agentUser, user.id, null, Topic.VISIBILITY.public, null, null, null, function (err, res) {
-                                if (err) return done(err);
-
-                                var list = res.body.data;
-                                assert.equal(list.count, 1);
-                                var rows = list.rows;
-
-                                rows.forEach(function (topicItem) {
-                                    assert.equal(topicItem.visibility, Topic.VISIBILITY.public);
-                                });
-                                done();
-                            });
-                        });
+                rows.forEach(function (topicItem) {
+                    assert.equal(topicItem.status, Topic.STATUSES.inProgress);
+                    assert.equal(topicItem.deletedAt, null);
                 });
             });
 
-            test('Success - only users topics', function (done) {
-                topicCreate(agentUser, user.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
-                    if (err) return done(err);
+            test('Success - status voting', async function () {
+                const publicTopic = (await topicCreatePromised(agentUser, user.id, null, null, null, null, null)).body.data;
+                // Add title & description in DB. NULL title topics are not to be returned.
+                const title = 'Public Topic';
+                const description = 'Public topic desc';
 
-                    var publicTopic = res.body.data;
+                await Topic.update(
+                    {
+                        title: title,
+                        description: description,
+                        status: Topic.STATUSES.voting
+                    },
+                    {
+                        where: {
+                            id: publicTopic.id
+                        }
+                    }
+                );
+                const list = (await topicListPromised(agentUser, user.id, null, null, 'voting', null, null, null)).body.data;
+                assert.equal(list.count, 1);
+                const rows = list.rows;
 
-                    // Add title & description in DB. NULL title topics are not to be returned.
-                    var title = 'Public Topic';
-                    var description = 'Public topic desc';
-
-                    Topic
-                        .update(
-                            {
-                                title: title,
-                                description: description
-                            },
-                            {
-                                where: {
-                                    id: publicTopic.id
-                                }
-                            }
-                        )
-                        .then(function () {
-                            topicList(agentCreator, creator.id, null, null, null, creator.id, null, function (err, res) {
-                                if (err) return done(err);
-
-                                var list = res.body.data;
-                                assert.equal(list.count, 1);
-                                var rows = list.rows;
-
-                                rows.forEach(function (topicItem) {
-                                    assert.equal(topicItem.creator.id, creator.id);
-                                    assert.notEqual(topicItem.creator.id, user.id);
-                                });
-                                done();
-                            });
-                        });
+                rows.forEach(function (topicItem) {
+                    assert.equal(topicItem.status, Topic.STATUSES.voting);
+                    assert.equal(topicItem.deletedAt, null);
                 });
             });
 
-            test('Success - status inProgress', function (done) {
-                topicCreate(agentUser, user.id, null, null, null, null, null, function (err, res) {
-                    if (err) return done(err);
+            test('Success - status followUp', async function () {
+                const publicTopic = (await topicCreatePromised(agentUser, user.id, null, null, null, null, null)).body.data;
 
-                    var publicTopic = res.body.data;
+                // Add title & description in DB. NULL title topics are not to be returned.
+                const title = 'Public Topic';
+                const description = 'Public topic desc';
 
-                    // Add title & description in DB. NULL title topics are not to be returned.
-                    var title = 'Public Topic';
-                    var description = 'Public topic desc';
+                await Topic.update(
+                    {
+                        title: title,
+                        description: description,
+                        status: Topic.STATUSES.followUp
+                    },
+                    {
+                        where: {
+                            id: publicTopic.id
+                        }
+                    }
+                );
 
-                    Topic
-                        .update(
-                            {
-                                title: title,
-                                description: description
-                            },
-                            {
-                                where: {
-                                    id: publicTopic.id
-                                }
-                            }
-                        )
-                        .then(function () {
-                            topicList(agentUser, user.id, null, null, 'inProgress', null, null, function (err, res) {
-                                if (err) return done(err);
+                const list = (await topicListPromised(agentUser, user.id, null, null, 'followUp', null, null, null)).body.data;
+                assert.equal(list.count, 1);
+                const rows = list.rows;
 
-                                var list = res.body.data;
-                                assert.equal(list.count, 2);
-                                var rows = list.rows;
-
-                                rows.forEach(function (topicItem) {
-                                    assert.equal(topicItem.status, Topic.STATUSES.inProgress);
-                                    assert.equal(topicItem.deletedAt, null);
-                                });
-                                done();
-                            });
-                        });
+                rows.forEach(function (topicItem) {
+                    assert.equal(topicItem.status, Topic.STATUSES.followUp);
+                    assert.equal(topicItem.deletedAt, null);
                 });
             });
 
-            test('Success - status voting', function (done) {
-                topicCreate(agentUser, user.id, null, null, null, null, null, function (err, res) {
-                    if (err) return done(err);
+            test('Success - status closed', async function () {
+                const publicTopic = (await topicCreatePromised(agentUser, user.id, null, null, null, null, null)).body.data;
 
-                    var publicTopic = res.body.data;
+                // Add title & description in DB. NULL title topics are not to be returned.
+                const title = 'Public Topic';
+                const description = 'Public topic desc';
 
-                    // Add title & description in DB. NULL title topics are not to be returned.
-                    var title = 'Public Topic';
-                    var description = 'Public topic desc';
+                await Topic.update(
+                    {
+                        title: title,
+                        description: description,
+                        status: Topic.STATUSES.closed
+                    },
+                    {
+                        where: {
+                            id: publicTopic.id
+                        }
+                    }
+                );
 
-                    Topic
-                        .update(
-                            {
-                                title: title,
-                                description: description,
-                                status: Topic.STATUSES.voting
-                            },
-                            {
-                                where: {
-                                    id: publicTopic.id
-                                }
-                            }
-                        )
-                        .then(function () {
-                            topicList(agentUser, user.id, null, null, 'voting', null, null, function (err, res) {
-                                if (err) return done(err);
+                const list = (await topicListPromised(agentUser, user.id, null, null, 'closed', null, null, null)).body.data;
 
-                                var list = res.body.data;
-                                assert.equal(list.count, 1);
-                                var rows = list.rows;
+                assert.equal(list.count, 1);
+                const rows = list.rows;
 
-                                rows.forEach(function (topicItem) {
-                                    assert.equal(topicItem.status, Topic.STATUSES.voting);
-                                    assert.equal(topicItem.deletedAt, null);
-                                });
-                                done();
-                            });
-                        });
+                rows.forEach(function (topicItem) {
+                    assert.equal(topicItem.status, Topic.STATUSES.closed);
+                    assert.equal(topicItem.deletedAt, null);
                 });
+
             });
-
-            test('Success - status followUp', function (done) {
-                topicCreate(agentUser, user.id, null, null, null, null, null, function (err, res) {
-                    if (err) return done(err);
-
-                    var publicTopic = res.body.data;
-
-                    // Add title & description in DB. NULL title topics are not to be returned.
-                    var title = 'Public Topic';
-                    var description = 'Public topic desc';
-
-                    Topic
-                        .update(
-                            {
-                                title: title,
-                                description: description,
-                                status: Topic.STATUSES.followUp
-                            },
-                            {
-                                where: {
-                                    id: publicTopic.id
-                                }
-                            }
-                        )
-                        .then(function () {
-                            topicList(agentUser, user.id, null, null, 'followUp', null, null, function (err, res) {
-                                if (err) return done(err);
-
-                                var list = res.body.data;
-                                assert.equal(list.count, 1);
-                                var rows = list.rows;
-
-                                rows.forEach(function (topicItem) {
-                                    assert.equal(topicItem.status, Topic.STATUSES.followUp);
-                                    assert.equal(topicItem.deletedAt, null);
-                                });
-                                done();
-                            });
-                        });
-                });
-            });
-
-            test('Success - status closed', function (done) {
-                topicCreate(agentUser, user.id, null, null, null, null, null, function (err, res) {
-                    if (err) return done(err);
-
-                    var publicTopic = res.body.data;
-
-                    // Add title & description in DB. NULL title topics are not to be returned.
-                    var title = 'Public Topic';
-                    var description = 'Public topic desc';
-
-                    Topic
-                        .update(
-                            {
-                                title: title,
-                                description: description,
-                                status: Topic.STATUSES.closed
-                            },
-                            {
-                                where: {
-                                    id: publicTopic.id
-                                }
-                            }
-                        )
-                        .then(function () {
-                            topicList(agentUser, user.id, null, null, 'closed', null, null, function (err, res) {
-                                if (err) return done(err);
-
-                                var list = res.body.data;
-                                assert.equal(list.count, 1);
-                                var rows = list.rows;
-
-                                rows.forEach(function (topicItem) {
-                                    assert.equal(topicItem.status, Topic.STATUSES.closed);
-                                    assert.equal(topicItem.deletedAt, null);
-                                });
-                                done();
-                            });
-                        });
-                });
-            });
-
-            test('Success - list only topics that User has voted on - voted=true', function (done) {
+            test('Success - list only topics that User has voted on - voted=true', async function () {
                 // Create 2 topics 1 in voting, but not voted, 1 voted. Topic list should return only 1 that User has voted on
-                async
-                    .parallel(
-                        [
-                            function (cb) {
-                                topicCreate(agentCreator, creator.id, Topic.VISIBILITY.private, null, null, '<html><head></head><body><h2>TEST User HAS NOT VOTED on this topic</h2></body></html>', null, cb);
-                            },
-                            function (cb) {
-                                topicCreate(agentCreator, creator.id, Topic.VISIBILITY.private, null, null, '<html><head></head><body><h2>TEST User HAS VOTED on this topic</h2></body></html>', null, cb);
-                            }
-                        ],
-                        function (err, res) {
-                            if (err) return done(err);
+                const topicWithVoteNotVoted = (await topicCreatePromised(agentCreator, creator.id, Topic.VISIBILITY.private, null, null, '<html><head></head><body><h2>TEST User HAS NOT VOTED on this topic</h2></body></html>', null)).body.data;
+                const topicWithVoteAndVoted = (await topicCreatePromised(agentCreator, creator.id, Topic.VISIBILITY.private, null, null, '<html><head></head><body><h2>TEST User HAS VOTED on this topic</h2></body></html>', null)).body.data;
+                const options = [
+                    {
+                        value: 'Option 1'
+                    },
+                    {
+                        value: 'Option 2'
+                    },
+                    {
+                        value: 'Option 3'
+                    }
+                ];
 
-                            const topicWithVoteNotVoted = res[0].body.data;
-                            const topicWithVoteAndVoted = res[1].body.data;
+                await topicVoteCreatePromised(agentCreator, user.id, topicWithVoteNotVoted.id, options, null, null, null, null, `Vote for test topic ${topicWithVoteNotVoted.title}`, null, null);
+                const vote = (await topicVoteCreatePromised(agentCreator, user.id, topicWithVoteAndVoted.id, options, null, null, null, null, `Vote for test topic ${topicWithVoteAndVoted.title}`, null, null)).body.data;
+                const topicMemberGroup = {
+                    groupId: group.id,
+                    level: TopicMemberGroup.LEVELS.edit
+                };
 
-                            async
-                                .parallel(
-                                    [
-                                        function (cb) {
-                                            const options = [
-                                                {
-                                                    value: 'Option 1'
-                                                },
-                                                {
-                                                    value: 'Option 2'
-                                                },
-                                                {
-                                                    value: 'Option 3'
-                                                }
-                                            ];
+                await topicMemberGroupsCreatePromised(agentCreator, creator.id, topicWithVoteNotVoted.id, topicMemberGroup);
+                await topicMemberGroupsCreatePromised(agentCreator, creator.id, topicWithVoteAndVoted.id, topicMemberGroup);
+                const voteList = [
+                    {
+                        optionId: vote.options.rows[0].id
+                    }
+                ];
 
-                                            topicVoteCreate(agentCreator, user.id, topicWithVoteNotVoted.id, options, null, null, null, null, `Vote for test topic ${topicWithVoteNotVoted.title}`, null, null, cb);
-                                        },
-                                        function (cb) {
-                                            const options = [
-                                                {
-                                                    value: 'Option 1'
-                                                },
-                                                {
-                                                    value: 'Option 2'
-                                                },
-                                                {
-                                                    value: 'Option 3'
-                                                }
-                                            ];
+                await topicVoteVotePromised(agentUser, user.id, topicWithVoteAndVoted.id, vote.id, voteList, null, null, null, null);
+                const resData = (await topicListPromised(agentUser, user.id, null, null, null, null, true, null)).body.data;
 
-                                            topicVoteCreate(agentCreator, user.id, topicWithVoteAndVoted.id, options, null, null, null, null, `Vote for test topic ${topicWithVoteAndVoted.title}`, null, null, cb);
-                                        },
-                                        function (cb) {
-                                            // Add topic to the group so the User has access through the Group
-                                            const topicMemberGroup = {
-                                                groupId: group.id,
-                                                level: TopicMemberGroup.LEVELS.edit
-                                            };
+                assert.equal(resData.count, 1);
+                assert.equal(resData.rows.length, 1);
 
-                                            topicMemberGroupsCreate(agentCreator, creator.id, topicWithVoteNotVoted.id, topicMemberGroup, cb);
-                                        },
-                                        function (cb) {
-                                            // Add topic to the group so the User has access through the Group
-                                            const topicMemberGroup = {
-                                                groupId: group.id,
-                                                level: TopicMemberGroup.LEVELS.edit
-                                            };
+                const resTopic = resData.rows[0];
 
-                                            topicMemberGroupsCreate(agentCreator, creator.id, topicWithVoteAndVoted.id, topicMemberGroup, cb);
-                                        }
-                                    ],
-                                    function (err, res) {
-                                        if (err) return done(err);
-
-                                        const vote = res[1].body.data; // Vote
-
-                                        const voteList = [
-                                            {
-                                                optionId: vote.options.rows[0].id
-                                            }
-                                        ];
-
-                                        topicVoteVote(agentUser, user.id, topicWithVoteAndVoted.id, vote.id, voteList, null, null, null, null, function (err) {
-                                            if (err) return done(err);
-
-                                            topicList(agentUser, user.id, null, null, null, null, true, function (err, res) {
-                                                if (err) return done(err);
-
-                                                const resData = res.body.data;
-
-                                                assert.equal(resData.count, 1);
-                                                assert.equal(resData.rows.length, 1);
-
-                                                const resTopic = resData.rows[0];
-
-                                                assert.equal(resTopic.id, topicWithVoteAndVoted.id);
-
-                                                done();
-                                            });
-                                        });
-                                    }
-                                )
-
-                        }
-                    );
+                assert.equal(resTopic.id, topicWithVoteAndVoted.id);
             });
 
-            test('Success - list only topics that User has NOT voted on - voted=false ', function (done) {
+            test('Success - list only topics that User has NOT voted on - voted=false ', async function () {
                 // Create 2 topics 1 in voting, but not voted, 1 voted. Topic list should return only 1 that User has NOT voted on
-                async
-                    .parallel(
-                        [
-                            function (cb) {
-                                topicCreate(agentCreator, creator.id, Topic.VISIBILITY.private, null, null, '<html><head></head><body><h2>TEST User HAS NOT VOTED on this topic</h2></body></html>', null, cb);
-                            },
-                            function (cb) {
-                                topicCreate(agentCreator, creator.id, Topic.VISIBILITY.private, null, null, '<html><head></head><body><h2>TEST User HAS VOTED on this topic</h2></body></html>', null, cb);
-                            }
-                        ],
-                        function (err, res) {
-                            if (err) return done(err);
+                const topicWithVoteNotVoted = (await topicCreatePromised(agentCreator, creator.id, Topic.VISIBILITY.private, null, null, '<html><head></head><body><h2>TEST User HAS NOT VOTED on this topic</h2></body></html>', null)).body.data;
+                const topicWithVoteAndVoted = (await topicCreatePromised(agentCreator, creator.id, Topic.VISIBILITY.private, null, null, '<html><head></head><body><h2>TEST User HAS VOTED on this topic</h2></body></html>', null)).body.data;
+                const options = [
+                    {
+                        value: 'Option 1'
+                    },
+                    {
+                        value: 'Option 2'
+                    },
+                    {
+                        value: 'Option 3'
+                    }
+                ];
 
-                            const topicWithVoteNotVoted = res[0].body.data;
-                            const topicWithVoteAndVoted = res[1].body.data;
+                await topicVoteCreatePromised(agentCreator, user.id, topicWithVoteNotVoted.id, options, null, null, null, null, `Vote for test topic ${topicWithVoteNotVoted.title}`, null, null);
+                const vote = (await topicVoteCreatePromised(agentCreator, user.id, topicWithVoteAndVoted.id, options, null, null, null, null, `Vote for test topic ${topicWithVoteAndVoted.title}`, null, null)).body.data;
 
-                            async
-                                .parallel(
-                                    [
-                                        function (cb) {
-                                            const options = [
-                                                {
-                                                    value: 'Option 1'
-                                                },
-                                                {
-                                                    value: 'Option 2'
-                                                },
-                                                {
-                                                    value: 'Option 3'
-                                                }
-                                            ];
+                const topicMemberGroup = {
+                    groupId: group.id,
+                    level: TopicMemberGroup.LEVELS.edit
+                };
 
-                                            topicVoteCreate(agentCreator, user.id, topicWithVoteNotVoted.id, options, null, null, null, null, `Vote for test topic ${topicWithVoteNotVoted.title}`, null, null, cb);
-                                        },
-                                        function (cb) {
-                                            const options = [
-                                                {
-                                                    value: 'Option 1'
-                                                },
-                                                {
-                                                    value: 'Option 2'
-                                                },
-                                                {
-                                                    value: 'Option 3'
-                                                }
-                                            ];
+                await topicMemberGroupsCreatePromised(agentCreator, creator.id, topicWithVoteNotVoted.id, topicMemberGroup);
+                await topicMemberGroupsCreatePromised(agentCreator, creator.id, topicWithVoteAndVoted.id, topicMemberGroup);
+                const voteList = [
+                    {
+                        optionId: vote.options.rows[0].id
+                    }
+                ];
 
-                                            topicVoteCreate(agentCreator, user.id, topicWithVoteAndVoted.id, options, null, null, null, null, `Vote for test topic ${topicWithVoteAndVoted.title}`, null, null, cb);
-                                        },
-                                        function (cb) {
-                                            // Add topic to the group so the User has access through the Group
-                                            const topicMemberGroup = {
-                                                groupId: group.id,
-                                                level: TopicMemberGroup.LEVELS.edit
-                                            };
+                await topicVoteVotePromised(agentUser, user.id, topicWithVoteAndVoted.id, vote.id, voteList, null, null, null, null);
+                const resData = (await topicListPromised(agentUser, user.id, null, null, null, null, false, null)).body.data
 
-                                            topicMemberGroupsCreate(agentCreator, creator.id, topicWithVoteNotVoted.id, topicMemberGroup, cb);
-                                        },
-                                        function (cb) {
-                                            // Add topic to the group so the User has access through the Group
-                                            const topicMemberGroup = {
-                                                groupId: group.id,
-                                                level: TopicMemberGroup.LEVELS.edit
-                                            };
+                assert.equal(resData.count, 1);
+                assert.equal(resData.rows.length, 1);
 
-                                            topicMemberGroupsCreate(agentCreator, creator.id, topicWithVoteAndVoted.id, topicMemberGroup, cb);
-                                        }
-                                    ],
-                                    function (err, res) {
-                                        if (err) return done(err);
+                const resTopic = resData.rows[0];
 
-                                        const vote = res[1].body.data; // Vote
-
-                                        const voteList = [
-                                            {
-                                                optionId: vote.options.rows[0].id
-                                            }
-                                        ];
-
-                                        topicVoteVote(agentUser, user.id, topicWithVoteAndVoted.id, vote.id, voteList, null, null, null, null, function (err) {
-                                            if (err) return done(err);
-
-                                            topicList(agentUser, user.id, null, null, null, null, false, function (err, res) {
-                                                if (err) return done(err);
-
-                                                const resData = res.body.data;
-
-                                                assert.equal(resData.count, 1);
-                                                assert.equal(resData.rows.length, 1);
-
-                                                const resTopic = resData.rows[0];
-
-                                                assert.equal(resTopic.id, topicWithVoteNotVoted.id);
-
-                                                done();
-                                            });
-                                        });
-                                    }
-                                )
-
-                        }
-                    );
+                assert.equal(resTopic.id, topicWithVoteNotVoted.id);
             });
 
             suite('Include', function () {
@@ -7861,7 +7696,7 @@ suite('Users', function () {
                             assert.deepEqual(topicReadAfterVoting.vote, voteReadAfterVote2);
 
                             // Make sure the results match with the result read with Topic list (/api/users/:userId/topics)
-                            const topicList = (await topicListPromised(agent, user.id, ['vote'], null, null, null, null)).body.data;
+                            const topicList = (await topicListPromised(agent, user.id, ['vote'], null, null, null, null, null)).body.data;
                             const topicVotedOn = _.find(topicList.rows, {id: topic.id});
 
                             // Topic list included votes dont have downloads
@@ -7995,7 +7830,7 @@ suite('Users', function () {
                                 }
                             ];
                             await topicMemberUsersCreatePromised(agent, user.id, topic.id, members);
-                            const topicList = (await topicListPromised(agentUser2, user2.id, ['vote'], null, null, null, true)).body.data;
+                            const topicList = (await topicListPromised(agentUser2, user2.id, ['vote'], null, null, null, true, null)).body.data;
                             const topicVotedOn = _.find(topicList.rows, {id: topic.id});
 
                             assert.deepEqual(topicVotedOn.vote, voteReadAfterVote2);
@@ -9996,106 +9831,57 @@ suite('Users', function () {
 
                 let topic;
 
-                suiteSetup(function (done) {
-                    async
-                        .parallel(
-                            [
-                                function (cb) {
-                                    userLib.createUserAndLogin(agentCreator, emailCreator, null, null, cb);
-                                },
-                                function (cb) {
-                                    userLib.createUserAndLogin(agentModerator, emailModerator, null, null, cb);
-                                },
-                                function (cb) {
-                                    userLib.createUserAndLogin(agentReporter, emailReporter, null, null, cb);
-                                }
-                            ]
-                            , function (err, results) {
-                                if (err) return done(err);
+                suiteSetup(async function () {
+                    userCreator = await userLib.createUserAndLoginPromised(agentCreator, emailCreator, null, null);
+                    userModerator = await userLib.createUserAndLoginPromised(agentModerator, emailModerator, null, null);
+                    userReporter = await userLib.createUserAndLoginPromised(agentReporter, emailReporter, null, null);
+                    topic = (await topicCreatePromised(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR SPAM REPORTING</h2></body></html>', null)).body.data;
 
-                                [userCreator, userModerator, userReporter] = results;
-
-                                topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR SPAM REPORTING</h2></body></html>', null, function (err, res) {
-                                    if (err) return done(err);
-
-                                    topic = res.body.data;
-
-                                    // Create a moderator in DB so that the Moderation email flow is executed
-                                    Moderator
-                                        .create({
-                                            userId: userModerator.id
-                                        })
-                                        .then(function () {
-                                            done();
-                                        })
-                                        .catch(done);
-                                });
-                            }
-                        );
+                    return Moderator.create({
+                        userId: userModerator.id
+                    });
                 });
 
-                test('Success', function (done) {
+                test('Success', async function () {
                     const reportType = Report.TYPES.spam;
                     const reportText = 'Topic spam report test';
 
-                    topicReportCreate(agentReporter, topic.id, reportType, reportText, function (err, res) {
-                        if (err) return done(err);
-
-                        const reportResult = res.body.data;
-
-                        assert.isTrue(validator.isUUID(reportResult.id, 4));
-                        assert.equal(reportResult.type, reportType);
-                        assert.equal(reportResult.text, reportText);
-                        assert.property(reportResult, 'createdAt');
-                        assert.equal(reportResult.creator.id, userReporter.id);
-
-                        done();
-                    });
+                    const reportResult = (await topicReportCreatePromised(agentReporter, topic.id, reportType, reportText)).body.data;
+                    assert.isTrue(validator.isUUID(reportResult.id, 4));
+                    assert.equal(reportResult.type, reportType);
+                    assert.equal(reportResult.text, reportText);
+                    assert.property(reportResult, 'createdAt');
+                    assert.equal(reportResult.creator.id, userReporter.id);
                 });
 
-                test('Fail - 40001 - Topic has already been reported. No duplicate reports.', function (done) {
+                test('Fail - 40001 - Topic has already been reported. No duplicate reports.', async function () {
                     const reportType = Report.TYPES.spam;
                     const reportText = 'Topic spam report test';
 
-                    _topicReportCreate(agentReporter, topic.id, reportType, reportText, 400, function (err, res) {
-                        if (err) return done(err);
+                    const resBodyStatus = (await _topicReportCreatePromised(agentReporter, topic.id, reportType, reportText, 400)).body.status;
+                    const expectedStatus = {
+                        code: 40001,
+                        message: 'Topic has already been reported. Only one active report is allowed at the time to avoid overloading the moderators'
+                    };
 
-                        const expectedStatus = {
-                            code: 40001,
-                            message: 'Topic has already been reported. Only one active report is allowed at the time to avoid overloading the moderators'
-                        };
-
-                        assert.deepEqual(res.body.status, expectedStatus);
-
-                        done();
-                    });
+                    assert.deepEqual(resBodyStatus, expectedStatus);
                 });
 
-                test('Fail - 40400 - Can\'t report a private Topic', function (done) {
+                test('Fail - 40400 - Can\'t report a private Topic', async function () {
                     const reportType = Report.TYPES.hate;
                     const reportText = 'Topic hate speech report for private Topic test';
 
-                    topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.private, null, null, null, null, function (err, res) {
-                        if (err) return done(err);
-
-                        topic = res.body.data;
-
-                        _topicReportCreate(agentReporter, topic.id, reportType, reportText, 404, done);
-                    });
+                    const topic = (await topicCreatePromised(agentCreator, userCreator.id, Topic.VISIBILITY.private, null, null, null, null)).body.data;
+                    return _topicReportCreatePromised(agentReporter, topic.id, reportType, reportText, 404);
                 });
 
 
-                test('Fail - 40100 - Authentication is required', function (done) {
+                test('Fail - 40100 - Authentication is required', async function () {
                     const reportType = Report.TYPES.hate;
                     const reportText = 'Topic hate speech report for private Topic test';
 
-                    topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.private, null, null, null, null, function (err, res) {
-                        if (err) return done(err);
-
-                        topic = res.body.data;
-
-                        _topicReportCreate(request.agent(app), topic.id, reportType, reportText, 401, done);
-                    });
+                    const topic = (await topicCreatePromised(agentCreator, userCreator.id, Topic.VISIBILITY.private, null, null, null, null)).body.data;
+                    return _topicReportCreatePromised(request.agent(app), topic.id, reportType, reportText, 401);
                 });
 
             });
@@ -10122,81 +9908,42 @@ suite('Users', function () {
                 let topic;
                 let report;
 
-                suiteSetup(function (done) {
-                    async
-                        .parallel(
-                            [
-                                function (cb) {
-                                    userLib.createUserAndLogin(agentCreator, emailCreator, null, null, cb);
-                                },
-                                function (cb) {
-                                    userLib.createUserAndLogin(agentModerator, emailModerator, null, null, cb);
-                                },
-                                function (cb) {
-                                    userLib.createUserAndLogin(agentReporter, emailReporter, null, null, cb);
-                                }
-                            ]
-                            , function (err, results) {
-                                if (err) return done(err);
+                suiteSetup(async function () {
+                    userCreator = await userLib.createUserAndLoginPromised(agentCreator, emailCreator, null, null);
+                    userModerator = await userLib.createUserAndLoginPromised(agentModerator, emailModerator, null, null);
+                    await userLib.createUserAndLoginPromised(agentReporter, emailReporter, null, null);
+                    topic = (await topicCreatePromised(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null)).body.data;
+                    report = (await topicReportCreatePromised(agentReporter, topic.id, reportType, reportText)).body.data;
+                    // Create a moderator in DB so that the Moderation email flow is executed
 
-                                [userCreator, userModerator] = results;
-
-                                topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null, function (err, res) {
-                                    if (err) return done(err);
-
-                                    topic = res.body.data;
-
-                                    topicReportCreate(agentReporter, topic.id, reportType, reportText, function (err, res) {
-                                        if (err) return done(err);
-
-                                        report = res.body.data;
-
-                                        // Create a moderator in DB so that the Moderation email flow is executed
-                                        Moderator
-                                            .create({
-                                                userId: userModerator.id
-                                            })
-                                            .then(function () {
-                                                done();
-                                            })
-                                            .catch(done);
-                                    });
-                                });
-                            }
-                        );
-                });
-
-                test('Success', function (done) {
-
-                    topicReportRead(agentModerator, topic.id, report.id, function (err, res) {
-                        if (err) return done(err);
-
-                        const reportResult = res.body.data;
-
-                        assert.equal(reportResult.id, report.id);
-                        assert.equal(reportResult.type, report.type);
-                        assert.equal(reportResult.text, report.text);
-                        assert.equal(reportResult.createdAt, report.createdAt);
-
-                        // FIXME: MAY NOT want to output moderator info
-                        assert.isNotNull(reportResult.moderator);
-                        assert.property(reportResult.moderator, 'id');
-
-                        assert.property(reportResult, 'moderatedReasonText');
-                        assert.property(reportResult, 'moderatedReasonType');
-
-                        const reportResultTopic = reportResult.topic;
-
-                        assert.equal(reportResultTopic.id, topic.id);
-                        assert.equal(reportResultTopic.title, topicTitle);
-                        assert.equal(reportResultTopic.description, topicDescription); // DOH, whatever you do Etherpad adds extra <br>
-
-                        done();
+                    return Moderator.create({
+                        userId: userModerator.id
                     });
                 });
 
-                test('Fail - 40100 - Only moderators can read a report', function (done) {
-                    _topicReportRead(agentCreator, topic.id, report.id, 401, done);
+                test('Success', async function () {
+                    const reportResult = (await topicReportReadPromised(agentModerator, topic.id, report.id)).body.data;
+                    assert.equal(reportResult.id, report.id);
+                    assert.equal(reportResult.type, report.type);
+                    assert.equal(reportResult.text, report.text);
+                    assert.equal(reportResult.createdAt, report.createdAt);
+
+                    // FIXME: MAY NOT want to output moderator info
+                    assert.isNotNull(reportResult.moderator);
+                    assert.property(reportResult.moderator, 'id');
+
+                    assert.property(reportResult, 'moderatedReasonText');
+                    assert.property(reportResult, 'moderatedReasonType');
+
+                    const reportResultTopic = reportResult.topic;
+
+                    assert.equal(reportResultTopic.id, topic.id);
+                    assert.equal(reportResultTopic.title, topicTitle);
+                    assert.equal(reportResultTopic.description, topicDescription); // DOH, whatever you do Etherpad adds extra <br>
+                });
+
+                test('Fail - 40100 - Only moderators can read a report', async function () {
+                    _topicReportReadPromised(agentCreator, topic.id, report.id, 401);
                 });
             });
 
@@ -10222,141 +9969,80 @@ suite('Users', function () {
                 let topic;
                 let report;
 
-                suiteSetup(function (done) {
-                    async
-                        .parallel(
-                            [
-                                function (cb) {
-                                    userLib.createUserAndLogin(agentCreator, emailCreator, null, null, cb);
-                                },
-                                function (cb) {
-                                    userLib.createUserAndLogin(agentModerator, emailModerator, null, null, cb);
-                                },
-                                function (cb) {
-                                    userLib.createUserAndLogin(agentReporter, emailReporter, null, null, cb);
-                                }
-                            ]
-                            , function (err, results) {
-                                if (err) return done(err);
+                suiteSetup(async function () {
+                    userCreator = await userLib.createUserAndLoginPromised(agentCreator, emailCreator, null, null);
+                    userModerator = await userLib.createUserAndLoginPromised(agentModerator, emailModerator, null, null);
+                    await userLib.createUserAndLoginPromised(agentReporter, emailReporter, null, null);
 
-                                [userCreator, userModerator] = results;
-
-                                Moderator
-                                    .create({
-                                        userId: userModerator.id
-                                    })
-                                    .then(function () {
-                                        done();
-                                    })
-                                    .catch(done);
-                            }
-                        );
-                });
-
-                setup(function (done) {
-                    topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null, function (err, res) {
-                        if (err) return done(err);
-
-                        topic = res.body.data;
-
-                        topicReportCreate(agentReporter, topic.id, reportType, reportText, function (err, res) {
-                            if (err) return done(err);
-
-                            report = res.body.data;
-
-                            done();
-                        });
+                    return Moderator.create({
+                        userId: userModerator.id
                     });
                 });
 
-                test('Success', function (done) {
-                    var type = Report.TYPES.spam;
-                    var text = 'Test: contains spam.';
-
-                    topicReportModerate(agentModerator, topic.id, report.id, type, text, function (err, res) {
-                        if (err) return done(err);
-
-                        var moderateResult = res.body.data;
-
-                        topicReportRead(agentModerator, topic.id, report.id, function (err, res) {
-                            if (err) return done(err);
-
-                            const reportReadResult = res.body.data;
-                            delete reportReadResult.topic; // No Topic info returned in moderation result
-
-                            assert.deepEqual(moderateResult, reportReadResult);
-
-                            return done();
-                        });
-                    });
+                setup(async function () {
+                    topic = (await topicCreatePromised(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, topicDescription, null)).body.data;
+                    report = (await topicReportCreatePromised(agentReporter, topic.id, reportType, reportText)).body.data;
                 });
 
-                test('Fail - 40012 - Report has become invalid cause the report has been already moderated', function (done) {
-                    var type = Report.TYPES.spam;
-                    var text = 'Test: contains spam.';
+                test('Success', async function () {
+                    const type = Report.TYPES.spam;
+                    const text = 'Test: contains spam.';
 
-                    topicReportModerate(agentModerator, topic.id, report.id, type, text, function (err) {
-                        if (err) return done(err);
+                    const moderateResult = (await topicReportModeratePromised(agentModerator, topic.id, report.id, type, text)).body.data;
+                    const reportReadResult = (await topicReportReadPromised(agentModerator, topic.id, report.id)).body.data
+                    delete reportReadResult.topic; // No Topic info returned in moderation result
 
-                        _topicReportModerate(agentModerator, topic.id, report.id, type, text, 400, function (err, res) {
-                            if (err) return done(err);
-
-                            var expectedBody = {
-                                status: {
-                                    code: 40012,
-                                    message: 'Report has become invalid cause the report has been already moderated'
-                                }
-                            };
-                            assert.deepEqual(res.body, expectedBody);
-
-                            done();
-                        });
-                    });
+                    assert.deepEqual(moderateResult, reportReadResult);
                 });
 
-                test('Fail - 40000 - type cannot be null', function (done) {
-                    var type = null;
-                    var text = 'Test: contains spam.';
+                test('Fail - 40012 - Report has become invalid cause the report has been already moderated', async function () {
+                    const type = Report.TYPES.spam;
+                    const text = 'Test: contains spam.';
 
-                    _topicReportModerate(agentModerator, topic.id, report.id, type, text, 400, function (err, res) {
-                        if (err) return done(err);
-
-                        var expectedBody = {
-                            status: {code: 40000},
-                            errors: {
-                                moderatedReasonType: 'TopicReport.moderatedReasonType cannot be null when moderator is set'
-                            }
-                        };
-                        assert.deepEqual(res.body, expectedBody);
-
-                        done();
-                    });
+                    await topicReportModeratePromised(agentModerator, topic.id, report.id, type, text);
+                    const resBody = (await _topicReportModeratePromised(agentModerator, topic.id, report.id, type, text, 400)).body;
+                    const expectedBody = {
+                        status: {
+                            code: 40012,
+                            message: 'Report has become invalid cause the report has been already moderated'
+                        }
+                    };
+                    assert.deepEqual(resBody, expectedBody);
                 });
 
-                test('Fail - 40000 - text cannot be null', function (done) {
-                    var type = Report.TYPES.spam;
-                    var text = null;
+                test('Fail - 40000 - type cannot be null', async function () {
+                    const type = null;
+                    const text = 'Test: contains spam.';
 
-                    _topicReportModerate(agentModerator, topic.id, report.id, type, text, 400, function (err, res) {
-                        if (err) return done(err);
-
-                        var expectedBody = {
-                            status: {code: 40000},
-                            errors: {
-                                moderatedReasonText: 'Text can be 1 to 2048 characters long.'
-                            }
-                        };
-                        assert.deepEqual(res.body, expectedBody);
-
-                        done();
-                    });
+                    const resBody = (await _topicReportModeratePromised(agentModerator, topic.id, report.id, type, text, 400)).body;
+                    const expectedBody = {
+                        status: {code: 40000},
+                        errors: {
+                            moderatedReasonType: 'TopicReport.moderatedReasonType cannot be null when moderator is set'
+                        }
+                    };
+                    assert.deepEqual(resBody, expectedBody);
                 });
 
-                test('Fail - 40100 - Moderation only allowed for Moderators', function (done) {
-                    var type = Report.TYPES.spam;
-                    var text = null;
+                test('Fail - 40000 - text cannot be null', async function () {
+                    const type = Report.TYPES.spam;
+                    const text = null;
 
-                    _topicReportModerate(agentCreator, topic.id, report.id, type, text, 401, done);
+                    const resBody = (await _topicReportModeratePromised(agentModerator, topic.id, report.id, type, text, 400)).body;
+                    const expectedBody = {
+                        status: {code: 40000},
+                        errors: {
+                            moderatedReasonText: 'Text can be 1 to 2048 characters long.'
+                        }
+                    };
+                    assert.deepEqual(resBody, expectedBody);
+                });
+
+                test('Fail - 40100 - Moderation only allowed for Moderators', async function () {
+                    const type = Report.TYPES.spam;
+                    const text = null;
+
+                    return _topicReportModeratePromised(agentCreator, topic.id, report.id, type, text, 401);
                 });
             });
 
@@ -12155,217 +11841,109 @@ suite('Topics', function () {
         suite('Reports', function () {
 
             suite('Create', function () {
-                var agentCreator = request.agent(app);
-                var agentReporter = request.agent(app);
-                var agentModerator = request.agent(app);
+                const agentCreator = request.agent(app);
+                const agentReporter = request.agent(app);
+                const agentModerator = request.agent(app);
 
-                var emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportest.com';
-                var emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportest.com';
-                var emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportest.com';
+                const emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportest.com';
+                const emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportest.com';
+                const emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportest.com';
 
-                var userCreator;
-                var userModerator;
-                var userReporter;
+                let userCreator;
+                let userModerator;
+                let userReporter;
 
-                var partner;
-                var topic;
-                var comment;
+                let partner;
+                let topic;
+                let comment;
 
-                suiteSetup(function (done) {
-                    async
-                        .parallel(
-                            [
-                                function (cb) {
-                                    userLib.createUserAndLogin(agentCreator, emailCreator, null, null, cb);
-                                },
-                                function (cb) {
-                                    userLib.createUser(agentModerator, emailModerator, null, null, cb);
-                                },
-                                function (cb) {
-                                    userLib.createUserAndLogin(agentReporter, emailReporter, null, null, cb);
-                                }
-                            ]
-                            , function (err, results) {
-                                if (err) return done(err);
+                suiteSetup(async function () {
+                    userCreator = await userLib.createUserAndLoginPromised(agentCreator, emailCreator, null, null);
+                    userModerator = await userLib.createUserPromised(agentModerator, emailModerator, null, null);
+                    userReporter = await userLib.createUserAndLoginPromised(agentReporter, emailReporter, null, null);
+                    topic = (await topicCreatePromised(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, null, null)).body.data;
+                    comment = (await topicCommentCreatePromised(agentCreator, userCreator.id, topic.id, null, null, Comment.TYPES.pro, 'test abuse report', 'test abuse report')).body.data;
+                    partner = await Partner.create({
+                        website: 'notimportant',
+                        redirectUriRegexp: 'notimportant'
+                    });
 
-                                userCreator = results[0];
-                                userModerator = results[1];
-                                userReporter = results[2];
-
-                                topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
-                                    if (err) return done(err);
-
-                                    topic = res.body.data;
-
-                                    topicCommentCreate(agentCreator, userCreator.id, topic.id, null, null, Comment.TYPES.pro, 'test abuse report', 'test abuse report', function (err, res) {
-                                        if (err) return done(err);
-
-                                        comment = res.body.data;
-
-                                        Partner
-                                            .create({
-                                                website: 'notimportant',
-                                                redirectUriRegexp: 'notimportant'
-                                            })
-                                            .then(function (res) {
-                                                partner = res;
-
-                                                return Topic
-                                                    .update(
-                                                        {
-                                                            sourcePartnerId: partner.id
-                                                        },
-                                                        {
-                                                            where: {
-                                                                id: topic.id
-                                                            }
-                                                        }
-                                                    );
-                                            })
-                                            .then(function () {
-                                                return Moderator
-                                                    .create({
-                                                        userId: userModerator.id,
-                                                        partnerId: partner.id
-                                                    });
-                                            })
-                                            .then(function () {
-                                                done();
-                                            })
-                                            .catch(done);
-                                    });
-                                });
+                    await Topic.update(
+                        {
+                            sourcePartnerId: partner.id
+                        },
+                        {
+                            where: {
+                                id: topic.id
                             }
-                        );
+                        }
+                    );
+
+                    return  Moderator.create({
+                        userId: userModerator.id,
+                        partnerId: partner.id
+                    });
                 });
 
-                test('Success', function (done) {
-                    var reportText = 'Hate speech report test';
+                test('Success', async function () {
+                    const reportText = 'Hate speech report test';
 
-                    topicCommentReportCreate(agentReporter, topic.id, comment.id, Report.TYPES.hate, reportText, function (err, res) {
-                        if (err) return done(err);
-
-                        var reportResult = res.body.data;
-
-                        assert.isTrue(validator.isUUID(reportResult.id, 4));
-                        assert.equal(reportResult.type, Report.TYPES.hate);
-                        assert.equal(reportResult.text, reportText);
-                        assert.property(reportResult, 'createdAt');
-                        assert.equal(reportResult.creator.id, userReporter.id);
-
-                        done();
-                    });
+                    const reportResult = (await topicCommentReportCreatePromised(agentReporter, topic.id, comment.id, Report.TYPES.hate, reportText)).body.data;
+                    assert.isTrue(validator.isUUID(reportResult.id, 4));
+                    assert.equal(reportResult.type, Report.TYPES.hate);
+                    assert.equal(reportResult.text, reportText);
+                    assert.property(reportResult, 'createdAt');
+                    assert.equal(reportResult.creator.id, userReporter.id);
                 });
 
             });
 
             suite('Read', function () {
-                var agentCreator = request.agent(app);
-                var agentReporter = request.agent(app);
-                var agentModerator = request.agent(app);
+                const agentCreator = request.agent(app);
+                const agentReporter = request.agent(app);
+                const agentModerator = request.agent(app);
 
-                var emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportreadtest.com';
-                var emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportreadtest.com';
-                var emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportreadtest.com';
+                const emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportreadtest.com';
+                const emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportreadtest.com';
+                const emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportreadtest.com';
 
-                var userCreator;
-                var userModerator;
+                let userCreator;
+                let userModerator;
 
-                var partner;
-                var topic;
-                var comment;
-                var report;
+                let partner;
+                let topic;
+                let comment;
+                let report;
 
-                suiteSetup(function (done) {
-                    async
-                        .parallel(
-                            [
-                                function (cb) {
-                                    userLib.createUserAndLogin(agentCreator, emailCreator, null, null, cb);
-                                },
-                                function (cb) {
-                                    userLib.createUser(agentModerator, emailModerator, null, null, cb);
-                                },
-                                function (cb) {
-                                    userLib.createUserAndLogin(agentReporter, emailReporter, null, null, cb);
-                                }
-                            ],
-                            function (err, results) {
-                                if (err) return done(err);
-
-                                userCreator = results[0];
-                                userModerator = results[1];
-
-                                topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, null, null, function (err, res) {
-                                    if (err) return done(err);
-
-                                    topic = res.body.data;
-
-                                    async
-                                        .parallel(
-                                            [
-                                                function (cb) {
-                                                    Partner
-                                                        .create({
-                                                            website: 'notimportant',
-                                                            redirectUriRegexp: 'notimportant'
-                                                        })
-                                                        .then(function (res) {
-                                                            partner = res;
-
-                                                            return Topic
-                                                                .update(
-                                                                    {
-                                                                        sourcePartnerId: partner.id
-                                                                    },
-                                                                    {
-                                                                        where: {
-                                                                            id: topic.id
-                                                                        }
-                                                                    }
-                                                                );
-                                                        })
-                                                        .then(function () {
-                                                            return Moderator
-                                                                .create({
-                                                                    userId: userModerator.id,
-                                                                    partnerId: partner.id
-                                                                });
-                                                        })
-                                                        .then(function () {
-                                                            cb();
-                                                        })
-                                                        .catch(cb);
-                                                },
-                                                function (cb) {
-                                                    topicCommentCreate(agentCreator, userCreator.id, topic.id, null, null, Comment.TYPES.pro, 'test abuse report', 'test abuse report', function (err, res) {
-                                                        if (err) return cb(err);
-
-                                                        comment = res.body.data;
-
-                                                        cb();
-                                                    });
-                                                }
-                                            ],
-                                            function (err) {
-                                                if (err) return done(err);
-
-                                                topicCommentReportCreate(agentReporter, topic.id, comment.id, Report.TYPES.hate, 'reported!', function (err, res) {
-                                                    if (err) return done(err);
-
-                                                    report = res.body.data;
-
-                                                    done();
-                                                });
-                                            }
-                                        );
-                                });
+                suiteSetup(async function () {
+                    userCreator = await userLib.createUserAndLoginPromised(agentCreator, emailCreator, null, null);
+                    userModerator = await userLib.createUserPromised(agentModerator, emailModerator, null, null);
+                    await userLib.createUserAndLoginPromised(agentReporter, emailReporter, null, null);
+                    topic = (await topicCreatePromised(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, null, null)).body.data;
+                    partner = await  Partner.create({
+                        website: 'notimportant',
+                        redirectUriRegexp: 'notimportant'
+                    });
+                    await Topic.update(
+                        {
+                            sourcePartnerId: partner.id
+                        },
+                        {
+                            where: {
+                                id: topic.id
                             }
-                        );
+                        }
+                    );
+                    await Moderator.create({
+                        userId: userModerator.id,
+                        partnerId: partner.id
+                    });
+                    comment = (await topicCommentCreatePromised(agentCreator, userCreator.id, topic.id, null, null, Comment.TYPES.pro, 'test abuse report', 'test abuse report')).body.data;
+                    report = (await topicCommentReportCreatePromised(agentReporter, topic.id, comment.id, Report.TYPES.hate, 'reported!')).body.data;
                 });
 
-                test('Success - token with audience', function (done) {
-                    var token = cosJwt.getTokenRestrictedUse(
+                test('Success - token with audience', async function () {
+                    const token = cosJwt.getTokenRestrictedUse(
                         {
                             userId: userModerator.id
                         },
@@ -12377,37 +11955,31 @@ suite('Topics', function () {
                         ]
                     );
 
-                    topicCommentReportRead(request.agent(app), topic.id, comment.id, report.id, token, function (err, res) {
-                        if (err) return done(err);
-
-                        var expectedResult = {
-                            status: {code: 20000},
-                            data: {
-                                id: report.id,
-                                type: report.type,
-                                text: report.text,
-                                createdAt: report.createdAt,
-                                comment: {
-                                    subject: comment.subject,
-                                    text: comment.text,
-                                    id: comment.id
-                                }
+                    const resBody = (await topicCommentReportReadPromised(request.agent(app), topic.id, comment.id, report.id, token)).body;
+                    const expectedResult = {
+                        status: {code: 20000},
+                        data: {
+                            id: report.id,
+                            type: report.type,
+                            text: report.text,
+                            createdAt: report.createdAt,
+                            comment: {
+                                subject: comment.subject,
+                                text: comment.text,
+                                id: comment.id
                             }
-                        };
-
-                        assert.deepEqual(res.body, expectedResult);
-
-                        done();
-                    });
+                        }
+                    };
+                    assert.deepEqual(resBody, expectedResult);
                 });
 
-                test('Fail - 40100 - Invalid token', function (done) {
-                    var token = {};
-                    _topicCommentReportRead(request.agent(app), topic.id, comment.id, report.id, token, 401, done);
+                test('Fail - 40100 - Invalid token', async function () {
+                    const token = {};
+                    return _topicCommentReportReadPromised(request.agent(app), topic.id, comment.id, report.id, token, 401);
                 });
 
-                test('Fail - 40100 - invalid token - without audience', function (done) {
-                    var token = jwt.sign(
+                test('Fail - 40100 - invalid token - without audience', async function () {
+                    const token = jwt.sign(
                         {},
                         config.session.privateKey,
                         {
@@ -12415,128 +11987,68 @@ suite('Topics', function () {
                         }
                     );
 
-                    _topicCommentReportRead(request.agent(app), topic.id, comment.id, report.id, token, 401, done);
+                    return _topicCommentReportReadPromised(request.agent(app), topic.id, comment.id, report.id, token, 401);
                 });
 
-                test('Fail - 40100 - invalid token - invalid audience', function (done) {
-                    var token = cosJwt.getTokenRestrictedUse({}, 'GET /foo/bar');
+                test('Fail - 40100 - invalid token - invalid audience', async function () {
+                    const token = cosJwt.getTokenRestrictedUse({}, 'GET /foo/bar');
 
-                    _topicCommentReportRead(request.agent(app), topic.id, comment.id, report.id, token, 401, done);
+                    return _topicCommentReportReadPromised(request.agent(app), topic.id, comment.id, report.id, token, 401);
                 });
 
             });
 
             suite('Moderate', function () {
+                const agentCreator = request.agent(app);
+                const agentReporter = request.agent(app);
+                const agentModerator = request.agent(app);
 
-                var agentCreator = request.agent(app);
-                var agentReporter = request.agent(app);
-                var agentModerator = request.agent(app);
+                const emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@repormoderationtest.com';
+                const emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@repormoderationtest.com';
+                const emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@repormoderationtest.com';
 
-                var emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@repormoderationtest.com';
-                var emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@repormoderationtest.com';
-                var emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@repormoderationtest.com';
+                let userCreator;
+                let userModerator;
 
-                var userCreator;
-                var userModerator;
+                let partner;
+                let topic;
+                let comment;
+                let report;
 
-                var partner;
-                var topic;
-                var comment;
-                var report;
+                suiteSetup(async function () {
+                    userCreator = await userLib.createUserAndLoginPromised(agentCreator, emailCreator, null, null);
+                    userModerator = await userLib.createUserPromised(agentModerator, emailModerator, null, null);
+                    await userLib.createUserAndLoginPromised(agentReporter, emailReporter, null, null);
+                    topic = (await topicCreatePromised(agentCreator, userCreator.id, Topic.VISIBILITY.private, null, null, null, null)).body.data;
 
-                suiteSetup(function (done) {
-                    async
-                        .parallel(
-                            [
-                                function (cb) {
-                                    userLib.createUserAndLogin(agentCreator, emailCreator, null, null, cb);
-                                },
-                                function (cb) {
-                                    userLib.createUser(agentModerator, emailModerator, null, null, cb);
-                                },
-                                function (cb) {
-                                    userLib.createUserAndLogin(agentReporter, emailReporter, null, null, cb);
-                                }
-                            ]
-                            , function (err, results) {
-                                if (err) return done(err);
-
-                                userCreator = results[0];
-                                userModerator = results[1];
-
-                                topicCreate(agentCreator, userCreator.id, Topic.VISIBILITY.private, null, null, null, null, function (err, res) {
-                                    if (err) return done(err);
-
-                                    topic = res.body.data;
-
-                                    async
-                                        .parallel(
-                                            [
-                                                function (cb) {
-                                                    Partner
-                                                        .create({
-                                                            website: 'notimportant',
-                                                            redirectUriRegexp: 'notimportant'
-                                                        })
-                                                        .then(function (res) {
-                                                            partner = res;
-
-                                                            return Topic
-                                                                .update(
-                                                                    {
-                                                                        sourcePartnerId: partner.id
-                                                                    },
-                                                                    {
-                                                                        where: {
-                                                                            id: topic.id
-                                                                        }
-                                                                    }
-                                                                );
-                                                        })
-                                                        .then(function () {
-                                                            return Moderator
-                                                                .create({
-                                                                    userId: userModerator.id,
-                                                                    partnerId: partner.id
-                                                                });
-                                                        })
-                                                        .then(function () {
-                                                            cb();
-                                                        })
-                                                        .catch(cb);
-                                                },
-                                                function (cb) {
-                                                    topicCommentCreate(agentCreator, userCreator.id, topic.id, null, null, Comment.TYPES.pro, 'test abuse report', 'test abuse report', function (err, res) {
-                                                        if (err) return cb(err);
-
-                                                        comment = res.body.data;
-
-                                                        cb();
-                                                    });
-                                                }
-                                            ],
-                                            function (err) {
-                                                if (err) return done(err);
-
-                                                topicCommentReportCreate(agentReporter, topic.id, comment.id, Report.TYPES.hate, 'Report create test text', function (err, res) {
-                                                    if (err) return done(err);
-
-                                                    report = res.body.data;
-
-                                                    done();
-                                                });
-                                            }
-                                        );
-                                });
+                    partner = await Partner.create({
+                        website: 'notimportant',
+                        redirectUriRegexp: 'notimportant'
+                    });
+                    await Topic.update(
+                        {
+                            sourcePartnerId: partner.id
+                        },
+                        {
+                            where: {
+                                id: topic.id
                             }
-                        );
+                        }
+                    );
+                    await Moderator.create({
+                        userId: userModerator.id,
+                        partnerId: partner.id
+                    });
+                    comment = (await topicCommentCreatePromised(agentCreator, userCreator.id, topic.id, null, null, Comment.TYPES.pro, 'test abuse report', 'test abuse report')).body.data;
+                    report = (await topicCommentReportCreatePromised(agentReporter, topic.id, comment.id, Report.TYPES.hate, 'Report create test text')).body.data;
+
                 });
 
-                test('Success', function (done) {
-                    var moderateType = Comment.DELETE_REASON_TYPES.duplicate;
-                    var moderateText = 'Report create moderation text';
+                test('Success', async function () {
+                    const  moderateType = Comment.DELETE_REASON_TYPES.duplicate;
+                    const moderateText = 'Report create moderation text';
 
-                    var token = cosJwt.getTokenRestrictedUse(
+                    const token = cosJwt.getTokenRestrictedUse(
                         {
                             userId: userModerator.id
                         },
@@ -12548,39 +12060,30 @@ suite('Topics', function () {
                         ]
                     );
 
-                    topicCommentReportModerate(request.agent(app), topic.id, comment.id, report.id, token, moderateType, moderateText, function (err) {
-                        if (err) return done(err);
+                    await topicCommentReportModeratePromised(request.agent(app), topic.id, comment.id, report.id, token, moderateType, moderateText);
 
-                        Comment
-                            .findOne({
-                                where: {
-                                    id: comment.id
-                                },
-                                paranoid: false
-                            })
-                            .then(function (comm) {
-                                var commentRead = comm.toJSON();
+                    const commentRead = (await Comment.findOne({
+                        where: {
+                            id: comment.id
+                        },
+                        paranoid: false
+                    })).toJSON();
 
-                                assert.equal(commentRead.deletedBy.id, userModerator.id);
-                                assert.equal(commentRead.report.id, report.id);
-                                assert.equal(commentRead.deletedReasonType, moderateType);
-                                assert.equal(commentRead.deletedReasonText, moderateText);
-                                assert.isNotNull(commentRead.deletedAt);
-
-                                done();
-                            })
-                            .catch(done);
-                    });
+                    assert.equal(commentRead.deletedBy.id, userModerator.id);
+                    assert.equal(commentRead.report.id, report.id);
+                    assert.equal(commentRead.deletedReasonType, moderateType);
+                    assert.equal(commentRead.deletedReasonText, moderateText);
+                    assert.isNotNull(commentRead.deletedAt);
                 });
 
-                test('Fail - 40100 - Invalid token - random stuff', function (done) {
-                    _topicCommentReportModerate(request.agent(app), topic.id, comment.id, report.id, 'TOKEN HERE', Comment.DELETE_REASON_TYPES.abuse, 'not important', 401, done);
+                test('Fail - 40100 - Invalid token - random stuff', async function () {
+                    return _topicCommentReportModeratePromised(request.agent(app), topic.id, comment.id, report.id, 'TOKEN HERE', Comment.DELETE_REASON_TYPES.abuse, 'not important', 401);
                 });
 
-                test('Fail - 40100 - Invalid token - invalid path', function (done) {
-                    var path = '/totally/foobar/path';
+                test('Fail - 40100 - Invalid token - invalid path', async function () {
+                    const path = '/totally/foobar/path';
 
-                    var token = jwt.sign(
+                    const token = jwt.sign(
                         {
                             path: path
                         },
@@ -12590,82 +12093,64 @@ suite('Topics', function () {
                         }
                     );
 
-                    _topicCommentReportModerate(request.agent(app), topic.id, comment.id, report.id, token, Comment.DELETE_REASON_TYPES.abuse, 'not important', 401, done);
+                    return _topicCommentReportModeratePromised(request.agent(app), topic.id, comment.id, report.id, token, Comment.DELETE_REASON_TYPES.abuse, 'not important', 401);
                 });
 
-                test('Fail - 40010 - Report has become invalid cause comment has been updated after the report', function (done) {
+                test('Fail - 40010 - Report has become invalid cause comment has been updated after the report', async function () {
                     // Revive the Comment we deleted on report
-                    Comment
-                        .update(
-                            {
-                                deletedById: null,
-                                deletedAt: null,
-                                deletedReasonType: null,
-                                deletedReasonText: null,
-                                deletedByReportId: null
+                    await Comment.update(
+                        {
+                            deletedById: null,
+                            deletedAt: null,
+                            deletedReasonType: null,
+                            deletedReasonText: null,
+                            deletedByReportId: null
 
+                        },
+                        {
+                            where: {
+                                id: comment.id
                             },
-                            {
-                                where: {
-                                    id: comment.id
-                                },
-                                paranoid: false
-                            }
-                        )
-                        .then(function () {
-                            topicCommentReportCreate(agentReporter, topic.id, comment.id, Report.TYPES.hate, 'Report create test text', function (err, res) {
-                                if (err) return done(err);
+                            paranoid: false
+                        }
+                    );
 
-                                var report = res.body.data;
+                    report = (await topicCommentReportCreatePromised(agentReporter, topic.id, comment.id, Report.TYPES.hate, 'Report create test text')).body.data;
+                    const moderateType = Comment.DELETE_REASON_TYPES.duplicate;
+                    const moderateText = 'Report create moderation text';
 
-                                var moderateType = Comment.DELETE_REASON_TYPES.duplicate;
-                                var moderateText = 'Report create moderation text';
+                    const  token = cosJwt.getTokenRestrictedUse(
+                        {
+                            userId: userModerator.id
+                        },
+                        [
+                            'POST /api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
+                                .replace(':topicId', topic.id)
+                                .replace(':commentId', comment.id)
+                                .replace(':reportId', report.id)
+                        ]
+                    );
 
-                                var token = cosJwt.getTokenRestrictedUse(
-                                    {
-                                        userId: userModerator.id
-                                    },
-                                    [
-                                        'POST /api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
-                                            .replace(':topicId', topic.id)
-                                            .replace(':commentId', comment.id)
-                                            .replace(':reportId', report.id)
-                                    ]
-                                );
+                    await Comment.update(
+                        {
+                            text: 'Update comment!'
+                        },
+                        {
+                            where: {
+                                id: comment.id
+                            },
+                            paranoid: false
+                        }
+                    );
+                    const resBody = (await _topicCommentReportModeratePromised (request.agent(app), topic.id, comment.id, report.id, token, moderateType, moderateText, 400)).body;
+                    const expectedResult = {
+                        status: {
+                            code: 40010,
+                            message: 'Report has become invalid cause comment has been updated after the report'
+                        }
+                    };
 
-                                Comment
-                                    .update(
-                                        {
-                                            text: 'Update comment!'
-                                        },
-                                        {
-                                            where: {
-                                                id: comment.id
-                                            },
-                                            paranoid: false
-                                        }
-                                    )
-                                    .then(function () {
-                                        _topicCommentReportModerate(request.agent(app), topic.id, comment.id, report.id, token, moderateType, moderateText, 400, function (err, res) {
-                                            if (err) return done(err);
-
-                                            var expectedResult = {
-                                                status: {
-                                                    code: 40010,
-                                                    message: 'Report has become invalid cause comment has been updated after the report'
-                                                }
-                                            };
-
-                                            assert.deepEqual(res.body, expectedResult);
-
-                                            done();
-                                        });
-                                    })
-                                    .catch(done);
-                            });
-
-                        })
-                        .catch(done);
+                    assert.deepEqual(resBody, expectedResult);
                 });
             });
 

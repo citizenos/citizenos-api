@@ -1701,7 +1701,7 @@ module.exports = function (app) {
         let statuses = req.query.statuses;
         const pinned = req.query.pinned;
         const hasVoted = req.query.hasVoted; // Filter out Topics where User has participated in the voting process.
-
+        const showModerated = req.query.showModerated || false;
         if (statuses && !Array.isArray(statuses)) {
             statuses = [statuses];
         }
@@ -1783,6 +1783,12 @@ module.exports = function (app) {
             logger.warn(`Ignored parameter "voted" as invalid value "${hasVoted}" was provided`);
         }
 
+        if (!showModerated || showModerated == "false") {
+            where += 'AND tr."moderatedAt" IS NULL ';
+        } else {
+            where += 'AND tr."moderatedAt" IS NOT NULL ';
+        }
+
         if (creatorId) {
             if (creatorId === userId) {
                 where += ' AND c.id =:creatorId ';
@@ -1839,6 +1845,7 @@ module.exports = function (app) {
                         FROM "TopicMemberUsers" tmu \
                         WHERE tmu."deletedAt" IS NULL \
                     ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId) \
+                    LEFT JOIN "TopicReports" tr ON  tr."topicId" = t.id \
                     LEFT JOIN ( \
                         SELECT \
                             tmg."topicId", \
@@ -2013,6 +2020,7 @@ module.exports = function (app) {
         let join = '';
         let returncolumns = '';
         let voteResultsPromise = false;
+        let showModerated = req.query.showModerated || false;
 
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
@@ -2083,6 +2091,12 @@ module.exports = function (app) {
             where += ' AND t."categories" @> ARRAY[:categories]::VARCHAR(255)[] ';
         }
 
+        if (!showModerated || showModerated == "false") {
+            where += 'AND tr."moderatedAt" IS NULL ';
+        } else {
+            where += 'AND tr."moderatedAt" IS NOT NULL ';
+        }
+
         if (statuses && statuses.length) {
             where += ' AND t.status IN (:statuses)';
         }
@@ -2132,6 +2146,7 @@ module.exports = function (app) {
                     ' + returncolumns + ' \
                 FROM "Topics" t \
                     LEFT JOIN "Users" c ON (c.id = t."creatorId") \
+                    LEFT JOIN "TopicReports" tr ON tr."topicId" = t.id \
                     LEFT JOIN ( \
                         SELECT tmu."topicId", COUNT(tmu."memberId")::integer AS "count" FROM ( \
                             SELECT \

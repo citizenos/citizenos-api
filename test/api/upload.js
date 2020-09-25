@@ -67,12 +67,11 @@ suite('Users', function () {
                 return https.get(fileUrl, function (response) {
                     const stream = response.pipe(file2);
 
-                    stream.on('finish', function () {
-                        fs.readFile(path.join(__dirname, '/uploads/return.txt'), 'utf8', function (err, data) {
-                            assert.equal('Test file for upload test.', data);
-                            fs.remove(path.join(__dirname, '/uploads/return.txt'));
-                            fs.remove(path.join(__dirname.replace('/test/api', '/public/uploads/'), 'test/'));
-                        });
+                    stream.on('finish', async function () {
+                        const data = await fs.readFileSync(path.join(__dirname, '/uploads/return.txt'), 'utf8');
+                        assert.equal('Test file for upload test.', data);
+                        fs.remove(path.join(__dirname, '/uploads/return.txt'));
+                        fs.remove(path.join(__dirname.replace('/test/api', '/public/uploads/'), 'test/'));
                     });
                 });
             });
