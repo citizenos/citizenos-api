@@ -1784,9 +1784,9 @@ module.exports = function (app) {
         }
 
         if (!showModerated || showModerated == "false") {
-            where += 'AND tr."moderatedAt" IS NULL ';
+            where += 'AND (tr."moderatedAt" IS NULL OR tr."resolvedAt" IS NOT NULL) ';
         } else {
-            where += 'AND tr."moderatedAt" IS NOT NULL ';
+            where += 'AND (tr."moderatedAt" IS NOT NULL AND tr."resolvedAt" IS NULL) ';
         }
 
         if (creatorId) {
@@ -2092,9 +2092,9 @@ module.exports = function (app) {
         }
 
         if (!showModerated || showModerated == "false") {
-            where += 'AND tr."moderatedAt" IS NULL ';
+            where += 'AND (tr."moderatedAt" IS NULL OR tr."resolvedAt" IS NOT NULL OR tr."deletedAt" IS NOT NULL) ';
         } else {
-            where += 'AND tr."moderatedAt" IS NOT NULL ';
+            where += 'AND tr."moderatedAt" IS NOT NULL AND tr."resolvedAt" IS NULL AND tr."deletedAt" IS NULL ';
         }
 
         if (statuses && statuses.length) {
