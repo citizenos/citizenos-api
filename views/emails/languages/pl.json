@@ -1,73 +1,73 @@
 {
   "LAYOUT": {
-    "LINK_TO_PLATFORM": "Link to platform",
-    "LINK_PRIVACY_POLICY": "Privacy Policy",
-    "EMPOWERED_BY": "Empowered by"
+    "LINK_TO_PLATFORM": "Link do platformy",
+    "LINK_PRIVACY_POLICY": "Polityka prywatności",
+    "EMPOWERED_BY": "Stworzone dzięki"
   },
   "ACCOUNT_VERIFICATION": {
-    "SUBJECT": "Activate your Citizen OS account"
+    "SUBJECT": "Aktywuj swoje konto Citizen OS"
   },
   "INVITE_GROUP": {
-    "SUBJECT": "{{fromUser.name}} is inviting you to join our group “{{group.name}}” on Citizen OS"
+    "SUBJECT": "{{fromUser.name}} zaprasza Cię do dołączenia do naszej grupy „{{group.name}}” w CitizenOS"
   },
   "INVITE_TOPIC": {
-    "SUBJECT": "{{fromUser.name}} is inviting you to make a collaborative decision",
+    "SUBJECT": "{{fromUser.name}} zaprasza Cię do podjęcia wspólnej decyzji",
     "SUBJECT_rahvaalgatus_ee": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust",
     "SUBJECT_rahvaalgatus_test": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Reset your Citizen OS account password"
+    "SUBJECT": "Zresetuj swoje hasło do konta CitizenOS"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Thank you, we received your report (#{{report.id}})"
+    "SUBJECT": "Dziękujemy, otrzymaliśmy Twój zgłoszenie (#{{report.id}})"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: your Citizen OS topic may contain a violation of guidelines"
+    "SUBJECT": "Zgłoszenie #{{report.id}}: Twój temat Citizen OS może zawierać naruszenie wytycznych"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "A Citizen OS topic has been reported (#{{report.id}}), please moderate"
+    "SUBJECT": "W sprawie tematu CitizenOS (#{{report.id}}) wysłano zgłoszenie, proszę moderować"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Your Citizen OS report #{{report.id}} has been reviewed"
+    "SUBJECT": "Twój zgłoszenie nr{{report.id}} zostało sprawdzone"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: Your Citizen OS topic has been reviewed by a moderator"
+    "SUBJECT": "Zgłoszenie #{{report.id}}: Twój temat w Citizen OS został sprawdzony przez moderatora"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "A reported (#{{report.id}}) Citizen OS topic has been revised, please review"
+    "SUBJECT": "Zgłoszony (#{{report.id}}) temat dla Citizen OS został zmieniony, sprawdź"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: access to your Citizen OS topic has been restored."
+    "SUBJECT": "Zgłoszenie #{{report.id}}: dostęp do Twojego tematu w Citizen OS został przywrócony."
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
-    "SUBJECT": "Your report (#{{report.id}}) in Citizen OS has been resolved"
+    "SUBJECT": "Twoje zgłoszenie (#{{report.id}}) w Citizen OS zostało zamknięte"
   },
   "REPORT": {
     "REPORT_TYPE": {
-      "ABUSE": "Is abusive or insulting",
-      "OBSCENE": "Contains obscene language",
-      "SPAM": "Contains spam or is unrelated to topic",
-      "HATE": "Contains hate speech",
-      "NETIQUETTE": "Infringes (n)etiquette",
-      "DUPLICATE": "Is a duplicate"
+      "ABUSE": "Jest obelżywy lub obraźliwy",
+      "OBSCENE": "Zawiera nieprzyzwoity język",
+      "SPAM": "Zawiera spam lub jest niezwiązany z tematem",
+      "HATE": "Zawiera mowę nienawiści",
+      "NETIQUETTE": "Naruszenie netykiety",
+      "DUPLICATE": "Jest duplikatem"
     }
   },
   "REPORT_COMMENT": {
     "REPORT_TYPE": {
-      "ABUSE": "Is abusive or insulting",
-      "OBSCENE": "Contains obscene language",
-      "SPAM": "Contains spam or is unrelated to topic",
-      "HATE": "Contains hate speech",
-      "NETIQUETTE": "Infringes (n)etiquette",
-      "DUPLICATE": "Is a duplicate"
+      "ABUSE": "Jest obelżywy lub obraźliwy",
+      "OBSCENE": "Zawiera nieprzyzwoity język",
+      "SPAM": "Zawiera spam lub jest niezwiązany z tematem",
+      "HATE": "Zawiera mowę nienawiści",
+      "NETIQUETTE": "Naruszenie netykiety",
+      "DUPLICATE": "Jest duplikatem"
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Your comment has been reported as inappropriate by the community"
+    "SUBJECT": "Twój komentarz został zgłoszony jako niewłaściwy przez kogoś ze społeczności"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "A comment has been reported as inappropriate by the community"
+    "SUBJECT": "Komentarz został zgłoszony jako nieodpowiedni przez społeczność"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""

@@ -1,33 +1,33 @@
 <!-- E-mail sent to Topic members of a reported Topic -->
 <p>
-    Hello <span class="blue">{{userMember.name}}</span>,
+    Witaj <span class="blue">{{userMember.name}}</span>,
 </p>
 <p class="important">
-    <b>A moderator has reviewed the report <span class="blue">#{{report.id}}</span>, which was submitted on {{report.createdAt}} about your Citizen OS topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" being inappropriate.</b>
+    <b>Moderator sprawdził zgłoszenie <span class="blue">#{{report.id}}</span>, które zostało przesłane {{report.createdAt}} na temat Twojego tematu w CitizenOS "<a href="{{linkViewTopic}}">{{topic.title}}</a>" Wg zgłoszenia temat zawiera nieodpowiednie treści.</b>
 </p>
 
-<h1>Decision of the moderator:</h1>
+<h1>Decyzja moderatora:</h1>
 <p>
 <ul>
-    <li class="li">Violation type: "{{report.moderatedReasonType}}"</li>
-    <li class="li">Reasoning: "{{report.moderatedReasonText}}"</li>
+    <li class="li">Typ naruszenia: "{{report.moderatedReasonType}}"</li>
+    <li class="li">Powód: "{{report.moderatedReasonText}}"</li>
 </ul>
 </p>
 <p>
-    When accessing your topic, users will now see an overlay, warning about violations in the topic. However, viewers have an option to bypass the overlay and view topic content at their own risk anyway.
+    Podczas uzyskiwania dostępu do tematu, użytkownicy zobaczą nakładki, ostrzeżenia o naruszeniach w temacie. Jednak widzowie mają możliwość omijania nakładki i przeglądania treści tematu na własne ryzyko.
 </p>
 
-<h1>What happens next?</h1>
+<h1>Co się stanie dalej?</h1>
 <p>
 <ol>
-    <li class="li">You and other admins and editors of the topic can edit topic content at any time to clear possible violations. You can then send the topic to moderators for review.</li>
-    <li class="li">Upon a review request, moderators will review the topic and remove restrictions if violations have been cleared.</li>
-    <li class="li">Until such time, access to the topic will remain restricted.</li>
+    <li class="li">Ty i inni administratorzy i edytorzy tematu mogą w każdej chwili edytować zawartość tematu, aby wyczyścić możliwe naruszenia. Następnie możesz wysłać temat do moderatorów w celu weryfikacji.</li>
+    <li class="li">Po otrzymaniu prośby o sprawdzenie moderatorzy sprawdzą temat i usuną ograniczenia, jeśli naruszenia zostaną usunięte.</li>
+    <li class="li">Do tego czasu dostęp do tematu pozostanie ograniczony.</li>
 </ol>
 </p>
-<p><a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process here.</a></p>
+<p><a href="{{linkViewModerationGuidelines}}">Więcej szczegółów na temat procesu moderacji w Citizen OS znajdziesz tutaj.</a></p>
 
 <hr/>
 <p>
-    Please review your topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" and see if it contains violations of community guidelines. Together we can maintain a high quality of content in Citizen OS user community.
+    Przejrzyj swój temat "<a href="{{linkViewTopic}}">{{topic.title}}</a>" i sprawdź, czy zawiera on naruszenia wytycznych społeczności. Razem możemy utrzymać wysoką jakość treści w społeczności użytkowników Citizen OS.
 </p>
