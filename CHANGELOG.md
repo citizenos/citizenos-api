@@ -1,3 +1,75 @@
+## 2020-09-29
+
+* Update inviting users to topic behaviour - https://github.com/citizenos/citizenos-fe/issues/254
+
+## 2020-09-28
+
+* Hide moderated topics behind filter - https://github.com/citizenos/citizenos-fe/issues/464
+
+## 2020-09-23
+
+* FIX 'See who liked your argument' feature not working - https://github.com/citizenos/citizenos-fe/issues/572
+
+## 2020-09-22
+
+* Update dependencies and related code
+
+
+## 2020-09-15
+
+* FIX Activity feed shows incorrect activity - title update - https://github.com/citizenos/citizenos-fe/issues/508
+
+## 2020-09-14
+
+* Update many tests to Promises
+
+## 2020-09-10
+
+* Drop DigiDocService for ID-card - https://github.com/citizenos/citizenos-api/issues/157
+
+## 2020-08-19
+
+* FIX Reorder topic report e-mail layout - https://github.com/citizenos/citizenos-api/issues/140
+* Fix comments api query
+
+## 2020-08-17
+
+* Update API add GET `/api/users/:userId/topics/:topicId/comments/:commentId/votes` endpoint - https://github.com/citizenos/citizenos-fe/issues/470
+## 2020-08-10
+
+* FIX API crashes when attachment name contains non ASCII character - https://github.com/citizenos/citizenos-api/issues/173
+
+## 2020-07-22
+
+* Fix user bdoc creating
+* Update lodash, smart-id and mobiil-id dependencies
+
+
+
+## 2020-06-27
+
+* Update sending emails to not fail other transactions if e-mail fails to send
+* Add email template language fallback
+* Group tests to Promises
+* Some Topics tests to Promises
+
+## 2020-05-27
+
+* Remove .csv file from final.bdoc container
+
+## 2020-05-13
+
+* Redirect users to topic from invite links after initial access - https://github.com/citizenos/citizenos-fe/issues/469
+* Update Invite tests to Promises
+
+## 2020-04-22
+
+* Add topicId, userId, groupId extra properties to activities if needed
+
+## 2020-04-22
+
+* Update activity feed to include topicId for CommentVote
+
 ## 2020-04-06
 
 * Email layout is wonky on mobile - https://github.com/citizenos/citizenos-api/issues/159
@@ -5,7 +77,7 @@
 
 ## 2020-03-30
 
-* Fix vote counting bug for multiple-choice votes with delegation -  https://github.com/citizenos/citizenos-fe/issues/443 https://github.com/citizenos/citizenos-fe/issues/413 
+* Fix vote counting bug for multiple-choice votes with delegation -  https://github.com/citizenos/citizenos-fe/issues/443 https://github.com/citizenos/citizenos-fe/issues/413
 
 ## 2020-02-20
 

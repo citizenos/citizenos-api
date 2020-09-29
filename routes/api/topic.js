@@ -3406,7 +3406,7 @@ module.exports = function (app) {
             }
         });
 
-        const createdInvites = await db.transaction(async function (t) {
+        let createdInvites = await db.transaction(async function (t) {
             let createdUsers;
 
             // The leftovers are e-mails for which User did not exist
@@ -3467,42 +3467,82 @@ module.exports = function (app) {
             validUserIdMembers = validUserIdMembers.filter(function (member) {
                 return member.userId !== req.user.id; // Make sure user does not invite self
             });
+            const currentMembers = await TopicMemberUser.findAll({
+                where: {
+                    topicId: topicId
+                }
+            });
 
             const createInvitePromises = validUserIdMembers.map(async function (member) {
-                const topicInvite = await TopicInviteUser.create(
-                    {
-                        topicId: topicId,
-                        creatorId: userId,
-                        userId: member.userId,
-                        level: member.level
-                    },
-                    {
-                        transaction: t
+                const addedMember = currentMembers.find (function (cmember) {
+                    return cmember.userId === member.userId;
+                });
+                if (addedMember) {
+                    const LEVELS = {
+                        none: 0, // Enables to override inherited permissions.
+                        read: 1,
+                        edit: 2,
+                        admin: 3
+                    };
+                    if (addedMember.level !== member.level) {
+                            if (LEVELS[member.level] > LEVELS[addedMember.level]) {
+                                await addedMember.update({
+                                    level: member.level
+                                });
+
+                                cosActivities
+                                    .updateActivity(addedMember, null, {
+                                        type: 'User',
+                                        id: req.user.id,
+                                        ip: req.ip
+                                    }, null, req.method + ' ' + req.path, t);
+
+                                return;
+                            }
+
+                            return;
+                    } else {
+                        return;
                     }
-                );
+                } else {
+                    const topicInvite = await TopicInviteUser.create(
+                        {
+                            topicId: topicId,
+                            creatorId: userId,
+                            userId: member.userId,
+                            level: member.level
+                        },
+                        {
+                            transaction: t
+                        }
+                    );
 
-                const userInvited = User.build({id: topicInvite.userId});
-                userInvited.dataValues.level = topicInvite.level; // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
-                userInvited.dataValues.inviteId = topicInvite.id; // FIXME: HACK? Invite event, pu
+                    const userInvited = User.build({id: topicInvite.userId});
+                    userInvited.dataValues.level = topicInvite.level; // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
+                    userInvited.dataValues.inviteId = topicInvite.id; // FIXME: HACK? Invite event, pu
 
-                await cosActivities.inviteActivity(
-                    topic,
-                    userInvited,
-                    {
-                        type: 'User',
-                        id: req.user.id,
-                        ip: req.ip
-                    },
-                    req.method + ' ' + req.path,
-                    t
-                );
+                    await cosActivities.inviteActivity(
+                        topic,
+                        userInvited,
+                        {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
 
-                return topicInvite;
+                    return topicInvite;
+                }
             });
 
             return Promise.all(createInvitePromises);
         });
 
+        createdInvites = createdInvites.filter(function (invite) {
+            return !!invite;
+        });
         await emailLib.sendTopicMemberUserInviteCreate(createdInvites);
 
         if (createdInvites.length) {
