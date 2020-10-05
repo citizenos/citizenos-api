@@ -5656,6 +5656,132 @@ module.exports = function (app) {
     });
 
 
+    const findDelegatedVoteValue = async function (voteId, userId) {
+        const voteResultsPromise = db
+        .query(
+            ' \
+                    WITH \
+                        RECURSIVE delegations("voteId", "toUserId", "byUserId", depth) AS ( \
+                            SELECT \
+                                "voteId", \
+                                "toUserId", \
+                                "byUserId", \
+                                1 \
+                            FROM "VoteDelegations" vd \
+                            WHERE vd."voteId" = :voteId \
+                              AND vd."deletedAt" IS NULL \
+                            \
+                            UNION ALL \
+                            \
+                            SELECT \
+                                vd."voteId", \
+                                vd."toUserId", \
+                                dc."byUserId", \
+                                dc.depth+1 \
+                            FROM delegations dc, "VoteDelegations" vd \
+                            WHERE vd."byUserId" = dc."toUserId" \
+                              AND vd."voteId" = dc."voteId" \
+                              AND vd."deletedAt" IS NULL \
+                        ), \
+                        indirect_delegations("voteId", "toUserId", "byUserId", depth) AS ( \
+                            SELECT DISTINCT ON("byUserId") \
+                                "voteId", \
+                                "toUserId", \
+                                "byUserId", \
+                                depth \
+                            FROM delegations \
+                            ORDER BY "byUserId", depth DESC \
+                        ), \
+                        vote_groups("voteId", "userId", "optionGroupId", "updatedAt") AS ( \
+                          SELECT DISTINCT ON ("userIdEffective") \
+                            vl."voteId", \
+                            ( \
+                               SELECT \
+                                    uco."userId" \
+                               FROM \
+                                    "VoteLists" vli \
+                                    JOIN "UserConnections" ucs ON (ucs."userId" = vli."userId") \
+                                    JOIN "UserConnections" uco ON (uco."connectionId" = ucs."connectionId" AND uco."connectionUserId" = ucs."connectionUserId") \
+                                    JOIN "VoteLists" vlo ON (vlo."voteId" = vli."voteId" AND vlo."userId" = uco."userId") \
+                                WHERE vli."userId" = vl."userId" \
+                                AND vli."voteId" = vl."voteId" \
+                                ORDER BY vlo."updatedAt" DESC \
+                                LIMIT 1 \
+                            ) "userIdEffective", \
+                            vl."optionGroupId", \
+                            vl."updatedAt" \
+                          FROM \
+                            "VoteLists" vl \
+                          WHERE\
+                            vl."voteId" = :voteId \
+                            AND vl."deletedAt" IS NULL \
+                          ORDER BY \
+                            "userIdEffective", \
+                            vl."updatedAt" DESC, \
+                            vl."optionGroupId" \
+                        ), \
+                        votes("voteId", "userId", "optionId", "optionGroupId") AS ( \
+                            SELECT \
+                                vl."voteId", \
+                                vl."userId", \
+                                vl."optionId", \
+                                vl."optionGroupId" \
+                            FROM "VoteLists" vl \
+                            JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."optionGroupId" = vg."optionGroupId") \
+                            WHERE vl."voteId" =  :voteId \
+                        ), \
+                        votes_with_delegations("voteId", "userId", "optionId", "optionGroupId", depth) AS ( \
+                            SELECT \
+                                v."voteId", \
+                                v."userId", \
+                                v."optionId", \
+                                v."optionGroupId", \
+                                id."depth" \
+                            FROM votes v \
+                            LEFT JOIN indirect_delegations id ON (v."userId" = id."toUserId") \
+                            WHERE v."userId" NOT IN (SELECT "byUserId" FROM indirect_delegations WHERE "voteId"=v."voteId") \
+                        ) \
+                    \
+                    SELECT \
+                        SUM(v."voteCount") as "voteCount", \
+                        v."optionId", \
+                        v."voteId", \
+                        vo."value", \
+                        (SELECT true FROM votes WHERE "userId" = :userId AND "optionId" = v."optionId") as "selected" \
+                    FROM ( \
+                        SELECT \
+                            COUNT(v."optionId") + 1 as "voteCount", \
+                            v."optionId", \
+                            v."optionGroupId", \
+                            v."voteId" \
+                        FROM votes_with_delegations v \
+                        WHERE v.depth IS NOT NULL \
+                        GROUP BY v."optionId", v."optionGroupId", v."voteId" \
+                        \
+                        UNION ALL \
+                        \
+                        SELECT \
+                            COUNT(v."optionId") as "voteCount", \
+                            v."optionId", \
+                            v."optionGroupId", \
+                            v."voteId" \
+                        FROM votes_with_delegations v \
+                        WHERE v.depth IS NULL \
+                        GROUP BY v."optionId", v."optionGroupId", v."voteId" \
+                    ) v \
+                    LEFT JOIN "VoteOptions" vo ON (v."optionId" = vo."id") \
+                    GROUP BY v."optionId", v."voteId", vo."value" \
+            ;',
+            {
+                replacements: {
+                    voteId: voteId,
+                    userId: userId
+                },
+                type: db.QueryTypes.SELECT,
+                raw: true
+            }
+        );
+    }
     /**
      * Read a Vote
      */
@@ -5693,118 +5819,139 @@ module.exports = function (app) {
         const voteResultsPromise = db
             .query(
                 ' \
-                        WITH \
-                            RECURSIVE delegations("voteId", "toUserId", "byUserId", depth) AS ( \
-                                SELECT \
-                                    "voteId", \
-                                    "toUserId", \
-                                    "byUserId", \
-                                    1 \
-                                FROM "VoteDelegations" vd \
-                                WHERE vd."voteId" = :voteId \
-                                  AND vd."deletedAt" IS NULL \
-                                \
-                                UNION ALL \
-                                \
-                                SELECT \
-                                    vd."voteId", \
-                                    vd."toUserId", \
-                                    dc."byUserId", \
-                                    dc.depth+1 \
-                                FROM delegations dc, "VoteDelegations" vd \
-                                WHERE vd."byUserId" = dc."toUserId" \
-                                  AND vd."voteId" = dc."voteId" \
-                                  AND vd."deletedAt" IS NULL \
-                            ), \
-                            indirect_delegations("voteId", "toUserId", "byUserId", depth) AS ( \
-                                SELECT DISTINCT ON("byUserId") \
-                                    "voteId", \
-                                    "toUserId", \
-                                    "byUserId", \
-                                    depth \
-                                FROM delegations \
-                                ORDER BY "byUserId", depth DESC \
-                            ), \
-                            vote_groups("voteId", "userId", "optionGroupId", "updatedAt") AS ( \
-                              SELECT DISTINCT ON ("userIdEffective") \
-                                vl."voteId", \
-                                ( \
-                                   SELECT \
-                                        uco."userId" \
-                                   FROM \
-                                        "VoteLists" vli \
-                                        JOIN "UserConnections" ucs ON (ucs."userId" = vli."userId") \
-                                        JOIN "UserConnections" uco ON (uco."connectionId" = ucs."connectionId" AND uco."connectionUserId" = ucs."connectionUserId") \
-                                        JOIN "VoteLists" vlo ON (vlo."voteId" = vli."voteId" AND vlo."userId" = uco."userId") \
-                                    WHERE vli."userId" = vl."userId" \
-                                    AND vli."voteId" = vl."voteId" \
-                                    ORDER BY vlo."updatedAt" DESC \
-                                    LIMIT 1 \
-                                ) "userIdEffective", \
-                                vl."optionGroupId", \
-                                vl."updatedAt" \
-                              FROM \
-                                "VoteLists" vl \
-                              WHERE\
-                                vl."voteId" = :voteId \
-                                AND vl."deletedAt" IS NULL \
-                              ORDER BY \
-                                "userIdEffective", \
-                                vl."updatedAt" DESC, \
-                                vl."optionGroupId" \
-                            ), \
-                            votes("voteId", "userId", "optionId", "optionGroupId") AS ( \
-                                SELECT \
-                                    vl."voteId", \
-                                    vl."userId", \
-                                    vl."optionId", \
-                                    vl."optionGroupId" \
-                                FROM "VoteLists" vl \
-                                JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."optionGroupId" = vg."optionGroupId") \
-                                WHERE vl."voteId" =  :voteId \
-                            ), \
-                            votes_with_delegations("voteId", "userId", "optionId", "optionGroupId", depth) AS ( \
-                                SELECT \
-                                    v."voteId", \
-                                    v."userId", \
-                                    v."optionId", \
-                                    v."optionGroupId", \
-                                    id."depth" \
-                                FROM votes v \
-                                LEFT JOIN indirect_delegations id ON (v."userId" = id."toUserId") \
-                                WHERE v."userId" NOT IN (SELECT "byUserId" FROM indirect_delegations WHERE "voteId"=v."voteId") \
-                            ) \
-                        \
-                        SELECT \
-                            SUM(v."voteCount") as "voteCount", \
-                            v."optionId", \
-                            v."voteId", \
-                            vo."value", \
-                            (SELECT true FROM votes WHERE "userId" = :userId AND "optionId" = v."optionId") as "selected" \
-                        FROM ( \
-                            SELECT \
-                                COUNT(v."optionId") + 1 as "voteCount", \
-                                v."optionId", \
-                                v."optionGroupId", \
-                                v."voteId" \
-                            FROM votes_with_delegations v \
-                            WHERE v.depth IS NOT NULL \
-                            GROUP BY v."optionId", v."optionGroupId", v."voteId" \
-                            \
-                            UNION ALL \
-                            \
-                            SELECT \
-                                COUNT(v."optionId") as "voteCount", \
-                                v."optionId", \
-                                v."optionGroupId", \
-                                v."voteId" \
-                            FROM votes_with_delegations v \
-                            WHERE v.depth IS NULL \
-                            GROUP BY v."optionId", v."optionGroupId", v."voteId" \
-                        ) v \
-                        LEFT JOIN "VoteOptions" vo ON (v."optionId" = vo."id") \
-                        GROUP BY v."optionId", v."voteId", vo."value" \
-                ;',
+                WITH \
+                RECURSIVE delegations("voteId", "toUserId", "byUserId", depth) AS ( \
+                    SELECT \
+                            "voteId", \
+                                            "toUserId", \
+                                            "byUserId", \
+                                                1 \
+                                            FROM "VoteDelegations" vd \
+                                            WHERE vd."voteId" = :voteId \
+                                              AND vd."deletedAt" IS NULL \
+                                            \
+                                            UNION ALL \
+                                            \
+                                            SELECT \
+                                                vd."voteId", \
+                                                vd."toUserId", \
+                                                dc."byUserId", \
+                                                dc.depth+1 \
+                                            FROM delegations dc, "VoteDelegations" vd \
+                                            WHERE vd."byUserId" = dc."toUserId" \
+                                              AND vd."voteId" = dc."voteId" \
+                                              AND vd."deletedAt" IS NULL \
+                                        ), \
+                                        indirect_delegations("voteId", "toUserId", "byUserId", depth) AS ( \
+                                            SELECT DISTINCT ON("byUserId") \
+                                                "voteId", \
+                                                "toUserId", \
+                                                "byUserId", \
+                                                depth \
+                                            FROM delegations \
+                                            ORDER BY "byUserId", depth DESC \
+                                        ), \
+                                        vote_groups("voteId", "userId", "optionGroupId", "updatedAt") AS ( \
+                                          SELECT DISTINCT ON ("userIdEffective") \
+                                            vl."voteId", \
+                                            ( \
+                                               SELECT \
+                                                    uco."userId" \
+                                               FROM \
+                                                    "VoteLists" vli \
+                                                    JOIN "UserConnections" ucs ON (ucs."userId" = vli."userId") \
+                                                    JOIN "UserConnections" uco ON (uco."connectionId" = ucs."connectionId" AND uco."connectionUserId" = ucs."connectionUserId") \
+                                                    JOIN "VoteLists" vlo ON (vlo."voteId" = vli."voteId" AND vlo."userId" = uco."userId") \
+                                                WHERE vli."userId" = vl."userId" \
+                                                AND vli."voteId" = vl."voteId" \
+                                                ORDER BY vlo."updatedAt" DESC \
+                                                LIMIT 1 \
+                                            ) "userIdEffective", \
+                                            vl."optionGroupId", \
+                                            vl."updatedAt" \
+                                          FROM \
+                                            "VoteLists" vl \
+                                          WHERE\
+                                            vl."voteId" = :voteId \
+                                            AND vl."deletedAt" IS NULL \
+                                          ORDER BY \
+                                            "userIdEffective", \
+                                            vl."updatedAt" DESC, \
+                                            vl."optionGroupId" \
+                                        ), \
+                                        votes("voteId", "userId", "optionId", "optionGroupId") AS ( \
+                                            SELECT \
+                                                vl."voteId", \
+                                                vl."userId", \
+                                                vl."optionId", \
+                                                vl."optionGroupId" \
+                                            FROM "VoteLists" vl \
+                                            JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."optionGroupId" = vg."optionGroupId") \
+                                            WHERE vl."voteId" =  :voteId \
+                                        ), \
+                                        votes_with_delegations("voteId", "userId", "optionId", "optionGroupId", depth) AS ( \
+                                            SELECT \
+                                                v."voteId", \
+                                                v."userId", \
+                                                v."optionId", \
+                                                v."optionGroupId", \
+                                                id."depth" \
+                                            FROM votes v \
+                                            LEFT JOIN indirect_delegations id ON (v."userId" = id."toUserId") \
+                                            WHERE v."userId" NOT IN (SELECT "byUserId" FROM indirect_delegations WHERE "voteId"=v."voteId") \
+                                        ) \
+                                    \
+                                    SELECT \
+                                        SUM(v."voteCount") as "voteCount", \
+                                        v."optionId", \
+                                        v."voteId", \
+                                        vo."value", \
+                                        (SELECT true FROM votes WHERE "userId" = :userId AND "optionId" = v."optionId") as "selected", \
+                                        CASE WHEN d."optionId" = v."optionId" THEN true ELSE null END AS delegated \
+                                    FROM ( \
+                                        SELECT \
+                                            COUNT(v."optionId") + 1 as "voteCount", \
+                                            v."optionId", \
+                                            v."optionGroupId", \
+                                            v."voteId" \
+                                        FROM votes_with_delegations v \
+                                        WHERE v.depth IS NOT NULL \
+                                        GROUP BY v."optionId", v."optionGroupId", v."voteId" \
+                                        \
+                                        UNION ALL \
+                                        \
+                                        SELECT \
+                                            COUNT(v."optionId") as "voteCount", \
+                                            v."optionId", \
+                                            v."optionGroupId", \
+                                            v."voteId" \
+                                        FROM votes_with_delegations v \
+                                        WHERE v.depth IS NULL \
+                                        GROUP BY v."optionId", v."optionGroupId", v."voteId" \
+                                    ) v \
+                                    LEFT JOIN "VoteOptions" vo ON (v."optionId" = vo."id") \
+                                    LEFT JOIN ( \
+                                        SELECT \
+                                            v."optionId" \
+                                        FROM \
+                                        votes v \
+                                        LEFT JOIN ( \
+                                            SELECT \
+                                                "toUserId" AS "userId", \
+                                                "byUserId", \
+                                                "voteId" \
+                                            FROM \
+                                                indirect_delegations id \
+                                            WHERE id."voteId" = :voteId \
+                                            AND id."byUserId" = :userId \
+                                            ORDER BY id.depth DESC LIMIT 1 \
+                                        ) ida \
+                                        ON ida."userId" = v."userId" AND v."voteId" = ida."voteId" \
+                                        WHERE ida."voteId" = :voteId \
+                                        AND ida."byUserId" = :userId \
+                                    ) d ON d."optionId" = v."optionId" \
+                                    GROUP BY v."optionId", v."voteId", vo."value", d."optionId" \
+                            ;',
                 {
                     replacements: {
                         voteId: voteId,
@@ -5828,10 +5975,13 @@ module.exports = function (app) {
                         const result = _.find(voteResults, {optionId: option.id});
 
                         if (result) {
-
                             option.dataValues.voteCount = parseInt(result.voteCount, 10); //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
                             if (result.selected) {
                                 option.dataValues.selected = result.selected; //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
+                                hasVoted = true;
+                            }
+                            if (result.delegated) {
+                                option.dataValues.delegated = result.delegated; //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
                                 hasVoted = true;
                             }
                         }

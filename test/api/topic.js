@@ -6849,6 +6849,106 @@ suite('Users', function () {
                             }
                         });
                     });
+                    test('Success - OK - count delegated votes and return in results - Delegation chain U->U1->U2->U3->U4', async function () {
+                        const topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
+                        const voteOptions = [
+                            {
+                                value: 'Option 1'
+                            },
+                            {
+                                value: 'Option 2',
+                            },
+                            {
+                                value: 'Option 3'
+                            }
+                        ];
+                        const topicVoteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, voteOptions, null, null, true, null, null, null, null)).body.data;
+                        const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, topicVoteCreated.id)).body.data;
+
+                        const members = [
+                            {
+                                userId: toUser1.id,
+                                level: TopicMemberUser.LEVELS.read
+                            },
+                            {
+                                userId: toUser2.id,
+                                level: TopicMemberUser.LEVELS.read
+                            },
+                            {
+                                userId: toUser3.id,
+                                level: TopicMemberUser.LEVELS.read
+                            },
+                            {
+                                userId: toUser4.id,
+                                level: TopicMemberUser.LEVELS.read
+                            }
+                        ];
+
+                        await topicMemberUsersCreatePromised(agent, user.id, topic.id, members);
+
+                        await topicVoteVotePromised(agent, user.id, topic.id, voteRead.id, [{optionId: voteRead.options.rows[1].id}], null, null, null, null);
+
+                        const delegationPromises = [
+                            topicVoteDelegationCreatePromised(agent, user.id, topic.id, voteRead.id, toUser1.id),
+                            topicVoteDelegationCreatePromised(agentToUser1, toUser1.id, topic.id, voteRead.id, toUser2.id),
+                            topicVoteDelegationCreatePromised(agentToUser2, toUser2.id, topic.id, voteRead.id, toUser3.id),
+                            topicVoteDelegationCreatePromised(agentToUser3, toUser3.id, topic.id, voteRead.id, toUser4.id)
+                        ];
+                        await Promise.all(delegationPromises);
+
+                        await topicVoteVotePromised(agentToUser4, toUser4.id, topic.id, voteRead.id, [{optionId: voteRead.options.rows[0].id}], null, null, null, null);
+
+                        await topicUpdateStatusPromised(agent, user.id, topic.id, Topic.STATUSES.followUp);
+                        const voteReadAfterVote = (await topicVoteReadPromised(agent, user.id, topic.id, voteRead.id)).body.data;
+                        const voteReadAfterVoteOptions = voteReadAfterVote.options.rows;
+
+                        voteReadAfterVoteOptions.forEach(function (option) {
+                            switch (option.id) {
+                                case voteRead.options.rows[0].id:
+                                    assert.equal(option.voteCount, 5);
+                                    assert.notProperty(option, 'selected');
+                                    assert.property(option, 'delegated');
+                                    break;
+                                case voteRead.options.rows[1].id:
+                                    assert.notProperty(option, 'voteCount');
+                                    assert.notProperty(option, 'selected');
+                                    assert.notProperty(option, 'delegated');
+                                    break;
+                                case voteRead.options.rows[2].id:
+                                    assert.notProperty(option, 'voteCount');
+                                    assert.notProperty(option, 'selected');
+                                    assert.notProperty(option, 'delegated');
+                                    break;
+                                default:
+                                    throw new Error('SHOULD NEVER HAPPEN!');
+                            }
+                        });
+
+                        const voteReadAfterVoteVoter = (await topicVoteReadPromised(agentToUser4, toUser4.id, topic.id, voteRead.id)).body.data;
+                        const voteReadAfterVoteOptionsVoter = voteReadAfterVoteVoter.options.rows;
+
+                        voteReadAfterVoteOptionsVoter.forEach(function (option) {
+                            switch (option.id) {
+                                case voteRead.options.rows[0].id:
+                                    assert.equal(option.voteCount, 5);
+                                    assert.property(option, 'selected');
+                                    assert.notProperty(option, 'delegated');
+                                    break;
+                                case voteRead.options.rows[1].id:
+                                    assert.notProperty(option, 'voteCount');
+                                    assert.notProperty(option, 'selected');
+                                    assert.notProperty(option, 'delegated');
+                                    break;
+                                case voteRead.options.rows[2].id:
+                                    assert.notProperty(option, 'voteCount');
+                                    assert.notProperty(option, 'selected');
+                                    assert.notProperty(option, 'delegated');
+                                    break;
+                                default:
+                                    throw new Error('SHOULD NEVER HAPPEN!');
+                            }
+                        });
+                    });
 
                     test('Fail - 40000 - cyclic delegation - U->U1->U2-->U', async function () {
                         const topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
