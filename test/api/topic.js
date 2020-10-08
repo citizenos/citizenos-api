@@ -5974,29 +5974,21 @@ suite('Users', function () {
         suite('Votes', function () {
 
             suite('Create', function () {
-                var agent = request.agent(app);
+                const agent = request.agent(app);
 
-                var user;
-                var topic;
+                let user;
+                let topic;
 
-                suiteSetup(function (done) {
-                    userLib.createUserAndLogin(agent, null, null, null, function (err, res) {
-                        if (err) return done(err);
-                        user = res;
-                        done();
-                    });
+                suiteSetup(async function () {
+                    user = await userLib.createUserAndLoginPromised(agent, null, null, null);
                 });
 
-                setup(function (done) {
-                    topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
-                        if (err) return done(err);
-                        topic = res.body.data;
-                        done();
-                    });
+                setup(async function () {
+                    topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
                 });
 
-                test('Success', function (done) {
-                    var options = [
+                test('Success', async function () {
+                    const options = [
                         {
                             value: 'Option 1'
                         },
@@ -6008,38 +6000,67 @@ suite('Users', function () {
                         }
                     ];
 
-                    var description = 'Vote description';
+                    const description = 'Vote description';
 
-                    topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, description, null, null, function (err, res) {
-                        if (err) return done(err);
+                    const vote = (await topicVoteCreatePromised(agent, user.id, topic.id, options, null, null, null, null, description, null, null)).body.data;
 
-                        var vote = res.body.data;
-
-                        assert.property(vote, 'id');
-                        assert.equal(vote.minChoices, 1);
-                        assert.equal(vote.maxChoices, 1);
-                        assert.equal(vote.delegationIsAllowed, false);
-                        assert.isNull(vote.endsAt);
-                        assert.equal(vote.description, description);
-                        assert.equal(vote.authType, Vote.AUTH_TYPES.soft);
+                    assert.property(vote, 'id');
+                    assert.equal(vote.minChoices, 1);
+                    assert.equal(vote.maxChoices, 1);
+                    assert.equal(vote.delegationIsAllowed, false);
+                    assert.isNull(vote.endsAt);
+                    assert.equal(vote.description, description);
+                    assert.equal(vote.authType, Vote.AUTH_TYPES.soft);
 
                         // Topic should end up in "voting" status
-                        Topic
+                    const t = await Topic
+                        .findOne({
+                            where: {
+                                id: topic.id
+                            }
+                        });
+                    assert.equal(t.status, Topic.STATUSES.voting);
+                });
+
+                test('Success - multiple choice', async function () {
+                    const options = [
+                        {
+                            value: 'Option 1'
+                        },
+                        {
+                            value: 'Option 2'
+                        },
+                        {
+                            value: 'Option 3'
+                        }
+                    ];
+
+                    const description = 'Vote description';
+                    const minChoices = 1;
+                    const maxChoices = 2;
+
+                    const vote = (await topicVoteCreatePromised(agent, user.id, topic.id, options, minChoices, maxChoices, null, null, description, null, null)).body.data;
+
+                    assert.property(vote, 'id');
+                    assert.equal(vote.minChoices, minChoices);
+                    assert.equal(vote.maxChoices, maxChoices);
+                    assert.equal(vote.delegationIsAllowed, false);
+                    assert.isNull(vote.endsAt);
+                    assert.equal(vote.description, description);
+                    assert.equal(vote.authType, Vote.AUTH_TYPES.soft);
+
+                        // Topic should end up in "voting" status
+                    const t = await Topic
                             .findOne({
                                 where: {
                                     id: topic.id
                                 }
-                            })
-                            .then(function (t) {
-                                assert.equal(t.status, Topic.STATUSES.voting);
-                                done();
-                            })
-                            .catch(done);
-                    });
+                            });
+                    assert.equal(t.status, Topic.STATUSES.voting);
                 });
 
-                test('Success - multiple choice', function (done) {
-                    let options = [
+                test('Success - authType === hard', async function () {
+                    const options = [
                         {
                             value: 'Option 1'
                         },
@@ -6051,61 +6072,13 @@ suite('Users', function () {
                         }
                     ];
 
-                    let description = 'Vote description';
-                    let minChoices = 1;
-                    let maxChoices = 2;
+                    const description = 'Vote description';
 
-                    topicVoteCreate(agent, user.id, topic.id, options, minChoices, maxChoices, null, null, description, null, null, function (err, res) {
-                        if (err) return done(err);
+                    const vote = (await topicVoteCreatePromised(agent, user.id, topic.id, options, null, null, null, null, description, null, Vote.AUTH_TYPES.hard)).body.data;
 
-                        var vote = res.body.data;
+                    assert.equal(vote.authType, Vote.AUTH_TYPES.hard);
 
-                        assert.property(vote, 'id');
-                        assert.equal(vote.minChoices, minChoices);
-                        assert.equal(vote.maxChoices, maxChoices);
-                        assert.equal(vote.delegationIsAllowed, false);
-                        assert.isNull(vote.endsAt);
-                        assert.equal(vote.description, description);
-                        assert.equal(vote.authType, Vote.AUTH_TYPES.soft);
-
-                        // Topic should end up in "voting" status
-                        Topic
-                            .findOne({
-                                where: {
-                                    id: topic.id
-                                }
-                            })
-                            .then(function (t) {
-                                assert.equal(t.status, Topic.STATUSES.voting);
-                                done();
-                            })
-                            .catch(done);
-                    });
-                });
-
-                test('Success - authType === hard', function (done) {
-                    var options = [
-                        {
-                            value: 'Option 1'
-                        },
-                        {
-                            value: 'Option 2'
-                        },
-                        {
-                            value: 'Option 3'
-                        }
-                    ];
-
-                    var description = 'Vote description';
-
-                    topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, description, null, Vote.AUTH_TYPES.hard, function (err, res) {
-                        if (err) return done(err);
-
-                        var vote = res.body.data;
-
-                        assert.equal(vote.authType, Vote.AUTH_TYPES.hard);
-
-                        db
+                    const voteContainerFiles = await db
                             .query(
                                 ' \
                                  SELECT \
@@ -6123,62 +6096,54 @@ suite('Users', function () {
                                     raw: true,
                                     nest: true
                                 }
-                            )
-                            .then(function (voteContainerFiles) {
-                                var expected = [
-                                    {
-                                        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                                        fileName: 'document.docx'
-                                    },
-                                    {
-                                        mimeType: 'text/html',
-                                        fileName: '__metainfo.html'
-                                    },
-                                    {
-                                        mimeType: 'text/html',
-                                        fileName: options[0].value + '.html'
-                                    },
-                                    {
-                                        mimeType: 'text/html',
-                                        fileName: options[1].value + '.html'
-                                    },
-                                    {
-                                        mimeType: 'text/html',
-                                        fileName: options[2].value + '.html'
-                                    }
-                                ];
+                            );
 
-                                assert.deepEqual(voteContainerFiles, expected);
+                    const expected = [
+                        {
+                            mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                            fileName: 'document.docx'
+                        },
+                        {
+                            mimeType: 'text/html',
+                            fileName: '__metainfo.html'
+                        },
+                        {
+                            mimeType: 'text/html',
+                            fileName: options[0].value + '.html'
+                        },
+                        {
+                            mimeType: 'text/html',
+                            fileName: options[1].value + '.html'
+                        },
+                        {
+                            mimeType: 'text/html',
+                            fileName: options[2].value + '.html'
+                        }
+                    ];
 
-                                done();
-                            });
-                    });
+                    assert.deepEqual(voteContainerFiles, expected);
                 });
 
-                test('Fail - Bad Request - at least 2 vote options are required', function (done) {
-                    var options = [
+                test('Fail - Bad Request - at least 2 vote options are required', async function () {
+                    const options = [
                         {
                             value: 'Option 1'
                         }
                     ];
-                    _topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null, 400, function (err, res) {
-                        if (err) return done(err);
+                    const resBody = (await _topicVoteCreatePromised(agent, user.id, topic.id, options, null, null, null, null, null, null, null, 400)).body;
 
-                        var expectedBody = {
-                            status: {
-                                code: 40001,
-                                message: 'At least 2 vote options are required'
-                            }
-                        };
+                    const expectedBody = {
+                        status: {
+                            code: 40001,
+                            message: 'At least 2 vote options are required'
+                        }
+                    };
 
-                        assert.deepEqual(res.body, expectedBody);
-
-                        done();
-                    });
+                    assert.deepEqual(resBody, expectedBody);
                 });
 
-                test('Fail - Bad Request - authType == hard - options too similar', function (done) {
-                    var options = [
+                test('Fail - Bad Request - authType == hard - options too similar', async function () {
+                    const options = [
                         {
                             value: 'Option 1'
                         },
@@ -6190,26 +6155,21 @@ suite('Users', function () {
                         }
                     ];
 
-                    var description = 'Vote description';
+                    const description = 'Vote description';
 
-                    _topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, description, null, Vote.AUTH_TYPES.hard, 400, function (err, res) {
-                        if (err) return done(err);
+                    const resBody = (await _topicVoteCreatePromised(agent, user.id, topic.id, options, null, null, null, null, description, null, Vote.AUTH_TYPES.hard, 400)).body;
+                    const expectedBody = {
+                        status: {
+                            code: 40002,
+                            message: 'Vote options are too similar'
+                        }
+                    };
 
-                        var expectedBody = {
-                            status: {
-                                code: 40002,
-                                message: 'Vote options are too similar'
-                            }
-                        };
-
-                        assert.deepEqual(res.body, expectedBody);
-
-                        done();
-                    });
+                    assert.deepEqual(resBody, expectedBody);
                 });
 
-                test('Fail - Bad Request - authType == hard - usage of reserved prefix', function (done) {
-                    var options = [
+                test('Fail - Bad Request - authType == hard - usage of reserved prefix', async function () {
+                    const options = [
                         {
                             value: '__Option 1'
                         },
@@ -6218,26 +6178,21 @@ suite('Users', function () {
                         }
                     ];
 
-                    var description = 'Vote description';
+                    const description = 'Vote description';
 
-                    _topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, description, null, Vote.AUTH_TYPES.hard, 400, function (err, res) {
-                        if (err) return done(err);
+                    const resBody = (await _topicVoteCreatePromised(agent, user.id, topic.id, options, null, null, null, null, description, null, Vote.AUTH_TYPES.hard, 400)).body;
+                    const expectedBody = {
+                        status: {
+                            code: 40004,
+                            message: 'Vote option not allowed due to usage of reserved prefix "' + VoteOption.RESERVED_PREFIX + '"'
+                        }
+                    };
 
-                        var expectedBody = {
-                            status: {
-                                code: 40004,
-                                message: 'Vote option not allowed due to usage of reserved prefix "' + VoteOption.RESERVED_PREFIX + '"'
-                            }
-                        };
-
-                        assert.deepEqual(res.body, expectedBody);
-
-                        done();
-                    });
+                    assert.deepEqual(resBody, expectedBody);
                 });
 
-                test('Fail - Bad Request - endsAt cannot be in the past', function (done) {
-                    var options = [
+                test('Fail - Bad Request - endsAt cannot be in the past', async function () {
+                    const options = [
                         {
                             value: 'Option 1'
                         },
@@ -6246,28 +6201,24 @@ suite('Users', function () {
                         }
                     ];
 
-                    var dateInThePast = new Date().setDate(new Date().getDate() - 1);
+                    const dateInThePast = new Date().setDate(new Date().getDate() - 1);
 
-                    _topicVoteCreate(agent, user.id, topic.id, options, null, null, null, dateInThePast, null, null, null, 400, function (err, res) {
-                        if (err) return done(err);
+                    const resBody = (await _topicVoteCreatePromised(agent, user.id, topic.id, options, null, null, null, dateInThePast, null, null, null, 400)).body;
 
-                        var expectedBody = {
-                            status: {
-                                code: 40000
-                            },
-                            errors: {
-                                endsAt: 'Voting deadline must be in the future.'
-                            }
-                        };
+                    const expectedBody = {
+                        status: {
+                            code: 40000
+                        },
+                        errors: {
+                            endsAt: 'Voting deadline must be in the future.'
+                        }
+                    };
 
-                        assert.deepEqual(res.body, expectedBody);
-
-                        done();
-                    });
+                    assert.deepEqual(resBody, expectedBody);
                 });
 
-                test('Fail - Bad Request - delegation is not allowed for authType = hard', function (done) {
-                    var options = [
+                test('Fail - Bad Request - delegation is not allowed for authType = hard', async function () {
+                    const options = [
                         {
                             value: 'Option 1'
                         },
@@ -6276,27 +6227,22 @@ suite('Users', function () {
                         }
                     ];
 
-                    var authType = Vote.AUTH_TYPES.hard;
-                    var delegationIsAllowed = true;
+                    const authType = Vote.AUTH_TYPES.hard;
+                    const delegationIsAllowed = true;
 
-                    _topicVoteCreate(agent, user.id, topic.id, options, null, null, delegationIsAllowed, null, null, null, authType, 400, function (err, res) {
-                        if (err) return done(err);
+                    const resBody = (await _topicVoteCreatePromised(agent, user.id, topic.id, options, null, null, delegationIsAllowed, null, null, null, authType, 400)).body;
+                    const expectedBody = {
+                        status: {
+                            code: 40003,
+                            message: 'Delegation is not allowed for authType "' + authType + '"'
+                        }
+                    };
 
-                        var expectedBody = {
-                            status: {
-                                code: 40003,
-                                message: 'Delegation is not allowed for authType "' + authType + '"'
-                            }
-                        };
-
-                        assert.deepEqual(res.body, expectedBody);
-
-                        done();
-                    });
+                    assert.deepEqual(resBody, expectedBody);
                 });
 
-                test('Fail - Forbidden - Vote creation is allowed only if Topic status is "inProgress"', function (done) {
-                    var options = [
+                test('Fail - Forbidden - Vote creation is allowed only if Topic status is "inProgress"', async function () {
+                    const options = [
                         {
                             value: 'Option 1'
                         },
@@ -6306,19 +6252,12 @@ suite('Users', function () {
                     ];
 
                     // Create a vote, that will set it to "inVoting" status, thus further Vote creation should not be allowed.
-                    topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null, function (err) {
-                        if (err) return done(err);
-
-                        _topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null, 403, function (err) {
-                            if (err) return done(err);
-
-                            done();
-                        });
-                    });
+                    await topicVoteCreatePromised(agent, user.id, topic.id, options, null, null, null, null, null, null, null);
+                    await _topicVoteCreatePromised(agent, user.id, topic.id, options, null, null, null, null, null, null, null, 403);
                 });
 
-                test('Fail - Bad Request - Vote option too long', function (done) {
-                    var options = [
+                test('Fail - Bad Request - Vote option too long', async function () {
+                    const options = [
                         {
                             value: 'This option is too long to be inserted in the database, because we have 200 character limit set. This is too long This is too long This is too long This is too long This is too long This is too long This is too long This is too long'
                         },
@@ -6328,22 +6267,17 @@ suite('Users', function () {
                     ];
 
 
-                    _topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null, 400, function (err, res) {
-                        if (err) return done(err);
+                    const resBody = (await _topicVoteCreatePromised(agent, user.id, topic.id, options, null, null, null, null, null, null, null, 400)).body;
+                    const expectedBody = {
+                        status: {
+                            code: 40000
+                        },
+                        errors: {
+                            value: 'Option value can be 1 to 200 characters long.'
+                        }
+                    };
 
-                        var expectedBody = {
-                            status: {
-                                code: 40000
-                            },
-                            errors: {
-                                value: 'Option value can be 1 to 200 characters long.'
-                            }
-                        };
-
-                        assert.deepEqual(res.body, expectedBody);
-
-                        done();
-                    });
+                    assert.deepEqual(resBody, expectedBody);
                 });
 
             });
@@ -7269,6 +7203,125 @@ suite('Users', function () {
                         const topicReadAfterVote = (await topicReadPromised(agent, user.id, topic.id, ['vote'])).body.data;
 
                         assert.deepEqual(topicReadAfterVote.vote, voteReadAfterVote2);
+                    });
+
+                    test('Success - multiple choice - vote Veto', async function () {
+                        const options = [
+                            {
+                                value: 'Option 1'
+                            },
+                            {
+                                value: 'Option 2'
+                            },
+                            {
+                                value: 'Option 3'
+                            },
+                            {
+                                value: 'Veto'
+                            }
+                        ];
+
+                        const voteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, options, 2, 3, false, null, null, null, null)).body.data;
+                        const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
+
+                        const voteList = [
+                            {
+                                optionId: _.find(voteRead.options.rows, {value: options[0].value}).id
+                            },
+                            {
+                                optionId: _.find(voteRead.options.rows, {value: options[3].value}).id
+                            }
+                        ];
+
+                        await topicVoteVotePromised(agent, user.id, topic.id, voteCreated.id, voteList, null, null, null, null);
+                        const voteReadAfterVote1 = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
+                        const option1 = _.find(voteReadAfterVote1.options.rows, {id: voteList[0].optionId});
+                        const option2 = _.find(voteReadAfterVote1.options.rows, {id: voteList[1].optionId});
+                        assert.notProperty(option1, 'voteCount');
+                        assert.equal(option2.voteCount, 1);
+                        assert.equal(option2.value, 'Veto');
+                    });
+
+                    test('Success - multiple choice - vote Neutral', async function () {
+                        const options = [
+                            {
+                                value: 'Option 1'
+                            },
+                            {
+                                value: 'Option 2'
+                            },
+                            {
+                                value: 'Option 3'
+                            },
+                            {
+                                value: 'Neutral'
+                            }
+                        ];
+
+                        const voteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, options, 2, 3, false, null, null, null, null)).body.data;
+                        const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
+
+                        const voteList = [
+                            {
+                                optionId: _.find(voteRead.options.rows, {value: options[0].value}).id
+                            },
+                            {
+                                optionId: _.find(voteRead.options.rows, {value: options[3].value}).id
+                            }
+                        ];
+
+                        await topicVoteVotePromised(agent, user.id, topic.id, voteCreated.id, voteList, null, null, null, null);
+                        const voteReadAfterVote1 = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
+                        const option1 = _.find(voteReadAfterVote1.options.rows, {id: voteList[0].optionId});
+                        const option2 = _.find(voteReadAfterVote1.options.rows, {id: voteList[1].optionId});
+                        assert.notProperty(option1, 'voteCount');
+                        assert.equal(option2.voteCount, 1);
+                        assert.equal(option2.value, 'Neutral');
+                    });
+
+                    test('Success - multiple choice - vote Neutral and Veto', async function () {
+                        const options = [
+                            {
+                                value: 'Option 1'
+                            },
+                            {
+                                value: 'Option 2'
+                            },
+                            {
+                                value: 'Veto'
+                            },
+                            {
+                                value: 'Neutral'
+                            }
+                        ];
+
+                        const voteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, options, 2, 3, false, null, null, null, null)).body.data;
+                        const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
+
+                        const voteList = [
+                            {
+                                optionId: _.find(voteRead.options.rows, {value: options[2].value}).id
+                            },
+                            {
+                                optionId: _.find(voteRead.options.rows, {value: options[3].value}).id
+                            }
+                        ];
+
+                        await topicVoteVotePromised(agent, user.id, topic.id, voteCreated.id, voteList, null, null, null, null);
+                        const voteReadAfterVote1 = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
+                        const option1 = _.find(voteReadAfterVote1.options.rows, {id: voteList[0].optionId});
+                        const option2 = _.find(voteReadAfterVote1.options.rows, {id: voteList[1].optionId});
+
+                        assert.equal(option1.value, 'Veto');
+                        assert.equal(option2.value, 'Neutral');
+                        if (option1.voteCount) {
+                            assert.equal(option1.voteCount, 1);
+                            assert.notProperty(option2, 'voteCount');
+                        }
+                        if (option2.voteCount) {
+                            assert.equal(option2.voteCount, 1);
+                            assert.notProperty(option1, 'voteCount');
+                        }
                     });
 
                     test('Success - public topic user with logged in', async function () {
