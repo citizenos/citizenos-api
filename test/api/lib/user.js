@@ -6,6 +6,7 @@
 
 module.exports = function (app) {
     const auth = require('../auth');
+    const userLib = require('../user');
     const models = app.get('models');
 
     const User = models.User;
@@ -178,7 +179,12 @@ module.exports = function (app) {
         return user;
     };
 
+    const _deleteUserPromised = async function (agent, userId) {
+        return userLib.userDeletePromised(agent, userId);
+    };
+
     return {
+        deleteUserPromised: _deleteUserPromised,
         createUser: _createUser,
         createUserPromised: _createUserPromised,
         createUserAndLogin: _createUserAndLogin,

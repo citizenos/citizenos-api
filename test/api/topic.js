@@ -377,13 +377,33 @@ var _topicsListUnauth = function (agent, statuses, categories, orderBy, offset, 
             sourcePartnerId: sourcePartnerId,
             include: include
         })
-        .expect(200)
+        .expect(expectedHttpCode)
         .expect('Content-Type', /json/)
         .end(callback);
 };
 
 var topicsListUnauth = function (agent, status, categories, orderBy, offset, limit, sourcePartnerId, include, callback) {
     _topicsListUnauth(agent, status, categories, orderBy, offset, limit, sourcePartnerId, include, 200, callback);
+};
+
+const _topicsListUnauthPromised = async function (agent, statuses, categories, orderBy, offset, limit, sourcePartnerId, include, expectedHttpCode) {
+    return agent
+        .get('/api/topics')
+        .query({
+            statuses: statuses,
+            categories: categories,
+            orderBy: orderBy,
+            offset: offset,
+            limit: limit,
+            sourcePartnerId: sourcePartnerId,
+            include: include
+        })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicsListUnauthPromised = async function (agent, status, categories, orderBy, offset, limit, sourcePartnerId, include) {
+    return _topicsListUnauthPromised(agent, status, categories, orderBy, offset, limit, sourcePartnerId, include, 200);
 };
 
 /**
@@ -7314,7 +7334,7 @@ suite('Users', function () {
 
                         assert.equal(option1.value, 'Veto');
                         assert.equal(option2.value, 'Neutral');
-                        if (option1.voteCount) {
+                        if (option1.voteCount) { //Only one option goes through as final vote
                             assert.equal(option1.voteCount, 1);
                             assert.notProperty(option2, 'voteCount');
                         }
@@ -7937,6 +7957,138 @@ suite('Users', function () {
                             const voteResult3 = (await topicVoteVotePromised(agentUser3, user3.id, topic.id, voteRead.id, voteListUser3, null, pidRepeatedVote, phoneNumberRepeatedVote)).body.data;
                             await topicVoteStatusPromised(agentUser3, user3.id, topic.id, voteRead.id, voteResult3.token);
 
+                            const voteResult4 = (await topicVoteVotePromised(agentUser4, user4.id, topic.id, voteRead.id, voteListUser4, null, pidSingleVote, phoneNumberSingleVote)).body.data;
+                            await topicVoteStatusPromised(agentUser4, user4.id, topic.id, voteRead.id, voteResult4.token);
+
+                            const voteReadAfterVote3 = (await topicVoteReadPromised(agentUser3, user3.id, topic.id, voteCreated.id)).body.data;
+
+                            voteReadAfterVote3.options.rows.forEach(function (option) {
+                                switch (option.id) {
+                                    case voteListUser3[0].optionId:
+                                        assert.equal(option.voteCount, 1 + 1); // U3, U4
+                                        assert.isTrue(option.selected);
+                                        break;
+                                    case voteListUser3[1].optionId:
+                                        assert.equal(option.voteCount, 1); // U3
+                                        assert.isTrue(option.selected);
+                                        break;
+                                    default:
+                                        assert.property(option, 'value');
+                                        assert.notProperty(option, 'voteCount');
+                                }
+                            });
+
+                            // Make sure the results match between different User requests
+                            const voteReadAfterVote2 = (await topicVoteReadPromised(agentUser2, user2.id, topic.id, voteCreated.id)).body.data;
+
+                            // NOTE: At this point we show "selected" as what the "userId" has selected, we do not check for UserConnections. We MAY want to change this... MAY.
+                            voteReadAfterVote3.options.rows.forEach(function (option) {
+                                delete option.selected;
+                            });
+
+                            assert.deepEqual(voteReadAfterVote2.options, voteReadAfterVote3.options);
+
+                            // Make sure the results match with result read with Topic
+                            const topicReadAfterVote2 = (await topicReadPromised(agentUser2, user2.id, topic.id, ['vote'])).body.data;
+                            const voteReadWithTopic2 = topicReadAfterVote2.vote;
+
+                            assert.deepEqual(voteReadWithTopic2, voteReadAfterVote2);
+
+                            // Make sure the results match with the result read with Topic list (/api/users/:userId/topics)
+                            // In order to do that, to see the topic in Users list, User needs to be a member of the Topic
+                            const members = [
+                                {
+                                    userId: user2.id,
+                                    level: TopicMemberUser.LEVELS.read
+                                }
+                            ];
+                            await topicMemberUsersCreatePromised(agent, user.id, topic.id, members);
+                            const topicList = (await topicListPromised(agentUser2, user2.id, ['vote'], null, null, null, true, null)).body.data;
+                            const topicVotedOn = _.find(topicList.rows, {id: topic.id});
+
+                            assert.deepEqual(topicVotedOn.vote, voteReadAfterVote2);
+                        });
+
+                        test('Success - Personal ID already connected to another user account - vote multiple-choice, re-vote delete account and count', async function () {
+                            this.timeout(40000);
+
+                            const phoneNumberRepeatedVote = '+37200000766';
+                            const pidRepeatedVote = '60001019906';
+
+                            const phoneNumberSingleVote = '+37200000566';
+                            const pidSingleVote = '60001018800';
+
+                            const options = [
+                                {
+                                    value: 'Option 1'
+                                },
+                                {
+                                    value: 'Option 2'
+                                },
+                                {
+                                    value: 'Option 3'
+                                }
+                            ];
+
+                            const topic = (await topicCreatePromised(agent, user.id, Topic.VISIBILITY.public, null, null, '<html><head></head><body><h2>TEST VOTE AND RE-VOTE</h2></body></html>', null)).body.data;
+                            const voteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, options, 1, 2, false, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                            const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
+
+                            const agentUser1 = agent;
+                            const user1 = user;
+
+                            const agentUser2 = request.agent(app);
+                            const user2 = await userLib.createUserAndLoginPromised(agentUser2, null, null, null);
+
+                            const agentUser3 = request.agent(app);
+                            const user3 = await userLib.createUserAndLoginPromised(agentUser3, null, null, null);
+
+                            const agentUser4 = request.agent(app);
+                            const user4 = await userLib.createUserAndLoginPromised(agentUser4, null, null, null);
+
+                            const voteListUser1 = [
+                                {
+                                    optionId: voteRead.options.rows[0].id
+                                },
+                                {
+                                    optionId: voteRead.options.rows[1].id
+                                }
+                            ];
+
+                            const voteListUser2 = [
+                                {
+                                    optionId: voteRead.options.rows[1].id
+                                },
+                                {
+                                    optionId: voteRead.options.rows[2].id
+                                }
+                            ];
+
+                            const voteListUser3 = [ // This should be counted in the final result as different "userId" is connected to the same PID
+                                {
+                                    optionId: voteRead.options.rows[0].id
+                                },
+                                {
+                                    optionId: voteRead.options.rows[2].id
+                                }
+                            ];
+
+                            const voteListUser4 = [ // This a person voting with a different PID to mix the water a bit
+                                {
+                                    optionId: voteRead.options.rows[0].id
+                                }
+                            ];
+
+                            const voteResult1 = (await topicVoteVotePromised(agentUser1, user1.id, topic.id, voteRead.id, voteListUser1, null, pidRepeatedVote, phoneNumberRepeatedVote)).body.data;
+                            await topicVoteStatusPromised(agentUser1, user1.id, topic.id, voteRead.id, voteResult1.token);
+
+                            const voteResult2 = (await topicVoteVotePromised(agentUser2, user2.id, topic.id, voteRead.id, voteListUser2, null, pidRepeatedVote, phoneNumberRepeatedVote)).body.data;
+                            await topicVoteStatusPromised(agentUser2, user2.id, topic.id, voteRead.id, voteResult2.token);
+
+                            const voteResult3 = (await topicVoteVotePromised(agentUser3, user3.id, topic.id, voteRead.id, voteListUser3, null, pidRepeatedVote, phoneNumberRepeatedVote)).body.data;
+                            await topicVoteStatusPromised(agentUser3, user3.id, topic.id, voteRead.id, voteResult3.token);
+
+                            await userLib.deleteUserPromised(agentUser3, user3.id);
                             const voteResult4 = (await topicVoteVotePromised(agentUser4, user4.id, topic.id, voteRead.id, voteListUser4, null, pidSingleVote, phoneNumberSingleVote)).body.data;
                             await topicVoteStatusPromised(agentUser4, user4.id, topic.id, voteRead.id, voteResult4.token);
 
@@ -10828,49 +10980,35 @@ suite('Topics', function () {
             });
         });
 
-        test('Success - non-authenticated User - don\'t show deleted "public" Topics', function (done) {
+        test('Success - non-authenticated User - don\'t show deleted "public" Topics', async function () {
 
-            topicCreate(creatorAgent, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health], null, null, null, function (err, res) {
-                if (err) return done(err);
-                var deletedTopic = res.body.data;
-
+            const deletedTopic = (await topicCreatePromised(creatorAgent, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health], null, null, null)).body.data;
                 // Set "title" to Topic, otherwise there will be no results because of the "title NOT NULL" in the query
-                Topic
-                    .update(
-                        {
-                            title: 'TEST PUBLIC DELETE'
-                        },
-                        {
-                            where: {
-                                id: deletedTopic.id
-                            }
-                        }
-                    )
-                    .then(function () {
-                        topicDelete(creatorAgent, creator.id, deletedTopic.id, function (err) {
-                            if (err) return done(err);
+            await Topic.update(
+                {
+                    title: 'TEST PUBLIC DELETE'
+                },
+                {
+                    where: {
+                        id: deletedTopic.id
+                    }
+                }
+            );
+            await topicDeletePromised(creatorAgent, creator.id, deletedTopic.id);
 
-                            topicsListUnauth(userAgent, Topic.STATUSES.inProgress, null, null, null, null, null, null, function (err, res) {
-                                if (err) return done(err);
+            const topicListRes = (await topicsListUnauthPromised(userAgent, Topic.STATUSES.inProgress, null, null, null, null, null, null)).body.data;
 
-                                assert.property(res.body.data, 'countTotal');
+            assert.property(topicListRes, 'countTotal');
 
-                                var topicList = res.body.data.rows;
+            const topicList = topicListRes.rows;
 
-                                assert.equal(res.body.data.count, topicList.length);
+            assert.equal(topicListRes.count, topicList.length);
 
-                                assert(topicList.length > 0);
-                                assert(topicList.length <= 26); // No limit, means default limit == 25
+            assert(topicList.length > 0);
+            assert(topicList.length <= 26); // No limit, means default limit == 25
 
-                                topicList.forEach(function (resTopic) {
-                                    assert.notEqual(deletedTopic.id, resTopic.id);
-                                });
-                                done();
-                            });
-                        });
-
-                    })
-                    .catch(done);
+            topicList.forEach(function (resTopic) {
+                assert.notEqual(deletedTopic.id, resTopic.id);
             });
 
         });

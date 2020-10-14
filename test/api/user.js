@@ -30,6 +30,21 @@ const _userUpdate = async function (agent, userId, name, email, password, langua
         .expect('Content-Type', /json/);
 };
 
+const _userDeletePromised = async function (agent, userId, expectedHttpCode) {
+    const path = '/api/users/:userId'
+        .replace('userId', userId);
+
+    return agent
+        .del(path)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const userDeletePromised = async function (agent, userId) {
+    return _userDeletePromised(agent, userId, 200);
+};
+
 const userUpdate = async function (agent, userId, name, email, password, language) {
     return _userUpdate(agent, userId, name, email, password, language, 200);
 };
@@ -79,6 +94,8 @@ const _userConsentDelete = async function (agent, userId, partnerId, expectedHtt
 const userConsentDelete = async function (agent, userId, partnerId) {
     return _userConsentDelete(agent, userId, partnerId, 200);
 };
+
+exports.userDeletePromised = userDeletePromised;
 
 const request = require('supertest');
 const app = require('../../app');
@@ -312,5 +329,36 @@ suite('User', function () {
 
         });
 
+    });
+
+    suite('Delete', function () {
+        const agent = request.agent(app);
+        const agent2 = request.agent(app);
+        let email, email2, password, user, user2;
+
+        setup(async function () {
+            email = 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@test.com';
+            email2 = 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A2@test.com';
+            password = 'Test123';
+            user = await userLib.createUserAndLoginPromised(agent, email, password, null);
+            user2 = await userLib.createUserPromised(agent2, email2, password, null);
+        });
+
+        test('Success', async function () {
+            return userDeletePromised(agent, user.id);
+        });
+
+        test('Fail - try deleting other user', async function () {
+            return _userDeletePromised(agent2, user.id, 401);
+        });
+
+        teardown(async function () {
+            return User
+                .destroy({
+                    where: {
+                        id: [user.id, user2.id]
+                    }
+                });
+        });
     });
 });
