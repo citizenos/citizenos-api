@@ -12,7 +12,7 @@ module.exports = function (app) {
     var Promise = app.get('Promise');
     var config = app.get('config');
     var urlLib = app.get('urlLib');
-
+    var db = models.Sequelize;
     var User = models.User;
     var UserConnection = models.UserConnection;
 
@@ -30,9 +30,7 @@ module.exports = function (app) {
 
         var userByEmailPromise = User
             .findOne({
-                where: {
-                    email: email
-                },
+                where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email)),
                 include: [UserConnection]
             });
         promisesToResolve.push(userByEmailPromise);

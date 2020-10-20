@@ -4541,9 +4541,7 @@ suite('Users', function () {
                                     // Verify that the User was created in expected language
                                     User
                                         .findOne({
-                                            where: {
-                                                email: memberToAdd.userId
-                                            }
+                                            where: db.where(db.fn('lower', db.col('email')), db.fn('lower',memberToAdd.userId))
                                         })
                                         .then(function (user) {
                                             assert.equal(user.language, memberToAdd.language);

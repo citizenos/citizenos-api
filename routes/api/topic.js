@@ -2399,22 +2399,27 @@ module.exports = function (app) {
         const validEmails = _.map(validEmailMembers, 'userId');
 
         // Find out which e-mails already exist
-        const usersExistingEmail = await User
-            .findAll({
-                where: {
-                    email: validEmails
-                },
-                attributes: ['id', 'email']
-            });
-
-        _(usersExistingEmail).forEach(function (u) {
-            const member = _.find(validEmailMembers, {userId: u.email});
-            if (member) {
-                member.userId = u.id;
-                validUserIdMembers.push(member);
-                _.remove(validEmailMembers, member); // Remove the e-mail, so that by the end of the day only e-mails that did not exist remain.
-            }
-        });
+        if (validEmails.length) {
+            const usersExistingEmail = await User
+                .findAll({
+                    where: {
+                        email: {
+                            [Op.iLike]: {
+                                [Op.any]: validEmails
+                            }
+                        }
+                    },
+                    attributes: ['id', 'email']
+                });
+                _(usersExistingEmail).forEach(function (u) {
+                    const member = _.find(validEmailMembers, {userId: u.email});
+                    if (member) {
+                        member.userId = u.id;
+                        validUserIdMembers.push(member);
+                        _.remove(validEmailMembers, member); // Remove the e-mail, so that by the end of the day only e-mails that did not exist remain.
+                    }
+                });
+        }
 
         await db.transaction(async function (t) {
             let createdUsers;
@@ -3442,25 +3447,30 @@ module.exports = function (app) {
         });
 
         const validEmails = _.map(validEmailMembers, 'userId');
-
-        // Find out which e-mails already exist
-        const usersExistingEmail = await User
+        if (validEmails.length) {
+            // Find out which e-mails already exist
+            const usersExistingEmail = await User
             .findAll({
                 where: {
-                    email: validEmails
+                    email: {
+                        [Op.iLike]: {
+                            [Op.any]: validEmails
+                        }
+                    }
                 },
                 attributes: ['id', 'email']
             });
 
 
-        _(usersExistingEmail).forEach(function (u) {
-            const member = _.find(validEmailMembers, {userId: u.email});
-            if (member) {
-                member.userId = u.id;
-                validUserIdMembers.push(member);
-                _.remove(validEmailMembers, member); // Remove the e-mail, so that by the end of the day only e-mails that did not exist remain.
-            }
-        });
+            _(usersExistingEmail).forEach(function (u) {
+                const member = _.find(validEmailMembers, {userId: u.email});
+                if (member) {
+                    member.userId = u.id;
+                    validUserIdMembers.push(member);
+                    _.remove(validEmailMembers, member); // Remove the e-mail, so that by the end of the day only e-mails that did not exist remain.
+                }
+            });
+        }
 
         let createdInvites = await db.transaction(async function (t) {
             let createdUsers;

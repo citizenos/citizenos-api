@@ -75,9 +75,7 @@ module.exports = function (app) {
                             return db.transaction(function (t) {
                                 return User
                                     .findOrCreate({
-                                        where: {
-                                            email: email // Well, this will allow user to log in either using User and pass or just Google.. I think it's ok..
-                                        },
+                                        where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email)),
                                         defaults: {
                                             name: displayName,
                                             email: email,
@@ -205,9 +203,7 @@ module.exports = function (app) {
                             return db.transaction(function (t) {
                                 return User
                                     .findOrCreate({
-                                        where: {
-                                            email: email // Well, this will allow user to log in either using User and pass or just Google.. I think it's ok..
-                                        },
+                                        where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email)), // Well, this will allow user to log in either using User and pass or just Google.. I think it's ok..
                                         defaults: {
                                             name: displayName,
                                             email: email,
@@ -310,9 +306,7 @@ module.exports = function (app) {
 
                 User
                     .findOne({
-                        where: {
-                            email: email
-                        }
+                        where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email))
                     })
                     .then(function (user) {
                         if (!user || !user.password) {

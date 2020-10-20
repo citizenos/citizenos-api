@@ -278,9 +278,7 @@ module.exports = function (app) {
     const _sendAccountVerification = function (to, emailVerificationCode, token) {
         return User
             .findAll({
-                where: {
-                    email: to
-                }
+                where: db.where(db.fn('lower', db.col('email')), db.fn('lower',to))
             })
             .then(function (users) {
                 const promisesToResolve = [];
@@ -324,9 +322,7 @@ module.exports = function (app) {
     const _sendPasswordReset = function (to, passwordResetCode) {
         return User
             .findAll({
-                where: {
-                    email: to
-                }
+                where: db.where(db.fn('lower', db.col('email')), db.fn('lower',to))
             })
             .then(function (users) {
                 const promisesToResolve = [];

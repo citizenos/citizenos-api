@@ -8,6 +8,7 @@ module.exports = function (app) {
     const auth = require('../auth');
     const userLib = require('../user');
     const models = app.get('models');
+    const db = models.Sequelize;
 
     const User = models.User;
 
@@ -47,9 +48,7 @@ module.exports = function (app) {
 
             User
                 .findOne({
-                    where: {
-                        email: email
-                    }
+                    where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email))
                 })
                 .then(function (user) {
                     auth.verify(agent, user.emailVerificationCode, function () {
@@ -96,9 +95,7 @@ module.exports = function (app) {
                 emailIsVerified: true
             },
             {
-                where: {
-                    email: email
-                },
+                where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email)),
                 returning: true
             }
         );
