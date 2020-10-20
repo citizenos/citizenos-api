@@ -618,6 +618,7 @@ const User = models.User;
 const UserConnection = models.UserConnection;
 const UserConsent = models.UserConsent;
 const Partner = models.Partner;
+const db = models.sequelize;
 
 suite('Auth', function () {
 
@@ -1357,9 +1358,7 @@ suite('Auth', function () {
 
                     return User
                             .findOne({
-                                where: {
-                                    email: email
-                                }
+                                where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email))
                             })
                             .then(function (user) {
                                 const passwordResetCode = user.passwordResetCode;
@@ -1407,9 +1406,7 @@ suite('Auth', function () {
                     await passwordResetSendPromised(agent, email);
                         return User
                             .findOne({
-                                where: {
-                                    email: email
-                                }
+                                where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
                             })
                             .then(function (user) {
                                 passwordResetCode = user.passwordResetCode;
@@ -1463,9 +1460,7 @@ suite('Auth', function () {
                     assert.equal(email, loginRes.body.data.email);
                     return User
                             .findOne({
-                                where: {
-                                    email: email
-                                }
+                                where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email))
                             })
                             .then(function (user) {
                                 // A new password reset code was to be generated - https://github.com/citizenos/citizenos-api/issues/68

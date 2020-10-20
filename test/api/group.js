@@ -261,6 +261,7 @@ var assert = require('chai').assert;
 var request = require('supertest');
 var app = require('../../app');
 var models = app.get('models');
+const db = models.sequelize;
 
 var shared = require('../utils/shared');
 var userLib = require('./lib/user')(app);
@@ -748,7 +749,7 @@ suite('Users', function () {
                         return User
                             .findOne({
                                 where: {
-                                    email: members[0].userId
+                                    email: db.where(db.fn('lower', db.col('email')), db.fn('lower',members[0].userId))
                                 }
                             })
                             .then(function (user) {

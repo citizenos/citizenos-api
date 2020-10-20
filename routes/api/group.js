@@ -595,7 +595,11 @@ module.exports = function (app) {
             usersCreatedPromise = User
                 .findAll({
                     where: {
-                        email: validEmails
+                        email: {
+                            [Op.iLike]: {
+                                [Op.any]: validEmails
+                            }
+                        }
                     },
                     attributes: ['id', 'email']
                 })

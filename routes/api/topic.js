@@ -2399,22 +2399,27 @@ module.exports = function (app) {
         const validEmails = _.map(validEmailMembers, 'userId');
 
         // Find out which e-mails already exist
-        const usersExistingEmail = await User
-            .findAll({
-                where: {
-                    email: validEmails
-                },
-                attributes: ['id', 'email']
-            });
-
-        _(usersExistingEmail).forEach(function (u) {
-            const member = _.find(validEmailMembers, {userId: u.email});
-            if (member) {
-                member.userId = u.id;
-                validUserIdMembers.push(member);
-                _.remove(validEmailMembers, member); // Remove the e-mail, so that by the end of the day only e-mails that did not exist remain.
-            }
-        });
+        if (validEmails.length) {
+            const usersExistingEmail = await User
+                .findAll({
+                    where: {
+                        email: {
+                            [Op.iLike]: {
+                                [Op.any]: validEmails
+                            }
+                        }
+                    },
+                    attributes: ['id', 'email']
+                });
+                _(usersExistingEmail).forEach(function (u) {
+                    const member = _.find(validEmailMembers, {userId: u.email});
+                    if (member) {
+                        member.userId = u.id;
+                        validUserIdMembers.push(member);
+                        _.remove(validEmailMembers, member); // Remove the e-mail, so that by the end of the day only e-mails that did not exist remain.
+                    }
+                });
+        }
 
         await db.transaction(async function (t) {
             let createdUsers;
@@ -3442,25 +3447,30 @@ module.exports = function (app) {
         });
 
         const validEmails = _.map(validEmailMembers, 'userId');
-
-        // Find out which e-mails already exist
-        const usersExistingEmail = await User
+        if (validEmails.length) {
+            // Find out which e-mails already exist
+            const usersExistingEmail = await User
             .findAll({
                 where: {
-                    email: validEmails
+                    email: {
+                        [Op.iLike]: {
+                            [Op.any]: validEmails
+                        }
+                    }
                 },
                 attributes: ['id', 'email']
             });
 
 
-        _(usersExistingEmail).forEach(function (u) {
-            const member = _.find(validEmailMembers, {userId: u.email});
-            if (member) {
-                member.userId = u.id;
-                validUserIdMembers.push(member);
-                _.remove(validEmailMembers, member); // Remove the e-mail, so that by the end of the day only e-mails that did not exist remain.
-            }
-        });
+            _(usersExistingEmail).forEach(function (u) {
+                const member = _.find(validEmailMembers, {userId: u.email});
+                if (member) {
+                    member.userId = u.id;
+                    validUserIdMembers.push(member);
+                    _.remove(validEmailMembers, member); // Remove the e-mail, so that by the end of the day only e-mails that did not exist remain.
+                }
+            });
+        }
 
         let createdInvites = await db.transaction(async function (t) {
             let createdUsers;
@@ -5864,8 +5874,7 @@ module.exports = function (app) {
                         v."optionId", \
                         v."voteId", \
                         vo."value", \
-                        (SELECT true FROM votes WHERE "userId" = :userId AND "optionId" = v."optionId") as "selected", \
-                        CASE WHEN d."optionId" = v."optionId" THEN true ELSE null END AS delegated \
+                        (SELECT true FROM votes WHERE "userId" = :userId AND "optionId" = v."optionId") as "selected" \
                     FROM ( \
                         SELECT \
                             COUNT(v."optionId") + 1 as "voteCount", \
@@ -5888,27 +5897,7 @@ module.exports = function (app) {
                         GROUP BY v."optionId", v."optionGroupId", v."voteId" \
                     ) v \
                     LEFT JOIN "VoteOptions" vo ON (v."optionId" = vo."id") \
-                    LEFT JOIN ( \
-                        SELECT \
-                            v."optionId" \
-                        FROM \
-                        votes v \
-                        LEFT JOIN ( \
-                            SELECT \
-                                "toUserId" AS "userId", \
-                                "byUserId", \
-                                "voteId" \
-                            FROM \
-                                indirect_delegations id \
-                            WHERE id."voteId" = :voteId \
-                            AND id."byUserId" = :userId \
-                            ORDER BY id.depth DESC LIMIT 1 \
-                        ) ida \
-                        ON ida."userId" = v."userId" AND v."voteId" = ida."voteId" \
-                        WHERE ida."voteId" = :voteId \
-                        AND ida."byUserId" = :userId \
-                    ) d ON d."optionId" = v."optionId" \
-                    GROUP BY v."optionId", v."voteId", vo."value", d."optionId" \
+                    GROUP BY v."optionId", v."voteId", vo."value" \
             ;',
                 {
                     replacements: {
@@ -5936,10 +5925,6 @@ module.exports = function (app) {
                             option.dataValues.voteCount = parseInt(result.voteCount, 10); //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
                             if (result.selected) {
                                 option.dataValues.selected = result.selected; //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
-                                hasVoted = true;
-                            }
-                            if (result.delegated) {
-                                option.dataValues.delegated = result.delegated; //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
                                 hasVoted = true;
                             }
                         }
