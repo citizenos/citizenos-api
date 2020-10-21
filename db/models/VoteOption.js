@@ -59,8 +59,7 @@ module.exports = function (sequelize, DataTypes) {
             id: this.dataValues.id,
             value: this.dataValues.value,
             voteCount: this.dataValues.voteCount, // HAX: added by certain queries
-            selected: this.dataValues.selected, // HAX: added by certain queries
-            delegated: this.dataValues.delegated // HAX: added by certain queries
+            selected: this.dataValues.selected // HAX: added by certain queries
         };
 
         return data;
