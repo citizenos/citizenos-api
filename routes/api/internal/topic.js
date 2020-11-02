@@ -7,7 +7,6 @@
 module.exports = function (app) {
     var models = app.get('models');
     var db = models.sequelize;
-    
     var authApiKey = app.get('middleware.authApiKey');
 
     var Topic = models.Topic;

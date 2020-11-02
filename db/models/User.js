@@ -143,6 +143,11 @@ module.exports = function (sequelize, DataTypes) {
                 type: DataTypes.DATE,
                 comment: 'Time when the terms were accepted',
                 allowNull: true
+            },
+            authorId: {
+                type: DataTypes.STRING,
+                allowNull: true,
+                comment: 'Etherpad authorID for the user'
             }
         }
     );

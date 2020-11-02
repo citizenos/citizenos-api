@@ -1,5 +1,7 @@
 'use strict';
 
+const User = require('../db/models/User');
+
 /**
  * Encapsulate Etherpad (EP) logic that is specific to Toru
  *
@@ -9,19 +11,19 @@
  */
 
 module.exports = function (app) {
-    var etherpadClient = app.get('etherpadClient');
-    var Promise = app.get('Promise');
-    var models = app.get('models');
-    var db = models.sequelize;
-    var config = app.get('config');
-    var logger = app.get('logger');
-    var jwt = app.get('jwt');
-    var encoder = app.get('encoder');
-    var cosActivities = app.get('cosActivities');
-    var path = require('path');
-    var fs = app.get('fs');
+    const etherpadClient = app.get('etherpadClient');
+    const models = app.get('models');
+    const db = models.sequelize;
+    const config = app.get('config');
+    const logger = app.get('logger');
+    const jwt = app.get('jwt');
+    const encoder = app.get('encoder');
+    const cosActivities = app.get('cosActivities');
+    const path = require('path');
+    const fs = app.get('fs');
 
-    var Topic = models.Topic;
+    const Topic = models.Topic;
+    const User = models.User;
 
     const TEMPLATE_ROOT = app.get('TEMPLATE_ROOT');
 
@@ -39,32 +41,23 @@ module.exports = function (app) {
      * @returns {Promise<String>} Etherpad groupID
      * @private
      */
-    var _createTopic = function (topicId, language, html) {
-        var lang = language ? language : 'en';
+    const _createTopic = async function (topicId, language, html) {
+        const lang = language ? language : 'en';
 
-        return etherpadClient
-            .createPadAsync({padID: topicId})
-            .then(function () {
-                if (html) {
-                    return Promise.resolve(html);
-                } else {
-                    return fs
-                        .readFileAsync(path.join(TEMPLATE_ROOT, 'etherpad/build/default_' + lang + '.html'))
-                        .then(function (buffer) {
-                            return buffer.toString();
-                        });
-                }
-            })
-            .then(function (padHtml) {
-                return etherpadClient.setHTMLAsync({
-                    padID: topicId,
-                    html: padHtml
-                });
-            });
+        await etherpadClient.createPadAsync({padID: topicId});
+        let padHtml = html;
+        if (!padHtml) {
+            padHtml =  (await fs.readFileAsync(path.join(TEMPLATE_ROOT, 'etherpad/build/default_' + lang + '.html'))).toString();
+        }
+
+        return etherpadClient.setHTMLAsync({
+            padID: topicId,
+            html: padHtml
+        });
     };
 
 
-    var _updateTopic = function (topicId, html) {
+    const _updateTopic = async function (topicId, html) {
         return etherpadClient.setHTMLAsync({
             padID: topicId,
             html: html
@@ -79,7 +72,7 @@ module.exports = function (app) {
      * @returns {Promise} ethrepadClient delete promise
      * @private
      */
-    var _deleteTopic = function (topicId) {
+    const _deleteTopic = async function (topicId) {
         return etherpadClient
             .deletePadAsync({padID: topicId});
     };
@@ -97,7 +90,7 @@ module.exports = function (app) {
      *
      * @private
      */
-    var _getUserAccessUrl = function (topic, userId, name, language, partner) {
+    const _getUserAccessUrl = function (topic, userId, name, language, partner) {
 
         /**
          * Using JWT to send data to ep_auth_citizenos because:
@@ -107,18 +100,18 @@ module.exports = function (app) {
          *
          * NOTE: If the payload gets too big, we may hit GET request length limit of 2048 bytes for some browsers!
          */
-        var jwtPayload = {
+        const jwtPayload = {
             user: {
                 id: userId,
                 name: name
             }
         };
 
-        var token = jwt.sign(jwtPayload, config.session.privateKey, {
+        const token = jwt.sign(jwtPayload, config.session.privateKey, {
             expiresIn: '1m',
             algorithm: config.session.algorithm
         });
-        var url = topic.padUrl + '?jwt=' + token + '&lang=' + language;
+        let url = topic.padUrl + '?jwt=' + token + '&lang=' + language;
 
         if (partner) {
             url += '&theme=' + partner.id;
@@ -136,12 +129,12 @@ module.exports = function (app) {
      *
      * @private
      */
-    var _getTopicPadUrl = function (topicId) {
-        var host = config.services.etherpad.host;
-        var port = config.services.etherpad.port;
-        var protocol = config.services.etherpad.ssl ? 'https' : 'http';
+    const _getTopicPadUrl = function (topicId) {
+        const host = config.services.etherpad.host;
+        const port = config.services.etherpad.port;
+        const protocol = config.services.etherpad.ssl ? 'https' : 'http';
 
-        var url = protocol + '://' + host + '/p/:topicId';
+        let url = protocol + '://' + host + '/p/:topicId';
         if (port !== '443') {
             url = protocol + '://' + host + ':' + port + '/p/:topicId';
         }
@@ -158,7 +151,7 @@ module.exports = function (app) {
      *
      * @private
      */
-    var _replaceFsTags = function (html) {
+    const _replaceFsTags = function (html) {
         html = html
             .replace(/<\/?(center|justify|right|left|fs+\d*)\s?.*?>/g, function (match, className) {
                 if (match.indexOf('/') > 0) {
@@ -189,9 +182,9 @@ module.exports = function (app) {
      *
      * @private
      */
-    var _getTopicTitleFromPadContent = function (str) {
-        var title;
-        var headingMatch = str.match(/(?!<h[1-6]><\/h[1-6]>)<h[1-6]>(.+?)<\/h[1-6]>/i);
+    const _getTopicTitleFromPadContent = function (str) {
+        let title;
+        const headingMatch = str.match(/(?!<h[1-6]><\/h[1-6]>)<h[1-6]>(.+?)<\/h[1-6]>/i);
         if (headingMatch && headingMatch.length > 0) {
             title = headingMatch[1];
         } else {
@@ -213,59 +206,72 @@ module.exports = function (app) {
         return title.trim();
     };
 
-    var _syncTopicWithPad = function (topicId, context, actor, rev) {
+    const _getTopicPadAuthors = async function (topicId) {
+        const authors = await etherpadClient
+            .listAuthorsOfPadAsync({padID: topicId})
+            .catch(function (err) {
+                logger.error(err);
+            });
+
+        if (authors) {
+            const authorUsers = await User.findAll({
+                where: {
+                    authorId: authors.authorIDs
+                },
+                attributes: ['id'],
+                raw: true
+            });
+
+            return authorUsers.map(function (user) {
+                return user.id
+            });
+        }
+
+        return;
+    };
+
+    const _syncTopicWithPad = async function (topicId, context, actor, rev) {
         logger.info('Sync topic with Pad', topicId, rev);
 
-        var params = {padID: topicId};
+        const params = {padID: topicId};
         if (rev) {
             params.rev = rev;
         }
 
-        return etherpadClient
-            .getHTMLAsync(params)
-            .then(function (res) {
-                var html = _replaceFsTags(res.html);
-                var title = _getTopicTitleFromPadContent(html);
+        const html = _replaceFsTags((await etherpadClient.getHTMLAsync(params)).html);
+        const title = _getTopicTitleFromPadContent(html);
 
-                return db.transaction(function (t) {
-                    return Topic
-                        .findOne({
-                            where: {
-                                id: topicId
-                            }
-                        })
-                        .then(function (topic) {
-                            topic.title = title;
-                            topic.description = html;
-                            if (!actor) {
-                                actor = {type: 'System'};
-                            }
+        return db.transaction(async function (t) {
+            const topic = await Topic.findOne({
+                    where: {
+                        id: topicId
+                    }
+                },{transaction: t});
+            topic.title = title;
+            topic.description = html;
+            if (!actor) {
+                actor = {type: 'System'};
+            }
 
-                            // TODO: ADD CHECK HERE, IF another event not updated (description) has been added then create new else update last description edit updatedAt field
-                            return cosActivities
-                                .updateTopicDescriptionActivity(topic, null, actor, ['id', 'title', 'status', 'visibility', 'sourcePartnerId'], context, t)
-                                .then(function () {
-                                    return topic
-                                        .update(
-                                            {
-                                                title: title,
-                                                description: html
-                                            },
-                                            {
-                                                where: {
-                                                    id: topicId,
-                                                    status: Topic.STATUSES.inProgress // Only in progress Topics can be updated
-                                                },
-                                                limit: 1
-                                            },
-                                            {
-                                                transaction: t
-                                            }
-                                        );
-                                });
-                        });
-                });
-            });
+                    // TODO: ADD CHECK HERE, IF another event not updated (description) has been added then create new else update last description edit updatedAt field
+            await cosActivities.updateTopicDescriptionActivity(topic, null, actor, ['id', 'title', 'status', 'visibility', 'sourcePartnerId'], context, t);
+            return topic.update(
+                    {
+                        title: title,
+                        description: html
+                    },
+                    {
+                        where: {
+                            id: topicId,
+                            status: Topic.STATUSES.inProgress // Only in progress Topics can be updated
+                        },
+                        limit: 1
+                    },
+                    {
+                        transaction: t
+                    }
+                );
+        });
     };
 
     return {
@@ -275,6 +281,7 @@ module.exports = function (app) {
         getUserAccessUrl: _getUserAccessUrl,
         getTopicPadUrl: _getTopicPadUrl,
         syncTopicWithPad: _syncTopicWithPad,
-        getTopicTitleFromPadContent: _getTopicTitleFromPadContent
+        getTopicTitleFromPadContent: _getTopicTitleFromPadContent,
+        getTopicPadAuthors: _getTopicPadAuthors
     };
 };

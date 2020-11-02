@@ -127,39 +127,32 @@ suite('Activities', function () {
             await topicLib.topicCreatePromised(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null);
             topic = (await topicLib.topicCreatePromised(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null)).body.data;
             user2 = userLib.createUserPromised(agent2, null, null, null);
-            return Partner
-                .create({
-                    website: 'notimportant',
-                    redirectUriRegexp: 'notimportant'
-                })
-                .then(function (res) {
-                    partner = res;
+            partner = await Partner.create({
+                website: 'notimportant',
+                redirectUriRegexp: 'notimportant'
+            });
 
-                    return Topic
-                        .update(
-                            {
-                                sourcePartnerId: partner.id
-                            },
-                            {
-                                where: {
-                                    id: topic.id
-                                }
-                            }
-                        );
-                })
-                .then(function () {
-                    return topicLib.topicMemberUsersCreatePromised(
-                        agent,
-                        user.id,
-                        topic.id,
-                        [
-                            {
-                                userId: user2.id,
-                                level: TopicMemberUser.LEVELS.read
-                            }
-                        ]
-                    );
-                });
+            await Topic.update(
+                {
+                    sourcePartnerId: partner.id
+                },
+                {
+                    where: {
+                        id: topic.id
+                    }
+                }
+            );
+            await topicLib.topicMemberUsersCreatePromised(
+                agent,
+                user.id,
+                topic.id,
+                [
+                    {
+                        userId: user2.id,
+                        level: TopicMemberUser.LEVELS.read
+                    }
+                ]
+            );
         });
 
         test('Success', async function () {
@@ -253,29 +246,24 @@ suite('Activities', function () {
             await topicLib.topicCreatePromised(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null);
             topic = (await topicLib.topicCreatePromised(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST2</h2></body></html>', null)).body.data;
             user2 = await (userLib.createUserPromised(agent2, null, null, null));
-            return Partner
+            partner = await Partner
                 .create({
                     website: 'notimportant',
                     redirectUriRegexp: 'notimportant'
-                })
-                .then(function (res) {
-                    partner = res;
-
-                    return Topic
-                        .update(
-                            {
-                                sourcePartnerId: partner.id
-                            },
-                            {
-                                where: {
-                                    id: topic.id
-                                }
-                            }
-                        );
-                })
-                .then(function () {
-                    return topicLib.topicMemberUsersCreatePromised(agent, user.id,topic.id,[{userId: user2.id,level: TopicMemberUser.LEVELS.read}]);
                 });
+
+            await Topic.update(
+                {
+                    sourcePartnerId: partner.id
+                },
+                {
+                    where: {
+                        id: topic.id
+                    }
+                }
+            );
+
+            await topicLib.topicMemberUsersCreatePromised(agent, user.id,topic.id,[{userId: user2.id,level: TopicMemberUser.LEVELS.read}]);
         });
 
         test('Success - count 0 - user has never viewed activity feed', async function () {

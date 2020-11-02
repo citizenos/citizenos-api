@@ -633,6 +633,7 @@ module.exports = function (app) {
     };
 
     const _topicReadUnauth = function (topicId, include) {
+        _syncTopicAuthors(topicId);
         let join = '';
         let returncolumns = '';
 
@@ -704,7 +705,8 @@ module.exports = function (app) {
                      tv."voteId", \
                      tr."id" AS "report.id", \
                      tr."moderatedReasonType" AS "report.moderatedReasonType", \
-                     tr."moderatedReasonText" AS "report.moderatedReasonText" \
+                     tr."moderatedReasonText" AS "report.moderatedReasonText", \
+                     au.authors \
                      ' + returncolumns + ' \
                 FROM "Topics" t \
                     LEFT JOIN "Users" c ON (c.id = t."creatorId") \
@@ -736,6 +738,17 @@ module.exports = function (app) {
                         AND gc."deletedAt" IS NULL \
                         GROUP BY tmgc."topicId" \
                     ) AS mgc ON (mgc."topicId" = t.id) \
+                    LEFT JOIN ( \
+                        SELECT \
+                            t.id as "topicId", \
+                            json_agg(u) as authors\
+                        FROM \
+                        "Topics" t \
+                        LEFT JOIN (SELECT id,  name FROM "Users") AS u \
+                        ON \
+                        u.id IN (SELECT unnest(t."authorIds")) \
+                        GROUP BY t.id \
+                    ) AS au ON au."topicId" = t.id \
                     LEFT JOIN ( \
                         SELECT \
                             tv."topicId", \
@@ -777,8 +790,10 @@ module.exports = function (app) {
     };
 
     const _topicReadAuth = async function (topicId, include, user, partner) {
+        _syncTopicAuthors(topicId);
         let join = '';
         let returncolumns = '';
+        let authorColumns = ' u.id, u.name ';
 
         if (include && !Array.isArray(include)) {
             include = [include];
@@ -839,6 +854,9 @@ module.exports = function (app) {
             , tr."type" AS "report.type" \
             , tr."text" AS "report.text" \
             ';
+            authorColumns += '\
+            , u.email \
+            ';
         }
 
         return db
@@ -881,7 +899,8 @@ module.exports = function (app) {
                         u.language as "user.language", \
                         tr.id AS "report.id", \
                         tr."moderatedReasonType" AS "report.moderatedReasonType", \
-                        tr."moderatedReasonText" AS "report.moderatedReasonText" \
+                        tr."moderatedReasonText" AS "report.moderatedReasonText", \
+                        au.authors \
                         ' + returncolumns + ' \
                 FROM "Topics" t \
                         LEFT JOIN ( \
@@ -905,6 +924,17 @@ module.exports = function (app) {
                     ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId) \
                     LEFT JOIN "Users" c ON (c.id = t."creatorId") \
                     LEFT JOIN "UserConnections" uc ON (uc."userId" = t."creatorId") \
+                    LEFT JOIN ( \
+                        SELECT \
+                            t.id AS "topicId", \
+                            json_agg(u) as authors\
+                        FROM \
+                        "Topics" t \
+                        LEFT JOIN (SELECT ' + authorColumns + ' FROM "Users" u ) u \
+                        ON \
+                        u.id IN (SELECT unnest(t."authorIds")) \
+                        GROUP BY t.id \
+                    ) AS au ON au."topicId" = t.id \
                     LEFT JOIN ( \
                         SELECT tmu."topicId", COUNT(tmu."memberId") AS "count" FROM ( \
                             SELECT \
@@ -1262,6 +1292,18 @@ module.exports = function (app) {
             );
     };
 
+    const _syncTopicAuthors = async function (topicId) {
+        const authorIds = await cosEtherpad.getTopicPadAuthors(topicId);
+        if (authorIds && authorIds.length) {
+            await Topic.update({
+                authorIds
+            }, {
+                where: {
+                    id: topicId
+                }
+            });
+        }
+    }
     /**
      * Create a new Topic
      */
@@ -1273,8 +1315,10 @@ module.exports = function (app) {
             categories: req.body.categories,
             hashtag: req.body.hashtag,
             endsAt: req.body.endsAt,
-            sourcePartnerObjectId: req.body.sourcePartnerObjectId
+            sourcePartnerObjectId: req.body.sourcePartnerObjectId,
+            authorIds: [req.user.id]
         });
+
         topic.padUrl = cosEtherpad.getTopicPadUrl(topic.id);
 
         if (req.locals.partner) {
@@ -1329,9 +1373,17 @@ module.exports = function (app) {
                 }
             );
         }
+        const authorIds = topic.authorIds;
+        const authors = await User.findAll({
+            where: {
+                id: authorIds
+            },
+            attributes: ['id', 'name'],
+            raw: true
+        });
 
         const resObject = topic.toJSON();
-
+        resObject.authors = authors;
         resObject.padUrl = cosEtherpad.getUserAccessUrl(topic, user.id, user.name, user.language, req.locals.partner);
         resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
 
@@ -3871,67 +3923,70 @@ module.exports = function (app) {
      *
      * TODO: API url is fishy.. maybe should be POST /api/topics/:joinToken/members
      */
-    app.post('/api/topics/join/:tokenJoin', loginCheck(['partner']), function (req, res, next) {
+    app.post('/api/topics/join/:tokenJoin', loginCheck(['partner']), async function (req, res, next) {
         const tokenJoin = req.params.tokenJoin;
         const userId = req.user.id;
 
-        Topic
-            .findOne({
+        try {
+            const topic = await Topic.findOne({
                 where: {
                     tokenJoin: tokenJoin
                 }
-            })
-            .then(function (topic) {
-                if (!topic) {
-                    return res.badRequest('Matching token not found', 1);
-                }
+            });
 
-                return db.transaction(function (t) {
-                    return TopicMemberUser
-                        .findOrCreate({
-                            where: {
-                                topicId: topic.id,
-                                userId: userId
-                            },
-                            defaults: {
-                                level: TopicMemberUser.LEVELS.read
-                            },
-                            transaction: t
-                        })
-                        .then(function ([memberUser, created]) {
-                            if (created) {
-                                return User
-                                    .findOne({
-                                        where: {
-                                            id: userId
-                                        }
-                                    })
-                                    .then(function (user) {
-                                        return cosActivities
-                                            .joinActivity(
-                                                topic,
-                                                {
-                                                    type: 'User',
-                                                    id: user.id,
-                                                    ip: req.ip,
-                                                    level: TopicMemberUser.LEVELS.read
-                                                },
-                                                req.method + ' ' + req.path,
-                                                t
-                                            );
-                                    });
-                            } else {
-                                return memberUser;
-                            }
-                        });
-                }).then(function () {
-                    const resObject = topic.toJSON();
-                    resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+            if (!topic) {
+                return res.badRequest('Matching token not found', 1);
+            }
 
-                    return res.ok(resObject);
+            await  db.transaction(async function (t) {
+                const [memberUser, created] = await TopicMemberUser.findOrCreate({
+                    where: {
+                        topicId: topic.id,
+                        userId: userId
+                    },
+                    defaults: {
+                        level: TopicMemberUser.LEVELS.read
+                    },
+                    transaction: t
                 });
-            })
-            .catch(next);
+
+                if (created) {
+                    const user = await User.findOne({
+                        where: {
+                            id: userId
+                        }
+                    });
+
+                    await cosActivities.joinActivity(
+                        topic,
+                        {
+                            type: 'User',
+                            id: user.id,
+                            ip: req.ip,
+                            level: TopicMemberUser.LEVELS.read
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
+                }
+            });
+            const authorIds = topic.authorIds;
+            const authors = await User.findAll({
+                where: {
+                    id: authorIds
+                },
+                attributes: ['id', 'name'],
+                raw: true
+            });
+
+            const resObject = topic.toJSON();
+            resObject.authors = authors;
+            resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+
+            return res.ok(resObject);
+        } catch (err){
+            next(err);
+        }
     });
 
 
@@ -3939,7 +3994,7 @@ module.exports = function (app) {
      * Add Topic Attachment
      */
 
-    app.post('/api/users/:userId/topics/:topicId/attachments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit), function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/attachments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit), async function (req, res, next) {
         const topicId = req.params.topicId;
         const name = req.body.name;
         const type = req.body.type;
@@ -3948,68 +4003,58 @@ module.exports = function (app) {
         const link = req.body.link;
 
         const attachmentLimit = config.attachments.limit || 5;
-
-        Topic
-            .findOne({
+        try {
+            const topic = await Topic.findOne({
                 where: {
                     id: topicId
                 },
                 include: [Attachment]
-            })
-            .then(function (topic) {
-                if (!topic) {
-                    return res.badRequest('Matching topic not found', 1);
-                }
-                if (topic.Attachments && topic.Attachments.length >= attachmentLimit) {
-                    return res.badRequest('Topic attachment limit reached', 2);
-                }
+            });
+            if (!topic) {
+                return res.badRequest('Matching topic not found', 1);
+            }
+            if (topic.Attachments && topic.Attachments.length >= attachmentLimit) {
+                return res.badRequest('Topic attachment limit reached', 2);
+            }
 
-                const attachment = Attachment.build({
-                    name: name,
-                    type: type,
-                    size: size,
-                    source: source,
-                    creatorId: req.user.id,
-                    link: link
-                });
+            let attachment = Attachment.build({
+                name: name,
+                type: type,
+                size: size,
+                source: source,
+                creatorId: req.user.id,
+                link: link
+            });
 
-                return db
-                    .transaction(function (t) {
-                        return attachment
-                            .save({transaction: t})
-                            .then(function (attachment) {
-                                return TopicAttachment
-                                    .create(
-                                        {
-                                            topicId: req.params.topicId,
-                                            attachmentId: attachment.id
-                                        },
-                                        {
-                                            transaction: t
-                                        }
-                                    )
-                                    .then(function () {
-                                        return cosActivities
-                                            .addActivity(
-                                                attachment,
-                                                {
-                                                    type: 'User',
-                                                    id: req.user.id,
-                                                    ip: req.ip
-                                                },
-                                                null,
-                                                topic,
-                                                req.method + ' ' + req.path,
-                                                t
-                                            );
-                                    });
-                            });
-                    })
-                    .then(function () {
-                        return res.ok(attachment.toJSON());
-                    });
-            })
-            .catch(next);
+            await db.transaction(async function (t) {
+                    attachment = await attachment.save({transaction: t});
+                    await TopicAttachment.create(
+                        {
+                            topicId: req.params.topicId,
+                            attachmentId: attachment.id
+                        },
+                        {
+                            transaction: t
+                        }
+                    );
+                    await cosActivities.addActivity(
+                        attachment,
+                        {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        },
+                        null,
+                        topic,
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
+                    return res.ok(attachment.toJSON());
+            });
+        } catch(err) {
+            next(err);
+        }
     });
 
     app.put('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit), function (req, res, next) {
@@ -6269,294 +6314,190 @@ module.exports = function (app) {
             });
     };
 
-    const handleTopicVoteHard = function (vote, req, res) {
-        const voteId = vote.id;
-        let userId = req.user ? req.user.id : null;
+    const handleTopicVoteHard = async function (vote, req, res) {
+        try {
+            const voteId = vote.id;
+            let userId = req.user ? req.user.id : null;
 
-        const voteOptions = req.body.options;
+            //idCard
+            const certificate = req.body.certificate;
+            //mID
+            const pid = req.body.pid;
+            const phoneNumber = req.body.phoneNumber;
+            //smart-ID
+            const countryCode = req.body.countryCode;
+            let personalInfo;
+            let signingMethod;
 
-        //idCard
-        const certificate = req.body.certificate;
-        //mID
-        const pid = req.body.pid;
-        const phoneNumber = req.body.phoneNumber;
-        //smart-ID
-        const countryCode = req.body.countryCode;
-        let personalInfo;
-        let signingMethod;
+            if (!certificate && !(pid && (phoneNumber || countryCode))) {
+                res.badRequest('Vote with hard authentication requires users certificate when signing with ID card OR phoneNumber+pid when signing with mID', 9);
 
-        if (!certificate && !(pid && (phoneNumber || countryCode))) {
-            res.badRequest('Vote with hard authentication requires users certificate when signing with ID card OR phoneNumber+pid when signing with mID', 9);
-
-            return Promise.reject();
-        }
-        let getCertificatePromise;
-        let smartIdcertificate;
-        let mobileIdCertificate;
-        let certFormat = 'base64'
-        if (pid && countryCode) {
-            signingMethod = Vote.SIGNING_METHODS.smartId;
-            getCertificatePromise = smartId
-                .getUserCertificate(pid, countryCode)
-                .then(function (result) {
-                    if (result.code === 404) {
-                        res.notFound();
-                        return Promise.reject();
+                return Promise.reject();
+            }
+            let certificateInfo;
+            let smartIdcertificate;
+            let mobileIdCertificate;
+            let certFormat = 'base64'
+            if (pid && countryCode) {
+                signingMethod = Vote.SIGNING_METHODS.smartId;
+                smartIdcertificate = await smartId.getUserCertificate(pid, countryCode);
+                certificateInfo = {
+                    certificate: smartIdcertificate,
+                    format: 'pem'
+                };
+            } else if (certificate) {
+                signingMethod = Vote.SIGNING_METHODS.idCard;
+                await mobileId.validateCert(certificate, 'hex');
+                certificateInfo = {
+                    certificate: certificate,
+                    format: 'der'
+                }
+                certFormat = 'hex';
+            } else {
+                signingMethod = Vote.SIGNING_METHODS.mid;
+                mobileIdCertificate = await mobileId.getUserCertificate(pid, phoneNumber);
+                certificateInfo = {
+                    certificate: mobileIdCertificate,
+                    format: 'pem'
+                };
+            }
+            if (signingMethod === Vote.SIGNING_METHODS.smartId) {
+                personalInfo = await smartId.getCertUserData(certificateInfo.certificate);
+                if (personalInfo.pid.indexOf(pid) - 1) {
+                    personalInfo.pid = pid;
+                }
+            } else {
+                personalInfo = await mobileId.getCertUserData(certificateInfo.certificate, certFormat);
+                if (signingMethod === Vote.SIGNING_METHODS.mid) {
+                    personalInfo.phoneNumber = phoneNumber;
+                }
+            }
+            await db
+                .transaction(async function (t) { // One big transaction, we don't want created User data to lay around in DB if the process failed.
+                    // Authenticated User
+                    if (userId) {
+                        await _checkAuthenticatedUser(userId, personalInfo, t);
+                    } else { // Un-authenticated User, find or create one.
+                        const user = (await authUser.getUserByPersonalId(personalInfo, UserConnection.CONNECTION_IDS.esteid, req, t))[0];
+                        userId = user.id;
+                    }
+                    let signInitResponse;
+                    switch (signingMethod) {
+                        case Vote.SIGNING_METHODS.idCard:
+                            signInitResponse = await cosSignature.signInitIdCard(voteId, userId, vote.VoteOptions, certificate, t);
+                            break;
+                        case Vote.SIGNING_METHODS.smartId:
+                            signInitResponse = await cosSignature.signInitSmartId(voteId, userId, vote.VoteOptions, personalInfo.pid, countryCode, smartIdcertificate, t);
+                            break;
+                        case Vote.SIGNING_METHODS.mid:
+                            signInitResponse = await cosSignature.signInitMobile(voteId, userId, vote.VoteOptions, personalInfo.pid, personalInfo.phoneNumber, mobileIdCertificate, t);
+                            break;
+                        default:
+                            throw new Error('Invalid signing method ' + signingMethod);
                     }
 
-                    if (result.code === 400) {
-                        res.badRequest();
-                        return Promise.reject();
+                            // Check that the personal ID is not related to another User account. We don't want Users signing Votes from different accounts.
+
+                    let token, sessionDataEncrypted;
+
+                    let sessionData = {
+                        voteOptions: vote.VoteOptions,
+                        signingMethod,
+                        userId: userId, // Required for un-authenticated signing.
+                        voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
                     }
 
-                    if (typeof result === 'string') {
-                        smartIdcertificate = result;
-
-                        return {
-                            certificate: result,
-                            format: 'pem'
-                        };
+                    if (signInitResponse.sessionId) {
+                        sessionData.sessionId = signInitResponse.sessionId,
+                        sessionData.sessionHash = signInitResponse.sessionHash,
+                        sessionData.personalInfo = signInitResponse.personalInfo,
+                        sessionData.signatureId = signInitResponse.signatureId;
                     } else {
-                        logger.error('handleTopicVoteHard() failed', req.path, result);
+                        switch (signInitResponse.statusCode) {
+                            case 0:
+                                // Common to MID and ID-card signing
+                                sessionData.personalInfo = personalInfo;
+                                sessionData.signableHash = signInitResponse.signableHash;
+                                sessionData.signatureId = signInitResponse.signatureId;
+                                break;
+                            case 101:
+                                res.badRequest('Invalid input parameters.', 20);
 
-                        return res.badRequest();
-                    }
-                });
+                                return Promise.reject();
+                            case 301:
+                                res.badRequest('User is not a Mobile-ID client. Please double check phone number and/or id code.', 21);
 
+                                return Promise.reject();
+                            case 302:
+                                res.badRequest('User certificates are revoked or suspended.', 22);
 
-        } else if (certificate) {
-            signingMethod = Vote.SIGNING_METHODS.idCard;
-            getCertificatePromise = mobileId
-                .validateCert(certificate, 'hex')
-                .then(function () {
-                    certFormat = 'hex';
-                    return {
-                        certificate: certificate,
-                        format: 'der'
-                    };
-                });
-        } else {
-            signingMethod = Vote.SIGNING_METHODS.mid;
-            getCertificatePromise = mobileId
-                .getUserCertificate(pid, phoneNumber)
-                .then(function (result) {
-                    if (result.data && result.data.error) {
-                        switch (result.data.error) {
-                            case 'phoneNumber must contain of + and numbers(8-30)':
-                                return res.badRequest(result.data.error, 21);
-                            case 'nationalIdentityNumber must contain of 11 digits':
-                                return res.badRequest(result.data.error, 22);
+                                return Promise.reject();
+                            case 303:
+                                res.badRequest('User certificate is not activated.', 23);
+
+                                return Promise.reject();
+                            case 304:
+                                res.badRequest('User certificate is suspended.', 24);
+
+                                return Promise.reject();
+                            case 305:
+                                res.badRequest('User certificate is expired.', 25);
+
+                                return Promise.reject();
                             default:
-                                return res.badRequest(result.data.error);
-                        }
-                    } else if (result.data && result.data.value) {
-                        switch (result.data.value) {
-                            case 'NOT_MID_CLIENT':
-                                return res.badRequest('Given user has no active certificates and is not MID client.');
-                            case 'USER_CANCELLED':
-                                return res.badRequest('User has cancelled the signing process');
-                            case 'SIGNATURE_HASH_MISMATCH':
-                                return res.badRequest('Mobile-ID configuration on user\'s SIM card differs from what is configured on service provider\'s side. User needs to contact his/her mobile operator');
-                            default:
-                                return res.badRequest(result.data.value);
-                        }
-                    } else if (result.data && result.data.result) {
-                        switch (result.data.result) {
-                            case 'NOT_ACTIVE':
-                                return res.badRequest('Certificate was found but is not active', 23);
-                            case 'NOT_FOUND':
-                                return res.badRequest('No certificate for the user was foun');
-                            default:
-                                return res.badRequest(result.data.result);
+                                logger.error('Unhandled DDS status code', signInitResponse.statusCode);
+                                res.internalServerError();
+
+                                return Promise.reject();
                         }
                     }
 
-                    mobileIdCertificate = result;
-
-                    return {
-                        certificate: result,
-                        format: 'pem'
-                    };
-                });
-        }
-
-        const personalInfoPromise = getCertificatePromise
-            .then(function (certificateInfo) {
-                if (signingMethod === Vote.SIGNING_METHODS.smartId) {
-                    return smartId
-                        .getCertUserData(certificateInfo.certificate)
-                        .then(function (result) {
-                            personalInfo = result;
-                            if (personalInfo.pid.indexOf(pid) - 1) {
-                                personalInfo.pid = pid;
-                            }
-
-                            return;
-                        });
-                }
-
-                return mobileId
-                    .getCertUserData(certificateInfo.certificate, certFormat)
-                    .then(function (certificateInfo) {
-                        personalInfo = certificateInfo;
-                        if (signingMethod === Vote.SIGNING_METHODS.mid) {
-                            personalInfo.phoneNumber = phoneNumber;
-                        }
-
-                        return;
+                    // Send JWT with state and expect it back in /sign /status - https://trello.com/c/ZDN2WomW/287-bug-id-card-signing-does-not-work-for-some-users
+                    // Wrapping sessionDataEncrypted in object, otherwise jwt.sign "expiresIn" will not work - https://github.com/auth0/node-jsonwebtoken/issues/166
+                    sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
+                    token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
+                        expiresIn: '5m',
+                        algorithm: config.session.algorithm
                     });
-            });
 
-        return db
-            .transaction(function (t) { // One big transaction, we don't want created User data to lay around in DB if the process failed.
-                return personalInfoPromise
-                    .then(function () {
-                        const promisesToResolve = [];
-                        // Authenticated User
-                        if (userId) {
-                            const loggedInUserPromise = _checkAuthenticatedUser(userId, personalInfo, t);
-                            promisesToResolve.push(loggedInUserPromise);
-                        } else { // Un-authenticated User, find or create one.
-                            const userPromise = authUser.getUserByPersonalId(personalInfo, UserConnection.CONNECTION_IDS.esteid, req, t)
-                                .then(function (userData) {
-                                    const user = userData[0];
-                                    userId = user.id;
-                                });
-
-                            promisesToResolve.push(userPromise);
-                        }
-
-                        // Check that the personal ID is not related to another User account. We don't want Users signing Votes from different accounts.
-                        return Promise
-                            .all(promisesToResolve)
-                            .then(function () {
-                                switch (signingMethod) {
-                                    case Vote.SIGNING_METHODS.idCard:
-                                        return cosSignature.signInitIdCard(voteId, userId, vote.VoteOptions, certificate, t);
-                                    case Vote.SIGNING_METHODS.smartId:
-                                        return cosSignature.signInitSmartId(voteId, userId, vote.VoteOptions, personalInfo.pid, countryCode, smartIdcertificate, t);
-                                    case Vote.SIGNING_METHODS.mid:
-                                        return cosSignature.signInitMobile(voteId, userId, vote.VoteOptions, personalInfo.pid, personalInfo.phoneNumber, mobileIdCertificate, t);
-                                    default:
-                                        throw new Error('Invalid signing method ' + signingMethod);
-                                }
-                            })
-                            .then(function (signInitResponse) {
-                                let sessionData, token, sessionDataEncrypted;
-                                if (signInitResponse.sessionId) {
-                                    signInitResponse.dataToSign;
-                                    sessionData = {
-                                        voteOptions: vote.VoteOptions,
-                                        signingMethod,
-                                        sessionId: signInitResponse.sessionId,
-                                        sessionHash: signInitResponse.sessionHash,
-                                        personalInfo: signInitResponse.personalInfo,
-                                        signatureId: signInitResponse.signatureId,
-                                        userId: userId, // Required for un-authenticated signing.
-                                        voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
-                                    };
-
-
-                                    sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
-                                    token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
-                                        expiresIn: '5m',
-                                        algorithm: config.session.algorithm
-                                    });
-                                    return res.ok({
-                                        challengeID: signInitResponse.challengeID,
-                                        token: token
-                                    }, 1);
-                                } else {
-                                    switch (signInitResponse.statusCode) {
-                                        case 0:
-                                            // Common to MID and ID-card signing
-                                            sessionData = {
-                                                voteOptions: voteOptions,
-                                                personalInfo: personalInfo,
-                                                signingMethod,
-                                                signableHash: signInitResponse.signableHash,
-                                                signatureId: signInitResponse.signatureId,
-                                                userId: userId, // Required for un-authenticated signing.
-                                                voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
-                                            };
-
-                                            // ID card
-                                            if (signInitResponse.signatureId) {
-                                                sessionData.signatureId = signInitResponse.signatureId;
-                                            }
-
-                                            // Send JWT with state and expect it back in /sign /status - https://trello.com/c/ZDN2WomW/287-bug-id-card-signing-does-not-work-for-some-users
-                                            // Wrapping sessionDataEncrypted in object, otherwise jwt.sign "expiresIn" will not work - https://github.com/auth0/node-jsonwebtoken/issues/166
-                                            sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
-                                            token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
-                                                expiresIn: '5m',
-                                                algorithm: config.session.algorithm
-                                            });
-
-                                            if (signingMethod === Vote.SIGNING_METHODS.idCard) {
-                                                return res.ok({
-                                                    signedInfoDigest: signInitResponse.signableHash,
-                                                    signedInfoHashType: cryptoLib.getHashType(signInitResponse.signableHash),
-                                                    token: token
-                                                }, 1);
-                                            } else {
-                                                return res.ok({
-                                                    challengeID: signInitResponse.challengeID,
-                                                    token: token
-                                                }, 1);
-                                            }
-                                        case 101:
-                                            res.badRequest('Invalid input parameters.', 20);
-
-                                            return Promise.reject();
-                                        case 301:
-                                            res.badRequest('User is not a Mobile-ID client. Please double check phone number and/or id code.', 21);
-
-                                            return Promise.reject();
-                                        case 302:
-                                            res.badRequest('User certificates are revoked or suspended.', 22);
-
-                                            return Promise.reject();
-                                        case 303:
-                                            res.badRequest('User certificate is not activated.', 23);
-
-                                            return Promise.reject();
-                                        case 304:
-                                            res.badRequest('User certificate is suspended.', 24);
-
-                                            return Promise.reject();
-                                        case 305:
-                                            res.badRequest('User certificate is expired.', 25);
-
-                                            return Promise.reject();
-                                        default:
-                                            logger.error('Unhandled DDS status code', signInitResponse.statusCode);
-                                            res.internalServerError();
-
-                                            return Promise.reject();
-                                    }
-                                }
-                            });
-                        }).catch(function (e) {
-                            switch (e.message) {
-                                case 'Personal ID already connected to another user account.':
-                                    return res.badRequest(e.message, 30)
-                                case 'User account already connected to another PID.':
-                                    return res.badRequest(e.message, 31);
-                            }
-                        });
-            }).catch(function (error) {
-                if (error && error.name === 'ValidationError') {
-                    switch (error.message) {
-                        case 'Invalid signature':
-                            return res.badRequest(error.message, 32);
-                        case 'Invalid certificate issuer':
-                            return res.badRequest(error.message, 33);
-                        case 'Certificate not active':
-                            return res.badRequest(error.message, 34);
+                    if (signingMethod === Vote.SIGNING_METHODS.idCard) {
+                        return res.ok({
+                            signedInfoDigest: signInitResponse.signableHash,
+                            signedInfoHashType: cryptoLib.getHashType(signInitResponse.signableHash),
+                            token: token
+                        }, 1);
+                    } else {
+                        return res.ok({
+                            challengeID: signInitResponse.challengeID,
+                            token: token
+                        }, 1);
                     }
-                }
-            });
+                });
+        } catch(error) {
+            switch (error.message) {
+                case 'Personal ID already connected to another user account.':
+                    return res.badRequest(error.message, 30)
+                case 'User account already connected to another PID.':
+                    return res.badRequest(error.message, 31);
+                case 'Invalid signature':
+                    return res.badRequest(error.message, 32);
+                case 'Invalid certificate issuer':
+                    return res.badRequest(error.message, 33);
+                case 'Certificate not active':
+                    return res.badRequest(error.message, 34);
+                case 'phoneNumber must contain of + and numbers(8-30)':
+                    return res.badRequest(error.message, 21);
+                case 'nationalIdentityNumber must contain of 11 digits':
+                    return res.badRequest(error.message, 22);
+                case 'Bad Request':
+                    return res.badRequest();
+                case 'Not Found':
+                    return res.notFound();
+                default:
+            }
+
+            throw error;
+        }
 
     };
 

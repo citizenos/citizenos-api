@@ -431,30 +431,27 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _signInitIdCard = function (voteId, userId, voteOptions, certificate, transaction) {
-        return _createUserBdoc(voteId, userId, voteOptions, certificate, 'hex', transaction)
-            .then(function (xades) {
-                const signableData = xades.signableHash;
+    const _signInitIdCard = async function (voteId, userId, voteOptions, certificate, transaction) {
+     //   try {
+            const xades = await _createUserBdoc(voteId, userId, voteOptions, certificate, 'hex', transaction);
+            const signableData = xades.signableHash;
 
-                return mobileId
-                    .getCertUserData(certificate, 'hex')
-                    .then(function (personalInfo) {
-                        xades = xades.toString();
+            const personalInfo = await mobileId.getCertUserData(certificate, 'hex');
 
-                        return Signature
-                            .create({data: xades})
-                            .then(function (signatureData) {
-                                return {
-                                    statusCode: 0,
-                                    personalInfo,
-                                    signableHash: signableData.toString('hex'),
-                                    signatureId: signatureData.id
-                                };
-                            });
-                    })
-            }).catch(function (e) {
-                logger.error(e);
-            });
+            const xadesString = xades.toString();
+
+            const signatureData = await Signature.create({data: xadesString});
+
+            return {
+                statusCode: 0,
+                personalInfo,
+                signableHash: signableData.toString('hex'),
+                signatureId: signatureData.id
+            };
+     /*   } catch(e) {
+            thr
+            logger.error(e);
+        }*/
     };
 
     /**
@@ -473,28 +470,17 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _signInitMobile = function (voteId, userId, voteOptions, pid, phoneNumber, certificate, transaction) {
-        return _createUserBdoc(voteId, userId, voteOptions, certificate, 'base64', transaction)
-            .then(function (xades) {
-                const signableData = xades.signableHash;
+    const _signInitMobile = async function (voteId, userId, voteOptions, pid, phoneNumber, certificate, transaction) {
+        const xades = await _createUserBdoc(voteId, userId, voteOptions, certificate, 'base64', transaction);
+        const signableData = xades.signableHash;
 
-                return mobileId
-                    .getCertUserData(certificate, 'base64')
-                    .then(function (personalInfo) {
-                        return mobileId
-                            .signature(pid, phoneNumber, signableData.toString('base64'))
-                            .then(function (response) {
-                                return Signature
-                                    .create({data: xades.toString()})
-                                    .then(function (signatureData) {
-                                        response.signatureId = signatureData.id
-                                        response.personalInfo = personalInfo;
+        const personalInfo = await mobileId.getCertUserData(certificate, 'base64');
+        const response = await mobileId.signature(pid, phoneNumber, signableData.toString('base64'));
+        const signatureData = await Signature.create({data: xades.toString()});
+        response.signatureId = signatureData.id
+        response.personalInfo = personalInfo;
 
-                                        return response;
-                                    });
-                            });
-                    });
-            });
+        return response;
     };
 
     /**
@@ -513,28 +499,16 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _signInitSmartId = function (voteId, userId, voteOptions, pid, countryCode, certificate, transaction) {
-        return _createUserBdoc(voteId, userId, voteOptions, certificate, 'base64', transaction)
-            .then(function (xades) {
-                const signableData = xades.signableHash;
+    const _signInitSmartId = async function (voteId, userId, voteOptions, pid, countryCode, certificate, transaction) {
+        const xades = await _createUserBdoc(voteId, userId, voteOptions, certificate, 'base64', transaction);
+        const signableData = xades.signableHash;
+        const personalInfo = await smartId.getCertUserData(certificate);
+        const response = await smartId.signature(pid, countryCode, signableData.toString('base64'))
+        const signatureData = await Signature.create({data: xades.toString()});
+        response.signatureId = signatureData.id
+        response.personalInfo = personalInfo;
 
-                return smartId
-                    .getCertUserData(certificate)
-                    .then(function (personalInfo) {
-                        return smartId
-                            .signature(pid, countryCode, signableData.toString('base64'))
-                            .then(function (response) {
-                                return Signature
-                                    .create({data: xades.toString()})
-                                    .then(function (signatureData) {
-                                        response.signatureId = signatureData.id
-                                        response.personalInfo = personalInfo;
-
-                                        return response;
-                                    });
-                            });
-                    });
-            });
+        return response;
     };
 
     const _handleSigningResult = function (voteId, userId, voteOptions, signableHash, signatureId, signature) {

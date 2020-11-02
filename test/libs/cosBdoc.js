@@ -1,156 +1,114 @@
 'use strict';
 
 suite('cosBdoc', function () {
-    var assert = require('chai').assert;
+    const assert = require('chai').assert;
 
-    var app = require('../../app');
-    var models = app.get('models');
-    var db = models.sequelize;
-    var logger = app.get('logger');
-    var Promise = app.get('Promise');
-    var fs = app.get('fs');
-    var cosBdoc = app.get('cosSignature');
-    var smartId = app.get('smartId');
-    var mobileId = app.get('mobileId');
-    var util = app.get('util');
-    var _ = app.get('lodash');
-    var shared = require('../utils/shared');
+    const app = require('../../app');
+    const models = app.get('models');
+    const db = models.sequelize;
+    const logger = app.get('logger');
+    const Promise = app.get('Promise');
+    const fs = app.get('fs');
+    const cosBdoc = app.get('cosSignature');
+    const smartId = app.get('smartId');
+    const mobileId = app.get('mobileId');
+    const util = app.get('util');
+    const _ = app.get('lodash');
+    const shared = require('../utils/shared');
 
-    var Topic = models.Topic;
-    var Vote = models.Vote;
-    var TopicVote = models.TopicVote;
-    var VoteOption = models.VoteOption;
-    var VoteList = models.VoteList;
-    var VoteUserContainer = models.VoteUserContainer;
-    var User = models.User;
-    var UserConnection = models.UserConnection;
+    const Topic = models.Topic;
+    const Vote = models.Vote;
+    const TopicVote = models.TopicVote;
+    const VoteOption = models.VoteOption;
+    const VoteList = models.VoteList;
+    const VoteUserContainer = models.VoteUserContainer;
+    const User = models.User;
+    const UserConnection = models.UserConnection;
 
-    var topic;
-    var vote;
-    var voteOptions = [];
-    var user;
+    let topic;
+    let vote;
+    const voteOptions = [];
+    let user;
 
-    var voteFileDir;
+    let voteFileDir;
 
-    suiteSetup(function (done) {
-        shared
-            .syncDb()
-            .finally(done);
+    suiteSetup(async function () {
+        return shared
+            .syncDb();
     });
 
     // FIXME: Proper test
-    test.skip('createVoteFiles', function (done) {
-        cosBdoc
-            .createVoteFiles(topic, vote, voteOptions)
-            .then(function () {
-                return fs
-                    .readdirAsync(voteFileDir + '/source');
-            })
-            .then(function (files) {
-                var expectedFiles = [
-                    'Option 1.html',
-                    'Option 2.html',
-                    '__metainfo.html',
-                    'document.docx'
-                ];
+    test.skip('createVoteFiles', async function () {
+        await cosBdoc.createVoteFiles(topic, vote, voteOptions);
+        const files  = await fs.readdirAsync(voteFileDir + '/source');
+        const expectedFiles = [
+            'Option 1.html',
+            'Option 2.html',
+            '__metainfo.html',
+            'document.docx'
+        ];
 
-                assert.deepEqual(files, expectedFiles);
-
-                done();
-            });
+        assert.deepEqual(files, expectedFiles);
     });
 
-    test.skip('createUserBdoc', function (done) {
-        fs
-            .readFileAsync('./test/resources/certificates/dds_good_igor_sign_hex_encoded_der.crt')
-            .then(function (certificate) {
-                return cosBdoc.createUserBdoc(topic.id, vote.id, user.id, certificate.toString(), [voteOptions[0]]);
-            })
-            .then(function () {
-                done();
-            });
+    test.skip('createUserBdoc', async function () {
+        const certificate = await fs.readFileAsync('./test/resources/certificates/dds_good_igor_sign_hex_encoded_der.crt');
+
+        return cosBdoc.createUserBdoc(topic.id, vote.id, user.id, certificate.toString(), [voteOptions[0]]);
     });
 
     suite('getPersonalInfoFromCertificate', function () {
 
-        test('Success - Hex encoded DER(default)', function (done) {
-            fs
-                .readFileAsync('./test/resources/certificates/dds_good_igor_sign_hex_encoded_der.crt')
-                .then(function (certificate) {
-                    return smartId
-                        .getCertUserData(certificate.toString(), 'hex');
-                })
-                .then(function (personalInfo) {
+        test('Success - Hex encoded DER(default)', async function () {
+            const certificate = await fs .readFileAsync('./test/resources/certificates/dds_good_igor_sign_hex_encoded_der.crt');
+            const personalInfo= await smartId.getCertUserData(certificate.toString(), 'hex');
                //     assert.equal(status, 'GOOD');
-                    var expectedPersonalInfo = {
-                        lastName: 'ŽAIKOVSKI',
-                        firstName: 'IGOR',
-                        pid: '37101010021',
-                        country: 'EE'
-                    };
+            const expectedPersonalInfo = {
+                lastName: 'ŽAIKOVSKI',
+                firstName: 'IGOR',
+                pid: '37101010021',
+                country: 'EE'
+            };
 
-                    assert.deepEqual(personalInfo, expectedPersonalInfo);
-
-                    done();
-                })
-                .catch(done);
+            assert.deepEqual(personalInfo, expectedPersonalInfo);
         });
 
-        test('Success - PEM', function (done) {
+        test('Success - PEM', async function () {
 
-            var pid = '60001019906';
-            var phoneNumber = '+37200000766';
-       //     var returnCertData = 'sign';
+            const pid = '60001019906';
+            const phoneNumber = '+37200000766';
+       //     const returnCertData = 'sign';
 
-            mobileId
-                .getUserCertificate(pid, phoneNumber)
-                .then(function (certInfo) {
-                    return mobileId
-                        .getCertUserData(certInfo, 'base64');
-                })
-                .then(function (personalInfo) {
-               //     assert.equal(status, 'GOOD');
-                    assert.deepEqual(personalInfo, {
-                        pid: '60001019906',
-                        firstName: 'MARY ÄNN',
-                        lastName: 'O’CONNEŽ-ŠUSLIK TESTNUMBER',
-                        country: 'EE'
-                    });
-
-                    done();
-                })
-                .catch(done);
+            const certInfo = await mobileId.getUserCertificate(pid, phoneNumber);
+            const personalInfo = await mobileId.getCertUserData(certInfo, 'base64');
+    //     assert.equal(status, 'GOOD');
+            assert.deepEqual(personalInfo, {
+                pid: '60001019906',
+                firstName: 'MARY ÄNN',
+                lastName: 'O’CONNEŽ-ŠUSLIK TESTNUMBER',
+                country: 'EE'
+            });
 
         });
     });
 
     suite('getMobileCertificate', function () {
 
-        test('Success', function (done) {
-            var pid = '60001019906';
-            var phoneNumber = '+37200000766';
+        test('Success', async function () {
+            const pid = '60001019906';
+            const phoneNumber = '+37200000766';
 
-            mobileId
-                .getUserCertificate(pid, phoneNumber)
-                .then(function (certInfo) {
-                    assert.equal(typeof certInfo, 'string');
-                    done();
-                });
+            const certInfo = await mobileId.getUserCertificate(pid, phoneNumber);
+            assert.equal(typeof certInfo, 'string');
         });
 
     });
 
     suite.skip('createFinalBdoc', function () {
 
-        test.skip('Success', function (done) {
-            cosBdoc
-                .getFinalBdoc(topic.id, vote.id)
-                .then(function (fileBuffer) {
-                    return fs
-                        .writeFileAsync(voteFileDir + '/final.bdoc', Buffer.from(fileBuffer, 'base64')); // eslint-disable-line no-buffer-constructor
-                })
-                .then(done)
-                .catch(done);
+        test.skip('Success', async function () {
+            const fileBuffer = cosBdoc.getFinalBdoc(topic.id, vote.id);
+            return fs.writeFileAsync(voteFileDir + '/final.bdoc', Buffer.from(fileBuffer, 'base64')); // eslint-disable-line no-buffer-constructor
         });
 
 
@@ -159,35 +117,35 @@ suite('cosBdoc', function () {
             this.timeout(0); //eslint-disable-line no-invalid-this
 
             // Run GC in a loop. Due to GC logic, first call to gc() will not free as much memory as possible. Every gc() call will a bit more if possible
-            var runGC = function () {
-                var j = 0;
+            const runGC = function () {
+                let j = 0;
                 while (j < 10) {
                     global.gc();
                     j++;
                 }
             };
 
-            var SIGNED_VOTE_FILE_PATH = './test/resources/bdoc/voteCreateFinalBdoc.bdoc';
-            var MEMBER_COUNT = 1000;
-            var createdUserIds = [];
-            var creatorId;
-            var topic;
-            var vote;
-            var voteOptions;
+            const SIGNED_VOTE_FILE_PATH = './test/resources/bdoc/voteCreateFinalBdoc.bdoc';
+            const MEMBER_COUNT = 1000;
+            const createdUserIds = [];
+            let creatorId;
+            let topic;
+            let vote;
+            let voteOptions;
 
-            var timeStart;
-            var interval;
-            var processMemoryUsageMax;
-            var processMemoryUsageMin;
+            let timeStart;
+            let interval;
+            let processMemoryUsageMax;
+            let processMemoryUsageMin;
 
-            suiteSetup(function (done) {
-                db
-                    .transaction(function (t) {
-                        var userCreationPromises = [];
+            suiteSetup( async function () {
+                return db
+                    .transaction(async function (t) {
+                        const userCreationPromises = [];
 
-                        for (var i = 0; i < MEMBER_COUNT; i++) {
-                            var name = util.randomString(16);
-                            var userCreatePromise = User
+                        for (let i = 0; i < MEMBER_COUNT; i++) {
+                            const name = util.randomString(16);
+                            const userCreatePromise = User
                                 .create(
                                     {
                                         name: name,
@@ -207,201 +165,169 @@ suite('cosBdoc', function () {
 
                         runGC();
 
-                        return Promise
-                            .all(userCreationPromises)
-                            .then(function () {
-                                logger.debug('Users created', process.memoryUsage());
-                                // Create UserConnections
-                                creatorId = createdUserIds[0];
+                        await Promise.all(userCreationPromises);
+                        logger.debug('Users created', process.memoryUsage());
+                        // Create UserConnections
+                        creatorId = createdUserIds[0];
 
-                                var userConnectionsToCreate = [];
+                        const userConnectionsToCreate = [];
 
-                                createdUserIds.forEach(function (userId) {
-                                    var pid = util.randomPid();
-                                    userConnectionsToCreate.push({
-                                        userId: userId,
-                                        connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                        connectionUserId: pid,
-                                        connectionData: {firstName: 'FirstÕ', lastName: 'Last' + pid}
-                                    });
-                                });
+                        createdUserIds.forEach(function (userId) {
+                            const pid = util.randomPid();
+                            userConnectionsToCreate.push({
+                                userId: userId,
+                                connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                connectionUserId: pid,
+                                connectionData: {firstName: 'FirstÕ', lastName: 'Last' + pid}
+                            });
+                        });
 
-                                return UserConnection
-                                    .bulkCreate(
-                                        userConnectionsToCreate,
-                                        {
-                                            transaction: t
-                                        }
-                                    );
-                            })
-                            .then(function () {
-                                logger.debug('User connections created', process.memoryUsage());
+                        await  UserConnection
+                            .bulkCreate(
+                                userConnectionsToCreate,
+                                {
+                                    transaction: t
+                                }
+                            );
+                        logger.debug('User connections created', process.memoryUsage());
 
-                                return Topic
-                                    .create(
-                                        {
-                                            title: 'createFinalBdoc Success - performance',
-                                            description: 'createFinalBdoc Success - performance',
-                                            padUrl: 'https://testarereal.com/p/test',
+                        topic = await Topic
+                            .create(
+                                {
+                                    title: 'createFinalBdoc Success - performance',
+                                    description: 'createFinalBdoc Success - performance',
+                                    padUrl: 'https://testarereal.com/p/test',
+                                    creatorId: creatorId
+                                },
+                                {
+                                    transaction: t
+                                }
+                            );
+                        logger.debug('Topic created', process.memoryUsage());
+
+                        // Create a Vote
+                        vote = await Vote.create(
+                            {
+                                authType: Vote.AUTH_TYPES.hard
+                            },
+                            {
+                                transaction: t
+                            }
+                        );
+                        logger.debug('Vote created', process.memoryUsage());
+
+                        // Create TopicVote
+                        await TopicVote.create(
+                            {
+                                topicId: topic.id,
+                                voteId: vote.id
+                            },
+                            {
+                                transaction: t
+                            }
+                        );
+                        // Create VoteOptions
+                        logger.debug('Topic vote created', process.memoryUsage());
+
+                        voteOptions = await VoteOption
+                            .bulkCreate(
+                                [
+                                    {
+                                        value: 'Yes',
+                                        voteId: vote.id
+                                    },
+                                    {
+                                        value: 'No',
+                                        voteId: vote.id
+                                    }
+                                ],
+                                {
+                                    transaction: t
+                                }
+                            );
+                        logger.debug('Vote options created', process.memoryUsage());
+
+                        // Create  vote files
+                        await cosBdoc.createVoteFiles(topic, vote, voteOptions, t);
+                        logger.debug('Vote files created', process.memoryUsage());
+
+                        // Create creator VoteUserContainer. Just for testing, everybody gets the same signed file.
+                        const fileContents = await fs.readFileAsync(SIGNED_VOTE_FILE_PATH); // eslint-disable-line no-sync
+
+                        await  VoteUserContainer
+                            .create(
+                                {
+                                    voteId: vote.id,
+                                    userId: creatorId,
+                                    container: fileContents
+                                },
+                                {
+                                    transaction: t
+                                }
+                            );
+                        logger.debug('Creator VoteUserContainers created', process.memoryUsage());
+
+                        const voteUserContainersCreatePromises = [];
+
+                        createdUserIds.forEach(function (userId, i) {
+                            if (i === 0) { // Skip first, creator has already been added
+                                return;
+                            }
+
+                            const createContainerPromise = db
+                                .query(
+                                    '\
+                                    INSERT INTO "VoteUserContainers" ("voteId", "userId", "container", "createdAt", "updatedAt") \
+                                        SELECT \
+                                            "voteId",\
+                                            :userId as "userId",\
+                                            container, \
+                                            NOW() as "createdAt", \
+                                            NOW() as "updatedAt" \
+                                        FROM "VoteUserContainers" \
+                                        WHERE "voteId" = :voteId AND "userId" = :creatorId \
+                                    ;',
+                                    {
+                                        replacements: {
+                                            voteId: vote.id,
+                                            userId: userId,
                                             creatorId: creatorId
                                         },
-                                        {
-                                            transaction: t
-                                        }
-                                    );
-                            })
-                            .then(function (topicCreateResult) {
-                                logger.debug('Topic created', process.memoryUsage());
-                                topic = topicCreateResult;
-
-                                // Create a Vote
-                                return Vote
-                                    .create(
-                                        {
-                                            authType: Vote.AUTH_TYPES.hard
-                                        },
-                                        {
-                                            transaction: t
-                                        }
-                                    );
-                            })
-                            .then(function (voteCreateResult) {
-                                logger.debug('Vote created', process.memoryUsage());
-
-                                vote = voteCreateResult;
-
-                                // Create TopicVote
-                                return TopicVote
-                                    .create(
-                                        {
-                                            topicId: topic.id,
-                                            voteId: voteCreateResult.id
-                                        },
-                                        {
-                                            transaction: t
-                                        }
-                                    );
-                            })
-                            .then(function () {
-                                // Create VoteOptions
-                                logger.debug('Topic vote created', process.memoryUsage());
-
-                                return VoteOption
-                                    .bulkCreate(
-                                        [
-                                            {
-                                                value: 'Yes',
-                                                voteId: vote.id
-                                            },
-                                            {
-                                                value: 'No',
-                                                voteId: vote.id
-                                            }
-                                        ],
-                                        {
-                                            transaction: t
-                                        }
-                                    );
-                            })
-                            .then(function (voteOptionCreateResult) {
-                                logger.debug('Vote options created', process.memoryUsage());
-
-                                voteOptions = voteOptionCreateResult;
-
-                                // Create  vote files
-                                return cosBdoc.createVoteFiles(topic, vote, voteOptions, t);
-                            })
-                            .then(function () {
-                                logger.debug('Vote files created', process.memoryUsage());
-
-                                // Create creator VoteUserContainer. Just for testing, everybody gets the same signed file.
-                                var fileContents = fs.readFileSync(SIGNED_VOTE_FILE_PATH); // eslint-disable-line no-sync
-
-                                return VoteUserContainer
-                                    .create(
-                                        {
-                                            voteId: vote.id,
-                                            userId: creatorId,
-                                            container: fileContents
-                                        },
-                                        {
-                                            transaction: t
-                                        }
-                                    );
-                            })
-                            .then(function () {
-                                logger.debug('Creator VoteUserContainers created', process.memoryUsage());
-
-                                var voteUserContainersCreatePromises = [];
-
-                                createdUserIds.forEach(function (userId, i) {
-                                    if (i === 0) { // Skip first, creator has already been added
-                                        return;
+                                        type: db.QueryTypes.INSERT,
+                                        raw: true,
+                                        transaction: t
                                     }
+                                );
 
-                                    var createContainerPromise = db
-                                        .query(
-                                            '\
-                                            INSERT INTO "VoteUserContainers" ("voteId", "userId", "container", "createdAt", "updatedAt") \
-                                                SELECT \
-                                                    "voteId",\
-                                                    :userId as "userId",\
-                                                    container, \
-                                                    NOW() as "createdAt", \
-                                                    NOW() as "updatedAt" \
-                                                FROM "VoteUserContainers" \
-                                                WHERE "voteId" = :voteId AND "userId" = :creatorId \
-                                            ;',
-                                            {
-                                                replacements: {
-                                                    voteId: vote.id,
-                                                    userId: userId,
-                                                    creatorId: creatorId
-                                                },
-                                                type: db.QueryTypes.INSERT,
-                                                raw: true,
-                                                transaction: t
-                                            }
-                                        );
+                            voteUserContainersCreatePromises.push(createContainerPromise);
+                        });
 
-                                    voteUserContainersCreatePromises.push(createContainerPromise);
-                                });
+                        await Promise.all(voteUserContainersCreatePromises);
+                            // console.log('VoteUserContainers created', process.memoryUsage());
 
-                                return Promise.all(voteUserContainersCreatePromises);
-                            })
-                            .then(function () {
-                                // console.log('VoteUserContainers created', process.memoryUsage());
+                        const userVotePromises = [];
+                        createdUserIds.forEach(function (userId) {
+                            userVotePromises.push(VoteList.create({
+                                userId: userId,
+                                voteId: vote.id,
+                                optionId: voteOptions[0].id,
+                                optionGroupId: util.randomString(8)
+                            }, {transaction: t}));
+                        });
 
-                                var userVotePromises = [];
-                                createdUserIds.forEach(function (userId) {
-                                    userVotePromises.push(VoteList.create({
-                                        userId: userId,
-                                        voteId: vote.id,
-                                        optionId: voteOptions[0].id,
-                                        optionGroupId: util.randomString(8)
-                                    }, {transaction: t}));
-                                });
-
-                                return Promise.all(userVotePromises);
-                            });
-                    })
-                    .then(function () {
-                        // console.log('VoteList created', process.memoryUsage());
-                        // console.log('Suite setup complete', 'topicId', topic.id, 'voteId', vote.id);
-                        done();
-                    })
-                    .catch(done);
+                        return Promise.all(userVotePromises);
+                    });
             });
 
             setup(function (done) {
                 runGC();
 
-                var mem = process.memoryUsage();
+                const mem = process.memoryUsage();
                 processMemoryUsageMax = _.clone(mem);
                 processMemoryUsageMin = _.clone(mem);
 
                 interval = setInterval(function () {
-                    var memUsage = process.memoryUsage();
+                    const memUsage = process.memoryUsage();
                     logger.info('Memory usage', memUsage);
 
                     if (processMemoryUsageMax.rss < memUsage.rss) {
@@ -434,20 +360,15 @@ suite('cosBdoc', function () {
                 done();
             });
 
-            test('Success - a lot of signatures', function (done) {
-                cosBdoc
-                    .getFinalBdoc(topic.id, vote.id)
-                    .then(function (fileStream) {
-                        var writeStream = fs.createWriteStream('/tmp/performanceTest.bdoc');
-                        fileStream.pipe(writeStream);
+            test('Success - a lot of signatures', async function () {
+                const fileStream  = await cosBdoc.getFinalBdoc(topic.id, vote.id);
+                const writeStream = fs.createWriteStream('/tmp/performanceTest.bdoc');
+                fileStream.pipe(writeStream);
 
-                        return util.streamToPromise(writeStream);
-                    })
-                    .then(done)
-                    .catch(done);
+                return util.streamToPromise(writeStream);
             });
 
-            teardown(function (done) {
+            teardown(async function () {
                 clearInterval(interval);
 
                 logger.info('Users:', createdUserIds.length);
@@ -461,7 +382,7 @@ suite('cosBdoc', function () {
                 );
                 logger.info('Time spent (ms):', new Date().getTime() - timeStart);
 
-                done();
+                return;
             });
 
         });

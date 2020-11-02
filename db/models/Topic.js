@@ -189,7 +189,12 @@ module.exports = function (sequelize, DataTypes) {
                     }
                 },
                 defaultValue: null
-            }
+            },
+            authorIds: {
+                type: DataTypes.ARRAY(DataTypes.UUID), //User id's of topic authors
+                defaultValue: [],
+                allowNull: true
+            },
         },
         {
             indexes: [

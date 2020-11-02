@@ -1537,7 +1537,6 @@ const topicVoteStatusPromised = async function (agent, userId, topicId, voteId, 
                     retries++;
 
                     const topicVoteStatusResponse = await _topicVoteStatusPromised(agent, userId, topicId, voteId, token, 200);
-
                     if (topicVoteStatusResponse.body.status.code === 20001 && topicVoteStatusResponse.body.status.message === 'Signing in progress') {
                         // Signing is in progress, we shall journey on...
                     } else {
@@ -3718,6 +3717,7 @@ suite('Users', function () {
 
             });
             test('Success - list only topics that User has voted on - voted=true', async function () {
+                this.timeout(10000);
                 // Create 2 topics 1 in voting, but not voted, 1 voted. Topic list should return only 1 that User has voted on
                 const topicWithVoteNotVoted = (await topicCreatePromised(agentCreator, creator.id, Topic.VISIBILITY.private, null, null, '<html><head></head><body><h2>TEST User HAS NOT VOTED on this topic</h2></body></html>', null)).body.data;
                 const topicWithVoteAndVoted = (await topicCreatePromised(agentCreator, creator.id, Topic.VISIBILITY.private, null, null, '<html><head></head><body><h2>TEST User HAS VOTED on this topic</h2></body></html>', null)).body.data;
@@ -8836,118 +8836,115 @@ suite('Users', function () {
                             });
                         });
 
-                        test('Fail - 40010 - User has cancelled the signing process', function (done) {
+                        test('Fail - 40010 - User has cancelled the signing process', async function () {
                             this.timeout(15000); // eslint-disable-line no-invalid-this
 
-                            var countryCode = 'EE';
-                            var pid = '10101010016';
+                            const countryCode = 'EE';
+                            const pid = '10101010016';
 
-                            var voteList = [
+                            const voteList = [
                                 {
                                     optionId: vote.options.rows[0].id
                                 }
                             ];
 
-                            _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, 200, function (err, res) {
-                                if (err) return done(err);
+                            const response = (await topicVoteVotePromised(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode)).body;
+                            assert.equal(response.status.code, 20001);
+                            assert.match(response.data.challengeID, /[0-9]{4}/);
 
-                                var response = res.body;
-                                assert.equal(response.status.code, 20001);
-                                assert.match(response.data.challengeID, /[0-9]{4}/);
+                            const maxRetries = 20;
+                            const retryInterval = 1000; // milliseconds;
 
-                                var called = 0;
-                                var replied = 0;
+                            let retries = 0;
 
-                                var getStatus = setInterval(function () {
-                                    if (called === replied) {
-                                        called++;
-                                        _topicVoteStatus(agent, user.id, topic.id, vote.id, response.data.token, 400, function (err, res) {
-                                            if (err && res.body && res.statusCode !== 200) return done(err);
+                            const statusInterval = setInterval(async function () {
+                                try {
+                                    if (retries < maxRetries) {
+                                        retries++;
 
-                                            replied++;
-                                            var statusresponse = res.body;
-                                            if (statusresponse.status.code === 20001 && statusresponse.status.message === 'Signing in progress') {
-                                                // FIXME: Interesting empty block
-                                            } else {
-                                                clearStatus(); //eslint-disable-line no-use-before-define
+                                        const topicVoteStatusResponse = await _topicVoteStatusPromised(agent, user.id, topic.id, vote.id, response.data.token, 400);
+                                        if (topicVoteStatusResponse.body.status.code === 20001 && topicVoteStatusResponse.body.status.message === 'Signing in progress') {
+                                            // Signing is in progress, we shall journey on...
+                                        } else {
+                                            // Its HTTP 200 and NOT 20001 - Signing in progress, so we have our result, WE'RE DONE HERE
+                                            clearInterval(statusInterval);
 
-                                                var expectedResponse = {
-                                                    status:
-                                                        {
-                                                            code: 40010,
-                                                            message: 'User has cancelled the signing process'
-                                                        }
-                                                }
-                                                assert.equal(statusresponse.status.code, 40010);
-                                                assert.deepEqual(res.body, expectedResponse);
-
-                                                done();
+                                            const expectedResponse = {
+                                                status:
+                                                    {
+                                                        code: 40010,
+                                                        message: 'User has cancelled the signing process'
+                                                    }
                                             }
-                                        });
-                                    }
-                                }, 2000);
+                                            assert.equal(topicVoteStatusResponse.body.status.code, 40010);
+                                            assert.deepEqual(topicVoteStatusResponse.body, expectedResponse);
+                                        }
+                                    } else {
+                                        clearInterval(statusInterval);
 
-                                var clearStatus = function () {
-                                    clearInterval(getStatus);
-                                };
-                            });
+                                        throw new Error(`topicVoteStatus maximum retry limit ${maxRetries} reached!`);
+                                    }
+                                } catch (err) {
+                                    if (err.message !== 'expected 400 "Bad Request", got 200 "OK"') {
+                                        console.log(err);
+                                    }
+                                }
+                            }, retryInterval);
                         });
 
-                        test('Fail - 40010 - User has cancelled the signing process Latvian PID', function (done) {
-                            this.timeout(15000); //eslint-disable-line no-invalid-this
+                        test('Fail - 40010 - User has cancelled the signing process Latvian PID', async function () {
+                            this.timeout(55000); //eslint-disable-line no-invalid-this
 
-                            var countryCode = 'LV';
-                            var pid = '010101-10014';
+                            const countryCode = 'LV';
+                            const pid = '010101-10014';
 
-                            var voteList = [
+                            const voteList = [
                                 {
                                     optionId: vote.options.rows[0].id
                                 }
                             ];
 
-                            _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, 200, function (err, res) {
-                                if (err) return done(err);
+                            const response = (await topicVoteVotePromised(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode)).body;
+                            assert.equal(response.status.code, 20001);
+                            assert.match(response.data.challengeID, /[0-9]{4}/);
 
-                                var response = res.body;
-                                assert.equal(response.status.code, 20001);
-                                assert.match(response.data.challengeID, /[0-9]{4}/);
+                            const maxRetries = 20;
+                            const retryInterval = 1000; // milliseconds;
 
-                                var called = 0;
-                                var replied = 0;
+                            let retries = 0;
+                            const statusInterval = setInterval(async function () {
+                                try {
+                                    if (retries < maxRetries) {
+                                        retries++;
 
-                                var getStatus = setInterval(function () {
-                                    if (called === replied) {
-                                        called++;
-                                        _topicVoteStatus(agent, user.id, topic.id, vote.id, response.data.token, 400, function (err, res) {
-                                            if (err && res.body && res.statusCode !== 200) return done(err);
+                                        const topicVoteStatusResponse = await _topicVoteStatusPromised(agent, user.id, topic.id, vote.id, response.data.token, 400);
+                                        if (topicVoteStatusResponse.body.status.code === 20001 && topicVoteStatusResponse.body.status.message === 'Signing in progress') {
+                                            // Signing is in progress, we shall journey on...
+                                        } else {
+                                            // Its HTTP 200 and NOT 20001 - Signing in progress, so we have our result, WE'RE DONE HERE
+                                            clearInterval(statusInterval);
 
-                                            replied++;
-                                            var statusresponse = res.body;
-                                            if (statusresponse.status.code === 20001 && statusresponse.status.message === 'Signing in progress') {
-                                                // FIXME: Interesting empty block
-                                            } else {
-                                                clearStatus(); //eslint-disable-line no-use-before-define
-
-                                                var expectedResponse = {
-                                                    status:
-                                                        {
-                                                            code: 40010,
-                                                            message: 'User has cancelled the signing process'
-                                                        }
-                                                }
-                                                assert.equal(statusresponse.status.code, 40010);
-                                                assert.deepEqual(res.body, expectedResponse);
-
-                                                done();
+                                            const expectedResponse = {
+                                                status:
+                                                    {
+                                                        code: 40010,
+                                                        message: 'User has cancelled the signing process'
+                                                    }
                                             }
-                                        });
-                                    }
-                                }, 2000);
+                                            assert.equal(topicVoteStatusResponse.body.status.code, 40010);
+                                            assert.deepEqual(topicVoteStatusResponse.body, expectedResponse);
+                                        }
+                                    } else {
+                                        clearInterval(statusInterval);
 
-                                var clearStatus = function () {
-                                    clearInterval(getStatus);
-                                };
-                            });
+                                        throw new Error(`topicVoteStatus maximum retry limit ${maxRetries} reached!`);
+                                    }
+                                } catch (err) {
+                                    if (err.message !== 'expected 400 "Bad Request", got 200 "OK"') {
+                                        console.log(err);
+                                    }
+                                }
+                            }, retryInterval);
                         });
 
                         test('Fail - 40031 - User account already connected to another PID.', function (done) {
