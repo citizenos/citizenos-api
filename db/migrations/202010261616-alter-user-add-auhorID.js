@@ -10,11 +10,11 @@ module.exports = {
                     comment: 'Etherpad authorID for the user'
                 }, { transaction: t }),
                 queryInterface.addColumn('Topics', 'authorIds', {
-                    type: Sequelize.ARRAY(Sequelize.STRING),
+                    type: Sequelize.ARRAY(Sequelize.UUID),
                     allowNull: true,
                     comment: 'Etherpad authorIDs for the topic'
                 }, { transaction: t }),
-                queryInterface.sequelize.query('UPDATE "Users" u SET "authorId" = REPLACE(ua."authorId", \'"\', \'\') FROM (SELECT SPLIT_PART(key, \':\',2) AS "userId", value AS "authorId" FROM "store" WHERE key ILIKE \'mapper2author:%\') ua WHERE ua."userId"=u.id::text;', {transaction: t})
+                queryInterface.sequelize.query('DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema=\'public\' AND table_name=\'store\') THEN UPDATE "Users" u SET "authorId" = REPLACE(ua."authorId", \'"\', \'\') FROM (SELECT SPLIT_PART(key, \':\',2) AS "userId", value AS "authorId" FROM "store" WHERE key ILIKE \'mapper2author:%\') ua WHERE ua."userId"=u.id::text; END IF; END $$ ;', {transaction: t})
                     .then(function (res) {
                         console.log(`Updated ${res[1].rowCount} Users!`);
 
