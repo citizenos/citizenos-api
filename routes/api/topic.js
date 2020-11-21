@@ -34,6 +34,7 @@ module.exports = function (app) {
     const encoder = app.get('encoder');
     const URL = require('url');
     const https = require('https');
+    const CosHtmlToDocx = app.get('cosHtmlToDocx');
 
     const loginCheck = app.get('middleware.loginCheck');
     const authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
@@ -1411,7 +1412,13 @@ module.exports = function (app) {
         const partner = req.locals.partner;
 
         const topic = await _topicReadAuth(topicId, include, user, partner);
+        if (req.query.docx) {
+            let filePath = topicId +'.docx';
+            console.log(filePath);
+            const doc = new CosHtmlToDocx(topic.description, topic.title, filePath);
 
+            return doc.processHTML();
+        }
         if (!topic) {
             return res.notFound();
         }
