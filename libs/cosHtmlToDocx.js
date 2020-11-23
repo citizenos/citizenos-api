@@ -8,15 +8,12 @@ const docx = require('docx');
 
 // Used to create docx files
 const htmlparser = require('htmlparser2');
-const Promise = require('bluebird');
 const encoder = require('html-entities').AllHtmlEntities;
 const fs = require('fs');
 const fsExtra = require('fs-extra');
 const https = require('https');
 const path = require('path');
-const sizeOf = require('image-size');
-const _ = require('lodash');
-const { AlignmentType, Document, HeadingLevel, Packer, Paragraph, TextRun, UnderlineType, Numbering} = docx;
+const { AlignmentType, Document, HeadingLevel, Packer, Paragraph, TextRun, Media} = docx;
 
 const _addStyles = function (params) {
     params.styles = {
@@ -132,7 +129,7 @@ const getImageFile = async function (url, dirpath) {
     const fileDirPath = getFilesPath(dirpath);
 
     return new Promise(function (resolve, reject) {
-        fsExtra.ensureDir(fileDirPath, {mode: '0760'}, function () {
+        return fsExtra.ensureDir(fileDirPath, {mode: '0760'}, function () {
             const filename = getFileNameFromPath(url);
             const filepath = path.join(fileDirPath, filename);
 
@@ -150,7 +147,8 @@ const getImageFile = async function (url, dirpath) {
                 });
             } else {
                 const file = fs.createWriteStream(filepath);
-                https.get(url, function (response) {
+                url = url.replace('http', 'https');
+                https.get(url, {rejectUnauthorized:false}, function (response) {
                     response.pipe(file);
                     file.on('finish', function () {
                         file.close();
@@ -158,9 +156,8 @@ const getImageFile = async function (url, dirpath) {
                         return resolve(filepath);
                     });
                 }).on('error', function (err) { // Handle errors
-                    fs.unlink(filepath);
-
-                    return reject(err);
+                    console.log(err);
+                    return fs.unlink(filepath, reject(err));
                 });
             }
         });
@@ -212,6 +209,14 @@ function CosHtmlToDocx (html, title, resPath) {
     _addStyles(params);
     const finalDoc = new Document(params);
 
+    const _isElement = function (element, name) {
+        if (element.type === 'tag' && element.name) {
+            return element.name === name;
+        }
+
+        return false;
+    }
+
     const _isHeadingElement = function (element) {
         if (element.name) {
             return element.name.match(/h+[0-6]/gi);
@@ -220,12 +225,7 @@ function CosHtmlToDocx (html, title, resPath) {
         return false;
     };
 
-    const _isCodeElement = function (element) {
-        return element.type === 'tag' && element.name && element.name === 'code';
-    };
-
     const _isAlignmentElement = function (element) {
-        console.log(element.type, element.name);
         if (element.name) {
             return style.align.indexOf(element.name) > -1;
         }
@@ -242,51 +242,25 @@ function CosHtmlToDocx (html, title, resPath) {
     };
 
     const _isListElement = function (element) {
-        return element.type === 'tag' && element.name && (element.name === 'ul' || element.name === 'ol' || element.name === 'li');
+        return (_isElement(element, 'ul') || _isElement(element, 'ol') || _isElement(element, 'li'));
     };
 
-    const _isBrElement = function (element) {
-        return element.type === 'tag' && element.name && element.name === 'br';
-    };
-
-    const _isBoldElement = function (element) {
-        return element.type === 'tag' && element.name && element.name === 'strong';
-    };
-
-    const _isItalicElement = function (element) {
-        return element.type === 'tag' && element.name && element.name === 'em';
-    };
-
-    const _isUnderlineElement = function (element) {
-        return element.type === 'tag' && element.name && element.name === 'u';
-    };
-
-    const _isStrikeElement = function (element) {
-        return element.type === 'tag' && element.name && element.name === 's';
-    };
-
-    const _isImgElement = function (element) {
-        return element.type === 'tag' && element.name && element.name === 'img';
-    };
-
-    const _isParagraphElement = function (element) {
-        if (element.type !== 'text') {
-            if (_isHeadingElement(element)) {
-                return true;
-            } else if (_isCodeElement(element)) {
-                return true;
-            } else if (_isImgElement(element)) {
-                return true;
-            } else if (_isAlignmentElement(element)) {
-                return true;
-            } else if (_isBrElement(element)) {
-                return true;
-            } else if (element.name === 'li') {
-                return true;
-            }
+    const _isTextElement = function (element) {
+        if (element.type === 'text') {
+            return true;
+        } else if (_isElement(element, 's') ||
+            _isElement(element, 'u') ||
+            _isElement(element, 'em') ||
+            _isElement(element, 'strong') ||
+            (_isColorElement(element) || _isFontSizeElement(element))) {
+            return true;
         }
 
         return false;
+    };
+
+    const _isParagraphElement = function (element) {
+        return !_isTextElement(element);
     };
 
     const _isIndentListElement = function (element) {
@@ -300,68 +274,29 @@ function CosHtmlToDocx (html, title, resPath) {
     };
 
     const _isBulletListElement = function (element) {
-        return element.name && element.name === 'ul' && element.attribs && element.attribs.class === 'bullet';
+        return _isElement(element, 'ul') && element.attribs && element.attribs.class === 'bullet';
     };
 
     const _isFontSizeElement = function (element) {
         return element.attribs && element.attribs.class && element.attribs.class.match(/font-size/g);
     };
 
-    const _isTextElement = function (element) {
-        if (element.type === 'text') {
-            return true;
-        } else if (_isStrikeElement(element) ||
-            _isUnderlineElement(element) ||
-            _isItalicElement(element) ||
-            _isBoldElement(element) ||
-            (_isColorElement(element) || _isFontSizeElement(element))) {
-            return true;
+    const _handleHeadingAttributes = function (element, attribs) {
+        if (_isHeadingElement(element)) {
+            attribs.heading = HeadingLevel['HEADING_'+element.name.replace('h','')]
         }
-
-        return false;
     };
 
-    const _getParagraphStyle = function (item, attributes) {
-        let depth = null;
-        if (!attributes) {
-            attributes = {};
+    const _handleCodeAttributes = function (element, attribs) {
+        if (_isElement(element, 'code')) {
+            attribs.style = 'code';
         }
+    }
 
-        if (item.name && _isHeadingElement(item)) {
-            attributes.heading = HeadingLevel['HEADING_'+item.name.replace('h','')]
+    const _handleAlignAttributes = function (element, attribs) {
+        if (_isAlignmentElement(element)) {
+            attribs.alignment = AlignmentType[element.name.toUpperCase()]
         }
-
-        if (item.name && _isCodeElement(item)) {
-            attributes.style = 'code';
-        }
-
-       /*if (item.name && _isImgElement(item)) {
-            attributes.push({'img': item.attribs.src});
-        }*/
-
-        if (_isAlignmentElement(item)) {
-            console.log(item.name.toUpperCase())
-            attributes.alignment = AlignmentType[item.name.toUpperCase()]
-        }
-        if (_isBulletListElement(item)) {
-            depth = _getItemDepth(item, null, true);
-            if (!attributes.bullet)
-                attributes.bullet = {level: depth};
-        } else if (item.name && item.name === 'ol') {
-            depth = _getItemDepth(item, null, true);
-            if (!attributes.numbering)
-                attributes.numbering = {reference: "numberLi", level: depth};
-        } else if (_isIndentListElement(item)) {
-            depth = _getItemDepth(item, null, true);
-            if (!attributes.bullet)
-                attributes.indent = {level: depth};
-        }
-
-        if (item.parent && item.parent.name !== 'body') {
-            return _getParagraphStyle(item.parent, attributes);
-        }
-
-        return attributes;
     };
 
     const _getElementFontSizeFromStyle = function (element) {
@@ -372,6 +307,7 @@ function CosHtmlToDocx (html, title, resPath) {
             return size * 2; // pts to half pts
         }
     };
+
     const _getItemDepth = function (item, depth, isList) {
         depth = depth || 0;
         if (item.parent && item.parent.name !== 'body') {
@@ -385,7 +321,48 @@ function CosHtmlToDocx (html, title, resPath) {
         }
     };
 
-    const _getTextWithFormat = function (item, children, attributes) {
+    const _handleListElementAttributes = function (element, attribs) {
+        let depth = null;
+        if (_isBulletListElement(element)) {
+            depth = _getItemDepth(element, null, true);
+            if (!attribs.bullet)
+            attribs.bullet = {level: depth};
+        } else if (element.name && element.name === 'ol') {
+            depth = _getItemDepth(element, null, true);
+            if (!attribs.numbering)
+            attribs.numbering = {reference: "numberLi", level: depth};
+        } else if (_isIndentListElement(element)) {
+            depth = _getItemDepth(element, null, true);
+            if (!attribs.bullet)
+            attribs.indent = {level: depth};
+        }
+    }
+
+    const _getParagraphStyle = async function (item, attributes) {
+        if (!attributes) {
+            attributes = {};
+        }
+        _handleHeadingAttributes(item, attributes);
+        _handleCodeAttributes(item, attributes);
+        _handleAlignAttributes(item, attributes);
+        _handleListElementAttributes(item, attributes);
+
+        if (_isElement(item, 'img')) {
+            const path = await getImageFile(item.attribs.src, resPath);
+            const image = Media.addImage(finalDoc, fs.readFileSync(path));
+            finalParagraphs.push(new Paragraph(image));
+
+            return null;
+        }
+
+        if (item.parent && item.parent.name !== 'body') {
+            return await _getParagraphStyle(item.parent, attributes);
+        }
+
+        return attributes;
+    };
+
+    const _getTextWithFormat = async function (item, children, attributes) {
         if (!attributes) {
             attributes = {};
         }
@@ -393,13 +370,13 @@ function CosHtmlToDocx (html, title, resPath) {
         if (_isColorElement(item)) {
             const colorName = item.attribs.class.split('color:')[1];
             attributes.color = style.colors[colorName];
-        } else if (_isBoldElement(item)) {
+        } else if (_isElement(item, 'strong')) {
             attributes.bold = true;
-        } else if (_isItalicElement(item)) {
+        } else if (_isElement(item, 'em')) {
             attributes.italics = true;
-        } else if (_isUnderlineElement(item)) {
+        } else if (_isElement(item, 'u')) {
             attributes.underline = {};
-        } else if (_isStrikeElement(item)) {
+        } else if (_isElement(item, 's')) {
             attributes.strike = {};
         } else if (_isFontSizeElement(item)) {
             attributes.size = _getElementFontSizeFromStyle(item);
@@ -409,78 +386,67 @@ function CosHtmlToDocx (html, title, resPath) {
             const textNode = attributes;
             textNode.text = encoder.decode(item.data);
             children.push( new TextRun (textNode));
-
-            return true;
-        } else if (item.children) {
-            item.children.forEach(function (gc) {
-                if (!_isListElement(gc)) {
-                    const itemAttributes = attributes;
-                    const value = _getTextWithFormat(gc, children, itemAttributes);
-                    if (value && typeof value === 'object') {
-                        children.push(value);
-
-                        return true;
-                    }
-                }
-            });
+        } if (item.children) {
+            for await (let gc of item.children) {
+                if (!_isListElement(gc))
+                    await _getTextWithFormat(gc, children, attributes);
+            }
+        } else {
+            return attributes;
         }
     };
 
-    const _childTagToFormat = function (child, properties, isList) {
+    const _childTagToFormat = async function (child, properties, isList) {
 
-        _getParagraphStyle(child, properties);
+        await _getParagraphStyle(child, properties);
         if (child.children) {
-            child.children.forEach(function (gchild) {
-                _getParagraphStyle(gchild, properties);
-                _getTextWithFormat(gchild, properties.children, null, isList);
-            });
+            for await (const gchild of child.children) {
+                await _getParagraphStyle(gchild, properties);
+                await _getTextWithFormat(gchild, properties.children, null, isList);
+            }
         }
 
         return properties;
 
     };
 
-    const _listItems = function (element, items) {
+    const _listItems =  function (element, items) {
         items = items || [];
         if (element.children) {
-            element.children.forEach(function (child) {
-                let lastItem = null;
+            for  (const child of element.children) {
                 if (_isTextElement(child) && element.name === 'li') {
-                    lastItem = items[items.length - 1];
-                    if (!_.isEqual(element, lastItem)) {
-                        items.push(element);
-                    }
+                    items.push(element);
 
                     return items;
                 } else if (_isHeadingElement(child) && element.name === 'li') {
-                    lastItem = items[items.length - 1];
-                    if (!_.isEqual(child, lastItem)) {
-                        items.push(child);
-                    }
+                    items.push(child);
 
                     return items;
                 }
 
-                return _listItems(child, items);
-            });
+                items = _listItems(child, items);
+            }
         }
 
         return items;
     };
 
-    const _listElementHandler = function (element) {
+    const _listElementHandler = async function (element) {
+        const liItems = _listItems(element);
+        if (!liItems) return;
+        for await (const li of liItems) {
+            const children = [];
+            await _getTextWithFormat(li, children);
+            const paragrpahProperties = await _getParagraphStyle(li);
+            paragrpahProperties.children = children
 
-        if (_isIndentListElement(element) || _isBulletListElement(element) || element.name === 'ol') {
-            const liItems = _listItems(element);
-            liItems.forEach(function (li) {
-                const children = [];
-                _getTextWithFormat(li, children);
-                let paragrpahProperties = {};
-                paragrpahProperties = _getParagraphStyle(li, paragrpahProperties);
-                paragrpahProperties.children = children
+            finalParagraphs.push(new Paragraph(paragrpahProperties));
 
-                finalParagraphs.push(new Paragraph(paragrpahProperties));
-            });
+            if (li.children) {
+                for await (const lic of li.children) {
+                    await _listElementHandler(lic);
+                }
+            }
         }
     };
 
@@ -496,62 +462,27 @@ function CosHtmlToDocx (html, title, resPath) {
     const _handleParserResult = async function (result) {
         const body = findItemByProperty(result, 'body');
         if (body && body.children) {
-            body.children.forEach(function (tag) {
+            for await (const tag of body.children) {
                 if (_isListElement(tag)) {
-                    _listElementHandler(tag);
+                    await _listElementHandler(tag);
                 }
                 else if (_isParagraphElement(tag)) {
-                    const paragraphProperties = _childTagToFormat(tag, {
+                    const paragraphProperties = await _childTagToFormat(tag, {
                         children: []
                     });
-                    if (Object.keys(paragraphProperties).length)
+                    if (paragraphProperties)
                         finalParagraphs.push(new Paragraph(paragraphProperties))
                 }
                 else if (_isTextElement(tag)) {
                     const textElement = {
                         children: []
                     }
-                    _getTextWithFormat(tag, textElement.children);
+                    await _getTextWithFormat(tag, textElement.children);
                     finalParagraphs.push(new Paragraph(textElement));
                 }
-            });
+            }
         }
     }
-
-    const downloadDocImages = async function (paragraphs) {
-        const imageDownloadPromises = [];
-
-        return new Promise(function (resolve) {
-            let counter = 0;
-            paragraphs.forEach(function (row) {
-                row.paragraph.forEach(function (method) {
-                    if (method && typeof method === 'object') {
-                        const key = Object.keys(method);
-                        if (key[0] === 'img') {
-                            imageDownloadPromises.push(getImageFile(method.img, resPath));
-                        }
-                    }
-                });
-                counter++;
-            });
-            if (counter >= paragraphs.length) {
-                return Promise
-                    .all(imageDownloadPromises)
-                    .then(function () {
-                        return resolve();
-                    });
-            }
-        });
-    };
-
-    const scaleImage = function (path) {
-        const dimensions = sizeOf(path);
-        if (dimensions.width > 605) {
-            return Math.round((605 / dimensions.width) * 100) / 100;
-        }
-
-        return 1;
-    };
 
     /**
      * Return docx from input html
@@ -563,26 +494,21 @@ function CosHtmlToDocx (html, title, resPath) {
      * @public
      */
 
-    this.processHTML = async function (html, res) {
+    this.processHTML = async function (html) {
         const processHtml = this.html || html;
-        const path = this.path;
-
-        return new Promise(function (resolve, reject) {
+        return new Promise (function (resolve, reject) {
             const handler =  new htmlparser.DefaultHandler(async function (err, result) {
                 if (err) {
                     return reject(err);
                 }
                 await _handleParserResult(result);
                 finalDoc.addSection({children: finalParagraphs});
-           //     const finalDoc = await createFinalDoc(paragraphs);
-
-                const b64string = await Packer.toBase64String(finalDoc);
-                await fs.writeFileSync('./TEST.docx', Buffer.from(b64string, 'base64'));
-                resolve();
+                return resolve(Buffer.from(await Packer.toBase64String(finalDoc), 'base64'));
             });
             const parser = new htmlparser.Parser(handler);
             parser.parseComplete(processHtml);
-        });
+        })
+
     };
 }
 

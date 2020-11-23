@@ -1412,13 +1412,7 @@ module.exports = function (app) {
         const partner = req.locals.partner;
 
         const topic = await _topicReadAuth(topicId, include, user, partner);
-        if (req.query.docx) {
-            let filePath = topicId +'.docx';
-            console.log(filePath);
-            const doc = new CosHtmlToDocx(topic.description, topic.title, filePath);
 
-            return doc.processHTML();
-        }
         if (!topic) {
             return res.notFound();
         }
