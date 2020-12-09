@@ -15,7 +15,7 @@ module.exports = function (app) {
      * Get update user etherpad authorID
      */
 
-    app.put('/api/internal/users/:userId', authApiKey, async function (req, res, next) {
+    app.put('/api/internal/users/:userId', authApiKey, async function (req, res) {
         var authorData = req.body;
         if (authorData.userId && authorData.authorID) {
             await User

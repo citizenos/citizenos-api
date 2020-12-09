@@ -895,7 +895,7 @@ suite('Auth', function () {
                             });
                     });
 
-                    test('Success - 20003 - created',async  function () {
+                    test('Success - 20003 - created',async function () {
                         this.timeout(35000); //eslint-disable-line no-invalid-this
 
                         const agent = request.agent(app);
@@ -1026,7 +1026,7 @@ suite('Auth', function () {
 
                         const agent = request.agent(app);
 
-                        const initResponse  = (await loginSmartIdInitPromised(agent, pid)).body.data;
+                        const initResponse = (await loginSmartIdInitPromised(agent, pid)).body.data;
                         const userInfoFromSmartIdStatusResponse = (await loginSmartIdStatusPromised(agent, initResponse.token)).body;
                         assert.equal(userInfoFromSmartIdStatusResponse.status.code, 20003);
                         const userFromStatus = (await statusPromised(agent)).body.data;
@@ -1039,7 +1039,7 @@ suite('Auth', function () {
                         pid = '10101010016'
                         const agent = request.agent(app);
 
-                        const initResponse  = (await loginSmartIdInitPromised(agent, pid)).body.data;
+                        const initResponse = (await loginSmartIdInitPromised(agent, pid)).body.data;
                         const smartIdStatusResponse = (await loginSmartIdStatusPromised(agent, initResponse.token)).body;
                         const expectedResponse = {
                             status: {
@@ -1056,7 +1056,7 @@ suite('Auth', function () {
                         pid = '10101010027'
                         const agent = request.agent(app);
 
-                        const initResponse  = (await loginSmartIdInitPromised(agent, pid)).body.data;
+                        const initResponse = (await loginSmartIdInitPromised(agent, pid)).body.data;
                         const smartIdStatusResponse = (await loginSmartIdStatusPromised(agent, initResponse.token, 5000)).body;
                         const expectedResponse = {
                             status: {
@@ -1090,7 +1090,7 @@ suite('Auth', function () {
                                 }
                             })
                             .then(async function () {
-                                const initResponse  = (await loginSmartIdInitPromised(agent2, pid)).body.data;
+                                const initResponse = (await loginSmartIdInitPromised(agent2, pid)).body.data;
                                 const smartIdStatusResponse = (await loginSmartIdStatusPromised(agent2, initResponse.token, 5000)).body;
                                 assert.equal(smartIdStatusResponse.status.code, 20002);
                                 const userFromStatus = (await statusPromised(agent2)).body.data;
@@ -1166,7 +1166,7 @@ suite('Auth', function () {
                     source: User.SOURCES.citizenos
                 })
                 .then(async function (user) {
-                    const userSignedup = (await signupPromised(agent,  user.email, password, language)).body.data;
+                    const userSignedup = (await signupPromised(agent, user.email, password, language)).body.data;
                     assert.equal(userSignedup.email, email);
                     assert.equal(userSignedup.language,user.language);
                 });
@@ -1485,7 +1485,7 @@ suite('Auth', function () {
 
         test('Success', async function () {
             await loginPromised(agent, email, password);
-            const user  = (await statusPromised(agent)).body.data;
+            const user = (await statusPromised(agent)).body.data;
             assert.equal(user.email, email);
         });
 
@@ -1595,7 +1595,7 @@ suite('Auth', function () {
             });
 
             test('Fail - 400 - Invalid partner configuration. Please contact system administrator.', async function () {
-                const authRes = await _openIdAuthorizePromised(agent, null,  uuid.v4(), null, null, null, null, 400);
+                const authRes = await _openIdAuthorizePromised(agent, null, uuid.v4(), null, null, null, null, 400);
                 assert.equal(authRes.text, 'Invalid partner configuration. Please contact system administrator.');
             });
 
