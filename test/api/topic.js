@@ -747,22 +747,6 @@ const topicReportCreatePromised = async function (agent, topicId, type, text) {
     return _topicReportCreatePromised(agent, topicId, type, text, 200);
 };
 
-var _topicReportRead = function (agent, topicId, reportId, expectedHttpCode, callback) {
-    var path = '/api/topics/:topicId/reports/:reportId'
-        .replace(':topicId', topicId)
-        .replace(':reportId', reportId);
-
-    agent
-        .get(path)
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
-};
-
-var topicReportRead = function (agent, topicId, reportId, callback) {
-    _topicReportRead(agent, topicId, reportId, 200, callback);
-};
-
 const _topicReportReadPromised = async function (agent, topicId, reportId, expectedHttpCode) {
     const path = '/api/topics/:topicId/reports/:reportId'
         .replace(':topicId', topicId)
@@ -1407,29 +1391,29 @@ var topicVoteReadUnauth = function (agent, topicId, voteId, callback) {
     _topicVoteReadUnauth(agent, topicId, voteId, 200, callback);
 };
 
-var _topicVoteVoteUnauth = function (agent, topicId, voteId, voteList, certificate, pid, phoneNumber, expectedHttpCode, callback) {
-    var path = '/api/topics/:topicId/votes/:voteId'
+const _topicVoteVoteUnauthPromised = async function (agent, topicId, voteId, voteList, certificate, pid, phoneNumber, countryCode, expectedHttpCode) {
+    const path = '/api/topics/:topicId/votes/:voteId'
         .replace(':topicId', topicId)
         .replace(':voteId', voteId);
 
-    var data = {
+    const data = {
         options: voteList,
         certificate: certificate, // Used only for Vote.AUTH_TYPES.hard
         pid: pid,
-        phoneNumber: phoneNumber
+        phoneNumber: phoneNumber,
+        countryCode: countryCode
     };
 
-    agent
+    return agent
         .post(path)
         .set('Content-Type', 'application/json')
         .send(data)
         .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
+        .expect('Content-Type', /json/);
 };
 
-var topicVoteVoteUnauth = function (agent, topicId, voteId, voteList, certificate, pid, phoneNumber, callback) {
-    _topicVoteVoteUnauth(agent, topicId, voteId, voteList, certificate, pid, phoneNumber, 200, callback);
+const topicVoteVoteUnauthPromised = async function (agent, topicId, voteId, voteList, certificate, pid, phoneNumber, countryCode) {
+    return _topicVoteVoteUnauthPromised(agent, topicId, voteId, voteList, certificate, pid, phoneNumber, countryCode, 200);
 };
 
 /**
@@ -1605,6 +1589,32 @@ var _topicVoteSignUnauth = function (agent, topicId, voteId, voteList, certifica
 //TODO: Missing test to use it?
 var topicVoteSignUnauth = function (agent, topicId, voteId, voteList, certificate, pid, token, callback) { //eslint-disable-line no-unused-vars
     _topicVoteSignUnauth(agent, topicId, voteId, voteList, certificate, pid, token, 200, callback);
+};
+
+const _topicVoteSignPromised = async function (agent, userId, topicId, voteId, voteList, certificate, pid, token, signatureValue, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/votes/:voteId/sign'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':voteId', voteId);
+
+    const data = {
+        options: voteList,
+        certificate, // Used only for Vote.AUTH_TYPES.hard
+        pid,
+        token,
+        signatureValue //TODO get propersignature
+    };
+
+    return agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .send(data)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicVoteSignPromised = async function (agent, userId, topicId, voteId, voteList, certificate, pid, token, signatureValue) {
+    return _topicVoteSignPromised(agent, userId, topicId, voteId, voteList, certificate, pid, token, signatureValue, 200);
 };
 
 var _topicVoteDownloadBdocFinal = function (agent, userId, topicId, voteId, expectedHttpCode, callback) {
@@ -1940,6 +1950,7 @@ const SevenZip = app.get('SevenZip');
 const etherpadClient = app.get('etherpadClient');
 const cosEtherpad = app.get('cosEtherpad');
 const jwt = app.get('jwt');
+const crypto = require('crypto');
 const cosJwt = app.get('cosJwt');
 const moment = app.get('moment');
 const validator = app.get('validator');
@@ -3343,7 +3354,7 @@ suite('Users', function () {
                     level: GroupMember.LEVELS.read
                 };
                 await topicMemberGroupsCreatePromised(agentCreator, creator.id, topic.id, topicMemberGroup);
-                return  groupLib.membersCreatePromised(agentCreator, creator.id, group.id, groupMemberUser);
+                return groupLib.membersCreatePromised(agentCreator, creator.id, group.id, groupMemberUser);
             });
 
             test('Success', async function () {
@@ -7457,11 +7468,11 @@ suite('Users', function () {
                     suite('ID-card', function () {
 
                         suite('Init', function () {
-                            var vote;
-                            var vote2;
+                            let vote;
+                            let vote2;
 
-                            setup(function (done) {
-                                var options = [
+                            setup(async function () {
+                                const options = [
                                     {
                                         value: 'Option 1'
                                     },
@@ -7472,148 +7483,146 @@ suite('Users', function () {
                                         value: 'Option 3'
                                     }
                                 ];
-                                async
-                                    .parallel(
-                                        [
-                                            function (cb) {
-                                                topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard, cb);
-                                            },
-                                            function (cb) {
-                                                topicVoteCreate(agent, user.id, topicPublic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard, cb);
-                                            }
-                                        ],
-                                        function (err, results) {
-                                            if (err) return done(err);
-
-                                            vote = results[0].body.data;
-                                            vote2 = results[1].body.data;
-                                            done();
-                                        }
-                                    );
+                                vote = (await topicVoteCreatePromised(agent, user.id, topic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                                vote2 = (await topicVoteCreatePromised(agent, user.id, topicPublic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
                             });
 
-                            teardown(function (done) {
-                                UserConnection
+                            teardown(async function () {
+                                await UserConnection
                                     .destroy({
                                         where: {
                                             connectionId: UserConnection.CONNECTION_IDS.esteid,
                                             connectionUserId: ['PNOEE-37101010021']
                                         },
                                         force: true
-                                    })
-                                    .then(function () {
-                                        done();
-                                    })
-                                    .catch(done);
-                            });
-
-                            test('Success', function (done) {
-                                var voteList = [
-                                    {
-                                        optionId: vote.options.rows[0].id
-                                    }
-                                ];
-
-                                var certificate = fs.readFileSync('./test/resources/certificates/dds_good_igor_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
-                                topicVoteVote(agent, user.id, topic.id, vote.id, voteList, certificate, null, null, null, function (err, res) {
-                                    if (err) return done(err);
-
-                                    var status = res.body.status;
-                                    var data = res.body.data;
-
-                                    assert.deepEqual(status, {code: 20001});
-                                    assert.property(data, 'signedInfoDigest');
-                                    assert.isTrue(data.signedInfoDigest.length > 0);
-
-                                    done();
-                                });
-                            });
-
-                            test('Success - unauth', function (done) {
-                                var reqAgent = request.agent(app);
-                                var voteList = [
-                                    {
-                                        optionId: vote.options.rows[0].id
-                                    }
-                                ];
-
-                                var certificate = fs.readFileSync('./test/resources/certificates/dds_good_igor_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
-                                topicVoteVoteUnauth(reqAgent, topicPublic.id, vote2.id, voteList, certificate, null, null, function (err, res) {
-                                    if (err) return done(err);
-
-                                    var status = res.body.status;
-                                    var data = res.body.data;
-
-                                    assert.deepEqual(status, {code: 20001});
-                                    assert.property(data, 'signedInfoDigest');
-                                    assert.isTrue(data.signedInfoDigest.length > 0);
-
-                                    done();
-                                });
-                            });
-
-                            test('Fail - unauth - topic is private', function (done) {
-                                var reqAgent = request.agent(app);
-                                var voteList = [
-                                    {
-                                        optionId: vote.options.rows[0].id
-                                    }
-                                ];
-
-                                var certificate = fs.readFileSync('./test/resources/certificates/dds_good_igor_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
-                                _topicVoteVoteUnauth(reqAgent, topic.id, vote.id, voteList, certificate, null, null, 401, function (err, res) {
-                                    if (err) return done(err);
-
-                                    var status = res.body.status;
-
-                                    assert.deepEqual(status, {
-                                        code: 40100,
-                                        message: 'Unauthorized'
                                     });
-
-                                    done();
-                                });
                             });
 
-                            test('Fail - 40009 - authType === hard - missing user certificate', function (done) {
-                                var voteList = [
+                            test('Success', async function () {
+                                const voteList = [
                                     {
                                         optionId: vote.options.rows[0].id
                                     }
                                 ];
 
-                                _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, null, null, null, 400, function (err, res) {
-                                    if (err) return done(err);
+                                const certificate = fs.readFileSync('./test/resources/certificates/dds_good_igor_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
+                                const res = await topicVoteVotePromised(agent, user.id, topic.id, vote.id, voteList, certificate, null, null, null);
+                                const status = res.body.status;
+                                const data = res.body.data;
 
-                                    var expectedBody = {
-                                        status: {
-                                            code: 40009,
-                                            message: 'Vote with hard authentication requires users certificate when signing with ID card OR phoneNumber+pid when signing with mID'
-                                        }
-                                    };
+                                assert.deepEqual(status, {code: 20001});
+                                assert.property(data, 'signedInfoDigest');
+                                assert.isTrue(data.signedInfoDigest.length > 0);
+                            });
 
-                                    assert.deepEqual(res.body, expectedBody);
+                            test('Success - unauth', async function () {
+                                const reqAgent = request.agent(app);
+                                const voteList = [
+                                    {
+                                        optionId: vote.options.rows[0].id
+                                    }
+                                ];
 
-                                    done();
+                                const certificate = fs.readFileSync('./test/resources/certificates/dds_good_igor_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
+                                const res = await topicVoteVoteUnauthPromised(reqAgent, topicPublic.id, vote2.id, voteList, certificate, null, null, null);
+                                const status = res.body.status;
+                                const data = res.body.data;
+
+                                assert.deepEqual(status, {code: 20001});
+                                assert.property(data, 'signedInfoDigest');
+                                assert.isTrue(data.signedInfoDigest.length > 0);
+                            });
+
+                            test('Fail - unauth - topic is private', async function () {
+                                const reqAgent = request.agent(app);
+                                const voteList = [
+                                    {
+                                        optionId: vote.options.rows[0].id
+                                    }
+                                ];
+
+                                const certificate = fs.readFileSync('./test/resources/certificates/dds_good_igor_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
+                                const status = (await _topicVoteVoteUnauthPromised(reqAgent, topic.id, vote.id, voteList, certificate, null, null, null, 401)).body.status;
+
+                                assert.deepEqual(status, {
+                                    code: 40100,
+                                    message: 'Unauthorized'
                                 });
                             });
 
-                            test.skip('Fail - 40030 - Personal ID already connected to another user account.', function (done) {
-                                // TODO: This test needs to generate a certificate
-                                done();
+                            test('Fail - 40009 - authType === hard - missing user certificate', async function () {
+                                const voteList = [
+                                    {
+                                        optionId: vote.options.rows[0].id
+                                    }
+                                ];
+
+                                const resBody = (await _topicVoteVotePromised(agent, user.id, topic.id, vote.id, voteList, null, null, null, null, 400)).body;
+                                const expectedBody = {
+                                    status: {
+                                        code: 40009,
+                                        message: 'Vote with hard authentication requires users certificate when signing with ID card OR phoneNumber+pid when signing with mID'
+                                    }
+                                };
+
+                                assert.deepEqual(resBody, expectedBody);
                             });
 
-                            test.skip('Fail - 40031 - User account already connected to another PID.', function (done) {
+                            test.skip('Fail - 40030 - Personal ID already connected to another user account.', async function () {
                                 // TODO: This test needs to generate a certificate
-                                done();
+                            });
+
+                            test.skip('Fail - 40031 - User account already connected to another PID.', async function () {
+                                // TODO: This test needs to generate a certificate
                             });
 
                         });
 
-                        suite('Sign', function () {
+                        suite.skip('Sign', function () {
+                            let vote;
 
-                            test.skip('Success', function (done) {
-                                done();
+                            setup(async function () {
+                                const options = [
+                                    {
+                                        value: 'Option 1'
+                                    },
+                                    {
+                                        value: 'Option 2'
+                                    },
+                                    {
+                                        value: 'Option 3'
+                                    }
+                                ];
+
+                                vote = (await topicVoteCreatePromised(agent, user.id, topic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                            });
+
+                            test('Success', async function () {
+                                const pid = 'PID';
+                                const voteList = [
+                                    {
+                                        optionId: vote.options.rows[0].id
+                                    }
+                                ];
+                                /**To run this test, it needs a private key cert pair, cert should be in hex format, also add issuer data to config file and also
+                                 * in the cosSignature.js in _handleSigningResult comment out timemark part
+                                 **/
+                                const certificate = fs.readFileSync('./test/resources/certificates/my_good_cert_hex.crt').toString(); //eslint-disable-line no-sync
+                                const privateKey = fs.readFileSync('./test/resources/certificates/my_good_key.pem'); //eslint-disable-line no-sync
+                                const resBody = (await topicVoteVotePromised(agent, user.id, topic.id, vote.id, voteList, certificate, null, null, null)).body;
+
+                                const status = resBody.status;
+                                const data = resBody.data;
+                                assert.deepEqual(status, {code: 20001});
+                                assert.property(data, 'signedInfoDigest');
+                                assert.isTrue(data.signedInfoDigest.length > 0);
+
+                                const sign = crypto.createSign('SHA256');
+                                sign.update(data.signedInfoDigest);
+                                const signatureValue = sign.sign(privateKey, 'hex');
+
+                                await topicVoteSignPromised(agent, user.id, topic.id, vote.id, voteList, certificate, pid, data.token, signatureValue);
+
                             });
 
                         });
@@ -7644,19 +7653,18 @@ suite('Users', function () {
                         });
 
                         teardown(async function () {
-                            return UserConnection
-                                .destroy({
-                                    where: {
-                                        connectionId: {
-                                            [db.Sequelize.Op.in]: [
-                                                UserConnection.CONNECTION_IDS.esteid,
-                                                UserConnection.CONNECTION_IDS.smartid
-                                            ]
-                                        },
-                                        connectionUserId: ['PNOEE-600010199060', 'PNOEE-11412090004', 'PNOEE-51001091072', 'PNOEE-60001018800']
+                            await UserConnection.destroy({
+                                where: {
+                                    connectionId: {
+                                        [db.Sequelize.Op.in]: [
+                                            UserConnection.CONNECTION_IDS.esteid,
+                                            UserConnection.CONNECTION_IDS.smartid
+                                        ]
                                     },
-                                    force: true
-                                });
+                                    connectionUserId: ['PNOEE-600010199060', 'PNOEE-11412090004', 'PNOEE-51001091072', 'PNOEE-60001018800']
+                                },
+                                force: true
+                            });
                         });
 
                         test('Success - Estonian mobile number and PID2', async function () {
@@ -8571,11 +8579,12 @@ suite('Users', function () {
 
                     suite('Smart-ID', function () {
 
-                        var vote;
+                        let vote;
+                        let vote2;
 
-                        setup(function (done) {
+                        setup(async function () {
 
-                            var options = [
+                            const options = [
                                 {
                                     value: 'Option 1'
                                 },
@@ -8586,254 +8595,196 @@ suite('Users', function () {
                                     value: 'Option 3'
                                 }
                             ];
-
-                            topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard, function (err, res) {
-                                if (err) return done(err);
-
-                                vote = res.body.data;
-
-                                topicVoteRead(agent, user.id, topic.id, vote.id, function (err, res) {
-                                    if (err) return done(err);
-
-                                    vote = res.body.data;
-
-                                    done();
-                                });
-                            });
+                            vote = (await topicVoteCreatePromised(agent, user.id, topic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                            vote = (await topicVoteReadPromised(agent, user.id, topic.id, vote.id)).body.data;
+                            vote2 = (await topicVoteCreatePromised(agent, user.id, topicPublic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
                         });
 
-                        teardown(function (done) {
-                            UserConnection
+                        teardown(async function () {
+                            await UserConnection
                                 .destroy({
                                     where: {
                                         connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
                                         connectionUserId: ['PNOEE-10101010016', 'PNOEE-10101010005', 'PNOEE-11412090004']
                                     },
                                     force: true
-                                })
-                                .then(function () {
-                                    done();
-                                })
-                                .catch(done);
-                        });
-
-                        test('Success - Estonian PID', function (done) {
-                            UserConnection
-                                .destroy({
-                                    where: {
-                                        connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
-                                        connectionUserId: ['PNOEE-10101010016', 'PNOEE-10101010005', 'PNOEE-11412090004']
-                                    },
-                                    force: true
-                                })
-                                .then(function () {
-                                    var countryCode = 'EE';
-                                    var pid = '10101010005';
-
-                                    var voteList = [
-                                        {
-                                            optionId: vote.options.rows[0].id
-                                        }
-                                    ];
-
-                                    _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, 200, function (err, res) {
-                                        if (err) return done(err);
-
-                                        var response = res.body;
-                                        assert.equal(response.status.code, 20001);
-                                        assert.match(response.data.challengeID, /[0-9]{4}/);
-                                        done();
-                                    });
                                 });
                         });
 
-                        test('Success - Latvian PID', function (done) {
-                            var countryCode = 'LV';
-                            var pid = '010101-10006';
+                        test('Success - Estonian PID', async function () {
+                           await UserConnection.destroy({
+                                where: {
+                                    connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
+                                    connectionUserId: ['PNOEE-10101010016', 'PNOEE-10101010005', 'PNOEE-11412090004']
+                                },
+                                force: true
+                            });
 
-                            var voteList = [
+                            const countryCode = 'EE';
+                            const pid = '10101010005';
+
+                            const voteList = [
                                 {
                                     optionId: vote.options.rows[0].id
                                 }
                             ];
 
-                            topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, function (err, res) {
-                                if (err) return done(err);
+                            const response = (await _topicVoteVotePromised(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, 200)).body;
 
-                                var response = res.body;
-                                assert.equal(response.status.code, 20001);
-                                assert.match(response.data.challengeID, /[0-9]{4}/);
-                                done();
-                            });
+                            assert.equal(response.status.code, 20001);
+                            assert.match(response.data.challengeID, /[0-9]{4}/);
                         });
 
-                        test('Success - Lithuanian PID', function (done) {
-                            var countryCode = 'LT';
-                            var pid = '10101010005';
+                        test('Success - unauth - Estonian PID', async function () {
+                            const reqAgent = request.agent(app);
+                            await UserConnection.destroy({
+                                 where: {
+                                     connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
+                                     connectionUserId: ['PNOEE-10101010016', 'PNOEE-10101010005', 'PNOEE-11412090004']
+                                 },
+                                 force: true
+                             });
 
-                            var voteList = [
+                             const countryCode = 'EE';
+                             const pid = '10101010005';
+
+                             const voteList = [
+                                 {
+                                     optionId: vote.options.rows[0].id
+                                 }
+                             ];
+                             const response = (await _topicVoteVoteUnauthPromised(reqAgent, topicPublic.id, vote2.id, voteList, null, pid, null, countryCode, 200)).body;
+
+                             assert.equal(response.status.code, 20001);
+                             assert.match(response.data.challengeID, /[0-9]{4}/);
+                        });
+
+                        test('Success - Latvian PID', async function () {
+                            const countryCode = 'LV';
+                            const pid = '010101-10006';
+
+                            const voteList = [
                                 {
                                     optionId: vote.options.rows[0].id
                                 }
                             ];
 
-                            topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, function (err, res) {
-                                if (err) return done(err);
-
-                                var response = res.body;
-                                assert.equal(response.status.code, 20001);
-                                assert.match(response.data.challengeID, /[0-9]{4}/);
-                                done();
-                            });
+                            const response = (await topicVoteVotePromised(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode)).body;
+                            assert.equal(response.status.code, 20001);
+                            assert.match(response.data.challengeID, /[0-9]{4}/);
                         });
 
-                        test('Success - Personal ID already connected to another user account.', function (done) {
-                            var countryCode = 'EE';
-                            var pid = '10101010005';
+                        test('Success - Lithuanian PID', async function () {
+                            const countryCode = 'LT';
+                            const pid = '10101010005';
 
-                            var voteList = [
+                            const voteList = [
                                 {
                                     optionId: vote.options.rows[0].id
                                 }
                             ];
 
-                            userLib.createUser(request.agent(app), null, null, null, function (err, res) {
-                                if (err) return done(err);
-
-                                var createdUser = res;
-
-                                UserConnection
-                                    .create({
-                                        userId: createdUser.id,
-                                        connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                        connectionUserId: pid
-                                    })
-                                    .then(function () {
-                                        topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, function (err, res) {
-                                            if (err) return done(err);
-
-                                            var response = res.body;
-                                            assert.equal(response.status.code, 20001);
-                                            assert.match(response.data.challengeID, /[0-9]{4}/);
-                                            done();
-                                        });
-                                    });
-                            });
+                            const response = (await topicVoteVotePromised(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode)).body;
+                            assert.equal(response.status.code, 20001);
+                            assert.match(response.data.challengeID, /[0-9]{4}/);
                         });
 
-                        test('Success - bdocUri exists', function (done) {
+                        test('Success - Personal ID already connected to another user account.', async function () {
+                            const countryCode = 'EE';
+                            const pid = '10101010005';
+
+                            const voteList = [
+                                {
+                                    optionId: vote.options.rows[0].id
+                                }
+                            ];
+
+                            const createdUser = await userLib.createUserPromised(request.agent(app), null, null, null)
+
+                            await UserConnection.create({
+                                userId: createdUser.id,
+                                connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                connectionUserId: pid
+                            });
+
+                            const response = (await topicVoteVotePromised(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode)).body;
+                            assert.equal(response.status.code, 20001);
+                            assert.match(response.data.challengeID, /[0-9]{4}/);
+                        });
+
+                        test('Success - bdocUri exists', async function () {
                             this.timeout(24000); //eslint-disable-line no-invalid-this
 
-                            var countryCode = 'EE';
-                            var pid = '10101010005';
+                            const countryCode = 'EE';
+                            const pid = '10101010005';
 
-                            var voteList = [
+                            const voteList = [
                                 {
                                     optionId: vote.options.rows[0].id
                                 }
                             ];
 
-                            topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, function (err, res) {
-                                if (err) return done(err);
+                            const response = (await topicVoteVotePromised(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode)).body;
+                            assert.equal(response.status.code, 20001);
+                            assert.match(response.data.challengeID, /[0-9]{4}/);
 
-                                var response = res.body;
-                                assert.equal(response.status.code, 20001);
-                                assert.match(response.data.challengeID, /[0-9]{4}/);
+                            const bdocpathExpected = '/api/users/self/topics/:topicId/votes/:voteId/downloads/bdocs/user'
+                                .replace(':topicId', topic.id)
+                                .replace(':voteId', vote.id);
+                            const statusresponse = (await topicVoteStatusPromised(agent, user.id, topic.id, vote.id, response.data.token)).body;
+                            assert.equal(statusresponse.status.code, 20002);
+                            assert.property(statusresponse.data, 'bdocUri');
 
-                                var bdocpathExpected = '/api/users/self/topics/:topicId/votes/:voteId/downloads/bdocs/user'
-                                    .replace(':topicId', topic.id)
-                                    .replace(':voteId', vote.id);
-                                var called = 0;
-                                var replied = 0;
+                            const bdocUri = statusresponse.data.bdocUri;
 
-                                var getStatus = setInterval(function () {
-                                    if (called === replied) {
-                                        called++;
-                                        topicVoteStatus(agent, user.id, topic.id, vote.id, response.data.token, function (err, res) {
-                                            if (err) done(err);
-
-                                            replied++;
-                                            var statusresponse = res.body;
-                                            if (statusresponse.status.code === 20001 && statusresponse.status.message === 'Signing in progress') {
-                                                // FIXME: Interesting empty block
-                                            } else {
-                                                clearStatus(); //eslint-disable-line no-use-before-define
-
-                                                assert.equal(statusresponse.status.code, 20002);
-                                                assert.property(statusresponse.data, 'bdocUri');
-
-                                                var bdocUri = statusresponse.data.bdocUri;
-
-                                                // Check for a valid token
-                                                var token = bdocUri.slice(bdocUri.indexOf('token=') + 6);
-                                                var tokenData = cosJwt.verifyTokenRestrictedUse(token, 'GET ' + bdocpathExpected);
-
-                                                assert.equal(tokenData.userId, user.id);
-
-                                                done();
-                                            }
-                                        });
-                                    }
-                                }, 2000);
-
-                                var clearStatus = function () {
-                                    clearInterval(getStatus);
-                                };
-                            });
+                            // Check for a valid token
+                            const token = bdocUri.slice(bdocUri.indexOf('token=') + 6);
+                            const tokenData = cosJwt.verifyTokenRestrictedUse(token, 'GET ' + bdocpathExpected);
+                            assert.equal(tokenData.userId, user.id);
 
                         });
 
-                        test('Fail - 40000 - Invalid country code', function (done) {
-                            var countryCode = 'OO';
-                            var pid = '10101010004';
+                        test('Fail - 40000 - Invalid country code', async function () {
+                            const countryCode = 'OO';
+                            const pid = '10101010004';
 
-                            var voteList = [
+                            const voteList = [
                                 {
                                     optionId: vote.options.rows[0].id
                                 }
                             ];
 
-                            _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, 400, function (err, res) {
-                                if (err) return done(err);
+                            const resBody = (await _topicVoteVotePromised(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, 400)).body
+                            const expectedResponse = {
+                                status: {
+                                    code: 40000,
+                                    message: 'Bad request'
+                                }
+                            };
 
-                                var expectedResponse = {
-                                    status: {
-                                        code: 40000,
-                                        message: 'Bad request'
-                                    }
-                                };
-
-                                assert.deepEqual(res.body, expectedResponse);
-
-                                done();
-                            });
+                            assert.deepEqual(resBody, expectedResponse);
                         });
 
-                        test('Fail - 40400 - Invalid PID', function (done) {
-                            var countryCode = 'EE';
-                            var pid = '1072';
+                        test('Fail - 40400 - Invalid PID', async function () {
+                            const countryCode = 'EE';
+                            const pid = '1072';
 
-                            var voteList = [
+                            const voteList = [
                                 {
                                     optionId: vote.options.rows[0].id
                                 }
                             ];
 
-                            _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, 404, function (err, res) {
-                                if (err) return done(err);
+                            const resBody = (await _topicVoteVotePromised(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, 404)).body;
 
+                            const expectedResponse = {
+                                status: {
+                                    code: 40400,
+                                    message: 'Not Found'
+                                }
+                            };
 
-                                var expectedResponse = {
-                                    status: {
-                                        code: 40400,
-                                        message: 'Not Found'
-                                    }
-                                };
-
-                                assert.deepEqual(res.body, expectedResponse);
-
-                                done();
-                            });
+                            assert.deepEqual(resBody, expectedResponse);
                         });
 
                         test('Fail - 40010 - User has cancelled the signing process', async function () {
@@ -8947,44 +8898,36 @@ suite('Users', function () {
                             }, retryInterval);
                         });
 
-                        test('Fail - 40031 - User account already connected to another PID.', function (done) {
+                        test('Fail - 40031 - User account already connected to another PID.', async function () {
                             // Originally set by a successful Vote, but taking a shortcut for faster test runs
-                            UserConnection
-                                .create({
-                                    userId: user.id,
-                                    connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId: 'PNOEE-11412090004',
-                                    connectionData: {
-                                        name: 'TEst name',
-                                        pid: '11412090004',
-                                        country: 'EE'
-                                    }
-                                })
-                                .then(function () {
-                                    var countryCode = 'EE';
-                                    var pid = '10101010005';
+                            await UserConnection.create({
+                                userId: user.id,
+                                connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                connectionUserId: 'PNOEE-11412090004',
+                                connectionData: {
+                                    name: 'TEst name',
+                                    pid: '11412090004',
+                                    country: 'EE'
+                                }
+                            });
+                            const countryCode = 'EE';
+                            const pid = '10101010005';
 
-                                    var voteList = [
-                                        {
-                                            optionId: vote.options.rows[0].id
-                                        }
-                                    ];
+                            const voteList = [
+                                {
+                                    optionId: vote.options.rows[0].id
+                                }
+                            ];
 
-                                    _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, 400, function (err, res) {
-                                        if (err) return done(err);
+                            const resBody = (await _topicVoteVotePromised(agent, user.id, topic.id, vote.id, voteList, null, pid, null, countryCode, 400)).body;
+                            const expectedResponse = {
+                                status: {
+                                    code: 40031,
+                                    message: 'User account already connected to another PID.'
+                                }
+                            };
 
-                                        var expectedResponse = {
-                                            status: {
-                                                code: 40031,
-                                                message: 'User account already connected to another PID.'
-                                            }
-                                        };
-
-                                        assert.deepEqual(res.body, expectedResponse);
-
-                                        done();
-                                    });
-                                });
+                            assert.deepEqual(resBody, expectedResponse);
                         });
                     });
                 });
@@ -12065,7 +12008,7 @@ suite('Topics', function () {
                         }
                     );
 
-                    return  Moderator.create({
+                    return Moderator.create({
                         userId: userModerator.id,
                         partnerId: partner.id
                     });
@@ -12106,7 +12049,7 @@ suite('Topics', function () {
                     userModerator = await userLib.createUserPromised(agentModerator, emailModerator, null, null);
                     await userLib.createUserAndLoginPromised(agentReporter, emailReporter, null, null);
                     topic = (await topicCreatePromised(agentCreator, userCreator.id, Topic.VISIBILITY.public, null, null, null, null)).body.data;
-                    partner = await  Partner.create({
+                    partner = await Partner.create({
                         website: 'notimportant',
                         redirectUriRegexp: 'notimportant'
                     });
@@ -12231,7 +12174,7 @@ suite('Topics', function () {
                 });
 
                 test('Success', async function () {
-                    const  moderateType = Comment.DELETE_REASON_TYPES.duplicate;
+                    const moderateType = Comment.DELETE_REASON_TYPES.duplicate;
                     const moderateText = 'Report create moderation text';
 
                     const token = cosJwt.getTokenRestrictedUse(
@@ -12305,7 +12248,7 @@ suite('Topics', function () {
                     const moderateType = Comment.DELETE_REASON_TYPES.duplicate;
                     const moderateText = 'Report create moderation text';
 
-                    const  token = cosJwt.getTokenRestrictedUse(
+                    const token = cosJwt.getTokenRestrictedUse(
                         {
                             userId: userModerator.id
                         },

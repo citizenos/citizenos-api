@@ -3938,8 +3938,8 @@ module.exports = function (app) {
                 return res.badRequest('Matching token not found', 1);
             }
 
-            await  db.transaction(async function (t) {
-                const [memberUser, created] = await TopicMemberUser.findOrCreate({
+            await db.transaction(async function (t) {
+                const [memberUser, created] = await TopicMemberUser.findOrCreate({ // eslint-disable-line
                     where: {
                         topicId: topic.id,
                         userId: userId
@@ -4556,7 +4556,7 @@ module.exports = function (app) {
                     });
 
             })
-            .then(function ([tc, c]) {
+            .then(function ([tc, c]) { // eslint-disable-line
                 c[0][0].edits.forEach(function (edit) {
                     edit.createdAt = new Date(edit.createdAt).toJSON();
                 });
@@ -5294,7 +5294,7 @@ module.exports = function (app) {
                                                     transaction: t
                                                 }
                                             )
-                                            .then(function ([updated, comment]) {
+                                            .then(function ([updated, comment]) { // eslint-disable-line
                                                 comment = Comment.build(comment.dataValues);
 
                                                 return cosActivities
@@ -5770,244 +5770,240 @@ module.exports = function (app) {
     /**
      * Read a Vote
      */
-    app.get('/api/users/:userId/topics/:topicId/votes/:voteId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId/votes/:voteId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
         const topicId = req.params.topicId;
         const voteId = req.params.voteId;
         const userId = req.user.id;
-
-        const voteInfoPromise = Vote
-            .findOne({
-                where: {id: voteId},
-                include: [
-                    {
-                        model: Topic,
-                        where: {id: topicId}
-                    },
-                    VoteOption,
-                    {
-                        model: VoteDelegation,
-                        where: {
-                            voteId: voteId,
-                            byUserId: req.user.id
+        try {
+            const voteInfo = await Vote
+                .findOne({
+                    where: {id: voteId},
+                    include: [
+                        {
+                            model: Topic,
+                            where: {id: topicId}
                         },
-                        attributes: ['id'],
-                        required: false,
-                        include: [
-                            {
-                                model: User
-                            }
-                        ]
-                    }
-                ]
-            });
-
-        const voteResultsPromise = db
-            .query(
-                ' \
-                WITH \
-                RECURSIVE delegations("voteId", "toUserId", "byUserId", depth) AS ( \
-                    SELECT \
-                            "voteId", \
-                            "toUserId", \
-                            "byUserId", \
-                                1 \
-                            FROM "VoteDelegations" vd \
-                            WHERE vd."voteId" = :voteId \
-                                AND vd."deletedAt" IS NULL \
-                            \
-                            UNION ALL \
-                            \
-                            SELECT \
-                                vd."voteId", \
-                                vd."toUserId", \
-                                dc."byUserId", \
-                                dc.depth+1 \
-                            FROM delegations dc, "VoteDelegations" vd \
-                            WHERE vd."byUserId" = dc."toUserId" \
-                                AND vd."voteId" = dc."voteId" \
-                                AND vd."deletedAt" IS NULL \
-                        ), \
-                        indirect_delegations("voteId", "toUserId", "byUserId", depth) AS ( \
-                            SELECT DISTINCT ON("byUserId") \
-                                "voteId", \
-                                "toUserId", \
-                                "byUserId", \
-                                depth \
-                            FROM delegations \
-                            ORDER BY "byUserId", depth DESC \
-                        ), \
-                        vote_groups("voteId", "userId", "optionGroupId", "updatedAt") AS ( \
-                            SELECT DISTINCT ON (vl."userId") vl."voteId", vl."userId", vli."optionGroupId", vl."updatedAt" \
-                            FROM ( \
-                                SELECT DISTINCT ON (vl."userId", MAX(vl."updatedAt")) \
-                                vl."userId", \
-                                vl."voteId", \
-                                MAX(vl."updatedAt") as "updatedAt" \
-                                FROM "VoteLists" vl \
-                                WHERE vl."voteId" = :voteId \
-                                AND vl."deletedAt" IS NULL \
-                                GROUP BY vl."userId", vl."voteId" \
-                                ORDER BY MAX(vl."updatedAt") DESC \
-                            ) vl \
-                            JOIN "VoteLists" vli \
-                            ON \
-                                vli."userId" = vl."userId" \
-                                AND vl."voteId" = vli."voteId" \
-                                AND vli."updatedAt" = vl."updatedAt" \
-                            WHERE vl."voteId" = :voteId \
-                                AND vl."userId" NOT IN \
-                                ( \
-                                    SELECT DISTINCT \
-                                        uc."connectedUser" \
-                                    FROM ( \
-                                        SELECT \
-                                            vl."userId", \
-                                            vl."updatedAt" \
-                                        FROM "VoteLists" vl \
-                                        WHERE vl."voteId" = :voteId \
-                                        AND vl."deletedAt" IS NULL \
-                                        ORDER BY vl."updatedAt" DESC \
-                                    ) vl \
-                                    JOIN \
-                                    ( \
-                                        SELECT \
-                                            uc."userId", \
-                                            uci."userId" as "connectedUser", \
-                                            uc."connectionId", \
-                                            uc."connectionUserId" \
-                                        FROM "UserConnections" uc \
-                                        JOIN "UserConnections" uci \
-                                            ON uc."connectionId" = uci."connectionId" \
-                                            AND uc."connectionUserId" = uci."connectionUserId" \
-                                            AND uc."userId" <> uci."userId" \
-                                    ) uc ON uc."userId" = vl."userId" \
-                                    JOIN ( \
-                                        SELECT \
-                                            vl."userId", \
-                                            vl."updatedAt" \
-                                            FROM "VoteLists" vl \
-                                            WHERE vl."voteId" = :voteId \
-                                                AND vl."deletedAt" IS NULL \
-                                            ORDER BY vl."updatedAt" DESC \
-                                    ) vli ON uc."connectedUser" = vli."userId" AND vli."updatedAt" < vl."updatedAt" \
-                                ) \
-                        ), \
-                        votes("voteId", "userId", "optionId", "optionGroupId") AS ( \
-                            SELECT \
-                                vl."voteId", \
-                                vl."userId", \
-                                vl."optionId", \
-                                vl."optionGroupId" \
-                            FROM "VoteLists" vl \
-                            JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."optionGroupId" = vg."optionGroupId") \
-                            WHERE vl."voteId" =  :voteId \
-                        ), \
-                        votes_with_delegations("voteId", "userId", "optionId", "optionGroupId", depth) AS ( \
-                            SELECT \
-                                v."voteId", \
-                                v."userId", \
-                                v."optionId", \
-                                v."optionGroupId", \
-                                id."depth" \
-                            FROM votes v \
-                            LEFT JOIN indirect_delegations id ON (v."userId" = id."toUserId") \
-                            WHERE v."userId" NOT IN (SELECT "byUserId" FROM indirect_delegations WHERE "voteId"=v."voteId") \
-                        ) \
-                    \
-                    SELECT \
-                        SUM(v."voteCount") as "voteCount", \
-                        v."optionId", \
-                        v."voteId", \
-                        vo."value", \
-                        (SELECT true FROM votes WHERE "userId" = :userId AND "optionId" = v."optionId") as "selected" \
-                    FROM ( \
-                        SELECT \
-                            COUNT(v."optionId") + 1 as "voteCount", \
-                            v."optionId", \
-                            v."optionGroupId", \
-                            v."voteId" \
-                        FROM votes_with_delegations v \
-                        WHERE v.depth IS NOT NULL \
-                        GROUP BY v."optionId", v."optionGroupId", v."voteId" \
-                        \
-                        UNION ALL \
-                        \
-                        SELECT \
-                            COUNT(v."optionId") as "voteCount", \
-                            v."optionId", \
-                            v."optionGroupId", \
-                            v."voteId" \
-                        FROM votes_with_delegations v \
-                        WHERE v.depth IS NULL \
-                        GROUP BY v."optionId", v."optionGroupId", v."voteId" \
-                    ) v \
-                    LEFT JOIN "VoteOptions" vo ON (v."optionId" = vo."id") \
-                    GROUP BY v."optionId", v."voteId", vo."value" \
-            ;',
-                {
-                    replacements: {
-                        voteId: voteId,
-                        userId: req.user.id
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true
-                }
-            );
-
-        Promise
-            .all([voteInfoPromise, voteResultsPromise])
-            .then(function ([voteInfo, voteResults]) {
-                if (!voteInfo) {
-                    return res.notFound();
-                }
-
-                let hasVoted = false;
-                if (voteResults) {
-                    voteInfo.dataValues.VoteOptions.forEach(function (option) {
-                        const result = _.find(voteResults, {optionId: option.id});
-
-                        if (result) {
-                            option.dataValues.voteCount = parseInt(result.voteCount, 10); //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
-                            if (result.selected) {
-                                option.dataValues.selected = result.selected; //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
-                                hasVoted = true;
-                            }
+                        VoteOption,
+                        {
+                            model: VoteDelegation,
+                            where: {
+                                voteId: voteId,
+                                byUserId: userId
+                            },
+                            attributes: ['id'],
+                            required: false,
+                            include: [
+                                {
+                                    model: User
+                                }
+                            ]
                         }
-                    });
-                }
+                    ]
+                });
 
-                // TODO: Contains duplicate code with GET /status AND /sign
-                if (hasVoted && voteInfo.authType === Vote.AUTH_TYPES.hard) {
-                    voteInfo.dataValues.downloads = {
-                        bdocVote: getBdocURL({
-                            userId: userId,
-                            topicId: topicId,
+            const voteResults = await db
+                .query(`
+                    WITH
+                    RECURSIVE delegations("voteId", "toUserId", "byUserId", depth) AS (
+                        SELECT
+                                "voteId",
+                                "toUserId",
+                                "byUserId",
+                                    1
+                                FROM "VoteDelegations" vd
+                                WHERE vd."voteId" = :voteId
+                                    AND vd."deletedAt" IS NULL
+
+                                UNION ALL
+
+                                SELECT
+                                    vd."voteId",
+                                    vd."toUserId",
+                                    dc."byUserId",
+                                    dc.depth+1
+                                FROM delegations dc, "VoteDelegations" vd
+                                WHERE vd."byUserId" = dc."toUserId"
+                                    AND vd."voteId" = dc."voteId"
+                                    AND vd."deletedAt" IS NULL
+                            ),
+                            indirect_delegations("voteId", "toUserId", "byUserId", depth) AS (
+                                SELECT DISTINCT ON("byUserId")
+                                    "voteId",
+                                    "toUserId",
+                                    "byUserId",
+                                    depth
+                                FROM delegations
+                                ORDER BY "byUserId", depth DESC
+                            ),
+                            vote_groups("voteId", "userId", "optionGroupId", "updatedAt") AS (
+                                SELECT DISTINCT ON (vl."userId") vl."voteId", vl."userId", vli."optionGroupId", vl."updatedAt"
+                                FROM (
+                                    SELECT DISTINCT ON (vl."userId", MAX(vl."updatedAt"))
+                                    vl."userId",
+                                    vl."voteId",
+                                    MAX(vl."updatedAt") as "updatedAt"
+                                    FROM "VoteLists" vl
+                                    WHERE vl."voteId" = :voteId
+                                    AND vl."deletedAt" IS NULL
+                                    GROUP BY vl."userId", vl."voteId"
+                                    ORDER BY MAX(vl."updatedAt") DESC
+                                ) vl
+                                JOIN "VoteLists" vli
+                                ON
+                                    vli."userId" = vl."userId"
+                                    AND vl."voteId" = vli."voteId"
+                                    AND vli."updatedAt" = vl."updatedAt"
+                                WHERE vl."voteId" = :voteId
+                                    AND vl."userId" NOT IN
+                                    (
+                                        SELECT DISTINCT
+                                            uc."connectedUser"
+                                        FROM (
+                                            SELECT
+                                                vl."userId",
+                                                vl."updatedAt"
+                                            FROM "VoteLists" vl
+                                            WHERE vl."voteId" = :voteId
+                                            AND vl."deletedAt" IS NULL
+                                            ORDER BY vl."updatedAt" DESC
+                                        ) vl
+                                        JOIN
+                                        (
+                                            SELECT
+                                                uc."userId",
+                                                uci."userId" as "connectedUser",
+                                                uc."connectionId",
+                                                uc."connectionUserId"
+                                            FROM "UserConnections" uc
+                                            JOIN "UserConnections" uci
+                                                ON uc."connectionId" = uci."connectionId"
+                                                AND uc."connectionUserId" = uci."connectionUserId"
+                                                AND uc."userId" <> uci."userId"
+                                        ) uc ON uc."userId" = vl."userId"
+                                        JOIN (
+                                            SELECT
+                                                vl."userId",
+                                                vl."updatedAt"
+                                                FROM "VoteLists" vl
+                                                WHERE vl."voteId" = :voteId
+                                                    AND vl."deletedAt" IS NULL
+                                                ORDER BY vl."updatedAt" DESC
+                                        ) vli ON uc."connectedUser" = vli."userId" AND vli."updatedAt" < vl."updatedAt"
+                                    )
+                            ),
+                            votes("voteId", "userId", "optionId", "optionGroupId") AS (
+                                SELECT
+                                    vl."voteId",
+                                    vl."userId",
+                                    vl."optionId",
+                                    vl."optionGroupId"
+                                FROM "VoteLists" vl
+                                JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."optionGroupId" = vg."optionGroupId")
+                                WHERE vl."voteId" =  :voteId
+                            ),
+                            votes_with_delegations("voteId", "userId", "optionId", "optionGroupId", depth) AS (
+                                SELECT
+                                    v."voteId",
+                                    v."userId",
+                                    v."optionId",
+                                    v."optionGroupId",
+                                    id."depth"
+                                FROM votes v
+                                LEFT JOIN indirect_delegations id ON (v."userId" = id."toUserId")
+                                WHERE v."userId" NOT IN (SELECT "byUserId" FROM indirect_delegations WHERE "voteId"=v."voteId")
+                            )
+
+                        SELECT
+                            SUM(v."voteCount") as "voteCount",
+                            v."optionId",
+                            v."voteId",
+                            vo."value",
+                            (SELECT true FROM votes WHERE "userId" = :userId AND "optionId" = v."optionId") as "selected"
+                        FROM (
+                            SELECT
+                                COUNT(v."optionId") + 1 as "voteCount",
+                                v."optionId",
+                                v."optionGroupId",
+                                v."voteId"
+                            FROM votes_with_delegations v
+                            WHERE v.depth IS NOT NULL
+                            GROUP BY v."optionId", v."optionGroupId", v."voteId"
+
+                            UNION ALL
+
+                            SELECT
+                                COUNT(v."optionId") as "voteCount",
+                                v."optionId",
+                                v."optionGroupId",
+                                v."voteId"
+                            FROM votes_with_delegations v
+                            WHERE v.depth IS NULL
+                            GROUP BY v."optionId", v."optionGroupId", v."voteId"
+                        ) v
+                        LEFT JOIN "VoteOptions" vo ON (v."optionId" = vo."id")
+                        GROUP BY v."optionId", v."voteId", vo."value"
+                ;`,
+                    {
+                        replacements: {
                             voteId: voteId,
-                            type: 'user'
-                        })
-                    };
-                }
-
-                if (req.locals.topic.permissions.level === TopicMemberUser.LEVELS.admin && [Topic.STATUSES.followUp, Topic.STATUSES.closed].indexOf(req.locals.topic.status) > -1) {
-                    if (!voteInfo.dataValues.downloads) {
-                        voteInfo.dataValues.downloads = {};
+                            userId: userId
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true
                     }
-                    const voteFinalURLParams = {
+                );
+            if (!voteInfo) {
+                return res.notFound();
+            }
+
+            let hasVoted = false;
+            if (voteResults) {
+                voteInfo.dataValues.VoteOptions.forEach(function (option) {
+                    const result = _.find(voteResults, {optionId: option.id});
+
+                    if (result) {
+                        option.dataValues.voteCount = parseInt(result.voteCount, 10); //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
+                        if (result.selected) {
+                            option.dataValues.selected = result.selected; //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
+                            hasVoted = true;
+                        }
+                    }
+                });
+            }
+
+            // TODO: Contains duplicate code with GET /status AND /sign
+            if (hasVoted && voteInfo.authType === Vote.AUTH_TYPES.hard) {
+                voteInfo.dataValues.downloads = {
+                    bdocVote: getBdocURL({
                         userId: userId,
                         topicId: topicId,
                         voteId: voteId,
-                        type: 'final'
-                    };
-                    if (voteInfo.authType === Vote.AUTH_TYPES.hard) {
-                        voteInfo.dataValues.downloads.bdocFinal = getBdocURL(voteFinalURLParams);
-                    } else {
-                        voteInfo.dataValues.downloads.zipFinal = getZipURL(voteFinalURLParams);
-                    }
-                }
+                        type: 'user'
+                    })
+                };
+            }
 
-                return res.ok(voteInfo);
-            })
-            .catch(next);
+            if (req.locals.topic.permissions.level === TopicMemberUser.LEVELS.admin && [Topic.STATUSES.followUp, Topic.STATUSES.closed].indexOf(req.locals.topic.status) > -1) {
+                if (!voteInfo.dataValues.downloads) {
+                    voteInfo.dataValues.downloads = {};
+                }
+                const voteFinalURLParams = {
+                    userId: userId,
+                    topicId: topicId,
+                    voteId: voteId,
+                    type: 'final'
+                };
+                if (voteInfo.authType === Vote.AUTH_TYPES.hard) {
+                    voteInfo.dataValues.downloads.bdocFinal = getBdocURL(voteFinalURLParams);
+                } else {
+                    voteInfo.dataValues.downloads.zipFinal = getZipURL(voteFinalURLParams);
+                }
+            }
+
+            return res.ok(voteInfo);
+        } catch(e) {
+            return next(e);
+        }
     });
 
     /**
@@ -6273,45 +6269,42 @@ module.exports = function (app) {
             });
     };
 
-    const _checkAuthenticatedUser = function (userId, personalInfo, transaction) {
-        return UserConnection
-            .findOne({
-                where: {
-                    connectionId: {
-                        [Op.in]: [
-                            UserConnection.CONNECTION_IDS.esteid,
-                            UserConnection.CONNECTION_IDS.smartid
-                        ]
-                    },
-                    userId: userId
+    const _checkAuthenticatedUser = async function (userId, personalInfo, transaction) {
+        const userConnection = await UserConnection.findOne({
+            where: {
+                connectionId: {
+                    [Op.in]: [
+                        UserConnection.CONNECTION_IDS.esteid,
+                        UserConnection.CONNECTION_IDS.smartid
+                    ]
                 },
-                transaction
-            })
-            .then(function (userConnection) {
-                if (userConnection) {
-                    let personId = personalInfo.pid;
-                    let connectionUserId = userConnection.connectionUserId;
-                    if (personalInfo.pid.indexOf('PNO') > -1) {
-                        personId = personId.split('-')[1];
-                    }
+                userId: userId
+            },
+            transaction
+        });
 
-                    if (connectionUserId.indexOf('PNO') > -1) {
-                        connectionUserId = connectionUserId.split('-')[1];
-                    }
-
-                    if (!userConnection.connectionData || (userConnection.connectionData.country && userConnection.connectionData.countryCode)) {
-                        if (userConnection.connectionUserId !== idPattern) {
-                            return Promise.reject(new Error('User account already connected to another PID.'));
-                        }
-                    }
-
-                    const idPattern = 'PNO' + personalInfo.country + '-' + personId;
-                    const connectionUserPattern = 'PNO' + (userConnection.connectionData.country || userConnection.connectionData.countryCode) + '-' + connectionUserId;
-                    if (connectionUserPattern !== idPattern) {
-                        return Promise.reject(new Error('User account already connected to another PID.'));
-                    }
+        if (userConnection) {
+            let personId = personalInfo.pid;
+            let connectionUserId = userConnection.connectionUserId;
+            if (personalInfo.pid.indexOf('PNO') > -1) {
+                personId = personId.split('-')[1];
+            }
+            const country = (personalInfo.country || personalInfo.countryCode);
+            const idPattern = `PNO${country}-${personId}`;
+            if (connectionUserId.indexOf('PNO') > -1) {
+                connectionUserId = connectionUserId.split('-')[1];
+            }
+            if (!userConnection.connectionData || (userConnection.connectionData.country || userConnection.connectionData.countryCode)) {
+                if (userConnection.connectionUserId !== idPattern) {
+                    throw new Error('User account already connected to another PID.');
                 }
-            });
+            }
+            const conCountry = (userConnection.connectionData.country || userConnection.connectionData.countryCode)
+            const connectionUserPattern = `PNO${conCountry}-${connectionUserId}`;
+            if (connectionUserPattern !== idPattern) {
+                throw new Error('User account already connected to another PID.');
+            }
+        }
     };
 
     const handleTopicVoteHard = async function (vote, req, res) {
@@ -6330,9 +6323,7 @@ module.exports = function (app) {
             let signingMethod;
 
             if (!certificate && !(pid && (phoneNumber || countryCode))) {
-                res.badRequest('Vote with hard authentication requires users certificate when signing with ID card OR phoneNumber+pid when signing with mID', 9);
-
-                return Promise.reject();
+                return res.badRequest('Vote with hard authentication requires users certificate when signing with ID card OR phoneNumber+pid when signing with mID', 9);
             }
             let certificateInfo;
             let smartIdcertificate;
@@ -6372,107 +6363,91 @@ module.exports = function (app) {
                     personalInfo.phoneNumber = phoneNumber;
                 }
             }
-            await db
-                .transaction(async function (t) { // One big transaction, we don't want created User data to lay around in DB if the process failed.
-                    // Authenticated User
-                    if (userId) {
-                        await _checkAuthenticatedUser(userId, personalInfo, t);
-                    } else { // Un-authenticated User, find or create one.
-                        const user = (await authUser.getUserByPersonalId(personalInfo, UserConnection.CONNECTION_IDS.esteid, req, t))[0];
-                        userId = user.id;
-                    }
-                    let signInitResponse;
-                    switch (signingMethod) {
-                        case Vote.SIGNING_METHODS.idCard:
-                            signInitResponse = await cosSignature.signInitIdCard(voteId, userId, vote.VoteOptions, certificate, t);
-                            break;
-                        case Vote.SIGNING_METHODS.smartId:
-                            signInitResponse = await cosSignature.signInitSmartId(voteId, userId, vote.VoteOptions, personalInfo.pid, countryCode, smartIdcertificate, t);
-                            break;
-                        case Vote.SIGNING_METHODS.mid:
-                            signInitResponse = await cosSignature.signInitMobile(voteId, userId, vote.VoteOptions, personalInfo.pid, personalInfo.phoneNumber, mobileIdCertificate, t);
-                            break;
-                        default:
-                            throw new Error('Invalid signing method ' + signingMethod);
-                    }
+            let signInitResponse, token, sessionDataEncrypted;
+            await db.transaction(async function (t) { // One big transaction, we don't want created User data to lay around in DB if the process failed.
+                // Authenticated User
+                if (userId) {
+                    await _checkAuthenticatedUser(userId, personalInfo, t);
+                } else { // Un-authenticated User, find or create one.
+                    const user = (await authUser.getUserByPersonalId(personalInfo, UserConnection.CONNECTION_IDS.esteid, req, t))[0];
+                    userId = user.id;
+                }
 
-                            // Check that the personal ID is not related to another User account. We don't want Users signing Votes from different accounts.
+                switch (signingMethod) {
+                    case Vote.SIGNING_METHODS.idCard:
+                        signInitResponse = await cosSignature.signInitIdCard(voteId, userId, vote.VoteOptions, certificate, t);
+                        break;
+                    case Vote.SIGNING_METHODS.smartId:
+                        signInitResponse = await cosSignature.signInitSmartId(voteId, userId, vote.VoteOptions, personalInfo.pid, countryCode, smartIdcertificate, t);
+                        break;
+                    case Vote.SIGNING_METHODS.mid:
+                        signInitResponse = await cosSignature.signInitMobile(voteId, userId, vote.VoteOptions, personalInfo.pid, personalInfo.phoneNumber, mobileIdCertificate, t);
+                        break;
+                    default:
+                        throw new Error('Invalid signing method ' + signingMethod);
+                }
+            });
+                        // Check that the personal ID is not related to another User account. We don't want Users signing Votes from different accounts.
 
-                    let token, sessionDataEncrypted;
+            let sessionData = {
+                voteOptions: vote.VoteOptions,
+                signingMethod,
+                userId: userId, // Required for un-authenticated signing.
+                voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
+            }
 
-                    let sessionData = {
-                        voteOptions: vote.VoteOptions,
-                        signingMethod,
-                        userId: userId, // Required for un-authenticated signing.
-                        voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
-                    }
-
-                    if (signInitResponse.sessionId) {
-                        sessionData.sessionId = signInitResponse.sessionId,
-                        sessionData.sessionHash = signInitResponse.sessionHash,
-                        sessionData.personalInfo = signInitResponse.personalInfo,
+            if (signInitResponse.sessionId) {
+                sessionData.sessionId = signInitResponse.sessionId,
+                sessionData.sessionHash = signInitResponse.sessionHash,
+                sessionData.personalInfo = signInitResponse.personalInfo,
+                sessionData.signatureId = signInitResponse.signatureId;
+            } else {
+                switch (signInitResponse.statusCode) {
+                    case 0:
+                        // Common to MID and ID-card signing
+                        sessionData.personalInfo = personalInfo;
+                        sessionData.signableHash = signInitResponse.signableHash;
                         sessionData.signatureId = signInitResponse.signatureId;
-                    } else {
-                        switch (signInitResponse.statusCode) {
-                            case 0:
-                                // Common to MID and ID-card signing
-                                sessionData.personalInfo = personalInfo;
-                                sessionData.signableHash = signInitResponse.signableHash;
-                                sessionData.signatureId = signInitResponse.signatureId;
-                                break;
-                            case 101:
-                                res.badRequest('Invalid input parameters.', 20);
+                        break;
+                    case 101:
+                        return res.badRequest('Invalid input parameters.', 20);
+                    case 301:
+                        return res.badRequest('User is not a Mobile-ID client. Please double check phone number and/or id code.', 21);
+                    case 302:
+                        return res.badRequest('User certificates are revoked or suspended.', 22);
+                    case 303:
+                        return res.badRequest('User certificate is not activated.', 23);
+                    case 304:
+                        return res.badRequest('User certificate is suspended.', 24);
+                    case 305:
+                        return res.badRequest('User certificate is expired.', 25);
+                    default:
+                        logger.error('Unhandled DDS status code', signInitResponse.statusCode);
+                        return res.internalServerError();
+                }
+            }
 
-                                return Promise.reject();
-                            case 301:
-                                res.badRequest('User is not a Mobile-ID client. Please double check phone number and/or id code.', 21);
+            // Send JWT with state and expect it back in /sign /status - https://trello.com/c/ZDN2WomW/287-bug-id-card-signing-does-not-work-for-some-users
+            // Wrapping sessionDataEncrypted in object, otherwise jwt.sign "expiresIn" will not work - https://github.com/auth0/node-jsonwebtoken/issues/166
+            sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
+            token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
+                expiresIn: '5m',
+                algorithm: config.session.algorithm
+            });
 
-                                return Promise.reject();
-                            case 302:
-                                res.badRequest('User certificates are revoked or suspended.', 22);
+            if (signingMethod === Vote.SIGNING_METHODS.idCard) {
+                return res.ok({
+                    signedInfoDigest: signInitResponse.signableHash,
+                    signedInfoHashType: cryptoLib.getHashType(signInitResponse.signableHash),
+                    token: token
+                }, 1);
+            } else {
+                return res.ok({
+                    challengeID: signInitResponse.challengeID,
+                    token: token
+                }, 1);
+            }
 
-                                return Promise.reject();
-                            case 303:
-                                res.badRequest('User certificate is not activated.', 23);
-
-                                return Promise.reject();
-                            case 304:
-                                res.badRequest('User certificate is suspended.', 24);
-
-                                return Promise.reject();
-                            case 305:
-                                res.badRequest('User certificate is expired.', 25);
-
-                                return Promise.reject();
-                            default:
-                                logger.error('Unhandled DDS status code', signInitResponse.statusCode);
-                                res.internalServerError();
-
-                                return Promise.reject();
-                        }
-                    }
-
-                    // Send JWT with state and expect it back in /sign /status - https://trello.com/c/ZDN2WomW/287-bug-id-card-signing-does-not-work-for-some-users
-                    // Wrapping sessionDataEncrypted in object, otherwise jwt.sign "expiresIn" will not work - https://github.com/auth0/node-jsonwebtoken/issues/166
-                    sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
-                    token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
-                        expiresIn: '5m',
-                        algorithm: config.session.algorithm
-                    });
-
-                    if (signingMethod === Vote.SIGNING_METHODS.idCard) {
-                        return res.ok({
-                            signedInfoDigest: signInitResponse.signableHash,
-                            signedInfoHashType: cryptoLib.getHashType(signInitResponse.signableHash),
-                            token: token
-                        }, 1);
-                    } else {
-                        return res.ok({
-                            challengeID: signInitResponse.challengeID,
-                            token: token
-                        }, 1);
-                    }
-                });
         } catch(error) {
             switch (error.message) {
                 case 'Personal ID already connected to another user account.':
@@ -6493,12 +6468,10 @@ module.exports = function (app) {
                     return res.badRequest();
                 case 'Not Found':
                     return res.notFound();
-                default:
             }
 
             throw error;
         }
-
     };
 
     /**
@@ -6527,7 +6500,7 @@ module.exports = function (app) {
     });
 
 
-    const handleTopicVoteSign = function (req, res, next) {
+    const handleTopicVoteSign = async function (req, res, next) {
         const topicId = req.params.topicId;
         const voteId = req.params.voteId;
 
@@ -6571,80 +6544,62 @@ module.exports = function (app) {
             return res.badRequest('Invalid token for the vote');
         }
 
-        return db
-            .transaction(function (t) {
+        try {
+            await db.transaction(async function (t) {
                 // Store vote options
                 const voteOptions = idSignFlowData.voteOptions;
 
                 const optionGroupId = Math.random().toString(36).substring(2, 10);
 
-                const promisesToResolve = [];
-
                 _(voteOptions).forEach(function (o) {
                     o.voteId = voteId;
                     o.userId = userId;
                     o.optionGroupId = optionGroupId;
+                    o.optionId = o.optionId || o.id;
                 });
 
                 if (req.user) {
-                    const loggedInUserPromise = _checkAuthenticatedUser(userId, idSignFlowData.personalInfo, t);
-                    promisesToResolve.push(loggedInUserPromise);
+                    await _checkAuthenticatedUser(userId, idSignFlowData.personalInfo, t);
                 }
 
-                const voteListCreatePromise = VoteList
+                const voteList = await VoteList
                     .bulkCreate(
                         voteOptions,
                         {
                             fields: ['optionId', 'voteId', 'userId', 'optionGroupId'],
                             transaction: t
                         }
-                    )
-                    .then(function (voteList) {
-                        return Topic
-                            .findOne({
-                                where: {
-                                    id: topicId
-                                },
-                                transaction: t
-                            })
-                            .then(function (topic) {
-                                const vl = [];
-                                let tc = _.cloneDeep(topic.dataValues);
-                                tc.description = null;
-                                tc = Topic.build(tc);
+                    );
+                const topic = await Topic.findOne({
+                    where: {
+                        id: topicId
+                    },
+                    transaction: t
+                });
+                const vl = [];
+                let tc = _.cloneDeep(topic.dataValues);
+                tc.description = null;
+                tc = Topic.build(tc);
 
-                                voteList.forEach(function (el, key) {
-                                    delete el.dataValues.optionId;
-                                    delete el.dataValues.optionGroupId;
-                                    el = VoteList.build(el.dataValues);
-                                    vl[key] = el;
-                                });
+                voteList.forEach(function (el, key) {
+                    delete el.dataValues.optionId;
+                    delete el.dataValues.optionGroupId;
+                    el = VoteList.build(el.dataValues);
+                    vl[key] = el;
+                });
 
-                                const actor = {
-                                    type: 'User',
-                                    ip: req.ip
-                                };
-                                if (userId) {
-                                    actor.id = userId;
-                                }
+                const actor = {
+                    type: 'User',
+                    ip: req.ip
+                };
+                if (userId) {
+                    actor.id = userId;
+                }
 
-                                return cosActivities
-                                    .createActivity(
-                                        vl,
-                                        tc,
-                                        actor,
-                                        req.method + ' ' + req.path,
-                                        t
-                                    )
-                                    .then(function () {
-                                        return voteList;
-                                    });
-                            });
-
-                    });
+                await cosActivities.createActivity(vl, tc, actor, req.method + ' ' + req.path, t);
 
                 // Delete delegation if you are voting - TODO: why is this here? You cannot delegate when authType === 'hard'
-                const voteDelegationDestroyPromise = VoteDelegation
+                await VoteDelegation
                     .destroy({
                         where: {
                             voteId: voteId,
@@ -6656,74 +6611,69 @@ module.exports = function (app) {
 
                 let connectionUserId = idSignFlowData.personalInfo.pid;
                 if (connectionUserId.indexOf('PNO') === -1) {
-                    connectionUserId = 'PNO' + idSignFlowData.personalInfo.country + '-' + connectionUserId;
+                    const country = (idSignFlowData.personalInfo.country || idSignFlowData.personalInfo.countryCode);
+                    connectionUserId = `PNO${country}-${connectionUserId}`;
                 }
 
-                const userConnectionAddPromise = UserConnection
-                    .upsert(
-                        {
-                            userId: userId,
-                            connectionId: UserConnection.CONNECTION_IDS.esteid,
-                            connectionUserId,
-                            connectionData: idSignFlowData.personalInfo
-                        },
-                        {
-                            transaction: t
-                        }
-                    );
+                await UserConnection.upsert(
+                    {
+                        userId: userId,
+                        connectionId: UserConnection.CONNECTION_IDS.esteid,
+                        connectionUserId,
+                        connectionData: idSignFlowData.personalInfo
+                    },
+                    {
+                        transaction: t
+                    }
+                );
+
                 const optionIds = voteOptions.map(function (elem) {
                     return elem.optionId
                 });
-                const signUserBdocPromise =
-                    VoteOption
-                        .findAll({
-                            where: {
-                                id: optionIds,
-                                voteId: voteId
-                            }
-                        })
-                        .then(function (voteOptionsResult) {
-                            return cosSignature
-                                .signUserBdoc(idSignFlowData.voteId, idSignFlowData.userId, voteOptionsResult, idSignFlowData.signableHash, idSignFlowData.signatureId, Buffer.from(signatureValue, 'hex').toString('base64'))
-                                .then(function (signedDocument) {
-                                    return VoteUserContainer
-                                        .upsert(
-                                            {
-                                                userId: userId,
-                                                voteId: voteId,
-                                                container: signedDocument.signedDocData
-                                            },
-                                            {
-                                                transaction: t
-                                            }
-                                        );
-                                }).catch(function (e) {
-                                    logger.error('ERROR: ', e);
-                                })
-                        });
 
-                promisesToResolve.push(voteListCreatePromise, voteDelegationDestroyPromise, userConnectionAddPromise, signUserBdocPromise);
-
-                return Promise.all(promisesToResolve).catch(function (e) {
-                    switch (e.message) {
-                        case 'Personal ID already connected to another user account.':
-                            return res.badRequest(e.message, 30)
-                        case 'User account already connected to another PID.':
-                            return res.badRequest(e.message, 31);
+                const voteOptionsResult = await VoteOption.findAll({
+                    where: {
+                        id: optionIds,
+                        voteId: voteId
                     }
                 });
-            })
-            .then(function () {
-                return res.ok({
-                    bdocUri: getBdocURL({
+                const signedDocument = await cosSignature.signUserBdoc(
+                    idSignFlowData.voteId,
+                    idSignFlowData.userId,
+                    voteOptionsResult,
+                    idSignFlowData.signableHash,
+                    idSignFlowData.signatureId,
+                    Buffer.from(signatureValue,'hex').toString('base64')
+                );
+                await VoteUserContainer.upsert(
+                    {
                         userId: userId,
-                        topicId: topicId,
                         voteId: voteId,
-                        type: 'user'
-                    })
-                });
-            })
-            .catch(next);
+                        container: signedDocument.signedDocData
+                    },
+                    {
+                        transaction: t
+                    }
+                );
+            });
+
+            return res.ok({
+                bdocUri: getBdocURL({
+                    userId: userId,
+                    topicId: topicId,
+                    voteId: voteId,
+                    type: 'user'
+                })
+            });
+        } catch(e) {
+            switch (e.message) {
+                case 'Personal ID already connected to another user account.':
+                    return res.badRequest(e.message, 30)
+                case 'User account already connected to another PID.':
+                    return res.badRequest(e.message, 31);
+            }
+            return next(e);
+        }
     };
 
     /**
@@ -6734,7 +6684,7 @@ module.exports = function (app) {
     app.post('/api/users/:userId/topics/:topicId/votes/:voteId/sign', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.voting]), handleTopicVoteSign);
 
 
-    const handleTopicVoteStatus = function (req, res) {
+    const handleTopicVoteStatus = async function (req, res) {
         const topicId = req.params.topicId;
         const voteId = req.params.voteId;
 
@@ -6764,237 +6714,181 @@ module.exports = function (app) {
                 return res.unauthorised('Invalid JWT token');
             }
         }
-        let statusPromise;
+
         const userId = req.user ? req.user.id : idSignFlowData.userId;
-        if (idSignFlowData.signingMethod === Vote.SIGNING_METHODS.smartId) {
-            statusPromise = cosSignature.getSmartIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions, timeoutMs);
-        } else {
-            statusPromise = cosSignature.getMobileIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions, timeoutMs);
-        }
 
-        return Promise.all([statusPromise])
-            .then(function (results) {
-                const signedDocInfo = results[0];
-                return db
-                    .transaction(function (t) {
-                        // Store vote options
-                        const voteOptions = idSignFlowData.voteOptions;
-                        const optionGroupId = Math.random().toString(36).substring(2, 10);
+        try {
+            let signedDocInfo;
+            if (idSignFlowData.signingMethod === Vote.SIGNING_METHODS.smartId) {
+                signedDocInfo = await cosSignature.getSmartIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions, timeoutMs);
+            } else {
+                signedDocInfo = await cosSignature.getMobileIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions, timeoutMs);
+            }
 
-                        const promisesToResolve = [];
+            await db.transaction(async function (t) {
+                // Store vote options
+                const voteOptions = idSignFlowData.voteOptions;
+                const optionGroupId = Math.random().toString(36).substring(2, 10);
 
-                        _(voteOptions).forEach(function (o) {
-                            if (!o.optionId && o.id) {
-                                o.optionId = o.id;
-                            }
-                            o.voteId = voteId;
-                            o.userId = userId;
-                            o.optionGroupId = optionGroupId;
-                        });
+                _(voteOptions).forEach(function (o) {
+                    if (!o.optionId && o.id) {
+                        o.optionId = o.id;
+                    }
+                    o.voteId = voteId;
+                    o.userId = userId;
+                    o.optionGroupId = optionGroupId;
+                });
 
-                        // Authenticated User signing, check the user connection
-                        if (req.user) {
-                            const loggedInUserPromise = _checkAuthenticatedUser(userId, idSignFlowData.personalInfo, t)
+                // Authenticated User signing, check the user connection
+                if (req.user) {
+                    await _checkAuthenticatedUser(userId, idSignFlowData.personalInfo, t)
+                }
 
-                            promisesToResolve.push(loggedInUserPromise);
-                        }
-
-                        const voteListCreatePromise = VoteList
+                const voteList = await VoteList
                             .bulkCreate(
                                 voteOptions,
                                 {
                                     fields: ['optionId', 'voteId', 'userId', 'optionGroupId'],
                                     transaction: t
                                 }
-                            ).then(function (voteList) {
-                                return Topic
-                                    .findOne({
-                                        where: {
-                                            id: topicId
-                                        },
-                                        transaction: t
-                                    })
-                                    .then(function (topic) {
-                                        const vl = [];
-                                        let tc = _.cloneDeep(topic.dataValues);
-                                        tc.description = null;
-                                        tc = Topic.build(tc);
-
-                                        voteList.forEach(function (el, key) {
-                                            delete el.dataValues.optionId;
-                                            delete el.dataValues.optionGroupId;
-                                            el = VoteList.build(el.dataValues);
-                                            vl[key] = el;
-                                        });
-                                        const actor = {
-                                            type: 'User',
-                                            ip: req.ip
-                                        };
-                                        if (userId) {
-                                            actor.id = userId;
-                                        }
-
-                                        return cosActivities
-                                            .createActivity(
-                                                vl,
-                                                tc,
-                                                actor,
-                                                req.method + ' ' + req.path,
-                                                t
-                                            )
-                                            .then(function () {
-                                                return voteList;
-                                            });
-                                    });
-
-                            });
-
-                        let connectionUserId = idSignFlowData.personalInfo.pid;
-                        if (connectionUserId.indexOf('PNO') === -1) {
-                            connectionUserId = 'PNO' + idSignFlowData.personalInfo.country + '-' + connectionUserId;
-                        }
-
-                        const userConnectionAddPromise = UserConnection
-                            .upsert(
-                                {
-                                    userId: userId,
-                                    connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId,
-                                    connectionData: idSignFlowData.personalInfo // When starting signing with Mobile-ID we have no full name, thus we need to fetch and update
-                                },
-                                {
-                                    transaction: t
-                                }
                             );
-                        // Delete delegation if you are voting - TODO: why is this here? You cannot delegate for authType === 'hard' anyway
-                        const voteDelegationDestroyPromise = VoteDelegation
-                            .destroy({
-                                where: {
-                                    voteId: voteId,
-                                    byUserId: userId
-                                },
-                                force: true,
-                                transaction: t
-                            });
+                const topic = await Topic.findOne({
+                    where: {
+                        id: topicId
+                    },
+                    transaction: t
+                });
+                const vl = [];
+                let tc = _.cloneDeep(topic.dataValues);
+                tc.description = null;
+                tc = Topic.build(tc);
 
-                        const voteUserContainerPromise = VoteUserContainer
-                            .upsert(
-                                {
-                                    userId: userId,
-                                    voteId: voteId,
-                                    container: signedDocInfo.signedDocData
-                                },
-                                {
-                                    transaction: t,
-                                    logging: false
-                                }
-                            );
-
-                        if (!req.user) {
-                            // When starting signing with Mobile-ID we have no full name, thus we need to fetch and update
-                            const userNameUpdatePromise = User
-                                .update(
-                                    {
-                                        name: db.fn('initcap', idSignFlowData.personalInfo.firstName + ' ' + idSignFlowData.personalInfo.lastName)
-                                    },
-                                    {
-                                        where: {
-                                            id: userId,
-                                            name: null
-                                        },
-                                        limit: 1, // SAFETY
-                                        transaction: t
-                                    }
-                                );
-
-                            promisesToResolve.push(userNameUpdatePromise);
-                        }
-
-                        promisesToResolve.push(voteListCreatePromise, voteDelegationDestroyPromise, userConnectionAddPromise, voteUserContainerPromise);
-
-                        return Promise.all(promisesToResolve).catch(function (e) {
-                            switch (e.message) {
-                                case 'Personal ID already connected to another user account.':
-                                    res.badRequest(e.message, 30);
-                                    return Promise.reject(e);
-                                case 'User account already connected to another PID.':
-                                    res.badRequest(e.message, 31);
-                                    return Promise.reject(e);
-                            }
-                        });
-                    })
-            }, function (result) {
-                let statusCode;
-                if (result.result && result.result.endResult) {
-                    statusCode = result.result.endResult;
-                } else if (result.result && !result.result.endResult) {
-                    statusCode = result.result;
-                } else {
-                    statusCode = result.state;
+                voteList.forEach(function (el, key) {
+                    delete el.dataValues.optionId;
+                    delete el.dataValues.optionGroupId;
+                    el = VoteList.build(el.dataValues);
+                    vl[key] = el;
+                });
+                const actor = {
+                    type: 'User',
+                    ip: req.ip
+                };
+                if (userId) {
+                    actor.id = userId;
                 }
 
-                switch (statusCode) {
-                    case 'RUNNING':
-                        res.ok('Signing in progress', 1);
+                await cosActivities.createActivity(vl, tc, actor, req.method + ' ' + req.path, t);
 
-                        return Promise.reject();
-                    case 'USER_CANCELLED':
-                        res.badRequest('User has cancelled the signing process', 10);
-
-                        return Promise.reject();
-                    case 'USER_REFUSED':
-                        res.badRequest('User has cancelled the signing process', 10);
-
-                        return Promise.reject();
-                    case 'SIGNATURE_HASH_MISMATCH':
-                        res.badRequest('Signature is not valid', 12);
-
-                        return Promise.reject();
-                    case 'NOT_MID_CLIENT':
-                        res.badRequest('Mobile-ID functionality of the phone is not yet ready', 13);
-
-                        return Promise.reject();
-                    case 'PHONE_ABSENT':
-                        res.badRequest('Delivery of the message was not successful, mobile phone is probably switched off or out of coverage;', 14);
-
-                        return Promise.reject();
-                    case 'DELIVERY_ERROR':
-                        res.badRequest('Other error when sending message (phone is incapable of receiving the message, error in messaging server etc.)', 15);
-
-                        return Promise.reject();
-                    case 'SIM_ERROR':
-                        res.badRequest('SIM application error.', 16);
-
-                        return Promise.reject();
-                    case 'TIMEOUT':
-                        logger.error('There was a timeout, i.e. end user did not confirm or refuse the operation within maximum time frame allowed (can change, around two minutes).', statusCode);
-                        res.badRequest('There was a timeout, i.e. end user did not confirm or refuse the operation within maximum time frame allowed (can change, around two minutes).', 10);
-
-                        return Promise.reject();
-                    default:
-                        logger.error('Unknown status code when trying to sign with mobile', statusCode, result);
-                        res.internalServerError();
-
-                        return Promise.reject();
+                let connectionUserId = idSignFlowData.personalInfo.pid;
+                if (connectionUserId.indexOf('PNO') === -1) {
+                    const country = (idSignFlowData.personalInfo.country || idSignFlowData.personalInfo.countryCode);
+                    connectionUserId = `PNO${country}-${connectionUserId}`;
                 }
-            })
-            .then(function () {
-                return res.ok(
-                    'Signing has been completed',
-                    2,
+
+                await UserConnection.upsert(
                     {
-                        bdocUri: getBdocURL({
-                            userId: userId,
-                            topicId: topicId,
-                            voteId: voteId,
-                            type: 'user'
-                        })
+                        userId: userId,
+                        connectionId: UserConnection.CONNECTION_IDS.esteid,
+                        connectionUserId,
+                        connectionData: idSignFlowData.personalInfo // When starting signing with Mobile-ID we have no full name, thus we need to fetch and update
+                    },
+                    {
+                        transaction: t
                     }
                 );
-            }, _.noop)
-            .error(function (e) {
-                logger.error(e);
+                // Delete delegation if you are voting - TODO: why is this here? You cannot delegate for authType === 'hard' anyway
+                await VoteDelegation.destroy({
+                    where: {
+                        voteId: voteId,
+                        byUserId: userId
+                    },
+                    force: true,
+                    transaction: t
+                });
+
+                await VoteUserContainer.upsert(
+                    {
+                        userId: userId,
+                        voteId: voteId,
+                        container: signedDocInfo.signedDocData
+                    },
+                    {
+                        transaction: t,
+                        logging: false
+                    }
+                );
+
+                if (!req.user) {
+                    // When starting signing with Mobile-ID we have no full name, thus we need to fetch and update
+                    await User
+                        .update(
+                            {
+                                name: db.fn('initcap', idSignFlowData.personalInfo.firstName + ' ' + idSignFlowData.personalInfo.lastName)
+                            },
+                            {
+                                where: {
+                                    id: userId,
+                                    name: null
+                                },
+                                limit: 1, // SAFETY
+                                transaction: t
+                            }
+                        );
+                }
             });
+
+            return res.ok(
+                'Signing has been completed',
+                2,
+                {
+                    bdocUri: getBdocURL({
+                        userId: userId,
+                        topicId: topicId,
+                        voteId: voteId,
+                        type: 'user'
+                    })
+                }
+            );
+        } catch (err) {
+            let statusCode;
+            if (err.result && err.result.endResult) {
+                statusCode = err.result.endResult;
+            } else if (err.result && !err.result.endResult) {
+                statusCode = err.result;
+            } else {
+                statusCode = err.state;
+            }
+            switch (err.message) {
+                case 'Personal ID already connected to another user account.':
+                    return res.badRequest(err.message, 30);
+                case 'User account already connected to another PID.':
+                    return res.badRequest(err.message, 31);
+            }
+            switch (statusCode) {
+                case 'RUNNING':
+                    return res.ok('Signing in progress', 1);
+                case 'USER_CANCELLED':
+                    return res.badRequest('User has cancelled the signing process', 10);
+                case 'USER_REFUSED':
+                    return res.badRequest('User has cancelled the signing process', 10);
+                case 'SIGNATURE_HASH_MISMATCH':
+                    return res.badRequest('Signature is not valid', 12);
+                case 'NOT_MID_CLIENT':
+                    return res.badRequest('Mobile-ID functionality of the phone is not yet ready', 13);
+                case 'PHONE_ABSENT':
+                    return res.badRequest('Delivery of the message was not successful, mobile phone is probably switched off or out of coverage;', 14);
+                case 'DELIVERY_ERROR':
+                    return res.badRequest('Other error when sending message (phone is incapable of receiving the message, error in messaging server etc.)', 15);
+                case 'SIM_ERROR':
+                    return res.badRequest('SIM application error.', 16);
+                case 'TIMEOUT':
+                    logger.error('There was a timeout, i.e. end user did not confirm or refuse the operation within maximum time frame allowed (can change, around two minutes).', statusCode);
+                    return res.badRequest('There was a timeout, i.e. end user did not confirm or refuse the operation within maximum time frame allowed (can change, around two minutes).', 10);
+                default:
+                    logger.error('Unknown status code when trying to sign with mobile', statusCode, err);
+                    return res.internalServerError();
+            }
+        }
     };
 
     /**

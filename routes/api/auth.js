@@ -495,7 +495,7 @@ module.exports = function (app) {
         if (personalInfo.pid.indexOf('PNO') > -1) {
             personId = personId.split('-')[1];
         }
-        const idPattern = new RegExp('(PNO' + personalInfo.country + '-)?' + personId);
+        const countryCode = personalInfo.country || personalInfo.countryCode;
 
         if (!transaction) {
             t = await db.transaction();
@@ -504,76 +504,67 @@ module.exports = function (app) {
             t = transaction;
         }
         try {
-            return UserConnection
-                .findOne({
-                    where: {
-                        connectionId: {
-                            [Op.in]: [
-                                UserConnection.CONNECTION_IDS.esteid,
-                                UserConnection.CONNECTION_IDS.smartid
-                            ]
-                        },
-                        connectionUserId: {
-                            [Op.like]: '%' + personId + '%',
-                        }
+            const userConnectionInfo = await UserConnection.findOne({
+                where: {
+                    connectionId: {
+                        [Op.in]: [
+                            UserConnection.CONNECTION_IDS.esteid,
+                            UserConnection.CONNECTION_IDS.smartid
+                        ]
                     },
-                    order: [['createdAt', 'ASC']],
-                    include: [User],
-                    transaction: t
-                })
-                .then(function (userConnectionInfo) {
-                    if (!userConnectionInfo) {
-                        return User
-                            .create(
-                                {
-                                    name: db.fn('initcap', personalInfo.firstName + ' ' + personalInfo.lastName),
-                                    source: User.SOURCES.citizenos
-                                },
-                                {
-                                    transaction: t
-                                }
-                            )
-                            .then(function (user) {
-                                return cosActivities
-                                    .createActivity(user, null, {
-                                        type: 'System',
-                                        ip: req.ip
-                                    }, req.method + ' ' + req.path, transaction)
-                                    .then(function () {
-                                        return UserConnection
-                                            .create(
-                                                {
-                                                    userId: user.id,
-                                                    connectionId: connectionId,
-                                                    connectionUserId: 'PNO' + personalInfo.country + '-' + personId,
-                                                    connectionData: personalInfo
-                                                },
-                                                {
-                                                    transaction: t
-                                                }
-                                            )
-                                            .then(function () {
-                                                if (toCommit) t.commit();
-                                                const userData = user.toJSON();
-                                                userData.termsVersion = user.dataValues.termsVersion;
-                                                userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
-
-                                                return [userData, 3]; // New user was created
-                                            });
-                                    });
-                            });
-                    } else {
-                        if (toCommit) t.commit();
-                        if (userConnectionInfo && idPattern.test(userConnectionInfo.connectionUserId)) {
-                            const user = userConnectionInfo.User;
-                            const userData = user.toJSON();
-                            userData.termsVersion = user.dataValues.termsVersion;
-                            userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
-
-                            return [userData, 2]; // Existing User found and logged in
-                        }
+                    connectionUserId: {
+                        [Op.like]: '%' + personId + '%',
                     }
-                });
+                },
+                order: [['createdAt', 'ASC']],
+                include: [User],
+                transaction: t
+            });
+
+            if (!userConnectionInfo) {
+                const user = await User.create(
+                    {
+                        name: db.fn('initcap', personalInfo.firstName + ' ' + personalInfo.lastName),
+                        source: User.SOURCES.citizenos
+                    },
+                    {
+                        transaction: t
+                    });
+
+                await cosActivities.createActivity(user, null, {
+                        type: 'System',
+                        ip: req.ip
+                    }, req.method + ' ' + req.path, t);
+
+                await UserConnection.create(
+                    {
+                        userId: user.id,
+                        connectionId: connectionId,
+                        connectionUserId: `PNO${countryCode}-${personId}`,
+                        connectionData: personalInfo
+                    },
+                    {
+                        transaction: t
+                    }
+                );
+                if (toCommit) t.commit();
+                let userData = user.toJSON();
+                userData.termsVersion = user.dataValues.termsVersion;
+                userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
+
+                return [userData, 3]; // New user was created
+            } else {
+                if (toCommit) t.commit();
+                const idPattern = new RegExp(`^(PNO${countryCode}-)?${personId}$`);
+                if (userConnectionInfo && idPattern.test(userConnectionInfo.connectionUserId)) {
+                    const user = userConnectionInfo.User;
+                    const userData = user.toJSON();
+                    userData.termsVersion = user.dataValues.termsVersion;
+                    userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
+
+                    return [userData, 2]; // Existing User found and logged in
+                }
+            }
         } catch (error) {
             if (toCommit) t.rollback();
             logger.error(error);
