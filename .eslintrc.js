@@ -7,5 +7,8 @@ module.exports = {
     'parserOptions': {
         'ecmaVersion': 9
     },
-    'extends': 'eslint:recommended'
+    'extends': ['eslint:recommended'],
+    'rules': {
+        'no-multi-spaces': ['error']
+    }
 };

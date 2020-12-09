@@ -244,7 +244,7 @@ module.exports = function (app) {
                         case 'Group':
                             delete returnActivity.data[field].creator;
                             if (field === 'origin' && activity.data.type === 'Update') break;
-                            group  = _.find(activity.groups, function (t) {return t.id === activity.data[field].id});
+                            group = _.find(activity.groups, function (t) {return t.id === activity.data[field].id});
                             object = Group.build(group).toJSON();
                             object['@type'] = activity.data[field]['@type'];
                             object.createdAt = activity.data[field].createdAt;
@@ -257,7 +257,7 @@ module.exports = function (app) {
                         case 'User':
                             delete returnActivity.data[field].language;
                             if (field === 'origin' && activity.data.type === 'Update') break;
-                            user  = _.find(activity.users, function (t) {return t.id === activity.data[field].id});
+                            user = _.find(activity.users, function (t) {return t.id === activity.data[field].id});
                             object = User.build(user).toJSON();
                             object['@type'] = activity.data[field]['@type'];
                             if (activity.data[field].level) { // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
