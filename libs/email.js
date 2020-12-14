@@ -148,51 +148,50 @@ module.exports = function (app) {
 
         return db
             .query(
-                '\
-                    SELECT \
-                        tm.id, \
-                        tm.name, \
-                        tm.email, \
-                        tm.language \
-                    FROM ( \
-                        SELECT DISTINCT ON(id) \
-                            tm."memberId" as id, \
-                            tm."level", \
-                            u.name, \
-                            u.email, \
-                            u.language \
-                        FROM "Topics" t \
-                        JOIN ( \
-                            SELECT \
-                                tmu."topicId", \
-                                tmu."userId" AS "memberId", \
-                                tmu."level"::text, \
-                                1 as "priority" \
-                            FROM "TopicMemberUsers" tmu \
-                            WHERE tmu."deletedAt" IS NULL \
-                            UNION \
-                            ( \
+                `SELECT
+                        tm.id,
+                        tm.name,
+                        tm.email,
+                        tm.language
+                    FROM (
+                        SELECT DISTINCT ON(id)
+                            tm."memberId" as id,
+                            tm."level",
+                            u.name,
+                            u.email,
+                            u.language
+                        FROM "Topics" t
+                        JOIN (
+                            SELECT
+                                tmu."topicId",
+                                tmu."userId" AS "memberId",
+                                tmu."level"::text,
+                                1 as "priority"
+                            FROM "TopicMemberUsers" tmu
+                            WHERE tmu."deletedAt" IS NULL
+                            UNION
+                            (
                                 SELECT \
-                                    tmg."topicId", \
-                                    gm."userId" AS "memberId", \
-                                    tmg."level"::text, \
-                                    2 as "priority" \
-                                FROM "TopicMemberGroups" tmg \
-                                LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
-                                WHERE tmg."deletedAt" IS NULL \
-                                AND gm."deletedAt" IS NULL \
-                                ORDER BY tmg."level"::"enum_TopicMemberGroups_level" DESC \
+                                    tmg."topicId",
+                                    gm."userId" AS "memberId",
+                                    tmg."level"::text,
+                                    2 as "priority"
+                                FROM "TopicMemberGroups" tmg
+                                LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                                WHERE tmg."deletedAt" IS NULL
+                                AND gm."deletedAt" IS NULL
+                                ORDER BY tmg."level"::"enum_TopicMemberGroups_level" DESC
                             ) \
-                        ) AS tm ON (tm."topicId" = t.id) \
-                        JOIN "Users" u ON (u.id = tm."memberId") \
-                        LEFT JOIN "TopicMemberUsers" tmu ON (tmu."userId" = tm."memberId" AND tmu."topicId" = t.id) \
-                        WHERE t.id = :topicId \
-                        ORDER BY id, tm.priority \
-                    ) tm \
-                    WHERE tm.level::"enum_TopicMemberUsers_level" >= :level \
-                    AND tm.email IS NOT NULL \
-                    ORDER BY name ASC \
-                ',
+                        ) AS tm ON (tm."topicId" = t.id)
+                        JOIN "Users" u ON (u.id = tm."memberId")
+                        LEFT JOIN "TopicMemberUsers" tmu ON (tmu."userId" = tm."memberId" AND tmu."topicId" = t.id)
+                        WHERE t.id = :topicId
+                        ORDER BY id, tm.priority
+                    ) tm
+                    WHERE tm.level::"enum_TopicMemberUsers_level" >= :level
+                    AND tm.email IS NOT NULL
+                    ORDER BY name ASC
+                `,
                 {
                     replacements: {
                         topicId: topicId,
@@ -218,18 +217,17 @@ module.exports = function (app) {
     const _getModerators = function (sourcePartnerId) {
         return db
             .query(
-                ' \
-                    SELECT \
-                        u.id, \
-                        u."email", \
-                        u."name", \
-                        u."language" \
-                    FROM "Moderators" m \
-                        JOIN "Users" u ON (u.id = m."userId") \
-                    WHERE u."email" IS NOT NULL \
-                    AND (m."partnerId" = :partnerId \
-                    OR m."partnerId" IS NULL) \
-                ',
+                `SELECT
+                        u.id,
+                        u."email",
+                        u."name",
+                        u."language"
+                    FROM "Moderators" m
+                        JOIN "Users" u ON (u.id = m."userId")
+                    WHERE u."email" IS NOT NULL
+                    AND (m."partnerId" = :partnerId
+                    OR m."partnerId" IS NULL)
+                `,
                 {
                     replacements: {
                         partnerId: sourcePartnerId
@@ -262,6 +260,30 @@ module.exports = function (app) {
         .then(function () {
             return {done, errors};
         });
+    }
+
+    /**
+     * Send help request email
+     */
+
+    const _sendHelpRequest = async (debugData) => {
+        const template = resolveTemplate('helpRequest');
+        const emailOptions = Object.assign(
+            _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
+            {
+                subject: 'Help request',
+                to: 'support@citizenos.com',
+                from: debugData.email
+                //Placeholders
+            }
+        );
+        Object.keys(debugData).forEach(function (key) {
+            emailOptions[key] = debugData[key];
+        });
+
+        emailOptions.linkedData.translations = template.translations;
+        // https://github.com/bevacqua/campaign#email-sending-option
+        await emailClient.sendStringAsync(template.body, emailOptions);
     }
 
     /**
@@ -1536,6 +1558,7 @@ module.exports = function (app) {
         sendTopicReportResolve: _sendTopicReportResolve,
         sendGroupMemberUserCreate: _sendGroupMemberUserCreate,
         sendCommentReport: _sendCommentReport,
-        sendToParliament: _sendToParliament
+        sendToParliament: _sendToParliament,
+        sendHelpRequest: _sendHelpRequest
     };
 };
