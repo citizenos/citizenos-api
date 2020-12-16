@@ -40,7 +40,7 @@ suite('cosBdoc', function () {
     // FIXME: Proper test
     test.skip('createVoteFiles', async function () {
         await cosBdoc.createVoteFiles(topic, vote, voteOptions);
-        const files  = await fs.readdirAsync(voteFileDir + '/source');
+        const files = await fs.readdirAsync(voteFileDir + '/source');
         const expectedFiles = [
             'Option 1.html',
             'Option 2.html',
@@ -182,7 +182,7 @@ suite('cosBdoc', function () {
                             });
                         });
 
-                        await  UserConnection
+                        await UserConnection
                             .bulkCreate(
                                 userConnectionsToCreate,
                                 {
@@ -254,7 +254,7 @@ suite('cosBdoc', function () {
                         // Create creator VoteUserContainer. Just for testing, everybody gets the same signed file.
                         const fileContents = await fs.readFileAsync(SIGNED_VOTE_FILE_PATH); // eslint-disable-line no-sync
 
-                        await  VoteUserContainer
+                        await VoteUserContainer
                             .create(
                                 {
                                     voteId: vote.id,
@@ -361,7 +361,7 @@ suite('cosBdoc', function () {
             });
 
             test('Success - a lot of signatures', async function () {
-                const fileStream  = await cosBdoc.getFinalBdoc(topic.id, vote.id);
+                const fileStream = await cosBdoc.getFinalBdoc(topic.id, vote.id);
                 const writeStream = fs.createWriteStream('/tmp/performanceTest.bdoc');
                 fileStream.pipe(writeStream);
 

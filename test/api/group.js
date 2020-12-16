@@ -39,7 +39,7 @@ const groupCreatePromised = async function (agent, userId, name, parentId, visib
     return _groupCreatePromised(agent, userId, name, parentId, visibility, 201);
 };
 
-const  _groupReadPromised = async function (agent, userId, groupId, expectedHttpCode) {
+const _groupReadPromised = async function (agent, userId, groupId, expectedHttpCode) {
     const path = '/api/users/:userId/groups/:groupId'
         .replace(':userId', userId)
         .replace(':groupId', groupId);
@@ -302,7 +302,7 @@ suite('Users', function () {
             });
 
             test('Success - non-default visibility', async function () {
-                const  group = (await groupCreatePromised(agent, user.id, groupName, null, Group.VISIBILITY.public)).body.data;
+                const group = (await groupCreatePromised(agent, user.id, groupName, null, Group.VISIBILITY.public)).body.data;
                 assert.property(group, 'id');
                 assert.equal(group.creator.id, user.id);
                 assert.equal(group.name, groupName);
@@ -435,7 +435,7 @@ suite('Users', function () {
                 const email = 'test_groupuf_' + new Date().getTime() + '@test.ee';
                 const password = 'testPassword123';
 
-                const user  = await userLib.createUserAndLoginPromised(agent, email, password, null);
+                const user = await userLib.createUserAndLoginPromised(agent, email, password, null);
 
                 const res = await _groupUpdatePromised(agent, user.id, group.id, 'This we shall try', null, 403);
                 assert.equal(res.status, 403);
@@ -590,7 +590,7 @@ suite('Users', function () {
 
             test('Success - non-authenticated User - show "public" Groups with sourcePartnerId', async function () {
                 const topicList = (await groupsListUnauthPromised(agentCreator, null, null, null, null, '4b511ad1-5b20-4c13-a6da-0b95d07b6900')).body.data;
-                const  topicListRow = topicList.rows;
+                const topicListRow = topicList.rows;
                 assert.property(topicList, 'countTotal');
                 assert.equal(topicList.count, topicListRow.length);
                 assert.equal(topicListRow.length, 0);

@@ -1,7 +1,5 @@
 'use strict';
 
-const User = require('../db/models/User');
-
 /**
  * Encapsulate Etherpad (EP) logic that is specific to Toru
  *
@@ -47,7 +45,7 @@ module.exports = function (app) {
         await etherpadClient.createPadAsync({padID: topicId});
         let padHtml = html;
         if (!padHtml) {
-            padHtml =  (await fs.readFileAsync(path.join(TEMPLATE_ROOT, 'etherpad/build/default_' + lang + '.html'))).toString();
+            padHtml = (await fs.readFileAsync(path.join(TEMPLATE_ROOT, 'etherpad/build/default_' + lang + '.html'))).toString();
         }
 
         return etherpadClient.setHTMLAsync({

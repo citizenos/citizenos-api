@@ -346,7 +346,7 @@ module.exports = function (app) {
                 where: {
                     voteId: voteId
                 },
-                transaction: transaction
+                transaction
             })
 
         voteContainerFiles.forEach(function (voteContainerFile) {
@@ -417,26 +417,21 @@ module.exports = function (app) {
      * @private
      */
     const _signInitIdCard = async function (voteId, userId, voteOptions, certificate, transaction) {
-     //   try {
-            const xades = await _createUserBdoc(voteId, userId, voteOptions, certificate, 'hex', transaction);
-            const signableData = xades.signableHash;
+        const xades = await _createUserBdoc(voteId, userId, voteOptions, certificate, 'hex', transaction);
+        const signableData = xades.signableHash;
 
-            const personalInfo = await mobileId.getCertUserData(certificate, 'hex');
+        const personalInfo = await mobileId.getCertUserData(certificate, 'hex');
 
-            const xadesString = xades.toString();
+        const xadesString = xades.toString();
 
-            const signatureData = await Signature.create({data: xadesString});
+        const signatureData = await Signature.create({data: xadesString});
 
-            return {
-                statusCode: 0,
-                personalInfo,
-                signableHash: signableData.toString('hex'),
-                signatureId: signatureData.id
-            };
-     /*   } catch(e) {
-            thr
-            logger.error(e);
-        }*/
+        return {
+            statusCode: 0,
+            personalInfo,
+            signableHash: signableData.toString('hex'),
+            signatureId: signatureData.id
+        };
     };
 
     /**
@@ -496,49 +491,41 @@ module.exports = function (app) {
         return response;
     };
 
-    const _handleSigningResult = function (voteId, userId, voteOptions, signableHash, signatureId, signature) {
-        return Signature
+    const _handleSigningResult = async function (voteId, userId, voteOptions, signableHash, signatureId, signature) {
+        const signatureData= await Signature
             .findOne({
                 where: {
                     id: signatureId
                 }
-            })
-            .then(function (signatureData) {
-                const xades = Xades.parse(signatureData.data);
-                xades.setSignature(Buffer.from(signature, 'base64'));
-                return hades.timemark(xades)
-                    .then(function (timemark) {
-                        xades.setOcspResponse(timemark);
-
-                        return _getUserContainer(voteId, userId, voteOptions)
-                            .then(function (container) {
-                                return new Promise(function (resolve) {
-                                    const chunks = [];
-                                    container.addSignature(xades);
-                                    const streamData = container.toStream();
-
-                                    streamData.on('data', function (data) {
-                                        chunks.push(data);
-                                    })
-
-                                    streamData.on('end', function () {
-                                        const buff = Buffer.concat(chunks);
-
-                                        return resolve(buff);
-                                    })
-                                    container.end();
-                                });
-                            })
-                            .then(function (container) {
-                                return {
-                                    signedDocData: container
-                                }
-                            })
-                            .catch(function (e) {
-                                return Promise.reject(e);
-                            })
-                    });
             });
+
+        const xades = Xades.parse(signatureData.data);
+        xades.setSignature(Buffer.from(signature, 'base64'));
+        const timemark = await hades.timemark(xades);
+        xades.setOcspResponse(timemark);
+
+        const container = await _getUserContainer(voteId, userId, voteOptions)
+
+        const signedDocData = await new Promise(function (resolve) {
+            const chunks = [];
+            container.addSignature(xades);
+            const streamData = container.toStream();
+
+            streamData.on('data', function (data) {
+                chunks.push(data);
+            })
+
+            streamData.on('end', function () {
+                const buff = Buffer.concat(chunks);
+
+                return resolve(buff);
+            })
+            container.end();
+        });
+
+        return {
+            signedDocData
+        }
     };
 
     const _getSmartIdSignedDoc = function (sessionId, signableHash, signatureId, voteId, userId, voteOptions, timeoutMs) {
