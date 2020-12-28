@@ -2020,16 +2020,11 @@ suite('Users', function () {
                 const description = '<!DOCTYPE HTML><html><body><h1>H1</h1><br><h2>h2</h2><br><h3>h3</h3><br><script>alert("owned!");</script><br><br>script<br><br></body></html>';
 
                 const topic = (await topicCreatePromised(agent, user.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health], null, description, null)).body.data;
-                return etherpadClient
-                    .getHTMLAsync({padID: topic.id})
-                    .then(function (getHtmlResult) {
-                        assert.equal(getHtmlResult.html, '<!DOCTYPE HTML><html><body><h1>H1</h1><br><h2>h2</h2><br><h3>h3</h3><br><br><br>script<br><br></body></html>');
-                    })
-                    .then(async function () {
-                        const topicRead = (await topicReadPromised(agent, user.id, topic.id, null)).body.data;
-                        assert.equal(topicRead.title, 'H1');
-                        assert.equal(topicRead.description, '<!DOCTYPE HTML><html><body><h1>H1</h1><br><h2>h2</h2><br><h3>h3</h3><br><br><br>script<br><br></body></html>');
-                    });
+                const getHtmlResult = await etherpadClient.getHTMLAsync({padID: topic.id});
+                assert.equal(getHtmlResult.html, '<!DOCTYPE HTML><html><body><h1>H1</h1><br><h2>h2</h2><br><h3>h3</h3><br><br><br>script<br><br><br></body></html>');
+                const topicRead = (await topicReadPromised(agent, user.id, topic.id, null)).body.data;
+                assert.equal(topicRead.title, 'H1');
+                assert.equal(topicRead.description, '<!DOCTYPE HTML><html><body><h1>H1</h1><br><h2>h2</h2><br><h3>h3</h3><br><br><br>script<br><br><br></body></html>');
             });
 
             test('Success - create with categories', async function () {
@@ -2662,7 +2657,7 @@ suite('Users', function () {
 
                                         padAgent
                                             .get(parsedUrl.path)
-                                            .expect(401)
+                                            .expect(403)
                                             .end(done);
                                     });
                             });
@@ -2687,7 +2682,7 @@ suite('Users', function () {
 
                                         padAgent
                                             .get(parsedUrl.path)
-                                            .expect(401)
+                                            .expect(403)
                                             .end(done);
                                     });
                             });
@@ -10082,7 +10077,7 @@ suite('Users', function () {
 
                     assert.equal(reportResultTopic.id, topic.id);
                     assert.equal(reportResultTopic.title, topicTitle);
-                    assert.equal(reportResultTopic.description, topicDescription); // DOH, whatever you do Etherpad adds extra <br>
+                    assert.equal(reportResultTopic.description, '<!DOCTYPE HTML><html><body><h1>Topic report test</h1><br>Topic report test desc<br><br><br></body></html>'); // DOH, whatever you do Etherpad adds extra <br>
                 });
 
                 test('Fail - 40100 - Only moderators can read a report', async function () {
