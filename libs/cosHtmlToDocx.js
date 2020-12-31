@@ -13,6 +13,7 @@ const fs = require('fs');
 const fsExtra = require('fs-extra');
 const https = require('https');
 const path = require('path');
+const sizeOf = require('image-size')
 const { AlignmentType, Document, HeadingLevel, Packer, Paragraph, TextRun, Media} = docx;
 
 const _addStyles = function (params) {
@@ -36,16 +37,19 @@ const _addStyles = function (params) {
                     {
                         level: 0,
                         text: "%1.",
+                        format: "decimal",
                         alignment: AlignmentType.LEFT,
                     },
                     {
                         level: 1,
-                        text: "%1.",
+                        text: "%1.%1.",
+                        format: "decimal",
                         alignment: AlignmentType.LEFT,
                     },
                     {
                         level: 2,
-                        text: "%1.",
+                        text: "%1.%1.%1",
+                        format: "decimal",
                         alignment: AlignmentType.LEFT,
                     },
                 ],
@@ -53,33 +57,14 @@ const _addStyles = function (params) {
         ],
     }
 };
-
-const style = {
-    a: {
-        color: '0680FC'
-    },
-    b: {
-        bold: true
-    },
-    u: {
-        underline: true
-    },
-    em: {
-        italics: true
-    },
-    s: {
-        strikethrough: true
-    },
-    colors: {
-        black: '000000',
-        red: 'FF0000',
-        green: '008000',
-        blue: '0000FF',
-        yellow: 'FFFF00',
-        orange: 'FFA500'
-    },
-    align: ['center', 'justify', 'left', 'right'],
-    headings: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']
+const alignTypes = ['center', 'justify', 'left', 'right'];
+const colors = {
+    black: '000000',
+    red: 'FF0000',
+    green: '008000',
+    blue: '0000FF',
+    yellow: 'FFFF00',
+    orange: 'FFA500'
 };
 
 const findItemByProperty = function (items, text, property) {
@@ -209,7 +194,7 @@ function CosHtmlToDocx (html, title, resPath) {
     _addStyles(params);
     const finalDoc = new Document(params);
 
-    const _isElement = function (element, name) {
+    const _isElement = (element, name) => {
         if (element.type === 'tag' && element.name) {
             return element.name === name;
         }
@@ -217,7 +202,7 @@ function CosHtmlToDocx (html, title, resPath) {
         return false;
     }
 
-    const _isHeadingElement = function (element) {
+    const _isHeadingElement = (element) => {
         if (element.name) {
             return element.name.match(/h+[0-6]/gi);
         }
@@ -225,15 +210,15 @@ function CosHtmlToDocx (html, title, resPath) {
         return false;
     };
 
-    const _isAlignmentElement = function (element) {
+    const _isAlignmentElement = (element) => {
         if (element.name) {
-            return style.align.indexOf(element.name) > -1;
+            return alignTypes.indexOf(element.name) > -1;
         }
 
         return false;
     };
 
-    const _isColorElement = function (element) {
+    const _isColorElement = (element) => {
         if (element.attribs && element.attribs.class) {
             return /color:[a-z]*/gi.test(element.attribs.class);
         }
@@ -241,29 +226,30 @@ function CosHtmlToDocx (html, title, resPath) {
         return false;
     };
 
-    const _isListElement = function (element) {
+    const _isListElement = (element) => {
         return (_isElement(element, 'ul') || _isElement(element, 'ol') || _isElement(element, 'li'));
     };
 
-    const _isTextElement = function (element) {
+    const _isTextElement = (element) => {
         if (element.type === 'text') {
             return true;
-        } else if (_isElement(element, 's') ||
-            _isElement(element, 'u') ||
-            _isElement(element, 'em') ||
-            _isElement(element, 'strong') ||
-            (_isColorElement(element) || _isFontSizeElement(element))) {
-            return true;
-        }
+        } else {
+            const textelem = ['s', 'u', 'sup', 'em', 'strong', 'span'].filter((v) => {
+                return _isElement(element, v) === true;
+            });
 
-        return false;
+            if (textelem.length || _isColorElement(element) || _isFontSizeElement(element))
+                return true;
+
+            return false;
+        }
     };
 
-    const _isParagraphElement = function (element) {
+    const _isParagraphElement = (element) => {
         return !_isTextElement(element);
     };
 
-    const _isIndentListElement = function (element) {
+    const _isIndentListElement = (element) => {
         const item = findItemByClass(element, 'indent');
 
         if (item) {
@@ -273,33 +259,33 @@ function CosHtmlToDocx (html, title, resPath) {
         return false;
     };
 
-    const _isBulletListElement = function (element) {
+    const _isBulletListElement = (element) => {
         return _isElement(element, 'ul') && element.attribs && element.attribs.class === 'bullet';
     };
 
-    const _isFontSizeElement = function (element) {
+    const _isFontSizeElement = (element) => {
         return element.attribs && element.attribs.class && element.attribs.class.match(/font-size/g);
     };
 
-    const _handleHeadingAttributes = function (element, attribs) {
+    const _handleHeadingAttributes = (element, attribs) => {
         if (_isHeadingElement(element)) {
             attribs.heading = HeadingLevel['HEADING_'+element.name.replace('h','')]
         }
     };
 
-    const _handleCodeAttributes = function (element, attribs) {
+    const _handleCodeAttributes = (element, attribs) => {
         if (_isElement(element, 'code')) {
             attribs.style = 'code';
         }
     }
 
-    const _handleAlignAttributes = function (element, attribs) {
+    const _handleAlignAttributes = (element, attribs) => {
         if (_isAlignmentElement(element)) {
             attribs.alignment = AlignmentType[element.name.toUpperCase()]
         }
     };
 
-    const _getElementFontSizeFromStyle = function (element) {
+    const _getElementFontSizeFromStyle = (element) => {
         let size = element.attribs.class.match(/(?:font-size:)([0-9]*)?/i);
         if (size[1]) {
             size = (Math.round(size[1] * 0.75 * 2) / 2).toFixed(1); // pixels to pts
@@ -308,7 +294,7 @@ function CosHtmlToDocx (html, title, resPath) {
         }
     };
 
-    const _getItemDepth = function (item, depth, isList) {
+    const _getItemDepth = (item, depth, isList) => {
         depth = depth || 0;
         if (item.parent && item.parent.name !== 'body') {
             if (!isList || (isList === true && _isListElement(item.parent) && item.parent.name !== 'li')) {
@@ -321,7 +307,7 @@ function CosHtmlToDocx (html, title, resPath) {
         }
     };
 
-    const _handleListElementAttributes = function (element, attribs) {
+    const _handleListElementAttributes = (element, attribs) => {
         let depth = null;
         if (_isBulletListElement(element)) {
             depth = _getItemDepth(element, null, true);
@@ -338,6 +324,17 @@ function CosHtmlToDocx (html, title, resPath) {
         }
     }
 
+    const scaleImage = (path) => {
+        var dimensions = sizeOf(path);
+        if (dimensions.width > 605) {
+            const scale = (605/dimensions.width)*100/100;
+            dimensions.width = Math.round(dimensions.width * scale);
+            dimensions.height = Math.round(dimensions.height * scale);
+        }
+
+        return dimensions;
+    };
+
     const _getParagraphStyle = async function (item, attributes) {
         if (!attributes) {
             attributes = {};
@@ -349,7 +346,8 @@ function CosHtmlToDocx (html, title, resPath) {
 
         if (_isElement(item, 'img')) {
             const path = await getImageFile(item.attribs.src, resPath);
-            const image = Media.addImage(finalDoc, fs.readFileSync(path));
+            const imagesize = scaleImage(path);
+            const image = Media.addImage(finalDoc, fs.readFileSync(path),imagesize.width, imagesize.height);
             finalParagraphs.push(new Paragraph(image));
 
             return null;
@@ -369,9 +367,11 @@ function CosHtmlToDocx (html, title, resPath) {
 
         if (_isColorElement(item)) {
             const colorName = item.attribs.class.split('color:')[1];
-            attributes.color = style.colors[colorName];
+            attributes.color = colors[colorName];
         } else if (_isElement(item, 'strong')) {
             attributes.bold = true;
+        } else if (_isElement(item, 'sup')) {
+            attributes.superScript = true;
         } else if (_isElement(item, 'em')) {
             attributes.italics = true;
         } else if (_isElement(item, 'u')) {
@@ -410,10 +410,10 @@ function CosHtmlToDocx (html, title, resPath) {
 
     };
 
-    const _listItems =  function (element, items) {
+    const _listItems = function (element, items) {
         items = items || [];
         if (element.children) {
-            for  (const child of element.children) {
+            for (const child of element.children) {
                 if (_isTextElement(child) && element.name === 'li') {
                     items.push(element);
 
@@ -462,25 +462,38 @@ function CosHtmlToDocx (html, title, resPath) {
     const _handleParserResult = async function (result) {
         const body = findItemByProperty(result, 'body');
         if (body && body.children) {
+            let paragraphProperties;
             for await (const tag of body.children) {
                 if (_isListElement(tag)) {
+                    if (paragraphProperties) {
+                        finalParagraphs.push(new Paragraph(paragraphProperties));
+                        paragraphProperties = null;
+                    }
+
                     await _listElementHandler(tag);
                 }
                 else if (_isParagraphElement(tag)) {
-                    const paragraphProperties = await _childTagToFormat(tag, {
+                    if (paragraphProperties) {
+                        finalParagraphs.push(new Paragraph(paragraphProperties));
+                        paragraphProperties = null;
+                    }
+                    const properties = await _childTagToFormat(tag, {
                         children: []
                     });
-                    if (paragraphProperties)
-                        finalParagraphs.push(new Paragraph(paragraphProperties))
+                    if (properties)
+                        finalParagraphs.push(new Paragraph(properties))
                 }
                 else if (_isTextElement(tag)) {
-                    const textElement = {
-                        children: []
+                    if (!paragraphProperties) {
+                        paragraphProperties = {
+                            children: []
+                        }
                     }
-                    await _getTextWithFormat(tag, textElement.children);
-                    finalParagraphs.push(new Paragraph(textElement));
+                    await _getTextWithFormat(tag, paragraphProperties.children);
                 }
             }
+            if (paragraphProperties)
+                finalParagraphs.push(new Paragraph(paragraphProperties));
         }
     }
 
@@ -497,7 +510,7 @@ function CosHtmlToDocx (html, title, resPath) {
     this.processHTML = async function (html) {
         const processHtml = this.html || html;
         return new Promise (function (resolve, reject) {
-            const handler =  new htmlparser.DefaultHandler(async function (err, result) {
+            const handler = new htmlparser.DefaultHandler(async function (err, result) {
                 if (err) {
                     return reject(err);
                 }
