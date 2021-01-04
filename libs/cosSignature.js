@@ -160,47 +160,36 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _createTopicFile = function (topic, vote, transaction) {
+    const _createTopicFile = async function (topic, vote, transaction) {
         const destinationDir = _getVoteFileSourceDir(topic.id, vote.id);
 
         let filePath;
 
+        await fsExtra
+            .mkdirsAsync(destinationDir, FILE_CREATE_MODE);
+        filePath = destinationDir + '/' + TOPIC_FILE.name;
+        const doc = new CosHtmlToDocx(topic.description, topic.title, filePath);
+
+        const docxBuffer = await doc.processHTML();
+
+        await VoteContainerFile.create(
+            {
+                voteId: vote.id,
+                fileName: TOPIC_FILE.name,
+                mimeType: TOPIC_FILE.mimeType,
+                content: docxBuffer
+            },
+            {
+                transaction: transaction
+            }
+        );
+
         return fsExtra
-            .mkdirsAsync(destinationDir, FILE_CREATE_MODE)
-            .then(function () {
-                filePath = destinationDir + '/' + TOPIC_FILE.name;
-                const doc = new CosHtmlToDocx(topic.description, topic.title, filePath);
-
-                return doc.processHTML();
+            .removeAsync(function () {
+                return _getTopicFileDir(topic.id);
             })
-            .then(function () {
-                const docxReadStream = fs.createReadStream(filePath);
-
-                return util.streamToBuffer(docxReadStream);
-            })
-            .then(function (docxBuffer) {
-                return VoteContainerFile
-                    .create(
-                        {
-                            voteId: vote.id,
-                            fileName: TOPIC_FILE.name,
-                            mimeType: TOPIC_FILE.mimeType,
-                            content: docxBuffer
-                        },
-                        {
-                            transaction: transaction
-                        }
-                    );
-            })
-            .then(function () {
-                // Best effort to remove temporary files, no need to block request
-                return fsExtra
-                    .removeAsync(function () {
-                        return _getTopicFileDir(topic.id);
-                    })
-                    .catch(function () {
-                        logger.warn('Failed to clean up temporary Topic files', destinationDir);
-                    });
+            .catch(function () {
+                logger.warn('Failed to clean up temporary Topic files', destinationDir);
             });
     };
 
@@ -283,25 +272,21 @@ module.exports = function (app) {
      * @returns {Promise} Promise
      * @private
      */
-    const _createVoteFiles = function (topic, vote, voteOptions, transaction) {
+    const _createVoteFiles = async function (topic, vote, voteOptions, transaction) {
         if (!topic || !vote || !voteOptions) {
             throw Error('Missing one or more required parameters!');
         }
 
-        const promisesToResolve = [];
-
         // Topic (document file)
-        promisesToResolve.push(_createTopicFile(topic, vote, transaction));
+        await _createTopicFile(topic, vote, transaction);
 
         // Metainfo file
-        promisesToResolve.push(_createMetainfoFile(topic, vote, transaction));
+        await _createMetainfoFile(topic, vote, transaction);
 
         // Each option file
-        voteOptions.forEach(function (voteOption) {
-            promisesToResolve.push(_createVoteOptionFile(vote, voteOption, transaction));
-        });
-
-        return Promise.all(promisesToResolve);
+        for await (const voteOption of voteOptions) {
+            await _createVoteOptionFile(vote, voteOption, transaction);
+        }
 
     };
 

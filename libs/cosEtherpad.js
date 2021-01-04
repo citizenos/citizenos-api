@@ -230,13 +230,12 @@ module.exports = function (app) {
 
     const _syncTopicWithPad = async function (topicId, context, actor, rev) {
         logger.info('Sync topic with Pad', topicId, rev);
-
         const params = {padID: topicId};
         if (rev) {
             params.rev = rev;
         }
 
-        const html = _replaceFsTags((await etherpadClient.getHTMLAsync(params)).html);
+        const html = (await etherpadClient.getHTMLAsync(params)).html;
         const title = _getTopicTitleFromPadContent(html);
 
         return db.transaction(async function (t) {

@@ -34,6 +34,7 @@ module.exports = function (app) {
     const encoder = app.get('encoder');
     const URL = require('url');
     const https = require('https');
+    const CosHtmlToDocx = app.get('cosHtmlToDocx');
 
     const loginCheck = app.get('middleware.loginCheck');
     const authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
