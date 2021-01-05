@@ -57,7 +57,7 @@ const _addStyles = function (params) {
         ],
     }
 };
-const alignTypes = ['center', 'justify', 'left', 'right'];
+
 const colors = {
     black: '000000',
     red: 'FF0000',
@@ -132,8 +132,7 @@ const getImageFile = async function (url, dirpath) {
                 });
             } else {
                 const file = fs.createWriteStream(filepath);
-                url = url.replace('http', 'https');
-                https.get(url, {rejectUnauthorized:false}, function (response) {
+                https.get(url, function (response) {
                     response.pipe(file);
                     file.on('finish', function () {
                         file.close();
@@ -141,7 +140,7 @@ const getImageFile = async function (url, dirpath) {
                         return resolve(filepath);
                     });
                 }).on('error', function (err) { // Handle errors
-                    console.log(err);
+                    console.error(err);
                     return fs.unlink(filepath, reject(err));
                 });
             }
@@ -211,8 +210,8 @@ function CosHtmlToDocx (html, title, resPath) {
     };
 
     const _isAlignmentElement = (element) => {
-        if (element.name) {
-            return alignTypes.indexOf(element.name) > -1;
+        if (element.attribs && element.attribs.style) {
+            return element.attribs.style.indexOf('text-align') > -1;
         }
 
         return false;
@@ -281,7 +280,8 @@ function CosHtmlToDocx (html, title, resPath) {
 
     const _handleAlignAttributes = (element, attribs) => {
         if (_isAlignmentElement(element)) {
-            attribs.alignment = AlignmentType[element.name.toUpperCase()]
+            const alignment = element.attribs.style.match(/(?:text-align:)([a-zA-Z]*)?/i);
+            attribs.alignment = AlignmentType[alignment[1].toUpperCase()]
         }
     };
 
