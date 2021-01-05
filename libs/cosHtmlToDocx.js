@@ -57,7 +57,7 @@ const _addStyles = function (params) {
         ],
     }
 };
-const alignTypes = ['center', 'justify', 'left', 'right'];
+
 const colors = {
     black: '000000',
     red: 'FF0000',
@@ -132,7 +132,7 @@ const getImageFile = async function (url, dirpath) {
                 });
             } else {
                 const file = fs.createWriteStream(filepath);
-                https.get(url, {}, function (response) {
+                https.get(url, function (response) {
                     response.pipe(file);
                     file.on('finish', function () {
                         file.close();
@@ -140,7 +140,7 @@ const getImageFile = async function (url, dirpath) {
                         return resolve(filepath);
                     });
                 }).on('error', function (err) { // Handle errors
-                    console.log(err);
+                    console.error(err);
                     return fs.unlink(filepath, reject(err));
                 });
             }
