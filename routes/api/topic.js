@@ -34,7 +34,6 @@ module.exports = function (app) {
     const encoder = app.get('encoder');
     const URL = require('url');
     const https = require('https');
-    const CosHtmlToDocx = app.get('cosHtmlToDocx');
 
     const loginCheck = app.get('middleware.loginCheck');
     const authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
@@ -3477,7 +3476,7 @@ module.exports = function (app) {
         if (!Array.isArray(members)) {
             members = [members];
         }
-
+        const inviteMessage = members[0].inviteMessage;
         const validEmailMembers = [];
         let validUserIdMembers = [];
 
@@ -3662,6 +3661,11 @@ module.exports = function (app) {
         createdInvites = createdInvites.filter(function (invite) {
             return !!invite;
         });
+
+        for(let invite of createdInvites) {
+            invite.inviteMessage = inviteMessage;
+        }
+
         await emailLib.sendTopicMemberUserInviteCreate(createdInvites);
 
         if (createdInvites.length) {
