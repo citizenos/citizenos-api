@@ -7025,7 +7025,6 @@ module.exports = function (app) {
             } else {
                 res.set('Content-disposition', 'attachment; filename=final.bdoc');
                 res.set('Content-type', 'application/vnd.etsi.asic-e+zip');
-                console.log(include);
                 finalDocStream = await cosSignature.getFinalBdoc(topicId, voteId, include);
             }
 
