@@ -6987,51 +6987,52 @@ module.exports = function (app) {
             .catch(next);
     });
 
-    const topicDownloadBdocFinal = function (req, res, next) {
+    const topicDownloadBdocFinal = async function (req, res, next) {
         const topicId = req.params.topicId;
         const voteId = req.params.voteId;
-
-        Topic
-            .findOne({
-                where: {
-                    id: topicId
-                },
-                include: [
-                    {
-                        model: Vote,
-                        where: {
-                            id: voteId,
-                            authType: Vote.AUTH_TYPES.hard
+        const include = req.query.include;
+        let finalDocStream;
+        try {
+            const topic = await Topic
+                .findOne({
+                    where: {
+                        id: topicId
+                    },
+                    include: [
+                        {
+                            model: Vote,
+                            where: {
+                                id: voteId,
+                                authType: Vote.AUTH_TYPES.hard
+                            }
                         }
-                    }
-                ]
-            })
-            .then(function (topic) {
-                const vote = topic.Votes[0];
+                    ]
+                });
+            const vote = topic.Votes[0];
 
-                // TODO: Once we implement the the "endDate>now -> followUp" we can remove Topic.STATUSES.voting check
-                if ((vote.endsAt && vote.endsAt.getTime() > new Date().getTime() && topic.status === Topic.STATUSES.voting) || topic.status === Topic.STATUSES.voting) {
-                    res.badRequest('The Vote has not ended.');
+            // TODO: Once we implement the the "endDate>now -> followUp" we can remove Topic.STATUSES.voting check
+            if ((vote.endsAt && vote.endsAt.getTime() > new Date().getTime() && topic.status === Topic.STATUSES.voting) || topic.status === Topic.STATUSES.voting) {
+                res.badRequest('The Vote has not ended.');
 
-                    return Promise.reject();
-                }
+                return Promise.reject();
+            }
 
-                if (req.query.accept === 'application/x-7z-compressed') {
-                    res.set('Content-disposition', 'attachment; filename=final.7z');
-                    res.set('Content-type', 'application/x-7z-compressed');
+            if (req.query.accept === 'application/x-7z-compressed') {
+                res.set('Content-disposition', 'attachment; filename=final.7z');
+                res.set('Content-type', 'application/x-7z-compressed');
 
-                    return cosSignature.getFinalBdoc(topicId, voteId, true);
-                } else {
-                    res.set('Content-disposition', 'attachment; filename=final.bdoc');
-                    res.set('Content-type', 'application/vnd.etsi.asic-e+zip');
+                finalDocStream = await cosSignature.getFinalBdoc(topicId, voteId, include, true);
+            } else {
+                res.set('Content-disposition', 'attachment; filename=final.bdoc');
+                res.set('Content-type', 'application/vnd.etsi.asic-e+zip');
+                console.log(include);
+                finalDocStream = await cosSignature.getFinalBdoc(topicId, voteId, include);
+            }
 
-                    return cosSignature.getFinalBdoc(topicId, voteId);
-                }
-            })
-            .then(function (finalDocStream) {
-                return finalDocStream.pipe(res);
-            })
-            .catch(next);
+            return finalDocStream.pipe(res);
+        } catch (e) {
+            next(e);
+        }
     };
 
     /**
