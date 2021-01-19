@@ -27,7 +27,7 @@ module.exports = function (app) {
                         SELECT
                             t.visibility = 'public' AS "isPublic",
                             t.status,
-                            COALESCE(tmup.level, tmgp.level, \'none\') as level
+                            COALESCE(tmup.level, tmgp.level, 'none') as level
                         FROM "Topics" t
                             LEFT JOIN (
                                 SELECT

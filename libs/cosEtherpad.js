@@ -141,35 +141,6 @@ module.exports = function (app) {
     };
 
     /**
-     * Update Topic with Pad contents
-     *
-     * @param {string} html Topic html
-     *
-     * @returns {string} Topic html
-     *
-     * @private
-     */
-    const _replaceFsTags = function (html) {
-        html = html
-            .replace(/<\/?(center|justify|right|left|fs+\d*)\s?.*?>/g, function (match, className) {
-                if (match.indexOf('/') > 0) {
-                    return '</span>';
-                } else {
-                    return '<span class="' + className + '" >';
-                }
-            })
-            .replace(/<span class='color:?(\w*)'>|<span data-color="(\w*)">/g, function (match, className, className2) {
-                if (!className) {
-                    className = className2;
-                }
-
-                return '<span class="' + className + '" >';
-            });
-
-        return html;
-    };
-
-    /**
      * Extract Topic title from Pad contents
      *
      * TODO: Public just for testing, bad design, but oh will do for now
