@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 10.14 (Ubuntu 10.14-0ubuntu0.18.04.1)
--- Dumped by pg_dump version 10.14 (Ubuntu 10.14-0ubuntu0.18.04.1)
+-- Dumped from database version 10.15 (Ubuntu 10.15-0ubuntu0.18.04.1)
+-- Dumped by pg_dump version 10.15 (Ubuntu 10.15-0ubuntu0.18.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -1546,7 +1546,8 @@ CREATE TABLE public."VoteUserContainers" (
     container bytea NOT NULL,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone
+    "deletedAt" timestamp with time zone,
+    "PID" text NOT NULL
 );
 
 
@@ -1569,6 +1570,13 @@ COMMENT ON COLUMN public."VoteUserContainers"."voteId" IS 'To what Vote this sig
 --
 
 COMMENT ON COLUMN public."VoteUserContainers".container IS 'BDOC containing the signed vote.';
+
+
+--
+-- Name: COLUMN "VoteUserContainers"."PID"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."VoteUserContainers"."PID" IS 'User personal ID';
 
 
 --
@@ -1933,6 +1941,14 @@ ALTER TABLE ONLY public."VoteOptions"
 
 ALTER TABLE ONLY public."VoteUserContainers"
     ADD CONSTRAINT "VoteUserContainers_pkey" PRIMARY KEY ("userId", "voteId");
+
+
+--
+-- Name: VoteUserContainers VoteUserContainers_voteId_PID_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."VoteUserContainers"
+    ADD CONSTRAINT "VoteUserContainers_voteId_PID_key" UNIQUE ("voteId", "PID");
 
 
 --
@@ -2480,4 +2496,5 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 202002192021-alter-user-connection.js
 20200225152502-remove-vote-user-container-activity.js
 202010261616-alter-user-add-auhorID.js
+20210119141948-alter-vote-user-containers.js
 \.

@@ -27,8 +27,7 @@ module.exports = function (sequelize, DataTypes) {
                     key: 'id'
                 },
                 onUpdate: 'CASCADE',
-                onDelete: 'CASCADE',
-                primaryKey: true
+                onDelete: 'CASCADE'
             },
             voteId: {
                 type: DataTypes.UUID,
@@ -46,6 +45,12 @@ module.exports = function (sequelize, DataTypes) {
                 type: DataTypes.BLOB,
                 allowNull: false,
                 comment: 'BDOC containing the signed vote.'
+            },
+            PID: {
+                type: DataTypes.TEXT,
+                allowNull: false,
+                comment: 'User personal ID',
+                primaryKey: true
             }
         }
     );

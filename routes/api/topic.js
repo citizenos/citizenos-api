@@ -80,44 +80,44 @@ module.exports = function (app) {
         const minRequiredLevel = level;
 
         // TODO: That casting to "enum_TopicMemberUsers_level". Sequelize does not support naming enums, through inheritance I have 2 enums that are the same but with different name thus different type in PG. Feature request - https://github.com/sequelize/sequelize/issues/2577
-        return db
+        const result = await db
             .query(
-                'SELECT \
-                    t.visibility = \'public\' AS "isPublic", \
-                    t.status, \
-                    COALESCE(\
-                        tmup.level, \
-                        tmgp.level, \
-                        CASE \
-                            WHEN t.visibility = \'public\' THEN \'read\' ELSE NULL \
-                        END, \
-                        \'none\'\
-                    ) as level, \
-                    COALESCE(tmup.level, tmgp.level, \'none\')::"enum_TopicMemberUsers_level" >= :level AS "hasDirectAccess", \
-                    t."sourcePartnerId" \
-                FROM "Topics" t \
-                    LEFT JOIN ( \
-                        SELECT \
-                            tmu."topicId",  \
-                            tmu."userId",  \
-                            tmu.level::text AS level  \
-                        FROM "TopicMemberUsers" tmu  \
-                        WHERE tmu."deletedAt" IS NULL  \
-                    ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId)  \
-                    LEFT JOIN (  \
-                        SELECT  \
-                            tmg."topicId",  \
-                            gm."userId",  \
-                            MAX(tmg.level)::text AS level  \
-                        FROM "TopicMemberGroups" tmg  \
-                            JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")  \
-                        WHERE tmg."deletedAt" IS NULL  \
-                        AND gm."deletedAt" IS NULL  \
-                        GROUP BY "topicId", "userId"  \
-                    ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)  \
-                WHERE t.id = :topicId \
-                AND t."deletedAt" IS NULL; \
-                ',
+                `SELECT
+                    t.visibility = 'public' AS "isPublic",
+                    t.status,
+                    COALESCE(
+                        tmup.level,
+                        tmgp.level,
+                        CASE
+                            WHEN t.visibility = 'public' THEN 'read' ELSE NULL
+                        END,
+                        'none'
+                    ) as level,
+                    COALESCE(tmup.level, tmgp.level, 'none')::"enum_TopicMemberUsers_level" >= :level AS "hasDirectAccess",
+                    t."sourcePartnerId"
+                FROM "Topics" t
+                    LEFT JOIN (
+                        SELECT
+                            tmu."topicId",
+                            tmu."userId",
+                            tmu.level::text AS level
+                        FROM "TopicMemberUsers" tmu
+                        WHERE tmu."deletedAt" IS NULL
+                    ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId)
+                    LEFT JOIN (
+                        SELECT
+                            tmg."topicId",
+                            gm."userId",
+                            MAX(tmg.level)::text AS level
+                        FROM "TopicMemberGroups" tmg
+                            JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                        WHERE tmg."deletedAt" IS NULL
+                        AND gm."deletedAt" IS NULL
+                        GROUP BY "topicId", "userId"
+                    ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
+                WHERE t.id = :topicId
+                AND t."deletedAt" IS NULL;
+                `,
                 {
                     replacements: {
                         topicId: topicId,
@@ -127,58 +127,56 @@ module.exports = function (app) {
                     type: db.QueryTypes.SELECT,
                     raw: true
                 }
-            )
-            .then(function (result) {
-                if (result && result[0]) {
-                    const isPublic = result[0].isPublic;
-                    const status = result[0].status;
-                    const hasDirectAccess = result[0].hasDirectAccess;
-                    const level = result[0].level;
-                    const sourcePartnerId = result[0].sourcePartnerId;
-                    if (hasDirectAccess || (allowPublic && isPublic) || allowSelf) {
-                        // If Topic status is not in the allowed list, deny access.
-                        if (topicStatusesAllowed && !(topicStatusesAllowed.indexOf(status) > -1)) {
-                            logger.warn('Access denied to topic due to status mismatch! ', 'topicStatusesAllowed:', topicStatusesAllowed, 'status:', status);
+            );
+            if (result && result[0]) {
+                const isPublic = result[0].isPublic;
+                const status = result[0].status;
+                const hasDirectAccess = result[0].hasDirectAccess;
+                const level = result[0].level;
+                const sourcePartnerId = result[0].sourcePartnerId;
+                if (hasDirectAccess || (allowPublic && isPublic) || allowSelf) {
+                    // If Topic status is not in the allowed list, deny access.
+                    if (topicStatusesAllowed && !(topicStatusesAllowed.indexOf(status) > -1)) {
+                        logger.warn('Access denied to topic due to status mismatch! ', 'topicStatusesAllowed:', topicStatusesAllowed, 'status:', status);
 
-                            return Promise.reject();
-                        }
-
-                        // Don't allow Partner to edit other Partners topics
-                        if (!isPublic && partnerId && sourcePartnerId) {
-                            if (partnerId !== sourcePartnerId) {
-                                logger.warn('Access denied to topic due to Partner mismatch! ', 'partnerId:', partnerId, 'sourcePartnerId:', sourcePartnerId);
-
-                                return Promise.reject();
-                            }
-                        }
-
-                        if (!allowSelf && (LEVELS[minRequiredLevel] > LEVELS[level])) {
-                            logger.warn('Access denied to topic due to member without permissions trying to delete user! ', 'userId:', userId);
-
-                            return Promise.reject();
-                        }
-
-                        const authorizationResult = {
-                            topic: {
-                                id: topicId,
-                                isPublic: isPublic,
-                                sourcePartnerId: sourcePartnerId,
-                                status: status,
-                                permissions: {
-                                    level: level,
-                                    hasDirectAccess: hasDirectAccess
-                                }
-                            }
-                        };
-
-                        return Promise.resolve(authorizationResult);
-                    } else {
-                        return Promise.reject();
+                        return false
                     }
+
+                    // Don't allow Partner to edit other Partners topics
+                    if (!isPublic && partnerId && sourcePartnerId) {
+                        if (partnerId !== sourcePartnerId) {
+                            logger.warn('Access denied to topic due to Partner mismatch! ', 'partnerId:', partnerId, 'sourcePartnerId:', sourcePartnerId);
+
+                            return false;
+                        }
+                    }
+
+                    if (!allowSelf && (LEVELS[minRequiredLevel] > LEVELS[level])) {
+                        logger.warn('Access denied to topic due to member without permissions trying to delete user! ', 'userId:', userId);
+
+                        return false
+                    }
+
+                    const authorizationResult = {
+                        topic: {
+                            id: topicId,
+                            isPublic: isPublic,
+                            sourcePartnerId: sourcePartnerId,
+                            status: status,
+                            permissions: {
+                                level: level,
+                                hasDirectAccess: hasDirectAccess
+                            }
+                        }
+                    };
+
+                    return authorizationResult;
                 } else {
-                    return Promise.reject();
+                    return false
                 }
-            });
+            } else {
+                return false
+            }
     };
 
     /**
@@ -192,7 +190,7 @@ module.exports = function (app) {
      * @returns {Function} Express middleware function
      */
     const hasPermission = function (level, allowPublic, topicStatusesAllowed, allowSelf) {
-        return function (req, res, next) {
+        return async function (req, res, next) {
             const userId = req.user.id;
             const partnerId = req.user.partnerId;
             const topicId = req.params.topicId;
@@ -212,93 +210,81 @@ module.exports = function (app) {
             if (topicStatusesAllowed && !Array.isArray(topicStatusesAllowed)) {
                 throw new Error('topicStatusesAllowed must be an array but was ', topicStatusesAllowed);
             }
+            try {
+                const authorizationResult = await _hasPermission(topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelfDelete, partnerId)
+                // Add "req.locals" to store info collected from authorization for further use in the request. Might save a query or two for some use cases.
+                // Naming convention ".locals" is inspired by "res.locals" - http://expressjs.com/api.html#res.locals
+                if (authorizationResult) {
+                    req.locals = authorizationResult;
+                    return next(null, req, res);
+                }
 
-            _hasPermission(topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelfDelete, partnerId)
-                .then(
-                    function (authorizationResult) {
-                        // Add "req.locals" to store info collected from authorization for further use in the request. Might save a query or two for some use cases.
-                        // Naming convention ".locals" is inspired by "res.locals" - http://expressjs.com/api.html#res.locals
-                        req.locals = authorizationResult;
-
-                        return new Promise(function (resolve) {
-                            return resolve(next(null, req, res));
-                        });
-                    },
-                    function (err) {
-                        if (err) {
-                            return next(err);
-                        }
-
-                        return res.forbidden('Insufficient permissions');
-                    }
-                )
-                .catch(next);
+                return res.forbidden('Insufficient permissions');
+            } catch (err) {
+                if (err) {
+                    return next(err);
+                }
+            }
         };
     };
 
     const hasVisibility = function (visibility) {
-        return function (req, res, next) {
-            return Topic
-                .count({
+        return async function (req, res, next) {
+            try {
+                const count = await Topic.count({
                     where: {
                         id: req.params.topicId,
                         visibility: visibility
                     }
-                })
-                .then(function (count) {
-                    if (!count) {
-                        return res.notFound();
-                    }
-                    next();
+                });
 
-                    return null; // NOTE: Avoids Bluebird throwing a warning about not returning a promise - http://goo.gl/rRqMUw
-                })
-                .catch(next);
+                if (!count) {
+                    return res.notFound();
+                }
+
+                return next();
+            } catch(err) {
+                return next(err);
+            }
         };
     };
 
-    const _isModerator = function (topicId, userId) {
-        return new Promise(function (resolve, reject) {
-            db
-                .query(
-                    '\
-                    SELECT \
-                        t."id" as "topicId", \
-                        m."userId", \
-                        m."partnerId" \
-                    FROM "Topics" t \
-                    JOIN "Moderators" m \
-                        ON (m."partnerId" = t."sourcePartnerId" OR m."partnerId" IS NULL) \
-                        AND m."userId" = :userId \
-                    WHERE t.id = :topicId \
-                    AND t."deletedAt" IS NULL \
-                    AND m."deletedAt" IS NULL \
-                    ;',
-                    {
-                        replacements: {
-                            topicId: topicId,
-                            userId: userId
-                        },
-                        type: db.QueryTypes.SELECT,
-                        raw: true
-                    }
-                )
-                .then(function (result) {
-                    if (result && result[0]) {
-                        const isUserModerator = result[0].userId === userId;
-                        const isTopicModerator = result[0].topicId === topicId;
+    const _isModerator = async function (topicId, userId) {
+        const result = await db
+            .query(
+                `
+                SELECT
+                    t."id" as "topicId",
+                    m."userId",
+                    m."partnerId"
+                FROM "Topics" t
+                JOIN "Moderators" m
+                    ON (m."partnerId" = t."sourcePartnerId" OR m."partnerId" IS NULL)
+                    AND m."userId" = :userId
+                WHERE t.id = :topicId
+                AND t."deletedAt" IS NULL
+                AND m."deletedAt" IS NULL
+                ;`,
+                {
+                    replacements: {
+                        topicId: topicId,
+                        userId: userId
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true
+                }
+            );
 
-                        if (isUserModerator && isTopicModerator) {
-                            return resolve({isModerator: result[0].partnerId ? result[0].partnerId : true});
-                        }
-                    }
+        if (result && result[0]) {
+            const isUserModerator = result[0].userId === userId;
+            const isTopicModerator = result[0].topicId === topicId;
 
-                    return resolve(false);
-                })
-                .catch(function (err) {
-                    reject(err);
-                });
-        });
+            if (isUserModerator && isTopicModerator) {
+                return {isModerator: result[0].partnerId ? result[0].partnerId : true};
+            }
+        }
+
+        return false;
     };
 
     /**
@@ -307,7 +293,7 @@ module.exports = function (app) {
      * @returns {Function} Express middleware function
      */
     const isModerator = function () {
-        return function (req, res, next) {
+        return async function (req, res, next) {
             const topicId = req.params.topicId;
             let userId;
 
@@ -316,27 +302,15 @@ module.exports = function (app) {
             }
 
             if (!topicId || !userId) {
-                return new Promise(function (resolve) {
-                    return resolve(next(null, req, res));
-                });
+                return next(null, req, res);
             }
 
-            _isModerator(topicId, userId)
-                .then(
-                    function (result) {
-                        if (result) {
-                            req.user.moderator = result.isModerator;
-                        }
+            const result = await _isModerator(topicId, userId)
+            if (result) {
+                req.user.moderator = result.isModerator;
+            }
 
-                        return new Promise(function (resolve) {
-                            return resolve(next(null, req, res));
-                        });
-                    },
-                    function (err) {
-                        return next(err);
-                    }
-                )
-                .catch(next);
+            return next(null, req, res);
         };
     };
 
@@ -402,149 +376,162 @@ module.exports = function (app) {
             includeVoted = ',(SELECT true FROM votes WHERE "userId" = :userId AND "optionId" = v."optionId") as "selected" ';
         }
 
+        let sql = `
+            WITH
+            RECURSIVE delegations("voteId", "toUserId", "byUserId", depth) AS (
+                SELECT
+                        "voteId",
+                        "toUserId",
+                        "byUserId",
+                            1
+                        FROM "VoteDelegations" vd
+                        WHERE vd."voteId" = :voteId
+                            AND vd."deletedAt" IS NULL
+
+                        UNION ALL
+
+                        SELECT
+                            vd."voteId",
+                            vd."toUserId",
+                            dc."byUserId",
+                            dc.depth+1
+                        FROM delegations dc, "VoteDelegations" vd
+                        WHERE vd."byUserId" = dc."toUserId"
+                            AND vd."voteId" = dc."voteId"
+                            AND vd."deletedAt" IS NULL
+                    ),
+                    indirect_delegations("voteId", "toUserId", "byUserId", depth) AS (
+                        SELECT DISTINCT ON("byUserId")
+                            "voteId",
+                            "toUserId",
+                            "byUserId",
+                            depth
+                        FROM delegations
+                        ORDER BY "byUserId", depth DESC
+                    ),
+                    vote_groups("voteId", "userId", "optionGroupId", "updatedAt") AS (
+                        SELECT DISTINCT ON (vl."userId") vl."voteId", vl."userId", vli."optionGroupId", vl."updatedAt"
+                        FROM (
+                            SELECT DISTINCT ON (vl."userId", MAX(vl."updatedAt"))
+                            vl."userId",
+                            vl."voteId",
+                            MAX(vl."updatedAt") as "updatedAt"
+                            FROM "VoteLists" vl
+                            WHERE vl."voteId" = :voteId
+                            AND vl."deletedAt" IS NULL
+                            GROUP BY vl."userId", vl."voteId"
+                            ORDER BY MAX(vl."updatedAt") DESC
+                        ) vl
+                        JOIN "VoteLists" vli
+                        ON
+                            vli."userId" = vl."userId"
+                            AND vl."voteId" = vli."voteId"
+                            AND vli."updatedAt" = vl."updatedAt"
+                        WHERE vl."voteId" = :voteId
+                            AND vl."userId" NOT IN
+                            (
+                                SELECT DISTINCT
+                                    uc."connectedUser"
+                                FROM (
+                                    SELECT
+                                        vl."userId",
+                                        vl."updatedAt"
+                                    FROM "VoteLists" vl
+                                    WHERE vl."voteId" = :voteId
+                                    AND vl."deletedAt" IS NULL
+                                    ORDER BY vl."updatedAt" DESC
+                                ) vl
+                                JOIN
+                                (
+                                    SELECT
+                                        uc."userId",
+                                        uci."userId" as "connectedUser",
+                                        uc."connectionId",
+                                        uc."connectionUserId"
+                                    FROM "UserConnections" uc
+                                    JOIN "UserConnections" uci
+                                        ON uc."connectionId" = uci."connectionId"
+                                        AND uc."connectionUserId" = uci."connectionUserId"
+                                        AND uc."userId" <> uci."userId"
+                                ) uc ON uc."userId" = vl."userId"
+                                JOIN (
+                                    SELECT
+                                        vl."userId",
+                                        vl."updatedAt"
+                                        FROM "VoteLists" vl
+                                        WHERE vl."voteId" = :voteId
+                                            AND vl."deletedAt" IS NULL
+                                        ORDER BY vl."updatedAt" DESC
+                                ) vli ON uc."connectedUser" = vli."userId" AND vli."updatedAt" < vl."updatedAt"
+                            )
+                    ),
+                    votes("voteId", "userId", "optionId", "optionGroupId") AS (
+                        SELECT
+                            vl."voteId",
+                            vl."userId",
+                            vl."optionId",
+                            vl."optionGroupId"
+                        FROM "VoteLists" vl
+                        JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."optionGroupId" = vg."optionGroupId")
+                        JOIN "Votes" v ON v.id = vl."voteId"
+                        WHERE v."authType"='${Vote.AUTH_TYPES.soft}' AND vl."voteId" = :voteId
+                        UNION ALL
+                        SELECT
+                            vl."voteId",
+                            vl."userId",
+                            vl."optionId",
+                            vl."optionGroupId"
+                        FROM "VoteLists" vl
+                        JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."optionGroupId" = vg."optionGroupId")
+                        JOIN "Votes" v ON v.id = vl."voteId"
+                        JOIN "VoteUserContainers" vuc ON vuc."voteId" = vl."voteId" AND vuc."userId" = vl."userId"
+                        WHERE v."authType"='${Vote.AUTH_TYPES.hard}' AND vl."voteId" = :voteId
+                    ),
+                    votes_with_delegations("voteId", "userId", "optionId", "optionGroupId", depth) AS (
+                        SELECT
+                            v."voteId",
+                            v."userId",
+                            v."optionId",
+                            v."optionGroupId",
+                            id."depth"
+                        FROM votes v
+                        LEFT JOIN indirect_delegations id ON (v."userId" = id."toUserId")
+                        WHERE v."userId" NOT IN (SELECT "byUserId" FROM indirect_delegations WHERE "voteId"=v."voteId")
+                    )
+
+                SELECT
+                    SUM(v."voteCount") as "voteCount",
+                    v."optionId",
+                    v."voteId",
+                    vo."value"
+                    ${includeVoted}
+                FROM (
+                    SELECT
+                        COUNT(v."optionId") + 1 as "voteCount",
+                        v."optionId",
+                        v."optionGroupId",
+                        v."voteId"
+                    FROM votes_with_delegations v
+                    WHERE v.depth IS NOT NULL
+                    GROUP BY v."optionId", v."optionGroupId", v."voteId"
+
+                    UNION ALL
+
+                    SELECT
+                        COUNT(v."optionId") as "voteCount",
+                        v."optionId",
+                        v."optionGroupId",
+                        v."voteId"
+                    FROM votes_with_delegations v
+                    WHERE v.depth IS NULL
+                    GROUP BY v."optionId", v."optionGroupId", v."voteId"
+                ) v
+                LEFT JOIN "VoteOptions" vo ON (v."optionId" = vo."id")
+                GROUP BY v."optionId", v."voteId", vo."value"
+        ;`;
+
         return db
-            .query(
-                ' \
-                    WITH \
-                        RECURSIVE delegations("voteId", "toUserId", "byUserId", depth) AS ( \
-                            SELECT \
-                                "voteId", \
-                                "toUserId", \
-                                "byUserId", \
-                                1 \
-                            FROM "VoteDelegations" vd \
-                            WHERE vd."voteId" = :voteId \
-                              AND vd."deletedAt" IS NULL \
-                            \
-                            UNION ALL \
-                            \
-                            SELECT \
-                                vd."voteId", \
-                                vd."toUserId", \
-                                dc."byUserId", \
-                                dc.depth+1 \
-                            FROM delegations dc, "VoteDelegations" vd \
-                            WHERE vd."byUserId" = dc."toUserId" \
-                              AND vd."voteId" = dc."voteId" \
-                              AND vd."deletedAt" IS NULL \
-                        ), \
-                        indirect_delegations("voteId", "toUserId", "byUserId", depth) AS ( \
-                            SELECT DISTINCT ON("byUserId") \
-                                "voteId", \
-                                "toUserId", \
-                                "byUserId", \
-                                depth \
-                            FROM delegations \
-                            ORDER BY "byUserId", depth DESC \
-                        ), \
-                        vote_groups("voteId", "userId", "optionGroupId", "updatedAt") AS ( \
-                            SELECT DISTINCT ON (vl."userId") vl."voteId", vl."userId", vli."optionGroupId", vl."updatedAt" \
-                            FROM ( \
-                                SELECT DISTINCT ON (vl."userId", MAX(vl."updatedAt")) \
-                                vl."userId", \
-                                vl."voteId", \
-                                MAX(vl."updatedAt") as "updatedAt" \
-                                FROM "VoteLists" vl \
-                                WHERE vl."voteId" = :voteId \
-                                AND vl."deletedAt" IS NULL \
-                                GROUP BY vl."userId", vl."voteId" \
-                                ORDER BY MAX(vl."updatedAt") DESC \
-                            ) vl \
-                            JOIN "VoteLists" vli \
-                            ON \
-                                vli."userId" = vl."userId" \
-                                AND vl."voteId" = vli."voteId" \
-                                AND vli."updatedAt" = vl."updatedAt" \
-                            WHERE vl."voteId" = :voteId \
-                                AND vl."userId" NOT IN \
-                                ( \
-                                    SELECT DISTINCT \
-                                        uc."connectedUser" \
-                                    FROM ( \
-                                        SELECT \
-                                            vl."userId", \
-                                            vl."updatedAt" \
-                                        FROM "VoteLists" vl \
-                                        WHERE vl."voteId" = :voteId \
-                                        AND vl."deletedAt" IS NULL \
-                                        ORDER BY vl."updatedAt" DESC \
-                                    ) vl \
-                                    JOIN \
-                                    ( \
-                                        SELECT \
-                                            uc."userId", \
-                                            uci."userId" as "connectedUser", \
-                                            uc."connectionId", \
-                                            uc."connectionUserId" \
-                                        FROM "UserConnections" uc \
-                                        JOIN "UserConnections" uci \
-                                            ON uc."connectionId" = uci."connectionId" \
-                                            AND uc."connectionUserId" = uci."connectionUserId" \
-                                            AND uc."userId" <> uci."userId" \
-                                    ) uc ON uc."userId" = vl."userId" \
-                                    JOIN ( \
-                                        SELECT \
-                                            vl."userId", \
-                                            vl."updatedAt" \
-                                            FROM "VoteLists" vl \
-                                            WHERE vl."voteId" = :voteId \
-                                                AND vl."deletedAt" IS NULL \
-                                            ORDER BY vl."updatedAt" DESC \
-                                    ) vli ON uc."connectedUser" = vli."userId" AND vli."updatedAt" < vl."updatedAt" \
-                                ) \
-                        ), \
-                        votes("voteId", "userId", "optionId", "optionGroupId") AS ( \
-                            SELECT \
-                                vl."voteId", \
-                                vl."userId", \
-                                vl."optionId", \
-                                vl."optionGroupId" \
-                            FROM "VoteLists" vl \
-                            JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."optionGroupId" = vg."optionGroupId") \
-                            WHERE vl."voteId" =  :voteId \
-                        ), \
-                        votes_with_delegations("voteId", "userId", "optionId", "optionGroupId", depth) AS ( \
-                            SELECT \
-                                v."voteId", \
-                                v."userId", \
-                                v."optionId", \
-                                v."optionGroupId", \
-                                id."depth" \
-                            FROM votes v \
-                            LEFT JOIN indirect_delegations id ON (v."userId" = id."toUserId") \
-                            WHERE v."userId" NOT IN (SELECT "byUserId" FROM indirect_delegations WHERE "voteId"=v."voteId") \
-                        ) \
-                    \
-                    SELECT \
-                        SUM(v."voteCount")::integer as "voteCount", \
-                        v."optionId", \
-                        v."voteId", \
-                        vo."value" \
-                        ' + includeVoted + ' \
-                    FROM ( \
-                        SELECT \
-                            COUNT(v."optionId") + 1 as "voteCount", \
-                            v."optionId", \
-                            v."optionGroupId", \
-                            v."voteId" \
-                        FROM votes_with_delegations v \
-                        WHERE v.depth IS NOT NULL \
-                        GROUP BY v."optionId", v."optionGroupId", v."voteId" \
-                        \
-                        UNION ALL \
-                        \
-                        SELECT \
-                            COUNT(v."optionId") as "voteCount", \
-                            v."optionId", \
-                            v."optionGroupId", \
-                            v."voteId" \
-                        FROM votes_with_delegations v \
-                        WHERE v.depth IS NULL \
-                        GROUP BY v."optionId", v."optionGroupId", v."voteId" \
-                    ) v \
-                    LEFT JOIN "VoteOptions" vo ON (v."optionId" = vo."id") \
-                    GROUP BY v."optionId", v."voteId", vo."value" \
-                ;',
+            .query(sql,
                 {
                     replacements: {
                         voteId: voteId,
@@ -639,145 +626,146 @@ module.exports = function (app) {
 
         if (include) {
             if (include.indexOf('vote') > -1) {
-                join += ' \
-                LEFT JOIN ( \
-                            SELECT "voteId", to_json(array( \
-                                SELECT CONCAT(id, \':\', value) \
-                                FROM "VoteOptions" \
-                                WHERE "deletedAt" IS NULL AND vo."voteId"="voteId" \
-                            )) as "optionIds" \
-                            FROM "VoteOptions" vo \
-                            WHERE vo."deletedAt" IS NULL \
-                            GROUP BY "voteId" \
-                        ) AS vo ON vo."voteId"=tv."voteId" ';
-                returncolumns += ' \
-                , vo."optionIds" as "vote.options" \
-                , tv."voteId" as "vote.id" \
-                , tv."authType" as "vote.authType" \
-                , tv."createdAt" as "vote.createdAt" \
-                , tv."delegationIsAllowed" as "vote.delegationIsAllowed" \
-                , tv."description" as "vote.description" \
-                , tv."endsAt" as "vote.endsAt" \
-                , tv."maxChoices" as "vote.maxChoices" \
-                , tv."minChoices" as "vote.minChoices" \
-                , tv."type" as "vote.type" \
-                ';
+                join += `
+                LEFT JOIN (
+                    SELECT "voteId", to_json(array(
+                        SELECT CONCAT(id, ':', value)
+                        FROM "VoteOptions"
+                        WHERE "deletedAt" IS NULL AND vo."voteId"="voteId"
+                    )) as "optionIds"
+                    FROM "VoteOptions" vo
+                    WHERE vo."deletedAt" IS NULL
+                    GROUP BY "voteId"
+                ) AS vo ON vo."voteId"=tv."voteId" `;
+
+                returncolumns += `
+                    , vo."optionIds" as "vote.options"
+                    , tv."voteId" as "vote.id"
+                    , tv."authType" as "vote.authType"
+                    , tv."createdAt" as "vote.createdAt"
+                    , tv."delegationIsAllowed" as "vote.delegationIsAllowed"
+                    , tv."description" as "vote.description"
+                    , tv."endsAt" as "vote.endsAt"
+                    , tv."maxChoices" as "vote.maxChoices"
+                    , tv."minChoices" as "vote.minChoices"
+                    , tv."type" as "vote.type"
+                `;
             }
             if (include.indexOf('event') > -1) {
-                join += '\
-                    LEFT JOIN ( \
-                        SELECT COUNT(events.id) as count, \
-                        events."topicId" \
-                        FROM "TopicEvents" events\
-                        WHERE events."topicId" = :topicId \
-                        AND events."deletedAt" IS NULL \
-                        GROUP BY events."topicId" \
-                    ) as te ON te."topicId" = t.id \
-                ';
-                returncolumns += ' \
-                    , COALESCE(te.count, 0) AS "events.count" \
-                    ';
+                join += `
+                    LEFT JOIN (
+                        SELECT COUNT(events.id) as count,
+                        events."topicId"
+                        FROM "TopicEvents" events
+                        WHERE events."topicId" = :topicId
+                        AND events."deletedAt" IS NULL
+                        GROUP BY events."topicId"
+                    ) as te ON te."topicId" = t.id
+                    `;
+                returncolumns += `
+                    , COALESCE(te.count, 0) AS "events.count"
+                    `;
             }
         }
 
         return db
             .query(
-                'SELECT \
-                     t.id, \
-                     t.title, \
-                     t.description, \
-                     t.status, \
-                     t.visibility, \
-                     t.categories, \
-                     t."endsAt", \
-                     t."padUrl", \
-                     t."sourcePartnerId", \
-                     t."sourcePartnerObjectId", \
-                     t."updatedAt", \
-                     t."createdAt", \
-                     t."hashtag", \
-                     c.id as "creator.id", \
-                     c.name as "creator.name", \
-                     c.company as "creator.company", \
-                     \'none\' as "permission.level", \
-                     muc.count as "members.users.count", \
-                     COALESCE(mgc.count, 0) as "members.groups.count", \
-                     tv."voteId", \
-                     tr."id" AS "report.id", \
-                     tr."moderatedReasonType" AS "report.moderatedReasonType", \
-                     tr."moderatedReasonText" AS "report.moderatedReasonText", \
-                     au.authors \
-                     ' + returncolumns + ' \
-                FROM "Topics" t \
-                    LEFT JOIN "Users" c ON (c.id = t."creatorId") \
-                    LEFT JOIN ( \
-                        SELECT tmu."topicId", COUNT(tmu."memberId") AS "count" FROM ( \
-                            SELECT \
-                                tmuu."topicId", \
-                                tmuu."userId" AS "memberId" \
-                            FROM "TopicMemberUsers" tmuu \
-                            WHERE tmuu."deletedAt" IS NULL \
-                            UNION \
-                            SELECT \
-                                tmg."topicId", \
-                                gm."userId" AS "memberId" \
-                            FROM "TopicMemberGroups" tmg \
-                                LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
-                                JOIN "Groups" gr on gr.id = tmg."groupId" \
-                            WHERE tmg."deletedAt" IS NULL \
-                            AND gm."deletedAt" IS NULL \
-                            AND gr."deletedAt" IS NULL \
-                        ) AS tmu GROUP BY "topicId" \
-                    ) AS muc ON (muc."topicId" = t.id) \
-                    LEFT JOIN ( \
-                        SELECT tmgc."topicId", count(tmgc."groupId") AS "count" \
-                        FROM "TopicMemberGroups" tmgc \
-                        JOIN "Groups" gc \
-                            ON gc.id = tmgc."groupId" \
-                        WHERE tmgc."deletedAt" IS NULL \
-                        AND gc."deletedAt" IS NULL \
-                        GROUP BY tmgc."topicId" \
-                    ) AS mgc ON (mgc."topicId" = t.id) \
-                    LEFT JOIN ( \
-                        SELECT \
-                            t.id as "topicId", \
-                            json_agg(u) as authors\
-                        FROM \
-                        "Topics" t \
-                        LEFT JOIN (SELECT id,  name FROM "Users") AS u \
-                        ON \
-                        u.id IN (SELECT unnest(t."authorIds")) \
-                        GROUP BY t.id \
-                    ) AS au ON au."topicId" = t.id \
-                    LEFT JOIN ( \
-                        SELECT \
-                            tv."topicId", \
-                            tv."voteId", \
-                            v."authType", \
-                            v."createdAt", \
-                            v."delegationIsAllowed", \
-                            v."description", \
-                            v."endsAt", \
-                            v."maxChoices", \
-                            v."minChoices", \
-                            v."type" \
-                        FROM "TopicVotes" tv INNER JOIN \
-                            (   \
-                                SELECT \
-                                    MAX("createdAt") as "createdAt", \
-                                    "topicId" \
-                                FROM "TopicVotes" \
-                                GROUP BY "topicId" \
-                            ) AS _tv ON (_tv."topicId" = tv."topicId" AND _tv."createdAt" = tv."createdAt") \
-                        LEFT JOIN "Votes" v \
-                                ON v.id = tv."voteId" \
-                    ) AS tv ON (tv."topicId" = t.id) \
-                    LEFT JOIN "TopicReports" tr ON (tr."topicId" = t.id AND tr."resolvedById" IS NULL AND tr."deletedAt" IS NULL) \
-                    ' + join + ' \
-                WHERE t.id = :topicId \
-                  AND t.visibility = \'public\'\
-                  AND t."deletedAt" IS NULL \
-                ',
+                `SELECT
+                     t.id,
+                     t.title,
+                     t.description,
+                     t.status,
+                     t.visibility,
+                     t.categories,
+                     t."endsAt",
+                     t."padUrl",
+                     t."sourcePartnerId",
+                     t."sourcePartnerObjectId",
+                     t."updatedAt",
+                     t."createdAt",
+                     t."hashtag",
+                     c.id as "creator.id",
+                     c.name as "creator.name",
+                     c.company as "creator.company",
+                     'none' as "permission.level",
+                     muc.count as "members.users.count",
+                     COALESCE(mgc.count, 0) as "members.groups.count",
+                     tv."voteId",
+                     tr."id" AS "report.id",
+                     tr."moderatedReasonType" AS "report.moderatedReasonType",
+                     tr."moderatedReasonText" AS "report.moderatedReasonText",
+                     au.authors
+                     ${returncolumns}
+                FROM "Topics" t
+                    LEFT JOIN "Users" c ON (c.id = t."creatorId")
+                    LEFT JOIN (
+                        SELECT tmu."topicId", COUNT(tmu."memberId") AS "count" FROM (
+                            SELECT
+                                tmuu."topicId",
+                                tmuu."userId" AS "memberId"
+                            FROM "TopicMemberUsers" tmuu
+                            WHERE tmuu."deletedAt" IS NULL
+                            UNION
+                            SELECT
+                                tmg."topicId",
+                                gm."userId" AS "memberId"
+                            FROM "TopicMemberGroups" tmg
+                                LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                                JOIN "Groups" gr on gr.id = tmg."groupId"
+                            WHERE tmg."deletedAt" IS NULL
+                            AND gm."deletedAt" IS NULL
+                            AND gr."deletedAt" IS NULL
+                        ) AS tmu GROUP BY "topicId"
+                    ) AS muc ON (muc."topicId" = t.id)
+                    LEFT JOIN (
+                        SELECT tmgc."topicId", count(tmgc."groupId") AS "count"
+                        FROM "TopicMemberGroups" tmgc
+                        JOIN "Groups" gc
+                            ON gc.id = tmgc."groupId"
+                        WHERE tmgc."deletedAt" IS NULL
+                        AND gc."deletedAt" IS NULL
+                        GROUP BY tmgc."topicId"
+                    ) AS mgc ON (mgc."topicId" = t.id)
+                    LEFT JOIN (
+                        SELECT
+                            t.id as "topicId",
+                            json_agg(u) as authors
+                        FROM
+                        "Topics" t
+                        LEFT JOIN (SELECT id,  name FROM "Users") AS u
+                        ON
+                        u.id IN (SELECT unnest(t."authorIds"))
+                        GROUP BY t.id
+                    ) AS au ON au."topicId" = t.id
+                    LEFT JOIN (
+                        SELECT
+                            tv."topicId",
+                            tv."voteId",
+                            v."authType",
+                            v."createdAt",
+                            v."delegationIsAllowed",
+                            v."description",
+                            v."endsAt",
+                            v."maxChoices",
+                            v."minChoices",
+                            v."type"
+                        FROM "TopicVotes" tv INNER JOIN
+                            (
+                                SELECT
+                                    MAX("createdAt") as "createdAt",
+                                    "topicId"
+                                FROM "TopicVotes"
+                                GROUP BY "topicId"
+                            ) AS _tv ON (_tv."topicId" = tv."topicId" AND _tv."createdAt" = tv."createdAt")
+                        LEFT JOIN "Votes" v
+                                ON v.id = tv."voteId"
+                    ) AS tv ON (tv."topicId" = t.id)
+                    LEFT JOIN "TopicReports" tr ON (tr."topicId" = t.id AND tr."resolvedById" IS NULL AND tr."deletedAt" IS NULL)
+                    ${join}
+                WHERE t.id = :topicId
+                  AND t.visibility = 'public'
+                  AND t."deletedAt" IS NULL
+                  `,
                 {
                     replacements: {
                         topicId: topicId
@@ -801,285 +789,274 @@ module.exports = function (app) {
 
         if (include) {
             if (include.indexOf('vote') > -1) {
-                join += ' \
-                    LEFT JOIN ( \
-                                SELECT "voteId", to_json(array( \
-                                    SELECT CONCAT(id, \':\', value) \
-                                    FROM "VoteOptions" \
-                                    WHERE "deletedAt" IS NULL AND vo."voteId"="voteId" \
-                                )) as "optionIds" \
-                                FROM "VoteOptions" vo \
-                                WHERE vo."deletedAt" IS NULL \
-                                GROUP BY "voteId" \
-                            ) AS vo ON vo."voteId"=tv."voteId" ';
-                returncolumns += ' \
-                    , vo."optionIds" as "vote.options" \
-                    , tv."voteId" as "vote.id" \
-                    , tv."authType" as "vote.authType" \
-                    , tv."createdAt" as "vote.createdAt" \
-                    , tv."delegationIsAllowed" as "vote.delegationIsAllowed" \
-                    , tv."description" as "vote.description" \
-                    , tv."endsAt" as "vote.endsAt" \
-                    , tv."maxChoices" as "vote.maxChoices" \
-                    , tv."minChoices" as "vote.minChoices" \
-                    , tv."type" as "vote.type" \
-                    ';
+                join += `
+                    LEFT JOIN (
+                        SELECT "voteId", to_json(array(
+                            SELECT CONCAT(id, ':', value)
+                            FROM "VoteOptions"
+                            WHERE "deletedAt" IS NULL AND vo."voteId"="voteId"
+                        )) as "optionIds"
+                        FROM "VoteOptions" vo
+                        WHERE vo."deletedAt" IS NULL
+                        GROUP BY "voteId"
+                    ) AS vo ON vo."voteId"=tv."voteId" `;
+                returncolumns += `
+                    , vo."optionIds" as "vote.options"
+                    , tv."voteId" as "vote.id"
+                    , tv."authType" as "vote.authType"
+                    , tv."createdAt" as "vote.createdAt"
+                    , tv."delegationIsAllowed" as "vote.delegationIsAllowed"
+                    , tv."description" as "vote.description"
+                    , tv."endsAt" as "vote.endsAt"
+                    , tv."maxChoices" as "vote.maxChoices"
+                    , tv."minChoices" as "vote.minChoices"
+                    , tv."type" as "vote.type"
+                    `;
             }
 
             if (include.indexOf('event') > -1) {
-                join += '\
-                    LEFT JOIN ( \
-                        SELECT COUNT(events.id) as count, \
-                        events."topicId" \
-                        FROM "TopicEvents" events\
-                        WHERE events."topicId" = :topicId \
-                        AND events."deletedAt" IS NULL \
-                        GROUP BY events."topicId" \
-                    ) as te ON te."topicId" = t.id \
-                ';
-                returncolumns += ' \
-                    , COALESCE(te.count, 0) AS "events.count" \
-                    ';
+                join += `
+                    LEFT JOIN (
+                        SELECT COUNT(events.id) as count,
+                        events."topicId"
+                        FROM "TopicEvents" events
+                        WHERE events."topicId" = :topicId
+                        AND events."deletedAt" IS NULL
+                        GROUP BY events."topicId"
+                    ) as te ON te."topicId" = t.id
+                `;
+                returncolumns += `
+                    , COALESCE(te.count, 0) AS "events.count"
+                `;
             }
         }
 
         if (user.moderator) {
-            returncolumns += ' \
-            , c.email as "creator.email" \
-            , uc."connectionData"::jsonb->>\'pid\' AS "creator.pid" \
-            , uc."connectionData"::jsonb->\'phoneNumber\' AS "creator.phoneNumber" \
-            ';
+            returncolumns += `
+            , c.email as "creator.email"
+            , uc."connectionData"::jsonb->>'pid' AS "creator.pid"
+            , uc."connectionData"::jsonb->'phoneNumber' AS "creator.phoneNumber"
+            `;
 
-            returncolumns += ' \
-            , tr."type" AS "report.type" \
-            , tr."text" AS "report.text" \
-            ';
-            authorColumns += '\
-            , u.email \
-            ';
+            returncolumns += `
+            , tr."type" AS "report.type"
+            , tr."text" AS "report.text"
+            `;
+            authorColumns += `
+            , u.email
+            `;
         }
 
-        return db
-            .query(
-                'SELECT \
-                        t.id, \
-                        t.title, \
-                        t.description, \
-                        t.status, \
-                        t.visibility, \
-                        t.hashtag, \
-                        CASE \
-                        WHEN COALESCE(tmup.level, tmgp.level, \'none\') = \'admin\' THEN t."tokenJoin" \
-                        ELSE NULL \
-                        END as "tokenJoin", \
-                        CASE \
-                        WHEN tp."topicId" = t.id THEN true \
-                        ELSE false \
-                        END as "pinned", \
-                        t.categories, \
-                        t."endsAt", \
-                        t."padUrl", \
-                        t."sourcePartnerId", \
-                        t."sourcePartnerObjectId", \
-                        t."createdAt", \
-                        t."updatedAt", \
-                        c.id as "creator.id", \
-                        c.name as "creator.name", \
-                        c.company as "creator.company", \
-                        COALESCE(\
-                        tmup.level, \
-                        tmgp.level, \
-                        \'none\' \
-                    ) as "permission.level", \
-                        muc.count as "members.users.count", \
-                        COALESCE(mgc.count, 0) as "members.groups.count", \
-                        tv."voteId", \
-                        u.id as "user.id", \
-                        u.name as "user.name", \
-                        u.language as "user.language", \
-                        tr.id AS "report.id", \
-                        tr."moderatedReasonType" AS "report.moderatedReasonType", \
-                        tr."moderatedReasonText" AS "report.moderatedReasonText", \
-                        au.authors \
-                        ' + returncolumns + ' \
-                FROM "Topics" t \
-                        LEFT JOIN ( \
-                        SELECT \
-                            tmu."topicId", \
-                            tmu."userId", \
-                            tmu.level::text AS level \
-                        FROM "TopicMemberUsers" tmu \
-                        WHERE tmu."deletedAt" IS NULL \
-                    ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId) \
-                    LEFT JOIN ( \
-                        SELECT \
-                            tmg."topicId", \
-                            gm."userId", \
-                            MAX(tmg.level)::text AS level \
-                        FROM "TopicMemberGroups" tmg \
-                            LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
-                        WHERE tmg."deletedAt" IS NULL \
-                        AND gm."deletedAt" IS NULL \
-                        GROUP BY "topicId", "userId" \
-                    ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId) \
-                    LEFT JOIN "Users" c ON (c.id = t."creatorId") \
-                    LEFT JOIN "UserConnections" uc ON (uc."userId" = t."creatorId") \
-                    LEFT JOIN ( \
-                        SELECT \
-                            t.id AS "topicId", \
-                            json_agg(u) as authors\
-                        FROM \
-                        "Topics" t \
-                        LEFT JOIN (SELECT ' + authorColumns + ' FROM "Users" u ) u \
-                        ON \
-                        u.id IN (SELECT unnest(t."authorIds")) \
-                        GROUP BY t.id \
-                    ) AS au ON au."topicId" = t.id \
-                    LEFT JOIN ( \
-                        SELECT tmu."topicId", COUNT(tmu."memberId") AS "count" FROM ( \
-                            SELECT \
-                                tmuu."topicId", \
-                                tmuu."userId" AS "memberId" \
-                            FROM "TopicMemberUsers" tmuu \
-                            WHERE tmuu."deletedAt" IS NULL \
-                            UNION \
-                            SELECT \
-                                tmg."topicId", \
-                                gm."userId" AS "memberId" \
-                            FROM "TopicMemberGroups" tmg \
-                                LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
-                                JOIN "Groups" gr ON gr.id = tmg."groupId" \
-                            WHERE tmg."deletedAt" IS NULL \
-                            AND gm."deletedAt" IS NULL \
-                            AND gr."deletedAt" IS NULL \
-                        ) AS tmu GROUP BY "topicId" \
-                    ) AS muc ON (muc."topicId" = t.id) \
-                    LEFT JOIN ( \
-                        SELECT "topicId", count("groupId") AS "count" \
-                        FROM "TopicMemberGroups" tmg \
-                        JOIN "Groups" g ON tmg."groupId" = g.id \
-                        WHERE tmg."deletedAt" IS NULL \
-                        AND g."deletedAt" IS NULL \
-                        GROUP BY "topicId" \
-                    ) AS mgc ON (mgc."topicId" = t.id) \
-                    LEFT JOIN "Users" u ON (u.id = :userId) \
-                    LEFT JOIN ( \
-                        SELECT \
-                            tv."topicId", \
-                            tv."voteId", \
-                            v."authType", \
-                            v."createdAt", \
-                            v."delegationIsAllowed", \
-                            v."description", \
-                            v."endsAt", \
-                            v."maxChoices", \
-                            v."minChoices", \
-                            v."type" \
-                        FROM "TopicVotes" tv INNER JOIN \
-                            (   \
-                                SELECT \
-                                    MAX("createdAt") as "createdAt", \
-                                    "topicId" \
-                                FROM "TopicVotes" \
-                                GROUP BY "topicId" \
-                            ) AS _tv ON (_tv."topicId" = tv."topicId" AND _tv."createdAt" = tv."createdAt") \
-                        LEFT JOIN "Votes" v \
-                                ON v.id = tv."voteId" \
-                    ) AS tv ON (tv."topicId" = t.id) \
-                    LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId \
-                    LEFT JOIN "TopicReports" tr ON (tr."topicId" = t.id AND tr."resolvedById" IS NULL AND tr."deletedAt" IS NULL) \
-                    ' + join + ' \
-                WHERE t.id = :topicId \
-                    AND t."deletedAt" IS NULL \
-                ',
-                {
-                    replacements: {
-                        topicId: topicId,
-                        userId: user.id
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true,
-                    nest: true
-                }
-            )
-            .then(function (result) {
-                if (result && result.length && result[0]) {
-                    return result[0];
-                } else {
-                    logger.warn('Topic not found', topicId);
-                    return Promise.reject();
-                }
-            })
-            .then(function (topic) {
-                topic.padUrl = cosEtherpad.getUserAccessUrl(topic, topic.user.id, topic.user.name, topic.user.language, partner);
-                topic.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+        const result = await db.query(
+            `SELECT
+                    t.id,
+                    t.title,
+                    t.description,
+                    t.status,
+                    t.visibility,
+                    t.hashtag,
+                    CASE
+                    WHEN COALESCE(tmup.level, tmgp.level, 'none') =  'admin' THEN t."tokenJoin"
+                    ELSE NULL
+                    END as "tokenJoin",
+                    CASE
+                    WHEN tp."topicId" = t.id THEN true
+                    ELSE false
+                    END as "pinned",
+                    t.categories,
+                    t."endsAt",
+                    t."padUrl",
+                    t."sourcePartnerId",
+                    t."sourcePartnerObjectId",
+                    t."createdAt",
+                    t."updatedAt",
+                    c.id as "creator.id",
+                    c.name as "creator.name",
+                    c.company as "creator.company",
+                    COALESCE(
+                    tmup.level,
+                    tmgp.level,
+                        'none '
+                ) as "permission.level",
+                    muc.count as "members.users.count",
+                    COALESCE(mgc.count, 0) as "members.groups.count",
+                    tv."voteId",
+                    u.id as "user.id",
+                    u.name as "user.name",
+                    u.language as "user.language",
+                    tr.id AS "report.id",
+                    tr."moderatedReasonType" AS "report.moderatedReasonType",
+                    tr."moderatedReasonText" AS "report.moderatedReasonText",
+                    au.authors
+                    ${returncolumns}
+            FROM "Topics" t
+                    LEFT JOIN (
+                    SELECT
+                        tmu."topicId",
+                        tmu."userId",
+                        tmu.level::text AS level
+                    FROM "TopicMemberUsers" tmu
+                    WHERE tmu."deletedAt" IS NULL
+                ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId)
+                LEFT JOIN (
+                    SELECT
+                        tmg."topicId",
+                        gm."userId",
+                        MAX(tmg.level)::text AS level
+                    FROM "TopicMemberGroups" tmg
+                        LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                    WHERE tmg."deletedAt" IS NULL
+                    AND gm."deletedAt" IS NULL
+                    GROUP BY "topicId", "userId"
+                ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
+                LEFT JOIN "Users" c ON (c.id = t."creatorId")
+                LEFT JOIN "UserConnections" uc ON (uc."userId" = t."creatorId")
+                LEFT JOIN (
+                    SELECT
+                        t.id AS "topicId",
+                        json_agg(u) as authors
+                    FROM
+                    "Topics" t
+                    LEFT JOIN (SELECT ${authorColumns} FROM "Users" u ) u
+                    ON
+                    u.id IN (SELECT unnest(t."authorIds"))
+                    GROUP BY t.id
+                ) AS au ON au."topicId" = t.id
+                LEFT JOIN (
+                    SELECT tmu."topicId", COUNT(tmu."memberId") AS "count" FROM (
+                        SELECT
+                            tmuu."topicId",
+                            tmuu."userId" AS "memberId"
+                        FROM "TopicMemberUsers" tmuu
+                        WHERE tmuu."deletedAt" IS NULL
+                        UNION
+                        SELECT
+                            tmg."topicId",
+                            gm."userId" AS "memberId"
+                        FROM "TopicMemberGroups" tmg
+                            LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                            JOIN "Groups" gr ON gr.id = tmg."groupId"
+                        WHERE tmg."deletedAt" IS NULL
+                        AND gm."deletedAt" IS NULL
+                        AND gr."deletedAt" IS NULL
+                    ) AS tmu GROUP BY "topicId"
+                ) AS muc ON (muc."topicId" = t.id)
+                LEFT JOIN (
+                    SELECT "topicId", count("groupId") AS "count"
+                    FROM "TopicMemberGroups" tmg
+                    JOIN "Groups" g ON tmg."groupId" = g.id
+                    WHERE tmg."deletedAt" IS NULL
+                    AND g."deletedAt" IS NULL
+                    GROUP BY "topicId"
+                ) AS mgc ON (mgc."topicId" = t.id)
+                LEFT JOIN "Users" u ON (u.id = :userId)
+                LEFT JOIN (
+                    SELECT
+                        tv."topicId",
+                        tv."voteId",
+                        v."authType",
+                        v."createdAt",
+                        v."delegationIsAllowed",
+                        v."description",
+                        v."endsAt",
+                        v."maxChoices",
+                        v."minChoices",
+                        v."type"
+                    FROM "TopicVotes" tv INNER JOIN
+                        (
+                            SELECT
+                                MAX("createdAt") as "createdAt",
+                                "topicId"
+                            FROM "TopicVotes"
+                            GROUP BY "topicId"
+                        ) AS _tv ON (_tv."topicId" = tv."topicId" AND _tv."createdAt" = tv."createdAt")
+                    LEFT JOIN "Votes" v
+                            ON v.id = tv."voteId"
+                ) AS tv ON (tv."topicId" = t.id)
+                LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId
+                LEFT JOIN "TopicReports" tr ON (tr."topicId" = t.id AND tr."resolvedById" IS NULL AND tr."deletedAt" IS NULL)
+                ${join}
+            WHERE t.id = :topicId
+                AND t."deletedAt" IS NULL
+            `,
+            {
+                replacements: {
+                    topicId: topicId,
+                    userId: user.id
+                },
+                type: db.QueryTypes.SELECT,
+                raw: true,
+                nest: true
+            }
+        );
+        let topic;
+        if (result && result.length && result[0]) {
+            topic = result[0];
+        } else {
+            logger.warn('Topic not found', topicId);
+            return;
+        }
+        topic.padUrl = cosEtherpad.getUserAccessUrl(topic, topic.user.id, topic.user.name, topic.user.language, partner);
+        topic.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
 
-                if (topic.visibility === Topic.VISIBILITY.public && topic.permission.level === TopicMemberUser.LEVELS.none) {
-                    topic.permission.level = TopicMemberUser.LEVELS.read;
-                }
-                // Remove the user info from output, was only needed for padUrl generation
-                delete topic.user;
+        if (topic.visibility === Topic.VISIBILITY.public && topic.permission.level === TopicMemberUser.LEVELS.none) {
+            topic.permission.level = TopicMemberUser.LEVELS.read;
+        }
+        // Remove the user info from output, was only needed for padUrl generation
+        delete topic.user;
 
-                if (include && include.indexOf('vote') > -1 && topic.vote && topic.vote.id) {
+        if (include && include.indexOf('vote') > -1 && topic.vote && topic.vote.id) {
 
-                    return getVoteResults(topic.vote.id, user.id)
-                        .then(
-                            function (result) {
-                                const options = [];
-                                let hasVoted = false;
+            const voteResult = await getVoteResults(topic.vote.id, user.id);
+            const options = [];
+            let hasVoted = false;
 
-                                topic.vote.options.forEach(function (option) {
-                                    option = option.split(':');
-                                    const o = {
-                                        id: option[0],
-                                        value: option[1]
-                                    };
-                                    if (result) {
-                                        const res = _.find(result, {'optionId': o.id});
-                                        if (res) {
-                                            o.voteCount = parseInt(res.voteCount, 10);
-                                            if (res.selected) {
-                                                o.selected = res.selected;
-                                                hasVoted = true;
-                                            }
-                                        }
-                                    }
-                                    options.push(o);
-                                });
-
-                                if (topic.vote.authType === Vote.AUTH_TYPES.hard && hasVoted) {
-                                    topic.vote.downloads = {
-                                        bdocVote: getBdocURL({
-                                            userId: user.id,
-                                            topicId: topicId,
-                                            voteId: topic.vote.id,
-                                            type: 'user'
-                                        })
-                                    };
-                                }
-
-                                topic.vote.options = {
-                                    count: options.length,
-                                    rows: options
-                                };
-
-                                if (!topic.report.id) {
-                                    delete topic.report;
-                                }
-
-                                return topic;
-                            }
-                        );
-                } else {
-                    delete topic.vote;
-
-                    if (!topic.report.id) {
-                        delete topic.report;
+            topic.vote.options.forEach(function (option) {
+                option = option.split(':');
+                const o = {
+                    id: option[0],
+                    value: option[1]
+                };
+                if (voteResult) {
+                    const res = _.find(voteResult, {'optionId': o.id});
+                    if (res) {
+                        const count = parseInt(res.voteCount, 10);
+                        if (count) {
+                            o.voteCount = count;
+                        }
+                        if (res.selected) {
+                            o.selected = res.selected;
+                            hasVoted = true;
+                        }
                     }
-
-                    return topic;
                 }
+                options.push(o);
             });
+
+            if (topic.vote.authType === Vote.AUTH_TYPES.hard && hasVoted) {
+                topic.vote.downloads = {
+                    bdocVote: getBdocURL({
+                        userId: user.id,
+                        topicId: topicId,
+                        voteId: topic.vote.id,
+                        type: 'user'
+                    })
+                };
+            }
+
+            topic.vote.options = {
+                count: options.length,
+                rows: options
+            };
+        } else {
+            delete topic.vote;
+        }
+
+        if (!topic.report.id) {
+            delete topic.report;
+        }
+
+        return topic;
     };
 
     const getAllVotesResults = function (userId) {
@@ -1087,197 +1064,211 @@ module.exports = function (app) {
         let join = '';
         let select = '';
         if (!userId) {
-            where = ' AND t.visibility = \'' + Topic.VISIBILITY.public + '\' ';
+            where = ` AND t.visibility = '${Topic.VISIBILITY.public}'`;
         } else {
             select = ', (SELECT true FROM pg_temp.votes(v."voteId") WHERE "userId" = :userId AND "optionId" = v."optionId") as "selected" ';
-            where = 'AND COALESCE(tmup.level, tmgp.level, \'none\')::"enum_TopicMemberUsers_level" > \'none\'';
-            join += 'LEFT JOIN ( \
-                        SELECT \
-                            tmu."topicId", \
-                            tmu."userId", \
-                            tmu.level::text AS level \
-                        FROM "TopicMemberUsers" tmu \
-                        WHERE tmu."deletedAt" IS NULL \
-                    ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId) \
-                    LEFT JOIN ( \
-                        SELECT \
-                            tmg."topicId", \
-                            gm."userId", \
-                            MAX(tmg.level)::text AS level \
-                        FROM "TopicMemberGroups" tmg \
-                            LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
-                        WHERE tmg."deletedAt" IS NULL \
-                        AND gm."deletedAt" IS NULL \
-                        GROUP BY "topicId", "userId" \
-                    ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId) \
-            ';
+            where = `AND COALESCE(tmup.level, tmgp.level, 'none')::"enum_TopicMemberUsers_level" > 'none'`;
+            join += `LEFT JOIN (
+                        SELECT
+                            tmu."topicId",
+                            tmu."userId",
+                            tmu.level::text AS level
+                        FROM "TopicMemberUsers" tmu
+                        WHERE tmu."deletedAt" IS NULL
+                    ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId)
+                    LEFT JOIN (
+                        SELECT
+                            tmg."topicId",
+                            gm."userId",
+                            MAX(tmg.level)::text AS level
+                        FROM "TopicMemberGroups" tmg
+                            LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                        WHERE tmg."deletedAt" IS NULL
+                        AND gm."deletedAt" IS NULL
+                        GROUP BY "topicId", "userId"
+                    ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
+            `;
         }
-        const query = ' \
-                        CREATE OR REPLACE FUNCTION pg_temp.delegations(uuid) \
-                            RETURNS TABLE("voteId" uuid, "toUserId" uuid, "byUserId" uuid, depth INT) \
-                                AS $$ \
-                                    WITH  RECURSIVE q ("voteId", "toUserId", "byUserId", depth) \
-                                        AS \
-                                            ( \
-                                            SELECT \
-                                                vd."voteId", \
-                                                vd."toUserId", \
-                                                vd."byUserId", \
-                                                1 \
-                                            FROM "VoteDelegations" vd \
-                                            WHERE vd."voteId" = $1 \
-                                              AND vd."deletedAt" IS NULL \
-                                            UNION ALL \
-                                            SELECT \
-                                                vd."voteId", \
-                                                vd."toUserId", \
-                                                dc."byUserId", \
-                                                dc.depth+1 \
-                                            FROM q dc, "VoteDelegations" vd \
-                                            WHERE vd."byUserId" = dc."toUserId" \
-                                              AND vd."voteId" = dc."voteId" \
-                                              AND vd."deletedAt" IS NULL \
-                                            ) \
-                            SELECT * FROM q; $$ \
-                        LANGUAGE SQL; \
-                        CREATE OR REPLACE FUNCTION pg_temp.indirect_delegations(uuid) \
-                            RETURNS TABLE("voteId" uuid, "toUserId" uuid, "byUserId" uuid, depth int) \
-                                AS $$ \
-                                    SELECT DISTINCT ON("byUserId") \
-                                        "voteId", \
-                                        "toUserId", \
-                                        "byUserId", \
-                                        depth \
-                                    FROM pg_temp.delegations($1) \
-                                    ORDER BY "byUserId", depth DESC; $$ \
-                            LANGUAGE SQL; \
-                        CREATE OR REPLACE FUNCTION pg_temp.vote_groups(uuid) \
-                            RETURNS TABLE ("voteId" uuid, "userId" uuid, "optionGroupId" character varying , "updatedAt" timestamp with time zone) \
-                            AS $$ \
-                            SELECT DISTINCT ON (vl."userId") vl."voteId", vl."userId", vli."optionGroupId", vl."updatedAt" \
-                            FROM ( \
-                                SELECT DISTINCT ON (vl."userId", MAX(vl."updatedAt")) \
-                                vl."userId", \
-                                vl."voteId", \
-                                MAX(vl."updatedAt") as "updatedAt" \
-                                FROM "VoteLists" vl \
-                                WHERE vl."voteId" = $1 \
-                                AND vl."deletedAt" IS NULL \
-                                GROUP BY vl."userId", vl."voteId" \
-                                ORDER BY MAX(vl."updatedAt") DESC \
-                            ) vl \
-                            JOIN "VoteLists" vli \
-                            ON \
-                                vli."userId" = vl."userId" \
-                                AND vl."voteId" = vli."voteId" \
-                                AND vli."updatedAt" = vl."updatedAt" \
-                            WHERE vl."voteId" = $1 \
-                                AND vl."userId" NOT IN \
-                                ( \
-                                    SELECT DISTINCT \
-                                        uc."connectedUser" \
-                                    FROM ( \
-                                        SELECT \
-                                            vl."userId", \
-                                            vl."updatedAt" \
-                                        FROM "VoteLists" vl \
-                                        WHERE vl."voteId" = $1 \
-                                        AND vl."deletedAt" IS NULL \
-                                        ORDER BY vl."updatedAt" DESC \
-                                    ) vl \
-                                    JOIN \
-                                    ( \
-                                        SELECT \
-                                            uc."userId", \
-                                            uci."userId" as "connectedUser", \
-                                            uc."connectionId", \
-                                            uc."connectionUserId" \
-                                        FROM "UserConnections" uc \
-                                        JOIN "UserConnections" uci \
-                                            ON uc."connectionId" = uci."connectionId" \
-                                            AND uc."connectionUserId" = uci."connectionUserId" \
-                                            AND uc."userId" <> uci."userId" \
-                                    ) uc ON uc."userId" = vl."userId" \
-                                    JOIN ( \
-                                        SELECT \
-                                            vl."userId", \
-                                            vl."updatedAt" \
-                                            FROM "VoteLists" vl \
-                                            WHERE vl."voteId" = $1 \
-                                                AND vl."deletedAt" IS NULL \
-                                            ORDER BY vl."updatedAt" DESC \
-                                    ) vli ON uc."connectedUser" = vli."userId" AND vli."updatedAt" < vl."updatedAt" \
-                                ) \
-                              ; $$ \
-                            LANGUAGE SQL; \
-                        CREATE OR REPLACE FUNCTION pg_temp.votes(uuid) \
-                            RETURNS TABLE ("voteId" uuid, "userId" uuid, "optionId" uuid, "optionGroupId" character varying) \
-                            AS $$ \
-                                SELECT \
-                                    vl."voteId", \
-                                    vl."userId", \
-                                    vl."optionId", \
-                                    vl."optionGroupId" \
-                                FROM "VoteLists" vl \
-                                JOIN pg_temp.vote_groups($1) vg ON (vl."voteId" = vg."voteId" AND vl."optionGroupId" = vg."optionGroupId") \
-                                WHERE vl."voteId" = $1; $$ \
-                            LANGUAGE SQL; \
-                        CREATE OR REPLACE FUNCTION pg_temp.votes_with_delegations(uuid) \
-                            RETURNS TABLE ("voteId" uuid, "userId" uuid, "optionId" uuid, "optionGroupId" varchar(8), depth int) \
-                            AS $$ \
-                                SELECT \
-                                    v."voteId", \
-                                    v."userId", \
-                                    v."optionId", \
-                                    v."optionGroupId", \
-                                    id."depth" \
-                                FROM pg_temp.votes($1) v \
-                                LEFT JOIN pg_temp.indirect_delegations($1) id ON (v."userId" = id."toUserId") \
-                                WHERE v."userId" NOT IN (SELECT "byUserId" FROM pg_temp.indirect_delegations($1) WHERE "voteId"=v."voteId"); $$ \
-                            LANGUAGE SQL; \
-                        CREATE OR REPLACE FUNCTION pg_temp.get_vote_results (uuid) \
-                            RETURNS TABLE ("voteCount" bigint, "optionId" uuid, "optionGroupId" varchar(8), "voteId" uuid) \
-                            AS $$ \
-                                SELECT \
-                                    COUNT(v."optionId") + 1 as "voteCount", \
-                                    v."optionId", \
-                                    v."optionGroupId", \
-                                    v."voteId" \
-                                FROM pg_temp.votes_with_delegations($1) v \
-                                WHERE v.depth IS NOT NULL \
-                                GROUP BY v."optionId", v."optionGroupId", v."voteId" \
-                                \
-                                UNION ALL \
-                                \
-                                SELECT \
-                                    COUNT(v."optionId") as "voteCount", \
-                                    v."optionId", \
-                                    v."optionGroupId", \
-                                    v."voteId" \
-                                FROM pg_temp.votes_with_delegations($1) v \
-                                WHERE v.depth IS NULL \
-                                GROUP BY v."optionId", v."optionGroupId", v."voteId"; $$ \
-                            LANGUAGE SQL; \
-                            \
-                        SELECT \
-                            SUM(v."voteCount") as "voteCount", \
-                            v."optionId", \
-                            v."voteId", \
-                            vo."value" \
-                            ' + select + ' \
-                        FROM "Topics" t \
-                        LEFT JOIN "TopicVotes" tv \
-                            ON tv."topicId" = t.id AND tv."deletedAt" IS NULL\
-                        LEFT JOIN pg_temp.get_vote_results(tv."voteId") v ON v."voteId" = tv."voteId" \
-                        LEFT JOIN "VoteOptions" vo ON v."optionId" = vo.id \
-                        ' + join + ' \
-                        WHERE  t."deletedAt" IS NULL \
-                        AND v."optionId" IS NOT NULL \
-                        AND v."voteId" IS NOT NULL \
-                        AND vo."value" IS NOT NULL \
-                        ' + where + '\
-                        GROUP BY v."optionId", v."voteId", vo."value" \
-                    ;';
+        const query = `
+                        CREATE OR REPLACE FUNCTION pg_temp.delegations(uuid)
+                            RETURNS TABLE("voteId" uuid, "toUserId" uuid, "byUserId" uuid, depth INT)
+                                AS $$
+                                    WITH  RECURSIVE q ("voteId", "toUserId", "byUserId", depth)
+                                        AS
+                                            (
+                                            SELECT
+                                                vd."voteId",
+                                                vd."toUserId",
+                                                vd."byUserId",
+                                                1
+                                            FROM "VoteDelegations" vd
+                                            WHERE vd."voteId" = $1
+                                              AND vd."deletedAt" IS NULL
+                                            UNION ALL
+                                            SELECT
+                                                vd."voteId",
+                                                vd."toUserId",
+                                                dc."byUserId",
+                                                dc.depth+1
+                                            FROM q dc, "VoteDelegations" vd
+                                            WHERE vd."byUserId" = dc."toUserId"
+                                              AND vd."voteId" = dc."voteId"
+                                              AND vd."deletedAt" IS NULL
+                                            )
+                            SELECT * FROM q; $$
+                        LANGUAGE SQL;
+                        CREATE OR REPLACE FUNCTION pg_temp.indirect_delegations(uuid)
+                            RETURNS TABLE("voteId" uuid, "toUserId" uuid, "byUserId" uuid, depth int)
+                                AS $$
+                                    SELECT DISTINCT ON("byUserId")
+                                        "voteId",
+                                        "toUserId",
+                                        "byUserId",
+                                        depth
+                                    FROM pg_temp.delegations($1)
+                                    ORDER BY "byUserId", depth DESC; $$
+                            LANGUAGE SQL;
+                        CREATE OR REPLACE FUNCTION pg_temp.vote_groups(uuid)
+                            RETURNS TABLE ("voteId" uuid, "userId" uuid, "optionGroupId" character varying , "updatedAt" timestamp with time zone)
+                            AS $$
+                            SELECT DISTINCT ON (vl."userId") vl."voteId", vl."userId", vli."optionGroupId", vl."updatedAt"
+                            FROM (
+                                SELECT DISTINCT ON (vl."userId", MAX(vl."updatedAt"))
+                                vl."userId",
+                                vl."voteId",
+                                MAX(vl."updatedAt") as "updatedAt"
+                                FROM "VoteLists" vl
+                                WHERE vl."voteId" = $1
+                                AND vl."deletedAt" IS NULL
+                                GROUP BY vl."userId", vl."voteId"
+                                ORDER BY MAX(vl."updatedAt") DESC
+                            ) vl
+                            JOIN "VoteLists" vli
+                            ON
+                                vli."userId" = vl."userId"
+                                AND vl."voteId" = vli."voteId"
+                                AND vli."updatedAt" = vl."updatedAt"
+                            WHERE vl."voteId" = $1
+                                AND vl."userId" NOT IN
+                                (
+                                    SELECT DISTINCT
+                                        uc."connectedUser"
+                                    FROM (
+                                        SELECT
+                                            vl."userId",
+                                            vl."updatedAt"
+                                        FROM "VoteLists" vl
+                                        WHERE vl."voteId" = $1
+                                        AND vl."deletedAt" IS NULL
+                                        ORDER BY vl."updatedAt" DESC
+                                    ) vl
+                                    JOIN
+                                    (
+                                        SELECT
+                                            uc."userId",
+                                            uci."userId" as "connectedUser",
+                                            uc."connectionId",
+                                            uc."connectionUserId"
+                                        FROM "UserConnections" uc
+                                        JOIN "UserConnections" uci
+                                            ON uc."connectionId" = uci."connectionId"
+                                            AND uc."connectionUserId" = uci."connectionUserId"
+                                            AND uc."userId" <> uci."userId"
+                                    ) uc ON uc."userId" = vl."userId"
+                                    JOIN (
+                                        SELECT
+                                            vl."userId",
+                                            vl."updatedAt"
+                                            FROM "VoteLists" vl
+                                            WHERE vl."voteId" = $1
+                                                AND vl."deletedAt" IS NULL
+                                            ORDER BY vl."updatedAt" DESC
+                                    ) vli ON uc."connectedUser" = vli."userId" AND vli."updatedAt" < vl."updatedAt"
+                                )
+                              ; $$
+                            LANGUAGE SQL;
+                        CREATE OR REPLACE FUNCTION pg_temp.votes(uuid)
+                            RETURNS TABLE ("voteId" uuid, "userId" uuid, "optionId" uuid, "optionGroupId" character varying)
+                            AS $$
+                                SELECT
+                                    vl."voteId",
+                                    vl."userId",
+                                    vl."optionId",
+                                    vl."optionGroupId"
+                                FROM "VoteLists" vl
+                                JOIN pg_temp.vote_groups($1) vg ON (vl."voteId" = vg."voteId" AND vl."optionGroupId" = vg."optionGroupId")
+                                JOIN "Votes" vo ON vo.id = vl."voteId"
+                                WHERE vo."authType"='${Vote.AUTH_TYPES.soft}' AND vl."voteId" = $1
+                                UNION ALL
+                                SELECT
+                                    vl."voteId",
+                                    vl."userId",
+                                    vl."optionId",
+                                    vl."optionGroupId"
+                                FROM "VoteLists" vl
+                                JOIN pg_temp.vote_groups($1) vg ON (vl."voteId" = vg."voteId" AND vl."optionGroupId" = vg."optionGroupId")
+                                JOIN "Votes" vo ON vo.id = vl."voteId"
+                                JOIN "VoteUserContainers" vuc ON vuc."voteId" = vl."voteId" AND vuc."userId" = vl."userId"
+                                WHERE vo."authType"='${Vote.AUTH_TYPES.hard}' AND vl."voteId" = $1
+                                $$
+                            LANGUAGE SQL;
+                        CREATE OR REPLACE FUNCTION pg_temp.votes_with_delegations(uuid)
+                            RETURNS TABLE ("voteId" uuid, "userId" uuid, "optionId" uuid, "optionGroupId" varchar(8), depth int)
+                            AS $$
+                                SELECT
+                                    v."voteId",
+                                    v."userId",
+                                    v."optionId",
+                                    v."optionGroupId",
+                                    id."depth"
+                                FROM pg_temp.votes($1) v
+                                LEFT JOIN pg_temp.indirect_delegations($1) id ON (v."userId" = id."toUserId")
+                                WHERE v."userId" NOT IN (SELECT "byUserId" FROM pg_temp.indirect_delegations($1) WHERE "voteId"=v."voteId");
+                                $$
+                            LANGUAGE SQL;
+                        CREATE OR REPLACE FUNCTION pg_temp.get_vote_results (uuid)
+                            RETURNS TABLE ("voteCount" bigint, "optionId" uuid, "optionGroupId" varchar(8), "voteId" uuid)
+                            AS $$
+                                SELECT
+                                    COUNT(v."optionId") + 1 as "voteCount",
+                                    v."optionId",
+                                    v."optionGroupId",
+                                    v."voteId"
+                                FROM pg_temp.votes_with_delegations($1) v
+                                WHERE v.depth IS NOT NULL
+                                GROUP BY v."optionId", v."optionGroupId", v."voteId"
+
+                                UNION ALL
+
+                                SELECT
+                                    COUNT(v."optionId") as "voteCount",
+                                    v."optionId",
+                                    v."optionGroupId",
+                                    v."voteId"
+                                FROM pg_temp.votes_with_delegations($1) v
+                                WHERE v.depth IS NULL
+                                GROUP BY v."optionId", v."optionGroupId", v."voteId"; $$
+                            LANGUAGE SQL;
+
+                        SELECT
+                            SUM(v."voteCount") as "voteCount",
+                            v."optionId",
+                            v."voteId",
+                            vo."value"
+                            ${select}
+                        FROM "Topics" t
+                        LEFT JOIN "TopicVotes" tv
+                            ON tv."topicId" = t.id AND tv."deletedAt" IS NULL
+                        LEFT JOIN pg_temp.get_vote_results(tv."voteId") v ON v."voteId" = tv."voteId"
+                        LEFT JOIN "VoteOptions" vo ON v."optionId" = vo.id
+                        ${join}
+                        WHERE  t."deletedAt" IS NULL
+                        AND v."optionId" IS NOT NULL
+                        AND v."voteId" IS NOT NULL
+                        AND vo."value" IS NOT NULL
+                        ${where}
+                        GROUP BY v."optionId", v."voteId", vo."value"
+                    ;`;
 
         return db
             .query(
@@ -1409,7 +1400,6 @@ module.exports = function (app) {
         const topicId = req.params.topicId;
         const user = req.user;
         const partner = req.locals.partner;
-
         const topic = await _topicReadAuth(topicId, include, user, partner);
 
         if (!topic) {
@@ -1419,67 +1409,62 @@ module.exports = function (app) {
         return res.ok(topic);
     }));
 
-    app.get('/api/topics/:topicId', function (req, res, next) {
+    app.get('/api/topics/:topicId', async function (req, res, next) {
         let include = req.query.include;
         const topicId = req.params.topicId;
 
         if (include && !Array.isArray(include)) {
             include = [include];
         }
+        try {
+            const result = await _topicReadUnauth(topicId, include);
+            if (result && result.length && result[0]) {
+                const topic = result[0];
+                topic.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+                if (include && include.indexOf('vote') > -1 && topic.vote && topic.vote.id) {
+                    const voteResults = await getVoteResults(topic.vote.id);
+                    const options = [];
 
-        _topicReadUnauth(topicId, include)
-            .then(function (result) {
-                if (result && result.length && result[0]) {
-                    const topic = result[0];
-                    topic.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
-                    if (include && include.indexOf('vote') > -1 && topic.vote && topic.vote.id) {
-                        return getVoteResults(topic.vote.id)
-                            .then(
-                                function (result) {
-                                    const options = [];
-                                    topic.vote.options.forEach(function (option) {
-                                        option = option.split(':');
-                                        const o = {
-                                            id: option[0],
-                                            value: option[1]
-                                        };
-                                        if (result) {
-                                            const res = _.find(result, {'optionId': o.id});
-                                            if (res) {
-                                                o.voteCount = res.voteCount;
-                                            }
-                                        }
-                                        options.push(o);
-                                    });
-                                    topic.vote.options = {
-                                        count: options.length,
-                                        rows: options
-                                    };
-
-                                    if (!topic.report.id) {
-                                        delete topic.report;
-                                    }
-
-                                    return res.ok(topic);
-                                },
-                                function (err) {
-                                    logger.error(err);
-                                }
-                            );
-                    } else {
-                        delete topic.vote;
-
-                        if (!topic.report.id) {
-                            delete topic.report;
+                    topic.vote.options.forEach(function (option) {
+                        option = option.split(':');
+                        const o = {
+                            id: option[0],
+                            value: option[1]
+                        };
+                        if (voteResults) {
+                            const res = _.find(voteResults, {'optionId': o.id});
+                            if (res) {
+                                o.voteCount = res.voteCount;
+                            }
                         }
+                        options.push(o);
+                    });
 
-                        return res.ok(topic);
+                    topic.vote.options = {
+                        count: options.length,
+                        rows: options
+                    };
+
+                    if (!topic.report.id) {
+                        delete topic.report;
                     }
+
+                    return res.ok(topic);
                 } else {
-                    return res.notFound();
+                    delete topic.vote;
+
+                    if (!topic.report.id) {
+                        delete topic.report;
+                    }
+
+                    return res.ok(topic);
                 }
-            })
-            .catch(next);
+            } else {
+                return res.notFound();
+            }
+        } catch (err) {
+            return next(err);
+        }
     });
 
     const _topicUpdate = async function (req, res) {
@@ -1497,9 +1482,7 @@ module.exports = function (app) {
             });
 
         if (!topic) {
-            res.badRequest();
-
-            return Promise.reject();
+            return res.badRequest();
         }
 
         const statuses = _.values(Topic.STATUSES);
@@ -1508,25 +1491,19 @@ module.exports = function (app) {
             // The only flow that allows going back in status flow is reopening for voting
             if (statusNew === Topic.STATUSES.voting && topic.status === Topic.STATUSES.followUp) {
                 if (!vote) {
-                    res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew + ' when the Topic has no Vote created');
-
-                    return Promise.reject();
+                    return res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew + ' when the Topic has no Vote created');
                 }
 
                 // TODO: This logic is specific to Rahvaalgatus.ee, with next Partner we have to make it more generic - https://trello.com/c/Sj3XRF5V/353-raa-ee-followup-email-to-riigikogu-and-token-access-to-events-api
                 // Do not allow going back to voting once the Topic has been sent to Parliament
                 if (vote.authType === Vote.AUTH_TYPES.hard) {
-                    await getVoteResults(vote.id)
-                        .then(function (voteResults) {
-                            const optionMax = _.maxBy(voteResults, 'voteCount');
-                            if (optionMax && optionMax.voteCount >= config.features.sendToParliament.voteCountMin) {
-                                res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew + ' when the Topic has been sent to Parliament');
-
-                                return Promise.reject();
-                            } else {
-                                isBackToVoting = true;
-                            }
-                        });
+                    const voteResults = await getVoteResults(vote.id);
+                    const optionMax = _.maxBy(voteResults, 'voteCount');
+                    if (optionMax && optionMax.voteCount >= config.features.sendToParliament.voteCountMin) {
+                        return res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew + ' when the Topic has been sent to Parliament');
+                    } else {
+                        isBackToVoting = true;
+                    }
                 }
 
                 isBackToVoting = true;
@@ -1535,27 +1512,19 @@ module.exports = function (app) {
                 if (vote.authType === Vote.AUTH_TYPES.hard && contact) {
                     // TODO: Return proper field errors as for Sequelize errors
                     if (!contact.name || !contact.email || !contact.phone || !validator.isEmail(contact.email)) {
-                        res.badRequest('Invalid contact info. Missing or invalid name, email or phone');
-
-                        return Promise.reject();
+                        return res.badRequest('Invalid contact info. Missing or invalid name, email or phone');
                     }
 
-                    await getVoteResults(vote.id)
-                        .then(function (voteResults) {
-                            const optionMax = _.maxBy(voteResults, 'voteCount');
-                            if (optionMax && optionMax.voteCount >= config.features.sendToParliament.voteCountMin) {
-                                isSendToParliament = true;
-                            } else {
-                                res.badRequest('Not enough votes to send to Parliament. Votes required - ' + config.features.sendToParliament.voteCountMin, 10);
-
-                                return Promise.reject();
-                            }
-                        });
+                    const voteResults = await getVoteResults(vote.id);
+                    const optionMax = _.maxBy(voteResults, 'voteCount');
+                    if (optionMax && optionMax.voteCount >= config.features.sendToParliament.voteCountMin) {
+                        isSendToParliament = true;
+                    } else {
+                        return res.badRequest('Not enough votes to send to Parliament. Votes required - ' + config.features.sendToParliament.voteCountMin, 10);
+                    }
                 }
             } else if (statuses.indexOf(topic.status) > statuses.indexOf(statusNew) || [Topic.STATUSES.voting].indexOf(statusNew) > -1) { // You are not allowed to go "back" in the status flow nor you are allowed to set "voting" directly, it can only be done creating a Vote.
-                res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew);
-
-                return Promise.reject();
+                return res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew);
             }
         }
 
@@ -1569,11 +1538,9 @@ module.exports = function (app) {
             }
         });
 
-        return db
-            .transaction(function (t) {
-                const promisesToResolve = [];
-
-                const topicUpdatePromise = topic
+        await db
+            .transaction(async function (t) {
+                await topic
                     .update(
                         req.body,
                         {
@@ -1587,9 +1554,7 @@ module.exports = function (app) {
                         }
                     );
 
-                promisesToResolve.push(topicUpdatePromise);
-
-                const topicActivityPromise = cosActivities
+                await cosActivities
                     .updateActivity(
                         topic,
                         null,
@@ -1603,12 +1568,10 @@ module.exports = function (app) {
                         t
                     );
 
-                promisesToResolve.push(topicActivityPromise);
-
                 if (isBackToVoting) {
-                    promisesToResolve.push(cosSignature.deleteFinalBdoc(topicId, vote.id));
+                    await cosSignature.deleteFinalBdoc(topicId, vote.id);
 
-                    const topicEventsDeletePromise = TopicEvent
+                    await TopicEvent
                         .destroy({
                             where: {
                                 topicId: topicId
@@ -1616,64 +1579,52 @@ module.exports = function (app) {
                             force: true,
                             transaction: t
                         });
-
-                    promisesToResolve.push(topicEventsDeletePromise);
                 }
 
 
                 if (req.body.description) {
-                    const epUpdateTopicPromise = cosEtherpad
+                    await cosEtherpad
                         .updateTopic(
                             topicId,
                             req.body.description
                         );
-                    promisesToResolve.push(epUpdateTopicPromise);
                 }
-
-                return Promise.all(promisesToResolve);
-            })
-            .then(function () {
-                if (req.body.description) {
-                    return cosEtherpad
-                        .syncTopicWithPad(
-                            topicId,
-                            req.method + ' ' + req.path,
-                            {
-                                type: 'User',
-                                id: req.user.id,
-                                ip: req.ip
-                            }
-                        );
-                } else {
-                    return Promise.resolve();
-                }
-            })
-            .then(function () {
-                // TODO: This logic is specific to Rahvaalgatus.ee, with next Partner we have to make it more generic - https://trello.com/c/Sj3XRF5V/353-raa-ee-followup-email-to-riigikogu-and-token-access-to-events-api
-                if (isSendToParliament) {
-                    logger.info('Sending to Parliament', req.method, req.path);
-
-                    // TODO: This should be and stay in sync with the expiry set by getBdocURL
-                    const downloadTokenExpiryDays = 30;
-                    const linkDownloadBdocFinalExpiryDate = new Date(new Date().getTime() + downloadTokenExpiryDays * 24 * 60 * 60 * 1000);
-
-                    const pathAddEvent = '/api/topics/:topicId/events' // COS API url for adding events with token
-                        .replace(':topicId', topicId);
-
-                    let linkAddEvent = config.features.sendToParliament.urlPrefix + '/initiatives/:topicId/events/new'.replace(':topicId', topicId);
-                    linkAddEvent += '?' + querystring.stringify({token: cosJwt.getTokenRestrictedUse({}, 'POST ' + pathAddEvent)});
-
-                    const downloadUriBdocFinal = getBdocURL({
-                        topicId: topicId,
-                        voteId: vote.id,
-                        type: 'goverment'
-                    });
-
-                    return emailLib.sendToParliament(topic, contact, downloadUriBdocFinal, linkDownloadBdocFinalExpiryDate, linkAddEvent);
-                }
-
-                return Promise.resolve();
             });
+
+        if (req.body.description) {
+            await cosEtherpad
+                .syncTopicWithPad(
+                    topicId,
+                    req.method + ' ' + req.path,
+                    {
+                        type: 'User',
+                        id: req.user.id,
+                        ip: req.ip
+                    }
+                );
+        }
+        // TODO: This logic is specific to Rahvaalgatus.ee, with next Partner we have to make it more generic - https://trello.com/c/Sj3XRF5V/353-raa-ee-followup-email-to-riigikogu-and-token-access-to-events-api
+        if (isSendToParliament) {
+            logger.info('Sending to Parliament', req.method, req.path);
+
+            // TODO: This should be and stay in sync with the expiry set by getBdocURL
+            const downloadTokenExpiryDays = 30;
+            const linkDownloadBdocFinalExpiryDate = new Date(new Date().getTime() + downloadTokenExpiryDays * 24 * 60 * 60 * 1000);
+
+            const pathAddEvent = '/api/topics/:topicId/events' // COS API url for adding events with token
+                .replace(':topicId', topicId);
+
+            let linkAddEvent = config.features.sendToParliament.urlPrefix + '/initiatives/:topicId/events/new'.replace(':topicId', topicId);
+            linkAddEvent += '?' + querystring.stringify({token: cosJwt.getTokenRestrictedUse({}, 'POST ' + pathAddEvent)});
+
+            const downloadUriBdocFinal = getBdocURL({
+                topicId: topicId,
+                voteId: vote.id,
+                type: 'goverment'
+            });
+
+            return emailLib.sendToParliament(topic, contact, downloadUriBdocFinal, linkDownloadBdocFinalExpiryDate, linkAddEvent);
+        }
     };
 
     /**
@@ -1799,7 +1750,7 @@ module.exports = function (app) {
     /**
      * Get all Topics User belongs to
      */
-    app.get('/api/users/:userId/topics', loginCheck(['partner']), function (req, res, next) {
+    app.get('/api/users/:userId/topics', loginCheck(['partner']), async function (req, res) {
         const userId = req.user.id;
         const partnerId = req.user.partnerId;
         let include = req.query.include;
@@ -1814,7 +1765,7 @@ module.exports = function (app) {
             statuses = [statuses];
         }
 
-        let voteResultsPromise = false;
+        let voteResults = false;
         let join = '';
         let returncolumns = '';
 
@@ -1823,48 +1774,48 @@ module.exports = function (app) {
         }
 
         if (include.indexOf('vote') > -1) {
-            returncolumns += ' \
-            , ( \
-                SELECT to_json( \
-                    array ( \
-                        SELECT concat(id, \':\', value) \
-                        FROM   "VoteOptions" \
-                        WHERE  "deletedAt" IS NULL \
-                        AND    "voteId" = tv."voteId" \
-                    ) \
-                ) \
-            ) as "vote.options" \
-            , tv."voteId" as "vote.id" \
-            , tv."authType" as "vote.authType" \
-            , tv."createdAt" as "vote.createdAt" \
-            , tv."delegationIsAllowed" as "vote.delegationIsAllowed" \
-            , tv."description" as "vote.description" \
-            , tv."endsAt" as "vote.endsAt" \
-            , tv."maxChoices" as "vote.maxChoices" \
-            , tv."minChoices" as "vote.minChoices" \
-            , tv."type" as "vote.type" \
-            ';
-            voteResultsPromise = getAllVotesResults(userId);
+            returncolumns += `
+            , (
+                SELECT to_json(
+                    array (
+                        SELECT concat(id, ':', value)
+                        FROM   "VoteOptions"
+                        WHERE  "deletedAt" IS NULL
+                        AND    "voteId" = tv."voteId"
+                    )
+                )
+            ) as "vote.options"
+            , tv."voteId" as "vote.id"
+            , tv."authType" as "vote.authType"
+            , tv."createdAt" as "vote.createdAt"
+            , tv."delegationIsAllowed" as "vote.delegationIsAllowed"
+            , tv."description" as "vote.description"
+            , tv."endsAt" as "vote.endsAt"
+            , tv."maxChoices" as "vote.maxChoices"
+            , tv."minChoices" as "vote.minChoices"
+            , tv."type" as "vote.type"
+            `;
+            voteResults = await getAllVotesResults(userId);
         }
 
         if (include.indexOf('event') > -1) {
-            join += 'LEFT JOIN ( \
-                        SELECT \
-                            COUNT(events.id) as count, \
-                            events."topicId" \
-                        FROM "TopicEvents" events \
-                        WHERE events."deletedAt" IS NULL \
-                        GROUP BY events."topicId" \
-                    ) AS te ON te."topicId" = t.id \
-            ';
-            returncolumns += '\
-            , COALESCE(te.count, 0) AS "events.count" \
-            ';
+            join += `LEFT JOIN (
+                        SELECT
+                            COUNT(events.id) as count,
+                            events."topicId"
+                        FROM "TopicEvents" events
+                        WHERE events."deletedAt" IS NULL
+                        GROUP BY events."topicId"
+                    ) AS te ON te."topicId" = t.id
+                `;
+            returncolumns += `
+            , COALESCE(te.count, 0) AS "events.count"
+            `;
         }
 
-        let where = ' t."deletedAt" IS NULL \
-                    AND t.title IS NOT NULL \
-                    AND COALESCE(tmup.level, tmgp.level, \'none\')::"enum_TopicMemberUsers_level" > \'none\' ';
+        let where = ` t."deletedAt" IS NULL
+                    AND t.title IS NOT NULL
+                    AND COALESCE(tmup.level, tmgp.level, 'none')::"enum_TopicMemberUsers_level" > 'none' `;
 
         // All partners should see only Topics created by their site, but our own app sees all.
         if (partnerId) {
@@ -1886,7 +1837,7 @@ module.exports = function (app) {
         if (['true', '1'].includes(hasVoted)) {
             where += 'AND EXISTS (SELECT TRUE FROM "VoteLists" vl WHERE vl."voteId" = tv."voteId" AND vl."userId" = :userId LIMIT 1)';
         } else if (['false', '0'].includes(hasVoted)) {
-            where += 'AND tv."voteId" IS NOT NULL AND t.status = \'voting\'::"enum_Topics_status" AND NOT EXISTS (SELECT TRUE FROM "VoteLists" vl WHERE vl."voteId" = tv."voteId" AND vl."userId" = :userId LIMIT 1)';
+            where += `AND tv."voteId" IS NOT NULL AND t.status = 'voting'::"enum_Topics_status" AND NOT EXISTS (SELECT TRUE FROM "VoteLists" vl WHERE vl."voteId" = tv."voteId" AND vl."userId" = :userId LIMIT 1)`;
         } else {
             logger.warn(`Ignored parameter "voted" as invalid value "${hasVoted}" was provided`);
         }
@@ -1907,146 +1858,146 @@ module.exports = function (app) {
 
         // TODO: NOT THE MOST EFFICIENT QUERY IN THE WORLD, tune it when time.
         // TODO: That casting to "enum_TopicMemberUsers_level". Sequelize does not support naming enums, through inheritance I have 2 enums that are the same but with different name thus different type in PG. Feature request - https://github.com/sequelize/sequelize/issues/2577
-        const query = '\
-                SELECT \
-                     t.id, \
-                     t.title, \
-                     t.description, \
-                     t.status, \
-                     t.visibility, \
-                     t.hashtag, \
-                     CASE \
-                        WHEN COALESCE(tmup.level, tmgp.level, \'none\') = \'admin\' THEN t."tokenJoin" \
-                        ELSE NULL \
-                     END as "tokenJoin", \
-                     CASE \
-                        WHEN tp."topicId" = t.id THEN true \
-                        ELSE false \
-                     END as "pinned", \
-                     t.categories, \
-                     t."sourcePartnerId", \
-                     t."sourcePartnerObjectId", \
-                     t."endsAt", \
-                     t."createdAt", \
-                     c.id as "creator.id", \
-                     c.name as "creator.name", \
-                     c.company as "creator.company", \
-                     COALESCE(tmup.level, tmgp.level, \'none\') as "permission.level", \
-                     muc.count as "members.users.count", \
-                     COALESCE(mgc.count, 0) as "members.groups.count", \
-                     tv."voteId" as "voteId", \
-                     tv."voteId" as "vote.id", \
-                     CASE WHEN t.status = \'voting\' THEN 1 \
-                        WHEN t.status = \'inProgress\' THEN 2 \
-                        WHEN t.status = \'followUp\' THEN 3 \
-                     ELSE 4 \
-                     END AS "order", \
-                     COALESCE(tc.count, 0) AS "comments.count", \
-                     com."createdAt" AS "comments.lastCreatedAt" \
-                     ' + returncolumns + ' \
-                FROM "Topics" t \
-                    LEFT JOIN ( \
-                        SELECT \
-                            tmu."topicId", \
-                            tmu."userId", \
-                            tmu.level::text AS level \
-                        FROM "TopicMemberUsers" tmu \
-                        WHERE tmu."deletedAt" IS NULL \
-                    ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId) \
-                    LEFT JOIN "TopicReports" tr ON  tr."topicId" = t.id \
-                    LEFT JOIN ( \
-                        SELECT \
-                            tmg."topicId", \
-                            gm."userId", \
-                            MAX(tmg.level)::text AS level \
-                        FROM "TopicMemberGroups" tmg \
-                            LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
-                        WHERE tmg."deletedAt" IS NULL \
-                        AND gm."deletedAt" IS NULL \
-                        GROUP BY "topicId", "userId" \
-                    ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId) \
-                    LEFT JOIN "Users" c ON (c.id = t."creatorId") \
-                    LEFT JOIN ( \
-                        SELECT tmu."topicId", COUNT(tmu."memberId") AS "count" FROM ( \
-                            SELECT \
-                                tmuu."topicId", \
-                                tmuu."userId" AS "memberId" \
-                            FROM "TopicMemberUsers" tmuu \
-                            WHERE tmuu."deletedAt" IS NULL \
-                            UNION \
-                            SELECT \
-                                tmg."topicId", \
-                                gm."userId" AS "memberId" \
-                            FROM "TopicMemberGroups" tmg \
-                                JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
-                                JOIN "Groups" g ON g.id = tmg."groupId" \
-                            WHERE tmg."deletedAt" IS NULL \
-                            AND g."deletedAt" IS NULL \
-                            AND gm."deletedAt" IS NULL \
-                        ) AS tmu GROUP BY "topicId" \
-                    ) AS muc ON (muc."topicId" = t.id) \
-                    LEFT JOIN ( \
-                        SELECT \
-                            tmg."topicId", \
-                            count(tmg."groupId") AS "count" \
-                        FROM "TopicMemberGroups" tmg \
-                        JOIN "Groups" g ON (g.id = tmg."groupId") \
-                        WHERE tmg."deletedAt" IS NULL \
-                        AND g."deletedAt" IS NULL \
-                        GROUP BY tmg."topicId" \
-                    ) AS mgc ON (mgc."topicId" = t.id) \
-                    LEFT JOIN ( \
-                        SELECT \
-                            tv."topicId", \
-                            tv."voteId", \
-                            v."authType", \
-                            v."createdAt", \
-                            v."delegationIsAllowed", \
-                            v."description", \
-                            v."endsAt", \
-                            v."maxChoices", \
-                            v."minChoices", \
-                            v."type" \
-                        FROM "TopicVotes" tv INNER JOIN \
-                            (   \
-                                SELECT \
-                                    MAX("createdAt") as "createdAt", \
-                                    "topicId" \
-                                FROM "TopicVotes" \
-                                GROUP BY "topicId" \
-                            ) AS _tv ON (_tv."topicId" = tv."topicId" AND _tv."createdAt" = tv."createdAt") \
-                        LEFT JOIN "Votes" v \
-                                ON v.id = tv."voteId" \
-                    ) AS tv ON (tv."topicId" = t.id) \
-                    LEFT JOIN ( \
-                        SELECT \
-                            "topicId", \
-                            COUNT(*) AS count \
-                        FROM "TopicComments" \
-                        GROUP BY "topicId" \
-                    ) AS tc ON (tc."topicId" = t.id) \
-                    LEFT JOIN ( \
-                        SELECT \
-                            tcc."topicId", \
-                            MAX(tcc."createdAt") as "createdAt" \
-                            FROM \
-                                (SELECT \
-                                    tc."topicId", \
-                                    c."createdAt" \
-                                FROM "TopicComments" tc \
-                                JOIN "Comments" c ON c.id = tc."commentId" \
-                                GROUP BY tc."topicId", c."createdAt" \
-                                ORDER BY c."createdAt" DESC \
-                                ) AS tcc \
-                            GROUP BY tcc."topicId" \
-                    ) AS com ON (com."topicId" = t.id) \
-                    LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId \
-                    ' + join + ' \
-                WHERE ' + where + ' \
-                ORDER BY "pinned" DESC, "order" ASC, t."updatedAt" DESC \
-            ;';
+        const query = `
+                SELECT
+                     t.id,
+                     t.title,
+                     t.description,
+                     t.status,
+                     t.visibility,
+                     t.hashtag,
+                     CASE
+                        WHEN COALESCE(tmup.level, tmgp.level, 'none') = 'admin' THEN t."tokenJoin"
+                        ELSE NULL
+                     END as "tokenJoin",
+                     CASE
+                        WHEN tp."topicId" = t.id THEN true
+                        ELSE false
+                     END as "pinned",
+                     t.categories,
+                     t."sourcePartnerId",
+                     t."sourcePartnerObjectId",
+                     t."endsAt",
+                     t."createdAt",
+                     c.id as "creator.id",
+                     c.name as "creator.name",
+                     c.company as "creator.company",
+                     COALESCE(tmup.level, tmgp.level, 'none') as "permission.level",
+                     muc.count as "members.users.count",
+                     COALESCE(mgc.count, 0) as "members.groups.count",
+                     tv."voteId" as "voteId",
+                     tv."voteId" as "vote.id",
+                     CASE WHEN t.status = 'voting' THEN 1
+                        WHEN t.status = 'inProgress' THEN 2
+                        WHEN t.status = 'followUp' THEN 3
+                     ELSE 4
+                     END AS "order",
+                     COALESCE(tc.count, 0) AS "comments.count",
+                     com."createdAt" AS "comments.lastCreatedAt"
+                    ${returncolumns}
+                FROM "Topics" t
+                    LEFT JOIN (
+                        SELECT
+                            tmu."topicId",
+                            tmu."userId",
+                            tmu.level::text AS level
+                        FROM "TopicMemberUsers" tmu
+                        WHERE tmu."deletedAt" IS NULL
+                    ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId)
+                    LEFT JOIN "TopicReports" tr ON  tr."topicId" = t.id
+                    LEFT JOIN (
+                        SELECT
+                            tmg."topicId",
+                            gm."userId",
+                            MAX(tmg.level)::text AS level
+                        FROM "TopicMemberGroups" tmg
+                            LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                        WHERE tmg."deletedAt" IS NULL
+                        AND gm."deletedAt" IS NULL
+                        GROUP BY "topicId", "userId"
+                    ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
+                    LEFT JOIN "Users" c ON (c.id = t."creatorId")
+                    LEFT JOIN (
+                        SELECT tmu."topicId", COUNT(tmu."memberId") AS "count" FROM (
+                            SELECT
+                                tmuu."topicId",
+                                tmuu."userId" AS "memberId"
+                            FROM "TopicMemberUsers" tmuu
+                            WHERE tmuu."deletedAt" IS NULL
+                            UNION
+                            SELECT
+                                tmg."topicId",
+                                gm."userId" AS "memberId"
+                            FROM "TopicMemberGroups" tmg
+                                JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                                JOIN "Groups" g ON g.id = tmg."groupId"
+                            WHERE tmg."deletedAt" IS NULL
+                            AND g."deletedAt" IS NULL
+                            AND gm."deletedAt" IS NULL
+                        ) AS tmu GROUP BY "topicId"
+                    ) AS muc ON (muc."topicId" = t.id)
+                    LEFT JOIN (
+                        SELECT
+                            tmg."topicId",
+                            count(tmg."groupId") AS "count"
+                        FROM "TopicMemberGroups" tmg
+                        JOIN "Groups" g ON (g.id = tmg."groupId")
+                        WHERE tmg."deletedAt" IS NULL
+                        AND g."deletedAt" IS NULL
+                        GROUP BY tmg."topicId"
+                    ) AS mgc ON (mgc."topicId" = t.id)
+                    LEFT JOIN (
+                        SELECT
+                            tv."topicId",
+                            tv."voteId",
+                            v."authType",
+                            v."createdAt",
+                            v."delegationIsAllowed",
+                            v."description",
+                            v."endsAt",
+                            v."maxChoices",
+                            v."minChoices",
+                            v."type"
+                        FROM "TopicVotes" tv INNER JOIN
+                            (
+                                SELECT
+                                    MAX("createdAt") as "createdAt",
+                                    "topicId"
+                                FROM "TopicVotes"
+                                GROUP BY "topicId"
+                            ) AS _tv ON (_tv."topicId" = tv."topicId" AND _tv."createdAt" = tv."createdAt")
+                        LEFT JOIN "Votes" v
+                                ON v.id = tv."voteId"
+                    ) AS tv ON (tv."topicId" = t.id)
+                    LEFT JOIN (
+                        SELECT
+                            "topicId",
+                            COUNT(*) AS count
+                        FROM "TopicComments"
+                        GROUP BY "topicId"
+                    ) AS tc ON (tc."topicId" = t.id)
+                    LEFT JOIN (
+                        SELECT
+                            tcc."topicId",
+                            MAX(tcc."createdAt") as "createdAt"
+                            FROM
+                                (SELECT
+                                    tc."topicId",
+                                    c."createdAt"
+                                FROM "TopicComments" tc
+                                JOIN "Comments" c ON c.id = tc."commentId"
+                                GROUP BY tc."topicId", c."createdAt"
+                                ORDER BY c."createdAt" DESC
+                                ) AS tcc
+                            GROUP BY tcc."topicId"
+                    ) AS com ON (com."topicId" = t.id)
+                    LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId
+                    ${join}
+                WHERE ${where}
+                ORDER BY "pinned" DESC, "order" ASC, t."updatedAt" DESC
+            ;`;
 
-        const topicsPromise = db
+        const rows = await db
             .query(
                 query,
                 {
@@ -2063,71 +2014,66 @@ module.exports = function (app) {
                 }
             );
 
-        Promise
-            .all([topicsPromise, voteResultsPromise])
-            .then(function ([rows, voteResults]) {
-                const rowCount = rows.length;
+        const rowCount = rows.length;
 
-                // Sequelize returns empty array for no results.
-                const result = {
-                    count: rowCount,
-                    rows: []
-                };
+        // Sequelize returns empty array for no results.
+        const result = {
+            count: rowCount,
+            rows: []
+        };
 
-                if (rowCount > 0) {
-                    rows.forEach(function (topic) {
-                        topic.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+        if (rowCount > 0) {
+            rows.forEach(function (topic) {
+                topic.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
 
-                        if (include.indexOf('vote') > -1) {
-                            if (topic.vote.id) {
-                                const options = [];
-                                if (topic.vote.options) {
-                                    topic.vote.options.forEach(function (voteOption) {
-                                        const o = {};
-                                        const optText = voteOption.split(':');
-                                        o.id = optText[0];
-                                        o.value = optText[1];
-                                        let result = 0;
-                                        if (voteResults) {
-                                            result = _.find(voteResults, {'optionId': optText[0]});
-                                            if (result) {
-                                                o.voteCount = parseInt(result.voteCount, 10);
-                                                if (result.selected) {
-                                                    o.selected = result.selected;
-                                                }
-                                            }
+                if (include.indexOf('vote') > -1) {
+                    if (topic.vote.id) {
+                        const options = [];
+                        if (topic.vote.options) {
+                            topic.vote.options.forEach(function (voteOption) {
+                                const o = {};
+                                const optText = voteOption.split(':');
+                                o.id = optText[0];
+                                o.value = optText[1];
+                                let result = 0;
+                                if (voteResults) {
+                                    result = _.find(voteResults, {'optionId': optText[0]});
+                                    if (result) {
+                                        o.voteCount = parseInt(result.voteCount, 10);
+                                        if (result.selected) {
+                                            o.selected = result.selected;
                                         }
-
-                                        options.push(o);
-                                    });
+                                    }
                                 }
-                                topic.vote.options = {
-                                    count: options.length,
-                                    rows: options
-                                };
-                            } else {
-                                delete topic.vote;
-                            }
-                        }
-                    });
-                    result.rows = rows;
-                }
 
-                return res.ok(result);
-            })
-            .catch(next);
+                                options.push(o);
+                            });
+                        }
+                        topic.vote.options = {
+                            count: options.length,
+                            rows: options
+                        };
+                    } else {
+                        delete topic.vote;
+                    }
+                }
+            });
+            result.rows = rows;
+        }
+
+        return res.ok(result);
     });
 
 
     /**
      * Topic list
      */
-    app.get('/api/topics', function (req, res, next) {
+    app.get('/api/topics', async function (req, res, next) {
         const limitMax = 500;
         const limitDefault = 26;
         let join = '';
         let returncolumns = '';
-        let voteResultsPromise = false;
+        let voteResults = false;
         let showModerated = req.query.showModerated || false;
 
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
@@ -2147,42 +2093,42 @@ module.exports = function (app) {
 
         if (include) {
             if (include.indexOf('vote') > -1) {
-                returncolumns += ' \
-                , ( \
-                    SELECT to_json( \
-                        array ( \
-                            SELECT concat(id, \':\', value) \
-                            FROM   "VoteOptions" \
-                            WHERE  "deletedAt" IS NULL \
-                            AND    "voteId" = tv."voteId" \
-                        ) \
-                    ) \
-                ) as "vote.options" \
-                , tv."voteId" as "vote.id" \
-                , tv."authType" as "vote.authType" \
-                , tv."createdAt" as "vote.createdAt" \
-                , tv."delegationIsAllowed" as "vote.delegationIsAllowed" \
-                , tv."description" as "vote.description" \
-                , tv."endsAt" as "vote.endsAt" \
-                , tv."maxChoices" as "vote.maxChoices" \
-                , tv."minChoices" as "vote.minChoices" \
-                , tv."type" as "vote.type" \
-                ';
-                voteResultsPromise = getAllVotesResults();
+                returncolumns += `
+                , (
+                    SELECT to_json(
+                        array (
+                            SELECT concat(id, ':', value)
+                            FROM   "VoteOptions"
+                            WHERE  "deletedAt" IS NULL
+                            AND    "voteId" = tv."voteId"
+                        )
+                    )
+                ) as "vote.options"
+                , tv."voteId" as "vote.id"
+                , tv."authType" as "vote.authType"
+                , tv."createdAt" as "vote.createdAt"
+                , tv."delegationIsAllowed" as "vote.delegationIsAllowed"
+                , tv."description" as "vote.description"
+                , tv."endsAt" as "vote.endsAt"
+                , tv."maxChoices" as "vote.maxChoices"
+                , tv."minChoices" as "vote.minChoices"
+                , tv."type" as "vote.type"
+                `;
+                voteResults = await getAllVotesResults();
             }
             if (include.indexOf('event') > -1) {
-                join += 'LEFT JOIN ( \
-                            SELECT \
-                                COUNT(events.id) as count, \
-                                events."topicId" \
-                            FROM "TopicEvents" events \
-                            WHERE events."deletedAt" IS NULL \
-                            GROUP BY events."topicId" \
-                        ) AS te ON te."topicId" = t.id \
-                ';
-                returncolumns += '\
-                , COALESCE(te.count, 0) AS "events.count" \
-                ';
+                join += `LEFT JOIN (
+                            SELECT
+                                COUNT(events.id) as count,
+                                events."topicId"
+                            FROM "TopicEvents" events
+                            WHERE events."deletedAt" IS NULL
+                            GROUP BY events."topicId"
+                        ) AS te ON te."topicId" = t.id
+                `;
+                returncolumns += `
+                , COALESCE(te.count, 0) AS "events.count"
+                `;
             }
         }
 
@@ -2191,9 +2137,9 @@ module.exports = function (app) {
             categories = [categories];
         }
 
-        let where = ' t.visibility = \'' + Topic.VISIBILITY.public + '\' \
-            AND t.title IS NOT NULL \
-            AND t."deletedAt" IS NULL ';
+        let where = ` t.visibility = '${Topic.VISIBILITY.public}'
+            AND t.title IS NOT NULL
+            AND t."deletedAt" IS NULL `;
 
         if (categories && categories.length) {
             where += ' AND t."categories" @> ARRAY[:categories]::VARCHAR(255)[] ';
@@ -2219,126 +2165,126 @@ module.exports = function (app) {
 
         const title = req.query.title;
         if (title) {
-            where += ' AND t.title LIKE \'%:title%\' ';
+            where += ` AND t.title LIKE '%:title%' `;
         }
 
-        const query = '\
-                SELECT \
-                    t.id, \
-                    t.title, \
-                    t.description, \
-                    t.status, \
-                    t.visibility, \
-                    t.hashtag, \
-                    t."tokenJoin", \
-                    t.categories, \
-                    t."endsAt", \
-                    t."createdAt", \
-                    t."sourcePartnerId", \
-                    t."sourcePartnerObjectId", \
-                    c.id as "creator.id", \
-                    c.name as "creator.name", \
-                    COALESCE(ta."lastActivity", t."updatedAt") as "lastActivity", \
-                    c.company as "creator.company", \
-                    muc.count as "members.users.count", \
-                    COALESCE(mgc.count, 0) as "members.groups.count", \
-                    CASE WHEN t.status = \'voting\' THEN 1 \
-                        WHEN t.status = \'inProgress\' THEN 2 \
-                        WHEN t.status = \'followUp\' THEN 3 \
-                    ELSE 4 \
-                    END AS "order", \
-                    tv."voteId", \
-                    COALESCE(tc.count, 0) AS "comments.count", \
-                    COALESCE(com."createdAt", NULL) AS "comments.lastCreatedAt", \
-                    count(*) OVER()::integer AS "countTotal" \
-                    ' + returncolumns + ' \
-                FROM "Topics" t \
-                    LEFT JOIN "Users" c ON (c.id = t."creatorId") \
-                    LEFT JOIN "TopicReports" tr ON tr."topicId" = t.id \
-                    LEFT JOIN ( \
-                        SELECT tmu."topicId", COUNT(tmu."memberId")::integer AS "count" FROM ( \
-                            SELECT \
-                                tmuu."topicId", \
-                                tmuu."userId" AS "memberId" \
-                            FROM "TopicMemberUsers" tmuu \
-                            WHERE tmuu."deletedAt" IS NULL \
-                            UNION \
-                            SELECT \
-                                tmg."topicId", \
-                                gm."userId" AS "memberId" \
-                            FROM "TopicMemberGroups" tmg \
-                                JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
-                                JOIN "Groups" g ON g.id = tmg."groupId" \
-                            WHERE tmg."deletedAt" IS NULL \
-                            AND g."deletedAt" IS NULL \
-                            AND gm."deletedAt" IS NULL \
-                        ) AS tmu GROUP BY "topicId" \
-                    ) AS muc ON (muc."topicId" = t.id) \
-                    LEFT JOIN ( \
-                        SELECT tmg."topicId", count(tmg."groupId")::integer AS "count" \
-                        FROM "TopicMemberGroups" tmg \
-                        JOIN "Groups" g \
-                            ON g.id = tmg."groupId" \
-                        WHERE tmg."deletedAt" IS NULL \
-                        AND g."deletedAt" IS NULL \
-                        GROUP BY tmg."topicId" \
-                    ) AS mgc ON (mgc."topicId" = t.id) \
-                    LEFT JOIN ( \
-                        SELECT \
-                            "topicId", \
-                            COUNT(*)::integer AS count \
-                        FROM "TopicComments" \
-                        GROUP BY "topicId" \
-                    ) AS tc ON (tc."topicId" = t.id) \
-                    LEFT JOIN ( \
-                        SELECT \
-                            tcc."topicId", \
-                            MAX(tcc."createdAt") as "createdAt" \
-                            FROM \
-                                (SELECT \
-                                    tc."topicId", \
-                                    c."createdAt" \
-                                FROM "TopicComments" tc \
-                                JOIN "Comments" c ON c.id = tc."commentId" \
-                                GROUP BY tc."topicId", c."createdAt" \
-                                ORDER BY c."createdAt" DESC \
-                                ) AS tcc \
-                            GROUP BY tcc."topicId" \
-                    ) AS com ON (com."topicId" = t.id) \
-                    LEFT JOIN ( \
-                        SELECT \
-                            tv."topicId", \
-                            tv."voteId", \
-                            v."authType", \
-                            v."createdAt", \
-                            v."delegationIsAllowed", \
-                            v."description", \
-                            v."endsAt", \
-                            v."maxChoices", \
-                            v."minChoices", \
-                            v."type" \
-                        FROM "TopicVotes" tv INNER JOIN \
-                            (   \
-                                SELECT \
-                                    MAX("createdAt") as "createdAt", \
-                                    "topicId" \
-                                FROM "TopicVotes" \
-                                GROUP BY "topicId" \
-                            ) AS _tv ON (_tv."topicId" = tv."topicId" AND _tv."createdAt" = tv."createdAt") \
-                        LEFT JOIN "Votes" v \
-                                ON v.id = tv."voteId" \
-                    ) AS tv ON (tv."topicId" = t.id) \
-                    LEFT JOIN ( \
-                        SELECT t.id, MAX(a."updatedAt") as "lastActivity" \
-                        FROM "Topics" t JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds" GROUP BY t.id \
-                    ) ta ON (ta.id = t.id) \
-                    ' + join + ' \
-                WHERE ' + where + ' \
-                ORDER BY "lastActivity" DESC \
-                LIMIT :limit OFFSET :offset \
-            ;';
+        const query = `
+                SELECT
+                    t.id,
+                    t.title,
+                    t.description,
+                    t.status,
+                    t.visibility,
+                    t.hashtag,
+                    t."tokenJoin",
+                    t.categories,
+                    t."endsAt",
+                    t."createdAt",
+                    t."sourcePartnerId",
+                    t."sourcePartnerObjectId",
+                    c.id as "creator.id",
+                    c.name as "creator.name",
+                    COALESCE(ta."lastActivity", t."updatedAt") as "lastActivity",
+                    c.company as "creator.company",
+                    muc.count as "members.users.count",
+                    COALESCE(mgc.count, 0) as "members.groups.count",
+                    CASE WHEN t.status = 'voting' THEN 1
+                        WHEN t.status = 'inProgress' THEN 2
+                        WHEN t.status = 'followUp' THEN 3
+                    ELSE 4
+                    END AS "order",
+                    tv."voteId",
+                    COALESCE(tc.count, 0) AS "comments.count",
+                    COALESCE(com."createdAt", NULL) AS "comments.lastCreatedAt",
+                    count(*) OVER()::integer AS "countTotal"
+                    ${returncolumns}
+                FROM "Topics" t
+                    LEFT JOIN "Users" c ON (c.id = t."creatorId")
+                    LEFT JOIN "TopicReports" tr ON tr."topicId" = t.id
+                    LEFT JOIN (
+                        SELECT tmu."topicId", COUNT(tmu."memberId")::integer AS "count" FROM (
+                            SELECT
+                                tmuu."topicId",
+                                tmuu."userId" AS "memberId"
+                            FROM "TopicMemberUsers" tmuu
+                            WHERE tmuu."deletedAt" IS NULL
+                            UNION
+                            SELECT
+                                tmg."topicId",
+                                gm."userId" AS "memberId"
+                            FROM "TopicMemberGroups" tmg
+                                JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                                JOIN "Groups" g ON g.id = tmg."groupId"
+                            WHERE tmg."deletedAt" IS NULL
+                            AND g."deletedAt" IS NULL
+                            AND gm."deletedAt" IS NULL
+                        ) AS tmu GROUP BY "topicId"
+                    ) AS muc ON (muc."topicId" = t.id)
+                    LEFT JOIN (
+                        SELECT tmg."topicId", count(tmg."groupId")::integer AS "count"
+                        FROM "TopicMemberGroups" tmg
+                        JOIN "Groups" g
+                            ON g.id = tmg."groupId"
+                        WHERE tmg."deletedAt" IS NULL
+                        AND g."deletedAt" IS NULL
+                        GROUP BY tmg."topicId"
+                    ) AS mgc ON (mgc."topicId" = t.id)
+                    LEFT JOIN (
+                        SELECT
+                            "topicId",
+                            COUNT(*)::integer AS count
+                        FROM "TopicComments"
+                        GROUP BY "topicId"
+                    ) AS tc ON (tc."topicId" = t.id)
+                    LEFT JOIN (
+                        SELECT
+                            tcc."topicId",
+                            MAX(tcc."createdAt") as "createdAt"
+                            FROM
+                                (SELECT
+                                    tc."topicId",
+                                    c."createdAt"
+                                FROM "TopicComments" tc
+                                JOIN "Comments" c ON c.id = tc."commentId"
+                                GROUP BY tc."topicId", c."createdAt"
+                                ORDER BY c."createdAt" DESC
+                                ) AS tcc
+                            GROUP BY tcc."topicId"
+                    ) AS com ON (com."topicId" = t.id)
+                    LEFT JOIN (
+                        SELECT
+                            tv."topicId",
+                            tv."voteId",
+                            v."authType",
+                            v."createdAt",
+                            v."delegationIsAllowed",
+                            v."description",
+                            v."endsAt",
+                            v."maxChoices",
+                            v."minChoices",
+                            v."type"
+                        FROM "TopicVotes" tv INNER JOIN
+                            (
+                                SELECT
+                                    MAX("createdAt") as "createdAt",
+                                    "topicId"
+                                FROM "TopicVotes"
+                                GROUP BY "topicId"
+                            ) AS _tv ON (_tv."topicId" = tv."topicId" AND _tv."createdAt" = tv."createdAt")
+                        LEFT JOIN "Votes" v
+                                ON v.id = tv."voteId"
+                    ) AS tv ON (tv."topicId" = t.id)
+                    LEFT JOIN (
+                        SELECT t.id, MAX(a."updatedAt") as "lastActivity"
+                        FROM "Topics" t JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds" GROUP BY t.id
+                    ) ta ON (ta.id = t.id)
+                    ${join}
+                WHERE ${where}
+                ORDER BY "lastActivity" DESC
+                LIMIT :limit OFFSET :offset
+            ;`;
 
-        const topicsPromise = db
+        const topics = await db
             .query(
                 query,
                 {
@@ -2355,59 +2301,54 @@ module.exports = function (app) {
                 }
             );
 
-        Promise
-            .all([topicsPromise, voteResultsPromise])
-            .then(function ([topics, voteResults]) {
-                if (!topics) {
-                    return res.notFound();
-                }
+        if (!topics) {
+            return res.notFound();
+        }
 
-                let countTotal = 0;
-                if (topics && topics.length) {
-                    countTotal = topics[0].countTotal;
-                    topics.forEach(function (topic) {
-                        topic.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+        let countTotal = 0;
+        if (topics && topics.length) {
+            countTotal = topics[0].countTotal;
+            topics.forEach(function (topic) {
+                topic.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
 
-                        delete topic.countTotal;
+                delete topic.countTotal;
 
-                        if (include && include.indexOf('vote') > -1 && topic.vote.id) {
-                            const options = [];
-                            if (topic.vote.options) {
-                                topic.vote.options.forEach(function (voteOption) {
-                                    const o = {};
-                                    const optText = voteOption.split(':');
-                                    o.id = optText[0];
-                                    o.value = optText[1];
-                                    if (voteResults) {
-                                        const result = _.find(voteResults, {'optionId': optText[0]});
-                                        if (result) {
-                                            o.voteCount = parseInt(result.voteCount, 10);
-                                        }
-                                    }
-                                    options.push(o);
-                                });
+                if (include && include.indexOf('vote') > -1 && topic.vote.id) {
+                    const options = [];
+                    if (topic.vote.options) {
+                        topic.vote.options.forEach(function (voteOption) {
+                            const o = {};
+                            const optText = voteOption.split(':');
+                            o.id = optText[0];
+                            o.value = optText[1];
+                            if (voteResults) {
+                                const result = _.find(voteResults, {'optionId': optText[0]});
+                                if (result) {
+                                    o.voteCount = parseInt(result.voteCount, 10);
+                                }
                             }
-                            topic.vote.options = {
-                                count: options.length,
-                                rows: options
-                            };
-                        } else {
-                            delete topic.vote;
-                        }
-                    });
-
+                            options.push(o);
+                        });
+                    }
+                    topic.vote.options = {
+                        count: options.length,
+                        rows: options
+                    };
+                } else {
+                    delete topic.vote;
                 }
+            });
 
-                // Sequelize returns empty array for no results.
-                const result = {
-                    countTotal: countTotal,
-                    count: topics.length,
-                    rows: topics
-                };
+        }
 
-                return res.ok(result);
-            })
-            .catch(next);
+        // Sequelize returns empty array for no results.
+        const result = {
+            countTotal: countTotal,
+            count: topics.length,
+            rows: topics
+        };
+
+        return res.ok(result);
 
     });
 
@@ -3770,12 +3711,7 @@ module.exports = function (app) {
 
         if (invite.deletedAt) {
 
-            let hasAccess;
-            try {
-                hasAccess = await _hasPermission(topicId, invite.userId, TopicMemberUser.LEVELS.read, true);
-            } catch (e) {
-                hasAccess = false;
-            }
+            const hasAccess = await _hasPermission(topicId, invite.userId, TopicMemberUser.LEVELS.read, true);
 
             if (hasAccess) {
                 return res.ok(invite, 1); // Invite has already been accepted OR deleted and the person has access
@@ -5169,22 +5105,22 @@ module.exports = function (app) {
     app.get(['/api/topics/:topicId/comments/:commentId/reports/:reportId', '/api/users/:userId/topics/:topicId/comments/:commentId/reports/:reportId'], authTokenRestrictedUse, function (req, res, next) {
         db
             .query(
-                '\
-                    SELECT \
-                        r."id", \
-                        r."type", \
-                        r."text", \
-                        r."createdAt", \
-                        c."id" as "comment.id", \
-                        c.subject as "comment.subject", \
-                        c."text" as "comment.text" \
-                    FROM "Reports" r \
-                    LEFT JOIN "CommentReports" cr ON (cr."reportId" = r.id) \
-                    LEFT JOIN "Comments" c ON (c.id = cr."commentId") \
-                    WHERE r.id = :reportId \
-                    AND c.id = :commentId \
-                    AND r."deletedAt" IS NULL \
-                ;',
+                `
+                    SELECT
+                        r."id",
+                        r."type",
+                        r."text",
+                        r."createdAt",
+                        c."id" as "comment.id",
+                        c.subject as "comment.subject",
+                        c."text" as "comment.text"
+                    FROM "Reports" r
+                    LEFT JOIN "CommentReports" cr ON (cr."reportId" = r.id)
+                    LEFT JOIN "Comments" c ON (c.id = cr."commentId")
+                    WHERE r.id = :reportId
+                    AND c.id = :commentId
+                    AND r."deletedAt" IS NULL
+                ;`,
                 {
                     replacements: {
                         commentId: req.params.commentId,
@@ -5217,19 +5153,19 @@ module.exports = function (app) {
 
         db
             .query(
-                '\
-                    SELECT \
-                        c."id" as "comment.id", \
-                        c."updatedAt" as "comment.updatedAt", \
-                        r."id" as "report.id", \
-                        r."createdAt" as "report.createdAt" \
-                    FROM "CommentReports" cr \
-                    LEFT JOIN "Reports" r ON (r.id = cr."reportId") \
-                    LEFT JOIN "Comments" c ON (c.id = cr."commentId") \
-                    WHERE cr."commentId" = :commentId AND cr."reportId" = :reportId \
-                    AND c."deletedAt" IS NULL \
-                    AND r."deletedAt" IS NULL \
-                ;',
+                `
+                    SELECT
+                        c."id" as "comment.id",
+                        c."updatedAt" as "comment.updatedAt",
+                        r."id" as "report.id",
+                        r."createdAt" as "report.createdAt"
+                    FROM "CommentReports" cr
+                    LEFT JOIN "Reports" r ON (r.id = cr."reportId")
+                    LEFT JOIN "Comments" c ON (c.id = cr."commentId")
+                    WHERE cr."commentId" = :commentId AND cr."reportId" = :reportId
+                    AND c."deletedAt" IS NULL
+                    AND r."deletedAt" IS NULL
+                ;`,
                 {
                     replacements: {
                         commentId: req.params.commentId,
@@ -5780,186 +5716,36 @@ module.exports = function (app) {
         const voteId = req.params.voteId;
         const userId = req.user.id;
         try {
-            const voteInfo = await Vote
-                .findOne({
-                    where: {id: voteId},
-                    include: [
-                        {
-                            model: Topic,
-                            where: {id: topicId}
-                        },
-                        VoteOption,
-                        {
-                            model: VoteDelegation,
-                            where: {
-                                voteId: voteId,
-                                byUserId: userId
-                            },
-                            attributes: ['id'],
-                            required: false,
-                            include: [
-                                {
-                                    model: User
-                                }
-                            ]
-                        }
-                    ]
-                });
-
-            const voteResults = await db
-                .query(`
-                    WITH
-                    RECURSIVE delegations("voteId", "toUserId", "byUserId", depth) AS (
-                        SELECT
-                                "voteId",
-                                "toUserId",
-                                "byUserId",
-                                    1
-                                FROM "VoteDelegations" vd
-                                WHERE vd."voteId" = :voteId
-                                    AND vd."deletedAt" IS NULL
-
-                                UNION ALL
-
-                                SELECT
-                                    vd."voteId",
-                                    vd."toUserId",
-                                    dc."byUserId",
-                                    dc.depth+1
-                                FROM delegations dc, "VoteDelegations" vd
-                                WHERE vd."byUserId" = dc."toUserId"
-                                    AND vd."voteId" = dc."voteId"
-                                    AND vd."deletedAt" IS NULL
-                            ),
-                            indirect_delegations("voteId", "toUserId", "byUserId", depth) AS (
-                                SELECT DISTINCT ON("byUserId")
-                                    "voteId",
-                                    "toUserId",
-                                    "byUserId",
-                                    depth
-                                FROM delegations
-                                ORDER BY "byUserId", depth DESC
-                            ),
-                            vote_groups("voteId", "userId", "optionGroupId", "updatedAt") AS (
-                                SELECT DISTINCT ON (vl."userId") vl."voteId", vl."userId", vli."optionGroupId", vl."updatedAt"
-                                FROM (
-                                    SELECT DISTINCT ON (vl."userId", MAX(vl."updatedAt"))
-                                    vl."userId",
-                                    vl."voteId",
-                                    MAX(vl."updatedAt") as "updatedAt"
-                                    FROM "VoteLists" vl
-                                    WHERE vl."voteId" = :voteId
-                                    AND vl."deletedAt" IS NULL
-                                    GROUP BY vl."userId", vl."voteId"
-                                    ORDER BY MAX(vl."updatedAt") DESC
-                                ) vl
-                                JOIN "VoteLists" vli
-                                ON
-                                    vli."userId" = vl."userId"
-                                    AND vl."voteId" = vli."voteId"
-                                    AND vli."updatedAt" = vl."updatedAt"
-                                WHERE vl."voteId" = :voteId
-                                    AND vl."userId" NOT IN
-                                    (
-                                        SELECT DISTINCT
-                                            uc."connectedUser"
-                                        FROM (
-                                            SELECT
-                                                vl."userId",
-                                                vl."updatedAt"
-                                            FROM "VoteLists" vl
-                                            WHERE vl."voteId" = :voteId
-                                            AND vl."deletedAt" IS NULL
-                                            ORDER BY vl."updatedAt" DESC
-                                        ) vl
-                                        JOIN
-                                        (
-                                            SELECT
-                                                uc."userId",
-                                                uci."userId" as "connectedUser",
-                                                uc."connectionId",
-                                                uc."connectionUserId"
-                                            FROM "UserConnections" uc
-                                            JOIN "UserConnections" uci
-                                                ON uc."connectionId" = uci."connectionId"
-                                                AND uc."connectionUserId" = uci."connectionUserId"
-                                                AND uc."userId" <> uci."userId"
-                                        ) uc ON uc."userId" = vl."userId"
-                                        JOIN (
-                                            SELECT
-                                                vl."userId",
-                                                vl."updatedAt"
-                                                FROM "VoteLists" vl
-                                                WHERE vl."voteId" = :voteId
-                                                    AND vl."deletedAt" IS NULL
-                                                ORDER BY vl."updatedAt" DESC
-                                        ) vli ON uc."connectedUser" = vli."userId" AND vli."updatedAt" < vl."updatedAt"
-                                    )
-                            ),
-                            votes("voteId", "userId", "optionId", "optionGroupId") AS (
-                                SELECT
-                                    vl."voteId",
-                                    vl."userId",
-                                    vl."optionId",
-                                    vl."optionGroupId"
-                                FROM "VoteLists" vl
-                                JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."optionGroupId" = vg."optionGroupId")
-                                WHERE vl."voteId" =  :voteId
-                            ),
-                            votes_with_delegations("voteId", "userId", "optionId", "optionGroupId", depth) AS (
-                                SELECT
-                                    v."voteId",
-                                    v."userId",
-                                    v."optionId",
-                                    v."optionGroupId",
-                                    id."depth"
-                                FROM votes v
-                                LEFT JOIN indirect_delegations id ON (v."userId" = id."toUserId")
-                                WHERE v."userId" NOT IN (SELECT "byUserId" FROM indirect_delegations WHERE "voteId"=v."voteId")
-                            )
-
-                        SELECT
-                            SUM(v."voteCount") as "voteCount",
-                            v."optionId",
-                            v."voteId",
-                            vo."value",
-                            (SELECT true FROM votes WHERE "userId" = :userId AND "optionId" = v."optionId") as "selected"
-                        FROM (
-                            SELECT
-                                COUNT(v."optionId") + 1 as "voteCount",
-                                v."optionId",
-                                v."optionGroupId",
-                                v."voteId"
-                            FROM votes_with_delegations v
-                            WHERE v.depth IS NOT NULL
-                            GROUP BY v."optionId", v."optionGroupId", v."voteId"
-
-                            UNION ALL
-
-                            SELECT
-                                COUNT(v."optionId") as "voteCount",
-                                v."optionId",
-                                v."optionGroupId",
-                                v."voteId"
-                            FROM votes_with_delegations v
-                            WHERE v.depth IS NULL
-                            GROUP BY v."optionId", v."optionGroupId", v."voteId"
-                        ) v
-                        LEFT JOIN "VoteOptions" vo ON (v."optionId" = vo."id")
-                        GROUP BY v."optionId", v."voteId", vo."value"
-                ;`,
+            const voteInfo = await Vote.findOne({
+                where: {id: voteId},
+                include: [
                     {
-                        replacements: {
+                        model: Topic,
+                        where: {id: topicId}
+                    },
+                    VoteOption,
+                    {
+                        model: VoteDelegation,
+                        where: {
                             voteId: voteId,
-                            userId: userId
+                            byUserId: userId
                         },
-                        type: db.QueryTypes.SELECT,
-                        raw: true
+                        attributes: ['id'],
+                        required: false,
+                        include: [
+                            {
+                                model: User
+                            }
+                        ]
                     }
-                );
+                ]
+            });
+
             if (!voteInfo) {
                 return res.notFound();
             }
+
+            const voteResults = await getVoteResults(voteId, userId);
 
             let hasVoted = false;
             if (voteResults) {
@@ -5967,7 +5753,9 @@ module.exports = function (app) {
                     const result = _.find(voteResults, {optionId: option.id});
 
                     if (result) {
-                        option.dataValues.voteCount = parseInt(result.voteCount, 10); //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
+                        const voteCount = parseInt(result.voteCount, 10);
+                        if (voteCount)
+                            option.dataValues.voteCount = voteCount;//TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
                         if (result.selected) {
                             option.dataValues.selected = result.selected; //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
                             hasVoted = true;
@@ -6080,47 +5868,45 @@ module.exports = function (app) {
     /**
      * Read a public Topics Vote
      */
-    app.get('/api/topics/:topicId/votes/:voteId', hasVisibility(Topic.VISIBILITY.public), function (req, res, next) {
+    app.get('/api/topics/:topicId/votes/:voteId', hasVisibility(Topic.VISIBILITY.public), async function (req, res, next) {
         const topicId = req.params.topicId;
         const voteId = req.params.voteId;
 
-        // TODO: Can be done in 1 query.
-        const voteInfoPromise = Vote
-            .findOne({
-                where: {id: voteId},
-                include: [
-                    {
-                        model: Topic,
-                        where: {id: topicId}
-                    },
-                    VoteOption
-                ]
-            });
+        try {
+            // TODO: Can be done in 1 query.
+            const voteInfo = await Vote
+                .findOne({
+                    where: {id: voteId},
+                    include: [
+                        {
+                            model: Topic,
+                            where: {id: topicId}
+                        },
+                        VoteOption
+                    ]
+                });
 
-        const voteResultsPromise = getVoteResults(voteId);
+            if (!voteInfo) {
+                return res.notFound();
+            }
 
-        Promise
-            .all([voteInfoPromise, voteResultsPromise])
-            .then(function ([voteInfo, voteResults]) {
-                if (!voteInfo) {
-                    return res.notFound();
-                }
-
-                if (voteResults) {
-                    _(voteInfo.dataValues.VoteOptions).forEach(function (option) {
-                        const result = _.find(voteResults, {optionId: option.id});
-                        if (result) {
-                            option.dataValues.voteCount = parseInt(result.voteCount, 10); //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
-                            if (result.selected) {
-                                option.dataValues.selected = result.selected; //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
-                            }
+            const voteResults = await getVoteResults(voteId);
+            if (voteResults) {
+                _(voteInfo.dataValues.VoteOptions).forEach(function (option) {
+                    const result = _.find(voteResults, {optionId: option.id});
+                    if (result) {
+                        option.dataValues.voteCount = parseInt(result.voteCount, 10); //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
+                        if (result.selected) {
+                            option.dataValues.selected = result.selected; //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
                         }
-                    });
-                }
+                    }
+                });
+            }
 
-                return res.ok(voteInfo);
-            })
-            .catch(next);
+            return res.ok(voteInfo);
+        } catch (err) {
+            return next(err);
+        }
     });
 
     const handleTopicVotePreconditions = async function (req, res) {
@@ -6487,21 +6273,17 @@ module.exports = function (app) {
      * TODO: Should simplify all of this routes code. It's a mess cause I decided to keep one endpoint for all of the voting. Maybe it's a better idea to move authType===hard to separate endpont
      * TODO: create an alias /api/topics/:topicId/votes/:voteId for un-authenticated signing? I's weird to call /users/self when user has not logged in...
      */
-    app.post('/api/users/:userId/topics/:topicId/votes/:voteId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.voting]), function (req, res, next) {
-        handleTopicVotePreconditions(req, res)
-            .then(function (vote) {
-                if (vote.authType === Vote.AUTH_TYPES.soft) {
-                    return handleTopicVoteSoft(vote, req, res);
-                } else {
-                    return handleTopicVoteHard(vote, req, res);
-                }
-            })
-            .catch(function (err) {
-                if (err) {
-                    return next(err);
-                }
-                // Ignore, headers are supposed to be sent before, not sure it's the right way to do things tho. I guess we should reject Promise with some error which then convertss to HTTP response?
-            });
+    app.post('/api/users/:userId/topics/:topicId/votes/:voteId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.voting]), async function (req, res, next) {
+        try {
+            const vote = await handleTopicVotePreconditions(req, res)
+            if (vote.authType === Vote.AUTH_TYPES.soft) {
+                return handleTopicVoteSoft(vote, req, res);
+            } else {
+                return handleTopicVoteHard(vote, req, res);
+            }
+        }catch(err) {
+            return next(err);
+        }
     });
 
 
@@ -6650,11 +6432,22 @@ module.exports = function (app) {
                     idSignFlowData.signatureId,
                     Buffer.from(signatureValue,'hex').toString('base64')
                 );
+
+                await VoteUserContainer.destroy({
+                    where: {
+                        voteId,
+                        PID: connectionUserId
+                    },
+                    force: true,
+                    transaction: t
+                });
+
                 await VoteUserContainer.upsert(
                     {
                         userId: userId,
                         voteId: voteId,
-                        container: signedDocument.signedDocData
+                        container: signedDocument.signedDocData,
+                        PID: connectionUserId
                     },
                     {
                         transaction: t
@@ -6721,9 +6514,9 @@ module.exports = function (app) {
         }
 
         const userId = req.user ? req.user.id : idSignFlowData.userId;
+        let signedDocInfo;
 
         try {
-            let signedDocInfo;
             if (idSignFlowData.signingMethod === Vote.SIGNING_METHODS.smartId) {
                 signedDocInfo = await cosSignature.getSmartIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions, timeoutMs);
             } else {
@@ -6749,14 +6542,14 @@ module.exports = function (app) {
                     await _checkAuthenticatedUser(userId, idSignFlowData.personalInfo, t)
                 }
 
-                const voteList = await VoteList
-                            .bulkCreate(
-                                voteOptions,
-                                {
-                                    fields: ['optionId', 'voteId', 'userId', 'optionGroupId'],
-                                    transaction: t
-                                }
-                            );
+                const voteList = await VoteList.bulkCreate(
+                    voteOptions,
+                    {
+                        fields: ['optionId', 'voteId', 'userId', 'optionGroupId'],
+                        transaction: t
+                    }
+                );
+
                 const topic = await Topic.findOne({
                     where: {
                         id: topicId
@@ -6815,7 +6608,8 @@ module.exports = function (app) {
                     {
                         userId: userId,
                         voteId: voteId,
-                        container: signedDocInfo.signedDocData
+                        container: signedDocInfo.signedDocData,
+                        PID: connectionUserId
                     },
                     {
                         transaction: t,
@@ -6840,20 +6634,22 @@ module.exports = function (app) {
                             }
                         );
                 }
-            });
 
-            return res.ok(
-                'Signing has been completed',
-                2,
-                {
-                    bdocUri: getBdocURL({
-                        userId: userId,
-                        topicId: topicId,
-                        voteId: voteId,
-                        type: 'user'
-                    })
-                }
-            );
+                t.afterCommit(() => {
+                    return res.ok(
+                        'Signing has been completed',
+                        2,
+                        {
+                            bdocUri: getBdocURL({
+                                userId: userId,
+                                topicId: topicId,
+                                voteId: voteId,
+                                type: 'user'
+                            })
+                        }
+                    );
+                });
+            });
         } catch (err) {
             let statusCode;
             if (err.result && err.result.endResult) {
@@ -6910,26 +6706,24 @@ module.exports = function (app) {
      * Un-authenticated, which means only authType===hard is supported.
      * Vote authType===hard then starts Vote signing process. Vote won't be counted before signing is finalized by calling POST /api/topics/:topicId/votes/:voteId/sign or Mobiil-ID signing is completed (GET /api/topics/:topicId/votes/:voteId/status)
      */
-    app.post('/api/topics/:topicId/votes/:voteId', function (req, res, next) {
-        handleTopicVotePreconditions(req, res)
-            .then(function (vote) {
-                // Deny calling for non-public Topics
-                if (vote.Topics[0].visibility !== Topic.VISIBILITY.public) {
-                    res.unauthorised();
+    app.post('/api/topics/:topicId/votes/:voteId', async function (req, res, next) {
+        try {
+            const vote = await handleTopicVotePreconditions(req, res);
+            // Deny calling for non-public Topics
+            if (vote.Topics[0].visibility !== Topic.VISIBILITY.public) {
+                return res.unauthorised();
+            }
 
-                    return Promise.reject();
-                }
+            if (vote.authType === Vote.AUTH_TYPES.soft) {
+                logger.warn('Un-authenticated Voting is not supported for Votes with authType === soft.');
 
-                if (vote.authType === Vote.AUTH_TYPES.soft) {
-                    logger.warn('Un-authenticated Voting is not supported for Votes with authType === soft.');
-                    res.badRequest('Un-authenticated Voting is not supported for Votes with authType === soft.');
-
-                    return Promise.reject();
-                } else {
-                    return handleTopicVoteHard(vote, req, res);
-                }
-            })
-            .catch(next);
+                return res.badRequest('Un-authenticated Voting is not supported for Votes with authType === soft.');
+            } else {
+                return handleTopicVoteHard(vote, req, res);
+            }
+        } catch(e) {
+            next(e);
+        }
     });
 
 
@@ -6958,33 +6752,35 @@ module.exports = function (app) {
      *
      * TODO: Deprecate /api/users/:userId/topics/:topicId/votes/:voteId/downloads/bdocs/user
      */
-    app.get(['/api/users/:userId/topics/:topicId/votes/:voteId/downloads/bdocs/user', '/api/topics/:topicId/votes/:voteId/downloads/bdocs/user'], authTokenRestrictedUse, function (req, res, next) {
+    app.get(['/api/users/:userId/topics/:topicId/votes/:voteId/downloads/bdocs/user', '/api/topics/:topicId/votes/:voteId/downloads/bdocs/user'], authTokenRestrictedUse, async function (req, res, next) {
         const voteId = req.params.voteId;
         const downloadTokenData = req.locals.tokenDecoded;
         const userId = downloadTokenData.userId;
 
         //TODO: Make use of streaming once Sequelize supports it - https://github.com/sequelize/sequelize/issues/2454
-        VoteUserContainer
+        try {
+            const voteUserContainer = await VoteUserContainer
             .findOne({
                 where: {
                     userId: userId,
                     voteId: voteId
                 }
-            })
-            .then(function (voteUserContainer) {
-                if (!voteUserContainer) {
-                    res.notFound();
+            });
 
-                    return Promise.reject();
-                }
+            if (!voteUserContainer) {
+                return res.notFound();
+            }
 
-                const container = voteUserContainer.dataValues.container;
+            const container = voteUserContainer.container;
 
-                res.set('Content-disposition', 'attachment; filename=vote.bdoc');
-                res.set('Content-type', 'application/vnd.etsi.asic-e+zip');
-                res.send(container);
-            })
-            .catch(next);
+            res.set('Content-disposition', 'attachment; filename=vote.bdoc');
+            res.set('Content-type', 'application/vnd.etsi.asic-e+zip');
+
+            return res.send(container);
+
+        } catch(err) {
+            return next (err);
+        }
     });
 
     const topicDownloadBdocFinal = async function (req, res, next) {
@@ -6994,20 +6790,20 @@ module.exports = function (app) {
         let finalDocStream;
         try {
             const topic = await Topic
-                .findOne({
-                    where: {
-                        id: topicId
-                    },
-                    include: [
-                        {
-                            model: Vote,
-                            where: {
-                                id: voteId,
-                                authType: Vote.AUTH_TYPES.hard
-                            }
+            .findOne({
+                where: {
+                    id: topicId
+                },
+                include: [
+                    {
+                        model: Vote,
+                        where: {
+                            id: voteId,
+                            authType: Vote.AUTH_TYPES.hard
                         }
-                    ]
-                });
+                    }
+                ]
+            });
             const vote = topic.Votes[0];
 
             // TODO: Once we implement the the "endDate>now -> followUp" we can remove Topic.STATUSES.voting check
@@ -7038,12 +6834,11 @@ module.exports = function (app) {
      * Download final vote Zip container
      */
 
-    const topicDownloadZipFinal = function (req, res, next) {
+    const topicDownloadZipFinal = async function (req, res, next) {
         const topicId = req.params.topicId;
         const voteId = req.params.voteId;
-
-        Topic
-            .findOne({
+        try {
+            const topic = await Topic.findOne({
                 where: {
                     id: topicId
                 },
@@ -7056,26 +6851,24 @@ module.exports = function (app) {
                         }
                     }
                 ]
-            })
-            .then(function (topic) {
-                const vote = topic.Votes[0];
+            });
 
-                // TODO: Once we implement the the "endDate>now -> followUp" we can remove Topic.STATUSES.voting check
-                if ((vote.endsAt && vote.endsAt.getTime() > new Date().getTime() && topic.status === Topic.STATUSES.voting) || topic.status === Topic.STATUSES.voting) {
-                    res.badRequest('The Vote has not ended.');
+            const vote = topic.Votes[0];
 
-                    return Promise.reject();
-                }
+            // TODO: Once we implement the the "endDate>now -> followUp" we can remove Topic.STATUSES.voting check
+            if ((vote.endsAt && vote.endsAt.getTime() > new Date().getTime() && topic.status === Topic.STATUSES.voting) || topic.status === Topic.STATUSES.voting) {
+                return res.badRequest('The Vote has not ended.');
+            }
 
-                res.set('Content-disposition', 'attachment; filename=final.zip');
-                res.set('Content-type', 'application/zip');
+            res.set('Content-disposition', 'attachment; filename=final.zip');
+            res.set('Content-type', 'application/zip');
 
-                return cosSignature.getFinalZip(topicId, voteId, true);
-            })
-            .then(function (finalDocStream) {
-                return finalDocStream.pipe(res);
-            })
-            .catch(next);
+            const finalDocStream = await cosSignature.getFinalZip(topicId, voteId, true);
+
+            return finalDocStream.pipe(res);
+        } catch(err) {
+            return next(err);
+        }
     };
 
     /**
@@ -7109,27 +6902,21 @@ module.exports = function (app) {
             return res.badRequest('Cannot delegate to self.', 1);
         }
 
-        let hasAccess;
-        try {
-            hasAccess = await _hasPermission(topicId, toUserId, TopicMemberUser.LEVELS.read, false, null, null, req.user.partnerId);
-        } catch (e) {
-            hasAccess = false;
-        }
+        const hasAccess = await _hasPermission(topicId, toUserId, TopicMemberUser.LEVELS.read, false, null, null, req.user.partnerId);
 
         if (!hasAccess) {
             return res.badRequest('Cannot delegate Vote to User who does not have access to this Topic.', 2);
         }
 
-        const vote = await Vote
-            .findOne({
-                where: {id: voteId},
-                include: [
-                    {
-                        model: Topic,
-                        where: {id: topicId}
-                    }
-                ]
-            });
+        const vote = await Vote.findOne({
+            where: {id: voteId},
+            include: [
+                {
+                    model: Topic,
+                    where: {id: topicId}
+                }
+            ]
+        });
 
         if (!vote) {
             return res.notFound();
@@ -7139,98 +6926,94 @@ module.exports = function (app) {
             return res.badRequest('The Vote has ended.');
         }
 
-        await db
-            .transaction(async function (t) {
-                let result;
+        await db.transaction(async function (t) {
+            let result;
 
-                try {
-                    result = await db
-                        .query(
-                            ' \
-                            WITH \
-                                RECURSIVE delegation_chains("voteId", "toUserId", "byUserId", depth) AS ( \
-                                    SELECT \
-                                        "voteId", \
-                                        "toUserId", \
-                                        "byUserId", \
-                                        1 \
-                                    FROM "VoteDelegations" vd \
-                                    WHERE vd."voteId" = :voteId \
-                                        AND vd."byUserId" = :toUserId \
-                                        AND vd."deletedAt" IS NULL \
-                                    \
-                                    UNION ALL \
-                                    \
-                                    SELECT \
-                                        vd."voteId", \
-                                        vd."toUserId", \
-                                        dc."byUserId", \
-                                        dc.depth + 1 \
-                                    FROM delegation_chains dc, "VoteDelegations" vd \
-                                    WHERE vd."voteId" = dc."voteId" \
-                                        AND vd."byUserId" = dc."toUserId" \
-                                        AND vd."deletedAt" IS NULL \
-                                ), \
-                                cyclicDelegation AS ( \
-                                    SELECT \
-                                        0 \
-                                    FROM delegation_chains \
-                                    WHERE "byUserId" = :toUserId \
-                                        AND "toUserId" = :byUserId \
-                                    LIMIT 1 \
-                                ), \
-                                upsert AS ( \
-                                    UPDATE "VoteDelegations" \
-                                    SET "toUserId" = :toUserId, \
-                                        "updatedAt" = CURRENT_TIMESTAMP \
-                                    WHERE "voteId" = :voteId \
-                                    AND "byUserId" = :byUserId \
-                                    AND 1 = 1 / COALESCE((SELECT * FROM cyclicDelegation), 1) \
-                                    AND "deletedAt" IS NULL \
-                                    RETURNING * \
-                                ) \
-                            INSERT INTO "VoteDelegations" ("voteId", "toUserId", "byUserId", "createdAt", "updatedAt") \
-                                SELECT :voteId, :toUserId, :byUserId, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP \
-                                WHERE NOT EXISTS (SELECT * FROM upsert) \
-                                    AND 1 = 1 / COALESCE((SELECT * FROM cyclicDelegation), 1) \
-                            RETURNING * \
-                            ',
-                            {
-                                replacements: {
-                                    voteId: voteId,
-                                    toUserId: toUserId,
-                                    byUserId: req.user.id
-                                },
-                                raw: true,
-                                transaction: t
-                            }
-                        );
-                } catch (err) {
-                    // HACK: Forcing division by zero when cyclic delegation is detected. Cannot use result check as both update and cyclic return [].
-                    if (err.parent.code === '22012') {
-                        // Cyclic delegation detected.
-                        return res.badRequest('Sorry, you cannot delegate your vote to this person.');
-                    }
-
-                    // Don't hide other errors
-                    throw err;
+            try {
+                result = await db
+                    .query(`
+                        WITH
+                            RECURSIVE delegation_chains("voteId", "toUserId", "byUserId", depth) AS (
+                                SELECT
+                                    "voteId",
+                                    "toUserId",
+                                    "byUserId",
+                                    1
+                                FROM "VoteDelegations" vd
+                                WHERE vd."voteId" = :voteId
+                                    AND vd."byUserId" = :toUserId
+                                    AND vd."deletedAt" IS NULL
+                                UNION ALL
+                                SELECT
+                                    vd."voteId",
+                                    vd."toUserId",
+                                    dc."byUserId",
+                                    dc.depth + 1
+                                FROM delegation_chains dc, "VoteDelegations" vd
+                                WHERE vd."voteId" = dc."voteId"
+                                    AND vd."byUserId" = dc."toUserId"
+                                    AND vd."deletedAt" IS NULL
+                            ),
+                            cyclicDelegation AS (
+                                SELECT
+                                    0
+                                FROM delegation_chains
+                                WHERE "byUserId" = :toUserId
+                                    AND "toUserId" = :byUserId
+                                LIMIT 1
+                            ),
+                            upsert AS (
+                                UPDATE "VoteDelegations"
+                                SET "toUserId" = :toUserId,
+                                    "updatedAt" = CURRENT_TIMESTAMP
+                                WHERE "voteId" = :voteId
+                                AND "byUserId" = :byUserId
+                                AND 1 = 1 / COALESCE((SELECT * FROM cyclicDelegation), 1)
+                                AND "deletedAt" IS NULL
+                                RETURNING *
+                            )
+                        INSERT INTO "VoteDelegations" ("voteId", "toUserId", "byUserId", "createdAt", "updatedAt")
+                            SELECT :voteId, :toUserId, :byUserId, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                            WHERE NOT EXISTS (SELECT * FROM upsert)
+                                AND 1 = 1 / COALESCE((SELECT * FROM cyclicDelegation), 1)
+                        RETURNING *
+                        ;`,
+                        {
+                            replacements: {
+                                voteId: voteId,
+                                toUserId: toUserId,
+                                byUserId: req.user.id
+                            },
+                            raw: true,
+                            transaction: t
+                        }
+                    );
+            } catch (err) {
+                // HACK: Forcing division by zero when cyclic delegation is detected. Cannot use result check as both update and cyclic return [].
+                if (err.parent.code === '22012') {
+                    // Cyclic delegation detected.
+                    return res.badRequest('Sorry, you cannot delegate your vote to this person.');
                 }
 
-                const delegation = VoteDelegation.build(result[0][0]);
+                // Don't hide other errors
+                throw err;
+            }
 
-                await cosActivities
-                    .createActivity(
-                        delegation,
-                        vote,
-                        {
-                            type: 'User',
-                            id: req.user.id,
-                            ip: req.ip
-                        },
-                        req.method + ' ' + req.path,
-                        t
-                    );
-            });
+            const delegation = VoteDelegation.build(result[0][0]);
+
+            await cosActivities
+                .createActivity(
+                    delegation,
+                    vote,
+                    {
+                        type: 'User',
+                        id: req.user.id,
+                        ip: req.ip
+                    },
+                    req.method + ' ' + req.path,
+                    t
+                );
+        });
 
         return res.ok();
     }));
@@ -7300,56 +7083,52 @@ module.exports = function (app) {
         return res.ok();
     }));
 
-    const topicEventsCreate = function (req, res, next) {
+    const topicEventsCreate = async function (req, res, next) {
         const topicId = req.params.topicId;
+        try {
+            const topic = await Topic
+                .findOne({
+                    where: {
+                        id: topicId
+                    }
+                });
 
-        return Topic
-            .findOne({
-                where: {
-                    id: topicId
-                }
-            })
-            .then(function (topic) {
-                return db
-                    .transaction(function (t) {
-                        return TopicEvent
-                            .create(
-                                {
-                                    topicId: topicId,
-                                    subject: req.body.subject,
-                                    text: req.body.text
-                                },
-                                {
-                                    transaction: t
-                                }
-                            )
-                            .then(function (event) {
-                                const actor = {
-                                    type: 'User',
-                                    ip: req.ip
-                                };
+            return db
+                .transaction(async function (t) {
+                    const event = await TopicEvent
+                        .create(
+                            {
+                                topicId: topicId,
+                                subject: req.body.subject,
+                                text: req.body.text
+                            },
+                            {
+                                transaction: t
+                            }
+                        );
+                    const actor = {
+                        type: 'User',
+                        ip: req.ip
+                    };
 
-                                if (req.user && req.user.id) {
-                                    actor.id = req.user.id;
-                                }
+                    if (req.user && req.user.id) {
+                        actor.id = req.user.id;
+                    }
 
-                                return cosActivities
-                                    .createActivity(
-                                        event,
-                                        topic,
-                                        actor,
-                                        req.method + ' ' + req.path,
-                                        t
-                                    )
-                                    .then(function () {
-                                        return event;
-                                    });
-                            });
-                    }).then(function (event) {
-                        return res.created(event.toJSON());
-                    });
-            })
-            .catch(next);
+                    await cosActivities
+                        .createActivity(
+                            event,
+                            topic,
+                            actor,
+                            req.method + ' ' + req.path,
+                            t
+                        );
+
+                    return res.created(event.toJSON());
+            });
+        } catch (err) {
+            return next(err);
+        }
 
     };
 
@@ -7363,23 +7142,24 @@ module.exports = function (app) {
     app.post('/api/topics/:topicId/events', authTokenRestrictedUse, topicEventsCreate);
 
 
-    const topicEventsList = function (req, res, next) {
+    const topicEventsList = async function (req, res, next) {
         const topicId = req.params.topicId;
-
-        TopicEvent
-            .findAll({
-                where: {
-                    topicId: topicId
-                },
-                order: [['createdAt', 'DESC']]
-            })
-            .then(function (events) {
-                return res.ok({
-                    count: events.length,
-                    rows: events
+        try {
+            const events = await TopicEvent
+                .findAll({
+                    where: {
+                        topicId: topicId
+                    },
+                    order: [['createdAt', 'DESC']]
                 });
-            })
-            .catch(next);
+
+            return res.ok({
+                count: events.length,
+                rows: events
+            });
+        } catch (err) {
+            return next(err);
+        }
     };
 
 
@@ -7396,148 +7176,137 @@ module.exports = function (app) {
     /**
      * Delete event
      */
-    app.delete('/api/users/:userId/topics/:topicId/events/:eventId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.followUp]), function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/events/:eventId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.followUp]), async function (req, res, next) {
         const topicId = req.params.topicId;
         const eventId = req.params.eventId;
-
-        TopicEvent
-            .findOne({
+        try {
+            const event = await TopicEvent.findOne({
                 where: {
                     id: eventId,
                     topicId: topicId
                 },
                 include: [Topic]
-            })
-            .then(function (event) {
-                return db
-                    .transaction(function (t) {
-                        return cosActivities
-                            .deleteActivity(event, event.Topic, {
-                                type: 'User',
-                                id: req.user.id,
-                                ip: req.ip
-                            }, req.method + ' ' + req.path, t)
-                            .then(function () {
-                                return TopicEvent
-                                    .destroy({
-                                        where: {
-                                            id: eventId,
-                                            topicId: topicId
-                                        },
-                                        transaction: t
-                                    });
-                            });
-                    });
+            });
 
-            })
-            .then(function () {
-                return res.ok();
-            })
-            .catch(next);
+            await db
+                .transaction(async function (t) {
+                    await cosActivities
+                        .deleteActivity(event, event.Topic, {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        }, req.method + ' ' + req.path, t);
+
+                    return TopicEvent.destroy({
+                        where: {
+                            id: eventId,
+                            topicId: topicId
+                        },
+                        transaction: t
+                    });
+                });
+
+            return res.ok();
+        } catch (err) {
+            return next(err);
+        }
     });
 
-    app.post('/api/users/:userId/topics/:topicId/pin', loginCheck(['partner']), function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/pin', loginCheck(['partner']), async function (req, res, next) {
         const userId = req.user.id;
         const topicId = req.params.topicId;
 
-        return db
-            .transaction(function (t) {
-                return TopicPin
-                    .findOrCreate({
+        try {
+            await db
+                .transaction(async function (t) {
+                    const [topicPin, created]= await TopicPin.findOrCreate({
                         where: {
                             topicId: topicId,
                             userId: userId
                         },
                         transaction: t
-                    })
-                    .then(function ([topicPin, created]) {
-                        if (created) {
-                            return Topic
-                                .findOne({
-                                    where: {
-                                        id: topicId
-                                    }
-                                })
-                                .then(function (topic) {
-                                    topic.description = null;
-
-                                    return cosActivities
-                                        .addActivity(
-                                            topic,
-                                            {
-                                                type: 'User',
-                                                id: userId,
-                                                ip: req.ip
-                                            },
-                                            null,
-                                            topicPin,
-                                            req.method + ' ' + req.path,
-                                            t
-                                        );
-                                });
-                        }
                     });
-            })
-            .then(function () {
-                return res.ok();
-            })
-            .catch(next);
+
+                    if (created) {
+                        const topic = await Topic.findOne({
+                            where: {
+                                id: topicId
+                            }
+                        });
+
+                        topic.description = null;
+
+                        return cosActivities
+                            .addActivity(
+                                topic,
+                                {
+                                    type: 'User',
+                                    id: userId,
+                                    ip: req.ip
+                                },
+                                null,
+                                topicPin,
+                                req.method + ' ' + req.path,
+                                t
+                            );
+                    }
+                });
+
+            return res.ok();
+        } catch (err) {
+            return next(err);
+        }
     });
 
-    app.delete('/api/users/:userId/topics/:topicId/pin', loginCheck(['partner']), function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/pin', loginCheck(['partner']), async function (req, res, next) {
         const userId = req.user.id;
         const topicId = req.params.topicId;
 
-        TopicPin
-            .findOne({
+        try {
+            const topicPin = await TopicPin.findOne({
                 where: {
                     userId: userId,
                     topicId: topicId
                 }
-            })
-            .then(function (topicPin) {
-                if (topicPin) {
-                    return db
-                        .transaction(function (t) {
-                            return Topic
-                                .findOne({
-                                    where: {
-                                        id: topicId
-                                    }
-                                })
-                                .then(function (topic) {
-                                    topic.description = null;
+            });
 
-                                    return cosActivities
-                                        .deleteActivity(
-                                            topicPin,
-                                            topic,
-                                            {
-                                                type: 'User',
-                                                id: req.user.id,
-                                                ip: req.ip
-                                            },
-                                            req.method + ' ' + req.path,
-                                            t
-                                        )
-                                        .then(function () {
-                                            return TopicPin
-                                                .destroy({
-                                                    where: {
-                                                        userId: userId,
-                                                        topicId: topicId
-                                                    },
-                                                    transaction: t
-                                                });
-                                        });
-                                });
+            if (topicPin) {
+                await db
+                    .transaction(async function (t) {
+                        const topic = await Topic.findOne({
+                            where: {
+                                id: topicId
+                            }
                         });
-                }
-            })
-            .then(function () {
-                return res.ok();
-            })
-            .catch(next);
+
+                        topic.description = null;
+
+                        await cosActivities.deleteActivity(
+                            topicPin,
+                            topic,
+                            {
+                                type: 'User',
+                                id: req.user.id,
+                                ip: req.ip
+                            },
+                            req.method + ' ' + req.path,
+                            t
+                        );
+
+                        return TopicPin.destroy({
+                            where: {
+                                userId: userId,
+                                topicId: topicId
+                            },
+                            transaction: t
+                        });
+                    });
+            }
+
+            return res.ok();
+        } catch (err) {
+            return next(err);
+        }
     });
 
     return {
