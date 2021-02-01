@@ -874,10 +874,10 @@ module.exports = function (app) {
                     c.name as "creator.name",
                     c.company as "creator.company",
                     COALESCE(
-                    tmup.level,
-                    tmgp.level,
-                        'none '
-                ) as "permission.level",
+                        tmup.level,
+                        tmgp.level,
+                            'none '
+                    ) as "permission.level",
                     muc.count as "members.users.count",
                     COALESCE(mgc.count, 0) as "members.groups.count",
                     tv."voteId",
