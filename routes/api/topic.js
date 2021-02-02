@@ -3788,6 +3788,9 @@ module.exports = function (app) {
             return res.gone(`The invite has expired. Invites are valid for ${TopicInviteUser.VALID_DAYS} days`, 2);
         }
 
+        // At this point we can already confirm users e-mail
+        await User.update({emailIsVerified: true},{where: { id: invite.userId}, fields: ['emailIsVerified'], limit: 1});
+
         return res.ok(invite);
     }));
 
