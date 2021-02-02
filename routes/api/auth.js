@@ -117,31 +117,33 @@ module.exports = function (app) {
         return res.redirect(redirectUri + querystring.stringify(errorObj));
     };
 
-    app.post('/api/auth/signup', function (req, res, next) {
+    app.post('/api/auth/signup', async function (req, res, next) {
         const email = req.body.email || ''; // HACK: Sequelize validate() is not run if value is "null". Also cannot use allowNull: false as I don' want constraint in DB. https://github.com/sequelize/sequelize/issues/2643
         const password = req.body.password || ''; // HACK: Sequelize validate() is not run if value is "null". Also cannot use allowNull: false as I don' want constraint in DB. https://github.com/sequelize/sequelize/issues/2643
         const name = req.body.name || util.emailToDisplayName(req.body.email);
         const company = req.body.company;
         const language = req.body.language;
-        const redirectSuccess = req.body.redirectSuccess;
+        const redirectSuccess = req.body.redirectSuccess || urlLib.getFe();
 
-        return User
-            .findOne({
-                where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email))
-            })
-            .then(function (user) {
-                if (user) {
-                    // IF password is null, the User was created through an invite. We allow an User to claim the account.
-                    if (user.password) {
-                        // Email address is already in use.
-                        return null;
-                    }
-                    user.password = password;
+        let created = false;
+        try {
+            let user = await User
+                .findOne({
+                    where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email))
+                });
+            if (user) {
+                // IF password is null, the User was created through an invite. We allow an User to claim the account.
+                if (user.password) {
+                    // Email address is already in use.
+                    return res.badRequest({email: 'The email address is already in use.'}, 1);
+                }
+                user.password = password;
 
-                    return user.save();
-                } else {
-                    return db.transaction(function (t) {
-                        return User
+                await user.save({fields: ['password']});
+            } else {
+                try {
+                    await db.transaction(async function (t) {
+                        [user, created] = await User
                             .findOrCreate({
                                 where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email)), // Well, this will allow user to log in either using User and pass or just Google.. I think it's ok..
                                 defaults: {
@@ -153,77 +155,59 @@ module.exports = function (app) {
                                     language: language
                                 },
                                 transaction: t
-                            })
-                            .then(function (result) {
-                                let user = result[0];
-                                let created = result[1];
-                                const activityPromise = [];
-                                if (created) {
-                                    logger.info('Created a new user', user.id);
-                                    activityPromise.push(cosActivities.createActivity(user, null, {
-                                        type: 'User',
-                                        id: user.id,
-                                        ip: req.ip
-                                    }, req.method + ' ' + req.path, t));
-                                }
-
-                                return Promise
-                                    .all(activityPromise)
-                                    .then(function () {
-                                        return UserConnection
-                                            .create({
-                                                userId: user.id,
-                                                connectionId: UserConnection.CONNECTION_IDS.citizenos,
-                                                connectionUserId: user.id,
-                                                connectionData: user
-                                            }, {
-                                                transaction: t
-                                            })
-                                            .then(function (uc) {
-
-                                                return cosActivities.addActivity(uc, {
-                                                    type: 'User',
-                                                    id: user.id,
-                                                    ip: req.ip
-                                                }, null, user, req.method + ' ' + req.path, t);
-                                            })
-                                            .then(function () {
-                                                return user;
-                                            });
-                                    });
                             });
+                        if (created) {
+                            logger.info('Created a new user', user.id);
+                            await cosActivities.createActivity(user, null, {
+                                type: 'User',
+                                id: user.id,
+                                ip: req.ip
+                            }, req.method + ' ' + req.path, t);
+                        }
+
+                        const uc = await UserConnection
+                            .create({
+                                userId: user.id,
+                                connectionId: UserConnection.CONNECTION_IDS.citizenos,
+                                connectionUserId: user.id,
+                                connectionData: user
+                            }, {
+                                transaction: t
+                            });
+
+                        return cosActivities.addActivity(uc, {
+                            type: 'User',
+                            id: user.id,
+                            ip: req.ip
+                        }, null, user, req.method + ' ' + req.path, t);
                     });
+                } catch(err) {
+                    return next(err);
                 }
-            })
-            .then(function (user) {
-                if (user) {
+            }
+
+            if (user) {
+                if (user.emailIsVerified) {
+                    setAuthCookie(req, res, user.id);
+
+                    return res.ok({redirectSuccess});
+                } else {
                     // Store redirect url in the token so that /api/auth/verify/:code could redirect to the url late
                     const tokenData = {
-                        redirectSuccess: redirectSuccess ? redirectSuccess : urlLib.getFe() // TODO: Misleading naming, would like to use "redirectUri" (OpenID convention) instead, but needs RAA.ee to update codebase.
+                        redirectSuccess // TODO: Misleading naming, would like to use "redirectUri" (OpenID convention) instead, but needs RAA.ee to update codebase.
                     };
 
                     const token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
+                    await emailLib.sendAccountVerification(user.email, user.emailVerificationCode, token);
 
-                    return emailLib
-                        .sendAccountVerification(user.email, user.emailVerificationCode, token)
-                        .then(function () {
-                            return user;
-                        });
-                } else {
-                    res.badRequest({email: 'The email address is already in use.'}, 1);
-
-                    return Promise.reject();
+                    return res.ok('Check your email ' + user.email + ' to verify your account.', user.toJSON());
                 }
-            })
-            .then(function (user) {
-                return res.ok('Check your email ' + user.email + ' to verify your account.', user.toJSON());
-            })
-            .catch(function (err) {
-                if (err) {
-                    return next(err);
-                }
-                // Ignore, headers are supposed to be sent before, not sure it's the right way to do things tho. I guess we should reject Promise with some error which then convertss to HTTP response?
-            });
+            } else {
+                return res.badRequest({email: 'The email address is already in use.'}, 1);
+            }
+        } catch (err) {
+            return next(err);
+        }
     });
 
     /**
@@ -277,7 +261,7 @@ module.exports = function (app) {
         return res.ok();
     });
 
-    app.get('/api/auth/verify/:code', function (req, res, next) {
+    app.get('/api/auth/verify/:code', async function (req, res) {
         const code = req.params.code;
         const token = req.query.token;
 
@@ -288,140 +272,123 @@ module.exports = function (app) {
                 redirectSuccess = tokenData.redirectSuccess;
             }
         }
-
-        User
-            .update(
-                {
-                    emailIsVerified: true
-                },
-                {
-                    where: {emailVerificationCode: code},
-                    limit: 1,
-                    validate: false,
-                    returning: true
-                }
-            )
-            .then(
-                function (result) {
-                    // Result[0] - rows, result[1] - updated rows
-                    // Result is array with the count of affected rows. For PG also possible to return affected rows
-                    if (result && result.length && !result[1] && !result[1].length) { // 0 rows updated.
-                        logger.warn('Email verification ended up updating 0 rows. Hackers or new verification code has been generated in between?');
-
-                        return res.redirect(302, redirectSuccess + '?error=emailVerificationFailed');
+        try {
+            const result = await User
+                .update(
+                    {
+                        emailIsVerified: true
+                    },
+                    {
+                        where: {emailVerificationCode: code},
+                        limit: 1,
+                        validate: false,
+                        returning: true
                     }
+                );
+            // Result[0] - rows, result[1] - updated rows
+            // Result is array with the count of affected rows. For PG also possible to return affected rows
+            if (result && result.length && !result[1] && !result[1].length) { // 0 rows updated.
+                logger.warn('Email verification ended up updating 0 rows. Hackers or new verification code has been generated in between?');
 
-                    if (getStateCookie(req, COOKIE_NAME_OPENID_AUTH_STATE)) { // We are in the middle of OpenID authorization flow
-                        return res.redirect(urlLib.getApi('/api/auth/openid/authorize'));
-                    } else {
-                        return res.redirect(302, redirectSuccess);
-                    }
-                },
-                function (err) {
-                    logger.warn('Sequelize DB error', err);
-                    // TODO: Not the sweetest solution for PG throwing "SequelizeDatabaseError: error: invalid input syntax for uuid: "columnName"".
-                    // TODO: Probably not required when TEXT type is used instead of UUID as then PG validation would not kick in.
+                return res.redirect(302, redirectSuccess + '?error=emailVerificationFailed');
+            }
 
-                    return res.redirect(302, redirectSuccess + '?error=emailVerificationFailed');
-                }
-            )
-            .catch(next); // Whatever blows up, always call next() for Express error handlers to be called.
+            if (getStateCookie(req, COOKIE_NAME_OPENID_AUTH_STATE)) { // We are in the middle of OpenID authorization flow
+                return res.redirect(urlLib.getApi('/api/auth/openid/authorize'));
+            } else {
+                return res.redirect(302, redirectSuccess);
+            }
+        } catch (err) {
+            logger.warn('Sequelize DB error', err);
+            // TODO: Not the sweetest solution for PG throwing "SequelizeDatabaseError: error: invalid input syntax for uuid: "columnName"".
+            // TODO: Probably not required when TEXT type is used instead of UUID as then PG validation would not kick in.
+
+            return res.redirect(302, redirectSuccess + '?error=emailVerificationFailed');
+        }
     });
 
 
-    app.post('/api/auth/password', loginCheck(), function (req, res, next) {
+    app.post('/api/auth/password', loginCheck(), async function (req, res, next) {
         const currentPassword = req.body.currentPassword;
         const newPassword = req.body.newPassword;
+        try {
+            const user = await User
+                .findOne({
+                    where: {
+                        id: req.user.id
+                    }
+                });
 
-        User
-            .findOne({
-                where: {
-                    id: req.user.id
-                }
-            })
-            .then(function (user) {
-                if (!user || user.password !== cryptoLib.getHash(currentPassword, 'sha256')) {
-                    res.badRequest('Invalid email or new password.');
+            if (!user || user.password !== cryptoLib.getHash(currentPassword, 'sha256')) {
+                return res.badRequest('Invalid email or new password.');
+            }
 
-                    return Promise.reject();
-                }
+            user.password = newPassword;
 
-                user.password = newPassword;
+            await user.save({fields: ['password']});
 
-                return user.save({fields: ['password']});
-            })
-            .then(function () {
-                return res.ok();
-            })
-            .catch(next);
+            return res.ok();
+        } catch (err) {
+            return next(err);
+        }
     });
 
 
-    app.post('/api/auth/password/reset/send', function (req, res, next) {
+    app.post('/api/auth/password/reset/send', async function (req, res, next) {
         const email = req.body.email;
         if (!email || !validator.isEmail(email)) {
             return res.badRequest({email: 'Invalid email'});
         }
-
-        User
-            .findOne({
+        try {
+            const user = await User.findOne({
                 where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email))
-            })
-            .then(function (user) {
-                if (!user) {
-                    res.badRequest({email: 'Account with this email does not exist.'}, 2);
+            });
 
-                    return Promise.reject();
-                }
+            if (!user) {
+                return res.badRequest({email: 'Account with this email does not exist.'}, 2);
+            }
 
-                user.passwordResetCode = true; // Model will generate new code
+            user.passwordResetCode = true; // Model will generate new code
 
-                return user
-                    .save({fields: ['passwordResetCode']});
-            })
-            .then(function (user) {
-                return emailLib
-                    .sendPasswordReset(user.email, user.passwordResetCode)
-                    .then(function () {
-                        return res.ok('Success! Please check your email :email to complete your password recovery.'.replace(':email', user.email));
-                    });
-            })
-            .catch(next);
+            await user.save({fields: ['passwordResetCode']});
+
+            await emailLib.sendPasswordReset(user.email, user.passwordResetCode);
+
+            return res.ok('Success! Please check your email :email to complete your password recovery.'.replace(':email', user.email));
+        } catch (err) {
+            return next(err);
+        }
     });
 
 
-    app.post('/api/auth/password/reset', function (req, res, next) {
+    app.post('/api/auth/password/reset', async function (req, res, next) {
         const email = req.body.email;
         const password = req.body.password;
         const passwordResetCode = req.body.passwordResetCode;
-
-        User
-            .findOne({
+        try {
+            const user = await User.findOne({
                 where: {
                     [Op.and]: [
                         db.where(db.fn('lower', db.col('email')), db.fn('lower',email)),
                         db.where(db.col('passwordResetCode'), passwordResetCode)
                     ]
                 }
-            })
-            .then(function (user) {
-                // !user.passwordResetCode avoids the situation where passwordResetCode has not been sent (null), but user posts null to API
-                if (!user || !user.passwordResetCode) {
-                    res.badRequest('Invalid email, password or password reset code.');
+            });
 
-                    return Promise.reject();
-                }
+            // !user.passwordResetCode avoids the situation where passwordResetCode has not been sent (null), but user posts null to API
+            if (!user || !user.passwordResetCode) {
+                return res.badRequest('Invalid email, password or password reset code.');
+            }
 
-                user.password = password; // Hash is created by the model hooks
-                user.passwordResetCode = true; // Model will generate new code so that old code cannot be used again - https://github.com/citizenos/citizenos-api/issues/68
+            user.password = password; // Hash is created by the model hooks
+            user.passwordResetCode = true; // Model will generate new code so that old code cannot be used again - https://github.com/citizenos/citizenos-api/issues/68
 
-                return user.save({fields: ['password', 'passwordResetCode']});
-            })
-            .then(function () {
-                //TODO: Logout all existing sessions for the User!
-                return res.ok();
-            })
-            .catch(next);
+            await user.save({fields: ['password', 'passwordResetCode']});
+            //TODO: Logout all existing sessions for the User!
+            return res.ok();
+        } catch (err) {
+            return next(err);
+        }
 
     });
 
@@ -431,61 +398,59 @@ module.exports = function (app) {
      *
      * @deprecated Use GET /api/users/self instead.
      */
-    app.get('/api/auth/status', loginCheck(['partner']), function (req, res, next) {
-        User
-            .findOne({
+    app.get('/api/auth/status', loginCheck(['partner']), async function (req, res, next) {
+        try {
+            const user = await User.findOne({
                 where: {
                     id: req.user.id
                 }
-            })
-            .then(function (user) {
-                if (!user) {
-                    clearSessionCookies(req, res);
+            });
 
-                    return res.notFound();
-                }
-                const userData = user.toJSON();
-                userData.termsVersion = user.dataValues.termsVersion;
-                userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
+            if (!user) {
+                clearSessionCookies(req, res);
 
-                return res.ok(userData);
-            })
-            .catch(next);
+                return res.notFound();
+            }
+            const userData = user.toJSON();
+            userData.termsVersion = user.dataValues.termsVersion;
+            userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
+
+            return res.ok(userData);
+        } catch (err) {
+            return next(err);
+        }
     });
 
 
-    app.post('/api/auth/smartid/init', function (req, res, next) {
+    app.post('/api/auth/smartid/init', async function (req, res, next) {
         const pid = req.body.pid;
         const countryCode = req.body.countryCode;
 
         if (!pid) {
             return res.badRequest('Smart-ID athentication requires users pid', 1);
         }
-
-        smartId
-            .authenticate(pid, countryCode)
-            .then(function (sessionData) {
-                const sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
-                const token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
-                    expiresIn: '5m',
-                    algorithm: config.session.algorithm
-                });
-
-                return res.ok({
-                    challengeID: sessionData.challengeID,
-                    token: token
-                }, 1);
-            })
-            .catch(function (e) {
-                if (e.code === 404) {
-                    return res.notFound();
-                }
-                if (e.code === 400) {
-                    return res.badRequest();
-                }
-
-                return next(e);
+        try {
+            const sessionData = await smartId.authenticate(pid, countryCode);
+            const sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
+            const token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
+                expiresIn: '5m',
+                algorithm: config.session.algorithm
             });
+
+            return res.ok({
+                challengeID: sessionData.challengeID,
+                token: token
+            }, 1);
+        } catch(e) {
+            if (e.code === 404) {
+                return res.notFound();
+            }
+            if (e.code === 400) {
+                return res.badRequest();
+            }
+
+            return next(e);
+        }
     });
 
     const _getUserByPersonalId = async function (personalInfo, connectionId, req, transaction) {
@@ -571,7 +536,7 @@ module.exports = function (app) {
         }
     };
 
-    app.get('/api/auth/smartid/status', function (req, res, next) {
+    app.get('/api/auth/smartid/status', async function (req, res, next) {
         const token = req.query.token;
         const timeoutMs = req.query.timeoutMs || 5000;
 
@@ -582,48 +547,41 @@ module.exports = function (app) {
         const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
         const loginSmartIdFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
         let personalInfo;
-        smartId
-            .statusAuth(loginSmartIdFlowData.sessionId, loginSmartIdFlowData.sessionHash, timeoutMs)
-            .then(function (response) {
-                if (response.error) {
-                    return res.badRequest(response.error.message, response.error.code);
-                } else if (response.state === 'RUNNING') {
-                    return res.ok('Log in progress', 1);
-                } else if (response.state === 'COMPLETE') {
-                    switch (response.result.endResult) {
-                        case 'OK':
-                            personalInfo = response.personalInfo;
-                            break;
-                        case 'USER_REFUSED':
-                            res.badRequest('User refused', 10);
+        try {
+            const response = await smartId.statusAuth(loginSmartIdFlowData.sessionId, loginSmartIdFlowData.sessionHash, timeoutMs);
 
-                            return;
-                        case 'TIMEOUT':
-                            res.badRequest('The transaction has expired', 11);
-
-                            return;
-                        default:
-                            res.badRequest(response);
-                            break;
-                    }
-                } else {
-                    return res.badRequest(response);
+            if (response.error) {
+                return res.badRequest(response.error.message, response.error.code);
+            } else if (response.state === 'RUNNING') {
+                return res.ok('Log in progress', 1);
+            } else if (response.state === 'COMPLETE') {
+                switch (response.result.endResult) {
+                    case 'OK':
+                        personalInfo = response.personalInfo;
+                        break;
+                    case 'USER_REFUSED':
+                        return res.badRequest('User refused', 10);
+                    case 'TIMEOUT':
+                        return res.badRequest('The transaction has expired', 11);
+                    default:
+                        return res.badRequest(response);
                 }
+            } else {
+                return res.badRequest(response);
+            }
 
-                return _getUserByPersonalId(personalInfo, UserConnection.CONNECTION_IDS.smartid, req)
-                    .then(function (userData) {
-                        const user = userData[0];
-                        const created = userData[1];
-                        setAuthCookie(req, res, user.id);
+            const userData = await _getUserByPersonalId(personalInfo, UserConnection.CONNECTION_IDS.smartid, req);
+            const user = userData[0];
+            const created = userData[1];
+            setAuthCookie(req, res, user.id);
 
-                        return res.ok(user, created);
-                    });
-            }, function (error) {
-                if (error && error.name === 'ValidationError') {
-                    return res.badRequest(error.message);
-                }
-            })
-            .catch(next);
+            return res.ok(user, created);
+        } catch(error) {
+            if (error && error.name === 'ValidationError') {
+                return res.badRequest(error.message);
+            }
+            return next(error);
+        }
     });
 
     const idCardAuth = function (req, res, next) {

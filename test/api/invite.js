@@ -155,8 +155,9 @@ suite('Invite', function () {
                 .replace(':email', email)
                 .replace(':topicId', topicId);
 
+            const redirectUri = urlLib.getFe('/topics/:topicId', {topicId: topicId});
             await userLib.createUserAndLoginPromised(agent, null, null, null);
-            const expectedLocation = urlLib.getFe('/account/signup', null, {email: email});
+            const expectedLocation = urlLib.getFe('/account/signup', null, {email: email, redirectSuccess: redirectUri});
 
             return agent
                 .get(path)
