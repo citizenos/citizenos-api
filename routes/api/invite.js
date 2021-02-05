@@ -8,84 +8,80 @@
  */
 
 module.exports = function (app) {
-    var models = app.get('models');
-    var Promise = app.get('Promise');
-    var config = app.get('config');
-    var urlLib = app.get('urlLib');
-    var db = models.Sequelize;
-    var User = models.User;
-    var UserConnection = models.UserConnection;
+    const models = app.get('models');
+    const config = app.get('config');
+    const urlLib = app.get('urlLib');
+    const db = models.Sequelize;
+    const User = models.User;
+    const UserConnection = models.UserConnection;
 
     /**
      * View the invite
      *
      * The link is used in e-mails or other invite channels and handles redirection logic based on info sent.
      */
-    app.get('/api/invite/view', function (req, res, next) {
-        var email = req.query.email;
-        var topicId = req.query.topicId;
-        var groupId = req.query.groupId;
+    app.get('/api/invite/view', async function (req, res) {
+        const email = req.query.email;
+        const topicId = req.query.topicId;
+        const groupId = req.query.groupId;
 
-        var promisesToResolve = [];
+        let userLoggedIn = null;
 
-        var userByEmailPromise = User
+        const userByEmail = await User
             .findOne({
                 where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email)),
                 include: [UserConnection]
             });
-        promisesToResolve.push(userByEmailPromise);
 
         // There is a User logged in?
         if (req.user && req.user.id) { // TODO: Move the check to some library
-            var userLoggedInPromise = User
+            userLoggedIn = await User
                 .findOne({
                     where: {
                         id: req.user.id
                     }
                 });
-            promisesToResolve.push(userLoggedInPromise);
         }
 
-        Promise
-            .all(promisesToResolve)
-            .then(function ([userByEmail, userLoggedIn]) {
-                if (userLoggedIn && userLoggedIn.email !== req.query.email) {
-                    // TODO: Duplicate code with POST /api/auth/logout
-                    // Log out the currently logged in User
-                    res.clearCookie(config.session.name, {
-                        path: config.session.cookie.path,
-                        domain: config.session.cookie.domain
-                    });
-                    res.clearCookie('express_sid'); // FIXME: Absolutely hate this solution. This deletes the EP session, so that on logout also EP session is destroyed. - https://trello.com/c/CkkFUz5D/235-ep-api-authorization-the-way-ep-session-is-invalidated-on-logout
+        if (userLoggedIn && userLoggedIn.email !== req.query.email) {
+            // TODO: Duplicate code with POST /api/auth/logout
+            // Log out the currently logged in User
+            res.clearCookie(config.session.name, {
+                path: config.session.cookie.path,
+                domain: config.session.cookie.domain
+            });
+            res.clearCookie('express_sid'); // FIXME: Absolutely hate this solution. This deletes the EP session, so that on logout also EP session is destroyed. - https://trello.com/c/CkkFUz5D/235-ep-api-authorization-the-way-ep-session-is-invalidated-on-logout
 
-                    userLoggedIn = null;
-                }
+            userLoggedIn = null;
+        }
 
-                // User does not exist or was created via invite and the signup has not been completed.
-                if (!userByEmail || (!userByEmail.password && userByEmail.source === User.SOURCES.citizenos && !userByEmail.UserConnections.length)) {
-                    var redirectUrl = urlLib.getFe('/account/signup', null, {email: email});
+        let objectUrl = null;
 
-                    return res.redirect(302, redirectUrl);
-                }
+        if (topicId) {
+            objectUrl = urlLib.getFe('/topics/:topicId', {topicId: topicId});
+        } else if (groupId) {
+            objectUrl = urlLib.getFe('/my/groups/:groupId', {groupId: groupId});
+        }
 
-                var objectUrl = null;
+        // User does not exist or was created via invite and the signup has not been completed.
+        if (!userByEmail || (!userByEmail.password && userByEmail.source === User.SOURCES.citizenos && !userByEmail.UserConnections.length)) {
+            if (userByEmail) {
+                userByEmail.emailIsVerified = true;
+                await userByEmail.save({fields: ['emailIsVerified'], validate: false}); //By using the invite link we can confirm the user as owner to this e-mail
+            }
+            const redirectUrl = urlLib.getFe('/account/signup', null, {email: email, redirectSuccess: objectUrl || ''});
 
-                if (topicId) {
-                    objectUrl = urlLib.getFe('/topics/:topicId', {topicId: topicId});
-                } else if (groupId) {
-                    objectUrl = urlLib.getFe('/my/groups/:groupId', {groupId: groupId});
-                }
+            return res.redirect(302, redirectUrl);
+        }
 
-                if (userLoggedIn) { // Logged in
-                    return res.redirect(302, objectUrl);
-                } else {
-                    return res.redirect(302, urlLib.getFe('/account/login', null, {
-                        email: email,
-                        redirectSuccess: objectUrl || ''
-                    }));
-                }
-            })
-            .catch(next);
+        if (userLoggedIn) { // Logged in
+            return res.redirect(302, objectUrl);
+        } else {
+            return res.redirect(302, urlLib.getFe('/account/login', null, {
+                email: email,
+                redirectSuccess: objectUrl || ''
+            }));
+        }
 
     });
 

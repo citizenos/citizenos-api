@@ -576,6 +576,22 @@ var topicMembersList = function (agent, userId, topicId, callback) {
     _topicMembersList(agent, userId, topicId, 200, callback);
 };
 
+const _topicMembersListPromised = async function (agent, userId, topicId, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/members'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId);
+
+    return agent
+        .get(path)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicMembersListPromised = async function (agent, userId, topicId) {
+    return _topicMembersListPromised(agent, userId, topicId, 200);
+};
+
 var _topicMembersUsersList = function (agent, userId, topicId, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/members/users'
         .replace(':userId', userId)
@@ -593,6 +609,33 @@ var topicMembersUsersList = function (agent, userId, topicId, callback) {
     _topicMembersUsersList(agent, userId, topicId, 200, callback);
 };
 
+const _topicMembersUsersListPromised = async function (agent, userId, topicId, limit, offset, search, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/members/users'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId);
+    const queryParams = {};
+    if (limit) {
+        queryParams.limit = limit;
+    }
+    if (offset) {
+        queryParams.offset = offset;
+    }
+    if (search) {
+        queryParams.search = search;
+    }
+
+    return agent
+        .get(path)
+        .query(queryParams)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicMembersUsersListPromised = async function (agent, userId, topicId, limit, offset, search) {
+    return _topicMembersUsersListPromised(agent, userId, topicId, limit, offset, search, 200);
+};
+
 var _topicMembersGroupsList = function (agent, userId, topicId, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/members/groups'
         .replace(':userId', userId)
@@ -608,6 +651,33 @@ var _topicMembersGroupsList = function (agent, userId, topicId, expectedHttpCode
 
 var topicMembersGroupsList = function (agent, userId, topicId, callback) {
     _topicMembersGroupsList(agent, userId, topicId, 200, callback);
+};
+
+const _topicMembersGroupsListPromised = async function (agent, userId, topicId, limit, offset, search, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/members/groups'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId);
+    const queryParams = {};
+    if (limit) {
+        queryParams.limit = limit;
+    }
+    if (offset) {
+        queryParams.offset = offset;
+    }
+    if (search) {
+        queryParams.search = search;
+    }
+
+    return agent
+        .get(path)
+        .query(queryParams)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicMembersGroupsListPromised = async function (agent, userId, topicId, limit, offset, search) {
+    return _topicMembersGroupsListPromised(agent, userId, topicId, limit, offset, search, 200);
 };
 
 const _topicInviteUsersCreatePromised = async function (agent, userId, topicId, invites, expectedHttpCode) {
@@ -4316,55 +4386,82 @@ suite('Users', function () {
 
                 suite('Users', function () {
 
-                    test('Success', function (done) {
-                        topicMembersUsersList(agent, user.id, topic.id, function (err, res) {
-                            if (err) return done(err);
+                    test('Success', async function () {
+                        const users = (await topicMembersUsersListPromised(agent, user.id, topic.id)).body.data;
+                        let groupExistsCount = 0;
+                        assert.equal(users.countTotal, users.count);
+                        delete users.countTotal;
 
-                            var users = res.body.data;
-                            var groupExistsCount = 0;
-                            users.rows.forEach(function (memberUser) {
-                                assert.property(memberUser, 'groups');
-                                memberUser.groups.rows.forEach(function (userGroup) {
-                                    if (userGroup.id === group.id) {
-                                        groupExistsCount++;
-                                        assert.include(groupMemberIds, memberUser.id);
-                                        assert.equal(userGroup.name, group.name);
-                                        assert.property(userGroup, 'level');
-                                    }
-                                });
-                            });
-
-                            assert.equal(groupExistsCount, 2);
-                            topicMembersList(agent, user.id, topic.id, function (err, res) {
-                                if (err) return done(err);
-                                users.rows.forEach(function (user) {
-                                    delete user.groups;
-                                });
-                                assert.deepEqual(users, res.body.data.users);
-
-                                done();
+                        users.rows.forEach(function (memberUser) {
+                            assert.property(memberUser, 'groups');
+                            memberUser.groups.rows.forEach(function (userGroup) {
+                                if (userGroup.id === group.id) {
+                                    groupExistsCount++;
+                                    assert.include(groupMemberIds, memberUser.id);
+                                    assert.equal(userGroup.name, group.name);
+                                    assert.property(userGroup, 'level');
+                                }
                             });
                         });
+
+                        assert.equal(groupExistsCount, 2);
+                        const memberUsers = (await topicMembersListPromised(agent, user.id, topic.id)).body.data.users;
+                        users.rows.forEach(function (user) {
+                            delete user.groups;
+                        });
+                        assert.deepEqual(users, memberUsers);
+                    });
+
+                    test('Success - with search', async function () {
+                        const allUsers = (await topicMembersUsersListPromised(agent, user.id, topic.id, 1)).body.data;
+                        assert.equal(allUsers.countTotal, 4);
+                        assert.equal(allUsers.rows.length, 1);
+                        const searchString = user.name.split(' ')[1];
+                        const users = (await topicMembersUsersListPromised(agent, user.id, topic.id, 1, null, searchString)).body.data;
+                        let groupExistsCount = 0;
+
+                        assert.equal(users.countTotal, 1);
+                        assert.equal(users.rows.length, 1);
+
+                        delete users.countTotal;
+
+                        users.rows.forEach(function (memberUser) {
+                            assert.property(memberUser, 'groups');
+                            assert.isAbove(memberUser.name.toLowerCase().indexOf(searchString.toLowerCase()), -1);
+                            memberUser.groups.rows.forEach(function (userGroup) {
+                                if (userGroup.id === group.id) {
+                                    groupExistsCount++;
+                                    assert.include(groupMemberIds, memberUser.id);
+                                    assert.equal(userGroup.name, group.name);
+                                    assert.property(userGroup, 'level');
+                                }
+                            });
+                        });
+
+                        assert.equal(groupExistsCount, 1);
                     });
 
                 });
 
                 suite('Groups', function () {
 
-                    test('Success', function (done) {
-                        topicMembersGroupsList(agent, user.id, topic.id, function (err, res) {
-                            if (err) return done(err);
+                    test('Success', async function () {
+                        const groups = (await topicMembersGroupsListPromised(agent, user.id, topic.id)).body.data;
+                        assert.equal(groups.count, groups.countTotal);
+                        delete groups.countTotal;
+                        const memberGroups = (await topicMembersListPromised(agent, user.id, topic.id)).body.data.groups;
+                        assert.deepEqual(groups, memberGroups);
+                    });
 
-                            var groups = res.body.data;
-
-                            topicMembersList(agent, user.id, topic.id, function (err, res) {
-                                if (err) return done(err);
-
-                                assert.deepEqual(groups, res.body.data.groups);
-
-                                done();
-                            });
-                        });
+                    test('Success - with search', async function () {
+                        const groups = (await topicMembersGroupsListPromised(agent, user.id, topic.id)).body.data;
+                        assert.equal(groups.count, 2);
+                        assert.equal(groups.countTotal, 2);
+                        const searchString = group.name.split(' ')[1];
+                        const groups2 = (await topicMembersGroupsListPromised(agent, user.id, topic.id,2, null, searchString)).body.data;
+                        assert.equal(1, groups2.count);
+                        assert.equal(1, groups2.countTotal);
+                        assert.isAbove(groups2.rows[0].name.toLowerCase().indexOf(searchString.toLowerCase()), -1);
                     });
 
                 });
