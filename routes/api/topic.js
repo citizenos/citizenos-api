@@ -529,7 +529,7 @@ module.exports = function (app) {
                 LEFT JOIN "VoteOptions" vo ON (v."optionId" = vo."id")
                 GROUP BY v."optionId", v."voteId", vo."value"
         ;`;
-
+                    console.log(sql);
         return db
             .query(sql,
                 {
@@ -5810,7 +5810,6 @@ module.exports = function (app) {
             }
 
             const voteResults = await getVoteResults(voteId, userId);
-
             let hasVoted = false;
             if (voteResults) {
                 voteInfo.dataValues.VoteOptions.forEach(function (option) {
