@@ -49,6 +49,10 @@
     }
   },
   "services": {
+    "idCard": {
+      "serviceUrl": "https://id-test.citizenos.com:8443/info",
+      "apiKey": "ZWeCMMQSoIpOnavNnEo2daBjXbmG3PoEWgNnQ13EtZ9jF43gkInxok5fIioX"
+    },
     "etherpad": {
       "host": "dev.p.citizenos.com",
       "port": "9001",

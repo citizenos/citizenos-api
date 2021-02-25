@@ -23,6 +23,10 @@
     "key": "CITIZENOS_API_KEY"
   },
   "services": {
+    "idCard": {
+      "serviceUrl": "CITIZENOS_SERVICES_IDCARD_SERVICE_URL",
+      "apiKey": "CITIZENOS_SERVICES_IDCARD_APIKEY"
+    },
     "etherpad": {
       "host": "CITIZENOS_SERVICES_ETHERPAD_HOST",
       "port": "CITIZENOS_SERVICES_ETHERPAD_PORT",

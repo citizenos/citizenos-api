@@ -20,6 +20,7 @@ module.exports = function (app) {
     const querystring = app.get('querystring');
     const urlLib = app.get('urlLib');
     const Promise = app.get('Promise');
+    const superagent = app.get('superagent');
     const Certificate = require('undersign/lib/certificate');
     const crypto = require('crypto');
     const url = app.get('url');
@@ -584,113 +585,63 @@ module.exports = function (app) {
         }
     });
 
-    const idCardAuth = function (req, res, next) {
+    const idCardAuth = async function (req, res, next) {
+        const cert = req.headers['x-ssl-client-cert'];
         const token = req.query.token || req.body.token; // Token to access the ID info service
-        let cert = req.headers['x-ssl-client-cert'];
-        const signature = req.body.signature;
 
+        if (config.services.idCard && cert) {
+            logger.error('X-SSL-Client-Cert header is not allowed when ID-card service is enabled. IF you trust your proxy, sending the X-SSL-Client-Cert, delete the services.idCard from your configuration.');
+            return res.badRequest('X-SSL-Client-Cert header is not allowed when ID-card proxy service is enabled.');
+        }
         if (!token && !cert) {
             logger.warn('Missing required parameter "token" OR certificate in X-SSL-Client-Cert header. One must be provided!', req.path, req.headers);
-
             return res.badRequest('Missing required parameter "token" OR certificate in X-SSL-Client-Cert header. One must be provided!');
         }
 
-        if(cert.indexOf('-----BEGIN') > -1) {
-            cert = cert.replace('-----BEGIN CERTIFICATE-----', '').replace('-----END CERTIFICATE-----', '')
-        }
-
-        let checkCertificatePromise;
-        if (cert && !signature) {
-            return mobileId
-                .validateCert(cert, 'base64')
-                .then(function () {
-                    const hex = crypto.randomBytes(16).toString('hex');
-                    const sha256 = crypto.createHash('sha256');
-                    sha256.update(hex);
-                    const hash = sha256.digest('hex');
-
-                    const sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt({
-                        hex
-                    })};
-
-                    const token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
-                        expiresIn: '5m',
-                        algorithm: config.session.algorithm
-                    });
-
-                    return res.ok({
-                        token,
-                        hash
-                    });
-                })
-                .catch(next);
-        } else {
-            const certificate = new Certificate(Buffer.from(cert,'base64'));
-            let tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
-            let idCardFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
-
-            if (certificate.hasSigned(idCardFlowData.hex, Buffer.from(signature.hex, 'hex'))) {
-                checkCertificatePromise = mobileId
-                        .getCertUserData(cert, 'base64')
-                        .then(function (certificateInfo) {
-                            let personalInfo = certificateInfo;
-                            personalInfo.countryCode = personalInfo.country;
-                            delete personalInfo.country;
-
-                            return {
-                                user: personalInfo,
-                                status: 'GOOD'
-                            }
-                        });
-            }
-        }
-
-        checkCertificatePromise
-            .then(function (res) {
-                const status = res.status;
-
-                switch (status) { //GOOD, UNKNOWN, EXPIRED, SUSPENDED, REVOKED
-                    case 'GOOD':
-                        return res.user;
-                    case 'SUSPENDED':
-                        res.badRequest('User certificate is suspended.', 24);
-
-                        return Promise.reject();
-                    case 'EXPIRED':
-                        res.badRequest('User certificate is expired.', 25);
-
-                        return Promise.reject();
-                    case 'UNKNOWN':
-                        res.badRequest('Unknown user certificate.', 26);
-
-                        return Promise.reject();
-                    case 'REVOKED':
-                        res.badRequest('User certificate has been revoked.', 27);
-
-                        return Promise.reject();
-                    default:
-                        logger.error('Unexpected certificate status from DDS', status);
-                        res.internalServerError();
-
-                        return Promise.reject();
+        try {
+            let personalInfo;
+            if (cert) {
+                let clientCert = cert;
+                if(cert.indexOf('-----BEGIN') > -1) {
+                    clientCert = cert.replace('-----BEGIN CERTIFICATE-----', '').replace('-----END CERTIFICATE-----', '')
                 }
-            })
-            .then(function (personalInfo) {
-                return _getUserByPersonalId(personalInfo, UserConnection.CONNECTION_IDS.esteid, req)
-                    .then(function (userData) {
-                        const user = userData[0];
-                        const created = userData[1];
-                        setAuthCookie(req, res, user.id);
-
-                        return res.ok(user, created);
+                await mobileId.validateCert(clientCert, 'base64');
+                personalInfo = await mobileId.getCertUserData(clientCert, 'base64');
+                personalInfo.countryCode = personalInfo.country;
+                delete personalInfo.country;
+            } else {
+                const idReq = await superagent.get(config.services.idCard.serviceUrl)
+                    .query({token})
+                    .set('X-API-KEY', config.services.idCard.apiKey)
+                    .catch(function (error) {
+                        if (error && error.response && error.response.body) {
+                            return res.badRequest(error.response.body.status.message);
+                        } else {
+                            throw new Error(error);
+                        }
                     });
-            }).catch(next);
+
+                    personalInfo = idReq.body.data.user
+            }
+
+            const userData = await _getUserByPersonalId(personalInfo, UserConnection.CONNECTION_IDS.esteid, req);
+            const user = userData[0];
+            const created = userData[1];
+            setAuthCookie(req, res, user.id);
+
+            return res.ok(user, created);
+
+        } catch(e) {
+            if (e.name === 'ValidationError') {
+                return res.badRequest(e.message);
+            }
+
+            return next(e);
+        }
     };
 
     /**
      * Authenticate using ID-card
-     *
-     * NOTE: Requires proxy in front of the app to set "X-SSL-Client-Cert" header
      *
      * GET support due to the fact that FF does not send credentials for preflight requests.
      *
