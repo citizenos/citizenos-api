@@ -507,8 +507,8 @@ var topicMemberGroupsCreate = function (agent, userId, topicId, members, callbac
 
 const _topicMemberGroupsCreatePromised = async function (agent, userId, topicId, members, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/members/groups'
-    .replace(':userId', userId)
-    .replace(':topicId', topicId);
+        .replace(':userId', userId)
+        .replace(':topicId', topicId);
 
     return agent
         .post(path)
@@ -1864,7 +1864,7 @@ const _topicCommentVotesListPromised = async function (agent, userId, topicId, c
 
 
 const topicCommentVotesListPromised = async function (agent, userId, topicId, commentId) {
-   return _topicCommentVotesListPromised(agent, userId, topicId, commentId, 200);
+    return _topicCommentVotesListPromised(agent, userId, topicId, commentId, 200);
 };
 
 var _topicEventCreate = function (agent, userId, topicId, subject, text, expectedHttpCode, callback) {
@@ -2515,37 +2515,37 @@ suite('Users', function () {
                             userLib.createUserAndLoginPromised(agentUser, null, null, null),
                             userLib.createUserAndLoginPromised(agentUser2, null, null, null)
                         ])
-                        .then(function (results) {
-                            creator = results[0];
-                            user = results[1];
-                            user2 = results[2];
+                            .then(function (results) {
+                                creator = results[0];
+                                user = results[1];
+                                user2 = results[2];
 
-                            return Promise
-                                .all([
+                                return Promise
+                                    .all([
                                         groupLib.createPromised(agentCreator, creator.id, 'Group', null, null),
                                         topicCreatePromised(agentCreator, creator.id, Topic.VISIBILITY.private, null, null, null, null)
-                                ])
-                                .then(function (results) {
-                                    group = results[0].body.data;
-                                    topic = results[1].body.data;
+                                    ])
+                                    .then(function (results) {
+                                        group = results[0].body.data;
+                                        topic = results[1].body.data;
 
-                                    // Add Group to Topic members and User to that Group
-                                    var memberGroup = {
-                                        groupId: group.id,
-                                        level: TopicMemberGroup.LEVELS.read
-                                    };
+                                        // Add Group to Topic members and User to that Group
+                                        var memberGroup = {
+                                            groupId: group.id,
+                                            level: TopicMemberGroup.LEVELS.read
+                                        };
 
-                                    var memberUser = {
-                                        userId: user.id,
-                                        level: GroupMember.LEVELS.read
-                                    };
+                                        var memberUser = {
+                                            userId: user.id,
+                                            level: GroupMember.LEVELS.read
+                                        };
 
-                                    return Promise.all([
-                                        topicMemberGroupsCreatePromised(agentCreator, creator.id, topic.id, memberGroup),
-                                        groupLib.membersCreatePromised(agentCreator, creator.id, group.id, memberUser)
-                                    ]);
-                                });
-                        });
+                                        return Promise.all([
+                                            topicMemberGroupsCreatePromised(agentCreator, creator.id, topic.id, memberGroup),
+                                            groupLib.membersCreatePromised(agentCreator, creator.id, group.id, memberUser)
+                                        ]);
+                                    });
+                            });
                     });
 
                     test('Success - User is a member of a Group that has READ access', function (done) {
@@ -3622,7 +3622,7 @@ suite('Users', function () {
             test('Success - visibility public', async function () {
                 const publicTopic = (await topicCreatePromised(agentUser, user.id, Topic.VISIBILITY.public, null, null, null, null)).body.data;
 
-                    // Add title & description in DB. NULL title topics are not to be returned.
+                // Add title & description in DB. NULL title topics are not to be returned.
                 const title = 'Public Topic';
                 const description = 'Public topic desc';
 
@@ -4508,7 +4508,7 @@ suite('Users', function () {
                         assert.equal(groups.count, 2);
                         assert.equal(groups.countTotal, 2);
                         const searchString = group.name.split(' ')[1];
-                        const groups2 = (await topicMembersGroupsListPromised(agent, user.id, topic.id,2, null, searchString)).body.data;
+                        const groups2 = (await topicMembersGroupsListPromised(agent, user.id, topic.id, 2, null, searchString)).body.data;
                         assert.equal(1, groups2.count);
                         assert.equal(1, groups2.countTotal);
                         assert.isAbove(groups2.rows[0].name.toLowerCase().indexOf(searchString.toLowerCase()), -1);
@@ -4644,7 +4644,7 @@ suite('Users', function () {
                                     // Verify that the User was created in expected language
                                     User
                                         .findOne({
-                                            where: db.where(db.fn('lower', db.col('email')), db.fn('lower',memberToAdd.userId))
+                                            where: db.where(db.fn('lower', db.col('email')), db.fn('lower', memberToAdd.userId))
                                         })
                                         .then(function (user) {
                                             assert.equal(user.language, memberToAdd.language);
@@ -5421,7 +5421,9 @@ suite('Users', function () {
                         assert.isArray(createdInvites);
                         assert.equal(createdInvites.length, 2);
 
-                        const createdInviteUser1 = _.find(createdInvites, {level: invitation[0].level}); // find by level, not by id to keep the code simpler
+                        const createdInviteUser1 = createdInvites.find(function (invite) { // find by level, not by id to keep the code simpler
+                            return invite.level === invitation[0].level;
+                        });
                         assert.uuid(createdInviteUser1.id, 'v4');
                         assert.equal(createdInviteUser1.topicId, topic.id);
                         assert.equal(createdInviteUser1.creatorId, userCreator.id);
@@ -5430,7 +5432,9 @@ suite('Users', function () {
                         assert.isNotNull(createdInviteUser1.createdAt);
                         assert.isNotNull(createdInviteUser1.updatedAt);
 
-                        const createdInviteUser2 = _.find(createdInvites, {level: invitation[1].level}); // find by level, not by id to keep the code simpler
+                        const createdInviteUser2 = createdInvites.find(function (invite) { // find by level, not by id to keep the code simpler
+                            return invite.level === invitation[1].level;
+                        });
                         assert.uuid(createdInviteUser2.id, 'v4');
                         assert.equal(createdInviteUser2.topicId, topic.id);
                         assert.equal(createdInviteUser2.creatorId, userCreator.id);
@@ -6133,7 +6137,7 @@ suite('Users', function () {
                     assert.equal(vote.description, description);
                     assert.equal(vote.authType, Vote.AUTH_TYPES.soft);
 
-                        // Topic should end up in "voting" status
+                    // Topic should end up in "voting" status
                     const t = await Topic
                         .findOne({
                             where: {
@@ -6170,13 +6174,13 @@ suite('Users', function () {
                     assert.equal(vote.description, description);
                     assert.equal(vote.authType, Vote.AUTH_TYPES.soft);
 
-                        // Topic should end up in "voting" status
+                    // Topic should end up in "voting" status
                     const t = await Topic
-                            .findOne({
-                                where: {
-                                    id: topic.id
-                                }
-                            });
+                        .findOne({
+                            where: {
+                                id: topic.id
+                            }
+                        });
                     assert.equal(t.status, Topic.STATUSES.voting);
                 });
 
@@ -6200,24 +6204,24 @@ suite('Users', function () {
                     assert.equal(vote.authType, Vote.AUTH_TYPES.hard);
 
                     const voteContainerFiles = await db
-                            .query(
-                                ' \
-                                 SELECT \
-                                    "mimeType", \
-                                    "fileName" \
-                                 FROM "VoteContainerFiles" \
-                                 WHERE "voteId" = :voteId \
-                                 ORDER BY "fileName" \
-                                ',
-                                {
-                                    replacements: {
-                                        voteId: vote.id
-                                    },
-                                    type: db.QueryTypes.SELECT,
-                                    raw: true,
-                                    nest: true
-                                }
-                            );
+                        .query(
+                            ' \
+                             SELECT \
+                                "mimeType", \
+                                "fileName" \
+                             FROM "VoteContainerFiles" \
+                             WHERE "voteId" = :voteId \
+                             ORDER BY "fileName" \
+                            ',
+                            {
+                                replacements: {
+                                    voteId: vote.id
+                                },
+                                type: db.QueryTypes.SELECT,
+                                raw: true,
+                                nest: true
+                            }
+                        );
 
                     const expected = [
                         {
@@ -8704,7 +8708,7 @@ suite('Users', function () {
                         });
 
                         test('Success - Estonian PID', async function () {
-                           await UserConnection.destroy({
+                            await UserConnection.destroy({
                                 where: {
                                     connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
                                     connectionUserId: ['PNOEE-10101010016', 'PNOEE-10101010005', 'PNOEE-11412090004']
@@ -8730,25 +8734,25 @@ suite('Users', function () {
                         test('Success - unauth - Estonian PID', async function () {
                             const reqAgent = request.agent(app);
                             await UserConnection.destroy({
-                                 where: {
-                                     connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
-                                     connectionUserId: ['PNOEE-10101010016', 'PNOEE-10101010005', 'PNOEE-11412090004']
-                                 },
-                                 force: true
-                             });
+                                where: {
+                                    connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
+                                    connectionUserId: ['PNOEE-10101010016', 'PNOEE-10101010005', 'PNOEE-11412090004']
+                                },
+                                force: true
+                            });
 
-                             const countryCode = 'EE';
-                             const pid = '10101010005';
+                            const countryCode = 'EE';
+                            const pid = '10101010005';
 
-                             const voteList = [
-                                 {
-                                     optionId: vote.options.rows[0].id
-                                 }
-                             ];
-                             const response = (await _topicVoteVoteUnauthPromised(reqAgent, topicPublic.id, vote2.id, voteList, null, pid, null, countryCode, 200)).body;
+                            const voteList = [
+                                {
+                                    optionId: vote.options.rows[0].id
+                                }
+                            ];
+                            const response = (await _topicVoteVoteUnauthPromised(reqAgent, topicPublic.id, vote2.id, voteList, null, pid, null, countryCode, 200)).body;
 
-                             assert.equal(response.status.code, 20001);
-                             assert.match(response.data.challengeID, /[0-9]{4}/);
+                            assert.equal(response.status.code, 20001);
+                            assert.match(response.data.challengeID, /[0-9]{4}/);
                         });
 
                         test('Success - Latvian PID', async function () {
@@ -10913,7 +10917,7 @@ suite('Topics', function () {
         test('Success - non-authenticated User - don\'t show deleted "public" Topics', async function () {
 
             const deletedTopic = (await topicCreatePromised(creatorAgent, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health], null, null, null)).body.data;
-                // Set "title" to Topic, otherwise there will be no results because of the "title NOT NULL" in the query
+            // Set "title" to Topic, otherwise there will be no results because of the "title NOT NULL" in the query
             await Topic.update(
                 {
                     title: 'TEST PUBLIC DELETE'
@@ -12034,8 +12038,8 @@ suite('Topics', function () {
                 });
 
                 test('Success', async function () {
-                    await topicCommentVotesCreatePromised (creatorAgent, topic.id, comment.id, 1);
-                    await topicCommentVotesCreatePromised (creatorAgent2, topic.id, comment.id, 0); //Add cleared vote that should not be returned;
+                    await topicCommentVotesCreatePromised(creatorAgent, topic.id, comment.id, 1);
+                    await topicCommentVotesCreatePromised(creatorAgent2, topic.id, comment.id, 0); //Add cleared vote that should not be returned;
                     const commentVotesList = (await topicCommentVotesListPromised(creatorAgent, creator.id, topic.id, comment.id)).body.data;
                     const commentVote = commentVotesList.rows[0];
                     const expected = {
@@ -12048,7 +12052,7 @@ suite('Topics', function () {
                                 name: creator.name,
                                 vote: "up"
                             }
-                      ],
+                        ],
                         count: 1
                     };
 
@@ -12363,7 +12367,7 @@ suite('Topics', function () {
                             paranoid: false
                         }
                     );
-                    const resBody = (await _topicCommentReportModeratePromised (request.agent(app), topic.id, comment.id, report.id, token, moderateType, moderateText, 400)).body;
+                    const resBody = (await _topicCommentReportModeratePromised(request.agent(app), topic.id, comment.id, report.id, token, moderateType, moderateText, 400)).body;
                     const expectedResult = {
                         status: {
                             code: 40010,
