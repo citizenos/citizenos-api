@@ -8,6 +8,8 @@ var _ = require('lodash');
  * @param {object} sequelize Sequelize instance
  * @param {object} DataTypes Sequelize DataTypes
  *
+ * TODO: refactor to GroupMemberUser for consistency
+ *
  * @returns {object} Sequelize model
  *
  * @see http://sequelizejs.com/docs/latest/models
