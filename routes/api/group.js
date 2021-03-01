@@ -5,33 +5,27 @@
  */
 
 module.exports = function (app) {
-    var logger = app.get('logger');
-    var models = app.get('models');
-    var db = models.sequelize;
-    var Op = db.Sequelize.Op;
-    var _ = app.get('lodash');
-    var cosActivities = app.get('cosActivities');
-    var validator = app.get('validator');
-    var emailLib = app.get('email');
-    var util = app.get('util');
-    var moment = app.get('moment');
-    var Promise = app.get('Promise');
+    const logger = app.get('logger');
+    const models = app.get('models');
+    const db = models.sequelize;
+    const Op = db.Sequelize.Op;
+    const _ = app.get('lodash');
+    const cosActivities = app.get('cosActivities');
+    const validator = app.get('validator');
+    const emailLib = app.get('email');
+    const util = app.get('util');
+    const moment = app.get('moment');
+    const Promise = app.get('Promise');
 
-    var loginCheck = app.get('middleware.loginCheck');
+    const loginCheck = app.get('middleware.loginCheck');
+    const asyncMiddleware = app.get('middleware.asyncMiddleware');
+    const DEPRECATED = app.get('middleware.deprecated'); // CAPS for ease of spotting in the code
 
-    var Group = models.Group;
-    var GroupMember = models.GroupMember;
-    var User = models.User;
+    const Group = models.Group;
+    const GroupMember = models.GroupMember;
+    const User = models.User;
 
-    /**
-     * Check if User has sufficient privileges to access the Object.
-     *
-     * @param {string} level One of Permission.LEVELS
-     *
-     * @returns {Function} Express middleware function
-     */
-
-    var _hasPermission = function (groupId, userId, level, allowPublic, allowSelf) {
+    const _hasPermission = function (groupId, userId, level, allowPublic, allowSelf) {
         // TODO: I think this will also map not found Groups/Users into Forbidden. May want to fix this for better User messaging.
         var LEVELS = {
             none: 0, // Enables to override inherited permissions.
@@ -560,9 +554,11 @@ module.exports = function (app) {
     /**
      * Create new members (GroupMember) to a Group
      *
-     * TODO: Remove first route definition after NEW FE deploy - https://trello.com/c/JutjiDeX/574-new-fe-post-deploy-actions
+     * @deprecated Use POST /api/users/:userId/groups/:groupId/invites/users instead
+     *
+     * @see https://github.com/citizenos/citizenos-fe/issues/348
      */
-    app.post(['/api/users/:userId/groups/:groupId/members', '/api/users/:userId/groups/:groupId/members/users'], loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, null), function (req, res, next) {
+    app.post(['/api/users/:userId/groups/:groupId/members/users'], DEPRECATED('Use invite API - https://github.com/citizenos/citizenos-fe/issues/348'), loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, null), function (req, res, next) {
         var members = req.body;
         var groupId = req.params.groupId;
 
@@ -742,10 +738,10 @@ module.exports = function (app) {
 
     /**
      * Get Group member Users
-     *
-     * TODO: Remove first route definition after NEW FE deploy - https://trello.com/c/JutjiDeX/574-new-fe-post-deploy-actions
      */
-    app.get(['/api/users/:userId/groups/:groupId/members', '/api/users/:userId/groups/:groupId/members/users'], loginCheck(['partner']), hasPermission(GroupMember.LEVELS.read, null, null), async function (req, res, next) {
+    app.get(['/api/users/:userId/groups/:groupId/members/users'], loginCheck(['partner']), hasPermission(GroupMember.LEVELS.read, null, null), async function (req, res, next) {
+        //FIXME: Deprecation warning - https://github.com/citizenos/citizenos-fe/issues/348
+
         const groupId = req.params.groupId;
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
@@ -799,17 +795,15 @@ module.exports = function (app) {
                 count: members.length,
                 rows: members
             });
-        } catch(err) {
+        } catch (err) {
             return next(err);
         }
     });
 
     /**
      * Update membership information
-     *
-     * TODO: Remove first route definition after NEW FE deploy - https://trello.com/c/JutjiDeX/574-new-fe-post-deploy-actions
      */
-    app.put(['/api/users/:userId/groups/:groupId/members/:memberId', '/api/users/:userId/groups/:groupId/members/users/:memberId'], loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, null), function (req, res, next) {
+    app.put(['/api/users/:userId/groups/:groupId/members/users/:memberId'], loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, null), function (req, res, next) {
         var newLevel = req.body.level;
         var memberId = req.params.memberId;
         var groupId = req.params.groupId;
@@ -869,10 +863,8 @@ module.exports = function (app) {
 
     /**
      * Delete membership information
-     *
-     * TODO: Remove first route definition after NEW FE deploy - https://trello.com/c/JutjiDeX/574-new-fe-post-deploy-actions
      */
-    app.delete(['/api/users/:userId/groups/:groupId/members/:memberId', '/api/users/:userId/groups/:groupId/members/users/:memberId'], loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, true), function (req, res, next) {
+    app.delete(['/api/users/:userId/groups/:groupId/members/users/:memberId'], loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, true), function (req, res, next) {
         var groupId = req.params.groupId;
         var memberId = req.params.memberId;
 
@@ -946,6 +938,34 @@ module.exports = function (app) {
             .catch(next);
     });
 
+    /**
+     * Invite new Members to the Group
+     *
+     * Does NOT add a Member automatically, but will send an invite, which has to accept in order to become a Member of the Topic
+     *
+     * @see https://github.com/citizenos/citizenos-fe/issues/348
+     */
+    app.post('/api/users/:userId/groups/:groupId/invites/users', loginCheck(), hasPermission(GroupMember.LEVELS.admin, null, null), asyncMiddleware(async function (req, res) {
+        return res.notImplemented('FIXME! Not implemented!');
+    }));
+
+    /**
+     * Get all pending User invites for a Group
+     *
+     * @see https://github.com/citizenos/citizenos-fe/issues/348
+     */
+    app.get('/api/users/:userId/groups/:groupId/invites/users', loginCheck(), hasPermission(GroupMember.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
+        return res.notImplemented('FIXME! Not implemented!');
+    }));
+
+    /**
+     * Get specific invite for a Group
+     *
+     * @see https://github.com/citizenos/citizenos-fe/issues/348
+     */
+    app.get('/api/users/:userId/groups/:groupId/invites/users/:inviteId', loginCheck(), hasPermission(GroupMember.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
+        return res.notImplemented('FIXME! Not implemented!');
+    }));
 
     /**
      * Get Group Topics
@@ -1161,7 +1181,7 @@ module.exports = function (app) {
                 count: topics.length,
                 rows: topics
             });
-        } catch(err) {
+        } catch (err) {
             return next(err);
         }
     });
