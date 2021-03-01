@@ -26,9 +26,9 @@ module.exports.model = function (sequelize, DataTypes) {
             groupId: {
                 type: DataTypes.UUID,
                 allowNull: false,
-                comment: 'Topic to which member belongs.',
+                comment: 'Group to which member belongs.',
                 references: {
-                    model: 'Topics',
+                    model: 'Groups',
                     key: 'id'
                 },
                 primaryKey: true

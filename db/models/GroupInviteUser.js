@@ -1,13 +1,21 @@
 'use strict';
 
+const util = require('../../libs/util');
+
 /**
- * Group Invite User
+ * GroupInviteUser
  *
- * @see https://github.com/sequelize/sequelize/wiki/Suggestion-for-Inheritance-API
- * @see http://stackoverflow.com/questions/19682171/how-to-extend-sequelize-model#answer-19684348
+ * @param {object} sequelize Sequelize instance
+ * @param {object} DataTypes Sequelize DataTypes
+ *
+ * @returns {object} Sequelize model
+ *
+ * @extends {object} Invite Sequelize model
+ *
+ * @see http://sequelizejs.com/docs/latest/models
  */
 
-module.exports.model = function (sequelize, DataTypes) {
+module.exports = function (sequelize, DataTypes) {
 
     // Parent model for this model
     const GroupInvite = require('./_GroupInvite').model(sequelize, DataTypes);

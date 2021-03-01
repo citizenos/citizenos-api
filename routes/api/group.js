@@ -22,6 +22,7 @@ module.exports = function (app) {
     const DEPRECATED = app.get('middleware.deprecated'); // CAPS for ease of spotting in the code
 
     const Group = models.Group;
+    const GroupInviteUser = models.GroupInviteUser;
     const GroupMember = models.GroupMember;
     const User = models.User;
 

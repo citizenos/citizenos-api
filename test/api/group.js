@@ -126,6 +126,23 @@ const groupsListUnauthPromised = async function (agent, status, orderBy, offset,
     return _groupsListUnauthPromised(agent, status, orderBy, offset, limit, sourcePartnerId, 200);
 };
 
+const _groupInviteUsersCreatePromised = async function (agent, userId, groupId, invites, expectedHttpCode) {
+    const path = '/api/users/:userId/groups/:groupId/invites/users'
+        .replace(':userId', userId)
+        .replace(':groupId', groupId);
+
+    return agent
+        .post(path)
+        .send(invites)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const groupInviteUsersCreatePromised = async function (agent, userId, groupId, invites) {
+    return _groupInviteUsersCreatePromised(agent, userId, groupId, invites, 201);
+};
+
 var _groupMembersCreate = function (agent, userId, groupId, members, expectedHttpCode, callback) {
     var path = '/api/users/:userId/groups/:groupId/members'
         .replace(':userId', userId)
@@ -312,7 +329,10 @@ suite('Users', function () {
 
 
             test('Fail - Unauthorized', async function () {
-                const expectedStatus = { code: 40100, message: 'Unauthorized' };
+                const expectedStatus = {
+                    code: 40100,
+                    message: 'Unauthorized'
+                };
                 const err = (await _groupCreatePromised(request.agent(app), user.id, groupName, null, null, 401)).body;
 
                 assert.deepEqual(err.status, expectedStatus);
@@ -653,6 +673,47 @@ suite('Users', function () {
 
         });
 
+        suite('Invites', function () {
+
+            suite('Users', function () {
+
+                suite('Create', function () {
+
+                    let agentCreator = request.agent(app);
+                    let groupName = 'Test GROUP for masses';
+
+                    let userCreator;
+                    let group;
+
+                    setup(async function () {
+                        userCreator = await userLib.createUserAndLoginPromised(agentCreator, null, null, null);
+                        group = (await groupCreatePromised(agentCreator, userCreator.id, groupName, null, null)).body.data;
+                    });
+
+                    test('Success - 20100 - invite a single User with userId', async function () {
+                        const userToInvite = await userLib.createUserPromised(request.agent(app), null, null, null);
+
+                        const invitation = {
+                            userId: userToInvite.id,
+                            level: TopicMemberUser.LEVELS.read
+                        };
+
+                        const inviteCreateResult = (await groupInviteUsersCreatePromised(agentCreator, userCreator, group.id, invitation)).body;
+
+                        assert.deepEqual(
+                            inviteCreateResult.status,
+                            {
+                                code: 20100
+                            }
+                        );
+                    });
+
+                });
+
+            });
+
+        });
+
         suite('Members', function () {
 
             suite('Users', function () {
@@ -749,7 +810,7 @@ suite('Users', function () {
                         return User
                             .findOne({
                                 where: {
-                                    email: db.where(db.fn('lower', db.col('email')), db.fn('lower',members[0].userId))
+                                    email: db.where(db.fn('lower', db.col('email')), db.fn('lower', members[0].userId))
                                 }
                             })
                             .then(function (user) {

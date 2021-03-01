@@ -3,7 +3,7 @@
 const util = require('../../libs/util');
 
 /**
- * TopicInvite
+ * TopicInviteUser
  *
  * @param {object} sequelize Sequelize instance
  * @param {object} DataTypes Sequelize DataTypes
