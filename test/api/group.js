@@ -706,6 +706,21 @@ suite('Users', function () {
                                 code: 20100
                             }
                         );
+
+                        assert.equal(inviteCreateResult.data.count, 1);
+
+                        const createdInvites = inviteCreateResult.data.rows;
+                        assert.isArray(createdInvites);
+                        assert.equal(createdInvites.length, 1);
+
+                        const createdInvite = createdInvites[0];
+                        assert.uuid(createdInvite.id, 'v4');
+                        assert.equal(createdInvite.groupId, group.id);
+                        assert.equal(createdInvite.creatorId, userCreator.id);
+                        assert.equal(createdInvite.userId, invitation.userId);
+                        assert.equal(createdInvite.level, invitation.level);
+                        assert.isNotNull(createdInvite.createdAt);
+                        assert.isNotNull(createdInvite.updatedAt);
                     });
 
                 });
