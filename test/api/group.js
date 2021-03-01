@@ -827,6 +827,25 @@ suite('Users', function () {
                         assert.isNotNull(createdInviteUser2.createdAt);
                         assert.isNotNull(createdInviteUser2.updatedAt);
                     });
+
+                    test('Fail - 40001 - Invite yourself', async function () {
+                        const invitation = {
+                            userId: userCreator.id,
+                            level: GroupMember.LEVELS.read
+                        };
+
+                        const inviteCreateResult = (await groupInviteUsersCreatePromised(agentCreator, userCreator, group.id, invitation)).body;
+
+                        const expectedBody = {
+                            status: {
+                                code: 40001,
+                                message: 'No invites were created. Possibly because no valid userId-s (uuidv4s or emails) were provided.'
+                            }
+                        };
+
+                        assert.deepEqual(inviteCreateResult, expectedBody);
+                    });
+
                 });
 
             });
