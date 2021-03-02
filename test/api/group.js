@@ -159,6 +159,22 @@ const groupInviteUsersReadPromised = async function (agent, groupId, inviteId) {
     return _groupInviteUsersReadPromised(agent, groupId, inviteId, 200);
 };
 
+const _groupInviteUsersListPromised = function (agent, userId, groupId, expectedHttpCode) {
+    const path = '/api/users/:userId/groups/:groupId/invites/users'
+        .replace(':userId', userId)
+        .replace(':groupId', groupId);
+
+    return agent
+        .get(path)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const groupInviteUsersListPromised = async function (agent, userId, groupId) {
+    return _groupInviteUsersListPromised(agent, userId, groupId, 200);
+};
+
 var _groupMembersCreate = function (agent, userId, groupId, members, expectedHttpCode, callback) {
     var path = '/api/users/:userId/groups/:groupId/members/users'
         .replace(':userId', userId)
@@ -1088,6 +1104,82 @@ suite('Users', function () {
 
                         assert.deepEqual(groupInviteRead, expectedBody);
 
+                    });
+
+                });
+
+                suite('List', function() {
+
+                    const agentCreator = request.agent(app);
+
+                    let userCreator;
+                    let userToInvite1;
+                    let userToInvite2;
+
+                    let group;
+
+                    let groupInviteCreated1;
+                    let groupInviteCreated2;
+
+                    setup(async function () {
+                        userCreator = await userLib.createUserAndLoginPromised(agentCreator, null, null, null);
+                        userToInvite1 = await userLib.createUserPromised(request.agent(app), null, null, null);
+                        userToInvite2 = await userLib.createUserPromised(request.agent(app), null, null, null);
+
+                        group = (await groupCreatePromised(agentCreator, userCreator.id, 'TEST CASE: User Invites List', null, null)).body.data;
+
+                        const topicInvite1 = {
+                            userId: userToInvite1.id,
+                            level: GroupMember.LEVELS.read
+                        };
+
+                        const topicInvite2 = {
+                            userId: userToInvite2.id,
+                            level: GroupMember.LEVELS.admin
+                        };
+
+                        groupInviteCreated1 = (await groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, topicInvite1)).body.data.rows[0];
+                        groupInviteCreated2 = (await groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, topicInvite2)).body.data.rows[0];
+                    });
+
+                    test('Success - 20000 - list invites', async function () {
+                        const invitesListResult = (await groupInviteUsersListPromised(agentCreator, userCreator.id, group.id)).body.data;
+                        assert.equal(2, invitesListResult.count);
+
+                        const invitesList = invitesListResult.rows;
+                        assert.isArray(invitesList);
+                        assert.equal(2, invitesList.length);
+
+                        const inviteListInvite1 = invitesList.find(invite => {
+                            return invite.id === groupInviteCreated1.id
+                        });
+
+                        const inviteListInviteUser1 = inviteListInvite1.user;
+                        assert.equal(inviteListInviteUser1.id, userToInvite1.id);
+                        assert.equal(inviteListInviteUser1.name, userToInvite1.name);
+                        assert.property(inviteListInviteUser1, 'imageUrl');
+                        delete inviteListInvite1.user;
+                        assert.deepEqual(inviteListInvite1, groupInviteCreated1);
+
+                        // The list result has User object, otherwise the objects should be equal
+                        const inviteListInvite2 = invitesList.find(invite => {
+                            return invite.id === groupInviteCreated2.id
+                        });
+                        const inviteListInviteUser2 = inviteListInvite2.user;
+                        assert.equal(inviteListInviteUser2.id, userToInvite2.id);
+                        assert.equal(inviteListInviteUser2.name, userToInvite2.name);
+                        assert.property(inviteListInviteUser2, 'imageUrl');
+                        delete inviteListInvite2.user;
+                        assert.deepEqual(inviteListInvite2, groupInviteCreated2);
+                    });
+
+                    test('Fail - 40100 - Unauthorized', async function () {
+                        await _groupInviteUsersListPromised(request.agent(app), '93857ed7-a81a-4187-85de-234f6d06b011', group.id, 401);
+                    });
+
+                    test('Fail - 40300 - at least read permissions required', async function () {
+                        await userLib.createUserAndLoginPromised(agentCreator, null, null, null);
+                        await _groupInviteUsersListPromised(agentCreator, userCreator.id, group.id, 403);
                     });
 
                 });

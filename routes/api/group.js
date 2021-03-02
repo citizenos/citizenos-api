@@ -1165,7 +1165,72 @@ module.exports = function (app) {
      * @see https://github.com/citizenos/citizenos-fe/issues/348
      */
     app.get('/api/users/:userId/groups/:groupId/invites/users', loginCheck(), hasPermission(GroupMember.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
-        return res.notImplemented('FIXME! Not implemented!');
+        const limitDefault = 10;
+        const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
+        let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+        const search = req.query.search;
+
+        let where = '';
+        if (search) {
+            where = ` AND u.name ILIKE :search `
+        }
+
+        try {
+            const invites = await db
+                .query(
+                    `SELECT
+                    giu.id,
+                    giu."creatorId",
+                    giu.level,
+                    giu."groupId",
+                    giu."userId",
+                    giu."createdAt",
+                    giu."updatedAt",
+                    u.id as "user.id",
+                    u.name as "user.name",
+                    u."imageUrl" as "user.imageUrl",
+                    count(*) OVER()::integer AS "countTotal"
+                FROM "GroupInviteUsers" giu
+                JOIN "Users" u ON u.id = giu."userId"
+                WHERE giu."groupId" = :groupId AND giu."deletedAt" IS NULL AND giu."createdAt" > NOW() - INTERVAL '${GroupInviteUser.VALID_DAYS}d'
+                ${where}
+                ORDER BY u.name ASC
+                LIMIT :limit
+                OFFSET :offset
+                ;`,
+                    {
+                        replacements: {
+                            groupId: req.params.groupId,
+                            limit,
+                            offset,
+                            search: `%${search}%`
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true,
+                        nest: true
+                    }
+                );
+
+            if (!invites) {
+                return res.notFound();
+            }
+            let countTotal = 0;
+            if (invites.length) {
+                countTotal = invites[0].countTotal;
+            }
+
+            invites.forEach(function (invite) {
+                delete invite.countTotal;
+            });
+
+            return res.ok({
+                countTotal,
+                count: invites.length,
+                rows: invites
+            });
+        } catch (err) {
+            return next(err);
+        }
     }));
 
     /**
