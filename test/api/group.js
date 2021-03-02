@@ -160,7 +160,7 @@ const groupInviteUsersReadPromised = async function (agent, groupId, inviteId) {
 };
 
 var _groupMembersCreate = function (agent, userId, groupId, members, expectedHttpCode, callback) {
-    var path = '/api/users/:userId/groups/:groupId/members'
+    var path = '/api/users/:userId/groups/:groupId/members/users'
         .replace(':userId', userId)
         .replace(':groupId', groupId);
 
@@ -178,7 +178,7 @@ var groupMembersCreate = function (agent, userId, groupId, members, callback) {
 };
 
 const _groupMembersCreatePromised = async function (agent, userId, groupId, members, expectedHttpCode) {
-    const path = '/api/users/:userId/groups/:groupId/members'
+    const path = '/api/users/:userId/groups/:groupId/members/users'
         .replace(':userId', userId)
         .replace(':groupId', groupId);
 
@@ -195,7 +195,7 @@ const groupMembersCreatePromised = async function (agent, userId, groupId, membe
 };
 
 var _groupMembersUpdate = function (agent, userId, groupId, memberId, level, expectedHttpCode, callback) {
-    var path = '/api/users/:userId/groups/:groupId/members/:memberId'
+    var path = '/api/users/:userId/groups/:groupId/members/users/:memberId'
         .replace(':userId', userId)
         .replace(':groupId', groupId)
         .replace(':memberId', memberId);
@@ -214,7 +214,7 @@ var groupMembersUpdate = function (agent, userId, groupId, memberId, level, call
 };
 
 const _groupMembersUpdatePromised = async function (agent, userId, groupId, memberId, level, expectedHttpCode) {
-    const path = '/api/users/:userId/groups/:groupId/members/:memberId'
+    const path = '/api/users/:userId/groups/:groupId/members/users/:memberId'
         .replace(':userId', userId)
         .replace(':groupId', groupId)
         .replace(':memberId', memberId);
@@ -232,7 +232,7 @@ const groupMembersUpdatePromised = async function (agent, userId, groupId, membe
 };
 
 var _groupMembersDelete = function (agent, userId, groupId, memberId, expectedHttpCode, callback) {
-    var path = '/api/users/:userId/groups/:groupId/members/:memberId'
+    var path = '/api/users/:userId/groups/:groupId/members/users/:memberId'
         .replace(':userId', userId)
         .replace(':groupId', groupId)
         .replace(':memberId', memberId);
@@ -250,7 +250,7 @@ var groupMembersDelete = function (agent, userId, groupId, memberId, callback) {
 };
 
 const _groupMembersDeletePromised = async function (agent, userId, groupId, memberId, expectedHttpCode) {
-    const path = '/api/users/:userId/groups/:groupId/members/:memberId'
+    const path = '/api/users/:userId/groups/:groupId/members/users/:memberId'
         .replace(':userId', userId)
         .replace(':groupId', groupId)
         .replace(':memberId', memberId);
@@ -753,7 +753,7 @@ suite('Users', function () {
                             },
                             {
                                 userId: userToInvite2.id,
-                                level: GroupMember.LEVELS.edit
+                                level: GroupMember.LEVELS.admin
                             }
                         ];
 
@@ -786,6 +786,7 @@ suite('Users', function () {
                         const createdInviteUser2 = createdInvites.find(function (invite) { // find by level, not by id to keep the code simpler
                             return invite.level === invitation[1].level;
                         });
+
                         assert.uuid(createdInviteUser2.id, 'v4');
                         assert.equal(createdInviteUser2.groupId, group.id);
                         assert.equal(createdInviteUser2.creatorId, userCreator.id);
@@ -804,7 +805,7 @@ suite('Users', function () {
                             },
                             {
                                 userId: cosUtil.randomString() + '@invitetest.com',
-                                level: GroupMember.LEVELS.edit
+                                level: GroupMember.LEVELS.admin
                             }
                         ];
 
