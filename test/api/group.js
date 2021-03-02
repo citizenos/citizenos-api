@@ -834,7 +834,7 @@ suite('Users', function () {
                             level: GroupMember.LEVELS.read
                         };
 
-                        const inviteCreateResult = (await groupInviteUsersCreatePromised(agentCreator, userCreator, group.id, invitation)).body;
+                        const inviteCreateResult = (await _groupInviteUsersCreatePromised(agentCreator, userCreator, group.id, invitation, 400)).body;
 
                         const expectedBody = {
                             status: {
