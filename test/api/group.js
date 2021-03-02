@@ -846,6 +846,53 @@ suite('Users', function () {
                         assert.deepEqual(inviteCreateResult, expectedBody);
                     });
 
+                    test('Fail - 40001 - invite a User with invalid userId', async function () {
+                        const invitation = [
+                            {
+                                userId: 'notAnEmailNorUserId',
+                                level: TopicMemberUser.LEVELS.read
+                            }
+                        ];
+
+                        const inviteCreateResult = (await _groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, invitation, 400)).body;
+
+                        const expectedResponseBody = {
+                            status: {
+                                code: 40001,
+                                message: 'No invites were created. Possibly because no valid userId-s (uuidv4s or emails) were provided.'
+                            }
+                        };
+
+                        assert.deepEqual(inviteCreateResult, expectedResponseBody);
+                    });
+
+                    test('Fail - 40000 - invalid JSON in request body', async function () {
+                        const expectedResponseBody = {
+                            status: {
+                                code: 40000,
+                                message: 'Invalid JSON in request body'
+                            }
+                        };
+
+                        const inviteCreateResult1 = (await _groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, '{asdasdas', 400)).body;
+
+                        assert.deepEqual(inviteCreateResult1, expectedResponseBody);
+
+                        const inviteCreateResult2 = (await _groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, 'PPPasdasdas', 400)).body;
+
+                        assert.deepEqual(inviteCreateResult2, expectedResponseBody);
+                    });
+
+                    test('Fail - 40100 - Unauthorized', async function () {
+                        await _groupInviteUsersCreatePromised(request.agent(app), '4727aecc-56f7-4802-8f76-2cfaad5cd5f3', group.id, [], 401);
+                    });
+
+                    test('Fail - 40300 - at least admin permissions required', async function () {
+                        const agentInvalidUser = request.agent(app);
+                        const invalidUser = await userLib.createUserAndLoginPromised(agentInvalidUser, null, null, null);
+
+                        await _groupInviteUsersCreatePromised(agentInvalidUser, invalidUser.id, group.id, [], 403);
+                    });
                 });
 
             });
