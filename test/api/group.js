@@ -1108,7 +1108,7 @@ suite('Users', function () {
 
                 });
 
-                suite('List', function() {
+                suite('List', function () {
 
                     const agentCreator = request.agent(app);
 
@@ -1128,18 +1128,18 @@ suite('Users', function () {
 
                         group = (await groupCreatePromised(agentCreator, userCreator.id, 'TEST CASE: User Invites List', null, null)).body.data;
 
-                        const topicInvite1 = {
+                        const groupInvite1 = {
                             userId: userToInvite1.id,
                             level: GroupMember.LEVELS.read
                         };
 
-                        const topicInvite2 = {
+                        const groupInvite2 = {
                             userId: userToInvite2.id,
                             level: GroupMember.LEVELS.admin
                         };
 
-                        groupInviteCreated1 = (await groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, topicInvite1)).body.data.rows[0];
-                        groupInviteCreated2 = (await groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, topicInvite2)).body.data.rows[0];
+                        groupInviteCreated1 = (await groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, groupInvite1)).body.data.rows[0];
+                        groupInviteCreated2 = (await groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, groupInvite2)).body.data.rows[0];
                     });
 
                     test('Success - 20000 - list invites', async function () {
@@ -1171,6 +1171,80 @@ suite('Users', function () {
                         assert.property(inviteListInviteUser2, 'imageUrl');
                         delete inviteListInvite2.user;
                         assert.deepEqual(inviteListInvite2, groupInviteCreated2);
+                    });
+
+                    test('Success - 20000 - list duplicate invites', async function () {
+                        // Second invite to User 1
+                        const groupInvite12 = {
+                            userId: userToInvite1.id,
+                            level: GroupMember.LEVELS.admin
+                        };
+
+                        const groupInviteCreated12 = (await groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, groupInvite12)).body.data.rows[0];
+
+                        const invitesListResult = (await groupInviteUsersListPromised(agentCreator, userCreator.id, group.id)).body.data;
+
+                        const invitesList = invitesListResult.rows;
+                        assert.isArray(invitesList);
+                        assert.equal(3, invitesList.length);
+
+                        const originalInvite = invitesList.find(invite => {
+                            return invite.id === groupInviteCreated1.id
+                        });
+                        assert.isObject(originalInvite);
+                        assert.equal(originalInvite.level, groupInviteCreated1.level);
+
+                        const duplicateInvite = invitesList.find(invite => {
+                           return invite.id === groupInviteCreated12.id
+                        });
+                        assert.isObject(duplicateInvite);
+                        assert.equal(duplicateInvite.level, groupInviteCreated12.level);
+
+                    });
+
+                    test('Success - 20000 - do not list expired invites', async function () {
+                        // Expire first invite
+                        await GroupInviteUser
+                            .update(
+                                {
+                                    createdAt: db.literal(`NOW() - INTERVAL '${GroupInviteUser.VALID_DAYS + 1}d'`)
+                                },
+                                {
+                                    where: {
+                                        id: groupInviteCreated1.id
+                                    }
+                                }
+                            );
+
+                        const invitesListResult = (await groupInviteUsersListPromised(agentCreator, userCreator.id, group.id)).body.data;
+                        assert.equal(1, invitesListResult.count);
+
+                        const invitesList = invitesListResult.rows;
+                        const inviteListInvite1 = invitesList.find(invite => {
+                            return invite.id === groupInviteCreated1.id;
+                        });
+                        assert.isUndefined(inviteListInvite1);
+                    });
+
+                    test('Success - 20000 - do not list deleted invites', async function () {
+                        // Delete second invite
+                        await GroupInviteUser
+                            .destroy(
+                                {
+                                    where: {
+                                        id: groupInviteCreated2.id
+                                    }
+                                }
+                            );
+
+                        const invitesListResult = (await groupInviteUsersListPromised(agentCreator, userCreator.id, group.id)).body.data;
+                        assert.equal(1, invitesListResult.count);
+
+                        const invitesList = invitesListResult.rows;
+                        const inviteListInvite2 = invitesList.find(invite => {
+                            return invite.id === groupInviteCreated2.id;
+                        });
+                        assert.isUndefined(inviteListInvite2);
                     });
 
                     test('Fail - 40100 - Unauthorized', async function () {
