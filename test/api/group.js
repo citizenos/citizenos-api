@@ -143,6 +143,22 @@ const groupInviteUsersCreatePromised = async function (agent, userId, groupId, i
     return _groupInviteUsersCreatePromised(agent, userId, groupId, invites, 201);
 };
 
+const _groupInviteUsersReadPromised = async function (agent, groupId, inviteId, expectedHttpCode) {
+    const path = '/api/groups/:groupId/invites/users/:inviteId'
+        .replace(':groupId', groupId)
+        .replace(':inviteId', inviteId);
+
+    return agent
+        .get(path)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const groupInviteUsersReadPromised = async function (agent, groupId, inviteId) {
+    return _groupInviteUsersReadPromised(agent, groupId, inviteId, 200);
+};
+
 var _groupMembersCreate = function (agent, userId, groupId, members, expectedHttpCode, callback) {
     var path = '/api/users/:userId/groups/:groupId/members'
         .replace(':userId', userId)
@@ -289,6 +305,8 @@ const User = models.User;
 const Group = models.Group;
 const GroupMember = models.GroupMember;
 const TopicMemberUser = models.TopicMemberUser;
+const TopicMemberGroup = models.TopicMemberGroup;
+const GroupInviteUser = models.GroupInviteUser;
 
 suite('Users', function () {
 
@@ -548,7 +566,7 @@ suite('Users', function () {
                                 topic = results[1].body.data;
                                 var memberGroup = {
                                     groupId: group.id,
-                                    level: TopicMemberUser.LEVELS.read
+                                    level: TopicMemberGroup.LEVELS.read
                                 };
 
                                 return await topicLib.topicMemberGroupsCreatePromised(agentCreator, user.id, topic.id, memberGroup);
@@ -681,7 +699,7 @@ suite('Users', function () {
                 suite('Create', function () {
 
                     let agentCreator = request.agent(app);
-                    let groupName = 'Test GROUP for masses';
+                    let groupName = 'TESTCASE: Invites Create';
 
                     let userCreator;
                     let group;
@@ -696,7 +714,7 @@ suite('Users', function () {
 
                         const invitation = {
                             userId: userToInvite.id,
-                            level: TopicMemberUser.LEVELS.read
+                            level: GroupMember.LEVELS.read
                         };
 
                         const inviteCreateResult = (await groupInviteUsersCreatePromised(agentCreator, userCreator, group.id, invitation)).body;
@@ -731,11 +749,11 @@ suite('Users', function () {
                         const invitation = [
                             {
                                 userId: userToInvite.id,
-                                level: TopicMemberUser.LEVELS.read
+                                level: GroupMember.LEVELS.read
                             },
                             {
                                 userId: userToInvite2.id,
-                                level: TopicMemberUser.LEVELS.edit
+                                level: GroupMember.LEVELS.edit
                             }
                         ];
 
@@ -782,11 +800,11 @@ suite('Users', function () {
                         const invitation = [
                             {
                                 userId: userToInvite.email,
-                                level: TopicMemberUser.LEVELS.read
+                                level: GroupMember.LEVELS.read
                             },
                             {
                                 userId: cosUtil.randomString() + '@invitetest.com',
-                                level: TopicMemberUser.LEVELS.edit
+                                level: GroupMember.LEVELS.edit
                             }
                         ];
 
@@ -850,7 +868,7 @@ suite('Users', function () {
                         const invitation = [
                             {
                                 userId: 'notAnEmailNorUserId',
-                                level: TopicMemberUser.LEVELS.read
+                                level: GroupMember.LEVELS.read
                             }
                         ];
 
@@ -904,6 +922,173 @@ suite('Users', function () {
                         // Try to invite with "read" level
                         await _groupInviteUsersCreatePromised(agentInvalidUser, invalidUser.id, group.id, [], 403);
                     });
+                });
+
+                suite('Read', function () {
+
+                    const agentCreator = request.agent(app);
+                    const agentUserToInvite = request.agent(app);
+
+                    const groupName = 'TESTCASE: Invite Read';
+
+                    let userCreator;
+                    let userToInvite;
+
+                    let group;
+                    let groupInviteCreated;
+
+                    suiteSetup(async function () {
+                        userToInvite = await userLib.createUserAndLoginPromised(agentUserToInvite, null, null, null);
+                        userCreator = await userLib.createUserAndLoginPromised(agentCreator, null, null, null);
+                    });
+
+                    setup(async function () {
+                        group = (await groupCreatePromised(agentCreator, userCreator.id, groupName, null, null)).body.data;
+
+                        const invitation = {
+                            userId: userToInvite.id,
+                            level: GroupMember.LEVELS.read
+                        };
+
+                        groupInviteCreated = (await groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, invitation)).body.data.rows[0];
+                    });
+
+                    test('Success - 20000', async function () {
+                        const inviteRead = (await groupInviteUsersReadPromised(request.agent(app), group.id, groupInviteCreated.id)).body.data;
+
+                        const expectedInvite = Object.assign({}, groupInviteCreated); // Clone
+
+                        expectedInvite.group = {
+                            id: group.id,
+                            name: group.name,
+                            creator: {
+                                id: userCreator.id
+                            }
+                        };
+
+                        expectedInvite.creator = {
+                            company: null,
+                            id: userCreator.id,
+                            imageUrl: null,
+                            name: userCreator.name
+                        };
+
+                        expectedInvite.user = {
+                            id: userToInvite.id,
+                            email: cosUtil.emailToMaskedEmail(userToInvite.email)
+                        };
+
+                        assert.deepEqual(inviteRead, expectedInvite);
+                    });
+
+                    // I invite has been accepted (deleted, but User has access)
+                    // test('Success - 20001', async function () {
+                    //     const topicMemberUser = (await topicInviteUsersAcceptPromised(agentUserToInvite, userToInvite.id, group.id, groupInviteCreated.id)).body.data;
+                    //
+                    //     assert.equal(topicMemberUser.topicId, group.id);
+                    //     assert.equal(topicMemberUser.userId, userToInvite.id);
+                    //     assert.equal(topicMemberUser.level, groupInviteCreated.level);
+                    //     assert.property(topicMemberUser, 'createdAt');
+                    //     assert.property(topicMemberUser, 'updatedAt');
+                    //     assert.property(topicMemberUser, 'deletedAt');
+                    //
+                    //     const inviteReadResult = (await topicInviteUsersReadPromised(request.agent(app), group.id, groupInviteCreated.id)).body;
+                    //     const expectedInvite = Object.assign({}, groupInviteCreated);
+                    //
+                    //     // Accepting the invite changes "updatedAt", thus these are not the same. Verify that the "updatedAt" exists and remove from expected and actual
+                    //     assert.property(inviteReadResult.data, 'updatedAt');
+                    //     delete inviteReadResult.data.updatedAt;
+                    //     delete expectedInvite.updatedAt;
+                    //
+                    //     expectedInvite.topic = {
+                    //         id: group.id,
+                    //         title: group.title,
+                    //         visibility: group.visibility,
+                    //         creator: {
+                    //             id: userCreator.id
+                    //         }
+                    //     };
+                    //
+                    //     expectedInvite.creator = {
+                    //         company: null,
+                    //         id: userCreator.id,
+                    //         imageUrl: null,
+                    //         name: userCreator.name
+                    //     };
+                    //
+                    //     expectedInvite.user = {
+                    //         id: userToInvite.id,
+                    //         email: cosUtil.emailToMaskedEmail(userToInvite.email)
+                    //     };
+                    //
+                    //     const expectedInviteResult = {
+                    //         status: {
+                    //             code: 20001
+                    //         },
+                    //         data: expectedInvite
+                    //     };
+                    //
+                    //     assert.deepEqual(inviteReadResult, expectedInviteResult);
+                    // });
+
+
+                    test('Fail - 40400 - Not found', async function () {
+                        await _groupInviteUsersReadPromised(request.agent(app), group.id, 'f4bb46b9-87a1-4ae4-b6df-c2605ab8c471', 404);
+                    });
+
+                    test('Fail - 41001 - Deleted', async function () {
+                        const invitation = {
+                            userId: userToInvite.id,
+                            level: GroupMember.LEVELS.read
+                        };
+
+                        let groupInviteCreated = (await groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, invitation)).body.data.rows[0];
+
+                        await GroupInviteUser
+                            .destroy({
+                                where: {
+                                    id: groupInviteCreated.id
+                                }
+                            });
+
+                        const groupInviteRead = (await _groupInviteUsersReadPromised(request.agent(app), group.id, groupInviteCreated.id, 410)).body;
+
+                        const expectedBody = {
+                            status: {
+                                code: 41001,
+                                message: 'The invite has been deleted'
+                            }
+                        };
+
+                        assert.deepEqual(groupInviteRead, expectedBody);
+                    });
+
+                    test('Fail - 41002 - Expired', async function () {
+                        await GroupInviteUser
+                            .update(
+                                {
+                                    createdAt: db.literal(`NOW() - INTERVAL '${GroupInviteUser.VALID_DAYS + 1}d'`)
+                                },
+                                {
+                                    where: {
+                                        id: groupInviteCreated.id
+                                    }
+                                }
+                            );
+
+                        const groupInviteRead = (await _groupInviteUsersReadPromised(request.agent(app), group.id, groupInviteCreated.id, 410)).body;
+
+                        const expectedBody = {
+                            status: {
+                                code: 41002,
+                                message: `The invite has expired. Invites are valid for ${GroupInviteUser.VALID_DAYS} days`
+                            }
+                        };
+
+                        assert.deepEqual(groupInviteRead, expectedBody);
+
+                    });
+
                 });
 
             });
@@ -1252,7 +1437,7 @@ suite('Users', function () {
                         const topicCreated = (await topicLib.topicCreatePromised(agent, creator.id, null, null, null, '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>', null)).body.data;
                         const memberGroup = {
                             groupId: group.id,
-                            level: TopicMemberUser.LEVELS.edit
+                            level: TopicMemberGroup.LEVELS.edit
                         };
                         await topicLib.topicMemberGroupsCreatePromised(agent, creator.id, topicCreated.id, memberGroup);
                     });
@@ -1273,7 +1458,7 @@ suite('Users', function () {
                         assert.deepEqual(groupMemberTopic.creator, creatorExpected);
 
                         assert.equal(groupMemberTopic.permission.level, TopicMemberUser.LEVELS.admin);
-                        assert.equal(groupMemberTopic.permission.levelGroup, TopicMemberUser.LEVELS.edit);
+                        assert.equal(groupMemberTopic.permission.levelGroup, TopicMemberGroup.LEVELS.edit);
 
                     });
 
@@ -1311,7 +1496,7 @@ suite('Users', function () {
                         const topic = (await topicLib.topicCreatePromised(agent, member.id, null, null, null, null, null)).body.data;
                         const memberGroup = {
                             groupId: group.id,
-                            level: TopicMemberUser.LEVELS.read
+                            level: TopicMemberGroup.LEVELS.read
                         };
                         await topicLib.topicMemberGroupsCreatePromised(agent, member.id, topic.id, memberGroup);
                         const groupData = (await groupListPromised(agent, member.id, null)).body.data;

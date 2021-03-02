@@ -1071,7 +1071,7 @@ module.exports = function (app) {
             });
 
             const createInvitePromises = validUserIdMembers.map(async function (member) {
-                const addedMember = currentMembers.find (function (cmember) {
+                const addedMember = currentMembers.find(function (cmember) {
                     return cmember.userId === member.userId;
                 });
                 if (addedMember) {
@@ -1143,7 +1143,7 @@ module.exports = function (app) {
             return !!invite;
         });
 
-        for(let invite of createdInvites) {
+        for (let invite of createdInvites) {
             invite.inviteMessage = inviteMessage;
         }
 
@@ -1173,8 +1173,81 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/348
      */
-    app.get('/api/users/:userId/groups/:groupId/invites/users/:inviteId', loginCheck(), hasPermission(GroupMember.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
-        return res.notImplemented('FIXME! Not implemented!');
+    app.get(['/api/groups/:groupId/invites/users/:inviteId', '/api/users/:userId/groups/:groupId/invites/users/:inviteId'], asyncMiddleware(async function (req, res) {
+        const groupId = req.params.groupId;
+        const inviteId = req.params.inviteId;
+
+        const invite = await GroupInviteUser
+            .findOne(
+                {
+                    where: {
+                        id: inviteId,
+                        groupId: groupId
+                    },
+                    paranoid: false, // return deleted!
+                    include: [
+                        {
+                            model: Group,
+                            attributes: ['id', 'name', 'creatorId'],
+                            as: 'group',
+                            required: true
+                        },
+                        {
+                            model: User,
+                            attributes: ['id', 'name', 'company', 'imageUrl'],
+                            as: 'creator',
+                            required: true
+                        },
+                        {
+                            model: User,
+                            attributes: ['id', 'email'],
+                            as: 'user',
+                            required: true
+                        }
+                    ],
+                    attributes: {
+                        include: [
+                            [
+                                db.literal(`EXTRACT(DAY FROM (NOW() - "GroupInviteUser"."createdAt"))`),
+                                'createdDaysAgo'
+                            ]
+                        ]
+                    }
+                }
+            );
+
+        if (!invite) {
+            return res.notFound();
+        }
+
+        if (invite.deletedAt) {
+
+            let hasAccess;
+            try {
+                hasAccess = await _hasPermission(groupId, invite.userId, GroupMember.LEVELS.read, null, null);
+            } catch (e) {
+                hasAccess = false;
+            }
+
+            if (hasAccess) {
+                return res.ok(invite, 1); // Invite has already been accepted OR deleted and the person has access
+            }
+
+            return res.gone('The invite has been deleted', 1);
+        }
+
+        if (invite.dataValues.createdDaysAgo > GroupInviteUser.VALID_DAYS) {
+            return res.gone(`The invite has expired. Invites are valid for ${GroupInviteUser.VALID_DAYS} days`, 2);
+        }
+
+        // At this point we can already confirm users e-mail
+        await User.update({emailIsVerified: true}, {
+            where: {id: invite.userId},
+            fields: ['emailIsVerified'],
+            limit: 1
+        });
+
+        return res.ok(invite);
     }));
 
     /**
