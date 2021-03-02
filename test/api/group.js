@@ -175,6 +175,23 @@ const groupInviteUsersListPromised = async function (agent, userId, groupId) {
     return _groupInviteUsersListPromised(agent, userId, groupId, 200);
 };
 
+const _groupInviteUsersDeletePromised = async function (agent, userId, groupId, inviteId, expectedHttpCode) {
+    const path = '/api/users/:userId/groups/:groupId/invites/users/:inviteId'
+        .replace(':userId', userId)
+        .replace(':groupId', groupId)
+        .replace(':inviteId', inviteId);
+
+    return agent
+        .delete(path)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const groupInviteUsersDeletePromised = async function (agent, userId, groupId, inviteId) {
+    return _groupInviteUsersDeletePromised(agent, userId, groupId, inviteId, 200);
+};
+
 var _groupMembersCreate = function (agent, userId, groupId, members, expectedHttpCode, callback) {
     var path = '/api/users/:userId/groups/:groupId/members/users'
         .replace(':userId', userId)
@@ -296,6 +313,7 @@ const _groupMembersTopicsListPromised = async function (agent, userId, groupId, 
 const groupMembersTopicsListPromised = async function (agent, userId, groupId) {
     return _groupMembersTopicsListPromised(agent, userId, groupId, 200);
 };
+
 module.exports.create = groupCreate;
 module.exports.createPromised = groupCreatePromised;
 module.exports.deletePromised = groupDeletePromised;
@@ -1254,6 +1272,78 @@ suite('Users', function () {
                     test('Fail - 40300 - at least read permissions required', async function () {
                         await userLib.createUserAndLoginPromised(agentCreator, null, null, null);
                         await _groupInviteUsersListPromised(agentCreator, userCreator.id, group.id, 403);
+                    });
+
+                });
+
+                suite('Delete', function () {
+
+                    const agentCreator = request.agent(app);
+
+                    let userCreator;
+                    let userToInvite;
+
+                    let group;
+                    let groupInviteCreated;
+
+                    suiteSetup(async function () {
+                        userToInvite = await userLib.createUserPromised(request.agent(app), null, null, null);
+                        userCreator = await userLib.createUserAndLoginPromised(agentCreator, null, null, null);
+                        group = (await groupCreatePromised(agentCreator, userCreator.id, 'TEST CASE: User Invites Delete', null, null)).body.data;
+
+                        const invitation = {
+                            userId: userToInvite.id,
+                            level: GroupMember.LEVELS.read
+                        };
+
+                        groupInviteCreated = (await groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, invitation)).body.data.rows[0];
+                    });
+
+                    test('Success - 20000', async function () {
+                        const userDeleteResult = (await groupInviteUsersDeletePromised(agentCreator, userCreator.id, group.id, groupInviteCreated.id)).body;
+
+                        const expectedBody = {
+                            status: {
+                                code: 20000
+                            }
+                        };
+
+                        assert.deepEqual(userDeleteResult, expectedBody);
+
+                        const topicInvite = await GroupInviteUser
+                            .findOne({
+                                where: {
+                                    id: groupInviteCreated.id,
+                                    groupId: group.id
+                                },
+                                paranoid: false
+                            });
+
+                        assert.isNotNull(topicInvite, 'deletedAt');
+                    });
+
+                    test('Fail - 40401 - Invite not found', async function () {
+                        const userDeleteResult = (await _groupInviteUsersDeletePromised(agentCreator, userCreator.id, group.id, '094ba349-c03e-4fa9-874e-48a978013b2a', 404)).body;
+
+                        const expectedBody = {
+                            status: {
+                                code: 40401,
+                                message: 'Invite not found'
+                            }
+                        };
+
+                        assert.deepEqual(userDeleteResult, expectedBody);
+                    });
+
+                    test('Fail - 40100 - Unauthorized', async function () {
+                        await _groupInviteUsersDeletePromised(request.agent(app), '4727aecc-56f7-4802-8f76-2cfaad5cd5f3', group.id, '094ba349-c03e-4fa9-874e-48a978013b2a', 401);
+                    });
+
+                    test('Fail - 40300 - at least admin permissions required', async function () {
+                        const agentInvalidUser = request.agent(app);
+                        const invalidUser = await userLib.createUserAndLoginPromised(agentInvalidUser, null, null, null);
+
+                        await _groupInviteUsersDeletePromised(agentInvalidUser, invalidUser.id, group.id, '094ba349-c03e-4fa9-874e-48a978013b2a', 403);
                     });
 
                 });

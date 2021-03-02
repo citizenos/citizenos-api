@@ -1315,6 +1315,31 @@ module.exports = function (app) {
         return res.ok(invite);
     }));
 
+    /** Delete Group invite
+     *
+     * @see https://github.com/citizenos/citizenos-fe/issues/348
+     */
+    app.delete(['/api/groups/:groupId/invites/users/:inviteId', '/api/users/:userId/groups/:groupId/invites/users/:inviteId'], loginCheck(), hasPermission(GroupMember.LEVELS.admin), asyncMiddleware(async function (req, res) {
+        const groupId = req.params.groupId;
+        const inviteId = req.params.inviteId;
+
+        const deletedCount = await GroupInviteUser
+            .destroy(
+                {
+                    where: {
+                        id: inviteId,
+                        groupId: groupId
+                    }
+                }
+            );
+
+        if (!deletedCount) {
+            return res.notFound('Invite not found', 1);
+        }
+
+        return res.ok();
+    }));
+
     /**
      * Get Group Topics
      */
