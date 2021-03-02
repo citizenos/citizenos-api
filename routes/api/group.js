@@ -1315,7 +1315,8 @@ module.exports = function (app) {
         return res.ok(invite);
     }));
 
-    /** Delete Group invite
+    /**
+     * Delete Group invite
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/348
      */
@@ -1338,6 +1339,118 @@ module.exports = function (app) {
         }
 
         return res.ok();
+    }));
+
+    /**
+     * Accept a group invite
+     */
+    app.post(['/api/users/:userId/groups/:groupId/invites/users/:inviteId/accept', '/api/groups/:groupId/invites/users/:inviteId/accept'], loginCheck(), asyncMiddleware(async function (req, res) {
+        const userId = req.user.id;
+        const groupId = req.params.groupId;
+        const inviteId = req.params.inviteId;
+
+        const invite = await GroupInviteUser
+            .findOne(
+                {
+                    where: {
+                        id: inviteId,
+                        groupId: groupId
+                    },
+                    attributes: {
+                        include: [
+                            [
+                                db.literal(`EXTRACT(DAY FROM (NOW() - "GroupInviteUser"."createdAt"))`),
+                                'createdDaysAgo'
+                            ]
+                        ]
+                    }
+                }
+            );
+
+        // Find out if the User is already a member of the Topic
+        const memberUserExisting = await GroupMember
+            .findOne({
+                where: {
+                    groupId: groupId,
+                    userId: userId
+                }
+            });
+
+        if (invite) {
+            if (invite.userId !== userId) {
+                return res.forbidden();
+            }
+
+            if (memberUserExisting) {
+                // User already a member, see if we need to update the level
+                if (GroupMember.LEVELS.indexOf(memberUserExisting.level) < GroupMember.LEVELS.indexOf(invite.level)) {
+                    const memberUserUpdated = await memberUserExisting.update({
+                        level: invite.level
+                    });
+                    return res.ok(memberUserUpdated);
+                } else {
+                    // No level update, respond with existing member info
+                    return res.ok(memberUserExisting);
+                }
+            } else {
+                // Has the invite expired?
+                if (invite.dataValues.createdDaysAgo > GroupInviteUser.VALID_DAYS) {
+                    return res.gone(`The invite has expired. Invites are valid for ${GroupInviteUser.VALID_DAYS} days`, 2);
+                }
+
+                // Topic needed just for the activity
+                const group = await Group.findOne({
+                    where: {
+                        id: invite.groupId
+                    }
+                });
+
+                const memberUserCreated = await db.transaction(async function (t) {
+                    const member = await GroupMember.create(
+                        {
+                            groupId: invite.groupId,
+                            userId: invite.userId,
+                            level: GroupMember.LEVELS[invite.level]
+                        },
+                        {
+                            transaction: t
+                        }
+                    );
+
+                    await invite.destroy({transaction: t});
+
+                    const user = User.build({id: member.userId});
+                    user.dataValues.id = member.userId;
+
+                    await cosActivities.acceptActivity(
+                        invite,
+                        {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        },
+                        {
+                            type: 'User',
+                            id: invite.creatorId
+                        },
+                        group,
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
+                    return member;
+                });
+
+                return res.created(memberUserCreated);
+            }
+        } else {
+            // Already a member, return that membership information
+            if (memberUserExisting) {
+                return res.ok(memberUserExisting);
+            } else { // No invite, not a member - the User is not invited
+                return res.notFound();
+            }
+        }
     }));
 
     /**

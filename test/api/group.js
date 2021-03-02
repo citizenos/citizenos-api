@@ -192,6 +192,23 @@ const groupInviteUsersDeletePromised = async function (agent, userId, groupId, i
     return _groupInviteUsersDeletePromised(agent, userId, groupId, inviteId, 200);
 };
 
+const _groupInviteUsersAcceptPromised = function aync (agent, userId, groupId, inviteId, expectedHttpCode) {
+    const path = '/api/users/:userId/groups/:groupId/invites/users/:inviteId/accept'
+        .replace(':userId', userId)
+        .replace(':groupId', groupId)
+        .replace(':inviteId', inviteId);
+
+    return agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const groupInviteUsersAcceptPromised = function async (agent, userId, groupId, inviteId) {
+    return _groupInviteUsersAcceptPromised(agent, userId, groupId, inviteId, 201);
+};
+
 var _groupMembersCreate = function (agent, userId, groupId, members, expectedHttpCode, callback) {
     var path = '/api/users/:userId/groups/:groupId/members/users'
         .replace(':userId', userId)
@@ -1348,6 +1365,91 @@ suite('Users', function () {
 
                 });
 
+                suite('Accept', function () {
+
+                    const agentCreator = request.agent(app);
+                    const agentUserToInvite = request.agent(app);
+
+                    let userCreator;
+                    let userToInvite;
+
+                    let group;
+                    let groupInviteCreated;
+
+                    setup(async function () {
+                        userToInvite = await userLib.createUserAndLoginPromised(agentUserToInvite, null, null, null);
+                        userCreator = await userLib.createUserAndLoginPromised(agentCreator, null, null, null);
+                        group = (await groupCreatePromised(agentCreator, userCreator.id, 'TEST CASE: User Invites List', null, null)).body.data;
+
+                        const invitation = {
+                            userId: userToInvite.id,
+                            level: GroupMember.LEVELS.read
+                        };
+
+                        groupInviteCreated = (await groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, invitation)).body.data.rows[0];
+                    });
+
+                    test('Success - 20100 - New member created', async function () {
+                        const groupMemberUser = (await groupInviteUsersAcceptPromised(agentUserToInvite, userToInvite.id, group.id, groupInviteCreated.id)).body.data;
+
+                        assert.equal(groupMemberUser.groupId, group.id);
+                        assert.equal(groupMemberUser.userId, userToInvite.id);
+                        assert.equal(groupMemberUser.level, groupInviteCreated.level);
+                        assert.property(groupMemberUser, 'createdAt');
+                        assert.property(groupMemberUser, 'updatedAt');
+                        assert.property(groupMemberUser, 'deletedAt');
+                    });
+
+                    test('Success - 20000 - User already a Member, but accepts an Invite', async function () {
+                        await groupInviteUsersAcceptPromised(agentUserToInvite, userToInvite.id, group.id, groupInviteCreated.id);
+                        const groupMemberUser = (await _groupInviteUsersAcceptPromised(agentUserToInvite, userToInvite.id, group.id, groupInviteCreated.id, 200)).body.data;
+
+                        assert.equal(groupMemberUser.groupId, group.id);
+                        assert.equal(groupMemberUser.userId, userToInvite.id);
+                        assert.equal(groupMemberUser.level, groupInviteCreated.level);
+                        assert.property(groupMemberUser, 'createdAt');
+                        assert.property(groupMemberUser, 'updatedAt');
+                        assert.property(groupMemberUser, 'deletedAt');
+                    });
+
+                    test('Fail - 40400 - Cannot accept deleted invite', async function () {
+                        await groupInviteUsersDeletePromised(agentCreator, userCreator.id, group.id, groupInviteCreated.id);
+                        await _groupInviteUsersAcceptPromised(agentUserToInvite, userToInvite.id, group.id, groupInviteCreated.id, 404);
+                    });
+
+                    test('Fail - 41002 - Cannot accept expired invite', async function () {
+                        await GroupInviteUser
+                            .update(
+                                {
+                                    createdAt: db.literal(`NOW() - INTERVAL '${GroupInviteUser.VALID_DAYS + 1}d'`)
+                                },
+                                {
+                                    where: {
+                                        id: groupInviteCreated.id
+                                    }
+                                }
+                            );
+
+                        const acceptResult = (await _groupInviteUsersAcceptPromised(agentUserToInvite, userToInvite.id, group.id, groupInviteCreated.id, 410)).body;
+
+                        const expectedBody = {
+                            status: {
+                                code: 41002,
+                                message: `The invite has expired. Invites are valid for ${GroupInviteUser.VALID_DAYS} days`
+                            }
+                        };
+
+                        assert.deepEqual(acceptResult, expectedBody);
+                    });
+
+                    test('Fail - 40100 - Unauthorized', async function () {
+                        await _groupInviteUsersAcceptPromised(request.agent(app), '93857ed7-a81a-4187-85de-234f6d06b011', group.id, groupInviteCreated.id, 401);
+                    });
+
+                    test('Fail - 40300 - Forbidden - Cannot accept for someone else', async function () {
+                        await _groupInviteUsersAcceptPromised(agentCreator, userToInvite.id, group.id, groupInviteCreated.id, 403);
+                    });
+                });
             });
 
         });
