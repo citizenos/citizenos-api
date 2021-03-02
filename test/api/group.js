@@ -274,21 +274,21 @@ module.exports.membersUpdatePromised = groupMembersUpdatePromised;
 module.exports.membersDelete = groupMembersDelete;
 module.exports.membersDeletePromised = groupMembersDeletePromised;
 
-var assert = require('chai').assert;
-var request = require('supertest');
-var app = require('../../app');
-var models = app.get('models');
+const assert = require('chai').assert;
+const request = require('supertest');
+const app = require('../../app');
+const models = app.get('models');
 const db = models.sequelize;
 const cosUtil = app.get('util');
 
-var shared = require('../utils/shared');
-var userLib = require('./lib/user')(app);
-var topicLib = require('./topic');
+const shared = require('../utils/shared');
+const userLib = require('./lib/user')(app);
+const topicLib = require('./topic');
 
-var User = models.User;
-var Group = models.Group;
-var GroupMember = models.GroupMember;
-var TopicMemberUser = models.TopicMemberUser;
+const User = models.User;
+const Group = models.Group;
+const GroupMember = models.GroupMember;
+const TopicMemberUser = models.TopicMemberUser;
 
 suite('Users', function () {
 
@@ -891,6 +891,17 @@ suite('Users', function () {
                         const agentInvalidUser = request.agent(app);
                         const invalidUser = await userLib.createUserAndLoginPromised(agentInvalidUser, null, null, null);
 
+                        // Try not being part of the group at all
+                        await _groupInviteUsersCreatePromised(agentInvalidUser, invalidUser.id, group.id, [], 403);
+
+                        // Create User with "read" level, should not be able to invite.
+                        await GroupMember.create({
+                            groupId: group.id,
+                            userId: invalidUser.id,
+                            level: GroupMember.LEVELS.read
+                        });
+
+                        // Try to invite with "read" level
                         await _groupInviteUsersCreatePromised(agentInvalidUser, invalidUser.id, group.id, [], 403);
                     });
                 });
