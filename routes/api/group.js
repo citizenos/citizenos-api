@@ -68,7 +68,7 @@ module.exports = function (app) {
                     var blevel = result[0].level;
 
                     if (!allowSelf && (LEVELS[minRequiredLevel] > LEVELS[blevel])) {
-                        logger.warn('Access denied to topic due to member without permissions trying to delete user! ', 'userId:', userId);
+                        logger.warn('Access denied to group due to member without permissions trying to delete user! ', 'userId:', userId);
 
                         return Promise.reject();
                     }
@@ -723,7 +723,7 @@ module.exports = function (app) {
                                             }, null, group, req.method + ' ' + req.path);
                                         }
                                     } else {
-                                        logger.error('Failed to create a TopicMemberUser', validUserIdMembers[i]);
+                                        logger.error('Failed to create a GroupMemberUser', validUserIdMembers[i]);
                                     }
                                 });
 
@@ -942,7 +942,7 @@ module.exports = function (app) {
     /**
      * Invite new Members to the Group
      *
-     * Does NOT add a Member automatically, but will send an invite, which has to accept in order to become a Member of the Topic
+     * Does NOT add a Member automatically, but will send an invite, which has to accept in order to become a Member of the Group
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/348
      */
@@ -1054,7 +1054,7 @@ module.exports = function (app) {
                 });
             }
 
-            // Need the Topic just for the activity
+            // Need the Group just for the activity
             const group = await Group.findOne({
                 where: {
                     id: groupId
@@ -1147,7 +1147,7 @@ module.exports = function (app) {
             invite.inviteMessage = inviteMessage;
         }
 
-        // FIXME - send invite e-mails - await emailLib.sendTopicMemberUserInviteCreate(createdInvites);
+        // FIXME - send invite e-mails - await emailLib.sendGroupMemberUserInviteCreate(createdInvites);
 
         if (createdInvites.length) {
             return res.created({
@@ -1367,7 +1367,7 @@ module.exports = function (app) {
                 }
             );
 
-        // Find out if the User is already a member of the Topic
+        // Find out if the User is already a member of the Group
         const memberUserExisting = await GroupMember
             .findOne({
                 where: {
@@ -1398,7 +1398,7 @@ module.exports = function (app) {
                     return res.gone(`The invite has expired. Invites are valid for ${GroupInviteUser.VALID_DAYS} days`, 2);
                 }
 
-                // Topic needed just for the activity
+                // Group needed just for the activity
                 const group = await Group.findOne({
                     where: {
                         id: invite.groupId
