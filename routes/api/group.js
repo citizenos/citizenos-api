@@ -1147,7 +1147,7 @@ module.exports = function (app) {
             invite.inviteMessage = inviteMessage;
         }
 
-        // FIXME - send invite e-mails - await emailLib.sendGroupMemberUserInviteCreate(createdInvites);
+        await emailLib.sendGroupMemberUserInviteCreate(createdInvites);
 
         if (createdInvites.length) {
             return res.created({
