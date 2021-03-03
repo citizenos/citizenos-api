@@ -53,8 +53,8 @@ module.exports = function (app) {
             })
             .then(function (result) {
                 if (result && result[0]) {
-                    var isPublic = result[0].isPublic;
-                    var isAllowed = result[0].allowed;
+                    const isPublic = result[0].isPublic;
+                    const isAllowed = result[0].allowed;
 
                     if (isAllowed || (allowPublic && isPublic) || allowSelf) {
                         return Promise.resolve(true);
@@ -69,9 +69,9 @@ module.exports = function (app) {
     };
     const hasPermission = function (level, allowPublic, allowSelf) {
         return function (req, res, next) {
-            var groupId = req.params.groupId;
-            var userId = req.user.id;
-            var allowDeleteSelf = allowSelf;
+            const groupId = req.params.groupId;
+            const userId = req.user.id;
+            let allowDeleteSelf = allowSelf;
 
             if (allowSelf) {
                 if (userId !== req.params.memberId) {
