@@ -1034,54 +1034,53 @@ suite('Users', function () {
                     });
 
                     // I invite has been accepted (deleted, but User has access)
-                    // test('Success - 20001', async function () {
-                    //     const topicMemberUser = (await topicInviteUsersAcceptPromised(agentUserToInvite, userToInvite.id, group.id, groupInviteCreated.id)).body.data;
-                    //
-                    //     assert.equal(topicMemberUser.topicId, group.id);
-                    //     assert.equal(topicMemberUser.userId, userToInvite.id);
-                    //     assert.equal(topicMemberUser.level, groupInviteCreated.level);
-                    //     assert.property(topicMemberUser, 'createdAt');
-                    //     assert.property(topicMemberUser, 'updatedAt');
-                    //     assert.property(topicMemberUser, 'deletedAt');
-                    //
-                    //     const inviteReadResult = (await topicInviteUsersReadPromised(request.agent(app), group.id, groupInviteCreated.id)).body;
-                    //     const expectedInvite = Object.assign({}, groupInviteCreated);
-                    //
-                    //     // Accepting the invite changes "updatedAt", thus these are not the same. Verify that the "updatedAt" exists and remove from expected and actual
-                    //     assert.property(inviteReadResult.data, 'updatedAt');
-                    //     delete inviteReadResult.data.updatedAt;
-                    //     delete expectedInvite.updatedAt;
-                    //
-                    //     expectedInvite.topic = {
-                    //         id: group.id,
-                    //         title: group.title,
-                    //         visibility: group.visibility,
-                    //         creator: {
-                    //             id: userCreator.id
-                    //         }
-                    //     };
-                    //
-                    //     expectedInvite.creator = {
-                    //         company: null,
-                    //         id: userCreator.id,
-                    //         imageUrl: null,
-                    //         name: userCreator.name
-                    //     };
-                    //
-                    //     expectedInvite.user = {
-                    //         id: userToInvite.id,
-                    //         email: cosUtil.emailToMaskedEmail(userToInvite.email)
-                    //     };
-                    //
-                    //     const expectedInviteResult = {
-                    //         status: {
-                    //             code: 20001
-                    //         },
-                    //         data: expectedInvite
-                    //     };
-                    //
-                    //     assert.deepEqual(inviteReadResult, expectedInviteResult);
-                    // });
+                    test('Success - 20001', async function () {
+                        const groupMemberUser = (await groupInviteUsersAcceptPromised(agentUserToInvite, userToInvite.id, group.id, groupInviteCreated.id)).body.data;
+
+                        assert.equal(groupMemberUser.groupId, group.id);
+                        assert.equal(groupMemberUser.userId, userToInvite.id);
+                        assert.equal(groupMemberUser.level, groupInviteCreated.level);
+                        assert.property(groupMemberUser, 'createdAt');
+                        assert.property(groupMemberUser, 'updatedAt');
+                        assert.property(groupMemberUser, 'deletedAt');
+
+                        const inviteReadResult = (await groupInviteUsersReadPromised(request.agent(app), group.id, groupInviteCreated.id)).body;
+                        const expectedInvite = Object.assign({}, groupInviteCreated);
+
+                        // Accepting the invite changes "updatedAt", thus these are not the same. Verify that the "updatedAt" exists and remove from expected and actual
+                        assert.property(inviteReadResult.data, 'updatedAt');
+                        delete inviteReadResult.data.updatedAt;
+                        delete expectedInvite.updatedAt;
+
+                        expectedInvite.group = {
+                            id: group.id,
+                            name: group.name,
+                            creator: {
+                                id: userCreator.id
+                            }
+                        };
+
+                        expectedInvite.creator = {
+                            company: null,
+                            id: userCreator.id,
+                            imageUrl: null,
+                            name: userCreator.name
+                        };
+
+                        expectedInvite.user = {
+                            id: userToInvite.id,
+                            email: cosUtil.emailToMaskedEmail(userToInvite.email)
+                        };
+
+                        const expectedInviteResult = {
+                            status: {
+                                code: 20001
+                            },
+                            data: expectedInvite
+                        };
+
+                        assert.deepEqual(inviteReadResult, expectedInviteResult);
+                    });
 
 
                     test('Fail - 40400 - Not found', async function () {

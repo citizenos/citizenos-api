@@ -5303,6 +5303,7 @@ suite('Users', function () {
                     let topic;
 
                     setup(async function () {
+                        this.timeout(5000);
                         userToInvite = await userLib.createUserPromised(request.agent(app), null, null, null);
                         userCreator = await userLib.createUserAndLoginPromised(agentCreator, null, null, null);
                         topic = (await topicCreatePromised(agentCreator, userCreator.id, null, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>', null)).body.data;
@@ -5661,7 +5662,6 @@ suite('Users', function () {
 
                         assert.deepEqual(inviteReadResult, expectedInviteResult);
                     });
-
 
                     test('Fail - 40400 - Not found', async function () {
                         await _topicInviteUsersReadPromised(request.agent(app), topic.id, 'f4bb46b9-87a1-4ae4-b6df-c2605ab8c471', 404);

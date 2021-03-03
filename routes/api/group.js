@@ -27,21 +27,11 @@ module.exports = function (app) {
     const User = models.User;
 
     const _hasPermission = function (groupId, userId, level, allowPublic, allowSelf) {
-        // TODO: I think this will also map not found Groups/Users into Forbidden. May want to fix this for better User messaging.
-        var LEVELS = {
-            none: 0, // Enables to override inherited permissions.
-            read: 1,
-            edit: 2,
-            admin: 3
-        };
-
-        var minRequiredLevel = level;
-
         return db
             .query('\
                     SELECT \
                         g.visibility = \'public\' AS "isPublic", \
-                        gm."userId" AS "allowed", \
+                        gm.level::"enum_GroupMembers_level" >= :level AS "allowed", \
                         gm."userId" AS uid, \
                         gm."level" AS level, \
                         g.id \
@@ -65,15 +55,9 @@ module.exports = function (app) {
                 if (result && result[0]) {
                     var isPublic = result[0].isPublic;
                     var isAllowed = result[0].allowed;
-                    var blevel = result[0].level;
 
-                    if (!allowSelf && (LEVELS[minRequiredLevel] > LEVELS[blevel])) {
-                        logger.warn('Access denied to group due to member without permissions trying to delete user! ', 'userId:', userId);
-
-                        return Promise.reject();
-                    }
                     if (isAllowed || (allowPublic && isPublic) || allowSelf) {
-                        return Promise.resolve();
+                        return Promise.resolve(true);
                     }
                 }
 
@@ -83,7 +67,7 @@ module.exports = function (app) {
                 return Promise.reject(err);
             });
     };
-    var hasPermission = function (level, allowPublic, allowSelf) {
+    const hasPermission = function (level, allowPublic, allowSelf) {
         return function (req, res, next) {
             var groupId = req.params.groupId;
             var userId = req.user.id;
