@@ -5549,118 +5549,112 @@ module.exports = function (app) {
     /**
      * Create a Comment Vote
      */
-    app.post('/api/topics/:topicId/comments/:commentId/votes', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), function (req, res, next) {
+    app.post('/api/topics/:topicId/comments/:commentId/votes', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
         const value = parseInt(req.body.value, 10);
+        try {
+            const comment = await Comment
+                .findOne({
+                    where: {
+                        id: req.params.commentId
+                    }
+                });
 
-        Comment
-            .findOne({
-                where: {
-                    id: req.params.commentId
-                }
-            })
-            .then(function (comment) {
-                if (!comment) {
-                    return comment;
-                }
+            if (!comment) {
+                return comment;
+            }
 
-                return db
-                    .transaction(function (t) {
-                        return CommentVote
-                            .findOne({
-                                where: {
-                                    commentId: req.params.commentId,
-                                    creatorId: req.user.id
-                                },
+            await db
+                .transaction(async function (t) {
+                    const vote = await CommentVote
+                        .findOne({
+                            where: {
+                                commentId: req.params.commentId,
+                                creatorId: req.user.id
+                            },
+                            transaction: t
+                        });
+                    if (vote) {
+                        //User already voted
+                        if (vote.value === value) { // Same value will 0 the vote...
+                            vote.value = 0;
+                        } else {
+                            vote.value = value;
+                        }
+                        vote.topicId = req.params.topicId;
+
+                        await cosActivities
+                            .updateActivity(vote, comment, {
+                                type: 'User',
+                                id: req.user.id,
+                                ip: req.ip
+                            }, null, req.method + ' ' + req.path, t);
+
+                        await vote.save({transaction: t});
+                    } else {
+                        //User has not voted...
+                        const cv = await CommentVote
+                            .create({
+                                commentId: req.params.commentId,
+                                creatorId: req.user.id,
+                                value: req.body.value
+                            }, {
                                 transaction: t
-                            })
-                            .then(function (vote) {
-                                if (vote) {
-                                    //User already voted
-                                    if (vote.value === value) { // Same value will 0 the vote...
-                                        vote.value = 0;
-                                    } else {
-                                        vote.value = value;
-                                    }
-                                    vote.topicId = req.params.topicId;
+                            });
+                        const c = _.cloneDeep(comment);
+                        c.topicId = req.params.topicId;
 
-                                    return cosActivities
-                                        .updateActivity(vote, comment, {
-                                            type: 'User',
-                                            id: req.user.id,
-                                            ip: req.ip
-                                        }, null, req.method + ' ' + req.path, t)
-                                        .then(function () {
-                                            return vote.save({transaction: t});
-                                        });
-                                } else {
-                                    //User has not voted...
-                                    return CommentVote
-                                        .create({
-                                            commentId: req.params.commentId,
-                                            creatorId: req.user.id,
-                                            value: req.body.value
-                                        }, {
-                                            transaction: t
-                                        })
-                                        .then(function (cv) {
-                                            const c = _.cloneDeep(comment);
-                                            c.topicId = req.params.topicId;
-                                            return cosActivities
-                                                .createActivity(cv, c, {
-                                                    type: 'User',
-                                                    id: req.user.id,
-                                                    ip: req.ip
-                                                }, req.method + ' ' + req.path, t);
-                                        });
-                                }
-                            })
-                            .catch(next);
-                    })
-                    .then(function () {
-                        return db
-                            .query(
-                                ' \
-                                SELECT \
-                                    tc."up.count", \
-                                    tc."down.count", \
-                                    COALESCE(cvus.selected, false) as "up.selected", \
-                                    COALESCE(cvds.selected, false) as "down.selected" \
-                                    FROM ( \
-                                        SELECT  \
-                                            tc."commentId", \
-                                            COALESCE(SUM(cvu.value), 0) as "up.count", \
-                                            COALESCE(ABS(SUM(cvd.value)), 0) as "down.count" \
-                                        FROM "TopicComments" tc \
-                                            LEFT JOIN "CommentVotes" cvu ON (tc."commentId" = cvu."commentId" AND cvu.value > 0) \
-                                            LEFT JOIN "CommentVotes" cvd ON (tc."commentId" = cvd."commentId" AND cvd.value < 0) \
-                                        WHERE tc."topicId" = :topicId \
-                                        AND tc."commentId" = :commentId \
-                                        GROUP BY tc."commentId" \
-                                    ) tc \
-                                    LEFT JOIN (SELECT "commentId", "creatorId", value, true AS selected FROM "CommentVotes" WHERE value > 0 AND "creatorId" = :userId) cvus ON (tc."commentId" = cvus."commentId") \
-                                    LEFT JOIN (SELECT "commentId", "creatorId", value, true AS selected FROM "CommentVotes" WHERE value < 0 AND "creatorId" = :userId) cvds ON (tc."commentId" = cvds."commentId") \
-                                ',
-                                {
-                                    replacements: {
-                                        topicId: req.params.topicId,
-                                        commentId: req.params.commentId,
-                                        userId: req.user.id
-                                    },
-                                    type: db.QueryTypes.SELECT,
-                                    raw: true,
-                                    nest: true
-                                }
-                            );
-                    });
-            })
-            .then(function (results) {
-                if (!results) {
-                    return res.notFound();
-                }
+                        await cosActivities
+                            .createActivity(cv, c, {
+                                type: 'User',
+                                id: req.user.id,
+                                ip: req.ip
+                            }, req.method + ' ' + req.path, t);
+                    }
+                });
 
-                return res.ok(results[0]);
-            })
-            .catch(next);
+            const results = await db
+                .query(
+                    `
+                    SELECT
+                        tc."up.count",
+                        tc."down.count",
+                        COALESCE(cvus.selected, false) as "up.selected",
+                        COALESCE(cvds.selected, false) as "down.selected"
+                        FROM (
+                            SELECT
+                                tc."commentId",
+                                COALESCE(cvu.count, 0) as "up.count",
+                                COALESCE(cvd.count, 0) as "down.count"
+                            FROM "TopicComments" tc
+                                LEFT JOIN ( SELECT "commentId", COUNT(value) as count FROM "CommentVotes" WHERE value > 0 GROUP BY "commentId") cvu ON tc."commentId" = cvu."commentId"
+                                LEFT JOIN ( SELECT "commentId", COUNT(value) as count FROM "CommentVotes"  WHERE value < 0 GROUP BY "commentId") cvd ON tc."commentId" = cvd."commentId"
+                            WHERE tc."topicId" = :topicId
+                            AND tc."commentId" = :commentId
+                            GROUP BY tc."commentId", cvu.count, cvd.count
+                        ) tc
+                        LEFT JOIN (SELECT "commentId", "creatorId", value, true AS selected FROM "CommentVotes" WHERE value > 0 AND "creatorId" = :userId) cvus ON (tc."commentId" = cvus."commentId")
+                        LEFT JOIN (SELECT "commentId", "creatorId", value, true AS selected FROM "CommentVotes" WHERE value < 0 AND "creatorId" = :userId) cvds ON (tc."commentId" = cvds."commentId");
+                    `,
+                    {
+                        replacements: {
+                            topicId: req.params.topicId,
+                            commentId: req.params.commentId,
+                            userId: req.user.id
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true,
+                        nest: true
+                    }
+                );
+
+            if (!results) {
+                return res.notFound();
+            }
+
+            return res.ok(results[0]);
+        } catch(err) {
+            next(err);
+        }
     });
 
 
