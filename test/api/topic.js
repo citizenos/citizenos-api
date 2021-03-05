@@ -7597,7 +7597,7 @@ suite('Users', function () {
                                     }
                                 ];
 
-                                const certificate = fs.readFileSync('./test/resources/certificates/dds_good_igor_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
+                                const certificate = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
                                 const res = await topicVoteVotePromised(agent, user.id, topic.id, vote.id, voteList, certificate, null, null, null);
                                 const status = res.body.status;
                                 const data = res.body.data;
@@ -7615,7 +7615,7 @@ suite('Users', function () {
                                     }
                                 ];
 
-                                const certificate = fs.readFileSync('./test/resources/certificates/dds_good_igor_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
+                                const certificate = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
                                 const res = await topicVoteVoteUnauthPromised(reqAgent, topicPublic.id, vote2.id, voteList, certificate, null, null, null);
                                 const status = res.body.status;
                                 const data = res.body.data;
@@ -7633,7 +7633,7 @@ suite('Users', function () {
                                     }
                                 ];
 
-                                const certificate = fs.readFileSync('./test/resources/certificates/dds_good_igor_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
+                                const certificate = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
                                 const status = (await _topicVoteVoteUnauthPromised(reqAgent, topic.id, vote.id, voteList, certificate, null, null, null, 401)).body.status;
 
                                 assert.deepEqual(status, {
@@ -7838,7 +7838,6 @@ suite('Users', function () {
                             // Wait for the vote signing to complete
                             await topicVoteStatusPromised(agent, user.id, topic.id, voteRead.id, voteVoteResult2.data.token);
                             const voteReadAfterVote2 = (await topicVoteReadPromised(agent, user.id, topic.id, voteRead.id)).body.data;
-
                             // Check that the 2nd vote was counted
                             _(voteList2).forEach(function (voteOption) {
                                 const option = _.find(voteReadAfterVote2.options.rows, {id: voteOption.optionId});

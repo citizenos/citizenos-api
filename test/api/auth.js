@@ -721,7 +721,7 @@ suite('Auth', function () {
                 this.timeout(5000); //eslint-disable-line no-invalid-this
 
                 const agent = request.agent(app);
-                const cert = fs.readFileSync('./test/resources/certificates/dds_good_igor_sign.pem', {encoding: 'utf8'}).replace(/\n/g, ''); //eslint-disable-line no-sync
+                const cert = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign.pem', {encoding: 'utf8'}).replace(/\n/g, ''); //eslint-disable-line no-sync
 
                 await _loginIdPromised(agent, null, cert, 200);
             });
