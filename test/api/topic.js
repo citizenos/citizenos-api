@@ -1579,7 +1579,8 @@ const _topicVoteStatusPromised = async function (agent, userId, topicId, voteId,
 };
 
 const topicVoteStatusPromised = async function (agent, userId, topicId, voteId, token) {
-    return new Promise(function (resolve, reject) {
+    return _topicVoteStatusPromised(agent, userId, topicId, voteId, token, 200);
+   /* return new Promise(function (resolve, reject) {
         const maxRetries = 20;
         const retryInterval = 1000; // milliseconds;
 
@@ -1612,7 +1613,7 @@ const topicVoteStatusPromised = async function (agent, userId, topicId, voteId, 
             }
 
         }, retryInterval);
-    });
+    });*/
 };
 
 var _topicVoteStatusUnauth = function (agent, topicId, voteId, token, expectedHttpCode, callback) {
@@ -6519,6 +6520,9 @@ suite('Users', function () {
                 let toUser6;
                 const agentToUser6 = request.agent(app);
 
+                let toUser7;
+                const agentToUser7 = request.agent(app);
+
                 suiteSetup(async function () {
                     const usersCreatePromises = [
                         userLib.createUserAndLoginPromised(agent, null, null, null),
@@ -6527,10 +6531,11 @@ suite('Users', function () {
                         userLib.createUserAndLoginPromised(agentToUser3, null, null, 'et'),
                         userLib.createUserAndLoginPromised(agentToUser4, null, null, null),
                         userLib.createUserAndLoginPromised(agentToUser5, null, null, null),
-                        userLib.createUserAndLoginPromised(agentToUser6, null, null, null)
+                        userLib.createUserAndLoginPromised(agentToUser6, null, null, null),
+                        userLib.createUserAndLoginPromised(agentToUser7, null, null, null)
                     ];
 
-                    [user, toUser1, toUser2, toUser3, toUser4, toUser5, toUser6] = await Promise.all(usersCreatePromises);
+                    [user, toUser1, toUser2, toUser3, toUser4, toUser5, toUser6, toUser7] = await Promise.all(usersCreatePromises);
                 });
 
                 suite('Create', function () {
@@ -6595,7 +6600,7 @@ suite('Users', function () {
                         assert.deepEqual(voteReadAfterDelegation.delegation, toUser2.toJSON());
                     });
 
-                    test('Success - OK - count delegated votes and not delegated votes - Delegation chain U->U1->U2->U3, U4->U5, U6 no delegation', async function () {
+                    test('Success - OK - count delegated votes and not delegated votes - Delegation chain U->U1->U2->U3, U4->U5 U7->U5, U6 no delegation', async function () {
                         const topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
                         const voteOptions = [
                             {
@@ -6635,6 +6640,10 @@ suite('Users', function () {
                             {
                                 userId: toUser6.id,
                                 level: TopicMemberUser.LEVELS.read
+                            },
+                            {
+                                userId: toUser7.id,
+                                level: TopicMemberUser.LEVELS.read
                             }
                         ];
 
@@ -6646,19 +6655,24 @@ suite('Users', function () {
                             topicVoteDelegationCreatePromised(agent, user.id, topic.id, voteRead.id, toUser1.id),
                             topicVoteDelegationCreatePromised(agentToUser1, toUser1.id, topic.id, voteRead.id, toUser2.id),
                             topicVoteDelegationCreatePromised(agentToUser2, toUser2.id, topic.id, voteRead.id, toUser3.id),
-                            topicVoteDelegationCreatePromised(agentToUser4, toUser4.id, topic.id, voteRead.id, toUser5.id)
+                            topicVoteDelegationCreatePromised(agentToUser4, toUser4.id, topic.id, voteRead.id, toUser5.id),
+                            topicVoteDelegationCreatePromised(agentToUser7, toUser7.id, topic.id, voteRead.id, toUser5.id)
                         ];
                         await Promise.all(delegationPromises);
 
                         const votePromises = [
                             topicVoteVotePromised(agentToUser3, toUser3.id, topic.id, voteRead.id, [{optionId: voteRead.options.rows[0].id}], null, null, null, null),
-                            topicVoteVotePromised(agentToUser5, toUser5.id, topic.id, voteRead.id, [{optionId: voteRead.options.rows[1].id}], null, null, null, null),
                             topicVoteVotePromised(agentToUser6, toUser6.id, topic.id, voteRead.id, [{optionId: voteRead.options.rows[1].id}], null, null, null, null)
                         ];
                         await Promise.all(votePromises);
 
                         const voteReadAfterVote = (await topicVoteReadPromised(agentToUser6, toUser6.id, topic.id, voteRead.id)).body.data;
-                        const voteReadAfterVoteOptions = voteReadAfterVote.options.rows;
+                        assert.equal(voteReadAfterVote.votersCount, 5);
+                        await topicVoteVotePromised(agentToUser5, toUser5.id, topic.id, voteRead.id, [{optionId: voteRead.options.rows[1].id}], null, null, null, null);
+
+                        const voteReadAfterVote2 = (await topicVoteReadPromised(agentToUser6, toUser6.id, topic.id, voteRead.id)).body.data;
+                        assert.equal(voteReadAfterVote2.votersCount, 8);
+                        const voteReadAfterVoteOptions = voteReadAfterVote2.options.rows;
 
                         voteReadAfterVoteOptions.forEach(function (option) {
                             switch (option.id) {
@@ -6667,7 +6681,7 @@ suite('Users', function () {
                                     assert.notProperty(option, 'selected');
                                     break;
                                 case voteRead.options.rows[1].id:
-                                    assert.equal(option.voteCount, 2 + 1);
+                                    assert.equal(option.voteCount, 2 + 1 +1);
                                     assert.isTrue(option.selected);
                                     break;
                                 case voteRead.options.rows[2].id:
@@ -6680,7 +6694,7 @@ suite('Users', function () {
                         });
                     });
 
-                    test('Success - OK - multiple choice - delegated votes and not delegated votes - Delegation chain U->U1->U2->U3, U4->U5, U6 no delegation', async function () {
+                    test('Success - OK - multiple choice - delegated votes and not delegated votes - Delegation chain U->U1->U2->U3, U4->U5 U7->U5, U6 no delegation', async function () {
                         const topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
                         const voteOptions = [
                             {
@@ -6701,7 +6715,6 @@ suite('Users', function () {
                         ];
                         const topicVoteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, voteOptions, 2, 3, true, null, null, null, null)).body.data;
                         const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, topicVoteCreated.id)).body.data;
-
                         const members = [
                             {
                                 userId: toUser1.id,
@@ -6726,6 +6739,10 @@ suite('Users', function () {
                             {
                                 userId: toUser6.id,
                                 level: TopicMemberUser.LEVELS.read
+                            },
+                            {
+                                userId: toUser7.id,
+                                level: TopicMemberUser.LEVELS.read
                             }
                         ];
                         await topicMemberUsersCreatePromised(agent, user.id, topic.id, members);
@@ -6744,7 +6761,8 @@ suite('Users', function () {
                             topicVoteDelegationCreatePromised(agent, user.id, topic.id, voteRead.id, toUser1.id),
                             topicVoteDelegationCreatePromised(agentToUser1, toUser1.id, topic.id, voteRead.id, toUser2.id),
                             topicVoteDelegationCreatePromised(agentToUser2, toUser2.id, topic.id, voteRead.id, toUser3.id),
-                            topicVoteDelegationCreatePromised(agentToUser4, toUser4.id, topic.id, voteRead.id, toUser5.id)
+                            topicVoteDelegationCreatePromised(agentToUser4, toUser4.id, topic.id, voteRead.id, toUser5.id),
+                            topicVoteDelegationCreatePromised(agentToUser7, toUser7.id, topic.id, voteRead.id, toUser5.id)
                         ];
                         await Promise.all(delegationPromises);
 
@@ -6792,11 +6810,11 @@ suite('Users', function () {
                                     assert.notProperty(option, 'selected');
                                     break;
                                 case voteRead.options.rows[1].id:
-                                    assert.equal(option.voteCount, (3 + 1) + (1 + 1) + 1); // U->U1->U2->U3, U4->U5, U6
+                                    assert.equal(option.voteCount, (3 + 1) + (2 + 1) + 1); // U->U1->U2->U3, U4->U5 U7->U5, U6
                                     assert.isTrue(option.selected);
                                     break;
                                 case voteRead.options.rows[2].id:
-                                    assert.equal(option.voteCount, (1 + 1)); // U4->U5
+                                    assert.equal(option.voteCount, (1 + 1 + 1)); // U4->U5 U7->U5
                                     assert.notProperty(option, 'selected');
                                     break;
                                 case voteRead.options.rows[3].id:
@@ -6826,6 +6844,7 @@ suite('Users', function () {
 
                         const voteReadAfterVoteForOverride = (await topicVoteReadPromised(agent, user.id, topic.id, voteRead.id)).body.data;
                         const voteReadAfterVoteForOverrideOptions = voteReadAfterVoteForOverride.options.rows;
+                        assert.equal(voteReadAfterVoteForOverride.votersCount, 8);
 
                         voteReadAfterVoteForOverrideOptions.forEach(function (option) {
                             switch (option.id) {
@@ -6834,11 +6853,11 @@ suite('Users', function () {
                                     assert.notProperty(option, 'selected');
                                     break;
                                 case voteRead.options.rows[1].id:
-                                    assert.equal(option.voteCount, (2 + 1) + (1 + 1) + 1); // U->U1->U2->U3, U4->U5, U6
+                                    assert.equal(option.voteCount, (2 + 1) + (1 + 1 + 1) + 1); // U->U1->U2->U3, U4->U5 U7->U5, U6
                                     assert.notProperty(option, 'selected');
                                     break;
                                 case voteRead.options.rows[2].id:
-                                    assert.equal(option.voteCount, (1 + 1) + 1); // U4->U5, U
+                                    assert.equal(option.voteCount, (1 + 1 + 1) + 1); // U4->U5 U7-> U5, U
                                     assert.isTrue(option.selected);
                                     break;
                                 case voteRead.options.rows[3].id:
@@ -7172,7 +7191,6 @@ suite('Users', function () {
 
                         // Verify the result of topic information, see that vote result is the same
                         const topicReadAfterVote = (await topicReadPromised(agent, user.id, topic.id, ['vote'])).body.data;
-
                         assert.deepEqual(topicReadAfterVote.vote, voteReadAfterVote2);
                     });
 
@@ -7547,7 +7565,7 @@ suite('Users', function () {
                                     }
                                 ];
 
-                                const certificate = fs.readFileSync('./test/resources/certificates/dds_good_igor_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
+                                const certificate = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
                                 const res = await topicVoteVotePromised(agent, user.id, topic.id, vote.id, voteList, certificate, null, null, null);
                                 const status = res.body.status;
                                 const data = res.body.data;
@@ -7565,7 +7583,7 @@ suite('Users', function () {
                                     }
                                 ];
 
-                                const certificate = fs.readFileSync('./test/resources/certificates/dds_good_igor_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
+                                const certificate = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
                                 const res = await topicVoteVoteUnauthPromised(reqAgent, topicPublic.id, vote2.id, voteList, certificate, null, null, null);
                                 const status = res.body.status;
                                 const data = res.body.data;
@@ -7583,7 +7601,7 @@ suite('Users', function () {
                                     }
                                 ];
 
-                                const certificate = fs.readFileSync('./test/resources/certificates/dds_good_igor_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
+                                const certificate = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
                                 const status = (await _topicVoteVoteUnauthPromised(reqAgent, topic.id, vote.id, voteList, certificate, null, null, null, 401)).body.status;
 
                                 assert.deepEqual(status, {
@@ -7906,6 +7924,7 @@ suite('Users', function () {
                             const voteResult4 = (await topicVoteVotePromised(agentUser4, user4.id, topic.id, voteRead.id, voteListUser4, null, pidSingleVote, phoneNumberSingleVote)).body.data;
                             await topicVoteStatusPromised(agentUser4, user4.id, topic.id, voteRead.id, voteResult4.token);
                             const voteReadAfterVote3 = (await topicVoteReadPromised(agentUser3, user3.id, topic.id, voteCreated.id)).body.data;
+                            assert.equal(2, voteReadAfterVote3.votersCount);
                             voteReadAfterVote3.options.rows.forEach(function (option) {
                                 switch (option.id) {
                                     case voteListUser3[0].optionId:
@@ -7931,7 +7950,7 @@ suite('Users', function () {
                             });
 
                             assert.deepEqual(voteReadAfterVote2.options, voteReadAfterVote3.options);
-
+                            assert.equal(2, voteReadAfterVote2.votersCount);
                             // Make sure the results match with result read with Topic
                             const topicReadAfterVote2 = (await topicReadPromised(agentUser2, user2.id, topic.id, ['vote'])).body.data;
                             const voteReadWithTopic2 = topicReadAfterVote2.vote;
@@ -8007,7 +8026,7 @@ suite('Users', function () {
                                 setTimeout(resolve, 1000);
                             });
                             const voteReadAfterVote2 = (await topicVoteReadPromised(agentUser2, user2.id, topic.id, voteCreated.id)).body.data;
-
+                            assert.equal(voteReadAfterVote2.votersCount, 1);
                             voteReadAfterVote2.options.rows.forEach(function (option) {
                                 switch (option.id) {
                                     case voteListUser2[0].optionId:

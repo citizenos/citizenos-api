@@ -136,7 +136,8 @@ module.exports = function (sequelize, DataTypes) {
             description: this.dataValues.description,
             type: this.dataValues.type,
             authType: this.dataValues.authType,
-            downloads: this.dataValues.downloads // TODO: should be virtual?
+            downloads: this.dataValues.downloads, // TODO: should be virtual?
+            votersCount: this.dataValues.votersCount// TODO: should be virtual?
         };
 
         // If Vote eagerly loads VoteOptions...

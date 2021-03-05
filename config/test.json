@@ -98,6 +98,12 @@
           "O": "AS Sertifitseerimiskeskus",
           "OID": "NTREE-10747013",
           "CN": "TEST of EID-SK 2016"
+        },
+        {
+          "CN": "TEST of ESTEID2018",
+          "OID": "NTREE-10747013",
+          "O": "SK ID Solutions AS",
+          "C":"EE"
         }]
     },
     "mobileId": {

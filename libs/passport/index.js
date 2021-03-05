@@ -146,6 +146,7 @@ module.exports = function (app) {
                         done(null, null);
                     }
                 } catch(err) {
+                    console.log(err);
                     done(err);
                 }
             }

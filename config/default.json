@@ -196,6 +196,12 @@
             "O":"AS Sertifitseerimiskeskus",
             "CN":"TEST of EID-SK 2011",
             "E":"pki@sk.ee"
+          },
+          {
+            "CN": "TEST of ESTEID2018",
+            "OID": "NTREE-10747013",
+            "O": "SK ID Solutions AS",
+            "C":"EE"
           }
         ]
       },

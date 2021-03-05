@@ -52,7 +52,7 @@ suite('cosBdoc', function () {
     });
 
     test.skip('createUserBdoc', async function () {
-        const certificate = await fs.readFileAsync('./test/resources/certificates/dds_good_igor_sign_hex_encoded_der.crt');
+        const certificate = await fs.readFileAsync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign_hex_encoded_der.crt');
 
         return cosBdoc.createUserBdoc(topic.id, vote.id, user.id, certificate.toString(), [voteOptions[0]]);
     });
@@ -60,13 +60,13 @@ suite('cosBdoc', function () {
     suite('getPersonalInfoFromCertificate', function () {
 
         test('Success - Hex encoded DER(default)', async function () {
-            const certificate = await fs .readFileAsync('./test/resources/certificates/dds_good_igor_sign_hex_encoded_der.crt');
+            const certificate = await fs .readFileAsync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign_hex_encoded_der.crt');
             const personalInfo= await smartId.getCertUserData(certificate.toString(), 'hex');
                //     assert.equal(status, 'GOOD');
             const expectedPersonalInfo = {
-                lastName: 'ŽAIKOVSKI',
-                firstName: 'IGOR',
-                pid: '37101010021',
+                lastName: 'JÕEORG',
+                firstName: 'JAAK-KRISTJAN',
+                pid: '38001085718',
                 country: 'EE'
             };
 

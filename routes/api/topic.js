@@ -428,7 +428,7 @@ module.exports = function (app) {
                             AND vl."voteId" = vli."voteId"
                             AND vli."updatedAt" = vl."updatedAt"
                         WHERE vl."voteId" = :voteId
-                            AND vl."userId" NOT IN
+                        AND vl."userId" NOT IN
                             (
                                 SELECT DISTINCT
                                     uc."connectedUser"
@@ -443,7 +443,7 @@ module.exports = function (app) {
                                 ) vl
                                 JOIN
                                 (
-                                    SELECT
+                                    SELECT DISTINCT ON (uc."userId")
                                         uc."userId",
                                         uci."userId" as "connectedUser",
                                         uc."connectionId",
@@ -487,12 +487,13 @@ module.exports = function (app) {
                         JOIN "VoteUserContainers" vuc ON vuc."voteId" = vl."voteId" AND vuc."userId" = vl."userId"
                         WHERE v."authType"='${Vote.AUTH_TYPES.hard}' AND vl."voteId" = :voteId
                     ),
-                    votes_with_delegations("voteId", "userId", "optionId", "optionGroupId", depth) AS (
+                    votes_with_delegations("voteId", "userId", "optionId", "optionGroupId", "byUserId", depth) AS (
                         SELECT
                             v."voteId",
                             v."userId",
                             v."optionId",
                             v."optionGroupId",
+                            id."byUserId",
                             id."depth"
                         FROM votes v
                         LEFT JOIN indirect_delegations id ON (v."userId" = id."toUserId")
@@ -503,6 +504,7 @@ module.exports = function (app) {
                     SUM(v."voteCount") as "voteCount",
                     v."optionId",
                     v."voteId",
+                    vuc.count AS "votersCount",
                     vo."value"
                     ${includeVoted}
                 FROM (
@@ -527,9 +529,58 @@ module.exports = function (app) {
                     GROUP BY v."optionId", v."optionGroupId", v."voteId"
                 ) v
                 LEFT JOIN "VoteOptions" vo ON (v."optionId" = vo."id")
-                GROUP BY v."optionId", v."voteId", vo."value"
+                LEFT JOIN (
+                    SELECT COUNT(*) FROM
+                    (
+                        SELECT tc."userId" FROM (SELECT d."byUserId" as "userId"
+                            FROM delegations d JOIN "VoteLists" vl ON d."toUserId" = vl."userId"  AND vl."voteId" = :voteId
+                            GROUP BY d."byUserId"
+                        UNION ALL
+                        SELECT vl."userId"
+                            FROM "VoteLists" vl
+                            WHERE vl."voteId" = :voteId AND vl."userId" NOT IN (SELECT "byUserId" FROM delegations) GROUP BY vl."userId"
+                        ) tc WHERE tc."userId" NOT IN
+                        (
+                            SELECT DISTINCT
+                                uc."userId"
+                            FROM (
+                                SELECT DISTINCT ON (vl."userId", vl."updatedAt")
+                                    vl."userId",
+                                    vl."updatedAt"
+                                FROM "VoteLists" vl
+                                WHERE vl."voteId" = :voteId
+                                AND vl."deletedAt" IS NULL
+                                ORDER BY vl."updatedAt" DESC
+                            ) vl
+                            JOIN
+                            (
+                                SELECT DISTINCT ON (uc."userId")
+                                    uc."userId",
+                                    uci."userId" as "connectedUser",
+                                    uc."connectionId",
+                                    uc."connectionUserId"
+                                FROM "UserConnections" uc
+                                JOIN "UserConnections" uci
+                                    ON uc."connectionId" = uci."connectionId"
+                                    AND uc."connectionUserId" = uci."connectionUserId"
+                                    AND uc."userId" <> uci."userId"
+                            ) uc ON uc."userId" = vl."userId"
+                            JOIN (
+                                SELECT
+                                    vl."userId",
+                                    vl."updatedAt"
+                                    FROM "VoteLists" vl
+                                    WHERE vl."voteId" = :voteId
+                                        AND vl."deletedAt" IS NULL
+                                    ORDER BY vl."updatedAt" DESC
+                            ) vli ON uc."connectedUser" = vli."userId" AND vli."updatedAt" > vl."updatedAt"
+                        )
+                    ) vc
+                    JOIN "VoteUserContainers" vuc ON vuc."userId" = vc."userId"
+                ) vuc ON vuc.count = vuc.count
+                GROUP BY v."optionId", v."voteId", vo."value", vuc.count
         ;`;
-                    console.log(sql);
+                //                console.log(sql.replace(/:voteId/gi, voteId).replace(/:userId/gi, userId))
         return db
             .query(sql,
                 {
@@ -1033,6 +1084,10 @@ module.exports = function (app) {
                 options.push(o);
             });
 
+            if (voteResult && voteResult.length) {
+                topic.vote.votersCount = voteResult[0].votersCount;
+            }
+
             if (topic.vote.authType === Vote.AUTH_TYPES.hard && hasVoted) {
                 topic.vote.downloads = {
                     bdocVote: getBdocURL({
@@ -1148,6 +1203,9 @@ module.exports = function (app) {
                                 vli."userId" = vl."userId"
                                 AND vl."voteId" = vli."voteId"
                                 AND vli."updatedAt" = vl."updatedAt"
+                            LEFT JOIN "UserConnections" uc
+                                ON uc."userId" = vl."userId"
+                                AND uc."connectionId" = 'esteid'
                             WHERE vl."voteId" = $1
                                 AND vl."userId" NOT IN
                                 (
@@ -1249,9 +1307,61 @@ module.exports = function (app) {
                                 WHERE v.depth IS NULL
                                 GROUP BY v."optionId", v."optionGroupId", v."voteId"; $$
                             LANGUAGE SQL;
+                        CREATE OR REPLACE FUNCTION pg_temp.get_voters_count (uuid)
+                            RETURNS TABLE ("votersCount" bigint)
+                            AS $$
+                                SELECT COUNT(*) as "votersCount" FROM
+                                (
+                                    SELECT tc."userId" FROM (SELECT d."byUserId" as "userId"
+                                        FROM pg_temp.delegations($1) d JOIN "VoteLists" vl ON d."toUserId" = vl."userId"  AND vl."voteId" = $1
+                                        GROUP BY d."byUserId"
+                                    UNION ALL
+                                    SELECT vl."userId"
+                                        FROM "VoteLists" vl
+                                        WHERE vl."voteId" = $1 AND vl."userId" NOT IN (SELECT "byUserId" FROM pg_temp.delegations($1)) GROUP BY vl."userId"
+                                    ) tc WHERE tc."userId" NOT IN
+                                    (
+                                        SELECT DISTINCT
+                                            uc."userId"
+                                        FROM (
+                                            SELECT DISTINCT ON (vl."userId", vl."updatedAt")
+                                                vl."userId",
+                                                vl."updatedAt"
+                                            FROM "VoteLists" vl
+                                            WHERE vl."voteId" = $1
+                                            AND vl."deletedAt" IS NULL
+                                            ORDER BY vl."updatedAt" DESC
+                                        ) vl
+                                        JOIN
+                                        (
+                                            SELECT DISTINCT ON (uc."userId")
+                                                uc."userId",
+                                                uci."userId" as "connectedUser",
+                                                uc."connectionId",
+                                                uc."connectionUserId"
+                                            FROM "UserConnections" uc
+                                            JOIN "UserConnections" uci
+                                                ON uc."connectionId" = uci."connectionId"
+                                                AND uc."connectionUserId" = uci."connectionUserId"
+                                                AND uc."userId" <> uci."userId"
+                                        ) uc ON uc."userId" = vl."userId"
+                                        JOIN (
+                                            SELECT
+                                                vl."userId",
+                                                vl."updatedAt"
+                                                FROM "VoteLists" vl
+                                                WHERE vl."voteId" = $1
+                                                    AND vl."deletedAt" IS NULL
+                                                ORDER BY vl."updatedAt" DESC
+                                        ) vli ON uc."connectedUser" = vli."userId" AND vli."updatedAt" > vl."updatedAt"
+                                    )
+                                ) vc JOIN "VoteUserContainers" vuc ON vuc."userId" = vc."userId";
+                             $$
+                            LANGUAGE SQL;
 
                         SELECT
                             SUM(v."voteCount") as "voteCount",
+                            vc."votersCount",
                             v."optionId",
                             v."voteId",
                             vo."value"
@@ -1261,13 +1371,14 @@ module.exports = function (app) {
                             ON tv."topicId" = t.id AND tv."deletedAt" IS NULL
                         LEFT JOIN pg_temp.get_vote_results(tv."voteId") v ON v."voteId" = tv."voteId"
                         LEFT JOIN "VoteOptions" vo ON v."optionId" = vo.id
+                        LEFT JOIN pg_temp.get_voters_count(tv."voteId") vc ON vc."votersCount" = vc."votersCount"
                         ${join}
                         WHERE  t."deletedAt" IS NULL
                         AND v."optionId" IS NOT NULL
                         AND v."voteId" IS NOT NULL
                         AND vo."value" IS NOT NULL
                         ${where}
-                        GROUP BY v."optionId", v."voteId", vo."value"
+                        GROUP BY v."optionId", v."voteId", vo."value", vc."votersCount"
                     ;`;
 
         return db
@@ -1431,7 +1542,7 @@ module.exports = function (app) {
                             id: option[0],
                             value: option[1]
                         };
-                        if (voteResults) {
+                        if (voteResults && voteResults.length) {
                             const res = _.find(voteResults, {'optionId': o.id});
                             if (res) {
                                 o.voteCount = res.voteCount;
@@ -1439,6 +1550,10 @@ module.exports = function (app) {
                         }
                         options.push(o);
                     });
+
+                    if (voteResults && voteResults.length) {
+                        topic.vote.votersCount = voteResults[0].votersCount;
+                    }
 
                     topic.vote.options = {
                         count: options.length,
@@ -2036,7 +2151,7 @@ module.exports = function (app) {
                                 o.id = optText[0];
                                 o.value = optText[1];
                                 let result = 0;
-                                if (voteResults) {
+                                if (voteResults && voteResults.length) {
                                     result = _.find(voteResults, {'optionId': optText[0]});
                                     if (result) {
                                         o.voteCount = parseInt(result.voteCount, 10);
@@ -2044,6 +2159,7 @@ module.exports = function (app) {
                                             o.selected = result.selected;
                                         }
                                     }
+                                    topic.vote.votersCount = voteResults[0].votersCount;
                                 }
 
                                 options.push(o);
@@ -2321,11 +2437,12 @@ module.exports = function (app) {
                             const optText = voteOption.split(':');
                             o.id = optText[0];
                             o.value = optText[1];
-                            if (voteResults) {
+                            if (voteResults && voteResults.length) {
                                 const result = _.find(voteResults, {'optionId': optText[0]});
                                 if (result) {
                                     o.voteCount = parseInt(result.voteCount, 10);
                                 }
+                                topic.vote.votersCount = voteResults[0].votersCount;
                             }
                             options.push(o);
                         });
@@ -2747,7 +2864,7 @@ module.exports = function (app) {
                     replacements: {
                         topicId: req.params.topicId,
                         userId: req.user.id,
-                        search: `%${search}%`,
+                        search: '%'+search+'%',
                         limit,
                         offset
                     },
@@ -5811,8 +5928,9 @@ module.exports = function (app) {
 
             const voteResults = await getVoteResults(voteId, userId);
             let hasVoted = false;
-            if (voteResults) {
-                voteInfo.dataValues.VoteOptions.forEach(function (option) {
+            if (voteResults && voteResults.length) {
+                voteInfo.dataValues.VoteOptions.forEach(function (option)
+                 {
                     const result = _.find(voteResults, {optionId: option.id});
 
                     if (result) {
@@ -5825,6 +5943,8 @@ module.exports = function (app) {
                         }
                     }
                 });
+
+                voteInfo.dataValues.votersCount = voteResults[0].votersCount;
             }
 
             // TODO: Contains duplicate code with GET /status AND /sign
@@ -5954,7 +6074,7 @@ module.exports = function (app) {
             }
 
             const voteResults = await getVoteResults(voteId);
-            if (voteResults) {
+            if (voteResults && voteResults.length) {
                 _(voteInfo.dataValues.VoteOptions).forEach(function (option) {
                     const result = _.find(voteResults, {optionId: option.id});
                     if (result) {
@@ -5964,6 +6084,7 @@ module.exports = function (app) {
                         }
                     }
                 });
+                voteInfo.dataValues.votersCount = voteResults[0].votersCount;
             }
 
             return res.ok(voteInfo);
@@ -6036,7 +6157,7 @@ module.exports = function (app) {
         return vote;
     };
 
-    const handleTopicVoteSoft = function (vote, req, res) {
+    const handleTopicVoteSoft = async function (vote, req, res) {
         const voteId = vote.id;
         const userId = req.user.id;
         const topicId = req.params.topicId;
@@ -6045,8 +6166,8 @@ module.exports = function (app) {
         const target = vote.toJSON();
         target['@type'] = 'Vote';
 
-        return db
-            .transaction(function (t) {
+        await db
+            .transaction(async function (t) {
                 // Store vote options
                 const optionGroupId = Math.random().toString(36).substring(2, 10);
 
@@ -6056,57 +6177,56 @@ module.exports = function (app) {
                     o.optionGroupId = optionGroupId;
                 });
 
-                const voteListCreatePromise = VoteList
-                    .bulkCreate(
-                        voteOptions,
-                        {
-                            fields: ['optionId', 'voteId', 'userId', 'optionGroupId'],
-                            transaction: t
-                        }
-                    )
-                    .then(function (voteList) {
-                        return Topic
-                            .findOne({
-                                where: {
-                                    id: topicId
-                                },
-                                transaction: t
-                            })
-                            .then(function (topic) {
-                                const vl = [];
-                                let tc = _.cloneDeep(topic.dataValues);
-                                tc.description = null;
-                                tc = Topic.build(tc);
+                await VoteList.destroy({
+                    where: {
+                        userId,
+                        voteId
+                    },
+                    force: true,
+                    transaction: t
+                });
 
-                                voteList.forEach(function (el, key) {
-                                    delete el.dataValues.optionId;
-                                    delete el.dataValues.optionGroupId;
-                                    el = VoteList.build(el.dataValues);
-                                    vl[key] = el;
-                                });
+                const voteList = await VoteList.bulkCreate(
+                    voteOptions,
+                    {
+                        fields: ['optionId', 'voteId', 'userId', 'optionGroupId'],
+                        transaction: t
+                    }
+                );
 
-                                return cosActivities
-                                    .createActivity(
-                                        vl,
-                                        tc,
-                                        {
-                                            type: 'User',
-                                            id: req.user.id,
-                                            ip: req.ip
-                                        },
-                                        req.method + ' ' + req.path,
-                                        t
-                                    )
-                                    .then(function () {
-                                        return voteList;
-                                    });
-                            });
+                const topic = await Topic.findOne({
+                    where: {
+                        id: topicId
+                    },
+                    transaction: t
+                });
 
+                const vl = [];
+                let tc = _.cloneDeep(topic.dataValues);
+                tc.description = null;
+                tc = Topic.build(tc);
 
-                    });
+                voteList.forEach(function (el, key) {
+                    delete el.dataValues.optionId;
+                    delete el.dataValues.optionGroupId;
+                    el = VoteList.build(el.dataValues);
+                    vl[key] = el;
+                });
+
+                await cosActivities.createActivity(
+                    vl,
+                    tc,
+                    {
+                        type: 'User',
+                        id: req.user.id,
+                        ip: req.ip
+                    },
+                    req.method + ' ' + req.path,
+                    t
+                );
 
                 // Delete delegation if you are voting
-                const voteDelegationDestroyPromise = VoteDelegation
+                await VoteDelegation
                     .destroy({
                         where: {
                             voteId: voteId,
@@ -6115,12 +6235,9 @@ module.exports = function (app) {
                         force: true,
                         transaction: t
                     });
-
-                return Promise.join(voteListCreatePromise, voteDelegationDestroyPromise);
-            })
-            .then(function () {
-                return res.ok();
             });
+
+            return res.ok();
     };
 
     const _checkAuthenticatedUser = async function (userId, personalInfo, transaction) {
@@ -6182,7 +6299,7 @@ module.exports = function (app) {
             let certificateInfo;
             let smartIdcertificate;
             let mobileIdCertificate;
-            let certFormat = 'base64'
+            let certFormat = 'base64';
             if (pid && countryCode) {
                 signingMethod = Vote.SIGNING_METHODS.smartId;
                 smartIdcertificate = await smartId.getUserCertificate(pid, countryCode);
@@ -6577,14 +6694,35 @@ module.exports = function (app) {
         }
 
         const userId = req.user ? req.user.id : idSignFlowData.userId;
-        let signedDocInfo;
-
         try {
-            if (idSignFlowData.signingMethod === Vote.SIGNING_METHODS.smartId) {
-                signedDocInfo = await cosSignature.getSmartIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions, timeoutMs);
-            } else {
-                signedDocInfo = await cosSignature.getMobileIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions, timeoutMs);
+            const getStatus = async () => {
+                let signedDocInfo;
+                try {
+                    if (idSignFlowData.signingMethod === Vote.SIGNING_METHODS.smartId) {
+                        signedDocInfo = await cosSignature.getSmartIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions, timeoutMs);
+                    } else {
+                        signedDocInfo = await cosSignature.getMobileIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions, timeoutMs);
+                    }
+
+                    return signedDocInfo;
+                } catch (err) {
+                    let statusCode;
+                    if (err.result && err.result.endResult) {
+                        statusCode = err.result.endResult;
+                    } else if (err.result && !err.result.endResult) {
+                        statusCode = err.result;
+                    } else {
+                        statusCode = err.state;
+                    }
+                    if (statusCode === 'RUNNING') {
+                        return getStatus();
+                    }
+
+                    throw err;
+                }
             }
+
+            const signedDocInfo = await getStatus();
 
             await db.transaction(async function (t) {
                 // Store vote options
@@ -6604,6 +6742,12 @@ module.exports = function (app) {
                 if (req.user) {
                     await _checkAuthenticatedUser(userId, idSignFlowData.personalInfo, t)
                 }
+                await VoteList.destroy({where: {
+                    voteId,
+                    userId
+                },
+                force: true,
+                transaction: t});
 
                 const voteList = await VoteList.bulkCreate(
                     voteOptions,
