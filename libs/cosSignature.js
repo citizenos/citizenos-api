@@ -112,8 +112,13 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _getVoteFileDir = function (topicId, voteId) {
-        return _getTopicFileDir(topicId) + '/' + voteId;
+    const _getVoteFileDir = function (topicId, voteId, include) {
+        const path = _getTopicFileDir(topicId) + '/' + voteId;
+        if (include && Array.isArray(include) && include.indexOf('csv') > -1) {
+            return path + '/includecsv';
+        }
+
+        return path;
     };
 
     /**
@@ -160,47 +165,36 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _createTopicFile = function (topic, vote, transaction) {
+    const _createTopicFile = async function (topic, vote, transaction) {
         const destinationDir = _getVoteFileSourceDir(topic.id, vote.id);
 
         let filePath;
 
+        await fsExtra
+            .mkdirsAsync(destinationDir, FILE_CREATE_MODE);
+        filePath = destinationDir + '/' + TOPIC_FILE.name;
+        const doc = new CosHtmlToDocx(topic.description, topic.title, filePath);
+
+        const docxBuffer = await doc.processHTML();
+
+        await VoteContainerFile.create(
+            {
+                voteId: vote.id,
+                fileName: TOPIC_FILE.name,
+                mimeType: TOPIC_FILE.mimeType,
+                content: docxBuffer
+            },
+            {
+                transaction: transaction
+            }
+        );
+
         return fsExtra
-            .mkdirsAsync(destinationDir, FILE_CREATE_MODE)
-            .then(function () {
-                filePath = destinationDir + '/' + TOPIC_FILE.name;
-                const doc = new CosHtmlToDocx(topic.description, topic.title, filePath);
-
-                return doc.processHTML();
+            .removeAsync(function () {
+                return _getTopicFileDir(topic.id);
             })
-            .then(function () {
-                const docxReadStream = fs.createReadStream(filePath);
-
-                return util.streamToBuffer(docxReadStream);
-            })
-            .then(function (docxBuffer) {
-                return VoteContainerFile
-                    .create(
-                        {
-                            voteId: vote.id,
-                            fileName: TOPIC_FILE.name,
-                            mimeType: TOPIC_FILE.mimeType,
-                            content: docxBuffer
-                        },
-                        {
-                            transaction: transaction
-                        }
-                    );
-            })
-            .then(function () {
-                // Best effort to remove temporary files, no need to block request
-                return fsExtra
-                    .removeAsync(function () {
-                        return _getTopicFileDir(topic.id);
-                    })
-                    .catch(function () {
-                        logger.warn('Failed to clean up temporary Topic files', destinationDir);
-                    });
+            .catch(function () {
+                logger.warn('Failed to clean up temporary Topic files', destinationDir);
             });
     };
 
@@ -283,25 +277,21 @@ module.exports = function (app) {
      * @returns {Promise} Promise
      * @private
      */
-    const _createVoteFiles = function (topic, vote, voteOptions, transaction) {
+    const _createVoteFiles = async function (topic, vote, voteOptions, transaction) {
         if (!topic || !vote || !voteOptions) {
             throw Error('Missing one or more required parameters!');
         }
 
-        const promisesToResolve = [];
-
         // Topic (document file)
-        promisesToResolve.push(_createTopicFile(topic, vote, transaction));
+        await _createTopicFile(topic, vote, transaction);
 
         // Metainfo file
-        promisesToResolve.push(_createMetainfoFile(topic, vote, transaction));
+        await _createMetainfoFile(topic, vote, transaction);
 
         // Each option file
-        voteOptions.forEach(function (voteOption) {
-            promisesToResolve.push(_createVoteOptionFile(vote, voteOption, transaction));
-        });
-
-        return Promise.all(promisesToResolve);
+        for await (const voteOption of voteOptions) {
+            await _createVoteOptionFile(vote, voteOption, transaction);
+        }
 
     };
 
@@ -571,262 +561,312 @@ module.exports = function (app) {
         return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signatureValue);
     };
 
-    const _generateFinalContainer = function (topicId, voteId, type, wrap) {
-        const voteFileDir = _getVoteFileDir(topicId, voteId);
-        const finalContainerPath = voteFileDir + '/final.' + type;
-        const finalZipPath = voteFileDir + '/final.7z';
+    const _generateFinalCSV = async function (voteId, type, finalContainer) {
+        let fromSql;
+        const connectionManager = db.connectionManager;
+        const connection = await connectionManager.getConnection();
+
+        switch (type) {
+            case 'bdoc':
+                fromSql = `SELECT
+                    o."timestamp",
+                    o."PID",
+                    o."fullName",
+                    array_agg(o."optionValue") AS "optionValues"
+                    FROM (
+                        SELECT
+                            v."createdAt" as "timestamp",
+                            uc."connectionUserId" as "PID",
+                            (uc."connectionData"::json->>'firstName') || ' ' || (uc."connectionData"::json->>'lastName') as "fullName",
+                            vo.value as "optionValue"
+                        FROM votes v
+                        JOIN "UserConnections" uc ON (uc."userId" = v."userId" AND uc."connectionId" = 'esteid')
+                        JOIN "VoteOptions" vo ON (vo."id" = v."optionId")
+                        ORDER BY v."createdAt" DESC
+                    ) o
+                    GROUP BY o."timestamp", o."PID", o."fullName"`;
+                break;
+            case 'zip':
+                fromSql = `SELECT
+                    o."timestamp",
+                    o."userId",
+                    o.name,
+                    array_agg(o."optionValue") AS "optionValues"
+                    FROM (
+                        SELECT
+                            v."createdAt" as "timestamp",
+                            v."userId",
+                            u.name,
+                            vo.value as "optionValue"
+                            FROM votes v
+                            JOIN "Users" u ON (u.id = v."userId")
+                            JOIN "VoteOptions" vo ON (vo."id" = v."optionId")
+                        ORDER BY v."createdAt" DESC
+                    ) o
+                    GROUP BY o."timestamp", o."userId", o.name`;
+                break;
+        }
+
+        const query = new QueryStream(
+            `WITH
+            vote_groups("voteId", "userId", "optionGroupId", "updatedAt") AS (
+                SELECT DISTINCT ON (vl."userId") vl."voteId", vl."userId", vli."optionGroupId", vl."updatedAt"
+                FROM (
+                    SELECT DISTINCT ON (vl."userId", MAX(vl."updatedAt"))
+                    vl."userId",
+                    vl."voteId",
+                    MAX(vl."updatedAt") as "updatedAt"
+                    FROM "VoteLists" vl
+                    WHERE vl."voteId" = $1
+                    AND vl."deletedAt" IS NULL
+                    GROUP BY
+                        vl."userId",
+                        vl."voteId"
+                    ORDER BY MAX(vl."updatedAt") DESC
+                ) vl
+                JOIN "VoteLists" vli
+                    ON vli."userId" = vl."userId"
+                    AND vl."voteId" = vli."voteId"
+                    AND vli."updatedAt" = vl."updatedAt"
+                LEFT JOIN "UserConnections" uc
+                ON uc."userId" = vl."userId"
+                AND uc."connectionId" = 'esteid'
+                WHERE vl."voteId" = $1
+                    AND vl."userId" NOT IN
+                    (
+                    SELECT DISTINCT
+                            uc."connectedUser"
+                            FROM (
+                                SELECT
+                                    vl."userId",
+                                    vl."updatedAt"
+                                FROM "VoteLists" vl
+                                WHERE vl."voteId" = $1
+                                AND vl."deletedAt" IS NULL
+                                ORDER BY vl."updatedAt" DESC
+                            ) vl
+                            JOIN (
+                                SELECT DISTINCT ON (uc."userId")
+                                    uc."userId",
+                                    uci."userId" as "connectedUser",
+                                    uc."connectionId", uc."connectionUserId"
+                                FROM "UserConnections" uc
+                                JOIN "UserConnections" uci
+                                    ON uc."connectionId" = uci."connectionId"
+                                    AND uc."connectionUserId" = uci."connectionUserId"
+                                    AND uc."userId" <> uci."userId"
+                            ) uc ON uc."userId" = vl."userId"
+                            JOIN (
+                                SELECT
+                                    vl."userId",
+                                    vl."updatedAt"
+                                FROM "VoteLists" vl
+                                WHERE vl."voteId" = $1
+                                AND vl."deletedAt" IS NULL
+                                ORDER BY vl."updatedAt" DESC
+                            ) vli
+                            ON uc."connectedUser" = vli."userId"
+                            AND vli."updatedAt" < vl."updatedAt"
+                    )
+            ),
+            votes("voteId", "userId", "optionId", "optionGroupId") AS (
+                SELECT
+                    vl."voteId",
+                    vl."userId",
+                    vl."optionId",
+                    vl."optionGroupId",
+                    vl."createdAt"
+                FROM "VoteLists" vl
+                JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."userId" = vg."userId" AND vl."optionGroupId" = vg."optionGroupId")
+                WHERE vl."voteId" = $1
+            )
+                ${fromSql}
+            ;`,
+            [voteId]
+        );
+
+        const stream = connection.query(query);
+
+        const csvStream = fastCsv.format({
+            headers: true,
+            rowDelimiter: '\r\n'
+        });
+
+        finalContainer.append(csvStream, {
+            name: VOTE_RESULTS_FILE.name,
+            mimeType: VOTE_RESULTS_FILE.mimeType
+        });
+
+        stream.on('data', function (voteResult) {
+            voteResult.optionFileName = [];
+
+            for(const optionValue of voteResult.optionValues) {
+                voteResult.optionFileName.push(_getVoteOptionFileName({value: optionValue}));
+
+            }
+
+            csvStream.write(voteResult);
+        });
+
+        stream.on('error', function (err) {
+            logger.error('_generateFinalContainer', 'Generating vote CSV FAILED', err);
+
+            csvStream.end();
+            finalContainer.finalize();
+            connectionManager.releaseConnection(connection);
+        });
+
+        stream.on('end', function () {
+            logger.debug('_generateFinalContainer', 'Generating vote CSV succeeded');
+
+            csvStream.end();
+            finalContainer.finalize();
+            connectionManager.releaseConnection(connection);
+        });
+    };
+
+    const _generateFinalContainer = async function (topicId, voteId, type, include, wrap) {
+        const voteFileDir = _getVoteFileDir(topicId, voteId, include);
+        const finalContainerPath = `${voteFileDir}/final.${type}`;
+        const finalZipPath = `${voteFileDir}/final.7z`;
 
         let finalContainerFileStream; // File write stream
         let finalContainer;
 
         const finalContainerDownloadPath = wrap ? finalZipPath : finalContainerPath;
+        try {
+            await fs.accessAsync(finalContainerDownloadPath, fs.R_OK);
+            logger.info('_generateFinalContainer', 'Cache hit for final BDOC file', finalContainerDownloadPath);
 
-        return fs
-            .accessAsync(finalContainerDownloadPath, fs.R_OK)
-            .then(function () {
-                logger.info('_generateFinalContainer', 'Cache hit for final BDOC file', finalContainerDownloadPath);
-
-                return fs.createReadStream(finalContainerDownloadPath);
-            }, function () {
+            return fs.createReadStream(finalContainerDownloadPath);
+        } catch (err) {
+            try {
                 logger.info('_generateFinalContainer', 'Cache miss for final BDOC file', finalContainerDownloadPath);
+                console.log()
+                await fsExtra.mkdirsAsync(voteFileDir);
 
-                return fsExtra
-                    .mkdirsAsync(voteFileDir)
-                    .then(function () {
-                        finalContainerFileStream = fs.createWriteStream(finalContainerPath);
-                        finalContainer = new Bdoc(finalContainerFileStream);
+                finalContainerFileStream = fs.createWriteStream(finalContainerPath);
+                finalContainer = new Bdoc(finalContainerFileStream);
 
-                        logger.debug('_generateFinalContainer', 'Vote file dir created', voteFileDir);
+                logger.debug('_generateFinalContainer', 'Vote file dir created', voteFileDir);
 
-                        return VoteContainerFile
-                            .findAll({
-                                where: {
-                                    voteId: voteId
-                                }
-                            });
-                    })
-                    .then(function (voteContainerFiles) {
-                        voteContainerFiles.forEach(function (voteContainerFile) {
-                            const fileName = voteContainerFile.fileName;
-                            const mimeType = voteContainerFile.mimeType;
-                            const content = voteContainerFile.content;
+                const voteContainerFiles = await VoteContainerFile.findAll({
+                    where: {
+                        voteId: voteId
+                    }
+                });
 
-                            logger.debug('_generateFinalContainer', 'Adding file to final BDOC', fileName, mimeType, content.length);
+                voteContainerFiles.forEach(function (voteContainerFile) {
+                    const fileName = voteContainerFile.fileName;
+                    const mimeType = voteContainerFile.mimeType;
+                    const content = voteContainerFile.content;
 
-                            return finalContainer.append(content, {
-                                name: fileName,
-                                mimeType: mimeType
-                            });
-                        })
-                    })
-                    .then(function () {
-                        if (type === 'bdoc') {
-                            logger.debug('_generateFinalContainer', 'Adding User votes to final BDOC');
+                    logger.debug('_generateFinalContainer', 'Adding file to final BDOC', fileName, mimeType, content.length);
 
-                            const connectionManager = db.connectionManager;
-
-                            return connectionManager
-                                .getConnection()
-                                .then(function (connection) {
-                                    logger.debug('_generateFinalContainer', 'Run query stream for User vote containers');
-
-                                    return new Promise(function (resolve, reject) {
-                                        const query = new QueryStream(
-                                            '\
-                                                SELECT DISTINCT ON (o."connectionUserId") \
-                                                    o.* \
-                                                    FROM ( \
-                                                        SELECT \
-                                                            vuc.container, \
-                                                            uc."connectionUserId" \
-                                                        FROM "VoteUserContainers" vuc \
-                                                        JOIN "UserConnections" uc ON (vuc."userId" = uc."userId") \
-                                                        WHERE vuc."voteId" = $1 \
-                                                        AND uc."connectionId" = $2 \
-                                                        ORDER BY vuc."updatedAt" DESC \
-                                                    ) o \
-                                            ;',
-                                            [voteId, UserConnection.CONNECTION_IDS.esteid]
-                                        );
-                                        const stream = connection.query(query);
-
-                                        stream.on('data', function (data) {
-                                            logger.debug('_generateFinalContainer', 'Add data', data.container.length);
-
-                                            const pid = data.connectionUserId;
-                                            const userbdocContainer = data.container;
-
-                                            finalContainer.append(userbdocContainer, {
-                                                name: USER_BDOC_FILE.name.replace(':pid', pid),
-                                                mimeType: USER_BDOC_FILE.mimeType
-                                            });
-                                        });
-
-                                        finalContainerFileStream.on('error', function (err) {
-                                            logger.error('_generateFinalContainer', 'Adding files to final BDOC FAILED', err);
-
-                                            return reject(err);
-                                        });
-
-                                        stream.on('error', function (err) {
-                                            connectionManager.releaseConnection(connection);
-
-                                            logger.error('_generateFinalContainer', 'Reading PG query stream failed', err);
-
-                                            return reject(err);
-                                        });
-
-                                        stream.on('end', function () {
-                                            connectionManager.releaseConnection(connection);
-
-                                            logger.debug('_generateFinalContainer', 'Adding files to final BDOC ENDED');
-
-                                            return resolve();
-                                        });
-                                    });
-                                });
-                        }
-                    })
-                    .then(function () {
-                        logger.debug('_generateFinalContainer', 'Generating vote CSV');
-
-                        const connectionManager = db.connectionManager;
-
-                        return connectionManager
-                            .getConnection()
-                            .then(function (connection) {
-                                if (type !== 'bdoc') {
-                                    let fromSql;
-
-                                    switch (type) {
-                                        case 'bdoc':
-                                            fromSql = 'SELECT DISTINCT ON (o."PID") \
-                                                o.* FROM ( \
-                                                SELECT \
-                                                row_number() OVER() AS "rowNumber", \
-                                                v."createdAt" as "timestamp", \
-                                                uc."connectionUserId" as "PID", \
-                                                    (uc."connectionData"::json->>\'firstName\') || \' \' || (uc."connectionData"::json->>\'lastName\') as "fullName", \
-                                                    vo.value as "optionValue" \
-                                                FROM votes v \
-                                                    JOIN "UserConnections" uc ON (uc."userId" = v."userId" AND uc."connectionId" = \'esteid\') \
-                                                JOIN "VoteOptions" vo ON (vo."id" = v."optionId") \
-                                            ORDER BY v."createdAt" DESC) o ';
-                                            break;
-                                        case 'zip':
-                                            fromSql = 'SELECT \
-                                                row_number() OVER() AS "rowNumber", \
-                                                v."createdAt" as "timestamp", \
-                                                v."userId" as "userId", \
-                                                u.name as "name", \
-                                                vo.value as "optionValue" \
-                                            FROM votes v \
-                                                JOIN "Users" u ON (u.id = v."userId") \
-                                                JOIN "VoteOptions" vo ON (vo."id" = v."optionId") \
-                                            ORDER BY vo.value DESC ';
-                                            break;
-                                    }
-
-                                    const query = new QueryStream(
-                                        ' \
-                                            WITH \
-                                                vote_groups("voteId", "userId", "optionGroupId", "updatedAt") AS ( \
-                                                    SELECT DISTINCT ON("voteId","userId") \
-                                                        vl."voteId", \
-                                                        vl."userId", \
-                                                        vl."optionGroupId", \
-                                                        vl."updatedAt" \
-                                                    FROM "VoteLists" vl \
-                                                    WHERE vl."voteId" = $1 \
-                                                    AND vl."deletedAt" IS NULL \
-                                                    ORDER BY "voteId", "userId", "createdAt" DESC, "optionGroupId" ASC \
-                                                ), \
-                                                votes("voteId", "userId", "optionId", "optionGroupId") AS ( \
-                                                    SELECT \
-                                                        vl."voteId", \
-                                                        vl."userId", \
-                                                        vl."optionId", \
-                                                        vl."optionGroupId", \
-                                                        vl."createdAt" \
-                                                    FROM "VoteLists" vl \
-                                                    JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."userId" = vg."userId" AND vl."optionGroupId" = vg."optionGroupId") \
-                                                    WHERE vl."voteId" = $1 \
-                                                ) \
-                                                ' + fromSql + '\
-                                        ;',
-                                        [voteId]
-                                    );
-
-                                    const stream = connection.query(query);
-
-                                    const csvStream = fastCsv.format({
-                                        headers: true,
-                                        rowDelimiter: '\r\n'
-                                    });
-                                    finalContainer.append(csvStream, {
-                                        name: VOTE_RESULTS_FILE.name,
-                                        mimeType: VOTE_RESULTS_FILE.mimeType
-                                    });
-
-                                    stream.on('data', function (voteResult) {
-                                        voteResult.optionFileName = _getVoteOptionFileName({value: voteResult.optionValue});
-                                        csvStream.write(voteResult);
-                                    });
-
-                                    stream.on('error', function (err) {
-                                        logger.error('_generateFinalContainer', 'Generating vote CSV FAILED', err);
-
-                                        csvStream.end();
-                                        finalContainer.finalize();
-                                        connectionManager.releaseConnection(connection);
-                                    });
-
-                                    stream.on('end', function () {
-                                        logger.debug('_generateFinalContainer', 'Generating vote CSV succeeded');
-
-                                        csvStream.end();
-                                        finalContainer.finalize();
-                                        connectionManager.releaseConnection(connection);
-                                    });
-                                } else {
-                                    finalContainer.finalize();
-                                }
-
-                                return util.streamToPromise(finalContainerFileStream);
-                            })
-                            .then(function () {
-                                if (wrap) {
-                                    logger.debug('_generateFinalContainer', 'Wrapping final BDOC');
-
-                                    // Wrap the BDOC in 7Zip
-                                    return util.streamToPromise(SevenZip.add(finalZipPath, [finalContainerPath]))
-                                        .then(function () {
-                                            logger.debug('_generateFinalContainer', 'Wrapping final BDOC succeeded', finalZipPath);
-
-                                            return finalZipPath;
-                                        });
-                                } else {
-                                    logger.debug('_generateFinalContainer', 'Not wrapping final BDOC', finalContainerPath);
-
-                                    return finalContainerPath;
-                                }
-                            })
-                            .then(function (docPath) {
-                                logger.debug('_generateFinalContainer', 'Final BDOC generated successfully', docPath);
-
-                                return fs.createReadStream(docPath);
-                            })
-                            .catch(function (err) {
-                                logger.error('Failed to generate final BDOC', err);
-
-                                // Clean up zip file that was created as it may be corrupted, best effort removing the file
-                                fs.unlink(finalContainerPath);
-                                fs.unlink(finalZipPath);
-
-                                throw err;
-                            });
+                    return finalContainer.append(content, {
+                        name: fileName,
+                        mimeType: mimeType
                     });
-            });
+                });
+
+                const connectionManager = db.connectionManager;
+                const connection = await connectionManager.getConnection();
+
+                if (type === 'bdoc') {
+                    logger.debug('_generateFinalContainer', 'Adding User votes to final BDOC');
+
+                    logger.debug('_generateFinalContainer', 'Run query stream for User vote containers');
+
+                    await new Promise(function (resolve, reject) {
+                        const query = new QueryStream(
+                            `SELECT DISTINCT ON (o."connectionUserId")
+                                    o.*
+                                    FROM (
+                                        SELECT
+                                            vuc.container,
+                                            uc."connectionUserId"
+                                        FROM "VoteUserContainers" vuc
+                                        JOIN "UserConnections" uc ON (vuc."userId" = uc."userId")
+                                        WHERE vuc."voteId" = $1
+                                        AND uc."connectionId" = $2
+                                        ORDER BY vuc."updatedAt" DESC
+                                    ) o
+                            ;`,
+                            [voteId, UserConnection.CONNECTION_IDS.esteid]
+                        );
+                        const stream = connection.query(query);
+
+                        stream.on('data', function (data) {
+                            logger.debug('_generateFinalContainer', 'Add data', data.container.length);
+
+                            const pid = data.connectionUserId;
+                            const userbdocContainer = data.container;
+
+                            finalContainer.append(userbdocContainer, {
+                                name: USER_BDOC_FILE.name.replace(':pid', pid),
+                                mimeType: USER_BDOC_FILE.mimeType
+                            });
+                        });
+
+                        finalContainerFileStream.on('error', function (err) {
+                            logger.error('_generateFinalContainer', 'Adding files to final BDOC FAILED', err);
+
+                            return reject(err);
+                        });
+
+                        stream.on('error', function (err) {
+                            connectionManager.releaseConnection(connection);
+
+                            logger.error('_generateFinalContainer', 'Reading PG query stream failed', err);
+
+                            return reject(err);
+                        });
+
+                        stream.on('end', function () {
+                            connectionManager.releaseConnection(connection);
+
+                            logger.debug('_generateFinalContainer', 'Adding files to final BDOC ENDED');
+
+                            return resolve();
+                        });
+                    });
+                }
+
+                logger.debug('_generateFinalContainer', 'Generating vote CSV');
+
+                if (type !== 'bdoc' || (include && include.indexOf('csv') > -1)) {
+                    await _generateFinalCSV(voteId, type, finalContainer);
+                } else {
+                    finalContainer.finalize();
+                }
+
+                await util.streamToPromise(finalContainerFileStream);
+                let docPath = finalContainerPath;
+
+                if (wrap) {
+                    logger.debug('_generateFinalContainer', 'Wrapping final BDOC');
+
+                    // Wrap the BDOC in 7Zip
+                    await util.streamToPromise(SevenZip.add(finalZipPath, [finalContainerPath]));
+                    logger.debug('_generateFinalContainer', 'Wrapping final BDOC succeeded', finalZipPath);
+                    docPath = finalZipPath;
+                } else {
+                    logger.debug('_generateFinalContainer', 'Not wrapping final BDOC', finalContainerPath);
+                }
+
+                logger.debug('_generateFinalContainer', 'Final BDOC generated successfully', docPath);
+
+                return fs.createReadStream(docPath);
+            } catch(err) {
+                logger.error('Failed to generate final BDOC', err);
+
+                // Clean up zip file that was created as it may be corrupted, best effort removing the file
+                fs.unlink(finalContainerPath);
+                fs.unlink(finalZipPath);
+
+                throw err;
+            }
+        }
     };
 
     /**
@@ -840,8 +880,8 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _getFinalBdoc = function (topicId, voteId, wrap) {
-        return _generateFinalContainer(topicId, voteId, 'bdoc', wrap);
+    const _getFinalBdoc = function (topicId, voteId, include, wrap) {
+        return _generateFinalContainer(topicId, voteId, 'bdoc', include, wrap);
     };
 
     /**
@@ -869,20 +909,20 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _deleteFinalBdoc = function (topicId, voteId) {
+    const _deleteFinalBdoc = async function (topicId, voteId) {
         const voteFileDir = _getVoteFileDir(topicId, voteId);
-        const finalBdocPath = voteFileDir + '/final.bdoc';
+        const voteFileDirCsv = _getVoteFileDir(topicId, voteFileDir, ['csv']);
+        [voteFileDir, voteFileDirCsv].forEach( async (dir) => {
+            const finalBdocPath = dir + '/final.bdoc';
 
-        return fs
-            .statAsync(finalBdocPath)
-            .then(
-                function () {
-                    return fs.unlinkAsync(finalBdocPath);
-                },
-                function () {
-                    return Promise.resolve(); // Well, if it did not exists, we're ok.
-                }
-            );
+            try {
+                await fs.statAsync(finalBdocPath);
+                await fs.unlinkAsync(finalBdocPath);
+            } catch (e) {
+                logger.log(e.message);
+            }
+        });
+
     };
 
     return {

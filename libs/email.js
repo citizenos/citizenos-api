@@ -588,6 +588,7 @@ module.exports = function (app) {
         let logoFile = emailHeaderLogo;
         let templateName = 'inviteTopic';
         let linkToApplication = urlLib.getFe();
+        let message = invites[0].inviteMessage;
         let customStyles = EMAIL_OPTIONS_DEFAULT.styles;
 
         const emailsSendPromises = toUsers.map(function (toUser) {
@@ -628,6 +629,7 @@ module.exports = function (app) {
                     }
                 ],
                 toUser: toUser,
+                message,
                 fromUser: fromUser,
                 topic: topic,
                 linkViewTopic: linkViewInvite,

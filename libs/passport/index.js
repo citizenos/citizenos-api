@@ -10,26 +10,26 @@
  */
 
 module.exports = function (app) {
-    var passport = app.get('passport');
-    var GoogleStrategy = require('passport-google-oauth20').Strategy;
-    var FacebookStrategy = require('passport-facebook').Strategy;
-    var LocalStrategy = require('passport-local').Strategy;
+    const passport = app.get('passport');
+    const GoogleStrategy = require('passport-google-oauth20').Strategy;
+    const FacebookStrategy = require('passport-facebook').Strategy;
+    const LocalStrategy = require('passport-local').Strategy;
 
-    var logger = app.get('logger');
-    var config = app.get('config');
-    var urlLib = app.get('urlLib');
-    var util = app.get('util');
-    var validator = app.get('validator');
-    var emailLib = app.get('email');
-    var cryptoLib = app.get('cryptoLib');
-    var cosActivities = app.get('cosActivities');
-    var models = app.get('models');
-    var db = models.sequelize;
+    const logger = app.get('logger');
+    const config = app.get('config');
+    const urlLib = app.get('urlLib');
+    const util = app.get('util');
+    const validator = app.get('validator');
+    const emailLib = app.get('email');
+    const cryptoLib = app.get('cryptoLib');
+    const cosActivities = app.get('cosActivities');
+    const models = app.get('models');
+    const db = models.sequelize;
 
-    var User = models.User;
-    var UserConnection = models.UserConnection;
+    const User = models.User;
+    const UserConnection = models.UserConnection;
 
-    var _init = function () {
+    const _init = function () {
         passport.serializeUser(function (user, done) { // Serialize data into session (req.user)
             done(null, user.id);
         });
@@ -43,126 +43,111 @@ module.exports = function (app) {
                 userProfileURL: 'https://www.googleapis.com/oauth2/v3/userinfo',
                 passReqToCallback: true // http://passportjs.org/guide/authorize/#association_in_verify_callback
             },
-            function (req, accessToken, refreshToken, profile, done) {
+            async function (req, accessToken, refreshToken, profile, done) {
                 logger.debug('Google responded with profile: ', profile);
 
-                var email = profile.email;
+                let email = profile.email;
+                let user, created;
                 if (!email && profile.emails.length) {
                     if (profile.emails[0]) {
                         email = profile.emails[0].value;
                     }
                 }
-                var displayName = profile.displayName;
+                let displayName = profile.displayName;
                 if (!displayName) {
                     displayName = util.emailToDisplayName(email);
                 }
-                var sourceId = profile.id;
-                var imageUrl = null;
+                const sourceId = profile.id;
+                let imageUrl = null;
                 if (profile.photos && profile.photos.length) {
                     imageUrl = profile.photos[0].value.split('?')[0];
                 }
-
-                UserConnection
-                    .findOne({
+                try {
+                    const userConnectionInfo = await UserConnection.findOne({
                         where: {
                             connectionId: UserConnection.CONNECTION_IDS.google,
                             connectionUserId: sourceId
                         },
                         include: [User]
-                    })
-                    .then(function (userConnectionInfo) {
-                        if (!userConnectionInfo) {
-                            return db.transaction(function (t) {
-                                return User
-                                    .findOrCreate({
-                                        where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email)),
-                                        defaults: {
-                                            name: displayName,
-                                            email: email,
-                                            password: null,
-                                            emailIsVerified: true,
-                                            imageUrl: imageUrl,
-                                            source: User.SOURCES.google,
-                                            sourceId: sourceId
-                                        },
-                                        transaction: t
-                                    })
-                                    .then(function ([user, created]) {
-                                        var activityPromise = [];
-                                        if (created) {
-                                            logger.info('Created a new user with Google', user.id);
+                    });
 
-                                            activityPromise.push(cosActivities.createActivity(user, null, {
-                                                type: 'User',
-                                                id: user.id,
-                                                ip: req.ip
-                                            }, req.method + ' ' + req.path, t));
-                                        }
-
-                                        return Promise
-                                            .all(activityPromise)
-                                            .then(function () {
-                                                return UserConnection
-                                                    .create(
-                                                        {
-                                                            userId: user.id,
-                                                            connectionId: UserConnection.CONNECTION_IDS.google,
-                                                            connectionUserId: sourceId,
-                                                            connectionData: profile
-                                                        },
-                                                        {transaction: t}
-                                                    )
-                                                    .then(function (uc) {
-                                                        return cosActivities.addActivity(uc, {
-                                                            type: 'User',
-                                                            id: user.id,
-                                                            ip: req.ip
-                                                        }, null, user, req.method + ' ' + req.path, t);
-                                                    })
-                                                    .then(function () {
-                                                        return UserConnection
-                                                            .findOrCreate({
-                                                                where: {
-                                                                    userId: user.id,
-                                                                    connectionId: UserConnection.CONNECTION_IDS.citizenos,
-                                                                    connectionUserId: user.id
-                                                                },
-                                                                defaults: {
-                                                                    userId: user.id,
-                                                                    connectionId: UserConnection.CONNECTION_IDS.citizenos,
-                                                                    connectionUserId: user.id,
-                                                                    connectionData: user
-                                                                },
-                                                                transaction: t
-                                                            });
-                                                    })
-                                                    .then(function () {
-                                                        if (!user.imageUrl) {
-                                                            logger.info('Updating User profile image from social network');
-                                                            user.imageUrl = imageUrl; // Update existing Users image url in case there is none (for case where User is created via CitizenOS but logs in with social)
-
-                                                            return [user.save(), created];
-                                                        }
-
-                                                        return [user, created];
-                                                    });
-                                            });
-                                    });
+                    if (!userConnectionInfo) {
+                        await db.transaction(async function (t) {
+                            [user, created] = await User.findOrCreate({
+                                where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email)),
+                                defaults: {
+                                    name: displayName,
+                                    email: email,
+                                    password: null,
+                                    emailIsVerified: true,
+                                    imageUrl: imageUrl,
+                                    source: User.SOURCES.google,
+                                    sourceId: sourceId
+                                },
+                                transaction: t
                             });
-                        } else {
-                            var user = userConnectionInfo.User;
 
-                            return [user, false];
-                        }
-                    })
-                    .then(function ([user]) {
-                        if (user) {
-                            done(null, user.toJSON());
-                        } else {
-                            done(null, null);
-                        }
-                    })
-                    .catch(done);
+                            if (created) {
+                                logger.info('Created a new user with Google', user.id);
+
+                                await cosActivities.createActivity(user, null, {
+                                    type: 'User',
+                                    id: user.id,
+                                    ip: req.ip
+                                }, req.method + ' ' + req.path, t);
+                            }
+
+                            const uc = await UserConnection.create(
+                                {
+                                    userId: user.id,
+                                    connectionId: UserConnection.CONNECTION_IDS.google,
+                                    connectionUserId: sourceId,
+                                    connectionData: profile
+                                },
+                                {transaction: t}
+                            );
+
+                            await cosActivities.addActivity(uc, {
+                                type: 'User',
+                                id: user.id,
+                                ip: req.ip
+                            }, null, user, req.method + ' ' + req.path, t);
+
+                            await UserConnection.findOrCreate({
+                                where: {
+                                    userId: user.id,
+                                    connectionId: UserConnection.CONNECTION_IDS.citizenos,
+                                    connectionUserId: user.id
+                                },
+                                defaults: {
+                                    userId: user.id,
+                                    connectionId: UserConnection.CONNECTION_IDS.citizenos,
+                                    connectionUserId: user.id,
+                                    connectionData: user
+                                },
+                                transaction: t
+                            });
+
+                            if (!user.imageUrl) {
+                                logger.info('Updating User profile image from social network');
+                                user.imageUrl = imageUrl; // Update existing Users image url in case there is none (for case where User is created via CitizenOS but logs in with social)
+
+                                await user.save();
+                            }
+
+                        });
+                    } else {
+                        user = userConnectionInfo.User;
+                    }
+
+                    if (user) {
+                        done(null, user.toJSON());
+                    } else {
+                        done(null, null);
+                    }
+                } catch(err) {
+                    done(err);
+                }
             }
         ));
 
@@ -176,7 +161,7 @@ module.exports = function (app) {
                 profileFields: ['id', 'displayName', 'cover', 'email'],
                 passReqToCallback: true
             },
-            function (req, accessToken, refreshToken, profile, done) {
+            async function (req, accessToken, refreshToken, profile, done) {
                 logger.info('Facebook responded with profile: ', profile);
 
                 if (!profile.emails || !profile.emails.length) {
@@ -185,110 +170,93 @@ module.exports = function (app) {
                     return done(new Error('Facebook did not provide e-mail, cannot authenticate user', null));
                 }
 
-                var email = profile.emails[0].value;
-                var displayName = profile.displayName || util.emailToDisplayName(email);
-                var sourceId = profile.id;
-                var imageUrl = 'https://graph.facebook.com/:id/picture?type=large'.replace(':id', sourceId);
+                const email = profile.emails[0].value;
+                const displayName = profile.displayName || util.emailToDisplayName(email);
+                const sourceId = profile.id;
+                const imageUrl = 'https://graph.facebook.com/:id/picture?type=large'.replace(':id', sourceId);
+                let user, created;
+                try {
+                    const userConnectionInfo = await UserConnection
+                        .findOne({
+                            where: {
+                                connectionId: UserConnection.CONNECTION_IDS.facebook,
+                                connectionUserId: sourceId
+                            },
+                            include: [User]
+                        });
+                    if (!userConnectionInfo) {
+                        await db.transaction(async function (t) {
+                            [user, created] = await User
+                                .findOrCreate({
+                                    where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email)), // Well, this will allow user to log in either using User and pass or just Google.. I think it's ok..
+                                    defaults: {
+                                        name: displayName,
+                                        email: email,
+                                        password: null,
+                                        emailIsVerified: true,
+                                        imageUrl: imageUrl,
+                                        source: User.SOURCES.facebook,
+                                        sourceId: sourceId
+                                    },
+                                    transaction: t
+                                });
+                            if (created) {
+                                logger.info('Created a new user with Google', user.id);
 
-                UserConnection
-                    .findOne({
-                        where: {
-                            connectionId: UserConnection.CONNECTION_IDS.facebook,
-                            connectionUserId: sourceId
-                        },
-                        include: [User]
-                    })
-                    .then(function (userConnectionInfo) {
-                        if (!userConnectionInfo) {
-                            return db.transaction(function (t) {
-                                return User
-                                    .findOrCreate({
-                                        where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email)), // Well, this will allow user to log in either using User and pass or just Google.. I think it's ok..
-                                        defaults: {
-                                            name: displayName,
-                                            email: email,
-                                            password: null,
-                                            emailIsVerified: true,
-                                            imageUrl: imageUrl,
-                                            source: User.SOURCES.facebook,
-                                            sourceId: sourceId
-                                        },
-                                        transaction: t
-                                    })
-                                    .then(function ([user, created]) {
-                                        var activityPromise = [];
-                                        if (created) {
-                                            logger.info('Created a new user with Google', user.id);
+                                await cosActivities.createActivity(user, null, {
+                                    type: 'User',
+                                    id: user.id,
+                                    ip: req.ip
+                                }, req.method + ' ' + req.path, t);
+                            }
 
-                                            activityPromise.push(cosActivities.createActivity(user, null, {
-                                                type: 'User',
-                                                id: user.id,
-                                                ip: req.ip
-                                            }, req.method + ' ' + req.path, t));
-                                        }
+                            const uc = await  UserConnection.create(
+                                {
+                                    userId: user.id,
+                                    connectionId: UserConnection.CONNECTION_IDS.facebook,
+                                    connectionUserId: sourceId,
+                                    connectionData: profile
+                                },
+                                {transaction: t}
+                            );
 
-                                        return Promise
-                                            .all(activityPromise)
-                                            .then(function () {
-                                                return UserConnection
-                                                    .create(
-                                                        {
-                                                            userId: user.id,
-                                                            connectionId: UserConnection.CONNECTION_IDS.facebook,
-                                                            connectionUserId: sourceId,
-                                                            connectionData: profile
-                                                        },
-                                                        {transaction: t}
-                                                    )
-                                                    .then(function (uc) {
-                                                        return cosActivities.addActivity(uc, {
-                                                            type: 'User',
-                                                            id: user.id,
-                                                            ip: req.ip
-                                                        }, null, user, req.method + ' ' + req.path, t);
-                                                    })
-                                                    .then(function () {
-                                                        return UserConnection
-                                                            .findOrCreate(
-                                                                {
-                                                                    where: {
-                                                                        userId: user.id,
-                                                                        connectionId: UserConnection.CONNECTION_IDS.citizenos,
-                                                                        connectionUserId: user.id
-                                                                    },
-                                                                    defaults: {
-                                                                        userId: user.id,
-                                                                        connectionId: UserConnection.CONNECTION_IDS.citizenos,
-                                                                        connectionUserId: user.id,
-                                                                        connectionData: user
-                                                                    },
-                                                                    transaction: t
-                                                                }
-                                                            );
-                                                    })
-                                                    .then(function () {
-                                                        if (!user.imageUrl) {
-                                                            logger.info('Updating User profile image from social network');
-                                                            user.imageUrl = imageUrl; // Update existing Users image url in case there is none (for case where User is created via CitizenOS but logs in with social)
+                            await cosActivities.addActivity(uc, {
+                                type: 'User',
+                                id: user.id,
+                                ip: req.ip
+                            }, null, user, req.method + ' ' + req.path, t);
 
-                                                            return [user.save(), created];
-                                                        }
+                            await UserConnection.findOrCreate(
+                                {
+                                    where: {
+                                        userId: user.id,
+                                        connectionId: UserConnection.CONNECTION_IDS.citizenos,
+                                        connectionUserId: user.id
+                                    },
+                                    defaults: {
+                                        userId: user.id,
+                                        connectionId: UserConnection.CONNECTION_IDS.citizenos,
+                                        connectionUserId: user.id,
+                                        connectionData: user
+                                    },
+                                    transaction: t
+                                }
+                            );
+                            if (!user.imageUrl) {
+                                logger.info('Updating User profile image from social network');
+                                user.imageUrl = imageUrl; // Update existing Users image url in case there is none (for case where User is created via CitizenOS but logs in with social)
 
-                                                        return [user, created];
-                                                    });
-                                            });
-                                    });
-                            });
-                        } else {
-                            var user = userConnectionInfo.User;
+                                await user.save();
+                            }
+                        });
+                    } else {
+                        user = userConnectionInfo.User;
+                    }
 
-                            return [user, false];
-                        }
-                    })
-                    .then(function ([user]) {
-                        done(null, user.toJSON());
-                    })
-                    .catch(done);
+                    return done(null, user.toJSON());
+                } catch(err) {
+                    return done(err);
+                }
             }
         ));
 
@@ -298,48 +266,45 @@ module.exports = function (app) {
                 usernameField: 'email',
                 passwordField: 'password'
             },
-            function (email, password, done) {
+            async function (email, password, done) {
 
                 if (!validator.isEmail(email)) {
                     return done({message: 'Invalid email.'}, false);
                 }
 
-                User
+                const user = await User
                     .findOne({
                         where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email))
-                    })
-                    .then(function (user) {
-                        if (!user || !user.password) {
-                            return done({
-                                message: 'The account does not exists.',
-                                code: 1
-                            }, false);
-                        }
-
-                        if (!user.emailIsVerified) {
-                            return emailLib
-                                .sendAccountVerification(user.email, user.emailVerificationCode)
-                                .then(function () {
-                                    return done({
-                                        message: 'The account verification has not been completed. Please check your e-mail.',
-                                        code: 2
-                                    }, false);
-                                });
-                        }
-
-                        if (user.password === cryptoLib.getHash(password, 'sha256')) {
-                            var userData = user.toJSON();
-                            userData.termsVersion = user.dataValues.termsVersion;
-                            userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
-
-                            return done(null, userData);
-                        } else {
-                            return done({
-                                message: {password: 'Invalid password'},
-                                code: 3
-                            }, false);
-                        }
                     });
+
+                if (!user || !user.password) {
+                    return done({
+                        message: 'The account does not exists.',
+                        code: 1
+                    }, false);
+                }
+
+                if (!user.emailIsVerified) {
+                    await emailLib.sendAccountVerification(user.email, user.emailVerificationCode);
+
+                    return done({
+                        message: 'The account verification has not been completed. Please check your e-mail.',
+                        code: 2
+                    }, false);
+                }
+
+                if (user.password === cryptoLib.getHash(password, 'sha256')) {
+                    const userData = user.toJSON();
+                    userData.termsVersion = user.dataValues.termsVersion;
+                    userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
+
+                    return done(null, userData);
+                } else {
+                    return done({
+                        message: {password: 'Invalid password'},
+                        code: 3
+                    }, false);
+                }
 
             }
         ));

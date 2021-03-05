@@ -745,36 +745,63 @@ module.exports = function (app) {
      *
      * TODO: Remove first route definition after NEW FE deploy - https://trello.com/c/JutjiDeX/574-new-fe-post-deploy-actions
      */
-    app.get(['/api/users/:userId/groups/:groupId/members', '/api/users/:userId/groups/:groupId/members/users'], loginCheck(['partner']), hasPermission(GroupMember.LEVELS.read, null, null), function (req, res, next) {
-        var groupId = req.params.groupId;
+    app.get(['/api/users/:userId/groups/:groupId/members', '/api/users/:userId/groups/:groupId/members/users'], loginCheck(['partner']), hasPermission(GroupMember.LEVELS.read, null, null), async function (req, res, next) {
+        const groupId = req.params.groupId;
+        const limitDefault = 10;
+        const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
+        let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+        const search = req.query.search;
 
-        db
-            .query(
-                'SELECT \
-                    u.id, \
-                    u.name, \
-                    u.company, \
-                    u."imageUrl", \
-                    gm.level \
-                FROM "GroupMembers" gm \
-                    JOIN "Users" u ON (u.id = gm."userId") \
-                WHERE gm."groupId" = :groupId \
-                AND gm."deletedAt" IS NULL',
-                {
-                    replacements: {
-                        groupId: groupId
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true
-                }
-            )
-            .then(function (members) {
-                return res.ok({
-                    count: members.length,
-                    rows: members
+        let where = '';
+        if (search) {
+            where = ` AND u.name ILIKE :search `
+        }
+
+        try {
+            const members = await db
+                .query(
+                    `SELECT
+                        u.id,
+                        u.name,
+                        u.company,
+                        u."imageUrl",
+                        gm.level,
+                        count(*) OVER()::integer AS "countTotal"
+                    FROM "GroupMembers" gm
+                        JOIN "Users" u ON (u.id = gm."userId")
+                    WHERE gm."groupId" = :groupId
+                    AND gm."deletedAt" IS NULL
+                    ${where}
+                    LIMIT :limit
+                    OFFSET :offset
+                    ;`,
+                    {
+                        replacements: {
+                            groupId,
+                            limit,
+                            offset,
+                            search: `%${search}%`
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true
+                    }
+                );
+            let countTotal = 0;
+            if (members && members.length) {
+                countTotal = members[0].countTotal;
+                members.forEach(function (member) {
+                    delete member.countTotal;
                 });
-            })
-            .catch(next);
+            }
+
+            return res.ok({
+                countTotal,
+                count: members.length,
+                rows: members
+            });
+        } catch(err) {
+            return next(err);
+        }
     });
 
     /**
@@ -1016,102 +1043,127 @@ module.exports = function (app) {
     /**
      * Get Group member Topics
      */
-    app.get('/api/users/:userId/groups/:groupId/members/topics', loginCheck(['partner']), hasPermission(GroupMember.LEVELS.read, null, null), function (req, res, next) {
+    app.get('/api/users/:userId/groups/:groupId/members/topics', loginCheck(['partner']), hasPermission(GroupMember.LEVELS.read, null, null), async function (req, res, next) {
+        const limitDefault = 10;
+        const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
+        const search = req.query.search;
+        let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+        let where = '';
+        if (search) {
+            where = ` AND t.title ILIKE :search `
+        }
 
-        db
-            .query(
-                'SELECT \
-                    t.id, \
-                    t.title, \
-                    t.visibility, \
-                    t.status, \
-                    t.categories, \
-                    t."endsAt", \
-                    CASE \
-                        WHEN tp."topicId" = t.id THEN true \
-                        ELSE false \
-                    END as "pinned", \
-                    t.hashtag, \
-                    t."updatedAt", \
-                    t."createdAt", \
-                    u.id as "creator.id", \
-                    u.name as "creator.name", \
-                    u.company as "creator.company", \
-                    u."imageUrl" as "creator.imageUrl", \
-                    COALESCE(tmup.level, tmgp.level, \'none\') as "permission.level", \
-                    COALESCE(tmgp.level, \'none\') as "permission.levelGroup", \
-                    muc.count as "members.users.count", \
-                    COALESCE(mgc.count, 0) as "members.groups.count" \
-                FROM "TopicMemberGroups" gt \
-                    JOIN "Topics" t ON (t.id = gt."topicId") \
-                    LEFT JOIN "Users" u ON (u.id = t."creatorId") \
-                    LEFT JOIN ( \
-                        SELECT \
-                            tmu."topicId", \
-                            tmu."userId", \
-                            tmu.level::text AS level \
-                        FROM "TopicMemberUsers" tmu \
-                        WHERE tmu."deletedAt" IS NULL \
-                    ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId) \
-                    LEFT JOIN ( \
-                        SELECT \
-                            tmg."topicId", \
-                            gm."userId", \
-                            MAX(tmg.level)::text AS level \
-                        FROM "TopicMemberGroups" tmg \
-                            LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
-                        WHERE tmg."deletedAt" IS NULL \
-                        AND gm."deletedAt" IS NULL \
-                        GROUP BY "topicId", "userId" \
-                    ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId) \
-                    LEFT JOIN ( \
-                        SELECT tmu."topicId", COUNT(tmu."memberId") AS "count" FROM ( \
-                            SELECT \
-                                tmuu."topicId", \
-                                tmuu."userId" AS "memberId" \
-                            FROM "TopicMemberUsers" tmuu \
-                            WHERE tmuu."deletedAt" IS NULL \
-                            UNION \
-                            SELECT \
-                                tmg."topicId", \
-                                gm."userId" AS "memberId" \
-                            FROM "TopicMemberGroups" tmg \
-                                JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
-                            WHERE tmg."deletedAt" IS NULL \
-                            AND gm."deletedAt" IS NULL \
-                        ) AS tmu GROUP BY "topicId" \
-                    ) AS muc ON (muc."topicId" = t.id) \
-                    LEFT JOIN ( \
-                        SELECT "topicId", count("groupId")::integer AS "count" \
-                        FROM "TopicMemberGroups" \
-                        WHERE "deletedAt" IS NULL \
-                        GROUP BY "topicId" \
-                    ) AS mgc ON (mgc."topicId" = t.id) \
-                    LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId \
-                WHERE gt."groupId" = :groupId \
-                    AND gt."deletedAt" IS NULL \
-                    AND t."deletedAt" IS NULL \
-                    AND COALESCE(tmup.level, tmgp.level, \'none\')::"enum_TopicMemberUsers_level" > \'none\' \
-                ORDER BY "pinned" DESC \
-                    ; \
-                ',
-                {
-                    replacements: {
-                        groupId: req.params.groupId,
-                        userId: req.user.id
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true,
-                    nest: true
-                }
-            )
-            .then(function (topics) {
-                return res.ok({
-                    count: topics.length,
-                    rows: topics
+        try {
+            const topics = await db
+                .query(
+                    `SELECT
+                        t.id,
+                        t.title,
+                        t.visibility,
+                        t.status,
+                        t.categories,
+                        t."endsAt",
+                        CASE
+                            WHEN tp."topicId" = t.id THEN true
+                            ELSE false
+                        END as "pinned",
+                        t.hashtag,
+                        t."updatedAt",
+                        t."createdAt",
+                        u.id as "creator.id",
+                        u.name as "creator.name",
+                        u.company as "creator.company",
+                        u."imageUrl" as "creator.imageUrl",
+                        COALESCE(tmup.level, tmgp.level, 'none') as "permission.level",
+                        COALESCE(tmgp.level, 'none') as "permission.levelGroup",
+                        muc.count as "members.users.count",
+                        COALESCE(mgc.count, 0) as "members.groups.count",
+                        count(*) OVER()::integer AS "countTotal"
+                    FROM "TopicMemberGroups" gt
+                        JOIN "Topics" t ON (t.id = gt."topicId")
+                        LEFT JOIN "Users" u ON (u.id = t."creatorId")
+                        LEFT JOIN (
+                            SELECT
+                                tmu."topicId",
+                                tmu."userId",
+                                tmu.level::text AS level
+                            FROM "TopicMemberUsers" tmu
+                            WHERE tmu."deletedAt" IS NULL
+                        ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId)
+                        LEFT JOIN (
+                            SELECT
+                                tmg."topicId",
+                                gm."userId",
+                                MAX(tmg.level)::text AS level
+                            FROM "TopicMemberGroups" tmg
+                                LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                            WHERE tmg."deletedAt" IS NULL
+                            AND gm."deletedAt" IS NULL
+                            GROUP BY "topicId", "userId"
+                        ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
+                        LEFT JOIN (
+                            SELECT tmu."topicId", COUNT(tmu."memberId") AS "count" FROM (
+                                SELECT
+                                    tmuu."topicId",
+                                    tmuu."userId" AS "memberId"
+                                FROM "TopicMemberUsers" tmuu
+                                WHERE tmuu."deletedAt" IS NULL
+                                UNION
+                                SELECT
+                                    tmg."topicId",
+                                    gm."userId" AS "memberId"
+                                FROM "TopicMemberGroups" tmg
+                                    JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                                WHERE tmg."deletedAt" IS NULL
+                                AND gm."deletedAt" IS NULL
+                            ) AS tmu GROUP BY "topicId"
+                        ) AS muc ON (muc."topicId" = t.id)
+                        LEFT JOIN (
+                            SELECT "topicId", count("groupId")::integer AS "count"
+                            FROM "TopicMemberGroups"
+                            WHERE "deletedAt" IS NULL
+                            GROUP BY "topicId"
+                        ) AS mgc ON (mgc."topicId" = t.id)
+                        LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId
+                    WHERE gt."groupId" = :groupId
+                        AND gt."deletedAt" IS NULL
+                        AND t."deletedAt" IS NULL
+                        AND COALESCE(tmup.level, tmgp.level, 'none')::"enum_TopicMemberUsers_level" > 'none'
+                        ${where}
+                    ORDER BY "pinned" DESC
+                    LIMIT :limit
+                    OFFSET :offset
+                    ;`,
+                    {
+                        replacements: {
+                            groupId: req.params.groupId,
+                            userId: req.user.id,
+                            limit,
+                            offset,
+                            search: `%${search}%`,
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true,
+                        nest: true
+                    }
+                );
+
+            let countTotal = 0;
+            if (topics && topics.length) {
+                countTotal = topics[0].countTotal;
+                topics.forEach(function (member) {
+                    delete member.countTotal;
                 });
-            })
-            .catch(next);
+            }
+
+            return res.ok({
+                countTotal,
+                count: topics.length,
+                rows: topics
+            });
+        } catch(err) {
+            return next(err);
+        }
     });
 
     /**
