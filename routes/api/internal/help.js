@@ -12,16 +12,22 @@ module.exports = function (app) {
      * Callback API for Pad change events
      */
     app.post('/api/internal/help', async function (req, res, next) {
-        const helpData = req.body;
+        try {
+            const helpData = req.body;
 
-        if (req.user) {
-            helpData.userId = req.user.id;
+            if (req.user) {
+                helpData.userId = req.user.id;
+            }
+
+            logger.info('Help request:', helpData);
+
+            await emailLib.sendHelpRequest(helpData);
+
+            return res.ok();
+        } catch (e) {
+            logger.error(e);
+            next(e);
         }
 
-        logger.info('Help request:', helpData);
-
-        await emailLib.sendHelpRequest(helpData);
-
-        return res.ok();
     });
 };
