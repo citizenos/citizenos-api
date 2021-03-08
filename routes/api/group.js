@@ -99,7 +99,7 @@ module.exports = function (app) {
      * Create a new Group
      */
     app.post('/api/users/:userId/groups', loginCheck(['partner']), function (req, res, next) {
-        var group = Group
+        const group = Group
             .build({
                 name: req.body.name,
                 creatorId: req.user.id,
@@ -192,8 +192,8 @@ module.exports = function (app) {
      * Update Group info
      */
     app.put('/api/users/:userId/groups/:groupId', loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, null), function (req, res, next) {
-        var groupId = req.params.groupId;
-        var groupName = req.body.name;
+        const groupId = req.params.groupId;
+        const groupName = req.body.name;
 
         Group
             .findOne({
@@ -323,19 +323,19 @@ module.exports = function (app) {
      * Get all Groups User belongs to
      */
     app.get('/api/users/:userId/groups', loginCheck(['partner']), function (req, res, next) {
-        var include = req.query.include;
+        let include = req.query.include;
         // Sequelize and associations are giving too eager results + not being the most effective. https://github.com/sequelize/sequelize/issues/2458
         // Falling back to raw SQL
         // TODO: support LIMIT & OFFSET
         // TODO: This cannot possibly be the most effective query in the world..
-        var joinText = '';
-        var returnFields = '';
+        let joinText = '';
+        let returnFields = '';
         if (include && !Array.isArray(include)) {
             include = [include];
         }
 
         if (include) {
-            var union = false;
+            let union = false;
             joinText = 'LEFT JOIN (';
             if (include.indexOf('member.topic') > -1) {
                 joinText += '\
@@ -459,15 +459,15 @@ module.exports = function (app) {
                 }
             )
             .then(function (rows) {
-                var results = {
+                const results = {
                     count: 0,
                     rows: []
                 };
-                var memberGroupIds = [];
+                const memberGroupIds = [];
 
                 rows.forEach(function (groupRow) {
-                    var group = _.cloneDeep(groupRow);
-                    var member = _.clone(group.member);
+                    const group = _.cloneDeep(groupRow);
+                    const member = _.clone(group.member);
 
 
                     if (memberGroupIds.indexOf(group.id) < 0) {
@@ -481,7 +481,7 @@ module.exports = function (app) {
                     if (include && member && member.memberId) {
                         results.rows.find(function (g, index) {
                             if (g.id === group.id) {
-                                var newMember = {
+                                const newMember = {
                                     id: member.memberId
                                 };
 
@@ -489,7 +489,7 @@ module.exports = function (app) {
                                     newMember.title = member.memberName;
                                     newMember.level = member.levelTopic;
 
-                                    var topicInGroup = results.rows[index].members.topics.rows.find(function (t) {
+                                    const topicInGroup = results.rows[index].members.topics.rows.find(function (t) {
                                         return t.id === newMember.id;
                                     });
 
@@ -544,11 +544,11 @@ module.exports = function (app) {
      * @see https://github.com/citizenos/citizenos-fe/issues/348
      */
     app.post(['/api/users/:userId/groups/:groupId/members/users'], DEPRECATED('Use invite API - https://github.com/citizenos/citizenos-fe/issues/348'), loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, null), function (req, res, next) {
-        var members = req.body;
-        var groupId = req.params.groupId;
+        let members = req.body;
+        const groupId = req.params.groupId;
 
-        var validEmailMembers = [];
-        var validUserIdMembers = [];
+        const validEmailMembers = [];
+        const validUserIdMembers = [];
 
         if (!Array.isArray(members)) {
             members = [members];
@@ -566,11 +566,11 @@ module.exports = function (app) {
             }
         });
 
-        var validEmails = validEmailMembers.map(function (m) {
+        const validEmails = validEmailMembers.map(function (m) {
             return m.userId;
         });
 
-        var usersCreatedPromise = Promise.resolve();
+        let usersCreatedPromise = Promise.resolve();
 
         if (validEmails.length) {
             usersCreatedPromise = User
@@ -586,7 +586,7 @@ module.exports = function (app) {
                 })
                 .then(function (users) {
                     _(users).forEach(function (u) {
-                        var member = _.find(validEmailMembers, {userId: u.email});
+                        const member = _.find(validEmailMembers, {userId: u.email});
                         if (member) {
                             member.userId = u.id;
                             validUserIdMembers.push(member);
@@ -596,7 +596,7 @@ module.exports = function (app) {
 
                     // The leftovers are e-mails for which User did not exist
                     if (validEmailMembers.length) {
-                        var usersToCreate = [];
+                        const usersToCreate = [];
                         _(validEmailMembers).forEach(function (m) {
                             usersToCreate.push({
                                 email: m.userId,
@@ -611,9 +611,9 @@ module.exports = function (app) {
                             return User
                                 .bulkCreate(usersToCreate, {transaction: t})
                                 .then(function (usersCreated) {
-                                    var userCreateActivityPromises = [];
+                                    const userCreateActivityPromises = [];
                                     usersCreated.forEach(function (u) {
-                                        var createActivityPromise = cosActivities.createActivity(
+                                        const createActivityPromise = cosActivities.createActivity(
                                             u,
                                             null,
                                             {
@@ -643,12 +643,12 @@ module.exports = function (app) {
             .then(function (createdUsers) {
                 if (createdUsers && createdUsers.length) {
                     _(createdUsers).forEach(function (u) {
-                        var member = {
+                        const member = {
                             userId: u.id
                         };
 
                         // Sequelize defaultValue has no effect if "undefined" or "null" is set for attribute...
-                        var level = _.find(validEmailMembers, {userId: u.email}).level;
+                        const level = _.find(validEmailMembers, {userId: u.email}).level;
                         if (level) {
                             member.level = level;
                         }
@@ -691,14 +691,14 @@ module.exports = function (app) {
                                 }
                             })
                             .then(function (group) {
-                                var userIdsToInvite = [];
+                                const userIdsToInvite = [];
 
                                 newMembers.forEach(function (result, i) {
                                     if (result.isFulfilled()) {
-                                        var value = result.value(); // findOrCreate returns [instance, created=true/false]
+                                        const value = result.value(); // findOrCreate returns [instance, created=true/false]
                                         if (value && value[1]) {
                                             userIdsToInvite.push(validUserIdMembers[i].userId);
-                                            var user = User.build({id: value[0].userId});
+                                            const user = User.build({id: value[0].userId});
                                             user.dataValues.id = value[0].userId;
                                             cosActivities.addActivity(user, {
                                                 type: 'User',
@@ -789,9 +789,9 @@ module.exports = function (app) {
      * Update membership information
      */
     app.put(['/api/users/:userId/groups/:groupId/members/users/:memberId'], loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, null), function (req, res, next) {
-        var newLevel = req.body.level;
-        var memberId = req.params.memberId;
-        var groupId = req.params.groupId;
+        const newLevel = req.body.level;
+        const memberId = req.params.memberId;
+        const groupId = req.params.groupId;
 
         GroupMember
             .findAll({
@@ -850,8 +850,8 @@ module.exports = function (app) {
      * Delete membership information
      */
     app.delete(['/api/users/:userId/groups/:groupId/members/users/:memberId'], loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, true), function (req, res, next) {
-        var groupId = req.params.groupId;
-        var memberId = req.params.memberId;
+        const groupId = req.params.groupId;
+        const memberId = req.params.memberId;
 
         GroupMember
             .findAll({
@@ -872,8 +872,8 @@ module.exports = function (app) {
                 // NOTE: Postgres does not support LIMIT for DELETE, thus the hidden "ctid" column and subselect is used
                 return db
                     .transaction(function (t) {
-                        var group = Group.build({id: groupId});
-                        var user = User.build({id: memberId});
+                        const group = Group.build({id: groupId});
+                        const user = User.build({id: memberId});
                         group.dataValues.id = groupId;
                         user.dataValues.id = memberId;
 
@@ -1660,28 +1660,28 @@ module.exports = function (app) {
      * Group list
      */
     app.get('/api/groups', function (req, res, next) {
-        var limitMax = 100;
-        var limitDefault = 26;
+        const limitMax = 100;
+        const limitDefault = 26;
 
-        var offset = req.query.offset || 0;
-        var limit = req.query.limit || limitDefault;
+        const offset = req.query.offset || 0;
+        let limit = req.query.limit || limitDefault;
         if (limit > limitMax) limit = limitDefault;
 
-        var where = {
+        const where = {
             visibility: Group.VISIBILITY.public,
             name: {
                 [Op.not]: null
             }
         };
 
-        var name = req.query.name;
+        const name = req.query.name;
         if (name) {
             where.name = {
                 [Op.iLike]: name
             };
         }
 
-        var sourcePartnerId = req.query.sourcePartnerId;
+        const sourcePartnerId = req.query.sourcePartnerId;
         if (sourcePartnerId) {
             where.sourcePartnerId = sourcePartnerId;
         }
