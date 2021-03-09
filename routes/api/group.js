@@ -180,7 +180,7 @@ module.exports = function (app) {
             )
             .then(function (result) {
                 if (result && result.length && result[0]) {
-                    var group = result[0];
+                    const group = result[0];
 
                     return res.ok(group);
                 }
@@ -659,7 +659,7 @@ module.exports = function (app) {
 
                 // TODO: Creates 1 DB call per Member which is not wise when thinking of performance.
                 // Change once http://sequelize.readthedocs.org/en/latest/api/model/#bulkcreaterecords-options-promisearrayinstance suppors "bulkUpsert"
-                var findOrCreatePromises = validUserIdMembers.map(function (member) {
+                const findOrCreatePromises = validUserIdMembers.map(function (member) {
                     member.groupId = req.params.groupId;
 
                     return db
