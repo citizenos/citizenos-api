@@ -1055,24 +1055,19 @@ module.exports = function (app) {
             });
 
             const createInvitePromises = validUserIdMembers.map(async function (member) {
-                const addedMember = currentMembers.find(function (cmember) {
+                const existingMember = currentMembers.find(function (cmember) {
                     return cmember.userId === member.userId;
                 });
-                if (addedMember) {
-                    const LEVELS = {
-                        none: 0, // Enables to override inherited permissions.
-                        read: 1,
-                        edit: 2,
-                        admin: 3
-                    };
-                    if (addedMember.level !== member.level) {
-                        if (LEVELS[member.level] > LEVELS[addedMember.level]) {
-                            await addedMember.update({
+                if (existingMember) {
+                    const levelsArray = Object.keys(GroupMember.LEVELS);
+                    if (existingMember.level !== member.level) {
+                        if (levelsArray.indexOf(member.level) > levelsArray.indexOf(existingMember.level)) {
+                            await existingMember.update({
                                 level: member.level
                             });
 
                             cosActivities
-                                .updateActivity(addedMember, null, {
+                                .updateActivity(existingMember, null, {
                                     type: 'User',
                                     id: req.user.id,
                                     ip: req.ip
@@ -1102,8 +1097,6 @@ module.exports = function (app) {
                     userInvited.dataValues.level = groupInvite.level; // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
                     userInvited.dataValues.inviteId = groupInvite.id;
 
-
-                    //TODO: Check that activity is correct
                     await cosActivities.inviteActivity(
                         group,
                         userInvited,
@@ -1367,7 +1360,8 @@ module.exports = function (app) {
 
             if (memberUserExisting) {
                 // User already a member, see if we need to update the level
-                if (GroupMember.LEVELS.indexOf(memberUserExisting.level) < GroupMember.LEVELS.indexOf(invite.level)) {
+                const levelsArray = Object.keys(GroupMember.LEVELS);
+                if (levelsArray.indexOf(memberUserExisting.level) < levelsArray.indexOf(invite.level)) {
                     const memberUserUpdated = await memberUserExisting.update({
                         level: invite.level
                     });

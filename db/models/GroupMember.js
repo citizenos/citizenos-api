@@ -1,6 +1,6 @@
 'use strict';
 
-var _ = require('lodash');
+const _ = require('lodash');
 
 /**
  * GroupMember
@@ -17,12 +17,12 @@ var _ = require('lodash');
 module.exports = function (sequelize, DataTypes) {
 
     // All possible permission levels.
-    var LEVELS = {
+    const LEVELS = {
         read: 'read',
         admin: 'admin'
     };
 
-    var GroupMember = sequelize.define(
+    const GroupMember = sequelize.define(
         'GroupMember',
         {
             groupId: {
