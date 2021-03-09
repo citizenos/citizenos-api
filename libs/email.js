@@ -268,12 +268,14 @@ module.exports = function (app) {
 
     const _sendHelpRequest = async (debugData) => {
         const template = resolveTemplate('helpRequest');
+        const name = util.emailToDisplayName(debugData.email);
+        const from = `${name} <${debugData.email}>`;
         const emailOptions = Object.assign(
             _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
             {
                 subject: 'Help request',
                 to: 'support@citizenos.com',
-                from: debugData.email
+                from
                 //Placeholders
             }
         );
