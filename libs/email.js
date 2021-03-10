@@ -270,22 +270,22 @@ module.exports = function (app) {
         const template = resolveTemplate('helpRequest');
         const name = util.emailToDisplayName(debugData.email);
         const from = `${name} <${debugData.email}>`;
-        const emailOptions = Object.assign(
-            _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
-            {
-                subject: 'Help request',
-                to: 'support@citizenos.com',
-                from
-                //Placeholders
-            }
-        );
+        const emailOptions = {
+            subject: 'Help request',
+            to: ['support@citizenos.com'],
+            from: from,
+            linkedData: {
+                translations: template.translations,
+            },
+            provider: EMAIL_OPTIONS_DEFAULT.provider
+        };
+
         Object.keys(debugData).forEach(function (key) {
             emailOptions[key] = debugData[key];
         });
 
-        emailOptions.linkedData.translations = template.translations;
         // https://github.com/bevacqua/campaign#email-sending-option
-        await emailClient.sendStringAsync(template.body, emailOptions);
+        return emailClient.sendStringAsync(template.body, emailOptions);
     }
 
     /**
