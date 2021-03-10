@@ -539,7 +539,7 @@ module.exports = function (app) {
     /**
      * Create new members (GroupMember) to a Group
      *
-     * @deprecated Use POST /api/users/:userId/groups/:groupId/invites/users instead
+     * @deprecated Use Invite API instead - POST /api/users/:userId/groups/:groupId/invites/users
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/348
      */

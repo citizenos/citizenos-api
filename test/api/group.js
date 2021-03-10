@@ -1584,6 +1584,18 @@ suite('Users', function () {
                         assert.equal(res.status, 201);
                     });
 
+                    test('Success - DEPRECATED - Use invite API - https://github.com/citizenos/citizenos-fe/issues/348', async function () {
+                        const members = [
+                            {
+                                userId: member.id,
+                                level: GroupMember.LEVELS.read
+                            }
+                        ];
+
+                        const groupMembersCreateResponse = await _groupMembersCreatePromised(agent, creator.id, group.id, members, 201);
+
+                        assert.equal(groupMembersCreateResponse.res.headers['citizenos-deprecated'], 'Use invite API - https://github.com/citizenos/citizenos-fe/issues/348');
+                    });
 
                     test('Fail - Forbidden - at least admin permissions required', async function () {
                         const agent = request.agent(app);
@@ -1602,7 +1614,6 @@ suite('Users', function () {
                         const res = await _groupMembersCreatePromised(agent, user.id, group.id, members, 403);
                         assert.equal(res.status, 403);
                     });
-
                 });
 
                 suite('List', function () {
