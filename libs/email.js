@@ -826,7 +826,8 @@ module.exports = function (app) {
 
             // TODO: could use Mu here...
             const subject = template.translations.INVITE_GROUP.SUBJECT
-                .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name));
+                .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
+                .replace('{{group.name}}', util.escapeHtml(group.name));
             const invite = _.find(invites, {userId: toUser.id});
             const linkViewInvite = urlLib.getFe('/groups/:groupId/invites/users/:inviteId', {
                 inviteId: invite.id,
