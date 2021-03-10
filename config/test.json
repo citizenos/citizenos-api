@@ -13,6 +13,12 @@
       "define": {
         "syncOnAssociation": true
       },
+      "dialectOptions": {
+        "ssl": {
+          "require": true,
+          "rejectUnauthorized": false
+        }
+      },
       "pool": {
         "min": 0,
         "max": 5,
