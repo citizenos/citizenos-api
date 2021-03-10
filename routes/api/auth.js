@@ -21,8 +21,6 @@ module.exports = function (app) {
     const urlLib = app.get('urlLib');
     const Promise = app.get('Promise');
     const superagent = app.get('superagent');
-    const Certificate = require('undersign/lib/certificate');
-    const crypto = require('crypto');
     const url = app.get('url');
     const mobileId = app.get('mobileId');
 
