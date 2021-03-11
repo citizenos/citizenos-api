@@ -3,7 +3,7 @@
 const util = require('../../libs/util');
 
 /**
- * TopicInviteUser
+ * GroupInviteUser
  *
  * @param {object} sequelize Sequelize instance
  * @param {object} DataTypes Sequelize DataTypes
@@ -14,12 +14,13 @@ const util = require('../../libs/util');
  *
  * @see http://sequelizejs.com/docs/latest/models
  */
+
 module.exports = function (sequelize, DataTypes) {
 
     // Parent model for this model
-    const TopicInvite = require('./_TopicInvite').model(sequelize, DataTypes);
+    const GroupInvite = require('./_GroupInvite').model(sequelize, DataTypes);
 
-    // NOTE: TopicInviteUser extends TopicInvite
+    // NOTE: GroupInviteUser extends GroupInvite
     const attributes = Object.assign({
         userId: {
             type: DataTypes.UUID,
@@ -30,31 +31,31 @@ module.exports = function (sequelize, DataTypes) {
                 key: 'id'
             }
         }
-    }, TopicInvite.attributes);
+    }, GroupInvite.attributes);
 
-    const TopicInviteUser = sequelize.define('TopicInviteUser', attributes);
+    const GroupInviteUser = sequelize.define('GroupInviteUser', attributes);
 
-    TopicInviteUser.associate = function (models) {
-        TopicInviteUser.belongsTo(models.Topic, {
-            foreignKey: 'topicId',
-            as: 'topic'
+    GroupInviteUser.associate = function (models) {
+        GroupInviteUser.belongsTo(models.Group, {
+            foreignKey: 'groupId',
+            as: 'group'
         });
 
-        TopicInviteUser.belongsTo(models.User, {
+        GroupInviteUser.belongsTo(models.User, {
             foreignKey: 'creatorId',
             as: 'creator'
         });
 
-        TopicInviteUser.belongsTo(models.User, {
+        GroupInviteUser.belongsTo(models.User, {
             foreignKey: 'userId',
             as: 'user'
         });
     };
 
-    TopicInviteUser.prototype.toJSON = function () {
+    GroupInviteUser.prototype.toJSON = function () {
         const data = {
             id: this.dataValues.id,
-            topicId: this.dataValues.topicId,
+            groupId: this.dataValues.groupId,
             userId: this.dataValues.userId,
             creatorId: this.dataValues.creatorId,
             level: this.dataValues.level,
@@ -62,8 +63,8 @@ module.exports = function (sequelize, DataTypes) {
             updatedAt: this.dataValues.updatedAt
         };
 
-        if (this.dataValues.topic) {
-            data.topic = this.dataValues.topic;
+        if (this.dataValues.group) {
+            data.group = this.dataValues.group;
         }
 
         if (this.dataValues.creator) {
@@ -80,7 +81,7 @@ module.exports = function (sequelize, DataTypes) {
         return data;
     };
 
-    TopicInviteUser.VALID_DAYS = 14; // How many days an invite is considered valid, over that is expired
+    GroupInviteUser.VALID_DAYS = 14; // How many days an invite is considered valid, over that is expired
 
-    return TopicInviteUser;
+    return GroupInviteUser;
 };

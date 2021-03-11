@@ -5,48 +5,33 @@
  */
 
 module.exports = function (app) {
-    var logger = app.get('logger');
-    var models = app.get('models');
-    var db = models.sequelize;
-    var Op = db.Sequelize.Op;
-    var _ = app.get('lodash');
-    var cosActivities = app.get('cosActivities');
-    var validator = app.get('validator');
-    var emailLib = app.get('email');
-    var util = app.get('util');
-    var moment = app.get('moment');
-    var Promise = app.get('Promise');
+    const logger = app.get('logger');
+    const models = app.get('models');
+    const db = models.sequelize;
+    const Op = db.Sequelize.Op;
+    const _ = app.get('lodash');
+    const cosActivities = app.get('cosActivities');
+    const validator = app.get('validator');
+    const emailLib = app.get('email');
+    const util = app.get('util');
+    const moment = app.get('moment');
+    const Promise = app.get('Promise');
 
-    var loginCheck = app.get('middleware.loginCheck');
+    const loginCheck = app.get('middleware.loginCheck');
+    const asyncMiddleware = app.get('middleware.asyncMiddleware');
+    const DEPRECATED = app.get('middleware.deprecated'); // CAPS for ease of spotting in the code
 
-    var Group = models.Group;
-    var GroupMember = models.GroupMember;
-    var User = models.User;
+    const Group = models.Group;
+    const GroupInviteUser = models.GroupInviteUser;
+    const GroupMember = models.GroupMember;
+    const User = models.User;
 
-    /**
-     * Check if User has sufficient privileges to access the Object.
-     *
-     * @param {string} level One of Permission.LEVELS
-     *
-     * @returns {Function} Express middleware function
-     */
-
-    var _hasPermission = function (groupId, userId, level, allowPublic, allowSelf) {
-        // TODO: I think this will also map not found Groups/Users into Forbidden. May want to fix this for better User messaging.
-        var LEVELS = {
-            none: 0, // Enables to override inherited permissions.
-            read: 1,
-            edit: 2,
-            admin: 3
-        };
-
-        var minRequiredLevel = level;
-
+    const _hasPermission = function (groupId, userId, level, allowPublic, allowSelf) {
         return db
             .query('\
                     SELECT \
                         g.visibility = \'public\' AS "isPublic", \
-                        gm."userId" AS "allowed", \
+                        gm.level::"enum_GroupMembers_level" >= :level AS "allowed", \
                         gm."userId" AS uid, \
                         gm."level" AS level, \
                         g.id \
@@ -68,17 +53,11 @@ module.exports = function (app) {
             })
             .then(function (result) {
                 if (result && result[0]) {
-                    var isPublic = result[0].isPublic;
-                    var isAllowed = result[0].allowed;
-                    var blevel = result[0].level;
+                    const isPublic = result[0].isPublic;
+                    const isAllowed = result[0].allowed;
 
-                    if (!allowSelf && (LEVELS[minRequiredLevel] > LEVELS[blevel])) {
-                        logger.warn('Access denied to topic due to member without permissions trying to delete user! ', 'userId:', userId);
-
-                        return Promise.reject();
-                    }
                     if (isAllowed || (allowPublic && isPublic) || allowSelf) {
-                        return Promise.resolve();
+                        return Promise.resolve(true);
                     }
                 }
 
@@ -88,11 +67,11 @@ module.exports = function (app) {
                 return Promise.reject(err);
             });
     };
-    var hasPermission = function (level, allowPublic, allowSelf) {
+    const hasPermission = function (level, allowPublic, allowSelf) {
         return function (req, res, next) {
-            var groupId = req.params.groupId;
-            var userId = req.user.id;
-            var allowDeleteSelf = allowSelf;
+            const groupId = req.params.groupId;
+            const userId = req.user.id;
+            let allowDeleteSelf = allowSelf;
 
             if (allowSelf) {
                 if (userId !== req.params.memberId) {
@@ -120,7 +99,7 @@ module.exports = function (app) {
      * Create a new Group
      */
     app.post('/api/users/:userId/groups', loginCheck(['partner']), function (req, res, next) {
-        var group = Group
+        const group = Group
             .build({
                 name: req.body.name,
                 creatorId: req.user.id,
@@ -201,7 +180,7 @@ module.exports = function (app) {
             )
             .then(function (result) {
                 if (result && result.length && result[0]) {
-                    var group = result[0];
+                    const group = result[0];
 
                     return res.ok(group);
                 }
@@ -213,8 +192,8 @@ module.exports = function (app) {
      * Update Group info
      */
     app.put('/api/users/:userId/groups/:groupId', loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, null), function (req, res, next) {
-        var groupId = req.params.groupId;
-        var groupName = req.body.name;
+        const groupId = req.params.groupId;
+        const groupName = req.body.name;
 
         Group
             .findOne({
@@ -344,19 +323,19 @@ module.exports = function (app) {
      * Get all Groups User belongs to
      */
     app.get('/api/users/:userId/groups', loginCheck(['partner']), function (req, res, next) {
-        var include = req.query.include;
+        let include = req.query.include;
         // Sequelize and associations are giving too eager results + not being the most effective. https://github.com/sequelize/sequelize/issues/2458
         // Falling back to raw SQL
         // TODO: support LIMIT & OFFSET
         // TODO: This cannot possibly be the most effective query in the world..
-        var joinText = '';
-        var returnFields = '';
+        let joinText = '';
+        let returnFields = '';
         if (include && !Array.isArray(include)) {
             include = [include];
         }
 
         if (include) {
-            var union = false;
+            let union = false;
             joinText = 'LEFT JOIN (';
             if (include.indexOf('member.topic') > -1) {
                 joinText += '\
@@ -480,15 +459,15 @@ module.exports = function (app) {
                 }
             )
             .then(function (rows) {
-                var results = {
+                const results = {
                     count: 0,
                     rows: []
                 };
-                var memberGroupIds = [];
+                const memberGroupIds = [];
 
                 rows.forEach(function (groupRow) {
-                    var group = _.cloneDeep(groupRow);
-                    var member = _.clone(group.member);
+                    const group = _.cloneDeep(groupRow);
+                    const member = _.clone(group.member);
 
 
                     if (memberGroupIds.indexOf(group.id) < 0) {
@@ -502,7 +481,7 @@ module.exports = function (app) {
                     if (include && member && member.memberId) {
                         results.rows.find(function (g, index) {
                             if (g.id === group.id) {
-                                var newMember = {
+                                const newMember = {
                                     id: member.memberId
                                 };
 
@@ -510,7 +489,7 @@ module.exports = function (app) {
                                     newMember.title = member.memberName;
                                     newMember.level = member.levelTopic;
 
-                                    var topicInGroup = results.rows[index].members.topics.rows.find(function (t) {
+                                    const topicInGroup = results.rows[index].members.topics.rows.find(function (t) {
                                         return t.id === newMember.id;
                                     });
 
@@ -560,14 +539,16 @@ module.exports = function (app) {
     /**
      * Create new members (GroupMember) to a Group
      *
-     * TODO: Remove first route definition after NEW FE deploy - https://trello.com/c/JutjiDeX/574-new-fe-post-deploy-actions
+     * @deprecated Use Invite API instead - POST /api/users/:userId/groups/:groupId/invites/users
+     *
+     * @see https://github.com/citizenos/citizenos-fe/issues/348
      */
-    app.post(['/api/users/:userId/groups/:groupId/members', '/api/users/:userId/groups/:groupId/members/users'], loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, null), function (req, res, next) {
-        var members = req.body;
-        var groupId = req.params.groupId;
+    app.post(['/api/users/:userId/groups/:groupId/members/users'], DEPRECATED('Use invite API - https://github.com/citizenos/citizenos-fe/issues/348'), loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, null), function (req, res, next) {
+        let members = req.body;
+        const groupId = req.params.groupId;
 
-        var validEmailMembers = [];
-        var validUserIdMembers = [];
+        const validEmailMembers = [];
+        const validUserIdMembers = [];
 
         if (!Array.isArray(members)) {
             members = [members];
@@ -585,11 +566,11 @@ module.exports = function (app) {
             }
         });
 
-        var validEmails = validEmailMembers.map(function (m) {
+        const validEmails = validEmailMembers.map(function (m) {
             return m.userId;
         });
 
-        var usersCreatedPromise = Promise.resolve();
+        let usersCreatedPromise = Promise.resolve();
 
         if (validEmails.length) {
             usersCreatedPromise = User
@@ -605,7 +586,7 @@ module.exports = function (app) {
                 })
                 .then(function (users) {
                     _(users).forEach(function (u) {
-                        var member = _.find(validEmailMembers, {userId: u.email});
+                        const member = _.find(validEmailMembers, {userId: u.email});
                         if (member) {
                             member.userId = u.id;
                             validUserIdMembers.push(member);
@@ -615,7 +596,7 @@ module.exports = function (app) {
 
                     // The leftovers are e-mails for which User did not exist
                     if (validEmailMembers.length) {
-                        var usersToCreate = [];
+                        const usersToCreate = [];
                         _(validEmailMembers).forEach(function (m) {
                             usersToCreate.push({
                                 email: m.userId,
@@ -630,9 +611,9 @@ module.exports = function (app) {
                             return User
                                 .bulkCreate(usersToCreate, {transaction: t})
                                 .then(function (usersCreated) {
-                                    var userCreateActivityPromises = [];
+                                    const userCreateActivityPromises = [];
                                     usersCreated.forEach(function (u) {
-                                        var createActivityPromise = cosActivities.createActivity(
+                                        const createActivityPromise = cosActivities.createActivity(
                                             u,
                                             null,
                                             {
@@ -662,12 +643,12 @@ module.exports = function (app) {
             .then(function (createdUsers) {
                 if (createdUsers && createdUsers.length) {
                     _(createdUsers).forEach(function (u) {
-                        var member = {
+                        const member = {
                             userId: u.id
                         };
 
                         // Sequelize defaultValue has no effect if "undefined" or "null" is set for attribute...
-                        var level = _.find(validEmailMembers, {userId: u.email}).level;
+                        const level = _.find(validEmailMembers, {userId: u.email}).level;
                         if (level) {
                             member.level = level;
                         }
@@ -678,7 +659,7 @@ module.exports = function (app) {
 
                 // TODO: Creates 1 DB call per Member which is not wise when thinking of performance.
                 // Change once http://sequelize.readthedocs.org/en/latest/api/model/#bulkcreaterecords-options-promisearrayinstance suppors "bulkUpsert"
-                var findOrCreatePromises = validUserIdMembers.map(function (member) {
+                const findOrCreatePromises = validUserIdMembers.map(function (member) {
                     member.groupId = req.params.groupId;
 
                     return db
@@ -710,14 +691,14 @@ module.exports = function (app) {
                                 }
                             })
                             .then(function (group) {
-                                var userIdsToInvite = [];
+                                const userIdsToInvite = [];
 
                                 newMembers.forEach(function (result, i) {
                                     if (result.isFulfilled()) {
-                                        var value = result.value(); // findOrCreate returns [instance, created=true/false]
+                                        const value = result.value(); // findOrCreate returns [instance, created=true/false]
                                         if (value && value[1]) {
                                             userIdsToInvite.push(validUserIdMembers[i].userId);
-                                            var user = User.build({id: value[0].userId});
+                                            const user = User.build({id: value[0].userId});
                                             user.dataValues.id = value[0].userId;
                                             cosActivities.addActivity(user, {
                                                 type: 'User',
@@ -726,7 +707,7 @@ module.exports = function (app) {
                                             }, null, group, req.method + ' ' + req.path);
                                         }
                                     } else {
-                                        logger.error('Failed to create a TopicMemberUser', validUserIdMembers[i]);
+                                        logger.error('Failed to create a GroupMemberUser', validUserIdMembers[i]);
                                     }
                                 });
 
@@ -742,10 +723,10 @@ module.exports = function (app) {
 
     /**
      * Get Group member Users
-     *
-     * TODO: Remove first route definition after NEW FE deploy - https://trello.com/c/JutjiDeX/574-new-fe-post-deploy-actions
      */
-    app.get(['/api/users/:userId/groups/:groupId/members', '/api/users/:userId/groups/:groupId/members/users'], loginCheck(['partner']), hasPermission(GroupMember.LEVELS.read, null, null), async function (req, res, next) {
+    app.get(['/api/users/:userId/groups/:groupId/members/users'], loginCheck(['partner']), hasPermission(GroupMember.LEVELS.read, null, null), async function (req, res, next) {
+        //FIXME: Deprecation warning - https://github.com/citizenos/citizenos-fe/issues/348
+
         const groupId = req.params.groupId;
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
@@ -799,20 +780,18 @@ module.exports = function (app) {
                 count: members.length,
                 rows: members
             });
-        } catch(err) {
+        } catch (err) {
             return next(err);
         }
     });
 
     /**
      * Update membership information
-     *
-     * TODO: Remove first route definition after NEW FE deploy - https://trello.com/c/JutjiDeX/574-new-fe-post-deploy-actions
      */
-    app.put(['/api/users/:userId/groups/:groupId/members/:memberId', '/api/users/:userId/groups/:groupId/members/users/:memberId'], loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, null), function (req, res, next) {
-        var newLevel = req.body.level;
-        var memberId = req.params.memberId;
-        var groupId = req.params.groupId;
+    app.put(['/api/users/:userId/groups/:groupId/members/users/:memberId'], loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, null), function (req, res, next) {
+        const newLevel = req.body.level;
+        const memberId = req.params.memberId;
+        const groupId = req.params.groupId;
 
         GroupMember
             .findAll({
@@ -869,12 +848,10 @@ module.exports = function (app) {
 
     /**
      * Delete membership information
-     *
-     * TODO: Remove first route definition after NEW FE deploy - https://trello.com/c/JutjiDeX/574-new-fe-post-deploy-actions
      */
-    app.delete(['/api/users/:userId/groups/:groupId/members/:memberId', '/api/users/:userId/groups/:groupId/members/users/:memberId'], loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, true), function (req, res, next) {
-        var groupId = req.params.groupId;
-        var memberId = req.params.memberId;
+    app.delete(['/api/users/:userId/groups/:groupId/members/users/:memberId'], loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, true), function (req, res, next) {
+        const groupId = req.params.groupId;
+        const memberId = req.params.memberId;
 
         GroupMember
             .findAll({
@@ -895,8 +872,8 @@ module.exports = function (app) {
                 // NOTE: Postgres does not support LIMIT for DELETE, thus the hidden "ctid" column and subselect is used
                 return db
                     .transaction(function (t) {
-                        var group = Group.build({id: groupId});
-                        var user = User.build({id: memberId});
+                        const group = Group.build({id: groupId});
+                        const user = User.build({id: memberId});
                         group.dataValues.id = groupId;
                         user.dataValues.id = memberId;
 
@@ -946,6 +923,513 @@ module.exports = function (app) {
             .catch(next);
     });
 
+    /**
+     * Invite new Members to the Group
+     *
+     * Does NOT add a Member automatically, but will send an invite, which has to accept in order to become a Member of the Group
+     *
+     * @see https://github.com/citizenos/citizenos-fe/issues/348
+     */
+    app.post('/api/users/:userId/groups/:groupId/invites/users', loginCheck(), hasPermission(GroupMember.LEVELS.admin, null, null), asyncMiddleware(async function (req, res) {
+        //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
+        const groupId = req.params.groupId;
+        const userId = req.user.id;
+        let members = req.body;
+
+        if (!Array.isArray(members)) {
+            members = [members];
+        }
+        const inviteMessage = members[0].inviteMessage;
+        const validEmailMembers = [];
+        let validUserIdMembers = [];
+
+        // userId can be actual UUID or e-mail, sort to relevant buckets
+        _(members).forEach(function (m) {
+            if (m.userId) {
+                m.userId = m.userId.trim();
+
+                // Is it an e-mail?
+                if (validator.isEmail(m.userId)) {
+                    validEmailMembers.push(m); // The whole member object with level
+                } else if (validator.isUUID(m.userId, 4)) {
+                    validUserIdMembers.push(m);
+                } else {
+                    logger.warn('Invalid member ID, is not UUID or email thus ignoring', req.method, req.path, m, req.body);
+                }
+            } else {
+                logger.warn('Missing member id, ignoring', req.method, req.path, m, req.body);
+            }
+        });
+
+        const validEmails = _.map(validEmailMembers, 'userId');
+        if (validEmails.length) {
+            // Find out which e-mails already exist
+            const usersExistingEmail = await User
+                .findAll({
+                    where: {
+                        email: {
+                            [Op.iLike]: {
+                                [Op.any]: validEmails
+                            }
+                        }
+                    },
+                    attributes: ['id', 'email']
+                });
+
+
+            _(usersExistingEmail).forEach(function (u) {
+                const member = _.find(validEmailMembers, {userId: u.email});
+                if (member) {
+                    member.userId = u.id;
+                    validUserIdMembers.push(member);
+                    _.remove(validEmailMembers, member); // Remove the e-mail, so that by the end of the day only e-mails that did not exist remain.
+                }
+            });
+        }
+
+        let createdInvites = await db.transaction(async function (t) {
+            let createdUsers;
+
+            // The leftovers are e-mails for which User did not exist
+            if (validEmailMembers.length) {
+                const usersToCreate = [];
+                _(validEmailMembers).forEach(function (m) {
+                    usersToCreate.push({
+                        email: m.userId,
+                        language: m.language,
+                        password: null,
+                        name: util.emailToDisplayName(m.userId),
+                        source: User.SOURCES.citizenos
+                    });
+                });
+
+                createdUsers = await User.bulkCreate(usersToCreate, {transaction: t});
+
+                const createdUsersActivitiesCreatePromises = createdUsers.map(async function (user) {
+                    return cosActivities.createActivity(
+                        user,
+                        null,
+                        {
+                            type: 'System',
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
+                });
+
+                await Promise.all(createdUsersActivitiesCreatePromises);
+            }
+
+            // Go through the newly created users and add them to the validUserIdMembers list so that they get invited
+            if (createdUsers && createdUsers.length) {
+                _(createdUsers).forEach(function (u) {
+                    const member = {
+                        userId: u.id
+                    };
+
+                    // Sequelize defaultValue has no effect if "undefined" or "null" is set for attribute...
+                    const level = _.find(validEmailMembers, {userId: u.email}).level;
+                    if (level) {
+                        member.level = level;
+                    }
+
+                    validUserIdMembers.push(member);
+                });
+            }
+
+            // Need the Group just for the activity
+            const group = await Group.findOne({
+                where: {
+                    id: groupId
+                }
+            });
+
+            validUserIdMembers = validUserIdMembers.filter(function (member) {
+                return member.userId !== req.user.id; // Make sure user does not invite self
+            });
+            const currentMembers = await GroupMember.findAll({
+                where: {
+                    groupId: groupId
+                }
+            });
+
+            const createInvitePromises = validUserIdMembers.map(async function (member) {
+                const existingMember = currentMembers.find(function (cmember) {
+                    return cmember.userId === member.userId;
+                });
+                if (existingMember) {
+                    const levelsArray = Object.keys(GroupMember.LEVELS);
+                    if (existingMember.level !== member.level) {
+                        if (levelsArray.indexOf(member.level) > levelsArray.indexOf(existingMember.level)) {
+                            await existingMember.update({
+                                level: member.level
+                            });
+
+                            cosActivities
+                                .updateActivity(existingMember, null, {
+                                    type: 'User',
+                                    id: req.user.id,
+                                    ip: req.ip
+                                }, null, req.method + ' ' + req.path, t);
+
+                            return;
+                        }
+
+                        return;
+                    } else {
+                        return;
+                    }
+                } else {
+                    const groupInvite = await GroupInviteUser.create(
+                        {
+                            groupId: groupId,
+                            creatorId: userId,
+                            userId: member.userId,
+                            level: member.level
+                        },
+                        {
+                            transaction: t
+                        }
+                    );
+
+                    const userInvited = User.build({id: groupInvite.userId});
+                    userInvited.dataValues.level = groupInvite.level; // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
+                    userInvited.dataValues.inviteId = groupInvite.id;
+
+                    await cosActivities.inviteActivity(
+                        group,
+                        userInvited,
+                        {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
+                    return groupInvite;
+                }
+            });
+
+            return Promise.all(createInvitePromises);
+        });
+
+        createdInvites = createdInvites.filter(function (invite) {
+            return !!invite;
+        });
+
+        for (let invite of createdInvites) {
+            invite.inviteMessage = inviteMessage;
+        }
+
+        await emailLib.sendGroupMemberUserInviteCreate(createdInvites);
+
+        if (createdInvites.length) {
+            return res.created({
+                count: createdInvites.length,
+                rows: createdInvites
+            });
+        } else {
+            return res.badRequest('No invites were created. Possibly because no valid userId-s (uuidv4s or emails) were provided.', 1);
+        }
+    }));
+
+    /**
+     * Get all pending User invites for a Group
+     *
+     * @see https://github.com/citizenos/citizenos-fe/issues/348
+     */
+    app.get('/api/users/:userId/groups/:groupId/invites/users', loginCheck(), hasPermission(GroupMember.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
+        const limitDefault = 10;
+        const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
+        let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+        const search = req.query.search;
+
+        let where = '';
+        if (search) {
+            where = ` AND u.name ILIKE :search `
+        }
+
+        try {
+            const invites = await db
+                .query(
+                    `SELECT
+                    giu.id,
+                    giu."creatorId",
+                    giu.level,
+                    giu."groupId",
+                    giu."userId",
+                    giu."createdAt",
+                    giu."updatedAt",
+                    u.id as "user.id",
+                    u.name as "user.name",
+                    u."imageUrl" as "user.imageUrl",
+                    count(*) OVER()::integer AS "countTotal"
+                FROM "GroupInviteUsers" giu
+                JOIN "Users" u ON u.id = giu."userId"
+                WHERE giu."groupId" = :groupId AND giu."deletedAt" IS NULL AND giu."createdAt" > NOW() - INTERVAL '${GroupInviteUser.VALID_DAYS}d'
+                ${where}
+                ORDER BY u.name ASC
+                LIMIT :limit
+                OFFSET :offset
+                ;`,
+                    {
+                        replacements: {
+                            groupId: req.params.groupId,
+                            limit,
+                            offset,
+                            search: `%${search}%`
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true,
+                        nest: true
+                    }
+                );
+
+            if (!invites) {
+                return res.notFound();
+            }
+            let countTotal = 0;
+            if (invites.length) {
+                countTotal = invites[0].countTotal;
+            }
+
+            invites.forEach(function (invite) {
+                delete invite.countTotal;
+            });
+
+            return res.ok({
+                countTotal,
+                count: invites.length,
+                rows: invites
+            });
+        } catch (err) {
+            return next(err);
+        }
+    }));
+
+    /**
+     * Get specific invite for a Group
+     *
+     * @see https://github.com/citizenos/citizenos-fe/issues/348
+     */
+    app.get(['/api/groups/:groupId/invites/users/:inviteId', '/api/users/:userId/groups/:groupId/invites/users/:inviteId'], asyncMiddleware(async function (req, res) {
+        const groupId = req.params.groupId;
+        const inviteId = req.params.inviteId;
+
+        const invite = await GroupInviteUser
+            .findOne(
+                {
+                    where: {
+                        id: inviteId,
+                        groupId: groupId
+                    },
+                    paranoid: false, // return deleted!
+                    include: [
+                        {
+                            model: Group,
+                            attributes: ['id', 'name', 'creatorId'],
+                            as: 'group',
+                            required: true
+                        },
+                        {
+                            model: User,
+                            attributes: ['id', 'name', 'company', 'imageUrl'],
+                            as: 'creator',
+                            required: true
+                        },
+                        {
+                            model: User,
+                            attributes: ['id', 'email'],
+                            as: 'user',
+                            required: true
+                        }
+                    ],
+                    attributes: {
+                        include: [
+                            [
+                                db.literal(`EXTRACT(DAY FROM (NOW() - "GroupInviteUser"."createdAt"))`),
+                                'createdDaysAgo'
+                            ]
+                        ]
+                    }
+                }
+            );
+
+        if (!invite) {
+            return res.notFound();
+        }
+
+        if (invite.deletedAt) {
+
+            let hasAccess;
+            try {
+                hasAccess = await _hasPermission(groupId, invite.userId, GroupMember.LEVELS.read, null, null);
+            } catch (e) {
+                hasAccess = false;
+            }
+
+            if (hasAccess) {
+                return res.ok(invite, 1); // Invite has already been accepted OR deleted and the person has access
+            }
+
+            return res.gone('The invite has been deleted', 1);
+        }
+
+        if (invite.dataValues.createdDaysAgo > GroupInviteUser.VALID_DAYS) {
+            return res.gone(`The invite has expired. Invites are valid for ${GroupInviteUser.VALID_DAYS} days`, 2);
+        }
+
+        // At this point we can already confirm users e-mail
+        await User.update({emailIsVerified: true}, {
+            where: {id: invite.userId},
+            fields: ['emailIsVerified'],
+            limit: 1
+        });
+
+        return res.ok(invite);
+    }));
+
+    /**
+     * Delete Group invite
+     *
+     * @see https://github.com/citizenos/citizenos-fe/issues/348
+     */
+    app.delete(['/api/groups/:groupId/invites/users/:inviteId', '/api/users/:userId/groups/:groupId/invites/users/:inviteId'], loginCheck(), hasPermission(GroupMember.LEVELS.admin), asyncMiddleware(async function (req, res) {
+        const groupId = req.params.groupId;
+        const inviteId = req.params.inviteId;
+
+        const deletedCount = await GroupInviteUser
+            .destroy(
+                {
+                    where: {
+                        id: inviteId,
+                        groupId: groupId
+                    }
+                }
+            );
+
+        if (!deletedCount) {
+            return res.notFound('Invite not found', 1);
+        }
+
+        return res.ok();
+    }));
+
+    /**
+     * Accept a group invite
+     */
+    app.post(['/api/users/:userId/groups/:groupId/invites/users/:inviteId/accept', '/api/groups/:groupId/invites/users/:inviteId/accept'], loginCheck(), asyncMiddleware(async function (req, res) {
+        const userId = req.user.id;
+        const groupId = req.params.groupId;
+        const inviteId = req.params.inviteId;
+
+        const invite = await GroupInviteUser
+            .findOne(
+                {
+                    where: {
+                        id: inviteId,
+                        groupId: groupId
+                    },
+                    attributes: {
+                        include: [
+                            [
+                                db.literal(`EXTRACT(DAY FROM (NOW() - "GroupInviteUser"."createdAt"))`),
+                                'createdDaysAgo'
+                            ]
+                        ]
+                    }
+                }
+            );
+
+        // Find out if the User is already a member of the Group
+        const memberUserExisting = await GroupMember
+            .findOne({
+                where: {
+                    groupId: groupId,
+                    userId: userId
+                }
+            });
+
+        if (invite) {
+            if (invite.userId !== userId) {
+                return res.forbidden();
+            }
+
+            if (memberUserExisting) {
+                // User already a member, see if we need to update the level
+                const levelsArray = Object.keys(GroupMember.LEVELS);
+                if (levelsArray.indexOf(memberUserExisting.level) < levelsArray.indexOf(invite.level)) {
+                    const memberUserUpdated = await memberUserExisting.update({
+                        level: invite.level
+                    });
+                    return res.ok(memberUserUpdated);
+                } else {
+                    // No level update, respond with existing member info
+                    return res.ok(memberUserExisting);
+                }
+            } else {
+                // Has the invite expired?
+                if (invite.dataValues.createdDaysAgo > GroupInviteUser.VALID_DAYS) {
+                    return res.gone(`The invite has expired. Invites are valid for ${GroupInviteUser.VALID_DAYS} days`, 2);
+                }
+
+                // Group needed just for the activity
+                const group = await Group.findOne({
+                    where: {
+                        id: invite.groupId
+                    }
+                });
+
+                const memberUserCreated = await db.transaction(async function (t) {
+                    const member = await GroupMember.create(
+                        {
+                            groupId: invite.groupId,
+                            userId: invite.userId,
+                            level: GroupMember.LEVELS[invite.level]
+                        },
+                        {
+                            transaction: t
+                        }
+                    );
+
+                    await invite.destroy({transaction: t});
+
+                    const user = User.build({id: member.userId});
+                    user.dataValues.id = member.userId;
+
+                    await cosActivities.acceptActivity(
+                        invite,
+                        {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        },
+                        {
+                            type: 'User',
+                            id: invite.creatorId
+                        },
+                        group,
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
+                    return member;
+                });
+
+                return res.created(memberUserCreated);
+            }
+        } else {
+            // Already a member, return that membership information
+            if (memberUserExisting) {
+                return res.ok(memberUserExisting);
+            } else { // No invite, not a member - the User is not invited
+                return res.notFound();
+            }
+        }
+    }));
 
     /**
      * Get Group Topics
@@ -1161,7 +1645,7 @@ module.exports = function (app) {
                 count: topics.length,
                 rows: topics
             });
-        } catch(err) {
+        } catch (err) {
             return next(err);
         }
     });
@@ -1170,28 +1654,28 @@ module.exports = function (app) {
      * Group list
      */
     app.get('/api/groups', function (req, res, next) {
-        var limitMax = 100;
-        var limitDefault = 26;
+        const limitMax = 100;
+        const limitDefault = 26;
 
-        var offset = req.query.offset || 0;
-        var limit = req.query.limit || limitDefault;
+        const offset = req.query.offset || 0;
+        let limit = req.query.limit || limitDefault;
         if (limit > limitMax) limit = limitDefault;
 
-        var where = {
+        const where = {
             visibility: Group.VISIBILITY.public,
             name: {
                 [Op.not]: null
             }
         };
 
-        var name = req.query.name;
+        const name = req.query.name;
         if (name) {
             where.name = {
                 [Op.iLike]: name
             };
         }
 
-        var sourcePartnerId = req.query.sourcePartnerId;
+        const sourcePartnerId = req.query.sourcePartnerId;
         if (sourcePartnerId) {
             where.sourcePartnerId = sourcePartnerId;
         }

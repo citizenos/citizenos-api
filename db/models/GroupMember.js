@@ -1,12 +1,14 @@
 'use strict';
 
-var _ = require('lodash');
+const _ = require('lodash');
 
 /**
  * GroupMember
  *
  * @param {object} sequelize Sequelize instance
  * @param {object} DataTypes Sequelize DataTypes
+ *
+ * TODO: refactor to GroupMemberUser for consistency
  *
  * @returns {object} Sequelize model
  *
@@ -15,12 +17,12 @@ var _ = require('lodash');
 module.exports = function (sequelize, DataTypes) {
 
     // All possible permission levels.
-    var LEVELS = {
+    const LEVELS = {
         read: 'read',
         admin: 'admin'
     };
 
-    var GroupMember = sequelize.define(
+    const GroupMember = sequelize.define(
         'GroupMember',
         {
             groupId: {
