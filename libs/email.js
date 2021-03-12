@@ -148,51 +148,50 @@ module.exports = function (app) {
 
         return db
             .query(
-                '\
-                    SELECT \
-                        tm.id, \
-                        tm.name, \
-                        tm.email, \
-                        tm.language \
-                    FROM ( \
-                        SELECT DISTINCT ON(id) \
-                            tm."memberId" as id, \
-                            tm."level", \
-                            u.name, \
-                            u.email, \
-                            u.language \
-                        FROM "Topics" t \
-                        JOIN ( \
-                            SELECT \
-                                tmu."topicId", \
-                                tmu."userId" AS "memberId", \
-                                tmu."level"::text, \
-                                1 as "priority" \
-                            FROM "TopicMemberUsers" tmu \
-                            WHERE tmu."deletedAt" IS NULL \
-                            UNION \
-                            ( \
+                `SELECT
+                        tm.id,
+                        tm.name,
+                        tm.email,
+                        tm.language
+                    FROM (
+                        SELECT DISTINCT ON(id)
+                            tm."memberId" as id,
+                            tm."level",
+                            u.name,
+                            u.email,
+                            u.language
+                        FROM "Topics" t
+                        JOIN (
+                            SELECT
+                                tmu."topicId",
+                                tmu."userId" AS "memberId",
+                                tmu."level"::text,
+                                1 as "priority"
+                            FROM "TopicMemberUsers" tmu
+                            WHERE tmu."deletedAt" IS NULL
+                            UNION
+                            (
                                 SELECT \
-                                    tmg."topicId", \
-                                    gm."userId" AS "memberId", \
-                                    tmg."level"::text, \
-                                    2 as "priority" \
-                                FROM "TopicMemberGroups" tmg \
-                                LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
-                                WHERE tmg."deletedAt" IS NULL \
-                                AND gm."deletedAt" IS NULL \
-                                ORDER BY tmg."level"::"enum_TopicMemberGroups_level" DESC \
+                                    tmg."topicId",
+                                    gm."userId" AS "memberId",
+                                    tmg."level"::text,
+                                    2 as "priority"
+                                FROM "TopicMemberGroups" tmg
+                                LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                                WHERE tmg."deletedAt" IS NULL
+                                AND gm."deletedAt" IS NULL
+                                ORDER BY tmg."level"::"enum_TopicMemberGroups_level" DESC
                             ) \
-                        ) AS tm ON (tm."topicId" = t.id) \
-                        JOIN "Users" u ON (u.id = tm."memberId") \
-                        LEFT JOIN "TopicMemberUsers" tmu ON (tmu."userId" = tm."memberId" AND tmu."topicId" = t.id) \
-                        WHERE t.id = :topicId \
-                        ORDER BY id, tm.priority \
-                    ) tm \
-                    WHERE tm.level::"enum_TopicMemberUsers_level" >= :level \
-                    AND tm.email IS NOT NULL \
-                    ORDER BY name ASC \
-                ',
+                        ) AS tm ON (tm."topicId" = t.id)
+                        JOIN "Users" u ON (u.id = tm."memberId")
+                        LEFT JOIN "TopicMemberUsers" tmu ON (tmu."userId" = tm."memberId" AND tmu."topicId" = t.id)
+                        WHERE t.id = :topicId
+                        ORDER BY id, tm.priority
+                    ) tm
+                    WHERE tm.level::"enum_TopicMemberUsers_level" >= :level
+                    AND tm.email IS NOT NULL
+                    ORDER BY name ASC
+                `,
                 {
                     replacements: {
                         topicId: topicId,
@@ -218,18 +217,17 @@ module.exports = function (app) {
     const _getModerators = function (sourcePartnerId) {
         return db
             .query(
-                ' \
-                    SELECT \
-                        u.id, \
-                        u."email", \
-                        u."name", \
-                        u."language" \
-                    FROM "Moderators" m \
-                        JOIN "Users" u ON (u.id = m."userId") \
-                    WHERE u."email" IS NOT NULL \
-                    AND (m."partnerId" = :partnerId \
-                    OR m."partnerId" IS NULL) \
-                ',
+                `SELECT
+                        u.id,
+                        u."email",
+                        u."name",
+                        u."language"
+                    FROM "Moderators" m
+                        JOIN "Users" u ON (u.id = m."userId")
+                    WHERE u."email" IS NOT NULL
+                    AND (m."partnerId" = :partnerId
+                    OR m."partnerId" IS NULL)
+                `,
                 {
                     replacements: {
                         partnerId: sourcePartnerId
@@ -242,26 +240,57 @@ module.exports = function (app) {
     };
 
     const handleAllPromises = function (emailPromises) {
-        var errors = [];
-        var done = [];
+        let errors = [];
+        let done = [];
         return Promise.allSettled(emailPromises)
-        .each(function (inspection) {
-            if (inspection.isRejected()) {
-                logger.error('FAILED:', inspection.reason());
-                errors.push({
-                    state: "rejected",
-                    value: inspection.reason()
-                });
-            } else {
-                done.push({
-                    state: "success",
-                    value: inspection.value()
-                });
+            .each(function (inspection) {
+                if (inspection.isRejected()) {
+                    logger.error('FAILED:', inspection.reason());
+                    errors.push({
+                        state: "rejected",
+                        value: inspection.reason()
+                    });
+                } else {
+                    done.push({
+                        state: "success",
+                        value: inspection.value()
+                    });
+                }
+            })
+            .then(function () {
+                return {
+                    done,
+                    errors
+                };
+            });
+    };
+
+    /**
+     * Send help request email
+     */
+
+    const _sendHelpRequest = async (debugData) => {
+        const template = resolveTemplate('helpRequest');
+        const emailOptions = Object.assign(
+            _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
+            {
+                subject: 'Help request',
+                to: ['support@citizenos.com'],
+                replyTo: debugData.email,
+                from: "support@citizenos.com",
+                linkedData: {
+                    translations: template.translations,
+                },
+                provider: EMAIL_OPTIONS_DEFAULT.provider,
             }
-        })
-        .then(function () {
-            return {done, errors};
+        );
+
+        Object.keys(debugData).forEach(function (key) {
+            emailOptions[key] = debugData[key];
         });
+
+        // https://github.com/bevacqua/campaign#email-sending-option
+        return emailClient.sendStringAsync(template.body, emailOptions);
     }
 
     /**
@@ -278,7 +307,7 @@ module.exports = function (app) {
     const _sendAccountVerification = function (to, emailVerificationCode, token) {
         return User
             .findAll({
-                where: db.where(db.fn('lower', db.col('email')), db.fn('lower',to))
+                where: db.where(db.fn('lower', db.col('email')), db.fn('lower', to))
             })
             .then(function (users) {
                 const promisesToResolve = [];
@@ -322,7 +351,7 @@ module.exports = function (app) {
     const _sendPasswordReset = function (to, passwordResetCode) {
         return User
             .findAll({
-                where: db.where(db.fn('lower', db.col('email')), db.fn('lower',to))
+                where: db.where(db.fn('lower', db.col('email')), db.fn('lower', to))
             })
             .then(function (users) {
                 const promisesToResolve = [];
@@ -735,6 +764,113 @@ module.exports = function (app) {
                 }
             });
 
+    };
+
+
+    /**
+     * Send Group invite e-mail
+     *
+     * @param {Array<GroupInviteUser>} invites GroupInviteUser instances
+     *
+     * @returns {Promise} Promise
+     *
+     * @private
+     */
+    const _sendGroupMemberUserInviteCreate = async function (invites) {
+        if (!invites || !Array.isArray(invites)) {
+            return Promise.reject(new Error('Missing one or more required parameters'));
+        }
+
+        if (!invites.length) {
+            logger.warn('Got empty invites list, no emails will be sent.');
+
+            return Promise.resolve();
+        }
+
+        // We assume that all TopicInviteUser instances are created at once, thus having the same topicId and creatorId
+        const fromUserPromise = User.findOne({ // From User
+            where: {
+                id: invites[0].creatorId
+            },
+            attributes: ['id', 'name']
+        });
+
+        const groupPromise = Group.findOne({
+            where: {
+                id: invites[0].groupId
+            },
+            attributes: ['id', 'name', 'visibility']
+        });
+
+        const toUsersPromise = User.findAll({
+            where: {
+                id: invites.map(invite => invite.userId)
+            },
+            attributes: ['id', 'email', 'language', 'name'],
+            raw: true
+        });
+
+        const [fromUser, group, toUsers] = await Promise.all([fromUserPromise, groupPromise, toUsersPromise]);
+
+        let logoFile = emailHeaderLogo;
+        let templateName = 'inviteGroup';
+        let linkToApplication = urlLib.getFe();
+        let message = invites[0].inviteMessage;
+        let customStyles = EMAIL_OPTIONS_DEFAULT.styles;
+
+        const emailsSendPromises = toUsers.map(function (toUser) {
+            if (!toUser.email) {
+                logger.info('Skipping invite e-mail to user as there is no email on the profile', toUser.email);
+                return Promise.resolve();
+            }
+
+            const template = resolveTemplate(templateName, toUser.language);
+
+            // TODO: could use Mu here...
+            const subject = template.translations.INVITE_GROUP.SUBJECT
+                .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
+                .replace('{{group.name}}', util.escapeHtml(group.name));
+            const invite = _.find(invites, {userId: toUser.id});
+            const linkViewInvite = urlLib.getFe('/groups/:groupId/invites/users/:inviteId', {
+                inviteId: invite.id,
+                groupId: group.id
+            });
+
+            // In case Topic has no title, just show the full url.
+            group.name = group.name ? group.name : linkViewInvite;
+
+            let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
+            linkedData.translations = template.translations;
+            const emailOptions = {
+                // from: from, - comes from emailClient.js configuration
+                subject: subject,
+                to: toUser.email,
+                images: [
+                    {
+                        name: emailHeaderLogoName,
+                        file: logoFile
+                    },
+                    {
+                        name: emailFooterLogoName,
+                        file: emailFooterLogo
+                    }
+                ],
+                toUser: toUser,
+                message,
+                fromUser: fromUser,
+                group: group,
+                linkViewGroup: linkViewInvite,
+                linkToApplication: linkToApplication,
+                provider: EMAIL_OPTIONS_DEFAULT.provider,
+                styles: customStyles,
+                linkToPlatformText: template.translations.LAYOUT.LINK_TO_PLATFORM,
+                linkedData
+            };
+
+            return emailClient.sendStringAsync(template.body, emailOptions);
+        });
+
+        return handleAllPromises(emailsSendPromises);
     };
 
     /**
@@ -1532,12 +1668,14 @@ module.exports = function (app) {
         sendTopicMemberUserCreate: _sendTopicMemberUserCreate,
         sendTopicMemberUserInviteCreate: _sendTopicMemberUserInviteCreate,
         sendTopicMemberGroupCreate: _sendTopicMemberGroupCreate,
+        sendGroupMemberUserInviteCreate: _sendGroupMemberUserInviteCreate,
         sendTopicReport: _sendTopicReport,
         sendTopicReportModerate: _sendTopicReportModerate,
         sendTopicReportReview: _sendTopicReportReview,
         sendTopicReportResolve: _sendTopicReportResolve,
         sendGroupMemberUserCreate: _sendGroupMemberUserCreate,
         sendCommentReport: _sendCommentReport,
-        sendToParliament: _sendToParliament
+        sendToParliament: _sendToParliament,
+        sendHelpRequest: _sendHelpRequest
     };
 };
