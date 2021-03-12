@@ -11866,150 +11866,138 @@ suite('Topics', function () {
         suite('Votes', function () {
 
             suite('Create', function () {
-                var creatorAgent = request.agent(app);
+                const creatorAgent = request.agent(app);
+                const userAgent = request.agent(app);
+                const user2Agent = request.agent(app);
 
-                var creator;
-                var topic;
-                var comment;
+                let creator;
+                let user;
+                let user2;
+                let topic;
+                let comment;
 
-                suiteSetup(function (done) {
-                    userLib.createUserAndLogin(creatorAgent, null, null, null, function (err, res) {
-                        if (err) return done(err);
-                        creator = res;
-                        done();
-                    });
+                suiteSetup(async function () {
+                    creator = await userLib.createUserAndLoginPromised(creatorAgent, null, null, null);
+                    user = await userLib.createUserAndLoginPromised(userAgent, null, null, null);
+                    user2 = await userLib.createUserAndLoginPromised(user2Agent, null, null, null);
                 });
 
-                setup(function (done) {
-                    topicCreate(creatorAgent, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business], null, null, null, function (err, res) {
-                        if (err) return done(err);
-                        topic = res.body.data;
-
-                        topicCommentCreate(creatorAgent, creator.id, topic.id, null, null, Comment.TYPES.pro, 'Subj', 'Text', function (err, res) {
-                            if (err) return done(err);
-                            comment = res.body.data;
-                            done();
-                        });
-                    });
+                setup(async function () {
+                    topic = (await topicCreatePromised(creatorAgent, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business], null, null, null)).body.data;
+                    comment = (await topicCommentCreatePromised(creatorAgent, creator.id, topic.id, null, null, Comment.TYPES.pro, 'Subj', 'Text')).body.data;
                 });
 
-                test('Success - 20100 - Upvote', function (done) {
-                    topicCommentVotesCreate(creatorAgent, topic.id, comment.id, 1, function (err, res) {
-                        if (err) return done(err);
-
-                        var expected = {
-                            status: {
-                                code: 20000
+                test('Success - 20100 - Upvote', async function () {
+                    const resBody = (await topicCommentVotesCreatePromised(creatorAgent, topic.id, comment.id, 1)).body;
+                    const expected = {
+                        status: {
+                            code: 20000
+                        },
+                        data: {
+                            up: {
+                                count: 1,
+                                selected: true
                             },
-                            data: {
-                                up: {
-                                    count: 1,
-                                    selected: true
-                                },
-                                down: {
-                                    count: 0,
-                                    selected: false
-                                }
+                            down: {
+                                count: 0,
+                                selected: false
                             }
-                        };
-                        assert.deepEqual(res.body, expected);
-
-                        done();
-                    });
+                        }
+                    };
+                    assert.deepEqual(resBody, expected);
                 });
 
 
-                test('Success - 20100 - Downvote', function (done) {
-                    topicCommentVotesCreate(creatorAgent, topic.id, comment.id, -1, function (err, res) {
-                        if (err) return done(err);
-
-                        var expected = {
-                            status: {
-                                code: 20000
+                test('Success - 20100 - Downvote', async function () {
+                    const resBody = (await topicCommentVotesCreatePromised(creatorAgent, topic.id, comment.id, -1)).body;
+                    const expected = {
+                        status: {
+                            code: 20000
+                        },
+                        data: {
+                            up: {
+                                count: 0,
+                                selected: false
                             },
-                            data: {
-                                up: {
-                                    count: 0,
-                                    selected: false
-                                },
-                                down: {
-                                    count: 1,
-                                    selected: true
-                                }
+                            down: {
+                                count: 1,
+                                selected: true
                             }
-                        };
-                        assert.deepEqual(res.body, expected);
-
-                        done();
-                    });
+                        }
+                    };
+                    assert.deepEqual(resBody, expected);
                 });
 
-                test('Success - 20100 - clear vote', function (done) {
-                    topicCommentVotesCreate(creatorAgent, topic.id, comment.id, 0, function (err, res) {
-                        if (err) return done(err);
-
-                        var expected = {
-                            status: {
-                                code: 20000
+                test('Success - 20100 - clear vote', async function () {
+                    const resBody = (await topicCommentVotesCreatePromised(creatorAgent, topic.id, comment.id, 0)).body;
+                    const expected = {
+                        status: {
+                            code: 20000
+                        },
+                        data: {
+                            up: {
+                                count: 0,
+                                selected: false
                             },
-                            data: {
-                                up: {
-                                    count: 0,
-                                    selected: false
-                                },
-                                down: {
-                                    count: 0,
-                                    selected: false
-                                }
+                            down: {
+                                count: 0,
+                                selected: false
                             }
-                        };
-                        assert.deepEqual(res.body, expected);
-
-                        done();
-                    });
+                        }
+                    };
+                    assert.deepEqual(resBody, expected);
                 });
 
-                test('Success - 20100 - change vote from upvote to downvote', function (done) {
-                    topicCommentVotesCreate(creatorAgent, topic.id, comment.id, 1, function (err) {
-                        if (err) return done(err);
-
-                        topicCommentVotesCreate(creatorAgent, topic.id, comment.id, -1, function (err, res) {
-                            if (err) return done(err);
-
-                            var expected = {
-                                status: {
-                                    code: 20000
-                                },
-                                data: {
-                                    up: {
-                                        count: 0,
-                                        selected: false
-                                    },
-                                    down: {
-                                        count: 1,
-                                        selected: true
-                                    }
-                                }
-                            };
-                            assert.deepEqual(res.body, expected);
-
-                            done();
-                        });
-                    });
+                test('Success - 20100 - change vote from upvote to downvote', async function () {
+                    await topicCommentVotesCreatePromised(creatorAgent, topic.id, comment.id, 1);
+                    const resBody = (await topicCommentVotesCreatePromised(creatorAgent, topic.id, comment.id, -1)).body;
+                    const expected = {
+                        status: {
+                            code: 20000
+                        },
+                        data: {
+                            up: {
+                                count: 0,
+                                selected: false
+                            },
+                            down: {
+                                count: 1,
+                                selected: true
+                            }
+                        }
+                    };
+                    assert.deepEqual(resBody, expected);
                 });
 
-                test('Fail - 40000 - invalid vote value', function (done) {
-                    _topicCommentVotesCreate(creatorAgent, topic.id, comment.id, 666, 400, function (err, res) {
-                        if (err) return done(err);
+                test('Success - Multiple users voting', async function () {
+                    await topicCommentVotesCreatePromised(creatorAgent, topic.id, comment.id, 1);
+                    await topicCommentVotesCreatePromised(userAgent, topic.id, comment.id, 1);
+                    const resBody = (await topicCommentVotesCreatePromised(user2Agent, topic.id, comment.id, -1)).body;
+                    const expected = {
+                        status: {
+                            code: 20000
+                        },
+                        data: {
+                            up: {
+                                count: 2,
+                                selected: false
+                            },
+                            down: {
+                                count: 1,
+                                selected: true
+                            }
+                        }
+                    };
+                    assert.deepEqual(resBody, expected);
+                });
 
-                        var expectedBody = {
-                            status: {code: 40000},
-                            errors: {value: 'Vote value must be 1 (up-vote), -1 (down-vote) OR 0 to clear vote.'}
-                        };
-                        assert.deepEqual(res.body, expectedBody);
-
-                        done();
-                    });
+                test('Fail - 40000 - invalid vote value', async function () {
+                    const resBody = (await _topicCommentVotesCreatePromised(creatorAgent, topic.id, comment.id, 666, 400)).body;
+                    const expectedBody = {
+                        status: {code: 40000},
+                        errors: {value: 'Vote value must be 1 (up-vote), -1 (down-vote) OR 0 to clear vote.'}
+                    };
+                    assert.deepEqual(resBody, expectedBody);
                 });
             });
 
