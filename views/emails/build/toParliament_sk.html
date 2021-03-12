@@ -1,0 +1,79 @@
+<table border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+
+    <tr>
+        <td align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
+            <p style="font-family: georgia, serif;font-size:19px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Riigikogu Kantseleile</p>
+
+        </td>
+    </tr>
+
+    <tr>
+        <td align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0; border-top: 1px solid #fbfbfb; " height="130">
+            <p style="font-family: arial, helvetica, sans-serif;font-size:14px;background-color: #FFFFFF; color:#252525;">
+                Rahvaalgatus.ee edastab kollektiivse pöördumise <a href="{{linkViewTopic}}">"{{topic.title}}"</a>.
+            </p>
+
+            <p style="font-family: arial, helvetica, sans-serif;font-size:14px;background-color: #FFFFFF; color:#252525;">
+                Saatja viit:
+            </p>
+
+            <p style="font-family: arial, helvetica, sans-serif;font-size:14px;background-color: #FFFFFF; color:#252525; font-weight: bold;">
+                {{topic.id}}
+            </p>
+
+            <p style="font-family: arial, helvetica, sans-serif;font-size:14px;background-color: #FFFFFF; color:#252525;">
+                Algatuse kontaktisiku andmed:
+            </p>
+
+            <p style="font-family: arial, helvetica, sans-serif;font-size:14px;background-color: #FFFFFF; color:#252525; font-weight: bold;">
+                {{contact.name}}<br/>{{contact.email}}<br/>{{contact.phone}}
+            </p>
+
+            {{#linkDownloadBdocFinal}}
+            <p style="font-family: arial, helvetica, sans-serif;font-size:14px;background-color: #FFFFFF; color:#252525;">
+                Konteinerit on võimalik alla laadida kuni {{linkDownloadBdocFinalExpiryDate}}
+            </p>
+
+            <p>
+                <a href="{{linkDownloadBdocFinal}}" style="font-family: arial, helvetica, sans-serif;font-size:14px; line-height:40px; width:60%; display:inline-block; background-color: #004892; color: #fff;"><span style="color: #fff; font-weight: bold;">Laadi konteiner alla</span></a>
+            </p>
+
+            <p style="font-family: arial, helvetica, sans-serif;font-size:14px;background-color: #FFFFFF; color:#252525; text-align: left;">
+                Konteiner "final.bdoc" on BDOC-konteiner ilma ühegi allkirjata, kõik allkirjad on eraldi failidena selle sees. BDOC kasutab ZIP algoritmi.
+            </p>
+
+            <p style="font-family: arial, helvetica, sans-serif;font-size:14px;background-color: #FFFFFF;color:#252525; text-align: left;">
+                Konteineri sisu:
+            </p>
+            <ul style="font-family: arial, helvetica, sans-serif;font-size:14px;background-color: #FFFFFF; color:#252525; text-align: left;">
+                <li>&lt;isikukood&gt;.bdoc - kodaniku allkirjaga dokument.</li>
+                <li>document.docx - kõigi poolt allkirjastatud dokument ehk algatuse sisu.</li>
+                <li>votes.csv - CSV fail kõigi häältega.</li><li>Yes.html, No.html - hääletuse valikuvariandi. "No" tähistab hääle tühistamist.</li>
+                <li>mimetype, META-INF - BDOC formaadi poolt nõutud failid.</li>
+            </ul>
+            {{/linkDownloadBdocFinal}}
+
+            {{#linkAddEvent}}
+            <p>
+                <a href="{{linkAddEvent}}" style="font-family: arial, helvetica, sans-serif;font-size:14px; line-height:40px; width:60%; display:inline-block; background-color: #004892; color: #fff;"><span style="color: #fff; font-weight: bold;">Sisesta otsus või täiendus</span></a>
+            </p>
+            {{/linkAddEvent}}
+        </td>
+    </tr>
+
+    <tr>
+        <td align="left" valign="bottom" style="background-color: #FFFFFF;border-top: 1px solid #fbfbfb;" height="120">
+            <p style="font-family: arial, helvetica, sans-serif;font-size:14px;background-color: #FFFFFF; color:#252525;">
+                Heade soovidega
+            </p>
+            <p style="font-family: arial, helvetica, sans-serif;font-size:14px;background-color: #FFFFFF; color:#252525;">
+                Rahvaalgatus.ee meeskond<br/><br/>
+                info@rahvaalgatus.ee<br/>
+                6938330
+            </p>
+        </td>
+    </tr>
+
+    </tbody>
+</table>
