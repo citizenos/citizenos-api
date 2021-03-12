@@ -277,7 +277,7 @@ module.exports = function (app) {
                 subject: 'Help request',
                 to: ['support@citizenos.com'],
                 replyTo: debugData.email,
-                from: "support@citizenos.com",
+                from: "no-reply@citizenos.com",
                 linkedData: {
                     translations: template.translations,
                 },
