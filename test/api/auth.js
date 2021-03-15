@@ -1073,7 +1073,7 @@ suite('Auth', function () {
                     const agent2 = request.agent(app);
 
                     test('Success - 20002 - existing User', async function () {
-                        this.timeout(15000); //eslint-disable-line no-invalid-this
+                        this.timeout(30000); //eslint-disable-line no-invalid-this
                         pid = '10101010005';
                         const user = await userLib.createUserPromised(agent2, null, null, null);
 

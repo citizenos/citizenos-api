@@ -8005,6 +8005,7 @@ suite('Users', function () {
                             assert.deepEqual(topicVotedOn.vote, voteReadAfterVote2);
                         });
 
+                        // FIXME: Known to fail, needs some attention. More details from @ilmartyrk
                         test('Success - Personal ID already connected to another user account - vote multiple-choice, re-vote delete account and count', async function () {
                             this.timeout(40000);
 
@@ -8803,7 +8804,7 @@ suite('Users', function () {
                         });
 
                         test('Success - bdocUri exists', async function () {
-                            this.timeout(24000); //eslint-disable-line no-invalid-this
+                            this.timeout(30000); //eslint-disable-line no-invalid-this
 
                             const countryCode = 'EE';
                             const pid = '10101010005';
@@ -8933,6 +8934,7 @@ suite('Users', function () {
                             }, retryInterval);
                         });
 
+                        // FIXME: Known to fail, needs some attention. More details from @ilmartyrk
                         test('Fail - 40010 - User has cancelled the signing process Latvian PID', async function () {
                             this.timeout(55000); //eslint-disable-line no-invalid-this
 
