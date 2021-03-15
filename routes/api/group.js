@@ -939,7 +939,7 @@ module.exports = function (app) {
         if (!Array.isArray(members)) {
             members = [members];
         }
-        const inviteMessage = members[0].inviteMessage;
+        const inviteMessage = members[0].inviteMessage; // IF future holds personalized invite messages, every invite has its own message. Also, easiest solution without rewriting a lot of code.
         const validEmailMembers = [];
         let validUserIdMembers = [];
 
@@ -1120,7 +1120,7 @@ module.exports = function (app) {
             return !!invite;
         });
 
-        for (let invite of createdInvites) {
+        for (let invite of createdInvites) { // IF future holds personalized invite messages, every invite has its own message and this code can be removed.
             invite.inviteMessage = inviteMessage;
         }
 

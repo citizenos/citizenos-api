@@ -793,7 +793,7 @@ suite('Users', function () {
                         assert.isNotNull(createdInvite.updatedAt);
                     });
 
-                    test('Success - 20100 - invite multiple Users - userId (uuidv4)', async function () {
+                    test('Success - 20100 - invite multiple Users - userId (uuidv4) WITHOUT invite message', async function () {
                         const userToInvite = await userLib.createUserPromised(request.agent(app), null, null, null);
                         const userToInvite2 = await userLib.createUserPromised(request.agent(app), null, null, null);
 
@@ -801,6 +801,63 @@ suite('Users', function () {
                             {
                                 userId: userToInvite.id,
                                 level: GroupMember.LEVELS.read
+                            },
+                            {
+                                userId: userToInvite2.id,
+                                level: GroupMember.LEVELS.admin
+                            }
+                        ];
+
+                        const inviteCreateResult = (await groupInviteUsersCreatePromised(agentCreator, userCreator, group.id, invitation)).body;
+
+                        assert.deepEqual(
+                            inviteCreateResult.status,
+                            {
+                                code: 20100
+                            }
+                        );
+
+                        assert.equal(inviteCreateResult.data.count, 2);
+
+                        const createdInvites = inviteCreateResult.data.rows;
+                        assert.isArray(createdInvites);
+                        assert.equal(createdInvites.length, 2);
+
+                        const createdInviteUser1 = createdInvites.find(function (invite) { // find by level, not by id to keep the code simpler
+                            return invite.level === invitation[0].level;
+                        });
+                        assert.uuid(createdInviteUser1.id, 'v4');
+                        assert.equal(createdInviteUser1.groupId, group.id);
+                        assert.equal(createdInviteUser1.creatorId, userCreator.id);
+                        assert.equal(createdInviteUser1.userId, invitation[0].userId);
+                        assert.equal(createdInviteUser1.level, invitation[0].level);
+                        assert.isNotNull(createdInviteUser1.createdAt);
+                        assert.isNotNull(createdInviteUser1.updatedAt);
+
+                        const createdInviteUser2 = createdInvites.find(function (invite) { // find by level, not by id to keep the code simpler
+                            return invite.level === invitation[1].level;
+                        });
+
+                        assert.uuid(createdInviteUser2.id, 'v4');
+                        assert.equal(createdInviteUser2.groupId, group.id);
+                        assert.equal(createdInviteUser2.creatorId, userCreator.id);
+                        assert.equal(createdInviteUser2.userId, invitation[1].userId);
+                        assert.equal(createdInviteUser2.level, invitation[1].level);
+                        assert.isNotNull(createdInviteUser2.createdAt);
+                        assert.isNotNull(createdInviteUser2.updatedAt);
+                    });
+
+                    test('Success - 20100 - invite multiple Users - userId (uuidv4) WITH invite message', async function () {
+                        // NOTE: This test DOES NOT test e-mail itself, it just verifies that there is no syntax error in the e-mail sending code.
+
+                        const userToInvite = await userLib.createUserPromised(request.agent(app), null, null, null);
+                        const userToInvite2 = await userLib.createUserPromised(request.agent(app), null, null, null);
+
+                        const invitation = [
+                            {
+                                userId: userToInvite.id,
+                                level: GroupMember.LEVELS.read,
+                                inviteMessage: 'TEST invite message in the e-mail.'
                             },
                             {
                                 userId: userToInvite2.id,
