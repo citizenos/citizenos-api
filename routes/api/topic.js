@@ -1800,7 +1800,7 @@ module.exports = function (app) {
     /**
      * Get all Topics User belongs to
      */
-    app.get('/api/users/:userId/topics', loginCheck(['partner']), function (req, res, next) {
+    app.get('/api/users/:userId/topics', loginCheck(['partner']), async function (req, res, next) {
         const userId = req.user.id;
         const partnerId = req.user.partnerId;
         let include = req.query.include;
@@ -1815,7 +1815,7 @@ module.exports = function (app) {
             statuses = [statuses];
         }
 
-        let voteResultsPromise = false;
+        let voteResults = false;
         let join = '';
         let returncolumns = '';
 
@@ -1824,83 +1824,83 @@ module.exports = function (app) {
         }
 
         if (include.indexOf('vote') > -1) {
-            returncolumns += ' \
-            , ( \
-                SELECT to_json( \
-                    array ( \
-                        SELECT concat(id, \':\', value) \
-                        FROM   "VoteOptions" \
-                        WHERE  "deletedAt" IS NULL \
-                        AND    "voteId" = tv."voteId" \
-                    ) \
-                ) \
-            ) as "vote.options" \
-            , tv."voteId" as "vote.id" \
-            , tv."authType" as "vote.authType" \
-            , tv."createdAt" as "vote.createdAt" \
-            , tv."delegationIsAllowed" as "vote.delegationIsAllowed" \
-            , tv."description" as "vote.description" \
-            , tv."endsAt" as "vote.endsAt" \
-            , tv."maxChoices" as "vote.maxChoices" \
-            , tv."minChoices" as "vote.minChoices" \
-            , tv."type" as "vote.type" \
-            ';
-            voteResultsPromise = getAllVotesResults(userId);
+            returncolumns += `
+            , (
+                SELECT to_json(
+                    array (
+                        SELECT concat(id, ':', value)
+                        FROM   "VoteOptions"
+                        WHERE  "deletedAt" IS NULL
+                        AND    "voteId" = tv."voteId"
+                    )
+                )
+            ) as "vote.options"
+            , tv."voteId" as "vote.id"
+            , tv."authType" as "vote.authType"
+            , tv."createdAt" as "vote.createdAt"
+            , tv."delegationIsAllowed" as "vote.delegationIsAllowed"
+            , tv."description" as "vote.description"
+            , tv."endsAt" as "vote.endsAt"
+            , tv."maxChoices" as "vote.maxChoices"
+            , tv."minChoices" as "vote.minChoices"
+            , tv."type" as "vote.type"
+            `;
+            voteResults = await getAllVotesResults(userId);
         }
 
         if (include.indexOf('event') > -1) {
-            join += 'LEFT JOIN ( \
-                        SELECT \
-                            COUNT(events.id) as count, \
-                            events."topicId" \
-                        FROM "TopicEvents" events \
-                        WHERE events."deletedAt" IS NULL \
-                        GROUP BY events."topicId" \
-                    ) AS te ON te."topicId" = t.id \
-            ';
-            returncolumns += '\
-            , COALESCE(te.count, 0) AS "events.count" \
-            ';
+            join += ` LEFT JOIN (
+                        SELECT
+                            COUNT(events.id) as count,
+                            events."topicId"
+                        FROM "TopicEvents" events
+                        WHERE events."deletedAt" IS NULL
+                        GROUP BY events."topicId"
+                    ) AS te ON te."topicId" = t.id
+            `;
+            returncolumns += `
+            , COALESCE(te.count, 0) AS "events.count"
+            `;
         }
 
-        let where = ' t."deletedAt" IS NULL \
-                    AND t.title IS NOT NULL \
-                    AND COALESCE(tmup.level, tmgp.level, \'none\')::"enum_TopicMemberUsers_level" > \'none\' ';
+        let where = ` t."deletedAt" IS NULL
+                    AND t.title IS NOT NULL
+                    AND COALESCE(tmup.level, tmgp.level, 'none')::"enum_TopicMemberUsers_level" > 'none' `;
 
         // All partners should see only Topics created by their site, but our own app sees all.
         if (partnerId) {
-            where += ' AND t."sourcePartnerId" = :partnerId ';
+            where += ` AND t."sourcePartnerId" = :partnerId `;
         }
 
         if (visibility) {
-            where += ' AND t.visibility=:visibility ';
+            where += ` AND t.visibility=:visibility `;
         }
 
         if (statuses && statuses.length) {
-            where += ' AND t.status IN (:statuses)';
+            where += ` AND t.status IN (:statuses) `;
         }
 
         if (pinned) {
-            where += 'AND tp."topicId" = t.id AND tp."userId" = :userId';
+            where += ` AND tp."topicId" = t.id AND tp."userId" = :userId`;
         }
 
         if (['true', '1'].includes(hasVoted)) {
-            where += 'AND EXISTS (SELECT TRUE FROM "VoteLists" vl WHERE vl."voteId" = tv."voteId" AND vl."userId" = :userId LIMIT 1)';
+            where += ` AND EXISTS (SELECT TRUE FROM "VoteLists" vl WHERE vl."voteId" = tv."voteId" AND vl."userId" = :userId LIMIT 1)`;
         } else if (['false', '0'].includes(hasVoted)) {
-            where += 'AND tv."voteId" IS NOT NULL AND t.status = \'voting\'::"enum_Topics_status" AND NOT EXISTS (SELECT TRUE FROM "VoteLists" vl WHERE vl."voteId" = tv."voteId" AND vl."userId" = :userId LIMIT 1)';
+            where += ` AND tv."voteId" IS NOT NULL AND t.status = 'voting'::"enum_Topics_status" AND NOT EXISTS (SELECT TRUE FROM "VoteLists" vl WHERE vl."voteId" = tv."voteId" AND vl."userId" = :userId LIMIT 1)`;
         } else {
             logger.warn(`Ignored parameter "voted" as invalid value "${hasVoted}" was provided`);
         }
 
         if (!showModerated || showModerated == "false") {
-            where += 'AND (tr."moderatedAt" IS NULL OR tr."resolvedAt" IS NOT NULL) ';
+            where += ` AND (tr."moderatedAt" IS NULL OR tr."resolvedAt" IS NOT NULL) `;
         } else {
-            where += 'AND (tr."moderatedAt" IS NOT NULL AND tr."resolvedAt" IS NULL) ';
+            where += ` AND (tr."moderatedAt" IS NOT NULL AND tr."resolvedAt" IS NULL) `;
         }
 
         if (creatorId) {
             if (creatorId === userId) {
-                where += ' AND c.id =:creatorId ';
+                where += ` AND c.id =:creatorId `;
             } else {
                 return res.badRequest('No rights!');
             }
@@ -1908,215 +1908,213 @@ module.exports = function (app) {
 
         // TODO: NOT THE MOST EFFICIENT QUERY IN THE WORLD, tune it when time.
         // TODO: That casting to "enum_TopicMemberUsers_level". Sequelize does not support naming enums, through inheritance I have 2 enums that are the same but with different name thus different type in PG. Feature request - https://github.com/sequelize/sequelize/issues/2577
-        const query = '\
-                SELECT \
-                     t.id, \
-                     t.title, \
-                     t.description, \
-                     t.status, \
-                     t.visibility, \
-                     t.hashtag, \
-                     CASE \
-                        WHEN COALESCE(tmup.level, tmgp.level, \'none\') = \'admin\' THEN t."tokenJoin" \
-                        ELSE NULL \
-                     END as "tokenJoin", \
-                     CASE \
-                        WHEN tp."topicId" = t.id THEN true \
-                        ELSE false \
-                     END as "pinned", \
-                     t.categories, \
-                     t."sourcePartnerId", \
-                     t."sourcePartnerObjectId", \
-                     t."endsAt", \
-                     t."createdAt", \
-                     c.id as "creator.id", \
-                     c.name as "creator.name", \
-                     c.company as "creator.company", \
-                     COALESCE(tmup.level, tmgp.level, \'none\') as "permission.level", \
-                     muc.count as "members.users.count", \
-                     COALESCE(mgc.count, 0) as "members.groups.count", \
-                     tv."voteId" as "voteId", \
-                     tv."voteId" as "vote.id", \
-                     CASE WHEN t.status = \'voting\' THEN 1 \
-                        WHEN t.status = \'inProgress\' THEN 2 \
-                        WHEN t.status = \'followUp\' THEN 3 \
-                     ELSE 4 \
-                     END AS "order", \
-                     COALESCE(tc.count, 0) AS "comments.count", \
-                     com."createdAt" AS "comments.lastCreatedAt" \
-                     ' + returncolumns + ' \
-                FROM "Topics" t \
-                    LEFT JOIN ( \
-                        SELECT \
-                            tmu."topicId", \
-                            tmu."userId", \
-                            tmu.level::text AS level \
-                        FROM "TopicMemberUsers" tmu \
-                        WHERE tmu."deletedAt" IS NULL \
-                    ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId) \
-                    LEFT JOIN "TopicReports" tr ON  tr."topicId" = t.id \
-                    LEFT JOIN ( \
-                        SELECT \
-                            tmg."topicId", \
-                            gm."userId", \
-                            MAX(tmg.level)::text AS level \
-                        FROM "TopicMemberGroups" tmg \
-                            LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
-                        WHERE tmg."deletedAt" IS NULL \
-                        AND gm."deletedAt" IS NULL \
-                        GROUP BY "topicId", "userId" \
-                    ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId) \
-                    LEFT JOIN "Users" c ON (c.id = t."creatorId") \
-                    LEFT JOIN ( \
-                        SELECT tmu."topicId", COUNT(tmu."memberId") AS "count" FROM ( \
-                            SELECT \
-                                tmuu."topicId", \
-                                tmuu."userId" AS "memberId" \
-                            FROM "TopicMemberUsers" tmuu \
-                            WHERE tmuu."deletedAt" IS NULL \
-                            UNION \
-                            SELECT \
-                                tmg."topicId", \
-                                gm."userId" AS "memberId" \
-                            FROM "TopicMemberGroups" tmg \
-                                JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
-                                JOIN "Groups" g ON g.id = tmg."groupId" \
-                            WHERE tmg."deletedAt" IS NULL \
-                            AND g."deletedAt" IS NULL \
-                            AND gm."deletedAt" IS NULL \
-                        ) AS tmu GROUP BY "topicId" \
-                    ) AS muc ON (muc."topicId" = t.id) \
-                    LEFT JOIN ( \
-                        SELECT \
-                            tmg."topicId", \
-                            count(tmg."groupId") AS "count" \
-                        FROM "TopicMemberGroups" tmg \
-                        JOIN "Groups" g ON (g.id = tmg."groupId") \
-                        WHERE tmg."deletedAt" IS NULL \
-                        AND g."deletedAt" IS NULL \
-                        GROUP BY tmg."topicId" \
-                    ) AS mgc ON (mgc."topicId" = t.id) \
-                    LEFT JOIN ( \
-                        SELECT \
-                            tv."topicId", \
-                            tv."voteId", \
-                            v."authType", \
-                            v."createdAt", \
-                            v."delegationIsAllowed", \
-                            v."description", \
-                            v."endsAt", \
-                            v."maxChoices", \
-                            v."minChoices", \
-                            v."type" \
-                        FROM "TopicVotes" tv INNER JOIN \
-                            (   \
-                                SELECT \
-                                    MAX("createdAt") as "createdAt", \
-                                    "topicId" \
-                                FROM "TopicVotes" \
-                                GROUP BY "topicId" \
-                            ) AS _tv ON (_tv."topicId" = tv."topicId" AND _tv."createdAt" = tv."createdAt") \
-                        LEFT JOIN "Votes" v \
-                                ON v.id = tv."voteId" \
-                    ) AS tv ON (tv."topicId" = t.id) \
-                    LEFT JOIN ( \
-                        SELECT \
-                            "topicId", \
-                            COUNT(*) AS count \
-                        FROM "TopicComments" \
-                        GROUP BY "topicId" \
-                    ) AS tc ON (tc."topicId" = t.id) \
-                    LEFT JOIN ( \
-                        SELECT \
-                            tcc."topicId", \
-                            MAX(tcc."createdAt") as "createdAt" \
-                            FROM \
-                                (SELECT \
-                                    tc."topicId", \
-                                    c."createdAt" \
-                                FROM "TopicComments" tc \
-                                JOIN "Comments" c ON c.id = tc."commentId" \
-                                GROUP BY tc."topicId", c."createdAt" \
-                                ORDER BY c."createdAt" DESC \
-                                ) AS tcc \
-                            GROUP BY tcc."topicId" \
-                    ) AS com ON (com."topicId" = t.id) \
-                    LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId \
-                    ' + join + ' \
-                WHERE ' + where + ' \
-                ORDER BY "pinned" DESC, "order" ASC, t."updatedAt" DESC \
-            ;';
+        const query = `
+                SELECT
+                     t.id,
+                     t.title,
+                     t.description,
+                     t.status,
+                     t.visibility,
+                     t.hashtag,
+                     CASE
+                        WHEN COALESCE(tmup.level, tmgp.level, 'none') = 'admin' THEN t."tokenJoin"
+                        ELSE NULL
+                     END as "tokenJoin",
+                     CASE
+                        WHEN tp."topicId" = t.id THEN true
+                        ELSE false
+                     END as "pinned",
+                     t.categories,
+                     t."sourcePartnerId",
+                     t."sourcePartnerObjectId",
+                     t."endsAt",
+                     t."createdAt",
+                     c.id as "creator.id",
+                     c.name as "creator.name",
+                     c.company as "creator.company",
+                     COALESCE(tmup.level, tmgp.level, 'none') as "permission.level",
+                     muc.count as "members.users.count",
+                     COALESCE(mgc.count, 0) as "members.groups.count",
+                     tv."voteId" as "voteId",
+                     tv."voteId" as "vote.id",
+                     CASE WHEN t.status = 'voting' THEN 1
+                        WHEN t.status = 'inProgress' THEN 2
+                        WHEN t.status = 'followUp' THEN 3
+                     ELSE 4
+                     END AS "order",
+                     COALESCE(tc.count, 0) AS "comments.count",
+                     com."createdAt" AS "comments.lastCreatedAt"
+                     ${returncolumns}
+                FROM "Topics" t
+                    LEFT JOIN (
+                        SELECT
+                            tmu."topicId",
+                            tmu."userId",
+                            tmu.level::text AS level
+                        FROM "TopicMemberUsers" tmu
+                        WHERE tmu."deletedAt" IS NULL
+                    ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId)
+                    LEFT JOIN "TopicReports" tr ON  tr."topicId" = t.id
+                    LEFT JOIN (
+                        SELECT
+                            tmg."topicId",
+                            gm."userId",
+                            MAX(tmg.level)::text AS level
+                        FROM "TopicMemberGroups" tmg
+                            LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                        WHERE tmg."deletedAt" IS NULL
+                        AND gm."deletedAt" IS NULL
+                        GROUP BY "topicId", "userId"
+                    ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
+                    LEFT JOIN "Users" c ON (c.id = t."creatorId")
+                    LEFT JOIN (
+                        SELECT tmu."topicId", COUNT(tmu."memberId") AS "count" FROM (
+                            SELECT
+                                tmuu."topicId",
+                                tmuu."userId" AS "memberId"
+                            FROM "TopicMemberUsers" tmuu
+                            WHERE tmuu."deletedAt" IS NULL
+                            UNION
+                            SELECT
+                                tmg."topicId",
+                                gm."userId" AS "memberId"
+                            FROM "TopicMemberGroups" tmg
+                                JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                                JOIN "Groups" g ON g.id = tmg."groupId"
+                            WHERE tmg."deletedAt" IS NULL
+                            AND g."deletedAt" IS NULL
+                            AND gm."deletedAt" IS NULL
+                        ) AS tmu GROUP BY "topicId"
+                    ) AS muc ON (muc."topicId" = t.id)
+                    LEFT JOIN (
+                        SELECT
+                            tmg."topicId",
+                            count(tmg."groupId") AS "count"
+                        FROM "TopicMemberGroups" tmg
+                        JOIN "Groups" g ON (g.id = tmg."groupId")
+                        WHERE tmg."deletedAt" IS NULL
+                        AND g."deletedAt" IS NULL
+                        GROUP BY tmg."topicId"
+                    ) AS mgc ON (mgc."topicId" = t.id)
+                    LEFT JOIN (
+                        SELECT
+                            tv."topicId",
+                            tv."voteId",
+                            v."authType",
+                            v."createdAt",
+                            v."delegationIsAllowed",
+                            v."description",
+                            v."endsAt",
+                            v."maxChoices",
+                            v."minChoices",
+                            v."type"
+                        FROM "TopicVotes" tv INNER JOIN
+                            (
+                                SELECT
+                                    MAX("createdAt") as "createdAt",
+                                    "topicId"
+                                FROM "TopicVotes"
+                                GROUP BY "topicId"
+                            ) AS _tv ON (_tv."topicId" = tv."topicId" AND _tv."createdAt" = tv."createdAt")
+                        LEFT JOIN "Votes" v
+                                ON v.id = tv."voteId"
+                    ) AS tv ON (tv."topicId" = t.id)
+                    LEFT JOIN (
+                        SELECT
+                            "topicId",
+                            COUNT(*) AS count
+                        FROM "TopicComments"
+                        GROUP BY "topicId"
+                    ) AS tc ON (tc."topicId" = t.id)
+                    LEFT JOIN (
+                        SELECT
+                            tcc."topicId",
+                            MAX(tcc."createdAt") as "createdAt"
+                            FROM
+                                (SELECT
+                                    tc."topicId",
+                                    c."createdAt"
+                                FROM "TopicComments" tc
+                                JOIN "Comments" c ON c.id = tc."commentId"
+                                GROUP BY tc."topicId", c."createdAt"
+                                ORDER BY c."createdAt" DESC
+                                ) AS tcc
+                            GROUP BY tcc."topicId"
+                    ) AS com ON (com."topicId" = t.id)
+                    LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId
+                    ${join}
+                WHERE ${where}
+                ORDER BY "pinned" DESC, "order" ASC, t."updatedAt" DESC
+            ;`;
 
-        const topicsPromise = db
-            .query(
-                query,
-                {
-                    replacements: {
-                        userId: userId,
-                        partnerId: partnerId,
-                        visibility: visibility,
-                        statuses: statuses,
-                        creatorId: creatorId
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true,
-                    nest: true
-                }
-            );
+        try {
+            const rows = await db
+                .query(
+                    query,
+                    {
+                        replacements: {
+                            userId: userId,
+                            partnerId: partnerId,
+                            visibility: visibility,
+                            statuses: statuses,
+                            creatorId: creatorId
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true,
+                        nest: true
+                    }
+                );
+            const rowCount = rows.length;
 
-        Promise
-            .all([topicsPromise, voteResultsPromise])
-            .then(function ([rows, voteResults]) {
-                const rowCount = rows.length;
+            // Sequelize returns empty array for no results.
+            const result = {
+                count: rowCount,
+                rows: []
+            };
 
-                // Sequelize returns empty array for no results.
-                const result = {
-                    count: rowCount,
-                    rows: []
-                };
+            if (rowCount > 0) {
+                rows.forEach( (topic) => {
+                    topic.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
 
-                if (rowCount > 0) {
-                    rows.forEach(function (topic) {
-                        topic.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
-
-                        if (include.indexOf('vote') > -1) {
-                            if (topic.vote.id) {
-                                const options = [];
-                                if (topic.vote.options) {
-                                    topic.vote.options.forEach(function (voteOption) {
-                                        const o = {};
-                                        const optText = voteOption.split(':');
-                                        o.id = optText[0];
-                                        o.value = optText[1];
-                                        let result = 0;
-                                        if (voteResults) {
-                                            result = _.find(voteResults, {'optionId': optText[0]});
-                                            if (result) {
-                                                o.voteCount = parseInt(result.voteCount, 10);
-                                                if (result.selected) {
-                                                    o.selected = result.selected;
-                                                }
+                    if (include.indexOf('vote') > -1) {
+                        if (topic.vote.id) {
+                            const options = [];
+                            if (topic.vote.options) {
+                                topic.vote.options.forEach(function (voteOption) {
+                                    const o = {};
+                                    const optText = voteOption.split(':');
+                                    o.id = optText[0];
+                                    o.value = optText[1];
+                                    let result = 0;
+                                    if (voteResults) {
+                                        result = _.find(voteResults, {'optionId': optText[0]});
+                                        if (result) {
+                                            o.voteCount = parseInt(result.voteCount, 10);
+                                            if (result.selected) {
+                                                o.selected = result.selected;
                                             }
                                         }
+                                    }
 
-                                        options.push(o);
-                                    });
-                                }
-                                topic.vote.options = {
-                                    count: options.length,
-                                    rows: options
-                                };
-                            } else {
-                                delete topic.vote;
+                                    options.push(o);
+                                });
                             }
+                            topic.vote.options = {
+                                count: options.length,
+                                rows: options
+                            };
+                        } else {
+                            delete topic.vote;
                         }
-                    });
-                    result.rows = rows;
-                }
+                    }
+                });
+                result.rows = rows;
+            }
 
-                return res.ok(result);
-            })
-            .catch(next);
+            return res.ok(result);
+        } catch (e) {
+            return next(e);
+        }
     });
 
 

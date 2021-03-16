@@ -341,7 +341,7 @@ const topicList = function (agent, userId, include, visibility, statuses, creato
     _topicList(agent, userId, include, visibility, statuses, creatorId, hasVoted, 200, callback);
 };
 
-const _topicListPromised = async function (agent, userId, include, visibility, statuses, creatorId, hasVoted, showModerated, expectedHttpCode) {
+const _topicListPromised = async function (agent, userId, include, visibility, statuses, creatorId, hasVoted, showModerated, pinned, expectedHttpCode) {
     const path = '/api/users/:userId/topics'.replace(':userId', userId);
 
     return agent
@@ -353,14 +353,15 @@ const _topicListPromised = async function (agent, userId, include, visibility, s
             statuses: statuses,
             creatorId: creatorId,
             hasVoted: hasVoted,
-            showModerated: showModerated
+            showModerated: showModerated,
+            pinned: pinned
         })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
 
-const topicListPromised = async function (agent, userId, include, visibility, statuses, creatorId, hasVoted, showModerated) {
-    return _topicListPromised(agent, userId, include, visibility, statuses, creatorId, hasVoted, showModerated, 200);
+const topicListPromised = async function (agent, userId, include, visibility, statuses, creatorId, hasVoted, showModerated, pinned) {
+    return _topicListPromised(agent, userId, include, visibility, statuses, creatorId, hasVoted, showModerated, pinned, 200);
 };
 
 var _topicsListUnauth = function (agent, statuses, categories, orderBy, offset, limit, sourcePartnerId, include, expectedHttpCode, callback) {
@@ -1888,6 +1889,26 @@ var topicEventCreate = function (agent, userId, topicId, subject, text, callback
     _topicEventCreate(agent, userId, topicId, subject, text, 201, callback);
 };
 
+const _topicEventCreatePromised = async function (agent, userId, topicId, subject, text, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/events'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId);
+
+    return agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .send({
+            subject: subject,
+            text: text
+        })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicEventCreatePromised = async function (agent, userId, topicId, subject, text) {
+    return _topicEventCreatePromised(agent, userId, topicId, subject, text, 201);
+};
+
 var _topicEventCreateUnauth = function (agent, topicId, token, subject, text, expectedHttpCode, callback) {
     var path = '/api/topics/:topicId/events'
         .replace(':topicId', topicId);
@@ -1956,6 +1977,21 @@ var _topicFavouriteCreate = function (agent, userId, topicId, expectedHttpCode, 
 
 var topicFavouriteCreate = function (agent, userId, topicId, callback) {
     _topicFavouriteCreate(agent, userId, topicId, 200, callback);
+};
+
+const _topicFavouriteCreatePromised = async function (agent, userId, topicId, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/pin'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId);
+
+    return agent
+        .post(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicFavouriteCreatePromised = async function (agent, userId, topicId) {
+    return _topicFavouriteCreatePromised(agent, userId, topicId, 200);
 };
 
 var _topicFavouriteDelete = function (agent, userId, topicId, expectedHttpCode, callback) {
@@ -3442,7 +3478,7 @@ suite('Users', function () {
                 assert.equal(comment2.text, text);
                 assert.equal(comment2.creator.id, creator.id);
 
-                const list = (await topicListPromised(agentCreator, creator.id, null, null, null, null, null, null)).body.data;
+                const list = (await topicListPromised(agentCreator, creator.id, null, null, null, null, null, null, null)).body.data;
                 assert.equal(list.count, 1);
 
                 const rows = list.rows;
@@ -3493,7 +3529,7 @@ suite('Users', function () {
 
                 deletedTopic = (await topicReadPromised(agentUser, user.id, deletedTopic.id, null)).body.data;
                 await topicDeletePromised(agentUser, user.id, deletedTopic.id);
-                const list = (await topicListPromised(agentUser, user.id, null, null, null, null, null, null)).body.data
+                const list = (await topicListPromised(agentUser, user.id, null, null, null, null, null, null, null)).body.data
                 assert.equal(list.count, 1);
 
                 const topicList = list.rows;
@@ -3537,7 +3573,7 @@ suite('Users', function () {
 
                 await topicReportModeratePromised(agentModerator, moderatedTopic.id, report.id, moderateType, moderateText);
 
-                const list = (await topicListPromised(agentUser, user.id, null, null, null, null, null, null)).body.data
+                const list = (await topicListPromised(agentUser, user.id, null, null, null, null, null, null, null)).body.data
                 assert.equal(list.count, 1);
 
                 const topicList = list.rows;
@@ -3579,7 +3615,7 @@ suite('Users', function () {
                 const moderateText = 'Report create moderation text';
 
                 await topicReportModeratePromised(agentModerator, moderatedTopic.id, report.id, moderateType, moderateText);
-                const list = (await topicListPromised(agentUser, user.id, null, null, null, null, null, true)).body.data;
+                const list = (await topicListPromised(agentUser, user.id, null, null, null, null, null, true, null)).body.data;
                 assert.equal(list.count, 1);
 
                 const topicList = list.rows;
@@ -3610,7 +3646,7 @@ suite('Users', function () {
                     }
                 );
 
-                const list = (await topicListPromised(agentUser, user.id, null, Topic.VISIBILITY.private, null, null, null, null)).body.data;
+                const list = (await topicListPromised(agentUser, user.id, null, Topic.VISIBILITY.private, null, null, null, null, null)).body.data;
                 assert.equal(list.count, 1);
                 const rows = list.rows;
 
@@ -3637,7 +3673,7 @@ suite('Users', function () {
                         }
                     }
                 );
-                const list = (await topicListPromised(agentUser, user.id, null, Topic.VISIBILITY.public, null, null, null, null)).body.data;
+                const list = (await topicListPromised(agentUser, user.id, null, Topic.VISIBILITY.public, null, null, null, null, null)).body.data;
                 assert.equal(list.count, 1);
                 const rows = list.rows;
 
@@ -3665,7 +3701,7 @@ suite('Users', function () {
                     }
                 );
 
-                const list = (await topicListPromised(agentCreator, creator.id, null, null, null, creator.id, null, null)).body.data;
+                const list = (await topicListPromised(agentCreator, creator.id, null, null, null, creator.id, null, null, null)).body.data;
                 assert.equal(list.count, 1);
                 const rows = list.rows;
 
@@ -3693,7 +3729,7 @@ suite('Users', function () {
                     }
                 );
 
-                const list = (await topicListPromised(agentUser, user.id, null, null, 'inProgress', null, null, null)).body.data;
+                const list = (await topicListPromised(agentUser, user.id, null, null, 'inProgress', null, null, null, null)).body.data;
                 assert.equal(list.count, 2);
                 const rows = list.rows;
 
@@ -3721,7 +3757,7 @@ suite('Users', function () {
                         }
                     }
                 );
-                const list = (await topicListPromised(agentUser, user.id, null, null, 'voting', null, null, null)).body.data;
+                const list = (await topicListPromised(agentUser, user.id, null, null, 'voting', null, null, null, null)).body.data;
                 assert.equal(list.count, 1);
                 const rows = list.rows;
 
@@ -3751,7 +3787,7 @@ suite('Users', function () {
                     }
                 );
 
-                const list = (await topicListPromised(agentUser, user.id, null, null, 'followUp', null, null, null)).body.data;
+                const list = (await topicListPromised(agentUser, user.id, null, null, 'followUp', null, null, null, null)).body.data;
                 assert.equal(list.count, 1);
                 const rows = list.rows;
 
@@ -3781,7 +3817,7 @@ suite('Users', function () {
                     }
                 );
 
-                const list = (await topicListPromised(agentUser, user.id, null, null, 'closed', null, null, null)).body.data;
+                const list = (await topicListPromised(agentUser, user.id, null, null, 'closed', null, null, null, null)).body.data;
 
                 assert.equal(list.count, 1);
                 const rows = list.rows;
@@ -3825,7 +3861,7 @@ suite('Users', function () {
                 ];
 
                 await topicVoteVotePromised(agentUser, user.id, topicWithVoteAndVoted.id, vote.id, voteList, null, null, null, null);
-                const resData = (await topicListPromised(agentUser, user.id, null, null, null, null, true, null)).body.data;
+                const resData = (await topicListPromised(agentUser, user.id, null, null, null, null, true, null, null)).body.data;
 
                 assert.equal(resData.count, 1);
                 assert.equal(resData.rows.length, 1);
@@ -3868,7 +3904,7 @@ suite('Users', function () {
                 ];
 
                 await topicVoteVotePromised(agentUser, user.id, topicWithVoteAndVoted.id, vote.id, voteList, null, null, null, null);
-                const resData = (await topicListPromised(agentUser, user.id, null, null, null, null, false, null)).body.data
+                const resData = (await topicListPromised(agentUser, user.id, null, null, null, null, false, null, null)).body.data
 
                 assert.equal(resData.count, 1);
                 assert.equal(resData.rows.length, 1);
@@ -3880,236 +3916,205 @@ suite('Users', function () {
 
             suite('Include', function () {
 
-                var agent = request.agent(app);
-                var title = 'Include test';
-                var description = 'include content';
+                const agent = request.agent(app);
+                const title = 'Include test';
+                const description = 'include content';
 
-                var user;
-                var topic;
+                let user;
+                let topic;
 
-                suiteSetup(function (done) {
-                    userLib.createUserAndLogin(agent, null, null, null, function (err, res) {
-                        if (err) return done(err);
-                        user = res;
-                        topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
-                            if (err) return done(err);
-                            topic = res.body.data;
-                            Topic
-                                .update(
-                                    {
-                                        title: title,
-                                        description: description
-                                    },
-                                    {
-                                        where: {
-                                            id: topic.id
-                                        }
-                                    }
-                                )
-                                .then(function () {
-                                    var options = [
-                                        {
-                                            value: 'Option 1'
-                                        },
-                                        {
-                                            value: 'Option 2'
-                                        },
-                                        {
-                                            value: 'Option 3'
-                                        }
-                                    ];
-
-                                    var description = 'Vote description';
-
-                                    topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, description, null, null, function (err, res) {
-                                        if (err) return done(err);
-
-                                        var vote = res.body.data;
-
-                                        assert.property(vote, 'id');
-                                        assert.equal(vote.minChoices, 1);
-                                        assert.equal(vote.maxChoices, 1);
-                                        assert.equal(vote.delegationIsAllowed, false);
-                                        assert.isNull(vote.endsAt);
-                                        assert.equal(vote.description, description);
-                                        assert.equal(vote.authType, Vote.AUTH_TYPES.soft);
-
-                                        // Topic should end up in "voting" status
-                                        Topic
-                                            .findOne({
-                                                where: {
-                                                    id: topic.id
-                                                }
-                                            })
-                                            .then(function (t) {
-                                                assert.equal(t.status, Topic.STATUSES.voting);
-                                                topic = t.dataValues;
-                                                done();
-                                            })
-                                            .catch(done);
-                                    });
-                                });
-                        });
-                    });
-                });
-
-                test('Success - include vote', function (done) {
-                    topicList(agent, user.id, ['vote'], null, null, null, null, function (err, res) {
-                        if (err) return done(err);
-
-                        var list = res.body.data.rows;
-                        assert.equal(list.length, 1);
-
-                        list.forEach(function (topicItem) {
-                            assert.equal(topicItem.visibility, Topic.VISIBILITY.private);
-                            if (topicItem.status === Topic.STATUSES.voting) {
-                                assert.property(topicItem, 'vote');
-                                topicItem.vote.options.rows.forEach(function (option) {
-                                    assert.property(option, 'id');
-                                    assert.property(option, 'value');
-                                });
+                suiteSetup(async function () {
+                    user = await userLib.createUserAndLoginPromised(agent, null, null, null);
+                    topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
+                    await Topic.update(
+                        {
+                            title: title,
+                            description: description
+                        },
+                        {
+                            where: {
+                                id: topic.id
                             }
-                        });
+                        }
+                    );
+                    const options = [
+                        {
+                            value: 'Option 1'
+                        },
+                        {
+                            value: 'Option 2'
+                        },
+                        {
+                            value: 'Option 3'
+                        }
+                    ];
 
-                        topicList(agent, user.id, null, null, null, null, null, function (err, res) {
-                            if (err) return done(err);
+                    const voteDescription = 'Vote description';
 
-                            var list2 = res.body.data.rows;
-                            assert.equal(list.length, list2.length);
+                    const vote = (await topicVoteCreatePromised(agent, user.id, topic.id, options, null, null, null, null, voteDescription, null, null)).body.data;
 
-                            for (var i = 0; i < list.length; i++) {
-                                assert.equal(list[i].id, list2[i].id);
-                                assert.equal(list[i].description, list2[i].description);
-                                assert.deepEqual(list[i].creator, list2[i].creator);
+                    assert.property(vote, 'id');
+                    assert.equal(vote.minChoices, 1);
+                    assert.equal(vote.maxChoices, 1);
+                    assert.equal(vote.delegationIsAllowed, false);
+                    assert.isNull(vote.endsAt);
+                    assert.equal(vote.description, voteDescription);
+                    assert.equal(vote.authType, Vote.AUTH_TYPES.soft);
 
-                                if (list[i].status === Topic.STATUSES.voting) {
-                                    assert.equal(list[i].vote.id, list2[i].vote.id);
-                                    assert.property(list[i].vote, 'options');
-                                    assert.notProperty(list2[i].vote, 'options');
-                                }
-                            }
-
-                            done();
-                        });
-
+                    // Topic should end up in "voting" status
+                    const t = await Topic.findOne({
+                        where: {
+                            id: topic.id
+                        }
                     });
+                    assert.equal(t.status, Topic.STATUSES.voting);
+                    topic = t.dataValues;
                 });
 
-                test('Success - include events', function (done) {
-                    topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.followUp, function (err) {
-                        if (err) return done(err);
+                test('Success - include vote', async function () {
+                    const list = (await topicListPromised(agent, user.id, ['vote'], null, null, null, null, null)).body.data.rows;
 
-                        var subject = 'Test Event title';
-                        var text = 'Test Event description';
+                    assert.equal(list.length, 1);
 
-                        topicEventCreate(agent, user.id, topic.id, subject, text, function (err, res) {
-                            if (err) return done(err);
-
-                            assert.equal(res.body.status.code, 20100);
-
-                            var event = res.body.data;
-                            assert.equal(event.subject, subject);
-                            assert.equal(event.text, text);
-                            assert.property(event, 'createdAt');
-                            assert.property(event, 'id');
-                            topicList(agent, user.id, ['event'], null, null, null, null, function (err, res) {
-                                if (err) return done(err);
-
-                                var list = res.body.data.rows;
-                                assert.equal(list.length, 1);
-
-                                list.forEach(function (topicItem) {
-                                    assert.equal(topicItem.visibility, Topic.VISIBILITY.private);
-                                    if (topicItem.status === Topic.STATUSES.followUp) {
-                                        assert.property(topicItem, 'events');
-                                        assert.equal(topicItem.events.count, 1);
-                                    }
-                                });
-
-                                topicList(agent, user.id, null, null, null, null, null, function (err, res) {
-                                    if (err) return done(err);
-
-                                    var list2 = res.body.data.rows;
-                                    assert.equal(list.length, list2.length);
-
-                                    for (var i = 0; i < list.length; i++) {
-                                        assert.equal(list[i].id, list2[i].id);
-                                        assert.equal(list[i].description, list2[i].description);
-                                        assert.deepEqual(list[i].creator, list2[i].creator);
-
-                                        if (list[i].status === Topic.STATUSES.voting) {
-                                            assert.equal(list[i].vote.id, list2[i].vote.id);
-                                            assert.property(list[i].vote, 'options');
-                                            assert.notProperty(list2[i].vote, 'options');
-                                        }
-                                    }
-
-                                    done();
-                                });
-
+                    list.forEach(function (topicItem) {
+                        assert.equal(topicItem.visibility, Topic.VISIBILITY.private);
+                        if (topicItem.status === Topic.STATUSES.voting) {
+                            assert.property(topicItem, 'vote');
+                            topicItem.vote.options.rows.forEach(function (option) {
+                                assert.property(option, 'id');
+                                assert.property(option, 'value');
                             });
-                        });
+                        }
                     });
+
+                    const list2 = (await topicListPromised(agent, user.id, null, null, null, null, null, null)).body.data.rows;
+                    assert.equal(list.length, list2.length);
+
+                    for (var i = 0; i < list.length; i++) {
+                        assert.equal(list[i].id, list2[i].id);
+                        assert.equal(list[i].description, list2[i].description);
+                        assert.deepEqual(list[i].creator, list2[i].creator);
+
+                        if (list[i].status === Topic.STATUSES.voting) {
+                            assert.equal(list[i].vote.id, list2[i].vote.id);
+                            assert.property(list[i].vote, 'options');
+                            assert.notProperty(list2[i].vote, 'options');
+                        }
+                    }
                 });
 
-                test('Success - include all', function (done) {
-                    topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.followUp, function (err) {
-                        if (err) return done(err);
+                test('Success - include events', async function () {
+                    await topicUpdateStatusPromised(agent, user.id, topic.id, Topic.STATUSES.followUp);
 
-                        var subject = 'Test Event title';
-                        var text = 'Test Event description';
+                    const subject = 'Test Event title';
+                    const text = 'Test Event description';
 
-                        topicEventCreate(agent, user.id, topic.id, subject, text, function (err, res) {
-                            if (err) return done(err);
+                    const res = await topicEventCreatePromised(agent, user.id, topic.id, subject, text);
+                    assert.equal(res.body.status.code, 20100);
 
-                            assert.equal(res.body.status.code, 20100);
+                    const event = res.body.data;
+                    assert.equal(event.subject, subject);
+                    assert.equal(event.text, text);
+                    assert.property(event, 'createdAt');
+                    assert.property(event, 'id');
+                    const list = (await topicListPromised(agent, user.id, ['event'], null, null, null, null, null)).body.data.rows;
+                    assert.equal(list.length, 1);
 
-                            var event = res.body.data;
-                            assert.equal(event.subject, subject);
-                            assert.equal(event.text, text);
-                            assert.property(event, 'createdAt');
-                            assert.property(event, 'id');
-                            topicList(agent, user.id, ['vote', 'event'], null, null, null, null, function (err, res) {
-                                if (err) return done(err);
-
-                                var list = res.body.data.rows;
-                                assert.equal(list.length, 1);
-
-                                list.forEach(function (topicItem) {
-                                    assert.equal(topicItem.visibility, Topic.VISIBILITY.private);
-                                    assert.property(topicItem, 'events');
-                                    if (topicItem.status === Topic.STATUSES.followUp) {
-                                        assert.property(topicItem, 'vote');
-                                        assert.equal(topicItem.events.count, 2);
-                                    }
-                                });
-
-                                topicList(agent, user.id, null, null, null, null, null, function (err, res) {
-                                    if (err) return done(err);
-
-                                    var list2 = res.body.data.rows;
-                                    assert.equal(list.length, list2.length);
-
-                                    for (var i = 0; i < list.length; i++) {
-                                        assert.equal(list[i].id, list2[i].id);
-                                        assert.equal(list[i].description, list2[i].description);
-                                        assert.deepEqual(list[i].creator, list2[i].creator);
-
-                                        if (list[i].status === Topic.STATUSES.voting) {
-                                            assert.equal(list[i].vote.id, list2[i].vote.id);
-                                            assert.property(list[i].vote, 'options');
-                                            assert.notProperty(list2[i].vote, 'options');
-                                        }
-                                    }
-
-                                    done();
-                                });
-
-                            });
-                        });
+                    list.forEach(function (topicItem) {
+                        assert.equal(topicItem.visibility, Topic.VISIBILITY.private);
+                        if (topicItem.status === Topic.STATUSES.followUp) {
+                            assert.property(topicItem, 'events');
+                            assert.equal(topicItem.events.count, 1);
+                        }
                     });
+
+                    const list2 = (await topicListPromised(agent, user.id, null, null, null, null, null, null)).body.data.rows;
+                    assert.equal(list.length, list2.length);
+
+                    for (var i = 0; i < list.length; i++) {
+                        assert.equal(list[i].id, list2[i].id);
+                        assert.equal(list[i].description, list2[i].description);
+                        assert.deepEqual(list[i].creator, list2[i].creator);
+
+                        if (list[i].status === Topic.STATUSES.voting) {
+                            assert.equal(list[i].vote.id, list2[i].vote.id);
+                            assert.property(list[i].vote, 'options');
+                            assert.notProperty(list2[i].vote, 'options');
+                        }
+                    }
                 });
 
+                test('Success - include pinned', async function () {
+                    await topicFavouriteCreatePromised(agent, user.id, topic.id);
+
+                    const list = (await topicListPromised(agent, user.id, null, null, null, null, null, null, true)).body.data.rows;
+
+                    assert.equal(list.length, 1);
+                    list.forEach(function (topicItem) {
+                        assert.equal(topicItem.visibility, Topic.VISIBILITY.private);
+                        assert.equal(topicItem.pinned, true);
+                    });
+
+                    const list2 = (await topicListPromised(agent, user.id, null, null, null, null, null, null)).body.data.rows;
+                    assert.equal(list.length, list2.length);
+
+                    for (var i = 0; i < list.length; i++) {
+                        assert.equal(list[i].id, list2[i].id);
+                        assert.equal(list[i].description, list2[i].description);
+                        assert.deepEqual(list[i].creator, list2[i].creator);
+
+                        if (list[i].status === Topic.STATUSES.voting) {
+                            assert.equal(list[i].vote.id, list2[i].vote.id);
+                            assert.property(list[i].vote, 'options');
+                            assert.notProperty(list2[i].vote, 'options');
+                        }
+                    }
+                });
+
+                test('Success - include all', async function () {
+                    await topicUpdateStatusPromised(agent, user.id, topic.id, Topic.STATUSES.followUp);
+
+                    const subject = 'Test Event title';
+                    const text = 'Test Event description';
+
+                    const res = await topicEventCreatePromised(agent, user.id, topic.id, subject, text);
+
+                    assert.equal(res.body.status.code, 20100);
+
+                    var event = res.body.data;
+                    assert.equal(event.subject, subject);
+                    assert.equal(event.text, text);
+                    assert.property(event, 'createdAt');
+                    assert.property(event, 'id');
+
+                    const list = (await topicListPromised(agent, user.id, ['vote', 'event'], null, null, null, null, null)).body.data.rows;
+
+                    assert.equal(list.length, 1);
+
+                    list.forEach(function (topicItem) {
+                        assert.equal(topicItem.visibility, Topic.VISIBILITY.private);
+                        assert.property(topicItem, 'events');
+                        if (topicItem.status === Topic.STATUSES.followUp) {
+                            assert.property(topicItem, 'vote');
+                            assert.equal(topicItem.events.count, 2);
+                        }
+                    });
+
+                    const list2 = (await topicListPromised(agent, user.id, null, null, null, null, null, null)).body.data.rows;
+                    assert.equal(list.length, list2.length);
+
+                    for (var i = 0; i < list.length; i++) {
+                        assert.equal(list[i].id, list2[i].id);
+                        assert.equal(list[i].description, list2[i].description);
+                        assert.deepEqual(list[i].creator, list2[i].creator);
+
+                        if (list[i].status === Topic.STATUSES.voting) {
+                            assert.equal(list[i].vote.id, list2[i].vote.id);
+                            assert.property(list[i].vote, 'options');
+                            assert.notProperty(list2[i].vote, 'options');
+                        }
+                    }
+                });
             });
 
             suite('Levels', function () {
@@ -7865,7 +7870,7 @@ suite('Users', function () {
                             assert.deepEqual(topicReadAfterVoting.vote, voteReadAfterVote2);
 
                             // Make sure the results match with the result read with Topic list (/api/users/:userId/topics)
-                            const topicList = (await topicListPromised(agent, user.id, ['vote'], null, null, null, null, null)).body.data;
+                            const topicList = (await topicListPromised(agent, user.id, ['vote'], null, null, null, null, null, null)).body.data;
                             const topicVotedOn = _.find(topicList.rows, {id: topic.id});
 
                             // Topic list included votes dont have downloads
@@ -7999,7 +8004,7 @@ suite('Users', function () {
                                 }
                             ];
                             await topicMemberUsersCreatePromised(agent, user.id, topic.id, members);
-                            const topicList = (await topicListPromised(agentUser2, user2.id, ['vote'], null, null, null, true, null)).body.data;
+                            const topicList = (await topicListPromised(agentUser2, user2.id, ['vote'], null, null, null, true, null, null)).body.data;
                             const topicVotedOn = _.find(topicList.rows, {id: topic.id});
 
                             assert.deepEqual(topicVotedOn.vote, voteReadAfterVote2);
@@ -8132,7 +8137,7 @@ suite('Users', function () {
                                 }
                             ];
                             await topicMemberUsersCreatePromised(agent, user.id, topic.id, members);
-                            const topicList = (await topicListPromised(agentUser2, user2.id, ['vote'], null, null, null, true, null)).body.data;
+                            const topicList = (await topicListPromised(agentUser2, user2.id, ['vote'], null, null, null, true, null, null)).body.data;
                             const topicVotedOn = _.find(topicList.rows, {id: topic.id});
 
                             assert.deepEqual(topicVotedOn.vote, voteReadAfterVote2);
