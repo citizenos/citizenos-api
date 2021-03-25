@@ -1,39 +1,39 @@
 <!-- E-mail sent to Topic members of a reporter Topic -->
 <p>
-    Hello <span class="blue">{{userMember.name}}</span>,
+    Ahoj, <span class="blue">{{userMember.name}}</span>
 </p>
 <p class="important">
-    <b>A Citizen OS user thinks there is a violation of Citizen OS community guidelines in your topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" and has filed a report <span class="blue">#{{report.id}}</span>.</b>
+    <b>Užívateľ Citizen OS sa domnieva, že došlo k porušeniu pravidiel komunity Citizen OS vo vašej téme "<a href="{{linkViewTopic}}">{{topic.title}}</a>" a nahlásil to správou <span class="blue">#{{report.id}}</span>.</b>
     <br><br>
-    All editors of the topic and community moderators are receiving this report, please see details below.
+    Túto správu dostanú všetci editori témy a komunitní moderátori, pozrite si detaily nižšie.
 </p>
 
-<h1>Details of the report</h1>
-<p>Topic: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
-<p>Report reference number: <b>{{report.id}}</b>
-<p>Type of violation: <b>"{{report.type}}"</b>
-<p>Your explanation: <b>"{{report.text}}"</b>
+<h1>Podrobnosti správy</h1>
+<p>Téma: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
+<p>Referenčné číslo správy: <b>{{report.id}}</b>
+<p>Typ porušenia: <b>"{{report.type}}"</b>
+<p>Vaše vysvetlenie: <b>"{{report.text}}"</b>
 
-<h1>What happens next?</h1>
+<h1>Čo bude nasledovať?</h1>
 <p>
 <ol>
-    <li class="li">Moderators are currently reviewing the topic. If they confirm a violation, they will restrict access to the topic.
+    <li class="li">Moderátori teraz preskúmajú tému. Ak potvrdia porušenie pravidiel, obmedzia k téme prístup.
     </li>
-    <li class="li">However, you and other editors can edit the topic at any time to clear possible violations. If the violations have been cleared, the topic can be sent for review to Citizen OS
-        moderators.
+    <li class="li">Vy a ďalší editori však môžte tému kedykoľvek upraviť, aby ste vymazali možné porušenia pravidiel. Ak budú porušenia pravidiel vymazané, téma sa odošle k preskúmaniu
+        moderátorom Citizen OS.
     </li>
-    <li class="li">Upon a review request, moderators will review the topic and withdraw all restrictions if violations have been removed.</li>
+    <li class="li">Po prijatí požiadavky o preskúmanie, moderátori tému preskúmajú a ak boli porušenia pravidiel vymazané, odstránia všetky obmedzenia.</li>
     <li class="li">
-        We will notify you if:
+        Upovedomíme vás, ak:
         <ul>
-            <li>moderators apply restrictions to the topic</li>
-            <li>Removal of violations has been reviewed and restrictions withdrawn.</li>
+            <li>moderátori uplatnia na tému obmedzenia</li>
+            <li>Odstránenie porušení pravidiel bolo preskúmané a obmedzenia stiahnuté.</li>
         </ul>
     </li>
 </ol>
 </p>
-<p><a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process here.</a></p>
+<p><a href="{{linkViewModerationGuidelines}}">O procese moderovania Citizen OS nájdete viac podrobností tu.</a></p>
 <hr/>
 <p>
-    Please review your topic  "<a href="{{linkViewTopic}}">{{topic.title}}</a>" and see if it contains violations of community guidelines. Together we can maintain a high quality of content in Citizen OS user community.
+    Preskúmajte prosím vašu tému "<a href="{{linkViewTopic}}">{{topic.title}}</a>" či obsahuje porušenia usmernení komunity. Spolu môžme udržať vysokú kvalitu obsahu v komunite užívateľov Citizen OS.
 </p>
