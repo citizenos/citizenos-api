@@ -1,36 +1,36 @@
 <!-- E-mail sent to User who reported the Topic -->
 <p>
-    Hello <span class="blue">{{userReporter.name}}</span>,
+    Ahoj <span class="blue">{{userReporter.name}}</span>,
 </p>
 <p class="important">
-    <b>A moderator has reviewed your report <span class="blue">#{{report.id}}</span>, which you submitted on {{report.createdAt}} about Citizen OS topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" being inappropriate.</b>
+    <b>Moderátor/ka preskúmal/a vašu správu <span class="blue">#{{report.id}}</span>, ktorú ste postúpili dňa {{report.createdAt}} o téme "<a href="{{linkViewTopic}}">{{topic.title}}</a>" na Citizen OS ako nevhodnej.</b>
     <br><br>
-    There is nothing you need to do, this email is for your information.
+    Nemusíte nič robiť, tento email je len pre vašu informáciu.
 </p>
 
-<h1>Decision of the moderator:</h1>
+<h1>Rozhodnutie moderátora/ky:</h1>
 <p>
 <ul>
-    <li class="li">Violation type: "{{report.moderatedReasonType}}"</li>
-    <li class="li">Reasoning: "{{report.moderatedReasonText}}"</li>
+    <li class="li">Typ porušenia pravidiel: "{{report.moderatedReasonType}}"</li>
+    <li class="li">Zdôvodnenie: "{{report.moderatedReasonText}}"</li>
 </ul>
 </p>
 <p>
-    When accessing the topic, users will now see an overlay, warning about violations in the topic. However, viewers have an option to bypass the overlay and view topic content at their own risk anyway
+    Pri prístupe do témy sa teraz užívateľom zobrazí prekrývajúci text s varovaním o porušení pravidiel v téme. Čitatelia však majú možnosť obísť prekrývajúci text a zobraziť si obsah témy na vlastné riziko
 </p>
 
-<h1>What happens next?</h1>
+<h1>Čo bude nasledovať?</h1>
 <p>
 <ol>
-    <li class="li">Admins and editors of the topic have also received the report. They can edit their topic at any time to clear possible violations. They can then send the topic to moderators for review.</li>
-    <li class="li">Upon a review request, moderators will review the topic and remove restrictions if violations have been cleared.</li>
-    <li class="li">Until such time, access to the topic will remain restricted.</li>
+    <li class="li">Admini a editori témy tiež dostali správu. Aby vymazali prípadné porušenia pravidiel, môžu svoju tému kedykoľvek upravovať. Môžu potom poslať tému moderátorom na preskúmanie.</li>
+    <li class="li">Po prijatí požiadavky o preskúmanie, moderátori tému preskúmajú a odstránia obmedzenia, ak boli porušenia pravidiel vymazané.</li>
+    <li class="li">Dovtedy zostane prístup k téme obmedzený.</li>
 </ol>
 </p>
-<p><a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process here.</a></p>
+<p><a href="{{linkViewModerationGuidelines}}">Viac podrobností o procese moderovania na Citizen OS nájdete tu.</a></p>
 
 <hr/>
 
 <p>
-    Thank you for helping us ensure a high quality of content in Citizen OS user community!
+    Vďaka za pomoc s udržiavaním vysokej kvality obsahu v užívateľskej komunite na Citizen OS!
 </p>
