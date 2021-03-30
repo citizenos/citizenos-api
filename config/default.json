@@ -25,6 +25,7 @@
       "omitNull": false,
       "dialectOptions": {
         "ssl": {
+          "require": true,
           "rejectUnauthorized": false
         }
       },

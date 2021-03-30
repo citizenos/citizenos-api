@@ -341,7 +341,7 @@ const topicList = function (agent, userId, include, visibility, statuses, creato
     _topicList(agent, userId, include, visibility, statuses, creatorId, hasVoted, 200, callback);
 };
 
-const _topicListPromised = async function (agent, userId, include, visibility, statuses, creatorId, hasVoted, showModerated, expectedHttpCode) {
+const _topicListPromised = async function (agent, userId, include, visibility, statuses, creatorId, hasVoted, showModerated, pinned, expectedHttpCode) {
     const path = '/api/users/:userId/topics'.replace(':userId', userId);
 
     return agent
@@ -353,14 +353,15 @@ const _topicListPromised = async function (agent, userId, include, visibility, s
             statuses: statuses,
             creatorId: creatorId,
             hasVoted: hasVoted,
-            showModerated: showModerated
+            showModerated: showModerated,
+            pinned: pinned
         })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
 
-const topicListPromised = async function (agent, userId, include, visibility, statuses, creatorId, hasVoted, showModerated) {
-    return _topicListPromised(agent, userId, include, visibility, statuses, creatorId, hasVoted, showModerated, 200);
+const topicListPromised = async function (agent, userId, include, visibility, statuses, creatorId, hasVoted, showModerated, pinned) {
+    return _topicListPromised(agent, userId, include, visibility, statuses, creatorId, hasVoted, showModerated, pinned, 200);
 };
 
 var _topicsListUnauth = function (agent, statuses, categories, orderBy, offset, limit, sourcePartnerId, include, expectedHttpCode, callback) {
@@ -507,8 +508,8 @@ var topicMemberGroupsCreate = function (agent, userId, topicId, members, callbac
 
 const _topicMemberGroupsCreatePromised = async function (agent, userId, topicId, members, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/members/groups'
-    .replace(':userId', userId)
-    .replace(':topicId', topicId);
+        .replace(':userId', userId)
+        .replace(':topicId', topicId);
 
     return agent
         .post(path)
@@ -1865,7 +1866,7 @@ const _topicCommentVotesListPromised = async function (agent, userId, topicId, c
 
 
 const topicCommentVotesListPromised = async function (agent, userId, topicId, commentId) {
-   return _topicCommentVotesListPromised(agent, userId, topicId, commentId, 200);
+    return _topicCommentVotesListPromised(agent, userId, topicId, commentId, 200);
 };
 
 var _topicEventCreate = function (agent, userId, topicId, subject, text, expectedHttpCode, callback) {
@@ -1887,6 +1888,26 @@ var _topicEventCreate = function (agent, userId, topicId, subject, text, expecte
 
 var topicEventCreate = function (agent, userId, topicId, subject, text, callback) {
     _topicEventCreate(agent, userId, topicId, subject, text, 201, callback);
+};
+
+const _topicEventCreatePromised = async function (agent, userId, topicId, subject, text, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/events'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId);
+
+    return agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .send({
+            subject: subject,
+            text: text
+        })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicEventCreatePromised = async function (agent, userId, topicId, subject, text) {
+    return _topicEventCreatePromised(agent, userId, topicId, subject, text, 201);
 };
 
 var _topicEventCreateUnauth = function (agent, topicId, token, subject, text, expectedHttpCode, callback) {
@@ -1957,6 +1978,21 @@ var _topicFavouriteCreate = function (agent, userId, topicId, expectedHttpCode, 
 
 var topicFavouriteCreate = function (agent, userId, topicId, callback) {
     _topicFavouriteCreate(agent, userId, topicId, 200, callback);
+};
+
+const _topicFavouriteCreatePromised = async function (agent, userId, topicId, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/pin'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId);
+
+    return agent
+        .post(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicFavouriteCreatePromised = async function (agent, userId, topicId) {
+    return _topicFavouriteCreatePromised(agent, userId, topicId, 200);
 };
 
 var _topicFavouriteDelete = function (agent, userId, topicId, expectedHttpCode, callback) {
@@ -2515,37 +2551,37 @@ suite('Users', function () {
                             userLib.createUserAndLoginPromised(agentUser, null, null, null),
                             userLib.createUserAndLoginPromised(agentUser2, null, null, null)
                         ])
-                        .then(function (results) {
-                            creator = results[0];
-                            user = results[1];
-                            user2 = results[2];
+                            .then(function (results) {
+                                creator = results[0];
+                                user = results[1];
+                                user2 = results[2];
 
-                            return Promise
-                                .all([
+                                return Promise
+                                    .all([
                                         groupLib.createPromised(agentCreator, creator.id, 'Group', null, null),
                                         topicCreatePromised(agentCreator, creator.id, Topic.VISIBILITY.private, null, null, null, null)
-                                ])
-                                .then(function (results) {
-                                    group = results[0].body.data;
-                                    topic = results[1].body.data;
+                                    ])
+                                    .then(function (results) {
+                                        group = results[0].body.data;
+                                        topic = results[1].body.data;
 
-                                    // Add Group to Topic members and User to that Group
-                                    var memberGroup = {
-                                        groupId: group.id,
-                                        level: TopicMemberGroup.LEVELS.read
-                                    };
+                                        // Add Group to Topic members and User to that Group
+                                        var memberGroup = {
+                                            groupId: group.id,
+                                            level: TopicMemberGroup.LEVELS.read
+                                        };
 
-                                    var memberUser = {
-                                        userId: user.id,
-                                        level: GroupMember.LEVELS.read
-                                    };
+                                        var memberUser = {
+                                            userId: user.id,
+                                            level: GroupMember.LEVELS.read
+                                        };
 
-                                    return Promise.all([
-                                        topicMemberGroupsCreatePromised(agentCreator, creator.id, topic.id, memberGroup),
-                                        groupLib.membersCreatePromised(agentCreator, creator.id, group.id, memberUser)
-                                    ]);
-                                });
-                        });
+                                        return Promise.all([
+                                            topicMemberGroupsCreatePromised(agentCreator, creator.id, topic.id, memberGroup),
+                                            groupLib.membersCreatePromised(agentCreator, creator.id, group.id, memberUser)
+                                        ]);
+                                    });
+                            });
                     });
 
                     test('Success - User is a member of a Group that has READ access', function (done) {
@@ -3393,7 +3429,7 @@ suite('Users', function () {
                 assert.equal(comment2.text, text);
                 assert.equal(comment2.creator.id, creator.id);
 
-                const list = (await topicListPromised(agentCreator, creator.id, null, null, null, null, null, null)).body.data;
+                const list = (await topicListPromised(agentCreator, creator.id, null, null, null, null, null, null, null)).body.data;
                 assert.equal(list.count, 1);
 
                 const rows = list.rows;
@@ -3444,7 +3480,7 @@ suite('Users', function () {
 
                 deletedTopic = (await topicReadPromised(agentUser, user.id, deletedTopic.id, null)).body.data;
                 await topicDeletePromised(agentUser, user.id, deletedTopic.id);
-                const list = (await topicListPromised(agentUser, user.id, null, null, null, null, null, null)).body.data
+                const list = (await topicListPromised(agentUser, user.id, null, null, null, null, null, null, null)).body.data
                 assert.equal(list.count, 1);
 
                 const topicList = list.rows;
@@ -3488,7 +3524,7 @@ suite('Users', function () {
 
                 await topicReportModeratePromised(agentModerator, moderatedTopic.id, report.id, moderateType, moderateText);
 
-                const list = (await topicListPromised(agentUser, user.id, null, null, null, null, null, null)).body.data
+                const list = (await topicListPromised(agentUser, user.id, null, null, null, null, null, null, null)).body.data
                 assert.equal(list.count, 1);
 
                 const topicList = list.rows;
@@ -3530,7 +3566,7 @@ suite('Users', function () {
                 const moderateText = 'Report create moderation text';
 
                 await topicReportModeratePromised(agentModerator, moderatedTopic.id, report.id, moderateType, moderateText);
-                const list = (await topicListPromised(agentUser, user.id, null, null, null, null, null, true)).body.data;
+                const list = (await topicListPromised(agentUser, user.id, null, null, null, null, null, true, null)).body.data;
                 assert.equal(list.count, 1);
 
                 const topicList = list.rows;
@@ -3561,7 +3597,7 @@ suite('Users', function () {
                     }
                 );
 
-                const list = (await topicListPromised(agentUser, user.id, null, Topic.VISIBILITY.private, null, null, null, null)).body.data;
+                const list = (await topicListPromised(agentUser, user.id, null, Topic.VISIBILITY.private, null, null, null, null, null)).body.data;
                 assert.equal(list.count, 1);
                 const rows = list.rows;
 
@@ -3573,7 +3609,7 @@ suite('Users', function () {
             test('Success - visibility public', async function () {
                 const publicTopic = (await topicCreatePromised(agentUser, user.id, Topic.VISIBILITY.public, null, null, null, null)).body.data;
 
-                    // Add title & description in DB. NULL title topics are not to be returned.
+                // Add title & description in DB. NULL title topics are not to be returned.
                 const title = 'Public Topic';
                 const description = 'Public topic desc';
 
@@ -3588,7 +3624,7 @@ suite('Users', function () {
                         }
                     }
                 );
-                const list = (await topicListPromised(agentUser, user.id, null, Topic.VISIBILITY.public, null, null, null, null)).body.data;
+                const list = (await topicListPromised(agentUser, user.id, null, Topic.VISIBILITY.public, null, null, null, null, null)).body.data;
                 assert.equal(list.count, 1);
                 const rows = list.rows;
 
@@ -3616,7 +3652,7 @@ suite('Users', function () {
                     }
                 );
 
-                const list = (await topicListPromised(agentCreator, creator.id, null, null, null, creator.id, null, null)).body.data;
+                const list = (await topicListPromised(agentCreator, creator.id, null, null, null, creator.id, null, null, null)).body.data;
                 assert.equal(list.count, 1);
                 const rows = list.rows;
 
@@ -3644,7 +3680,7 @@ suite('Users', function () {
                     }
                 );
 
-                const list = (await topicListPromised(agentUser, user.id, null, null, 'inProgress', null, null, null)).body.data;
+                const list = (await topicListPromised(agentUser, user.id, null, null, 'inProgress', null, null, null, null)).body.data;
                 assert.equal(list.count, 2);
                 const rows = list.rows;
 
@@ -3672,7 +3708,7 @@ suite('Users', function () {
                         }
                     }
                 );
-                const list = (await topicListPromised(agentUser, user.id, null, null, 'voting', null, null, null)).body.data;
+                const list = (await topicListPromised(agentUser, user.id, null, null, 'voting', null, null, null, null)).body.data;
                 assert.equal(list.count, 1);
                 const rows = list.rows;
 
@@ -3702,7 +3738,7 @@ suite('Users', function () {
                     }
                 );
 
-                const list = (await topicListPromised(agentUser, user.id, null, null, 'followUp', null, null, null)).body.data;
+                const list = (await topicListPromised(agentUser, user.id, null, null, 'followUp', null, null, null, null)).body.data;
                 assert.equal(list.count, 1);
                 const rows = list.rows;
 
@@ -3732,7 +3768,7 @@ suite('Users', function () {
                     }
                 );
 
-                const list = (await topicListPromised(agentUser, user.id, null, null, 'closed', null, null, null)).body.data;
+                const list = (await topicListPromised(agentUser, user.id, null, null, 'closed', null, null, null, null)).body.data;
 
                 assert.equal(list.count, 1);
                 const rows = list.rows;
@@ -3776,7 +3812,7 @@ suite('Users', function () {
                 ];
 
                 await topicVoteVotePromised(agentUser, user.id, topicWithVoteAndVoted.id, vote.id, voteList, null, null, null, null);
-                const resData = (await topicListPromised(agentUser, user.id, null, null, null, null, true, null)).body.data;
+                const resData = (await topicListPromised(agentUser, user.id, null, null, null, null, true, null, null)).body.data;
 
                 assert.equal(resData.count, 1);
                 assert.equal(resData.rows.length, 1);
@@ -3819,7 +3855,7 @@ suite('Users', function () {
                 ];
 
                 await topicVoteVotePromised(agentUser, user.id, topicWithVoteAndVoted.id, vote.id, voteList, null, null, null, null);
-                const resData = (await topicListPromised(agentUser, user.id, null, null, null, null, false, null)).body.data
+                const resData = (await topicListPromised(agentUser, user.id, null, null, null, null, false, null, null)).body.data
 
                 assert.equal(resData.count, 1);
                 assert.equal(resData.rows.length, 1);
@@ -3831,236 +3867,205 @@ suite('Users', function () {
 
             suite('Include', function () {
 
-                var agent = request.agent(app);
-                var title = 'Include test';
-                var description = 'include content';
+                const agent = request.agent(app);
+                const title = 'Include test';
+                const description = 'include content';
 
-                var user;
-                var topic;
+                let user;
+                let topic;
 
-                suiteSetup(function (done) {
-                    userLib.createUserAndLogin(agent, null, null, null, function (err, res) {
-                        if (err) return done(err);
-                        user = res;
-                        topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
-                            if (err) return done(err);
-                            topic = res.body.data;
-                            Topic
-                                .update(
-                                    {
-                                        title: title,
-                                        description: description
-                                    },
-                                    {
-                                        where: {
-                                            id: topic.id
-                                        }
-                                    }
-                                )
-                                .then(function () {
-                                    var options = [
-                                        {
-                                            value: 'Option 1'
-                                        },
-                                        {
-                                            value: 'Option 2'
-                                        },
-                                        {
-                                            value: 'Option 3'
-                                        }
-                                    ];
-
-                                    var description = 'Vote description';
-
-                                    topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, description, null, null, function (err, res) {
-                                        if (err) return done(err);
-
-                                        var vote = res.body.data;
-
-                                        assert.property(vote, 'id');
-                                        assert.equal(vote.minChoices, 1);
-                                        assert.equal(vote.maxChoices, 1);
-                                        assert.equal(vote.delegationIsAllowed, false);
-                                        assert.isNull(vote.endsAt);
-                                        assert.equal(vote.description, description);
-                                        assert.equal(vote.authType, Vote.AUTH_TYPES.soft);
-
-                                        // Topic should end up in "voting" status
-                                        Topic
-                                            .findOne({
-                                                where: {
-                                                    id: topic.id
-                                                }
-                                            })
-                                            .then(function (t) {
-                                                assert.equal(t.status, Topic.STATUSES.voting);
-                                                topic = t.dataValues;
-                                                done();
-                                            })
-                                            .catch(done);
-                                    });
-                                });
-                        });
-                    });
-                });
-
-                test('Success - include vote', function (done) {
-                    topicList(agent, user.id, ['vote'], null, null, null, null, function (err, res) {
-                        if (err) return done(err);
-
-                        var list = res.body.data.rows;
-                        assert.equal(list.length, 1);
-
-                        list.forEach(function (topicItem) {
-                            assert.equal(topicItem.visibility, Topic.VISIBILITY.private);
-                            if (topicItem.status === Topic.STATUSES.voting) {
-                                assert.property(topicItem, 'vote');
-                                topicItem.vote.options.rows.forEach(function (option) {
-                                    assert.property(option, 'id');
-                                    assert.property(option, 'value');
-                                });
+                suiteSetup(async function () {
+                    user = await userLib.createUserAndLoginPromised(agent, null, null, null);
+                    topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
+                    await Topic.update(
+                        {
+                            title: title,
+                            description: description
+                        },
+                        {
+                            where: {
+                                id: topic.id
                             }
-                        });
+                        }
+                    );
+                    const options = [
+                        {
+                            value: 'Option 1'
+                        },
+                        {
+                            value: 'Option 2'
+                        },
+                        {
+                            value: 'Option 3'
+                        }
+                    ];
 
-                        topicList(agent, user.id, null, null, null, null, null, function (err, res) {
-                            if (err) return done(err);
+                    const voteDescription = 'Vote description';
 
-                            var list2 = res.body.data.rows;
-                            assert.equal(list.length, list2.length);
+                    const vote = (await topicVoteCreatePromised(agent, user.id, topic.id, options, null, null, null, null, voteDescription, null, null)).body.data;
 
-                            for (var i = 0; i < list.length; i++) {
-                                assert.equal(list[i].id, list2[i].id);
-                                assert.equal(list[i].description, list2[i].description);
-                                assert.deepEqual(list[i].creator, list2[i].creator);
+                    assert.property(vote, 'id');
+                    assert.equal(vote.minChoices, 1);
+                    assert.equal(vote.maxChoices, 1);
+                    assert.equal(vote.delegationIsAllowed, false);
+                    assert.isNull(vote.endsAt);
+                    assert.equal(vote.description, voteDescription);
+                    assert.equal(vote.authType, Vote.AUTH_TYPES.soft);
 
-                                if (list[i].status === Topic.STATUSES.voting) {
-                                    assert.equal(list[i].vote.id, list2[i].vote.id);
-                                    assert.property(list[i].vote, 'options');
-                                    assert.notProperty(list2[i].vote, 'options');
-                                }
-                            }
-
-                            done();
-                        });
-
+                    // Topic should end up in "voting" status
+                    const t = await Topic.findOne({
+                        where: {
+                            id: topic.id
+                        }
                     });
+                    assert.equal(t.status, Topic.STATUSES.voting);
+                    topic = t.dataValues;
                 });
 
-                test('Success - include events', function (done) {
-                    topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.followUp, function (err) {
-                        if (err) return done(err);
+                test('Success - include vote', async function () {
+                    const list = (await topicListPromised(agent, user.id, ['vote'], null, null, null, null, null)).body.data.rows;
 
-                        var subject = 'Test Event title';
-                        var text = 'Test Event description';
+                    assert.equal(list.length, 1);
 
-                        topicEventCreate(agent, user.id, topic.id, subject, text, function (err, res) {
-                            if (err) return done(err);
-
-                            assert.equal(res.body.status.code, 20100);
-
-                            var event = res.body.data;
-                            assert.equal(event.subject, subject);
-                            assert.equal(event.text, text);
-                            assert.property(event, 'createdAt');
-                            assert.property(event, 'id');
-                            topicList(agent, user.id, ['event'], null, null, null, null, function (err, res) {
-                                if (err) return done(err);
-
-                                var list = res.body.data.rows;
-                                assert.equal(list.length, 1);
-
-                                list.forEach(function (topicItem) {
-                                    assert.equal(topicItem.visibility, Topic.VISIBILITY.private);
-                                    if (topicItem.status === Topic.STATUSES.followUp) {
-                                        assert.property(topicItem, 'events');
-                                        assert.equal(topicItem.events.count, 1);
-                                    }
-                                });
-
-                                topicList(agent, user.id, null, null, null, null, null, function (err, res) {
-                                    if (err) return done(err);
-
-                                    var list2 = res.body.data.rows;
-                                    assert.equal(list.length, list2.length);
-
-                                    for (var i = 0; i < list.length; i++) {
-                                        assert.equal(list[i].id, list2[i].id);
-                                        assert.equal(list[i].description, list2[i].description);
-                                        assert.deepEqual(list[i].creator, list2[i].creator);
-
-                                        if (list[i].status === Topic.STATUSES.voting) {
-                                            assert.equal(list[i].vote.id, list2[i].vote.id);
-                                            assert.property(list[i].vote, 'options');
-                                            assert.notProperty(list2[i].vote, 'options');
-                                        }
-                                    }
-
-                                    done();
-                                });
-
+                    list.forEach(function (topicItem) {
+                        assert.equal(topicItem.visibility, Topic.VISIBILITY.private);
+                        if (topicItem.status === Topic.STATUSES.voting) {
+                            assert.property(topicItem, 'vote');
+                            topicItem.vote.options.rows.forEach(function (option) {
+                                assert.property(option, 'id');
+                                assert.property(option, 'value');
                             });
-                        });
+                        }
                     });
+
+                    const list2 = (await topicListPromised(agent, user.id, null, null, null, null, null, null)).body.data.rows;
+                    assert.equal(list.length, list2.length);
+
+                    for (var i = 0; i < list.length; i++) {
+                        assert.equal(list[i].id, list2[i].id);
+                        assert.equal(list[i].description, list2[i].description);
+                        assert.deepEqual(list[i].creator, list2[i].creator);
+
+                        if (list[i].status === Topic.STATUSES.voting) {
+                            assert.equal(list[i].vote.id, list2[i].vote.id);
+                            assert.property(list[i].vote, 'options');
+                            assert.notProperty(list2[i].vote, 'options');
+                        }
+                    }
                 });
 
-                test('Success - include all', function (done) {
-                    topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.followUp, function (err) {
-                        if (err) return done(err);
+                test('Success - include events', async function () {
+                    await topicUpdateStatusPromised(agent, user.id, topic.id, Topic.STATUSES.followUp);
 
-                        var subject = 'Test Event title';
-                        var text = 'Test Event description';
+                    const subject = 'Test Event title';
+                    const text = 'Test Event description';
 
-                        topicEventCreate(agent, user.id, topic.id, subject, text, function (err, res) {
-                            if (err) return done(err);
+                    const res = await topicEventCreatePromised(agent, user.id, topic.id, subject, text);
+                    assert.equal(res.body.status.code, 20100);
 
-                            assert.equal(res.body.status.code, 20100);
+                    const event = res.body.data;
+                    assert.equal(event.subject, subject);
+                    assert.equal(event.text, text);
+                    assert.property(event, 'createdAt');
+                    assert.property(event, 'id');
+                    const list = (await topicListPromised(agent, user.id, ['event'], null, null, null, null, null)).body.data.rows;
+                    assert.equal(list.length, 1);
 
-                            var event = res.body.data;
-                            assert.equal(event.subject, subject);
-                            assert.equal(event.text, text);
-                            assert.property(event, 'createdAt');
-                            assert.property(event, 'id');
-                            topicList(agent, user.id, ['vote', 'event'], null, null, null, null, function (err, res) {
-                                if (err) return done(err);
-
-                                var list = res.body.data.rows;
-                                assert.equal(list.length, 1);
-
-                                list.forEach(function (topicItem) {
-                                    assert.equal(topicItem.visibility, Topic.VISIBILITY.private);
-                                    assert.property(topicItem, 'events');
-                                    if (topicItem.status === Topic.STATUSES.followUp) {
-                                        assert.property(topicItem, 'vote');
-                                        assert.equal(topicItem.events.count, 2);
-                                    }
-                                });
-
-                                topicList(agent, user.id, null, null, null, null, null, function (err, res) {
-                                    if (err) return done(err);
-
-                                    var list2 = res.body.data.rows;
-                                    assert.equal(list.length, list2.length);
-
-                                    for (var i = 0; i < list.length; i++) {
-                                        assert.equal(list[i].id, list2[i].id);
-                                        assert.equal(list[i].description, list2[i].description);
-                                        assert.deepEqual(list[i].creator, list2[i].creator);
-
-                                        if (list[i].status === Topic.STATUSES.voting) {
-                                            assert.equal(list[i].vote.id, list2[i].vote.id);
-                                            assert.property(list[i].vote, 'options');
-                                            assert.notProperty(list2[i].vote, 'options');
-                                        }
-                                    }
-
-                                    done();
-                                });
-
-                            });
-                        });
+                    list.forEach(function (topicItem) {
+                        assert.equal(topicItem.visibility, Topic.VISIBILITY.private);
+                        if (topicItem.status === Topic.STATUSES.followUp) {
+                            assert.property(topicItem, 'events');
+                            assert.equal(topicItem.events.count, 1);
+                        }
                     });
+
+                    const list2 = (await topicListPromised(agent, user.id, null, null, null, null, null, null)).body.data.rows;
+                    assert.equal(list.length, list2.length);
+
+                    for (var i = 0; i < list.length; i++) {
+                        assert.equal(list[i].id, list2[i].id);
+                        assert.equal(list[i].description, list2[i].description);
+                        assert.deepEqual(list[i].creator, list2[i].creator);
+
+                        if (list[i].status === Topic.STATUSES.voting) {
+                            assert.equal(list[i].vote.id, list2[i].vote.id);
+                            assert.property(list[i].vote, 'options');
+                            assert.notProperty(list2[i].vote, 'options');
+                        }
+                    }
                 });
 
+                test('Success - include pinned', async function () {
+                    await topicFavouriteCreatePromised(agent, user.id, topic.id);
+
+                    const list = (await topicListPromised(agent, user.id, null, null, null, null, null, null, true)).body.data.rows;
+
+                    assert.equal(list.length, 1);
+                    list.forEach(function (topicItem) {
+                        assert.equal(topicItem.visibility, Topic.VISIBILITY.private);
+                        assert.equal(topicItem.pinned, true);
+                    });
+
+                    const list2 = (await topicListPromised(agent, user.id, null, null, null, null, null, null)).body.data.rows;
+                    assert.equal(list.length, list2.length);
+
+                    for (var i = 0; i < list.length; i++) {
+                        assert.equal(list[i].id, list2[i].id);
+                        assert.equal(list[i].description, list2[i].description);
+                        assert.deepEqual(list[i].creator, list2[i].creator);
+
+                        if (list[i].status === Topic.STATUSES.voting) {
+                            assert.equal(list[i].vote.id, list2[i].vote.id);
+                            assert.property(list[i].vote, 'options');
+                            assert.notProperty(list2[i].vote, 'options');
+                        }
+                    }
+                });
+
+                test('Success - include all', async function () {
+                    await topicUpdateStatusPromised(agent, user.id, topic.id, Topic.STATUSES.followUp);
+
+                    const subject = 'Test Event title';
+                    const text = 'Test Event description';
+
+                    const res = await topicEventCreatePromised(agent, user.id, topic.id, subject, text);
+
+                    assert.equal(res.body.status.code, 20100);
+
+                    var event = res.body.data;
+                    assert.equal(event.subject, subject);
+                    assert.equal(event.text, text);
+                    assert.property(event, 'createdAt');
+                    assert.property(event, 'id');
+
+                    const list = (await topicListPromised(agent, user.id, ['vote', 'event'], null, null, null, null, null)).body.data.rows;
+
+                    assert.equal(list.length, 1);
+
+                    list.forEach(function (topicItem) {
+                        assert.equal(topicItem.visibility, Topic.VISIBILITY.private);
+                        assert.property(topicItem, 'events');
+                        if (topicItem.status === Topic.STATUSES.followUp) {
+                            assert.property(topicItem, 'vote');
+                            assert.equal(topicItem.events.count, 2);
+                        }
+                    });
+
+                    const list2 = (await topicListPromised(agent, user.id, null, null, null, null, null, null)).body.data.rows;
+                    assert.equal(list.length, list2.length);
+
+                    for (var i = 0; i < list.length; i++) {
+                        assert.equal(list[i].id, list2[i].id);
+                        assert.equal(list[i].description, list2[i].description);
+                        assert.deepEqual(list[i].creator, list2[i].creator);
+
+                        if (list[i].status === Topic.STATUSES.voting) {
+                            assert.equal(list[i].vote.id, list2[i].vote.id);
+                            assert.property(list[i].vote, 'options');
+                            assert.notProperty(list2[i].vote, 'options');
+                        }
+                    }
+                });
             });
 
             suite('Levels', function () {
@@ -4459,7 +4464,7 @@ suite('Users', function () {
                         assert.equal(groups.count, 2);
                         assert.equal(groups.countTotal, 2);
                         const searchString = group.name.split(' ')[1];
-                        const groups2 = (await topicMembersGroupsListPromised(agent, user.id, topic.id,2, null, searchString)).body.data;
+                        const groups2 = (await topicMembersGroupsListPromised(agent, user.id, topic.id, 2, null, searchString)).body.data;
                         assert.equal(1, groups2.count);
                         assert.equal(1, groups2.countTotal);
                         assert.isAbove(groups2.rows[0].name.toLowerCase().indexOf(searchString.toLowerCase()), -1);
@@ -4595,7 +4600,7 @@ suite('Users', function () {
                                     // Verify that the User was created in expected language
                                     User
                                         .findOne({
-                                            where: db.where(db.fn('lower', db.col('email')), db.fn('lower',memberToAdd.userId))
+                                            where: db.where(db.fn('lower', db.col('email')), db.fn('lower', memberToAdd.userId))
                                         })
                                         .then(function (user) {
                                             assert.equal(user.language, memberToAdd.language);
@@ -5254,6 +5259,7 @@ suite('Users', function () {
                     let topic;
 
                     setup(async function () {
+                        this.timeout(5000);
                         userToInvite = await userLib.createUserPromised(request.agent(app), null, null, null);
                         userCreator = await userLib.createUserAndLoginPromised(agentCreator, null, null, null);
                         topic = (await topicCreatePromised(agentCreator, userCreator.id, null, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>', null)).body.data;
@@ -5372,7 +5378,9 @@ suite('Users', function () {
                         assert.isArray(createdInvites);
                         assert.equal(createdInvites.length, 2);
 
-                        const createdInviteUser1 = _.find(createdInvites, {level: invitation[0].level}); // find by level, not by id to keep the code simpler
+                        const createdInviteUser1 = createdInvites.find(function (invite) { // find by level, not by id to keep the code simpler
+                            return invite.level === invitation[0].level;
+                        });
                         assert.uuid(createdInviteUser1.id, 'v4');
                         assert.equal(createdInviteUser1.topicId, topic.id);
                         assert.equal(createdInviteUser1.creatorId, userCreator.id);
@@ -5381,7 +5389,9 @@ suite('Users', function () {
                         assert.isNotNull(createdInviteUser1.createdAt);
                         assert.isNotNull(createdInviteUser1.updatedAt);
 
-                        const createdInviteUser2 = _.find(createdInvites, {level: invitation[1].level}); // find by level, not by id to keep the code simpler
+                        const createdInviteUser2 = createdInvites.find(function (invite) { // find by level, not by id to keep the code simpler
+                            return invite.level === invitation[1].level;
+                        });
                         assert.uuid(createdInviteUser2.id, 'v4');
                         assert.equal(createdInviteUser2.topicId, topic.id);
                         assert.equal(createdInviteUser2.creatorId, userCreator.id);
@@ -5609,7 +5619,6 @@ suite('Users', function () {
                         assert.deepEqual(inviteReadResult, expectedInviteResult);
                     });
 
-
                     test('Fail - 40400 - Not found', async function () {
                         await _topicInviteUsersReadPromised(request.agent(app), topic.id, 'f4bb46b9-87a1-4ae4-b6df-c2605ab8c471', 404);
                     });
@@ -5783,77 +5792,72 @@ suite('Users', function () {
 
                 suite('Delete', function () {
 
-                    suite('Success', function () {
+                    const agentCreator = request.agent(app);
 
-                        const agentCreator = request.agent(app);
+                    let userCreator;
+                    let userToInvite;
 
-                        let userCreator;
-                        let userToInvite;
+                    let topic;
+                    let topicInviteCreated;
 
-                        let topic;
-                        let topicInviteCreated;
+                    suiteSetup(async function () {
+                        userToInvite = await userLib.createUserPromised(request.agent(app), null, null, null);
+                        userCreator = await userLib.createUserAndLoginPromised(agentCreator, null, null, null);
+                        topic = (await topicCreatePromised(agentCreator, userCreator.id, null, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>', null)).body.data;
 
-                        suiteSetup(async function () {
-                            userToInvite = await userLib.createUserPromised(request.agent(app), null, null, null);
-                            userCreator = await userLib.createUserAndLoginPromised(agentCreator, null, null, null);
-                            topic = (await topicCreatePromised(agentCreator, userCreator.id, null, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>', null)).body.data;
+                        const invitation = {
+                            userId: userToInvite.id,
+                            level: TopicMemberUser.LEVELS.read
+                        };
 
-                            const invitation = {
-                                userId: userToInvite.id,
-                                level: TopicMemberUser.LEVELS.read
-                            };
+                        topicInviteCreated = (await topicInviteUsersCreatePromised(agentCreator, userCreator.id, topic.id, invitation)).body.data.rows[0];
+                    });
 
-                            topicInviteCreated = (await topicInviteUsersCreatePromised(agentCreator, userCreator.id, topic.id, invitation)).body.data.rows[0];
-                        });
+                    test('Success - 20000', async function () {
+                        const userDeleteResult = (await topicInviteUsersDeletePromised(agentCreator, userCreator.id, topic.id, topicInviteCreated.id)).body;
 
-                        test('Success - 20000', async function () {
-                            const userDeleteResult = (await topicInviteUsersDeletePromised(agentCreator, userCreator.id, topic.id, topicInviteCreated.id)).body;
+                        const expectedBody = {
+                            status: {
+                                code: 20000
+                            }
+                        };
 
-                            const expectedBody = {
-                                status: {
-                                    code: 20000
-                                }
-                            };
+                        assert.deepEqual(userDeleteResult, expectedBody);
 
-                            assert.deepEqual(userDeleteResult, expectedBody);
+                        const topicInvite = await TopicInviteUser
+                            .findOne({
+                                where: {
+                                    id: topicInviteCreated.id,
+                                    topicId: topic.id
+                                },
+                                paranoid: false
+                            });
 
-                            const topicInvite = await TopicInviteUser
-                                .findOne({
-                                    where: {
-                                        id: topicInviteCreated.id,
-                                        topicId: topic.id
-                                    },
-                                    paranoid: false
-                                });
+                        assert.isNotNull(topicInvite, 'deletedAt');
+                    });
 
-                            assert.isNotNull(topicInvite, 'deletedAt');
-                        });
+                    test('Fail - 40401 - Invite not found', async function () {
+                        const userDeleteResult = (await _topicInviteUsersDeletePromised(agentCreator, userCreator.id, topic.id, '094ba349-c03e-4fa9-874e-48a978013b2a', 404)).body;
 
-                        test('Fail - 40401 - Invite not found', async function () {
-                            const userDeleteResult = (await _topicInviteUsersDeletePromised(agentCreator, userCreator.id, topic.id, '094ba349-c03e-4fa9-874e-48a978013b2a', 404)).body;
+                        const expectedBody = {
+                            status: {
+                                code: 40401,
+                                message: 'Invite not found'
+                            }
+                        };
 
-                            const expectedBody = {
-                                status: {
-                                    code: 40401,
-                                    message: 'Invite not found'
-                                }
-                            };
+                        assert.deepEqual(userDeleteResult, expectedBody);
+                    });
 
-                            assert.deepEqual(userDeleteResult, expectedBody);
-                        });
+                    test('Fail - 40100 - Unauthorized', async function () {
+                        await _topicInviteUsersDeletePromised(request.agent(app), '4727aecc-56f7-4802-8f76-2cfaad5cd5f3', topic.id, '094ba349-c03e-4fa9-874e-48a978013b2a', 401);
+                    });
 
+                    test('Fail - 40300 - at least admin permissions required', async function () {
+                        const agentInvalidUser = request.agent(app);
+                        const invalidUser = await userLib.createUserAndLoginPromised(agentInvalidUser, null, null, null);
 
-                        test('Fail - 40100 - Unauthorized', async function () {
-                            await _topicInviteUsersDeletePromised(request.agent(app), '4727aecc-56f7-4802-8f76-2cfaad5cd5f3', topic.id, '094ba349-c03e-4fa9-874e-48a978013b2a', 401);
-                        });
-
-                        test('Fail - 40300 - at least admin permissions required', async function () {
-                            const agentInvalidUser = request.agent(app);
-                            const invalidUser = await userLib.createUserAndLoginPromised(agentInvalidUser, null, null, null);
-
-                            await _topicInviteUsersDeletePromised(agentInvalidUser, invalidUser.id, topic.id, '094ba349-c03e-4fa9-874e-48a978013b2a', 403);
-                        });
-
+                        await _topicInviteUsersDeletePromised(agentInvalidUser, invalidUser.id, topic.id, '094ba349-c03e-4fa9-874e-48a978013b2a', 403);
                     });
 
                 });
@@ -6084,7 +6088,7 @@ suite('Users', function () {
                     assert.equal(vote.description, description);
                     assert.equal(vote.authType, Vote.AUTH_TYPES.soft);
 
-                        // Topic should end up in "voting" status
+                    // Topic should end up in "voting" status
                     const t = await Topic
                         .findOne({
                             where: {
@@ -6121,13 +6125,13 @@ suite('Users', function () {
                     assert.equal(vote.description, description);
                     assert.equal(vote.authType, Vote.AUTH_TYPES.soft);
 
-                        // Topic should end up in "voting" status
+                    // Topic should end up in "voting" status
                     const t = await Topic
-                            .findOne({
-                                where: {
-                                    id: topic.id
-                                }
-                            });
+                        .findOne({
+                            where: {
+                                id: topic.id
+                            }
+                        });
                     assert.equal(t.status, Topic.STATUSES.voting);
                 });
 
@@ -6151,24 +6155,24 @@ suite('Users', function () {
                     assert.equal(vote.authType, Vote.AUTH_TYPES.hard);
 
                     const voteContainerFiles = await db
-                            .query(
-                                ' \
-                                 SELECT \
-                                    "mimeType", \
-                                    "fileName" \
-                                 FROM "VoteContainerFiles" \
-                                 WHERE "voteId" = :voteId \
-                                 ORDER BY "fileName" \
-                                ',
-                                {
-                                    replacements: {
-                                        voteId: vote.id
-                                    },
-                                    type: db.QueryTypes.SELECT,
-                                    raw: true,
-                                    nest: true
-                                }
-                            );
+                        .query(
+                            ' \
+                             SELECT \
+                                "mimeType", \
+                                "fileName" \
+                             FROM "VoteContainerFiles" \
+                             WHERE "voteId" = :voteId \
+                             ORDER BY "fileName" \
+                            ',
+                            {
+                                replacements: {
+                                    voteId: vote.id
+                                },
+                                type: db.QueryTypes.SELECT,
+                                raw: true,
+                                nest: true
+                            }
+                        );
 
                     const expected = [
                         {
@@ -6523,6 +6527,9 @@ suite('Users', function () {
                 let toUser7;
                 const agentToUser7 = request.agent(app);
 
+                let toUser8;
+                const agentToUser8 = request.agent(app);
+
                 suiteSetup(async function () {
                     const usersCreatePromises = [
                         userLib.createUserAndLoginPromised(agent, null, null, null),
@@ -6532,10 +6539,11 @@ suite('Users', function () {
                         userLib.createUserAndLoginPromised(agentToUser4, null, null, null),
                         userLib.createUserAndLoginPromised(agentToUser5, null, null, null),
                         userLib.createUserAndLoginPromised(agentToUser6, null, null, null),
-                        userLib.createUserAndLoginPromised(agentToUser7, null, null, null)
+                        userLib.createUserAndLoginPromised(agentToUser7, null, null, null),
+                        userLib.createUserAndLoginPromised(agentToUser8, null, null, null)
                     ];
 
-                    [user, toUser1, toUser2, toUser3, toUser4, toUser5, toUser6, toUser7] = await Promise.all(usersCreatePromises);
+                    [user, toUser1, toUser2, toUser3, toUser4, toUser5, toUser6, toUser7, toUser8] = await Promise.all(usersCreatePromises);
                 });
 
                 suite('Create', function () {
@@ -6668,6 +6676,7 @@ suite('Users', function () {
 
                         const voteReadAfterVote = (await topicVoteReadPromised(agentToUser6, toUser6.id, topic.id, voteRead.id)).body.data;
                         assert.equal(voteReadAfterVote.votersCount, 5);
+
                         await topicVoteVotePromised(agentToUser5, toUser5.id, topic.id, voteRead.id, [{optionId: voteRead.options.rows[1].id}], null, null, null, null);
 
                         const voteReadAfterVote2 = (await topicVoteReadPromised(agentToUser6, toUser6.id, topic.id, voteRead.id)).body.data;
@@ -6694,7 +6703,7 @@ suite('Users', function () {
                         });
                     });
 
-                    test('Success - OK - multiple choice - delegated votes and not delegated votes - Delegation chain U->U1->U2->U3, U4->U5 U7->U5, U6 no delegation', async function () {
+                    test('Success - OK - multiple choice - delegated votes and not delegated votes - Delegation chain U->U1->U2->U3, U4->U6 U5->U6, U7->U5, U8 no delegation', async function () {
                         const topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
                         const voteOptions = [
                             {
@@ -6744,6 +6753,11 @@ suite('Users', function () {
                                 userId: toUser7.id,
                                 level: TopicMemberUser.LEVELS.read
                             }
+                            ,
+                            {
+                                userId: toUser8.id,
+                                level: TopicMemberUser.LEVELS.read
+                            }
                         ];
                         await topicMemberUsersCreatePromised(agent, user.id, topic.id, members);
 
@@ -6761,7 +6775,8 @@ suite('Users', function () {
                             topicVoteDelegationCreatePromised(agent, user.id, topic.id, voteRead.id, toUser1.id),
                             topicVoteDelegationCreatePromised(agentToUser1, toUser1.id, topic.id, voteRead.id, toUser2.id),
                             topicVoteDelegationCreatePromised(agentToUser2, toUser2.id, topic.id, voteRead.id, toUser3.id),
-                            topicVoteDelegationCreatePromised(agentToUser4, toUser4.id, topic.id, voteRead.id, toUser5.id),
+                            topicVoteDelegationCreatePromised(agentToUser4, toUser4.id, topic.id, voteRead.id, toUser6.id),
+                            topicVoteDelegationCreatePromised(agentToUser5, toUser5.id, topic.id, voteRead.id, toUser6.id),
                             topicVoteDelegationCreatePromised(agentToUser7, toUser7.id, topic.id, voteRead.id, toUser5.id)
                         ];
                         await Promise.all(delegationPromises);
@@ -6775,7 +6790,7 @@ suite('Users', function () {
                             }
                         ];
 
-                        const voteListUser5 = [
+                        const voteListUser6 = [
                             {
                                 optionId: voteRead.options.rows[1].id,
                             },
@@ -6784,7 +6799,7 @@ suite('Users', function () {
                             }
                         ];
 
-                        const voteListUser6 = [ // 1 (U6)
+                        const voteListUser8 = [ // 1 (U8)
                             {
                                 optionId: voteRead.options.rows[1].id
                             },
@@ -6795,12 +6810,12 @@ suite('Users', function () {
 
                         const votePromises = [
                             topicVoteVotePromised(agentToUser3, toUser3.id, topic.id, voteRead.id, voteListUser3, null, null, null, null),
-                            topicVoteVotePromised(agentToUser5, toUser5.id, topic.id, voteRead.id, voteListUser5, null, null, null, null),
-                            topicVoteVotePromised(agentToUser6, toUser6.id, topic.id, voteRead.id, voteListUser6, null, null, null, null)
+                            topicVoteVotePromised(agentToUser6, toUser6.id, topic.id, voteRead.id, voteListUser6, null, null, null, null),
+                            topicVoteVotePromised(agentToUser8, toUser8.id, topic.id, voteRead.id, voteListUser8, null, null, null, null)
                         ];
                         await Promise.all(votePromises);
 
-                        const voteReadAfterVote = (await topicVoteReadPromised(agentToUser6, toUser6.id, topic.id, voteRead.id)).body.data;
+                        const voteReadAfterVote = (await topicVoteReadPromised(agentToUser8, toUser8.id, topic.id, voteRead.id)).body.data;
                         const voteReadAfterVoteOptions = voteReadAfterVote.options.rows;
 
                         voteReadAfterVoteOptions.forEach(function (option) {
@@ -6810,15 +6825,15 @@ suite('Users', function () {
                                     assert.notProperty(option, 'selected');
                                     break;
                                 case voteRead.options.rows[1].id:
-                                    assert.equal(option.voteCount, (3 + 1) + (2 + 1) + 1); // U->U1->U2->U3, U4->U5 U7->U5, U6
+                                    assert.equal(option.voteCount, (3 + 1) + (2 + 1 + 1) + 1); // U->U1->U2->U3, U4->U6 U5->U6, U7->U5, U8
                                     assert.isTrue(option.selected);
                                     break;
                                 case voteRead.options.rows[2].id:
-                                    assert.equal(option.voteCount, (1 + 1 + 1)); // U4->U5 U7->U5
+                                    assert.equal(option.voteCount, (1 + 1 + 1 + 1)); // U4->U6 U5->U6 U7->U5
                                     assert.notProperty(option, 'selected');
                                     break;
                                 case voteRead.options.rows[3].id:
-                                    assert.equal(option.voteCount, 1); // U6
+                                    assert.equal(option.voteCount, 1); // U8
                                     assert.isTrue(option.selected);
                                     break;
                                 case voteRead.options.rows[4].id:
@@ -6844,7 +6859,7 @@ suite('Users', function () {
 
                         const voteReadAfterVoteForOverride = (await topicVoteReadPromised(agent, user.id, topic.id, voteRead.id)).body.data;
                         const voteReadAfterVoteForOverrideOptions = voteReadAfterVoteForOverride.options.rows;
-                        assert.equal(voteReadAfterVoteForOverride.votersCount, 8);
+                        assert.equal(voteReadAfterVoteForOverride.votersCount, 9);
 
                         voteReadAfterVoteForOverrideOptions.forEach(function (option) {
                             switch (option.id) {
@@ -6853,15 +6868,15 @@ suite('Users', function () {
                                     assert.notProperty(option, 'selected');
                                     break;
                                 case voteRead.options.rows[1].id:
-                                    assert.equal(option.voteCount, (2 + 1) + (1 + 1 + 1) + 1); // U->U1->U2->U3, U4->U5 U7->U5, U6
+                                    assert.equal(option.voteCount, (2 + 1) + (2 + 1 + 1) + 1); // U->U1->U2->U3, U4->U6 U5->U6 U7->U5, U8
                                     assert.notProperty(option, 'selected');
                                     break;
                                 case voteRead.options.rows[2].id:
-                                    assert.equal(option.voteCount, (1 + 1 + 1) + 1); // U4->U5 U7-> U5, U
+                                    assert.equal(option.voteCount, (2 + 1 + 1) + 1); // U4->U6 U5->U6 U7-> U5, U
                                     assert.isTrue(option.selected);
                                     break;
                                 case voteRead.options.rows[3].id:
-                                    assert.equal(option.voteCount, 1); // U6
+                                    assert.equal(option.voteCount, 1); // U8
                                     assert.notProperty(option, 'selected');
                                     break;
                                 case voteRead.options.rows[4].id:
@@ -7833,7 +7848,7 @@ suite('Users', function () {
                             assert.deepEqual(topicReadAfterVoting.vote, voteReadAfterVote2);
 
                             // Make sure the results match with the result read with Topic list (/api/users/:userId/topics)
-                            const topicList = (await topicListPromised(agent, user.id, ['vote'], null, null, null, null, null)).body.data;
+                            const topicList = (await topicListPromised(agent, user.id, ['vote'], null, null, null, null, null, null)).body.data;
                             const topicVotedOn = _.find(topicList.rows, {id: topic.id});
 
                             // Topic list included votes dont have downloads
@@ -7966,7 +7981,7 @@ suite('Users', function () {
                                 }
                             ];
                             await topicMemberUsersCreatePromised(agent, user.id, topic.id, members);
-                            const topicList = (await topicListPromised(agentUser2, user2.id, ['vote'], null, null, null, true, null)).body.data;
+                            const topicList = (await topicListPromised(agentUser2, user2.id, ['vote'], null, null, null, true, null, null)).body.data;
                             const topicVotedOn = _.find(topicList.rows, {id: topic.id});
 
                             assert.deepEqual(topicVotedOn.vote, voteReadAfterVote2);
@@ -8169,7 +8184,7 @@ suite('Users', function () {
                                 }
                             ];
                             await topicMemberUsersCreatePromised(agent, user.id, topic.id, members);
-                            const topicList = (await topicListPromised(agentUser2, user2.id, ['vote'], null, null, null, true, null)).body.data;
+                            const topicList = (await topicListPromised(agentUser2, user2.id, ['vote'], null, null, null, true, null, null)).body.data;
                             const topicVotedOn = _.find(topicList.rows, {id: topic.id});
                             assert.deepEqual(topicVotedOn.vote, voteReadAfterVote2);
                         });
@@ -8688,6 +8703,163 @@ suite('Users', function () {
                                     fs.unlinkSync(pathFinalBdoc);
                                 });
 
+                                test('Success - Vote, delete account, re-vote & count, delete account re-count', async () => {
+                                    const pid = 10101010005;
+                                    const countryCode = 'EE';
+                                    const topic = (await topicCreatePromised(agent, user.id, Topic.VISIBILITY.public, null, null, '<html><head></head><body><h2>TEST VOTE AND DELETE ACCOUNT AND RE-VOTE</h2></body></html>', null)).body.data;
+                                    const agentUser1 = request.agent(app);
+                                    const agentUser2 = request.agent(app);
+                                    const user1 = await userLib.createUserAndLoginPromised(agentUser1, null, null, null);
+                                    const user2 = await userLib.createUserAndLoginPromised(agentUser2, null, null, null);
+
+                                    let options = [
+                                        {
+                                            value: 'Option 1'
+                                        },
+                                        {
+                                            value: 'Option 2'
+                                        },
+                                        {
+                                            value: 'Option 3'
+                                        }
+                                    ];
+
+                                    const voteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, options, 1, 2, false, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                                    const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
+
+                                    // Vote for the first time
+                                    // Vote for the first time
+                                    const voteList1 = [
+                                        {
+                                            optionId: _.find(voteRead.options.rows, {value: options[0].value}).id
+                                        },
+                                        {
+                                            optionId: _.find(voteRead.options.rows, {value: options[1].value}).id
+                                        }
+                                    ];
+
+                                     // Vote for the first time
+                                    // Vote for the first time
+                                    const voteList2 = [
+                                        {
+                                            optionId: _.find(voteRead.options.rows, {value: options[0].value}).id
+                                        },
+                                        {
+                                            optionId: _.find(voteRead.options.rows, {value: options[2].value}).id
+                                        }
+                                    ];
+
+                                    const voteVoteResult = (await topicVoteVotePromised(agentUser1, user1.id, topic.id, voteRead.id, voteList1, null, pid, null, countryCode, null)).body;
+                                    await topicVoteStatusPromised(agentUser1, user1.id, topic.id, voteCreated.id, voteVoteResult.data.token);
+                                    const voteRead2 = (await topicVoteReadPromised(agentUser1, user1.id, topic.id, voteCreated.id)).body.data;
+
+                                    assert.equal(1, voteRead2.votersCount);
+                                    voteRead2.options.rows.forEach((option) => {
+                                        switch (option.id) {
+                                            case voteList1[0].optionId:
+                                                assert.equal(option.voteCount, 1);
+                                                assert.isTrue(option.selected);
+                                            break;
+                                            case voteList1[1].optionId:
+                                                assert.equal(option.voteCount, 1);
+                                                assert.isTrue(option.selected);
+                                            break;
+                                            default:
+                                                assert.property(option, 'value');
+                                                assert.notProperty(option, 'voteCount');
+                                        }
+                                    });
+
+                                    await userLib.deleteUserPromised(agentUser1, user1.id);
+
+                                    const voteVoteResult2 = (await topicVoteVotePromised(agentUser2, user2.id, topic.id, voteRead.id, voteList2, null, pid, null, countryCode, null)).body;
+                                    await topicVoteStatusPromised(agentUser2, user2.id, topic.id, voteCreated.id, voteVoteResult2.data.token);
+                                    const voteRead3 = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
+
+                                    assert.equal(1, voteRead3.votersCount);
+                                    voteRead3.options.rows.forEach((option) => {
+                                        switch (option.id) {
+                                            case voteList2[0].optionId:
+                                                assert.equal(option.voteCount, 1);
+                                                assert.notProperty(option, 'selected');
+                                            break;
+                                            case voteList2[1].optionId:
+                                                assert.equal(option.voteCount, 1);
+                                                assert.notProperty(option, 'selected');
+                                            break;
+                                            default:
+                                                assert.property(option, 'value');
+                                                assert.notProperty(option, 'voteCount');
+                                        }
+                                    });
+
+                                    await userLib.deleteUserPromised(agentUser2, user2.id);
+
+                                    // End the voting
+                                    await topicUpdatePromised(agent, user.id, topic.id, Topic.STATUSES.followUp, Topic.VISIBILITY.private, null, null, null);
+                                    const voteReadAfterVoteClosed = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
+                                    assert.equal(voteReadAfterVoteClosed.votersCount, 1);
+
+                                    // Verify the final vote container format and download
+                                    const finalBdocUrlRegex = new RegExp(`^${config.url.api}/api/users/self/topics/${topic.id}/votes/${voteRead.id}/downloads/bdocs/final\\?token=([a-zA-Z_.0-9\\-]{676})$`);
+                                    const finalBdocUrlMatches = voteReadAfterVoteClosed.downloads.bdocFinal.match(finalBdocUrlRegex);
+
+                                    assert.isNotNull(finalBdocUrlMatches);
+
+                                    const finalBdocDownloadToken = finalBdocUrlMatches[1];
+                                    await topicVoteDownloadBdocFinalPromised(agent, topic.id, voteRead.id, finalBdocDownloadToken);
+
+                                    const pathFinalBdoc = `./test/tmp/final_${voteRead.id}_${user.id}.bdoc`;
+                                    const fileWriteStream = fs.createWriteStream(pathFinalBdoc);
+                                    const fileWriteStreamPromised = cosUtil.streamToPromise(fileWriteStream);
+
+                                    request('')
+                                        .get(voteReadAfterVoteClosed.downloads.bdocFinal.split('?')[0])
+                                        .query({token: finalBdocDownloadToken})
+                                        .pipe(fileWriteStream);
+
+                                    await fileWriteStreamPromised;
+
+                                    const bdocFileList = await new Promise(function (resolve, reject) {
+                                        const files = [];
+
+                                        const listStream = SevenZip.list(pathFinalBdoc);
+
+                                        listStream.on('data', function (data) {
+                                            files.push(data);
+                                        });
+
+                                        listStream.on('end', function () {
+                                            resolve(files);
+                                        });
+
+                                        listStream.on('error', function (err) {
+                                            reject(err);
+                                        });
+                                    });
+
+                                    const fileListExpected = [
+                                        'mimetype',
+                                        '__metainfo.html',
+                                        `${options[0].value}.html`,
+                                        `${options[1].value}.html`,
+                                        `${options[2].value}.html`,
+                                        'document.docx',
+                                        `PNOEE-${pid}.bdoc`,
+                                        'votes.csv',
+                                        'META-INF/manifest.xml'
+                                    ];
+
+                                    bdocFileList.forEach(function (f) {
+                                        assert.include(fileListExpected, f.file);
+                                    });
+
+                                    // Clean up
+                                    fs.unlinkSync(pathFinalBdoc);
+
+
+                                }).timeout(40000);
+
                                 teardown(async function () {
                                     await UserConnection
                                         .destroy({
@@ -8739,7 +8911,7 @@ suite('Users', function () {
                         });
 
                         test('Success - Estonian PID', async function () {
-                           await UserConnection.destroy({
+                            await UserConnection.destroy({
                                 where: {
                                     connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
                                     connectionUserId: ['PNOEE-10101010016', 'PNOEE-10101010005', 'PNOEE-11412090004']
@@ -8765,25 +8937,25 @@ suite('Users', function () {
                         test('Success - unauth - Estonian PID', async function () {
                             const reqAgent = request.agent(app);
                             await UserConnection.destroy({
-                                 where: {
-                                     connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
-                                     connectionUserId: ['PNOEE-10101010016', 'PNOEE-10101010005', 'PNOEE-11412090004']
-                                 },
-                                 force: true
-                             });
+                                where: {
+                                    connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
+                                    connectionUserId: ['PNOEE-10101010016', 'PNOEE-10101010005', 'PNOEE-11412090004']
+                                },
+                                force: true
+                            });
 
-                             const countryCode = 'EE';
-                             const pid = '10101010005';
+                            const countryCode = 'EE';
+                            const pid = '10101010005';
 
-                             const voteList = [
-                                 {
-                                     optionId: vote.options.rows[0].id
-                                 }
-                             ];
-                             const response = (await _topicVoteVoteUnauthPromised(reqAgent, topicPublic.id, vote2.id, voteList, null, pid, null, countryCode, 200)).body;
+                            const voteList = [
+                                {
+                                    optionId: vote.options.rows[0].id
+                                }
+                            ];
+                            const response = (await _topicVoteVoteUnauthPromised(reqAgent, topicPublic.id, vote2.id, voteList, null, pid, null, countryCode, 200)).body;
 
-                             assert.equal(response.status.code, 20001);
-                             assert.match(response.data.challengeID, /[0-9]{4}/);
+                            assert.equal(response.status.code, 20001);
+                            assert.match(response.data.challengeID, /[0-9]{4}/);
                         });
 
                         test('Success - Latvian PID', async function () {
@@ -8840,7 +9012,7 @@ suite('Users', function () {
                         });
 
                         test('Success - bdocUri exists', async function () {
-                            this.timeout(24000); //eslint-disable-line no-invalid-this
+                            this.timeout(30000); //eslint-disable-line no-invalid-this
 
                             const countryCode = 'EE';
                             const pid = '10101010005';
@@ -8970,6 +9142,7 @@ suite('Users', function () {
                             }, retryInterval);
                         });
 
+                        // FIXME: Known to fail, needs some attention. More details from @ilmartyrk
                         test('Fail - 40010 - User has cancelled the signing process Latvian PID', async function () {
                             this.timeout(55000); //eslint-disable-line no-invalid-this
 
@@ -10948,7 +11121,7 @@ suite('Topics', function () {
         test('Success - non-authenticated User - don\'t show deleted "public" Topics', async function () {
 
             const deletedTopic = (await topicCreatePromised(creatorAgent, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health], null, null, null)).body.data;
-                // Set "title" to Topic, otherwise there will be no results because of the "title NOT NULL" in the query
+            // Set "title" to Topic, otherwise there will be no results because of the "title NOT NULL" in the query
             await Topic.update(
                 {
                     title: 'TEST PUBLIC DELETE'
@@ -11903,150 +12076,138 @@ suite('Topics', function () {
         suite('Votes', function () {
 
             suite('Create', function () {
-                var creatorAgent = request.agent(app);
+                const creatorAgent = request.agent(app);
+                const userAgent = request.agent(app);
+                const user2Agent = request.agent(app);
 
-                var creator;
-                var topic;
-                var comment;
+                let creator;
+                let user;
+                let user2;
+                let topic;
+                let comment;
 
-                suiteSetup(function (done) {
-                    userLib.createUserAndLogin(creatorAgent, null, null, null, function (err, res) {
-                        if (err) return done(err);
-                        creator = res;
-                        done();
-                    });
+                suiteSetup(async function () {
+                    creator = await userLib.createUserAndLoginPromised(creatorAgent, null, null, null);
+                    user = await userLib.createUserAndLoginPromised(userAgent, null, null, null);
+                    user2 = await userLib.createUserAndLoginPromised(user2Agent, null, null, null);
                 });
 
-                setup(function (done) {
-                    topicCreate(creatorAgent, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business], null, null, null, function (err, res) {
-                        if (err) return done(err);
-                        topic = res.body.data;
-
-                        topicCommentCreate(creatorAgent, creator.id, topic.id, null, null, Comment.TYPES.pro, 'Subj', 'Text', function (err, res) {
-                            if (err) return done(err);
-                            comment = res.body.data;
-                            done();
-                        });
-                    });
+                setup(async function () {
+                    topic = (await topicCreatePromised(creatorAgent, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business], null, null, null)).body.data;
+                    comment = (await topicCommentCreatePromised(creatorAgent, creator.id, topic.id, null, null, Comment.TYPES.pro, 'Subj', 'Text')).body.data;
                 });
 
-                test('Success - 20100 - Upvote', function (done) {
-                    topicCommentVotesCreate(creatorAgent, topic.id, comment.id, 1, function (err, res) {
-                        if (err) return done(err);
-
-                        var expected = {
-                            status: {
-                                code: 20000
+                test('Success - 20100 - Upvote', async function () {
+                    const resBody = (await topicCommentVotesCreatePromised(creatorAgent, topic.id, comment.id, 1)).body;
+                    const expected = {
+                        status: {
+                            code: 20000
+                        },
+                        data: {
+                            up: {
+                                count: 1,
+                                selected: true
                             },
-                            data: {
-                                up: {
-                                    count: 1,
-                                    selected: true
-                                },
-                                down: {
-                                    count: 0,
-                                    selected: false
-                                }
+                            down: {
+                                count: 0,
+                                selected: false
                             }
-                        };
-                        assert.deepEqual(res.body, expected);
-
-                        done();
-                    });
+                        }
+                    };
+                    assert.deepEqual(resBody, expected);
                 });
 
 
-                test('Success - 20100 - Downvote', function (done) {
-                    topicCommentVotesCreate(creatorAgent, topic.id, comment.id, -1, function (err, res) {
-                        if (err) return done(err);
-
-                        var expected = {
-                            status: {
-                                code: 20000
+                test('Success - 20100 - Downvote', async function () {
+                    const resBody = (await topicCommentVotesCreatePromised(creatorAgent, topic.id, comment.id, -1)).body;
+                    const expected = {
+                        status: {
+                            code: 20000
+                        },
+                        data: {
+                            up: {
+                                count: 0,
+                                selected: false
                             },
-                            data: {
-                                up: {
-                                    count: 0,
-                                    selected: false
-                                },
-                                down: {
-                                    count: 1,
-                                    selected: true
-                                }
+                            down: {
+                                count: 1,
+                                selected: true
                             }
-                        };
-                        assert.deepEqual(res.body, expected);
-
-                        done();
-                    });
+                        }
+                    };
+                    assert.deepEqual(resBody, expected);
                 });
 
-                test('Success - 20100 - clear vote', function (done) {
-                    topicCommentVotesCreate(creatorAgent, topic.id, comment.id, 0, function (err, res) {
-                        if (err) return done(err);
-
-                        var expected = {
-                            status: {
-                                code: 20000
+                test('Success - 20100 - clear vote', async function () {
+                    const resBody = (await topicCommentVotesCreatePromised(creatorAgent, topic.id, comment.id, 0)).body;
+                    const expected = {
+                        status: {
+                            code: 20000
+                        },
+                        data: {
+                            up: {
+                                count: 0,
+                                selected: false
                             },
-                            data: {
-                                up: {
-                                    count: 0,
-                                    selected: false
-                                },
-                                down: {
-                                    count: 0,
-                                    selected: false
-                                }
+                            down: {
+                                count: 0,
+                                selected: false
                             }
-                        };
-                        assert.deepEqual(res.body, expected);
-
-                        done();
-                    });
+                        }
+                    };
+                    assert.deepEqual(resBody, expected);
                 });
 
-                test('Success - 20100 - change vote from upvote to downvote', function (done) {
-                    topicCommentVotesCreate(creatorAgent, topic.id, comment.id, 1, function (err) {
-                        if (err) return done(err);
-
-                        topicCommentVotesCreate(creatorAgent, topic.id, comment.id, -1, function (err, res) {
-                            if (err) return done(err);
-
-                            var expected = {
-                                status: {
-                                    code: 20000
-                                },
-                                data: {
-                                    up: {
-                                        count: 0,
-                                        selected: false
-                                    },
-                                    down: {
-                                        count: 1,
-                                        selected: true
-                                    }
-                                }
-                            };
-                            assert.deepEqual(res.body, expected);
-
-                            done();
-                        });
-                    });
+                test('Success - 20100 - change vote from upvote to downvote', async function () {
+                    await topicCommentVotesCreatePromised(creatorAgent, topic.id, comment.id, 1);
+                    const resBody = (await topicCommentVotesCreatePromised(creatorAgent, topic.id, comment.id, -1)).body;
+                    const expected = {
+                        status: {
+                            code: 20000
+                        },
+                        data: {
+                            up: {
+                                count: 0,
+                                selected: false
+                            },
+                            down: {
+                                count: 1,
+                                selected: true
+                            }
+                        }
+                    };
+                    assert.deepEqual(resBody, expected);
                 });
 
-                test('Fail - 40000 - invalid vote value', function (done) {
-                    _topicCommentVotesCreate(creatorAgent, topic.id, comment.id, 666, 400, function (err, res) {
-                        if (err) return done(err);
+                test('Success - Multiple users voting', async function () {
+                    await topicCommentVotesCreatePromised(creatorAgent, topic.id, comment.id, 1);
+                    await topicCommentVotesCreatePromised(userAgent, topic.id, comment.id, 1);
+                    const resBody = (await topicCommentVotesCreatePromised(user2Agent, topic.id, comment.id, -1)).body;
+                    const expected = {
+                        status: {
+                            code: 20000
+                        },
+                        data: {
+                            up: {
+                                count: 2,
+                                selected: false
+                            },
+                            down: {
+                                count: 1,
+                                selected: true
+                            }
+                        }
+                    };
+                    assert.deepEqual(resBody, expected);
+                });
 
-                        var expectedBody = {
-                            status: {code: 40000},
-                            errors: {value: 'Vote value must be 1 (up-vote), -1 (down-vote) OR 0 to clear vote.'}
-                        };
-                        assert.deepEqual(res.body, expectedBody);
-
-                        done();
-                    });
+                test('Fail - 40000 - invalid vote value', async function () {
+                    const resBody = (await _topicCommentVotesCreatePromised(creatorAgent, topic.id, comment.id, 666, 400)).body;
+                    const expectedBody = {
+                        status: {code: 40000},
+                        errors: {value: 'Vote value must be 1 (up-vote), -1 (down-vote) OR 0 to clear vote.'}
+                    };
+                    assert.deepEqual(resBody, expectedBody);
                 });
             });
 
@@ -12069,8 +12230,8 @@ suite('Topics', function () {
                 });
 
                 test('Success', async function () {
-                    await topicCommentVotesCreatePromised (creatorAgent, topic.id, comment.id, 1);
-                    await topicCommentVotesCreatePromised (creatorAgent2, topic.id, comment.id, 0); //Add cleared vote that should not be returned;
+                    await topicCommentVotesCreatePromised(creatorAgent, topic.id, comment.id, 1);
+                    await topicCommentVotesCreatePromised(creatorAgent2, topic.id, comment.id, 0); //Add cleared vote that should not be returned;
                     const commentVotesList = (await topicCommentVotesListPromised(creatorAgent, creator.id, topic.id, comment.id)).body.data;
                     const commentVote = commentVotesList.rows[0];
                     const expected = {
@@ -12083,7 +12244,7 @@ suite('Topics', function () {
                                 name: creator.name,
                                 vote: "up"
                             }
-                      ],
+                        ],
                         count: 1
                     };
 
@@ -12398,7 +12559,7 @@ suite('Topics', function () {
                             paranoid: false
                         }
                     );
-                    const resBody = (await _topicCommentReportModeratePromised (request.agent(app), topic.id, comment.id, report.id, token, moderateType, moderateText, 400)).body;
+                    const resBody = (await _topicCommentReportModeratePromised(request.agent(app), topic.id, comment.id, report.id, token, moderateType, moderateText, 400)).body;
                     const expectedResult = {
                         status: {
                             code: 40010,

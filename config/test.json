@@ -13,6 +13,12 @@
       "define": {
         "syncOnAssociation": true
       },
+      "dialectOptions": {
+        "ssl": {
+          "require": true,
+          "rejectUnauthorized": false
+        }
+      },
       "pool": {
         "min": 0,
         "max": 5,
@@ -167,5 +173,8 @@
     "maxFileSize": 50000,
     "baseFolder": "",
     "baseURL": ""
+  },
+  "encryption": {
+    "salt": "superSecretSalt"
   }
 }

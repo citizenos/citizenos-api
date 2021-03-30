@@ -3,7 +3,7 @@
 const util = require('../../libs/util');
 
 /**
- * TopicInvite
+ * TopicInviteUser
  *
  * @param {object} sequelize Sequelize instance
  * @param {object} DataTypes Sequelize DataTypes
@@ -19,7 +19,7 @@ module.exports = function (sequelize, DataTypes) {
     // Parent model for this model
     const TopicInvite = require('./_TopicInvite').model(sequelize, DataTypes);
 
-    // NOTE: TopicMemberUser extends TopicMember
+    // NOTE: TopicInviteUser extends TopicInvite
     const attributes = Object.assign({
         userId: {
             type: DataTypes.UUID,

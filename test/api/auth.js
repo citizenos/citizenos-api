@@ -90,14 +90,14 @@ const _loginIdPromised = async function (agent, token, clientCert, expectedHttpC
     }
 
     return a.expect(expectedHttpCode)
-    .expect('Content-Type', /json/)
-    .then(function (res, err) {
-        if (err) return err;
-        const data = res.body.data;
-        if (data && !data.token && !data.hash) {
-            a.expect('set-cookie', /.*\.sid=.*; Path=\/api; Expires=.*; HttpOnly/);
-        }
-    });
+        .expect('Content-Type', /json/)
+        .then(function (res, err) {
+            if (err) return err;
+            const data = res.body.data;
+            if (data && !data.token && !data.hash) {
+                a.expect('set-cookie', /.*\.sid=.*; Path=\/api; Expires=.*; HttpOnly/);
+            }
+        });
 }
 
 /**
@@ -888,13 +888,13 @@ suite('Auth', function () {
                             .destroy({
                                 where: {
                                     connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId: ['PNOEE-'+pid]
+                                    connectionUserId: ['PNOEE-' + pid]
                                 },
                                 force: true
                             });
                     });
 
-                    test('Success - 20003 - created',async function () {
+                    test('Success - 20003 - created', async function () {
                         this.timeout(35000); //eslint-disable-line no-invalid-this
 
                         const agent = request.agent(app);
@@ -906,7 +906,6 @@ suite('Auth', function () {
                         // Makes sure login succeeded AND consistency between /auth/status and /auth/mobile/status endpoints
                         assert.deepEqual(userFromStatus, userInfoFromMobiilIdStatusResponse.data);
                         assert.equal(userInfoFromMobiilIdStatusResponse.data.name, 'Mary Änn O’Connež-Šuslik Testnumber'); // Special check for encoding issues
-
                     });
                 });
 
@@ -1021,7 +1020,7 @@ suite('Auth', function () {
                     });
 
                     test('Success - 20003 - created', async function () {
-                        this.timeout(15000); //eslint-disable-line no-invalid-this
+                        this.timeout(35000); //eslint-disable-line no-invalid-this
 
                         const agent = request.agent(app);
 
@@ -1034,8 +1033,9 @@ suite('Auth', function () {
                     });
 
                     test('Fail - 40010 - User refused', async function () {
-                        this.timeout(15000); //eslint-disable-line no-invalid-this
-                        pid = '10101010016'
+                        this.timeout(35000); //eslint-disable-line no-invalid-this
+
+                        pid = '10101010016';
                         const agent = request.agent(app);
 
                         const initResponse = (await loginSmartIdInitPromised(agent, pid)).body.data;
@@ -1072,7 +1072,7 @@ suite('Auth', function () {
                     const agent2 = request.agent(app);
 
                     test('Success - 20002 - existing User', async function () {
-                        this.timeout(15000); //eslint-disable-line no-invalid-this
+                        this.timeout(30000); //eslint-disable-line no-invalid-this
                         pid = '10101010005';
                         const user = await userLib.createUserPromised(agent2, null, null, null);
 
@@ -1167,7 +1167,7 @@ suite('Auth', function () {
                 .then(async function (user) {
                     const userSignedup = (await signupPromised(agent, user.email, password, language)).body.data;
                     assert.equal(userSignedup.email, email);
-                    assert.equal(userSignedup.language,user.language);
+                    assert.equal(userSignedup.language, user.language);
                 });
 
         });
@@ -1282,7 +1282,7 @@ suite('Auth', function () {
         test.skip('Success - signup sets redirectSuccess and verify should redirect to it', async function () {
         });
 
-        test('Fail - invalid emailVerificationCode',async function () {
+        test('Fail - invalid emailVerificationCode', async function () {
             return agent
                 .get('/api/auth/verify/thisCodeDoesNotExist')
                 .expect(302)
@@ -1299,7 +1299,7 @@ suite('Auth', function () {
             const password = 'testPassword123';
             const newPassword = 'newPassword123';
 
-            suiteSetup( async function () {
+            suiteSetup(async function () {
                 return userLib.createUserAndLoginPromised(agent, email, password, null);
             });
 
@@ -1356,16 +1356,16 @@ suite('Auth', function () {
                     await passwordResetSendPromised(agent, email);
 
                     return User
-                            .findOne({
-                                where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email))
-                            })
-                            .then(function (user) {
-                                const passwordResetCode = user.passwordResetCode;
+                        .findOne({
+                            where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
+                        })
+                        .then(function (user) {
+                            const passwordResetCode = user.passwordResetCode;
 
-                                assert.property(user, 'passwordResetCode');
-                                assert.isNotNull(passwordResetCode);
-                                assert.lengthOf(passwordResetCode, 36);
-                            });
+                            assert.property(user, 'passwordResetCode');
+                            assert.isNotNull(passwordResetCode);
+                            assert.lengthOf(passwordResetCode, 36);
+                        });
                 });
 
                 test('Fail - 40000 - missing email', async function () {
@@ -1403,13 +1403,13 @@ suite('Auth', function () {
 
                 suiteSetup(async function () {
                     await passwordResetSendPromised(agent, email);
-                        return User
-                            .findOne({
-                                where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
-                            })
-                            .then(function (user) {
-                                passwordResetCode = user.passwordResetCode;
-                            });
+                    return User
+                        .findOne({
+                            where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
+                        })
+                        .then(function (user) {
+                            passwordResetCode = user.passwordResetCode;
+                        });
                 });
 
                 test('Fail - invalid reset code', async function () {
@@ -1458,13 +1458,13 @@ suite('Auth', function () {
                     const loginRes = await loginPromised(agent, email, password);
                     assert.equal(email, loginRes.body.data.email);
                     return User
-                            .findOne({
-                                where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email))
-                            })
-                            .then(function (user) {
-                                // A new password reset code was to be generated - https://github.com/citizenos/citizenos-api/issues/68
-                                assert.notEqual(user.passwordResetCode, passwordResetCode);
-                            });
+                        .findOne({
+                            where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
+                        })
+                        .then(function (user) {
+                            // A new password reset code was to be generated - https://github.com/citizenos/citizenos-api/issues/68
+                            assert.notEqual(user.passwordResetCode, passwordResetCode);
+                        });
                 });
 
             });

@@ -11,6 +11,9 @@
             <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0; border-top: 1px solid #fbfbfb; " height="130">
                 <p style="font-family: Open Sans,sans-serif; font-size:14px;background-color: #FFFFFF; color:#252525;">L'utilisateur de Citizen OS <b>{{fromUser.name}}</b> vient de vous inviter à rejoindre le groupe de décision :</p>
                 <p style="font-family: Open Sans,sans-serif; font-size:20px; font-weight: bold; background-color: #FFFFFF; color:#0680fc;"><a href="{{linkViewGroup}}" target="_blank" style="color:#0680FC; text-decoration: none; font-family: Open Sans,sans-serif;">{{group.name}}</a></p>
+                {{#message}}
+                <p style="font-family: Open Sans,sans-serif; font-size:14px;background-color: #FFFFFF; color:#252525;">{{message}}</p>
+                {{/message}}
             </td>
         </tr>
 

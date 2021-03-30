@@ -90,5 +90,8 @@
       "voteCountMin": "CITIZENOS_FEATURES_SENDTOPARLIAMENT_VOTECOUNTMIN",
       "from": "CITIZENOS_FEATURES_SENDTOPARLIAMENT_FROM"
     }
+  },
+  "encryption": {
+    "salt": "CITIZENOS_ENCRYPTION_SALT"
   }
 }

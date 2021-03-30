@@ -126,8 +126,91 @@ const groupsListUnauthPromised = async function (agent, status, orderBy, offset,
     return _groupsListUnauthPromised(agent, status, orderBy, offset, limit, sourcePartnerId, 200);
 };
 
+const _groupInviteUsersCreatePromised = async function (agent, userId, groupId, invites, expectedHttpCode) {
+    const path = '/api/users/:userId/groups/:groupId/invites/users'
+        .replace(':userId', userId)
+        .replace(':groupId', groupId);
+
+    return agent
+        .post(path)
+        .send(invites)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const groupInviteUsersCreatePromised = async function (agent, userId, groupId, invites) {
+    return _groupInviteUsersCreatePromised(agent, userId, groupId, invites, 201);
+};
+
+const _groupInviteUsersReadPromised = async function (agent, groupId, inviteId, expectedHttpCode) {
+    const path = '/api/groups/:groupId/invites/users/:inviteId'
+        .replace(':groupId', groupId)
+        .replace(':inviteId', inviteId);
+
+    return agent
+        .get(path)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const groupInviteUsersReadPromised = async function (agent, groupId, inviteId) {
+    return _groupInviteUsersReadPromised(agent, groupId, inviteId, 200);
+};
+
+const _groupInviteUsersListPromised = function (agent, userId, groupId, expectedHttpCode) {
+    const path = '/api/users/:userId/groups/:groupId/invites/users'
+        .replace(':userId', userId)
+        .replace(':groupId', groupId);
+
+    return agent
+        .get(path)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const groupInviteUsersListPromised = async function (agent, userId, groupId) {
+    return _groupInviteUsersListPromised(agent, userId, groupId, 200);
+};
+
+const _groupInviteUsersDeletePromised = async function (agent, userId, groupId, inviteId, expectedHttpCode) {
+    const path = '/api/users/:userId/groups/:groupId/invites/users/:inviteId'
+        .replace(':userId', userId)
+        .replace(':groupId', groupId)
+        .replace(':inviteId', inviteId);
+
+    return agent
+        .delete(path)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const groupInviteUsersDeletePromised = async function (agent, userId, groupId, inviteId) {
+    return _groupInviteUsersDeletePromised(agent, userId, groupId, inviteId, 200);
+};
+
+const _groupInviteUsersAcceptPromised = function aync (agent, userId, groupId, inviteId, expectedHttpCode) {
+    const path = '/api/users/:userId/groups/:groupId/invites/users/:inviteId/accept'
+        .replace(':userId', userId)
+        .replace(':groupId', groupId)
+        .replace(':inviteId', inviteId);
+
+    return agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const groupInviteUsersAcceptPromised = function async (agent, userId, groupId, inviteId) {
+    return _groupInviteUsersAcceptPromised(agent, userId, groupId, inviteId, 201);
+};
+
 var _groupMembersCreate = function (agent, userId, groupId, members, expectedHttpCode, callback) {
-    var path = '/api/users/:userId/groups/:groupId/members'
+    var path = '/api/users/:userId/groups/:groupId/members/users'
         .replace(':userId', userId)
         .replace(':groupId', groupId);
 
@@ -145,7 +228,7 @@ var groupMembersCreate = function (agent, userId, groupId, members, callback) {
 };
 
 const _groupMembersCreatePromised = async function (agent, userId, groupId, members, expectedHttpCode) {
-    const path = '/api/users/:userId/groups/:groupId/members'
+    const path = '/api/users/:userId/groups/:groupId/members/users'
         .replace(':userId', userId)
         .replace(':groupId', groupId);
 
@@ -162,7 +245,7 @@ const groupMembersCreatePromised = async function (agent, userId, groupId, membe
 };
 
 var _groupMembersUpdate = function (agent, userId, groupId, memberId, level, expectedHttpCode, callback) {
-    var path = '/api/users/:userId/groups/:groupId/members/:memberId'
+    var path = '/api/users/:userId/groups/:groupId/members/users/:memberId'
         .replace(':userId', userId)
         .replace(':groupId', groupId)
         .replace(':memberId', memberId);
@@ -181,7 +264,7 @@ var groupMembersUpdate = function (agent, userId, groupId, memberId, level, call
 };
 
 const _groupMembersUpdatePromised = async function (agent, userId, groupId, memberId, level, expectedHttpCode) {
-    const path = '/api/users/:userId/groups/:groupId/members/:memberId'
+    const path = '/api/users/:userId/groups/:groupId/members/users/:memberId'
         .replace(':userId', userId)
         .replace(':groupId', groupId)
         .replace(':memberId', memberId);
@@ -199,7 +282,7 @@ const groupMembersUpdatePromised = async function (agent, userId, groupId, membe
 };
 
 var _groupMembersDelete = function (agent, userId, groupId, memberId, expectedHttpCode, callback) {
-    var path = '/api/users/:userId/groups/:groupId/members/:memberId'
+    var path = '/api/users/:userId/groups/:groupId/members/users/:memberId'
         .replace(':userId', userId)
         .replace(':groupId', groupId)
         .replace(':memberId', memberId);
@@ -217,7 +300,7 @@ var groupMembersDelete = function (agent, userId, groupId, memberId, callback) {
 };
 
 const _groupMembersDeletePromised = async function (agent, userId, groupId, memberId, expectedHttpCode) {
-    const path = '/api/users/:userId/groups/:groupId/members/:memberId'
+    const path = '/api/users/:userId/groups/:groupId/members/users/:memberId'
         .replace(':userId', userId)
         .replace(':groupId', groupId)
         .replace(':memberId', memberId);
@@ -247,6 +330,7 @@ const _groupMembersTopicsListPromised = async function (agent, userId, groupId, 
 const groupMembersTopicsListPromised = async function (agent, userId, groupId) {
     return _groupMembersTopicsListPromised(agent, userId, groupId, 200);
 };
+
 module.exports.create = groupCreate;
 module.exports.createPromised = groupCreatePromised;
 module.exports.deletePromised = groupDeletePromised;
@@ -257,20 +341,23 @@ module.exports.membersUpdatePromised = groupMembersUpdatePromised;
 module.exports.membersDelete = groupMembersDelete;
 module.exports.membersDeletePromised = groupMembersDeletePromised;
 
-var assert = require('chai').assert;
-var request = require('supertest');
-var app = require('../../app');
-var models = app.get('models');
+const assert = require('chai').assert;
+const request = require('supertest');
+const app = require('../../app');
+const models = app.get('models');
 const db = models.sequelize;
+const cosUtil = app.get('util');
 
-var shared = require('../utils/shared');
-var userLib = require('./lib/user')(app);
-var topicLib = require('./topic');
+const shared = require('../utils/shared');
+const userLib = require('./lib/user')(app);
+const topicLib = require('./topic');
 
-var User = models.User;
-var Group = models.Group;
-var GroupMember = models.GroupMember;
-var TopicMemberUser = models.TopicMemberUser;
+const User = models.User;
+const Group = models.Group;
+const GroupMember = models.GroupMember;
+const TopicMemberUser = models.TopicMemberUser;
+const TopicMemberGroup = models.TopicMemberGroup;
+const GroupInviteUser = models.GroupInviteUser;
 
 suite('Users', function () {
 
@@ -312,7 +399,10 @@ suite('Users', function () {
 
 
             test('Fail - Unauthorized', async function () {
-                const expectedStatus = { code: 40100, message: 'Unauthorized' };
+                const expectedStatus = {
+                    code: 40100,
+                    message: 'Unauthorized'
+                };
                 const err = (await _groupCreatePromised(request.agent(app), user.id, groupName, null, null, 401)).body;
 
                 assert.deepEqual(err.status, expectedStatus);
@@ -527,7 +617,7 @@ suite('Users', function () {
                                 topic = results[1].body.data;
                                 var memberGroup = {
                                     groupId: group.id,
-                                    level: TopicMemberUser.LEVELS.read
+                                    level: TopicMemberGroup.LEVELS.read
                                 };
 
                                 return await topicLib.topicMemberGroupsCreatePromised(agentCreator, user.id, topic.id, memberGroup);
@@ -653,6 +743,773 @@ suite('Users', function () {
 
         });
 
+        suite('Invites', function () {
+
+            suite('Users', function () {
+
+                suite('Create', function () {
+
+                    let agentCreator = request.agent(app);
+                    let groupName = 'TESTCASE: Invites Create';
+
+                    let userCreator;
+                    let group;
+
+                    setup(async function () {
+                        userCreator = await userLib.createUserAndLoginPromised(agentCreator, null, null, null);
+                        group = (await groupCreatePromised(agentCreator, userCreator.id, groupName, null, null)).body.data;
+                    });
+
+                    test('Success - 20100 - invite a single User with userId', async function () {
+                        const userToInvite = await userLib.createUserPromised(request.agent(app), null, null, null);
+
+                        const invitation = {
+                            userId: userToInvite.id,
+                            level: GroupMember.LEVELS.read
+                        };
+
+                        const inviteCreateResult = (await groupInviteUsersCreatePromised(agentCreator, userCreator, group.id, invitation)).body;
+
+                        assert.deepEqual(
+                            inviteCreateResult.status,
+                            {
+                                code: 20100
+                            }
+                        );
+
+                        assert.equal(inviteCreateResult.data.count, 1);
+
+                        const createdInvites = inviteCreateResult.data.rows;
+                        assert.isArray(createdInvites);
+                        assert.equal(createdInvites.length, 1);
+
+                        const createdInvite = createdInvites[0];
+                        assert.uuid(createdInvite.id, 'v4');
+                        assert.equal(createdInvite.groupId, group.id);
+                        assert.equal(createdInvite.creatorId, userCreator.id);
+                        assert.equal(createdInvite.userId, invitation.userId);
+                        assert.equal(createdInvite.level, invitation.level);
+                        assert.isNotNull(createdInvite.createdAt);
+                        assert.isNotNull(createdInvite.updatedAt);
+                    });
+
+                    test('Success - 20100 - invite multiple Users - userId (uuidv4) WITHOUT invite message', async function () {
+                        const userToInvite = await userLib.createUserPromised(request.agent(app), null, null, null);
+                        const userToInvite2 = await userLib.createUserPromised(request.agent(app), null, null, null);
+
+                        const invitation = [
+                            {
+                                userId: userToInvite.id,
+                                level: GroupMember.LEVELS.read
+                            },
+                            {
+                                userId: userToInvite2.id,
+                                level: GroupMember.LEVELS.admin
+                            }
+                        ];
+
+                        const inviteCreateResult = (await groupInviteUsersCreatePromised(agentCreator, userCreator, group.id, invitation)).body;
+
+                        assert.deepEqual(
+                            inviteCreateResult.status,
+                            {
+                                code: 20100
+                            }
+                        );
+
+                        assert.equal(inviteCreateResult.data.count, 2);
+
+                        const createdInvites = inviteCreateResult.data.rows;
+                        assert.isArray(createdInvites);
+                        assert.equal(createdInvites.length, 2);
+
+                        const createdInviteUser1 = createdInvites.find(function (invite) { // find by level, not by id to keep the code simpler
+                            return invite.level === invitation[0].level;
+                        });
+                        assert.uuid(createdInviteUser1.id, 'v4');
+                        assert.equal(createdInviteUser1.groupId, group.id);
+                        assert.equal(createdInviteUser1.creatorId, userCreator.id);
+                        assert.equal(createdInviteUser1.userId, invitation[0].userId);
+                        assert.equal(createdInviteUser1.level, invitation[0].level);
+                        assert.isNotNull(createdInviteUser1.createdAt);
+                        assert.isNotNull(createdInviteUser1.updatedAt);
+
+                        const createdInviteUser2 = createdInvites.find(function (invite) { // find by level, not by id to keep the code simpler
+                            return invite.level === invitation[1].level;
+                        });
+
+                        assert.uuid(createdInviteUser2.id, 'v4');
+                        assert.equal(createdInviteUser2.groupId, group.id);
+                        assert.equal(createdInviteUser2.creatorId, userCreator.id);
+                        assert.equal(createdInviteUser2.userId, invitation[1].userId);
+                        assert.equal(createdInviteUser2.level, invitation[1].level);
+                        assert.isNotNull(createdInviteUser2.createdAt);
+                        assert.isNotNull(createdInviteUser2.updatedAt);
+                    });
+
+                    test('Success - 20100 - invite multiple Users - userId (uuidv4) WITH invite message', async function () {
+                        // NOTE: This test DOES NOT test e-mail itself, it just verifies that there is no syntax error in the e-mail sending code.
+
+                        const userToInvite = await userLib.createUserPromised(request.agent(app), null, null, null);
+                        const userToInvite2 = await userLib.createUserPromised(request.agent(app), null, null, null);
+
+                        const invitation = [
+                            {
+                                userId: userToInvite.id,
+                                level: GroupMember.LEVELS.read,
+                                inviteMessage: 'TEST invite message in the e-mail.'
+                            },
+                            {
+                                userId: userToInvite2.id,
+                                level: GroupMember.LEVELS.admin
+                            }
+                        ];
+
+                        const inviteCreateResult = (await groupInviteUsersCreatePromised(agentCreator, userCreator, group.id, invitation)).body;
+
+                        assert.deepEqual(
+                            inviteCreateResult.status,
+                            {
+                                code: 20100
+                            }
+                        );
+
+                        assert.equal(inviteCreateResult.data.count, 2);
+
+                        const createdInvites = inviteCreateResult.data.rows;
+                        assert.isArray(createdInvites);
+                        assert.equal(createdInvites.length, 2);
+
+                        const createdInviteUser1 = createdInvites.find(function (invite) { // find by level, not by id to keep the code simpler
+                            return invite.level === invitation[0].level;
+                        });
+                        assert.uuid(createdInviteUser1.id, 'v4');
+                        assert.equal(createdInviteUser1.groupId, group.id);
+                        assert.equal(createdInviteUser1.creatorId, userCreator.id);
+                        assert.equal(createdInviteUser1.userId, invitation[0].userId);
+                        assert.equal(createdInviteUser1.level, invitation[0].level);
+                        assert.isNotNull(createdInviteUser1.createdAt);
+                        assert.isNotNull(createdInviteUser1.updatedAt);
+
+                        const createdInviteUser2 = createdInvites.find(function (invite) { // find by level, not by id to keep the code simpler
+                            return invite.level === invitation[1].level;
+                        });
+
+                        assert.uuid(createdInviteUser2.id, 'v4');
+                        assert.equal(createdInviteUser2.groupId, group.id);
+                        assert.equal(createdInviteUser2.creatorId, userCreator.id);
+                        assert.equal(createdInviteUser2.userId, invitation[1].userId);
+                        assert.equal(createdInviteUser2.level, invitation[1].level);
+                        assert.isNotNull(createdInviteUser2.createdAt);
+                        assert.isNotNull(createdInviteUser2.updatedAt);
+                    });
+
+                    test('Success - 20100 - invite multiple users, 1 existing User and one not existing User - email & email', async function () {
+                        const userToInvite = await userLib.createUserPromised(request.agent(app), null, null, null);
+                        const invitation = [
+                            {
+                                userId: userToInvite.email,
+                                level: GroupMember.LEVELS.read
+                            },
+                            {
+                                userId: cosUtil.randomString() + '@invitetest.com',
+                                level: GroupMember.LEVELS.admin
+                            }
+                        ];
+
+                        const inviteCreateResult = (await groupInviteUsersCreatePromised(agentCreator, userCreator, group.id, invitation)).body;
+
+                        assert.deepEqual(
+                            inviteCreateResult.status,
+                            {
+                                code: 20100
+                            }
+                        );
+
+                        assert.equal(inviteCreateResult.data.count, 2);
+
+                        const createdInvites = inviteCreateResult.data.rows;
+                        assert.isArray(createdInvites);
+                        assert.equal(createdInvites.length, 2);
+
+                        const createdInviteUser1 = createdInvites.find(function (invite) { // find by level, not by id to keep the code simpler
+                            return invite.level === invitation[0].level;
+                        });
+                        assert.uuid(createdInviteUser1.id, 'v4');
+                        assert.equal(createdInviteUser1.groupId, group.id);
+                        assert.equal(createdInviteUser1.creatorId, userCreator.id);
+                        assert.uuid(createdInviteUser1.userId, 'v4');
+                        assert.equal(createdInviteUser1.level, invitation[0].level);
+                        assert.isNotNull(createdInviteUser1.createdAt);
+                        assert.isNotNull(createdInviteUser1.updatedAt);
+
+                        const createdInviteUser2 = createdInvites.find(function (invite) { // find by level, not by id to keep the code simpler
+                            return invite.level === invitation[1].level;
+                        });
+                        assert.uuid(createdInviteUser2.id, 'v4');
+                        assert.equal(createdInviteUser2.groupId, group.id);
+                        assert.equal(createdInviteUser2.creatorId, userCreator.id);
+                        assert.uuid(createdInviteUser2.userId, 'v4');
+                        assert.equal(createdInviteUser2.level, invitation[1].level);
+                        assert.isNotNull(createdInviteUser2.createdAt);
+                        assert.isNotNull(createdInviteUser2.updatedAt);
+                    });
+
+                    test('Fail - 40001 - Invite yourself', async function () {
+                        const invitation = {
+                            userId: userCreator.id,
+                            level: GroupMember.LEVELS.read
+                        };
+
+                        const inviteCreateResult = (await _groupInviteUsersCreatePromised(agentCreator, userCreator, group.id, invitation, 400)).body;
+
+                        const expectedBody = {
+                            status: {
+                                code: 40001,
+                                message: 'No invites were created. Possibly because no valid userId-s (uuidv4s or emails) were provided.'
+                            }
+                        };
+
+                        assert.deepEqual(inviteCreateResult, expectedBody);
+                    });
+
+                    test('Fail - 40001 - invite a User with invalid userId', async function () {
+                        const invitation = [
+                            {
+                                userId: 'notAnEmailNorUserId',
+                                level: GroupMember.LEVELS.read
+                            }
+                        ];
+
+                        const inviteCreateResult = (await _groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, invitation, 400)).body;
+
+                        const expectedResponseBody = {
+                            status: {
+                                code: 40001,
+                                message: 'No invites were created. Possibly because no valid userId-s (uuidv4s or emails) were provided.'
+                            }
+                        };
+
+                        assert.deepEqual(inviteCreateResult, expectedResponseBody);
+                    });
+
+                    test('Fail - 40000 - invalid JSON in request body', async function () {
+                        const expectedResponseBody = {
+                            status: {
+                                code: 40000,
+                                message: 'Invalid JSON in request body'
+                            }
+                        };
+
+                        const inviteCreateResult1 = (await _groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, '{asdasdas', 400)).body;
+
+                        assert.deepEqual(inviteCreateResult1, expectedResponseBody);
+
+                        const inviteCreateResult2 = (await _groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, 'PPPasdasdas', 400)).body;
+
+                        assert.deepEqual(inviteCreateResult2, expectedResponseBody);
+                    });
+
+                    test('Fail - 40100 - Unauthorized', async function () {
+                        await _groupInviteUsersCreatePromised(request.agent(app), '4727aecc-56f7-4802-8f76-2cfaad5cd5f3', group.id, [], 401);
+                    });
+
+                    test('Fail - 40300 - at least admin permissions required', async function () {
+                        const agentInvalidUser = request.agent(app);
+                        const invalidUser = await userLib.createUserAndLoginPromised(agentInvalidUser, null, null, null);
+
+                        // Try not being part of the group at all
+                        await _groupInviteUsersCreatePromised(agentInvalidUser, invalidUser.id, group.id, [], 403);
+
+                        // Create User with "read" level, should not be able to invite.
+                        await GroupMember.create({
+                            groupId: group.id,
+                            userId: invalidUser.id,
+                            level: GroupMember.LEVELS.read
+                        });
+
+                        // Try to invite with "read" level
+                        await _groupInviteUsersCreatePromised(agentInvalidUser, invalidUser.id, group.id, [], 403);
+                    });
+                });
+
+                suite('Read', function () {
+
+                    const agentCreator = request.agent(app);
+                    const agentUserToInvite = request.agent(app);
+
+                    const groupName = 'TESTCASE: Invite Read';
+
+                    let userCreator;
+                    let userToInvite;
+
+                    let group;
+                    let groupInviteCreated;
+
+                    suiteSetup(async function () {
+                        userToInvite = await userLib.createUserAndLoginPromised(agentUserToInvite, null, null, null);
+                        userCreator = await userLib.createUserAndLoginPromised(agentCreator, null, null, null);
+                    });
+
+                    setup(async function () {
+                        group = (await groupCreatePromised(agentCreator, userCreator.id, groupName, null, null)).body.data;
+
+                        const invitation = {
+                            userId: userToInvite.id,
+                            level: GroupMember.LEVELS.read
+                        };
+
+                        groupInviteCreated = (await groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, invitation)).body.data.rows[0];
+                    });
+
+                    test('Success - 20000', async function () {
+                        const inviteRead = (await groupInviteUsersReadPromised(request.agent(app), group.id, groupInviteCreated.id)).body.data;
+
+                        const expectedInvite = Object.assign({}, groupInviteCreated); // Clone
+
+                        expectedInvite.group = {
+                            id: group.id,
+                            name: group.name,
+                            creator: {
+                                id: userCreator.id
+                            }
+                        };
+
+                        expectedInvite.creator = {
+                            company: null,
+                            id: userCreator.id,
+                            imageUrl: null,
+                            name: userCreator.name
+                        };
+
+                        expectedInvite.user = {
+                            id: userToInvite.id,
+                            email: cosUtil.emailToMaskedEmail(userToInvite.email)
+                        };
+
+                        assert.deepEqual(inviteRead, expectedInvite);
+                    });
+
+                    // I invite has been accepted (deleted, but User has access)
+                    test('Success - 20001', async function () {
+                        const groupMemberUser = (await groupInviteUsersAcceptPromised(agentUserToInvite, userToInvite.id, group.id, groupInviteCreated.id)).body.data;
+
+                        assert.equal(groupMemberUser.groupId, group.id);
+                        assert.equal(groupMemberUser.userId, userToInvite.id);
+                        assert.equal(groupMemberUser.level, groupInviteCreated.level);
+                        assert.property(groupMemberUser, 'createdAt');
+                        assert.property(groupMemberUser, 'updatedAt');
+                        assert.property(groupMemberUser, 'deletedAt');
+
+                        const inviteReadResult = (await groupInviteUsersReadPromised(request.agent(app), group.id, groupInviteCreated.id)).body;
+                        const expectedInvite = Object.assign({}, groupInviteCreated);
+
+                        // Accepting the invite changes "updatedAt", thus these are not the same. Verify that the "updatedAt" exists and remove from expected and actual
+                        assert.property(inviteReadResult.data, 'updatedAt');
+                        delete inviteReadResult.data.updatedAt;
+                        delete expectedInvite.updatedAt;
+
+                        expectedInvite.group = {
+                            id: group.id,
+                            name: group.name,
+                            creator: {
+                                id: userCreator.id
+                            }
+                        };
+
+                        expectedInvite.creator = {
+                            company: null,
+                            id: userCreator.id,
+                            imageUrl: null,
+                            name: userCreator.name
+                        };
+
+                        expectedInvite.user = {
+                            id: userToInvite.id,
+                            email: cosUtil.emailToMaskedEmail(userToInvite.email)
+                        };
+
+                        const expectedInviteResult = {
+                            status: {
+                                code: 20001
+                            },
+                            data: expectedInvite
+                        };
+
+                        assert.deepEqual(inviteReadResult, expectedInviteResult);
+                    });
+
+
+                    test('Fail - 40400 - Not found', async function () {
+                        await _groupInviteUsersReadPromised(request.agent(app), group.id, 'f4bb46b9-87a1-4ae4-b6df-c2605ab8c471', 404);
+                    });
+
+                    test('Fail - 41001 - Deleted', async function () {
+                        const invitation = {
+                            userId: userToInvite.id,
+                            level: GroupMember.LEVELS.read
+                        };
+
+                        let groupInviteCreated = (await groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, invitation)).body.data.rows[0];
+
+                        await GroupInviteUser
+                            .destroy({
+                                where: {
+                                    id: groupInviteCreated.id
+                                }
+                            });
+
+                        const groupInviteRead = (await _groupInviteUsersReadPromised(request.agent(app), group.id, groupInviteCreated.id, 410)).body;
+
+                        const expectedBody = {
+                            status: {
+                                code: 41001,
+                                message: 'The invite has been deleted'
+                            }
+                        };
+
+                        assert.deepEqual(groupInviteRead, expectedBody);
+                    });
+
+                    test('Fail - 41002 - Expired', async function () {
+                        await GroupInviteUser
+                            .update(
+                                {
+                                    createdAt: db.literal(`NOW() - INTERVAL '${GroupInviteUser.VALID_DAYS + 1}d'`)
+                                },
+                                {
+                                    where: {
+                                        id: groupInviteCreated.id
+                                    }
+                                }
+                            );
+
+                        const groupInviteRead = (await _groupInviteUsersReadPromised(request.agent(app), group.id, groupInviteCreated.id, 410)).body;
+
+                        const expectedBody = {
+                            status: {
+                                code: 41002,
+                                message: `The invite has expired. Invites are valid for ${GroupInviteUser.VALID_DAYS} days`
+                            }
+                        };
+
+                        assert.deepEqual(groupInviteRead, expectedBody);
+
+                    });
+
+                });
+
+                suite('List', function () {
+
+                    const agentCreator = request.agent(app);
+
+                    let userCreator;
+                    let userToInvite1;
+                    let userToInvite2;
+
+                    let group;
+
+                    let groupInviteCreated1;
+                    let groupInviteCreated2;
+
+                    setup(async function () {
+                        userCreator = await userLib.createUserAndLoginPromised(agentCreator, null, null, null);
+                        userToInvite1 = await userLib.createUserPromised(request.agent(app), null, null, null);
+                        userToInvite2 = await userLib.createUserPromised(request.agent(app), null, null, null);
+
+                        group = (await groupCreatePromised(agentCreator, userCreator.id, 'TEST CASE: User Invites List', null, null)).body.data;
+
+                        const groupInvite1 = {
+                            userId: userToInvite1.id,
+                            level: GroupMember.LEVELS.read
+                        };
+
+                        const groupInvite2 = {
+                            userId: userToInvite2.id,
+                            level: GroupMember.LEVELS.admin
+                        };
+
+                        groupInviteCreated1 = (await groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, groupInvite1)).body.data.rows[0];
+                        groupInviteCreated2 = (await groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, groupInvite2)).body.data.rows[0];
+                    });
+
+                    test('Success - 20000 - list invites', async function () {
+                        const invitesListResult = (await groupInviteUsersListPromised(agentCreator, userCreator.id, group.id)).body.data;
+                        assert.equal(2, invitesListResult.count);
+
+                        const invitesList = invitesListResult.rows;
+                        assert.isArray(invitesList);
+                        assert.equal(2, invitesList.length);
+
+                        const inviteListInvite1 = invitesList.find(invite => {
+                            return invite.id === groupInviteCreated1.id
+                        });
+
+                        const inviteListInviteUser1 = inviteListInvite1.user;
+                        assert.equal(inviteListInviteUser1.id, userToInvite1.id);
+                        assert.equal(inviteListInviteUser1.name, userToInvite1.name);
+                        assert.property(inviteListInviteUser1, 'imageUrl');
+                        delete inviteListInvite1.user;
+                        assert.deepEqual(inviteListInvite1, groupInviteCreated1);
+
+                        // The list result has User object, otherwise the objects should be equal
+                        const inviteListInvite2 = invitesList.find(invite => {
+                            return invite.id === groupInviteCreated2.id
+                        });
+                        const inviteListInviteUser2 = inviteListInvite2.user;
+                        assert.equal(inviteListInviteUser2.id, userToInvite2.id);
+                        assert.equal(inviteListInviteUser2.name, userToInvite2.name);
+                        assert.property(inviteListInviteUser2, 'imageUrl');
+                        delete inviteListInvite2.user;
+                        assert.deepEqual(inviteListInvite2, groupInviteCreated2);
+                    });
+
+                    test('Success - 20000 - list duplicate invites', async function () {
+                        // Second invite to User 1
+                        const groupInvite12 = {
+                            userId: userToInvite1.id,
+                            level: GroupMember.LEVELS.admin
+                        };
+
+                        const groupInviteCreated12 = (await groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, groupInvite12)).body.data.rows[0];
+
+                        const invitesListResult = (await groupInviteUsersListPromised(agentCreator, userCreator.id, group.id)).body.data;
+
+                        const invitesList = invitesListResult.rows;
+                        assert.isArray(invitesList);
+                        assert.equal(3, invitesList.length);
+
+                        const originalInvite = invitesList.find(invite => {
+                            return invite.id === groupInviteCreated1.id
+                        });
+                        assert.isObject(originalInvite);
+                        assert.equal(originalInvite.level, groupInviteCreated1.level);
+
+                        const duplicateInvite = invitesList.find(invite => {
+                           return invite.id === groupInviteCreated12.id
+                        });
+                        assert.isObject(duplicateInvite);
+                        assert.equal(duplicateInvite.level, groupInviteCreated12.level);
+
+                    });
+
+                    test('Success - 20000 - do not list expired invites', async function () {
+                        // Expire first invite
+                        await GroupInviteUser
+                            .update(
+                                {
+                                    createdAt: db.literal(`NOW() - INTERVAL '${GroupInviteUser.VALID_DAYS + 1}d'`)
+                                },
+                                {
+                                    where: {
+                                        id: groupInviteCreated1.id
+                                    }
+                                }
+                            );
+
+                        const invitesListResult = (await groupInviteUsersListPromised(agentCreator, userCreator.id, group.id)).body.data;
+                        assert.equal(1, invitesListResult.count);
+
+                        const invitesList = invitesListResult.rows;
+                        const inviteListInvite1 = invitesList.find(invite => {
+                            return invite.id === groupInviteCreated1.id;
+                        });
+                        assert.isUndefined(inviteListInvite1);
+                    });
+
+                    test('Success - 20000 - do not list deleted invites', async function () {
+                        // Delete second invite
+                        await GroupInviteUser
+                            .destroy(
+                                {
+                                    where: {
+                                        id: groupInviteCreated2.id
+                                    }
+                                }
+                            );
+
+                        const invitesListResult = (await groupInviteUsersListPromised(agentCreator, userCreator.id, group.id)).body.data;
+                        assert.equal(1, invitesListResult.count);
+
+                        const invitesList = invitesListResult.rows;
+                        const inviteListInvite2 = invitesList.find(invite => {
+                            return invite.id === groupInviteCreated2.id;
+                        });
+                        assert.isUndefined(inviteListInvite2);
+                    });
+
+                    test('Fail - 40100 - Unauthorized', async function () {
+                        await _groupInviteUsersListPromised(request.agent(app), '93857ed7-a81a-4187-85de-234f6d06b011', group.id, 401);
+                    });
+
+                    test('Fail - 40300 - at least read permissions required', async function () {
+                        await userLib.createUserAndLoginPromised(agentCreator, null, null, null);
+                        await _groupInviteUsersListPromised(agentCreator, userCreator.id, group.id, 403);
+                    });
+
+                });
+
+                suite('Delete', function () {
+
+                    const agentCreator = request.agent(app);
+
+                    let userCreator;
+                    let userToInvite;
+
+                    let group;
+                    let groupInviteCreated;
+
+                    suiteSetup(async function () {
+                        userToInvite = await userLib.createUserPromised(request.agent(app), null, null, null);
+                        userCreator = await userLib.createUserAndLoginPromised(agentCreator, null, null, null);
+                        group = (await groupCreatePromised(agentCreator, userCreator.id, 'TEST CASE: User Invites Delete', null, null)).body.data;
+
+                        const invitation = {
+                            userId: userToInvite.id,
+                            level: GroupMember.LEVELS.read
+                        };
+
+                        groupInviteCreated = (await groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, invitation)).body.data.rows[0];
+                    });
+
+                    test('Success - 20000', async function () {
+                        const userDeleteResult = (await groupInviteUsersDeletePromised(agentCreator, userCreator.id, group.id, groupInviteCreated.id)).body;
+
+                        const expectedBody = {
+                            status: {
+                                code: 20000
+                            }
+                        };
+
+                        assert.deepEqual(userDeleteResult, expectedBody);
+
+                        const topicInvite = await GroupInviteUser
+                            .findOne({
+                                where: {
+                                    id: groupInviteCreated.id,
+                                    groupId: group.id
+                                },
+                                paranoid: false
+                            });
+
+                        assert.isNotNull(topicInvite, 'deletedAt');
+                    });
+
+                    test('Fail - 40401 - Invite not found', async function () {
+                        const userDeleteResult = (await _groupInviteUsersDeletePromised(agentCreator, userCreator.id, group.id, '094ba349-c03e-4fa9-874e-48a978013b2a', 404)).body;
+
+                        const expectedBody = {
+                            status: {
+                                code: 40401,
+                                message: 'Invite not found'
+                            }
+                        };
+
+                        assert.deepEqual(userDeleteResult, expectedBody);
+                    });
+
+                    test('Fail - 40100 - Unauthorized', async function () {
+                        await _groupInviteUsersDeletePromised(request.agent(app), '4727aecc-56f7-4802-8f76-2cfaad5cd5f3', group.id, '094ba349-c03e-4fa9-874e-48a978013b2a', 401);
+                    });
+
+                    test('Fail - 40300 - at least admin permissions required', async function () {
+                        const agentInvalidUser = request.agent(app);
+                        const invalidUser = await userLib.createUserAndLoginPromised(agentInvalidUser, null, null, null);
+
+                        await _groupInviteUsersDeletePromised(agentInvalidUser, invalidUser.id, group.id, '094ba349-c03e-4fa9-874e-48a978013b2a', 403);
+                    });
+
+                });
+
+                suite('Accept', function () {
+
+                    const agentCreator = request.agent(app);
+                    const agentUserToInvite = request.agent(app);
+
+                    let userCreator;
+                    let userToInvite;
+
+                    let group;
+                    let groupInviteCreated;
+
+                    setup(async function () {
+                        userToInvite = await userLib.createUserAndLoginPromised(agentUserToInvite, null, null, null);
+                        userCreator = await userLib.createUserAndLoginPromised(agentCreator, null, null, null);
+                        group = (await groupCreatePromised(agentCreator, userCreator.id, 'TEST CASE: User Invites List', null, null)).body.data;
+
+                        const invitation = {
+                            userId: userToInvite.id,
+                            level: GroupMember.LEVELS.read
+                        };
+
+                        groupInviteCreated = (await groupInviteUsersCreatePromised(agentCreator, userCreator.id, group.id, invitation)).body.data.rows[0];
+                    });
+
+                    test('Success - 20100 - New member created', async function () {
+                        const groupMemberUser = (await groupInviteUsersAcceptPromised(agentUserToInvite, userToInvite.id, group.id, groupInviteCreated.id)).body.data;
+
+                        assert.equal(groupMemberUser.groupId, group.id);
+                        assert.equal(groupMemberUser.userId, userToInvite.id);
+                        assert.equal(groupMemberUser.level, groupInviteCreated.level);
+                        assert.property(groupMemberUser, 'createdAt');
+                        assert.property(groupMemberUser, 'updatedAt');
+                        assert.property(groupMemberUser, 'deletedAt');
+                    });
+
+                    test('Success - 20000 - User already a Member, but accepts an Invite', async function () {
+                        await groupInviteUsersAcceptPromised(agentUserToInvite, userToInvite.id, group.id, groupInviteCreated.id);
+                        const groupMemberUser = (await _groupInviteUsersAcceptPromised(agentUserToInvite, userToInvite.id, group.id, groupInviteCreated.id, 200)).body.data;
+
+                        assert.equal(groupMemberUser.groupId, group.id);
+                        assert.equal(groupMemberUser.userId, userToInvite.id);
+                        assert.equal(groupMemberUser.level, groupInviteCreated.level);
+                        assert.property(groupMemberUser, 'createdAt');
+                        assert.property(groupMemberUser, 'updatedAt');
+                        assert.property(groupMemberUser, 'deletedAt');
+                    });
+
+                    test('Fail - 40400 - Cannot accept deleted invite', async function () {
+                        await groupInviteUsersDeletePromised(agentCreator, userCreator.id, group.id, groupInviteCreated.id);
+                        await _groupInviteUsersAcceptPromised(agentUserToInvite, userToInvite.id, group.id, groupInviteCreated.id, 404);
+                    });
+
+                    test('Fail - 41002 - Cannot accept expired invite', async function () {
+                        await GroupInviteUser
+                            .update(
+                                {
+                                    createdAt: db.literal(`NOW() - INTERVAL '${GroupInviteUser.VALID_DAYS + 1}d'`)
+                                },
+                                {
+                                    where: {
+                                        id: groupInviteCreated.id
+                                    }
+                                }
+                            );
+
+                        const acceptResult = (await _groupInviteUsersAcceptPromised(agentUserToInvite, userToInvite.id, group.id, groupInviteCreated.id, 410)).body;
+
+                        const expectedBody = {
+                            status: {
+                                code: 41002,
+                                message: `The invite has expired. Invites are valid for ${GroupInviteUser.VALID_DAYS} days`
+                            }
+                        };
+
+                        assert.deepEqual(acceptResult, expectedBody);
+                    });
+
+                    test('Fail - 40100 - Unauthorized', async function () {
+                        await _groupInviteUsersAcceptPromised(request.agent(app), '93857ed7-a81a-4187-85de-234f6d06b011', group.id, groupInviteCreated.id, 401);
+                    });
+
+                    test('Fail - 40300 - Forbidden - Cannot accept for someone else', async function () {
+                        await _groupInviteUsersAcceptPromised(agentCreator, userToInvite.id, group.id, groupInviteCreated.id, 403);
+                    });
+                });
+            });
+
+        });
+
         suite('Members', function () {
 
             suite('Users', function () {
@@ -749,7 +1606,7 @@ suite('Users', function () {
                         return User
                             .findOne({
                                 where: {
-                                    email: db.where(db.fn('lower', db.col('email')), db.fn('lower',members[0].userId))
+                                    email: db.where(db.fn('lower', db.col('email')), db.fn('lower', members[0].userId))
                                 }
                             })
                             .then(function (user) {
@@ -784,6 +1641,18 @@ suite('Users', function () {
                         assert.equal(res.status, 201);
                     });
 
+                    test('Success - DEPRECATED - Use invite API - https://github.com/citizenos/citizenos-fe/issues/348', async function () {
+                        const members = [
+                            {
+                                userId: member.id,
+                                level: GroupMember.LEVELS.read
+                            }
+                        ];
+
+                        const groupMembersCreateResponse = await _groupMembersCreatePromised(agent, creator.id, group.id, members, 201);
+
+                        assert.equal(groupMembersCreateResponse.res.headers['citizenos-deprecated'], 'Use invite API - https://github.com/citizenos/citizenos-fe/issues/348');
+                    });
 
                     test('Fail - Forbidden - at least admin permissions required', async function () {
                         const agent = request.agent(app);
@@ -802,7 +1671,6 @@ suite('Users', function () {
                         const res = await _groupMembersCreatePromised(agent, user.id, group.id, members, 403);
                         assert.equal(res.status, 403);
                     });
-
                 });
 
                 suite('List', function () {
@@ -995,7 +1863,7 @@ suite('Users', function () {
                         const topicCreated = (await topicLib.topicCreatePromised(agent, creator.id, null, null, null, '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>', null)).body.data;
                         const memberGroup = {
                             groupId: group.id,
-                            level: TopicMemberUser.LEVELS.edit
+                            level: TopicMemberGroup.LEVELS.edit
                         };
                         await topicLib.topicMemberGroupsCreatePromised(agent, creator.id, topicCreated.id, memberGroup);
                     });
@@ -1016,7 +1884,7 @@ suite('Users', function () {
                         assert.deepEqual(groupMemberTopic.creator, creatorExpected);
 
                         assert.equal(groupMemberTopic.permission.level, TopicMemberUser.LEVELS.admin);
-                        assert.equal(groupMemberTopic.permission.levelGroup, TopicMemberUser.LEVELS.edit);
+                        assert.equal(groupMemberTopic.permission.levelGroup, TopicMemberGroup.LEVELS.edit);
 
                     });
 
@@ -1054,7 +1922,7 @@ suite('Users', function () {
                         const topic = (await topicLib.topicCreatePromised(agent, member.id, null, null, null, null, null)).body.data;
                         const memberGroup = {
                             groupId: group.id,
-                            level: TopicMemberUser.LEVELS.read
+                            level: TopicMemberGroup.LEVELS.read
                         };
                         await topicLib.topicMemberGroupsCreatePromised(agent, member.id, topic.id, memberGroup);
                         const groupData = (await groupListPromised(agent, member.id, null)).body.data;

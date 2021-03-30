@@ -29,7 +29,7 @@
     "cacheman": "2.2.1",
     "cacheman-memory": "1.1.0",
     "campaign": "4.1.7",
-    "campaign-mailgun": "1.1.0",
+    "campaign-mailgun": "git+https://github.com/citizenos/campaign-mailgun.git#ba0d82a8ff3ab8623960171560e2abb6f6a96247",
     "campaign-mustache": "1.0.0",
     "campaign-nodemailer": "1.1.0",
     "campaign-terminal": "1.0.4",

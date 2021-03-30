@@ -1,5 +1,7 @@
 'use strict';
 
+const { trimEnd } = require("lodash");
+
 /**
  * VoteList
  *
@@ -55,6 +57,11 @@ module.exports = function (sequelize, DataTypes) {
                 type: DataTypes.STRING(8),
                 allowNull: false,
                 comment: 'To recognise which votes were given in the same request needed to adequately count votes later.'
+            },
+            userHash: {
+                type: DataTypes.STRING(64),
+                allowNull: true,
+                comment: 'Hash from users PID that allows filtering votes from different users, but same person'
             }
         },
         {
