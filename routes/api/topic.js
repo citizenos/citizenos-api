@@ -6356,7 +6356,14 @@ module.exports = function (app) {
         // Store vote options
         const voteOptions = idSignFlowData.voteOptions;
         const optionGroupId = Math.random().toString(36).substring(2, 10);
-        const userHash = createDataHash(voteId + idSignFlowData.personalInfo.pid);
+
+        let connectionUserId = idSignFlowData.personalInfo.pid;
+        if (connectionUserId.indexOf('PNO') === -1) {
+            const country = (idSignFlowData.personalInfo.country || idSignFlowData.personalInfo.countryCode);
+            connectionUserId = `PNO${country}-${connectionUserId}`;
+        }
+
+        const userHash = createDataHash(voteId + connectionUserId);
 
         _(voteOptions).forEach(function (o) {
             o.voteId = voteId;
@@ -6372,12 +6379,6 @@ module.exports = function (app) {
         }
 
         await handleVoteLists(req, userId, topicId, voteId, voteOptions, context, transaction);
-
-        let connectionUserId = idSignFlowData.personalInfo.pid;
-        if (connectionUserId.indexOf('PNO') === -1) {
-            const country = (idSignFlowData.personalInfo.country || idSignFlowData.personalInfo.countryCode);
-            connectionUserId = `PNO${country}-${connectionUserId}`;
-        }
 
         await UserConnection.upsert(
             {
