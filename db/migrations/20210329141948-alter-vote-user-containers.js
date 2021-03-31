@@ -10,7 +10,7 @@ module.exports = {
                 }, { transaction: t }),
                 queryInterface.sequelize.query(`UPDATE "VoteUserContainers" vuc SET "PID" = vuc."userId"::text WHERE vuc."userId" IS NOT NULL;`, {transaction: t}),
                 queryInterface.sequelize.query(`UPDATE "VoteUserContainers" vuc SET "PID" = uc."connectionUserId"::text FROM "UserConnections" uc WHERE uc."userId"::text = vuc."userId"::text AND uc."connectionId" = 'esteid';`, {transaction: t}),
-                queryInterface.sequelize.query(`DELETE FROM "VoteUserContainers" a USING (SELECT "voteId", "PID", MAX("createdAt") as "createdAt" FROM "VoteUserContainers" GROUP BY "voteId", "PID") b WHERE a."voteId" = b."voteId" AND a."PID" = b."PID" AND a."createdAt" <> b."createdAt";`, {transaction: t}),
+                queryInterface.sequelize.query(`DELETE FROM "VoteUserContainers" a USING (SELECT "voteId", "PID", MAX("createdAt") as "createdAt" FROM "VoteUserContainers" GROUP BY "voteId", "PID") b WHERE a."voteId" = b."voteId" AND a."PID" = b."PID" AND a."createdAt" < b."createdAt";`, {transaction: t}),
                 queryInterface.changeColumn('VoteUserContainers', 'PID', {
                     type: Sequelize.TEXT,
                     allowNull: false,
