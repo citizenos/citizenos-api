@@ -173,5 +173,8 @@
     "maxFileSize": 50000,
     "baseFolder": "",
     "baseURL": ""
+  },
+  "encryption": {
+    "salt": "superSecretSalt"
   }
 }

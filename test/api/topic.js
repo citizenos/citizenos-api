@@ -1580,7 +1580,8 @@ const _topicVoteStatusPromised = async function (agent, userId, topicId, voteId,
 };
 
 const topicVoteStatusPromised = async function (agent, userId, topicId, voteId, token) {
-    return new Promise(function (resolve, reject) {
+    return _topicVoteStatusPromised(agent, userId, topicId, voteId, token, 200);
+   /* return new Promise(function (resolve, reject) {
         const maxRetries = 20;
         const retryInterval = 1000; // milliseconds;
 
@@ -1613,7 +1614,7 @@ const topicVoteStatusPromised = async function (agent, userId, topicId, voteId, 
             }
 
         }, retryInterval);
-    });
+    });*/
 };
 
 var _topicVoteStatusUnauth = function (agent, topicId, voteId, token, expectedHttpCode, callback) {
@@ -2271,7 +2272,6 @@ suite('Users', function () {
                     assert.match(expectedTopic.padUrl, /http(s)?:\/\/.*\/p\/[a-zA-Z0-9-]{36}\?jwt=.*&lang=[a-z]{2}/);
                     delete topicRead.padUrl;
                     delete expectedTopic.padUrl;
-
                     assert.deepEqual(topicRead, expectedTopic);
 
                     done();
@@ -3014,8 +3014,8 @@ suite('Users', function () {
                 });
             });
 
-            test('Success - send to Parliament', function (done) {
-                var voteOptions = [
+            test('Success - send to Parliament', async function () {
+                const voteOptions = [
                     {
                         value: 'Option 1'
                     },
@@ -3024,7 +3024,7 @@ suite('Users', function () {
                     }
                 ];
 
-                Topic
+                await Topic
                     .update(
                         {
                             title: 'TEST TITLE FOR SENDING TO PARLIAMENT', // Add  title which is not there as Topic is not edited in EP,
@@ -3036,84 +3036,35 @@ suite('Users', function () {
                             },
                             validate: false
                         }
-                    )
-                    .then(function () {
-                        // NOTE: Creating a Vote.AUTH_TYPES.soft and changing to Vote.AUTH_TYPES.hard after voting just for testing
-                        topicVoteCreate(agent, user.id, topic.id, voteOptions, 1, 1, false, null, null, Vote.TYPES.regular, Vote.AUTH_TYPES.soft, function (err, res) {
-                            if (err) return done(err);
+                    );
+                    // NOTE: Creating a Vote.AUTH_TYPES.soft and changing to Vote.AUTH_TYPES.hard after voting just for testing
+                const topicVote = (await topicVoteCreatePromised(agent, user.id, topic.id, voteOptions, 1, 1, false, null, null, Vote.TYPES.regular, Vote.AUTH_TYPES.hard)).body.data;
 
-                            topicVoteRead(agent, user.id, topic.id, res.body.data.id, function (err, res) {
-                                if (err) return done(err);
+                const vote = (await topicVoteReadPromised(agent, user.id, topic.id, topicVote.id)).body.data;
 
-                                var vote = res.body.data;
-                                var option = vote.options.rows[0];
+                const option = vote.options.rows[0];
 
-                                async
-                                    .parallel(
-                                        [
-                                            function (cb) {
-                                                topicVoteVote(agent, user.id, topic.id, vote.id, [{optionId: option.id}], null, null, null, null, cb);
-                                            },
-                                            function (cb) {
-                                                var agent2 = request.agent(app);
-                                                userLib.createUserAndLogin(agent2, null, null, null, function (err, res) {
-                                                    if (err) return cb(err);
+                const voteVoteResult = (await topicVoteVotePromised(agent, user.id, topic.id, vote.id, [{optionId: option.id}], null, '60001018800', '+37200000566', null)).body;
+                await topicVoteStatusPromised(agent, user.id, topic.id, vote.id, voteVoteResult.data.token);
+                const agent2 = request.agent(app);
+                const user2 = await userLib.createUserAndLoginPromised(agent2, null, null, null);
+                await topicMemberUsersCreatePromised(agent, user.id, topic.id, [
+                    {
+                        userId: user2.id,
+                        level: TopicMemberUser.LEVELS.read
+                    }
+                ]);
+                const voteVoteResult1 = (await topicVoteVotePromised(agent2, user2.id, topic.id, vote.id, [{optionId: option.id}], null, '60001019906', '+37200000766', null)).body;
+                await topicVoteStatusPromised(agent2, user2.id, topic.id, vote.id, voteVoteResult1.data.token);
 
-                                                    var user2 = res;
-                                                    topicMemberUsersCreate(
-                                                        agent,
-                                                        user.id,
-                                                        topic.id,
-                                                        [
-                                                            {
-                                                                userId: user2.id,
-                                                                level: TopicMemberUser.LEVELS.read
-                                                            }
-                                                        ],
-                                                        function (err) {
-                                                            if (err) return done(err);
+                const contact = {
+                    name: 'Test',
+                    email: 'test@test.com',
+                    phone: '+3725100000'
+                };
 
-                                                            topicVoteVote(agent2, user2.id, topic.id, vote.id, [{optionId: option.id}], null, null, null, null, cb);
-                                                        }
-                                                    );
-                                                });
-                                            }
-                                        ],
-                                        function (err) {
-                                            if (err) return done(err);
-
-                                            // Now that we have generated required Vote count, change the Vote to Vote.AUTH_TYPES.hard to be allowed to send to parliament
-                                            Vote
-                                                .update(
-                                                    {
-                                                        authType: Vote.AUTH_TYPES.hard
-                                                    },
-                                                    {
-                                                        where: {
-                                                            id: vote.id
-                                                        }
-                                                    }
-                                                )
-                                                .then(function () {
-                                                    var contact = {
-                                                        name: 'Test',
-                                                        email: 'test@test.com',
-                                                        phone: '+3725100000'
-                                                    };
-
-                                                    topicUpdate(agent, user.id, topic.id, Topic.STATUSES.followUp, Topic.VISIBILITY.public, null, null, contact, function (err) {
-                                                        if (err) return done(err);
-
-                                                        _topicUpdate(agent, user.id, topic.id, Topic.STATUSES.voting, Topic.VISIBILITY.public, null, null, contact, 400, done);
-                                                    });
-                                                })
-                                                .catch(done);
-                                        }
-                                    );
-                            });
-                        });
-                    })
-                    .catch(done);
+                await topicUpdatePromised(agent, user.id, topic.id, Topic.STATUSES.followUp, Topic.VISIBILITY.public, null, null, contact);
+                await _topicUpdatePromised(agent, user.id, topic.id, Topic.STATUSES.voting, Topic.VISIBILITY.public, null, null, contact, 400);
             });
 
             test('Fail - Page Not Found - topicId is null', function (done) {
@@ -6573,6 +6524,12 @@ suite('Users', function () {
                 let toUser6;
                 const agentToUser6 = request.agent(app);
 
+                let toUser7;
+                const agentToUser7 = request.agent(app);
+
+                let toUser8;
+                const agentToUser8 = request.agent(app);
+
                 suiteSetup(async function () {
                     const usersCreatePromises = [
                         userLib.createUserAndLoginPromised(agent, null, null, null),
@@ -6581,10 +6538,12 @@ suite('Users', function () {
                         userLib.createUserAndLoginPromised(agentToUser3, null, null, 'et'),
                         userLib.createUserAndLoginPromised(agentToUser4, null, null, null),
                         userLib.createUserAndLoginPromised(agentToUser5, null, null, null),
-                        userLib.createUserAndLoginPromised(agentToUser6, null, null, null)
+                        userLib.createUserAndLoginPromised(agentToUser6, null, null, null),
+                        userLib.createUserAndLoginPromised(agentToUser7, null, null, null),
+                        userLib.createUserAndLoginPromised(agentToUser8, null, null, null)
                     ];
 
-                    [user, toUser1, toUser2, toUser3, toUser4, toUser5, toUser6] = await Promise.all(usersCreatePromises);
+                    [user, toUser1, toUser2, toUser3, toUser4, toUser5, toUser6, toUser7, toUser8] = await Promise.all(usersCreatePromises);
                 });
 
                 suite('Create', function () {
@@ -6649,7 +6608,7 @@ suite('Users', function () {
                         assert.deepEqual(voteReadAfterDelegation.delegation, toUser2.toJSON());
                     });
 
-                    test('Success - OK - count delegated votes and not delegated votes - Delegation chain U->U1->U2->U3, U4->U5, U6 no delegation', async function () {
+                    test('Success - OK - count delegated votes and not delegated votes - Delegation chain U->U1->U2->U3, U4->U5 U7->U5, U6 no delegation', async function () {
                         const topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
                         const voteOptions = [
                             {
@@ -6689,6 +6648,10 @@ suite('Users', function () {
                             {
                                 userId: toUser6.id,
                                 level: TopicMemberUser.LEVELS.read
+                            },
+                            {
+                                userId: toUser7.id,
+                                level: TopicMemberUser.LEVELS.read
                             }
                         ];
 
@@ -6700,19 +6663,25 @@ suite('Users', function () {
                             topicVoteDelegationCreatePromised(agent, user.id, topic.id, voteRead.id, toUser1.id),
                             topicVoteDelegationCreatePromised(agentToUser1, toUser1.id, topic.id, voteRead.id, toUser2.id),
                             topicVoteDelegationCreatePromised(agentToUser2, toUser2.id, topic.id, voteRead.id, toUser3.id),
-                            topicVoteDelegationCreatePromised(agentToUser4, toUser4.id, topic.id, voteRead.id, toUser5.id)
+                            topicVoteDelegationCreatePromised(agentToUser4, toUser4.id, topic.id, voteRead.id, toUser5.id),
+                            topicVoteDelegationCreatePromised(agentToUser7, toUser7.id, topic.id, voteRead.id, toUser5.id)
                         ];
                         await Promise.all(delegationPromises);
 
                         const votePromises = [
                             topicVoteVotePromised(agentToUser3, toUser3.id, topic.id, voteRead.id, [{optionId: voteRead.options.rows[0].id}], null, null, null, null),
-                            topicVoteVotePromised(agentToUser5, toUser5.id, topic.id, voteRead.id, [{optionId: voteRead.options.rows[1].id}], null, null, null, null),
                             topicVoteVotePromised(agentToUser6, toUser6.id, topic.id, voteRead.id, [{optionId: voteRead.options.rows[1].id}], null, null, null, null)
                         ];
                         await Promise.all(votePromises);
 
                         const voteReadAfterVote = (await topicVoteReadPromised(agentToUser6, toUser6.id, topic.id, voteRead.id)).body.data;
-                        const voteReadAfterVoteOptions = voteReadAfterVote.options.rows;
+                        assert.equal(voteReadAfterVote.votersCount, 5);
+
+                        await topicVoteVotePromised(agentToUser5, toUser5.id, topic.id, voteRead.id, [{optionId: voteRead.options.rows[1].id}], null, null, null, null);
+
+                        const voteReadAfterVote2 = (await topicVoteReadPromised(agentToUser6, toUser6.id, topic.id, voteRead.id)).body.data;
+                        assert.equal(voteReadAfterVote2.votersCount, 8);
+                        const voteReadAfterVoteOptions = voteReadAfterVote2.options.rows;
 
                         voteReadAfterVoteOptions.forEach(function (option) {
                             switch (option.id) {
@@ -6721,7 +6690,7 @@ suite('Users', function () {
                                     assert.notProperty(option, 'selected');
                                     break;
                                 case voteRead.options.rows[1].id:
-                                    assert.equal(option.voteCount, 2 + 1);
+                                    assert.equal(option.voteCount, 2 + 1 +1);
                                     assert.isTrue(option.selected);
                                     break;
                                 case voteRead.options.rows[2].id:
@@ -6734,7 +6703,7 @@ suite('Users', function () {
                         });
                     });
 
-                    test('Success - OK - multiple choice - delegated votes and not delegated votes - Delegation chain U->U1->U2->U3, U4->U5, U6 no delegation', async function () {
+                    test('Success - OK - multiple choice - delegated votes and not delegated votes - Delegation chain U->U1->U2->U3, U4->U6 U5->U6, U7->U5, U8 no delegation', async function () {
                         const topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
                         const voteOptions = [
                             {
@@ -6755,7 +6724,6 @@ suite('Users', function () {
                         ];
                         const topicVoteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, voteOptions, 2, 3, true, null, null, null, null)).body.data;
                         const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, topicVoteCreated.id)).body.data;
-
                         const members = [
                             {
                                 userId: toUser1.id,
@@ -6780,6 +6748,15 @@ suite('Users', function () {
                             {
                                 userId: toUser6.id,
                                 level: TopicMemberUser.LEVELS.read
+                            },
+                            {
+                                userId: toUser7.id,
+                                level: TopicMemberUser.LEVELS.read
+                            }
+                            ,
+                            {
+                                userId: toUser8.id,
+                                level: TopicMemberUser.LEVELS.read
                             }
                         ];
                         await topicMemberUsersCreatePromised(agent, user.id, topic.id, members);
@@ -6798,7 +6775,9 @@ suite('Users', function () {
                             topicVoteDelegationCreatePromised(agent, user.id, topic.id, voteRead.id, toUser1.id),
                             topicVoteDelegationCreatePromised(agentToUser1, toUser1.id, topic.id, voteRead.id, toUser2.id),
                             topicVoteDelegationCreatePromised(agentToUser2, toUser2.id, topic.id, voteRead.id, toUser3.id),
-                            topicVoteDelegationCreatePromised(agentToUser4, toUser4.id, topic.id, voteRead.id, toUser5.id)
+                            topicVoteDelegationCreatePromised(agentToUser4, toUser4.id, topic.id, voteRead.id, toUser6.id),
+                            topicVoteDelegationCreatePromised(agentToUser5, toUser5.id, topic.id, voteRead.id, toUser6.id),
+                            topicVoteDelegationCreatePromised(agentToUser7, toUser7.id, topic.id, voteRead.id, toUser5.id)
                         ];
                         await Promise.all(delegationPromises);
 
@@ -6811,7 +6790,7 @@ suite('Users', function () {
                             }
                         ];
 
-                        const voteListUser5 = [
+                        const voteListUser6 = [
                             {
                                 optionId: voteRead.options.rows[1].id,
                             },
@@ -6820,7 +6799,7 @@ suite('Users', function () {
                             }
                         ];
 
-                        const voteListUser6 = [ // 1 (U6)
+                        const voteListUser8 = [ // 1 (U8)
                             {
                                 optionId: voteRead.options.rows[1].id
                             },
@@ -6831,12 +6810,12 @@ suite('Users', function () {
 
                         const votePromises = [
                             topicVoteVotePromised(agentToUser3, toUser3.id, topic.id, voteRead.id, voteListUser3, null, null, null, null),
-                            topicVoteVotePromised(agentToUser5, toUser5.id, topic.id, voteRead.id, voteListUser5, null, null, null, null),
-                            topicVoteVotePromised(agentToUser6, toUser6.id, topic.id, voteRead.id, voteListUser6, null, null, null, null)
+                            topicVoteVotePromised(agentToUser6, toUser6.id, topic.id, voteRead.id, voteListUser6, null, null, null, null),
+                            topicVoteVotePromised(agentToUser8, toUser8.id, topic.id, voteRead.id, voteListUser8, null, null, null, null)
                         ];
                         await Promise.all(votePromises);
 
-                        const voteReadAfterVote = (await topicVoteReadPromised(agentToUser6, toUser6.id, topic.id, voteRead.id)).body.data;
+                        const voteReadAfterVote = (await topicVoteReadPromised(agentToUser8, toUser8.id, topic.id, voteRead.id)).body.data;
                         const voteReadAfterVoteOptions = voteReadAfterVote.options.rows;
 
                         voteReadAfterVoteOptions.forEach(function (option) {
@@ -6846,15 +6825,15 @@ suite('Users', function () {
                                     assert.notProperty(option, 'selected');
                                     break;
                                 case voteRead.options.rows[1].id:
-                                    assert.equal(option.voteCount, (3 + 1) + (1 + 1) + 1); // U->U1->U2->U3, U4->U5, U6
+                                    assert.equal(option.voteCount, (3 + 1) + (2 + 1 + 1) + 1); // U->U1->U2->U3, U4->U6 U5->U6, U7->U5, U8
                                     assert.isTrue(option.selected);
                                     break;
                                 case voteRead.options.rows[2].id:
-                                    assert.equal(option.voteCount, (1 + 1)); // U4->U5
+                                    assert.equal(option.voteCount, (1 + 1 + 1 + 1)); // U4->U6 U5->U6 U7->U5
                                     assert.notProperty(option, 'selected');
                                     break;
                                 case voteRead.options.rows[3].id:
-                                    assert.equal(option.voteCount, 1); // U6
+                                    assert.equal(option.voteCount, 1); // U8
                                     assert.isTrue(option.selected);
                                     break;
                                 case voteRead.options.rows[4].id:
@@ -6880,6 +6859,7 @@ suite('Users', function () {
 
                         const voteReadAfterVoteForOverride = (await topicVoteReadPromised(agent, user.id, topic.id, voteRead.id)).body.data;
                         const voteReadAfterVoteForOverrideOptions = voteReadAfterVoteForOverride.options.rows;
+                        assert.equal(voteReadAfterVoteForOverride.votersCount, 9);
 
                         voteReadAfterVoteForOverrideOptions.forEach(function (option) {
                             switch (option.id) {
@@ -6888,15 +6868,15 @@ suite('Users', function () {
                                     assert.notProperty(option, 'selected');
                                     break;
                                 case voteRead.options.rows[1].id:
-                                    assert.equal(option.voteCount, (2 + 1) + (1 + 1) + 1); // U->U1->U2->U3, U4->U5, U6
+                                    assert.equal(option.voteCount, (2 + 1) + (2 + 1 + 1) + 1); // U->U1->U2->U3, U4->U6 U5->U6 U7->U5, U8
                                     assert.notProperty(option, 'selected');
                                     break;
                                 case voteRead.options.rows[2].id:
-                                    assert.equal(option.voteCount, (1 + 1) + 1); // U4->U5, U
+                                    assert.equal(option.voteCount, (2 + 1 + 1) + 1); // U4->U6 U5->U6 U7-> U5, U
                                     assert.isTrue(option.selected);
                                     break;
                                 case voteRead.options.rows[3].id:
-                                    assert.equal(option.voteCount, 1); // U6
+                                    assert.equal(option.voteCount, 1); // U8
                                     assert.notProperty(option, 'selected');
                                     break;
                                 case voteRead.options.rows[4].id:
@@ -7226,7 +7206,6 @@ suite('Users', function () {
 
                         // Verify the result of topic information, see that vote result is the same
                         const topicReadAfterVote = (await topicReadPromised(agent, user.id, topic.id, ['vote'])).body.data;
-
                         assert.deepEqual(topicReadAfterVote.vote, voteReadAfterVote2);
                     });
 
@@ -7851,7 +7830,6 @@ suite('Users', function () {
 
                             // Check that the 1st vote was overwritten
                             const optionOverwritten = _.find(voteReadAfterVote2.options.rows, {id: voteList1[0].optionId});
-
                             assert.notProperty(optionOverwritten, 'voteCount');
                             assert.notProperty(optionOverwritten, 'selected');
 
@@ -7960,9 +7938,8 @@ suite('Users', function () {
 
                             const voteResult4 = (await topicVoteVotePromised(agentUser4, user4.id, topic.id, voteRead.id, voteListUser4, null, pidSingleVote, phoneNumberSingleVote)).body.data;
                             await topicVoteStatusPromised(agentUser4, user4.id, topic.id, voteRead.id, voteResult4.token);
-
                             const voteReadAfterVote3 = (await topicVoteReadPromised(agentUser3, user3.id, topic.id, voteCreated.id)).body.data;
-
+                            assert.equal(2, voteReadAfterVote3.votersCount);
                             voteReadAfterVote3.options.rows.forEach(function (option) {
                                 switch (option.id) {
                                     case voteListUser3[0].optionId:
@@ -7988,7 +7965,7 @@ suite('Users', function () {
                             });
 
                             assert.deepEqual(voteReadAfterVote2.options, voteReadAfterVote3.options);
-
+                            assert.equal(2, voteReadAfterVote2.votersCount);
                             // Make sure the results match with result read with Topic
                             const topicReadAfterVote2 = (await topicReadPromised(agentUser2, user2.id, topic.id, ['vote'])).body.data;
                             const voteReadWithTopic2 = topicReadAfterVote2.vote;
@@ -8010,7 +7987,78 @@ suite('Users', function () {
                             assert.deepEqual(topicVotedOn.vote, voteReadAfterVote2);
                         });
 
-                        // FIXME: Known to fail, needs some attention. More details from @ilmartyrk
+                        test('Success - Personal ID - vote multiple-choice, delete account  re-vote under another user and count', async function () {
+                            this.timeout(40000);
+                            const phoneNumberRepeatedVote = '+37200000766';
+                            const pidRepeatedVote = '60001019906'
+                            const options = [
+                                {
+                                    value: 'Option 1'
+                                },
+                                {
+                                    value: 'Option 2'
+                                },
+                                {
+                                    value: 'Option 3'
+                                }
+                            ];
+
+                            const topic = (await topicCreatePromised(agent, user.id, Topic.VISIBILITY.public, null, null, '<html><head></head><body><h2>TEST VOTE AND RE-VOTE</h2></body></html>', null)).body.data;
+                            const voteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, options, 1, 2, false, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                            const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
+
+                            const agentUser1 = agent;
+                            const user1 = user;
+
+                            const agentUser2 = request.agent(app);
+                            const user2 = await userLib.createUserAndLoginPromised(agentUser2, null, null, null);
+
+                            const voteListUser1 = [
+                                {
+                                    optionId: voteRead.options.rows[0].id
+                                },
+                                {
+                                    optionId: voteRead.options.rows[1].id
+                                }
+                            ];
+
+                            const voteListUser2 = [
+                                {
+                                    optionId: voteRead.options.rows[1].id
+                                },
+                                {
+                                    optionId: voteRead.options.rows[2].id
+                                }
+                            ];
+
+                            const voteResult1 = (await topicVoteVotePromised(agentUser1, user1.id, topic.id, voteRead.id, voteListUser1, null, pidRepeatedVote, phoneNumberRepeatedVote)).body.data;
+                            await topicVoteStatusPromised(agentUser1, user1.id, topic.id, voteRead.id, voteResult1.token);
+                            await userLib.deleteUserPromised(agentUser1, user1.id);
+
+                            const voteResult2 = (await topicVoteVotePromised(agentUser2, user2.id, topic.id, voteRead.id, voteListUser2, null, pidRepeatedVote, phoneNumberRepeatedVote)).body.data;
+                            await topicVoteStatusPromised(agentUser2, user2.id, topic.id, voteRead.id, voteResult2.token);
+                            await new Promise((resolve) => {
+                                setTimeout(resolve, 1000);
+                            });
+                            const voteReadAfterVote2 = (await topicVoteReadPromised(agentUser2, user2.id, topic.id, voteCreated.id)).body.data;
+                            assert.equal(voteReadAfterVote2.votersCount, 1);
+                            voteReadAfterVote2.options.rows.forEach(function (option) {
+                                switch (option.id) {
+                                    case voteListUser2[0].optionId:
+                                        assert.equal(option.voteCount, 1);
+                                        assert.isTrue(option.selected);
+                                        break;
+                                    case voteListUser2[1].optionId:
+                                        assert.equal(option.voteCount, 1);
+                                        assert.isTrue(option.selected);
+                                        break;
+                                    default:
+                                        assert.property(option, 'value');
+                                        assert.notProperty(option, 'voteCount');
+                                }
+                            });
+                        });
+
                         test('Success - Personal ID already connected to another user account - vote multiple-choice, re-vote delete account and count', async function () {
                             this.timeout(40000);
 
@@ -8093,7 +8141,6 @@ suite('Users', function () {
                             await userLib.deleteUserPromised(agentUser3, user3.id);
                             const voteResult4 = (await topicVoteVotePromised(agentUser4, user4.id, topic.id, voteRead.id, voteListUser4, null, pidSingleVote, phoneNumberSingleVote)).body.data;
                             await topicVoteStatusPromised(agentUser4, user4.id, topic.id, voteRead.id, voteResult4.token);
-
                             const voteReadAfterVote3 = (await topicVoteReadPromised(agentUser3, user3.id, topic.id, voteCreated.id)).body.data;
 
                             voteReadAfterVote3.options.rows.forEach(function (option) {
@@ -8139,7 +8186,6 @@ suite('Users', function () {
                             await topicMemberUsersCreatePromised(agent, user.id, topic.id, members);
                             const topicList = (await topicListPromised(agentUser2, user2.id, ['vote'], null, null, null, true, null, null)).body.data;
                             const topicVotedOn = _.find(topicList.rows, {id: topic.id});
-
                             assert.deepEqual(topicVotedOn.vote, voteReadAfterVote2);
                         });
 
@@ -8656,6 +8702,163 @@ suite('Users', function () {
                                     // Clean up
                                     fs.unlinkSync(pathFinalBdoc);
                                 });
+
+                                test('Success - Vote, delete account, re-vote & count, delete account re-count', async () => {
+                                    const pid = 10101010005;
+                                    const countryCode = 'EE';
+                                    const topic = (await topicCreatePromised(agent, user.id, Topic.VISIBILITY.public, null, null, '<html><head></head><body><h2>TEST VOTE AND DELETE ACCOUNT AND RE-VOTE</h2></body></html>', null)).body.data;
+                                    const agentUser1 = request.agent(app);
+                                    const agentUser2 = request.agent(app);
+                                    const user1 = await userLib.createUserAndLoginPromised(agentUser1, null, null, null);
+                                    const user2 = await userLib.createUserAndLoginPromised(agentUser2, null, null, null);
+
+                                    let options = [
+                                        {
+                                            value: 'Option 1'
+                                        },
+                                        {
+                                            value: 'Option 2'
+                                        },
+                                        {
+                                            value: 'Option 3'
+                                        }
+                                    ];
+
+                                    const voteCreated = (await topicVoteCreatePromised(agent, user.id, topic.id, options, 1, 2, false, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                                    const voteRead = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
+
+                                    // Vote for the first time
+                                    // Vote for the first time
+                                    const voteList1 = [
+                                        {
+                                            optionId: _.find(voteRead.options.rows, {value: options[0].value}).id
+                                        },
+                                        {
+                                            optionId: _.find(voteRead.options.rows, {value: options[1].value}).id
+                                        }
+                                    ];
+
+                                     // Vote for the first time
+                                    // Vote for the first time
+                                    const voteList2 = [
+                                        {
+                                            optionId: _.find(voteRead.options.rows, {value: options[0].value}).id
+                                        },
+                                        {
+                                            optionId: _.find(voteRead.options.rows, {value: options[2].value}).id
+                                        }
+                                    ];
+
+                                    const voteVoteResult = (await topicVoteVotePromised(agentUser1, user1.id, topic.id, voteRead.id, voteList1, null, pid, null, countryCode, null)).body;
+                                    await topicVoteStatusPromised(agentUser1, user1.id, topic.id, voteCreated.id, voteVoteResult.data.token);
+                                    const voteRead2 = (await topicVoteReadPromised(agentUser1, user1.id, topic.id, voteCreated.id)).body.data;
+
+                                    assert.equal(1, voteRead2.votersCount);
+                                    voteRead2.options.rows.forEach((option) => {
+                                        switch (option.id) {
+                                            case voteList1[0].optionId:
+                                                assert.equal(option.voteCount, 1);
+                                                assert.isTrue(option.selected);
+                                            break;
+                                            case voteList1[1].optionId:
+                                                assert.equal(option.voteCount, 1);
+                                                assert.isTrue(option.selected);
+                                            break;
+                                            default:
+                                                assert.property(option, 'value');
+                                                assert.notProperty(option, 'voteCount');
+                                        }
+                                    });
+
+                                    await userLib.deleteUserPromised(agentUser1, user1.id);
+
+                                    const voteVoteResult2 = (await topicVoteVotePromised(agentUser2, user2.id, topic.id, voteRead.id, voteList2, null, pid, null, countryCode, null)).body;
+                                    await topicVoteStatusPromised(agentUser2, user2.id, topic.id, voteCreated.id, voteVoteResult2.data.token);
+                                    const voteRead3 = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
+
+                                    assert.equal(1, voteRead3.votersCount);
+                                    voteRead3.options.rows.forEach((option) => {
+                                        switch (option.id) {
+                                            case voteList2[0].optionId:
+                                                assert.equal(option.voteCount, 1);
+                                                assert.notProperty(option, 'selected');
+                                            break;
+                                            case voteList2[1].optionId:
+                                                assert.equal(option.voteCount, 1);
+                                                assert.notProperty(option, 'selected');
+                                            break;
+                                            default:
+                                                assert.property(option, 'value');
+                                                assert.notProperty(option, 'voteCount');
+                                        }
+                                    });
+
+                                    await userLib.deleteUserPromised(agentUser2, user2.id);
+
+                                    // End the voting
+                                    await topicUpdatePromised(agent, user.id, topic.id, Topic.STATUSES.followUp, Topic.VISIBILITY.private, null, null, null);
+                                    const voteReadAfterVoteClosed = (await topicVoteReadPromised(agent, user.id, topic.id, voteCreated.id)).body.data;
+                                    assert.equal(voteReadAfterVoteClosed.votersCount, 1);
+
+                                    // Verify the final vote container format and download
+                                    const finalBdocUrlRegex = new RegExp(`^${config.url.api}/api/users/self/topics/${topic.id}/votes/${voteRead.id}/downloads/bdocs/final\\?token=([a-zA-Z_.0-9\\-]{676})$`);
+                                    const finalBdocUrlMatches = voteReadAfterVoteClosed.downloads.bdocFinal.match(finalBdocUrlRegex);
+
+                                    assert.isNotNull(finalBdocUrlMatches);
+
+                                    const finalBdocDownloadToken = finalBdocUrlMatches[1];
+                                    await topicVoteDownloadBdocFinalPromised(agent, topic.id, voteRead.id, finalBdocDownloadToken);
+
+                                    const pathFinalBdoc = `./test/tmp/final_${voteRead.id}_${user.id}.bdoc`;
+                                    const fileWriteStream = fs.createWriteStream(pathFinalBdoc);
+                                    const fileWriteStreamPromised = cosUtil.streamToPromise(fileWriteStream);
+
+                                    request('')
+                                        .get(voteReadAfterVoteClosed.downloads.bdocFinal.split('?')[0])
+                                        .query({token: finalBdocDownloadToken})
+                                        .pipe(fileWriteStream);
+
+                                    await fileWriteStreamPromised;
+
+                                    const bdocFileList = await new Promise(function (resolve, reject) {
+                                        const files = [];
+
+                                        const listStream = SevenZip.list(pathFinalBdoc);
+
+                                        listStream.on('data', function (data) {
+                                            files.push(data);
+                                        });
+
+                                        listStream.on('end', function () {
+                                            resolve(files);
+                                        });
+
+                                        listStream.on('error', function (err) {
+                                            reject(err);
+                                        });
+                                    });
+
+                                    const fileListExpected = [
+                                        'mimetype',
+                                        '__metainfo.html',
+                                        `${options[0].value}.html`,
+                                        `${options[1].value}.html`,
+                                        `${options[2].value}.html`,
+                                        'document.docx',
+                                        `PNOEE-${pid}.bdoc`,
+                                        'votes.csv',
+                                        'META-INF/manifest.xml'
+                                    ];
+
+                                    bdocFileList.forEach(function (f) {
+                                        assert.include(fileListExpected, f.file);
+                                    });
+
+                                    // Clean up
+                                    fs.unlinkSync(pathFinalBdoc);
+
+
+                                }).timeout(40000);
 
                                 teardown(async function () {
                                     await UserConnection

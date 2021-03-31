@@ -722,7 +722,6 @@ suite('Auth', function () {
 
                 const agent = request.agent(app);
                 const cert = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign.pem', {encoding: 'utf8'}).replace(/\n/g, ''); //eslint-disable-line no-sync
-
                 await _loginIdPromised(agent, null, cert, 200);
             });
 

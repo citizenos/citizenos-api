@@ -778,28 +778,22 @@ module.exports = function (app) {
                     logger.debug('_generateFinalContainer', 'Run query stream for User vote containers');
 
                     await new Promise(function (resolve, reject) {
-                        const query = new QueryStream(
-                            `SELECT DISTINCT ON (o."connectionUserId")
-                                    o.*
-                                    FROM (
-                                        SELECT
-                                            vuc.container,
-                                            uc."connectionUserId"
-                                        FROM "VoteUserContainers" vuc
-                                        JOIN "UserConnections" uc ON (vuc."userId" = uc."userId")
-                                        WHERE vuc."voteId" = $1
-                                        AND uc."connectionId" = $2
-                                        ORDER BY vuc."updatedAt" DESC
-                                    ) o
+                        const query = new QueryStream(`
+                            SELECT
+                                container,
+                                "PID"
+                            FROM "VoteUserContainers"
+                            WHERE "voteId" = $1
+                            ORDER BY "updatedAt" DESC
                             ;`,
-                            [voteId, UserConnection.CONNECTION_IDS.esteid]
+                            [voteId]
                         );
                         const stream = connection.query(query);
 
                         stream.on('data', function (data) {
                             logger.debug('_generateFinalContainer', 'Add data', data.container.length);
 
-                            const pid = data.connectionUserId;
+                            const pid = data.PID;
                             const userbdocContainer = data.container;
 
                             finalContainer.append(userbdocContainer, {
