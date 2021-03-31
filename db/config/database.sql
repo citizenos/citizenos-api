@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 10.15 (Ubuntu 10.15-0ubuntu0.18.04.1)
--- Dumped by pg_dump version 10.15 (Ubuntu 10.15-0ubuntu0.18.04.1)
+-- Dumped from database version 10.16 (Ubuntu 10.16-0ubuntu0.18.04.1)
+-- Dumped by pg_dump version 10.16 (Ubuntu 10.16-0ubuntu0.18.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -31,17 +31,17 @@ COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
 
 
 --
--- Name: pg_stat_statements; Type: EXTENSION; Schema: -; Owner: -
+-- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
 --
 
-CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA public;
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
 
 
 --
--- Name: EXTENSION pg_stat_statements; Type: COMMENT; Schema: -; Owner: -
+-- Name: EXTENSION pgcrypto; Type: COMMENT; Schema: -; Owner: -
 --
 
-COMMENT ON EXTENSION pg_stat_statements IS 'track execution statistics of all SQL statements executed';
+COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
 
 
 --
@@ -748,19 +748,96 @@ CREATE TABLE public."Topics" (
     description text,
     status public."enum_Topics_status" DEFAULT 'inProgress'::public."enum_Topics_status" NOT NULL,
     visibility public."enum_Topics_visibility" DEFAULT 'private'::public."enum_Topics_visibility" NOT NULL,
-    "creatorId" uuid NOT NULL,
-    "createdAt" timestamp with time zone NOT NULL,
-    "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone,
     categories character varying(255)[] DEFAULT (ARRAY[]::character varying[])::character varying(255)[],
+    "sourcePartnerId" uuid,
+    "sourcePartnerObjectId" character varying(255),
+    "creatorId" uuid NOT NULL,
     "tokenJoin" character varying(8) NOT NULL,
     "padUrl" character varying(255) NOT NULL,
     "endsAt" timestamp with time zone,
-    "sourcePartnerId" uuid,
     hashtag character varying(60) DEFAULT NULL::character varying,
-    "sourcePartnerObjectId" character varying(255),
+    "createdAt" timestamp with time zone NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL,
+    "deletedAt" timestamp with time zone,
     "authorIds" uuid[]
 );
+
+
+--
+-- Name: COLUMN "Topics".title; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics".title IS 'Title of the Topic.';
+
+
+--
+-- Name: COLUMN "Topics".description; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics".description IS 'Short description of what the Topic is about.';
+
+
+--
+-- Name: COLUMN "Topics".status; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics".status IS 'Topic statuses.';
+
+
+--
+-- Name: COLUMN "Topics".visibility; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics".visibility IS 'Who can see (read) the Topic apart from the Members.';
+
+
+--
+-- Name: COLUMN "Topics"."sourcePartnerId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics"."sourcePartnerId" IS 'The Partner id of the site from which the Topic was created';
+
+
+--
+-- Name: COLUMN "Topics"."sourcePartnerObjectId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics"."sourcePartnerObjectId" IS 'The Partner object/entity id for mapping';
+
+
+--
+-- Name: COLUMN "Topics"."creatorId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics"."creatorId" IS 'User ID of the creator of the Topic.';
+
+
+--
+-- Name: COLUMN "Topics"."tokenJoin"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics"."tokenJoin" IS 'Token for joining the Topic. Used for sharing public urls for Users to join the Topic.';
+
+
+--
+-- Name: COLUMN "Topics"."padUrl"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics"."padUrl" IS 'Etherpad Pad absolute url.';
+
+
+--
+-- Name: COLUMN "Topics"."endsAt"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics"."endsAt" IS 'Deadline for the Topic. If NULL then no deadline at all.';
+
+
+--
+-- Name: COLUMN "Topics".hashtag; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics".hashtag IS 'Hashtag to search related content from external sources.';
 
 
 --
@@ -806,22 +883,92 @@ CREATE TABLE public."Users" (
     id uuid NOT NULL,
     name character varying(255),
     company character varying(255),
+    language character varying(5) DEFAULT 'en'::character varying,
     email character varying(254),
     password character varying(64),
     "passwordResetCode" uuid,
     "emailIsVerified" boolean DEFAULT false NOT NULL,
     "emailVerificationCode" uuid NOT NULL,
-    "createdAt" timestamp with time zone NOT NULL,
-    "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone,
-    language character varying(5) DEFAULT 'en'::character varying,
     source public."enum_Users_source" NOT NULL,
     "sourceId" character varying(255),
     "imageUrl" character varying(255),
     "termsVersion" character varying(255),
     "termsAcceptedAt" timestamp with time zone,
+    "createdAt" timestamp with time zone NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL,
+    "deletedAt" timestamp with time zone,
     "authorId" character varying(255)
 );
+
+
+--
+-- Name: COLUMN "Users".name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Users".name IS 'Full name of the user.';
+
+
+--
+-- Name: COLUMN "Users".company; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Users".company IS 'Company name.';
+
+
+--
+-- Name: COLUMN "Users".language; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Users".language IS 'Language code.';
+
+
+--
+-- Name: COLUMN "Users".email; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Users".email IS 'User registration email.';
+
+
+--
+-- Name: COLUMN "Users".password; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Users".password IS 'Password hash. NULL if User was created on invitation and has not registered.';
+
+
+--
+-- Name: COLUMN "Users"."emailIsVerified"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Users"."emailIsVerified" IS 'Flag indicating if e-mail verification has been completed.';
+
+
+--
+-- Name: COLUMN "Users"."emailVerificationCode"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Users"."emailVerificationCode" IS 'E-mail verification code that is sent out with e-mail as a link.';
+
+
+--
+-- Name: COLUMN "Users".source; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Users".source IS 'User creation source.';
+
+
+--
+-- Name: COLUMN "Users"."sourceId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Users"."sourceId" IS 'User id in the source system. For Facebook their user id, for Google their user id and so on. Null is allowed as there is not point for CitizenOS to provide one.';
+
+
+--
+-- Name: COLUMN "Users"."imageUrl"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Users"."imageUrl" IS 'User profile image url.';
 
 
 --
@@ -907,8 +1054,16 @@ CREATE TABLE public."VoteLists" (
     "optionGroupId" character varying(8) NOT NULL,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone
+    "deletedAt" timestamp with time zone,
+    "userHash" character varying(64)
 );
+
+
+--
+-- Name: COLUMN "VoteLists"."userHash"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."VoteLists"."userHash" IS 'Hash from users PID that allows filtering votes from different users, but same person';
 
 
 --
@@ -964,27 +1119,6 @@ CREATE TABLE public."VoteUserContainers" (
     "deletedAt" timestamp with time zone,
     "PID" text NOT NULL
 );
-
-
---
--- Name: COLUMN "VoteUserContainers"."userId"; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public."VoteUserContainers"."userId" IS 'Id of the User Who cast the Vote.';
-
-
---
--- Name: COLUMN "VoteUserContainers"."voteId"; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public."VoteUserContainers"."voteId" IS 'To what Vote this signed container belongs to.';
-
-
---
--- Name: COLUMN "VoteUserContainers".container; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public."VoteUserContainers".container IS 'BDOC containing the signed vote.';
 
 
 --
@@ -1314,15 +1448,7 @@ ALTER TABLE ONLY public."VoteOptions"
 --
 
 ALTER TABLE ONLY public."VoteUserContainers"
-    ADD CONSTRAINT "VoteUserContainers_pkey" PRIMARY KEY ("userId", "voteId");
-
-
---
--- Name: VoteUserContainers VoteUserContainers_voteId_PID_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."VoteUserContainers"
-    ADD CONSTRAINT "VoteUserContainers_voteId_PID_key" UNIQUE ("voteId", "PID");
+    ADD CONSTRAINT "VoteUserContainers_pkey" PRIMARY KEY ("voteId", "PID");
 
 
 --
@@ -1895,4 +2021,6 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 20200225152502-remove-vote-user-container-activity.js
 202010261616-alter-user-add-auhorID.js
 20210310104918-create-group-invite-user.js
+202103251231-alter-vote-lists-add-userhash.js
+20210329141948-alter-vote-user-containers.js
 \.
