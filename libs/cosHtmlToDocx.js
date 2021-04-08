@@ -210,11 +210,19 @@ function CosHtmlToDocx (html, title, resPath) {
     };
 
     const _isAlignmentElement = (element) => {
-        if (element.attribs && element.attribs.style) {
-            return element.attribs.style.indexOf('text-align') > -1;
+        let isAlign = false;
+        if (element.attribs && element.attribs.class) {
+            ['left', 'center', 'right'].forEach((align) => {
+                if (element.attribs.class.indexOf(align) > -1 ) {
+                    isAlign = true;
+                }
+            })
+        }
+        if (!isAlign && element.attribs && element.attribs.style) {
+            isAlign = element.attribs.style.indexOf('text-align') > -1;
         }
 
-        return false;
+        return isAlign;
     };
 
     const _isColorElement = (element) => {
@@ -280,8 +288,20 @@ function CosHtmlToDocx (html, title, resPath) {
 
     const _handleAlignAttributes = (element, attribs) => {
         if (_isAlignmentElement(element)) {
-            const alignment = element.attribs.style.match(/(?:text-align:)([a-zA-Z]*)?/i);
-            attribs.alignment = AlignmentType[alignment[1].toUpperCase()]
+            let alignment = element.attribs.class.match(/(?:text-align:)([a-zA-Z]*)?/i);
+            ['left', 'center', 'right'].forEach((align) => {
+                if (element.attribs.class && element.attribs.class.indexOf(align) > -1) {
+                    alignment = align;
+                }
+            });
+
+            if (!alignment && element.attribs.style) {
+                alignment = element.attribs.style.match(/(?:text-align:)([a-zA-Z]*)?/i);
+                if (alignment.length) {
+                    alignment = alignment[1];
+                }
+            }
+            attribs.alignment = AlignmentType[alignment.toUpperCase()]
         }
     };
 
