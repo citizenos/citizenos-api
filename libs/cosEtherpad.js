@@ -199,6 +199,10 @@ module.exports = function (app) {
         return;
     };
 
+    const _inlineToClasses = async (html) => {
+        return html.replace(/style=/gi, 'class=').replace(/text-align:/gi, '');
+    };
+
     const _syncTopicWithPad = async function (topicId, context, actor, rev) {
         logger.info('Sync topic with Pad', topicId, rev);
         const params = {padID: topicId};
@@ -206,7 +210,8 @@ module.exports = function (app) {
             params.rev = rev;
         }
 
-        const html = (await etherpadClient.getHTMLAsync(params)).html;
+        let html = (await etherpadClient.getHTMLAsync(params)).html;
+        html = await _inlineToClasses(html);
         const title = _getTopicTitleFromPadContent(html);
 
         return db.transaction(async function (t) {

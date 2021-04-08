@@ -211,7 +211,7 @@ module.exports = function (app) {
                                 }, req.method + ' ' + req.path, t);
                             }
 
-                            const uc = await  UserConnection.create(
+                            const uc = await UserConnection.create(
                                 {
                                     userId: user.id,
                                     connectionId: UserConnection.CONNECTION_IDS.facebook,
