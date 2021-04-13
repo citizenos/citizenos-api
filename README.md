@@ -66,7 +66,7 @@ Examples of Citizen OS API configuration: https://github.com/citizenos/citizenos
 ### Running
 
 * Start the app - `npm start`
-* By default API is available https://dev.citizenos.com:3003 or over plain HTTP http://dev.api.citizenos.com:3002.
+* By default API is available https://dev.api.citizenos.com:3003 or over plain HTTP http://dev.api.citizenos.com:3002.
 
 **NOTES:**
 
