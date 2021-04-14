@@ -22,6 +22,6 @@ To install whole CitizenOS the main components are to be installed separately by
 Installion order:
 
 * **Etherpad-Lite** - Use https://github.com/ether/etherpad-lite or https://github.com/citizenos/etherpad-lite-heroku. Later used by Citizen OS and is tested to work with our setup.
-    * **NOTE!** In order for Citizen OS to cooperate with Etherpad it needs a certain set of plugins and configuration. See the example configuration - https://github.com/citizenos/etherpad-lite-heroku/blob/master/config/local.json.example_citizenos
+    * **NOTE!** In order for Citizen OS API & FE to cooperate with Etherpad it needs a certain set of plugins and configuration. See the example configuration - https://github.com/citizenos/etherpad-lite-heroku/blob/master/config/local.json.example_citizenos
 * **citizenos-api** - https://github.com/citizenos/citizenos-api
 * **citizenos-fe** - https://github.com/citizenos/citizenos-fe
