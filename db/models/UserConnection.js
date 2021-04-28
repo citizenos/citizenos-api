@@ -16,7 +16,7 @@ var _ = require('lodash');
  */
 module.exports = function (sequelize, DataTypes) {
 
-    var CONNECTION_IDS = {
+    const CONNECTION_IDS = {
         esteid: 'esteid', // Estonian ID card infra
         smartid: 'smartid', // Smart ID
         google: 'google',
@@ -24,7 +24,7 @@ module.exports = function (sequelize, DataTypes) {
         citizenos: 'citizenos'
     };
 
-    var UserConnection = sequelize.define(
+    const UserConnection = sequelize.define(
         'UserConnection',
         {
             userId: {

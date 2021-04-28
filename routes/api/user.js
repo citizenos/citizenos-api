@@ -5,6 +5,7 @@ module.exports = function (app) {
     const db = models.sequelize;
 
     const loginCheck = app.get('middleware.loginCheck');
+    const asyncMiddleware = app.get('middleware.asyncMiddleware');
     const emailLib = app.get('email');
     const config = app.get('config');
     const cosActivities = app.get('cosActivities');
@@ -12,6 +13,7 @@ module.exports = function (app) {
     const jwt = app.get('jwt');
     const uuid = app.get('uuid');
     const moment = app.get('moment');
+    const validator = app.get('validator');
 
     const User = models.User;
     const UserConsent = models.UserConsent;
@@ -170,12 +172,12 @@ module.exports = function (app) {
                                     transaction: t
                                 })
                             });
+                    })
             })
-        })
-        .then(function () {
-            return res.ok();
-        })
-        .catch(next);
+            .then(function () {
+                return res.ok();
+            })
+            .catch(next);
     });
     /**
      * Create UserConsent
@@ -302,5 +304,52 @@ module.exports = function (app) {
             })
             .catch(next);
     });
+
+
+    /**
+     * Get UserConnections
+     *
+     * Get UserConnections, that is list of methods User can use to authenticate.
+     */
+    app.get('/api/users/:userId/userconnections', asyncMiddleware(async function (req, res) {
+            const userId = req.params.userId;
+            let where;
+
+            if (validator.isUUID(userId)) {
+                where = {
+                    userId: userId
+                }
+            } else if (validator.isEmail(userId)) {
+                const user = await User.findOne({
+                    where: {
+                        email: userId
+                    },
+                    attributes: ['id']
+                });
+
+                if (!user) {
+                    return res.notFound();
+                }
+
+                where = {
+                    userId: user.id
+                }
+            } else {
+                return res.badRequest('Invalid userId', 1);
+            }
+
+            const userConnections = await UserConnection.findAll({
+                where: where,
+                attributes: ['connectionId'],
+                order: [[db.cast(db.col('connectionId'), 'TEXT'), 'ASC']] // Cast as we want alphabetical order, not enum order.
+            });
+
+            if (!userConnections || !userConnections.length) {
+                return res.notFound();
+            }
+
+            return res.ok(userConnections);
+        }
+    ));
 
 };

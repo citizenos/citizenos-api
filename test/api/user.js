@@ -95,12 +95,28 @@ const userConsentDelete = async function (agent, userId, partnerId) {
     return _userConsentDelete(agent, userId, partnerId, 200);
 };
 
+const _userConnectionsList = async function (agent, userId, expectedHttpCode) {
+    const path = '/api/users/:userId/userconnections'
+        .replace(':userId', userId);
+
+    return agent
+        .get(path)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const userConnectionsList = async function (agent, userId) {
+    return _userConnectionsList(agent, userId, 200);
+};
+
 exports.userDeletePromised = userDeletePromised;
 
 const request = require('supertest');
 const app = require('../../app');
 const models = app.get('models');
 const uuid = require('node-uuid');
+const cosUtil = app.get('util');
 
 const assert = require('chai').assert;
 const cryptoLib = app.get('cryptoLib');
@@ -110,6 +126,7 @@ const userLib = require('./lib/user')(app);
 const auth = require('./auth');
 
 const User = models.User;
+const UserConnection = models.UserConnection;
 const Partner = models.Partner;
 
 suite('User', function () {
@@ -159,7 +176,7 @@ suite('User', function () {
             await auth.logoutPromised(agent);
             let u = await User.findOne({
                 where: {id: user.id}
-            })
+            });
             assert.equal(u.emailIsVerified, false);
             await User.update(
                 {emailIsVerified: true},
@@ -169,13 +186,13 @@ suite('User', function () {
                     },
                     limit: 1
                 }
-            )
+            );
 
             await auth.loginPromised(agent, emailNew, passwordNew);
 
             u = await User.findOne({
                 where: {id: user.id}
-            })
+            });
 
             assert.property(u, 'id');
             assert.equal(u.email, emailNew);
@@ -360,5 +377,117 @@ suite('User', function () {
                     }
                 });
         });
+    });
+
+    suite('UserConnections', function () {
+        const agent = request.agent(app);
+
+        let user;
+
+        setup(async function () {
+            user = await userLib.createUserPromised(agent); // Creates connection with e-mail
+        });
+
+        test('Success - 20000 - 1 connection - emails only', async function () {
+            const res = await userConnectionsList(agent, user.email);
+
+            const bodyExpected = {
+                status: {
+                    code: 20000
+                },
+                data: [
+                    {
+                        connectionId: UserConnection.CONNECTION_IDS.citizenos
+                    }
+                ]
+            };
+
+            assert.deepEqual(res.body, bodyExpected);
+        });
+
+        test('Success - 2000 - 4 connections - citizenos, google, esteid, smartid', async function () {
+            // UserConnection "citizenos" is created on signup
+            await UserConnection.create({
+                userId: user.id,
+                connectionId: UserConnection.CONNECTION_IDS.google,
+                connectionUserId: 'test_generated_google1234' + cosUtil.randomString()
+            });
+
+            await UserConnection.create({
+                userId: user.id,
+                connectionId: UserConnection.CONNECTION_IDS.esteid,
+                connectionUserId: 'test_generated_esteid_' + cosUtil.randomString()
+            });
+
+            await UserConnection.create({
+                userId: user.id,
+                connectionId: UserConnection.CONNECTION_IDS.smartid,
+                connectionUserId: 'test_generated_smartId_`' + cosUtil.randomString()
+            });
+
+            const res = await userConnectionsList(agent, user.email);
+
+            const bodyExpected = {
+                status: {
+                    code: 20000
+                },
+                data: [
+                    {
+                        connectionId: UserConnection.CONNECTION_IDS.citizenos
+                    },
+                    {
+                        connectionId: UserConnection.CONNECTION_IDS.esteid
+                    },
+                    {
+                        connectionId: UserConnection.CONNECTION_IDS.google
+                    },
+                    {
+                        connectionId: UserConnection.CONNECTION_IDS.smartid
+                    }
+                ]
+            };
+
+            assert.deepEqual(res.body, bodyExpected);
+        });
+
+        test('Fail - 40400 - not found by valid UUID', async function () {
+            const res = await _userConnectionsList(agent, uuid.v4(), 404);
+
+            const bodyExpected = {
+                status: {
+                    code: 40400,
+                    message: 'Not Found'
+                }
+            };
+
+            assert.deepEqual(res.body, bodyExpected);
+        });
+
+        test('Fail - 40400 - not found by valid e-mail', async function () {
+            const res = await _userConnectionsList(agent, 'citizenos_test_get_user_connections_404@test.com', 404);
+
+            const bodyExpected = {
+                status: {
+                    code: 40400,
+                    message: 'Not Found'
+                }
+            };
+
+            assert.deepEqual(res.body, bodyExpected);
+        });
+
+        test('Fail - 40001 - invalid userId', async function () {
+            const res = await _userConnectionsList(agent, '123', 400);
+
+            const bodyExpected = {
+                status: {
+                    code: 40001,
+                    message: 'Invalid userId'
+                }
+            };
+
+            assert.deepEqual(res.body, bodyExpected);
+        });
+
     });
 });
