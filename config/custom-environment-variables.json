@@ -81,6 +81,7 @@
     "bucket": "AWS_S3_BUCKET_NAME",
     "region": "AWS_S3_REGION",
     "allowedFileTypes": "STORAGE_ALLOWED_FILE_TYPES",
+    "allowedMimeTypes":"STORAGE_ALLOWED_FILE_MIME_TYPES",
     "maxFileSize": "STORAGE_MAX_FILE_SIZE",
     "baseFolder": "STORAGE_BASE_FOLDER",
     "baseURL": "STORAGE_BASE_URL"
