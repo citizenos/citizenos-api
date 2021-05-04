@@ -5563,7 +5563,7 @@ suite('Users', function () {
 
                         expectedInvite.user = {
                             id: userToInvite.id,
-                            email: cosUtil.emailToMaskedEmail(userToInvite.email)
+                            email: userToInvite.email
                         };
 
                         assert.deepEqual(inviteRead, expectedInvite);
@@ -5606,7 +5606,7 @@ suite('Users', function () {
 
                         expectedInvite.user = {
                             id: userToInvite.id,
-                            email: cosUtil.emailToMaskedEmail(userToInvite.email)
+                            email: userToInvite.email
                         };
 
                         const expectedInviteResult = {
