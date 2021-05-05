@@ -316,6 +316,17 @@ module.exports = function (app) {
             let where;
 
             if (validator.isUUID(userId)) {
+                const user = await User.findOne({
+                    where: {
+                        id: userId
+                    },
+                    attributes: ['id']
+                });
+
+                if (!user) {
+                    return res.notFound();
+                }
+
                 where = {
                     userId: userId
                 }
@@ -345,10 +356,16 @@ module.exports = function (app) {
             });
 
             if (!userConnections || !userConnections.length) {
-                return res.notFound();
+                return res.ok({
+                    count: 0,
+                    rows: []
+                });
             }
 
-            return res.ok(userConnections);
+            return res.ok({
+                count: userConnections.length,
+                rows: userConnections
+            });
         }
     ));
 

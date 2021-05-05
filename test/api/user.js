@@ -395,11 +395,14 @@ suite('User', function () {
                 status: {
                     code: 20000
                 },
-                data: [
-                    {
-                        connectionId: UserConnection.CONNECTION_IDS.citizenos
-                    }
-                ]
+                data: {
+                    count: 1,
+                    rows: [
+                        {
+                            connectionId: UserConnection.CONNECTION_IDS.citizenos
+                        }
+                    ]
+                }
             };
 
             assert.deepEqual(res.body, bodyExpected);
@@ -431,20 +434,23 @@ suite('User', function () {
                 status: {
                     code: 20000
                 },
-                data: [
-                    {
-                        connectionId: UserConnection.CONNECTION_IDS.citizenos
-                    },
-                    {
-                        connectionId: UserConnection.CONNECTION_IDS.esteid
-                    },
-                    {
-                        connectionId: UserConnection.CONNECTION_IDS.google
-                    },
-                    {
-                        connectionId: UserConnection.CONNECTION_IDS.smartid
-                    }
-                ]
+                data: {
+                    count: 4,
+                    rows: [
+                        {
+                            connectionId: UserConnection.CONNECTION_IDS.citizenos
+                        },
+                        {
+                            connectionId: UserConnection.CONNECTION_IDS.esteid
+                        },
+                        {
+                            connectionId: UserConnection.CONNECTION_IDS.google
+                        },
+                        {
+                            connectionId: UserConnection.CONNECTION_IDS.smartid
+                        }
+                    ]
+                }
             };
 
             assert.deepEqual(res.body, bodyExpected);

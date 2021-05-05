@@ -793,6 +793,39 @@ suite('Users', function () {
                         assert.isNotNull(createdInvite.updatedAt);
                     });
 
+                    test('Success - 20100 - invite a single User with non-existing e-mail', async function () {
+                        const userToInvite = await userLib.createUserPromised(request.agent(app), null, null, null);
+
+                        const invitation =                             {
+                            userId: 'groupInviteTest_' + cosUtil.randomString() + '@invitetest.com',
+                            level: GroupMember.LEVELS.admin
+                        };
+
+                        const inviteCreateResult = (await groupInviteUsersCreatePromised(agentCreator, userCreator, group.id, invitation)).body;
+
+                        assert.deepEqual(
+                            inviteCreateResult.status,
+                            {
+                                code: 20100
+                            }
+                        );
+
+                        assert.equal(inviteCreateResult.data.count, 1);
+
+                        const createdInvites = inviteCreateResult.data.rows;
+                        assert.isArray(createdInvites);
+                        assert.equal(createdInvites.length, 1);
+
+                        const createdInvite = createdInvites[0];
+                        assert.uuid(createdInvite.id, 'v4');
+                        assert.equal(createdInvite.groupId, group.id);
+                        assert.equal(createdInvite.creatorId, userCreator.id);
+                        assert.equal(createdInvite.level, invitation.level);
+                        assert.isNotNull(createdInvite.userId);
+                        assert.isNotNull(createdInvite.createdAt);
+                        assert.isNotNull(createdInvite.updatedAt);
+                    });
+
                     test('Success - 20100 - invite multiple Users - userId (uuidv4) WITHOUT invite message', async function () {
                         const userToInvite = await userLib.createUserPromised(request.agent(app), null, null, null);
                         const userToInvite2 = await userLib.createUserPromised(request.agent(app), null, null, null);
