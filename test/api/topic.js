@@ -1581,40 +1581,6 @@ const _topicVoteStatusPromised = async function (agent, userId, topicId, voteId,
 
 const topicVoteStatusPromised = async function (agent, userId, topicId, voteId, token) {
     return _topicVoteStatusPromised(agent, userId, topicId, voteId, token, 200);
-   /* return new Promise(function (resolve, reject) {
-        const maxRetries = 20;
-        const retryInterval = 1000; // milliseconds;
-
-        let retries = 0;
-
-        const statusInterval = setInterval(async function () {
-            try {
-                if (retries < maxRetries) {
-                    retries++;
-
-                    const topicVoteStatusResponse = await _topicVoteStatusPromised(agent, userId, topicId, voteId, token, 200);
-                    if (topicVoteStatusResponse.body.status.code === 20001 && topicVoteStatusResponse.body.status.message === 'Signing in progress') {
-                        // Signing is in progress, we shall journey on...
-                    } else {
-                        // Its HTTP 200 and NOT 20001 - Signing in progress, so we have our result, WE'RE DONE HERE
-                        clearInterval(statusInterval);
-
-                        return resolve(topicVoteStatusResponse);
-                    }
-                } else {
-                    clearInterval(statusInterval);
-
-                    return reject(new Error(`topicVoteStatus maximum retry limit ${maxRetries} reached!`));
-                }
-            } catch (err) {
-                // Whatever blows, stop polling
-                clearInterval(statusInterval);
-
-                return reject(err);
-            }
-
-        }, retryInterval);
-    });*/
 };
 
 var _topicVoteStatusUnauth = function (agent, topicId, voteId, token, expectedHttpCode, callback) {
@@ -3037,7 +3003,7 @@ suite('Users', function () {
                             validate: false
                         }
                     );
-                    // NOTE: Creating a Vote.AUTH_TYPES.soft and changing to Vote.AUTH_TYPES.hard after voting just for testing
+                // NOTE: Creating a Vote.AUTH_TYPES.soft and changing to Vote.AUTH_TYPES.hard after voting just for testing
                 const topicVote = (await topicVoteCreatePromised(agent, user.id, topic.id, voteOptions, 1, 1, false, null, null, Vote.TYPES.regular, Vote.AUTH_TYPES.hard)).body.data;
 
                 const vote = (await topicVoteReadPromised(agent, user.id, topic.id, topicVote.id)).body.data;
@@ -5296,6 +5262,36 @@ suite('Users', function () {
                         assert.isNotNull(createdInvite.updatedAt);
                     });
 
+                    test('Success - 20100 - invite a single User with non-existing e-mail', async function () {
+                        const invitation = {
+                            userId: 'topicInviteTest_' + cosUtil.randomString() + '@invitetest.com',
+                            level: TopicMemberUser.LEVELS.read
+                        };
+
+                        const inviteCreateResult = (await topicInviteUsersCreatePromised(agentCreator, userCreator.id, topic.id, invitation)).body;
+
+                        assert.deepEqual(
+                            inviteCreateResult.status,
+                            {
+                                code: 20100
+                            }
+                        );
+
+                        assert.equal(inviteCreateResult.data.count, 1);
+
+                        const createdInvites = inviteCreateResult.data.rows;
+                        assert.isArray(createdInvites);
+                        assert.equal(createdInvites.length, 1);
+
+                        const createdInvite = createdInvites[0];
+                        assert.uuid(createdInvite.id, 'v4');
+                        assert.equal(createdInvite.topicId, topic.id);
+                        assert.equal(createdInvite.creatorId, userCreator.id);
+                        assert.equal(createdInvite.level, invitation.level);
+                        assert.isNotNull(createdInvite.userId);
+                        assert.isNotNull(createdInvite.createdAt);
+                        assert.isNotNull(createdInvite.updatedAt);
+                    });
 
                     test('Success - 20100 - invite multiple Users - userId (uuidv4)', async function () {
                         const userToInvite2 = await userLib.createUserPromised(request.agent(app), null, null, null);
@@ -6690,7 +6686,7 @@ suite('Users', function () {
                                     assert.notProperty(option, 'selected');
                                     break;
                                 case voteRead.options.rows[1].id:
-                                    assert.equal(option.voteCount, 2 + 1 +1);
+                                    assert.equal(option.voteCount, 2 + 1 + 1);
                                     assert.isTrue(option.selected);
                                     break;
                                 case voteRead.options.rows[2].id:
@@ -8738,7 +8734,7 @@ suite('Users', function () {
                                         }
                                     ];
 
-                                     // Vote for the first time
+                                    // Vote for the first time
                                     // Vote for the first time
                                     const voteList2 = [
                                         {
@@ -8759,11 +8755,11 @@ suite('Users', function () {
                                             case voteList1[0].optionId:
                                                 assert.equal(option.voteCount, 1);
                                                 assert.isTrue(option.selected);
-                                            break;
+                                                break;
                                             case voteList1[1].optionId:
                                                 assert.equal(option.voteCount, 1);
                                                 assert.isTrue(option.selected);
-                                            break;
+                                                break;
                                             default:
                                                 assert.property(option, 'value');
                                                 assert.notProperty(option, 'voteCount');
@@ -8782,11 +8778,11 @@ suite('Users', function () {
                                             case voteList2[0].optionId:
                                                 assert.equal(option.voteCount, 1);
                                                 assert.notProperty(option, 'selected');
-                                            break;
+                                                break;
                                             case voteList2[1].optionId:
                                                 assert.equal(option.voteCount, 1);
                                                 assert.notProperty(option, 'selected');
-                                            break;
+                                                break;
                                             default:
                                                 assert.property(option, 'value');
                                                 assert.notProperty(option, 'voteCount');
