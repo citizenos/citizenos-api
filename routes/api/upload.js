@@ -2,20 +2,20 @@
 
 module.exports = function (app) {
 
-    var config = app.get('config');
-    var loginCheck = app.get('middleware.loginCheck');
+    const config = app.get('config');
+    const loginCheck = app.get('middleware.loginCheck');
 
-    var AWS = require('aws-sdk');
-    var uuid = app.get('uuid');
-    var Promise = app.get('Promise');
-    var Busboy = app.get('busboy');
-    var StreamUpload = app.get('stream_upload');
-    var path = require('path');
-    var url = require('url');
-    var logger = app.get('logger');
+    const AWS = require('aws-sdk');
+    const uuid = app.get('uuid');
+    const Promise = app.get('Promise');
+    const Busboy = app.get('busboy');
+    const StreamUpload = app.get('stream_upload');
+    const path = require('path');
+    const url = require('url');
+    const logger = app.get('logger');
 
-    var credentials = {
-        accessKeyId: config.storage.accessKeyId, 
+    const credentials = {
+        accessKeyId: config.storage.accessKeyId,
         secretAccessKey: config.storage.secretAccessKey
     };
 
@@ -24,17 +24,17 @@ module.exports = function (app) {
      */
 
     app.get('/api/users/:userId/upload/sign', loginCheck(['partner']), function (req, res, next) {
-        
-        var filename = uuid.v4();
-        var filetype = req.query.filetype;
-        var folder = req.query.folder;
-        var bucket = config.storage.bucket;
+
+        let filename = uuid.v4();
+        const filetype = req.query.filetype;
+        const folder = req.query.folder;
+        const bucket = config.storage.bucket;
 
         if (folder) {
             filename = folder + '/' + filename;
         }
 
-        var s3Params = {
+        const s3Params = {
             Bucket: bucket,
             Key: filename,
             Expires: 900,
@@ -42,12 +42,12 @@ module.exports = function (app) {
             ACL: 'public-read'
         };
 
-        var s3 = new AWS.S3(credentials);
+        const s3 = new AWS.S3(credentials);
         s3.getSignedUrl('putObject', s3Params, function (err, data) {
             if (err) {
                 return next(err);
             }
-            var returnData = {
+            const returnData = {
                 signedRequest: data,
                 url: 'https://' + bucket + '.s3.amazonaws.com/' + filename,
                 filename: filename
@@ -61,27 +61,27 @@ module.exports = function (app) {
      * Sign download
      */
     app.get('/api/upload/signdownload', function (req, res, next) {
-        var filename = req.query.filename;
-        var filetype = req.query.filetype;
-        var downloadName = req.query.downloadName;
-        var folder = req.query.folder;
-        var bucket = config.storage.bucket;
+        let filename = req.query.filename;
+        const filetype = req.query.filetype;
+        let downloadName = req.query.downloadName;
+        const folder = req.query.folder;
+        const bucket = config.storage.bucket;
 
         if (folder) {
             filename = folder + '/' + filename;
         }
 
-        var responseHeader = 'attachment;';
+        let responseHeader = 'attachment;';
 
         if (downloadName) {
-            var regEx = new RegExp('.' + filetype, 'gi');
+            const regEx = new RegExp('.' + filetype, 'gi');
             downloadName = [encodeURIComponent(downloadName.replace(regEx, '')), filetype].join('.');
             responseHeader += 'filename=' + downloadName;
         }
 
-        var s3 = new AWS.S3(credentials);
+        const s3 = new AWS.S3(credentials);
 
-        var params = {
+        const params = {
             Bucket: bucket,
             Key: filename,
             Expires: 60,
@@ -98,19 +98,20 @@ module.exports = function (app) {
     });
 
 
-    var _deleteFromS3 = function (filename, folder) {
+    const _deleteFromS3 = function (filename, folder) {
         return new Promise(function (resolve, reject) {
-            var s3 = new AWS.S3();
-            var bucket = config.storage.bucket;
+            const s3 = new AWS.S3();
+            const bucket = config.storage.bucket;
 
             if (folder) {
                 filename = folder + '/' + filename;
             }
 
-            var params = {
+            const params = {
                 Bucket: bucket,
                 Key: filename
             };
+
             s3.deleteObject(params, function (err) {
                 if (err) {
                     return reject(err);
@@ -121,39 +122,44 @@ module.exports = function (app) {
         });
     };
 
-    app.delete('/api/users/:userId/upload', loginCheck(['partner']), function (req, res, next) {
-        var filename = req.query.filename;
-        var folder = req.query.folder;
+    app.delete('/api/users/:userId/upload', loginCheck(['partner']), async function (req, res, next) {
+        const filename = req.query.filename;
+        const folder = req.query.folder;
 
         //FIXME: No delete from DB?
-        _deleteFromS3(filename, folder)
-            .then(function () {
-                res.ok();
-            })
-            .catch(next);
+        try {
+            await _deleteFromS3(filename, folder);
+
+            return  res.ok();
+        } catch (e) {
+            return next(e);
+        }
     });
 
-    var drainStream = function (stream) {
+    const drainStream = function (stream) {
         stream.on('readable', stream.read.bind(stream));
     };
 
     app.post('/api/users/:userId/upload', function (req, res, next) {
-        var appDir = __dirname.replace('/routes/api', '/public/uploads');
+        const appDir = __dirname.replace('/routes/api', '/public/uploads');
 
-        var baseFolder = config.storage.baseFolder || appDir;
-        var baseURL = config.storage.baseURL || (config.url.api + '/uploads/');
+        const baseFolder = config.storage.baseFolder || appDir;
+        const baseURL = config.storage.baseURL || (config.url.api + '/uploads/');
 
-        var subFolder = req.params.padId || ''; // topic ID
-        var imageUpload = new StreamUpload({
+        let subFolder = req.params.padId || ''; // topic ID
+        const imageUpload = new StreamUpload({
             extensions: config.storage.allowedFileTypes,
+            types: config.storage.allowedMimeTypes,
             maxSize: config.storage.maxFileSize,
             baseFolder: baseFolder,
             storage: config.storage
         });
-        var storageConfig = config.storage;
+
+        const storageConfig = config.storage;
+        let busboy;
         if (storageConfig) {
             try {
-                var busboy = new Busboy({
+                busboy = new Busboy({
                     headers: req.headers,
                     limits: {
                         fileSize: config.maxFileSize
@@ -164,22 +170,22 @@ module.exports = function (app) {
 
                 return next(error);
             }
-            
-            var isDone;
-            var done = function (error) {
+
+            let isDone;
+            const done = function (error) {
                 logger.error('UPLOAD ERROR', error);
 
                 if (isDone) return;
                 isDone = true;
-                
-                res.status(error.statusCode || 500).json(error);
+
+                res.status(error.statusCode || 500).json(error.message);
                 req.unpipe(busboy);
                 drainStream(req);
                 busboy.removeAllListeners();
             };
-            var uploadResult;
-            var newFileName = uuid.v4();
-            var accessPath = '';
+            let uploadResult;
+            const newFileName = uuid.v4();
+            let accessPath = '';
             busboy.on('field', function (fieldname, data) {
                 if (fieldname === 'folder') {
                     subFolder = data;
@@ -187,13 +193,13 @@ module.exports = function (app) {
             });
 
             busboy.on('file', function (fieldname, file, filename, encoding, mimetype) {
-                var savedFilename = path.join(subFolder, newFileName + path.extname(filename));
+                let savedFilename = path.join(subFolder, newFileName + path.extname(filename));
                 if (!config.storage.type || config.storage.type === 'local') {
                     accessPath = url.resolve(baseURL, savedFilename);
                     savedFilename = path.join(baseFolder, savedFilename);
                 }
                 file.on('limit', function () {
-                    var error = new Error('File is too large');
+                    const error = new Error('File is too large');
                     error.type = 'fileSize';
                     error.statusCode = 403;
                     busboy.emit('error', error);
@@ -203,9 +209,8 @@ module.exports = function (app) {
                     busboy.emit('error', error);
                 });
 
-                uploadResult = imageUpload
-                    .upload(file, {type: mimetype, filename: savedFilename});
-                
+                uploadResult = imageUpload.upload(file, {type: mimetype, filename: savedFilename});
+
             });
 
             busboy.on('error', done);
@@ -213,22 +218,22 @@ module.exports = function (app) {
                 if (uploadResult) {
                     uploadResult
                         .then(function (data) {
-                            
+
                             if (accessPath) {
                                 data = accessPath;
                             }
-                            
+
                             return res.status(201).json(data);
                         })
                         .catch(function (err) {
                             return res.status(500).json(err);
                         });
                 }
-                
+
             });
             req.pipe(busboy);
         }
 
-        
+
     });
 };
