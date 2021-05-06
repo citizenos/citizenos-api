@@ -2562,22 +2562,11 @@ suite('Users', function () {
                             var parsedUrl = _parsePadUrl(padUrl);
                             var padAgent = request.agent(parsedUrl.host);
 
-                            // TODO: PADREAD: Move to reusable code
                             padAgent
                                 .get(parsedUrl.path)
-                                .expect(302)
-                                .end(function (err, res) {
-                                    if (err) return done(err);
-
-                                    var redirectUrl = res.headers.location;
-                                    assert.match(redirectUrl, /^\/p\/r\.[\w]{32}/);
-
-                                    padAgent
-                                        .get(redirectUrl)
-                                        .expect(200)
-                                        .expect('Content-Type', /html/)
-                                        .end(done); // TODO: may want to check if body contains something to confirm it's the read only page
-                                });
+                                .expect(200)
+                                .expect('x-ep-auth-citizenos-authorize', 'readonly')
+                                .end(done);
                         });
                     });
 
@@ -2841,19 +2830,9 @@ suite('Users', function () {
                             // TODO: PADREAD: Move to reusable code
                             padAgent
                                 .get(parsedUrl.path)
-                                .expect(302)
-                                .end(function (err, res) {
-                                    if (err) return done(err);
-
-                                    var redirectUrl = res.headers.location;
-                                    assert.match(redirectUrl, /^\/p\/r\.[\w]{32}/);
-
-                                    padAgent
-                                        .get(redirectUrl)
-                                        .expect(200)
-                                        .expect('Content-Type', /html/)
-                                        .end(done); // TODO: may want to check if body contains something to confirm it's the read only page
-                                });
+                                .expect(200)
+                                .expect('x-ep-auth-citizenos-authorize', 'readonly')
+                                .end(done);
                         });
                     });
 
