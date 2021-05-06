@@ -2960,6 +2960,8 @@ suite('Users', function () {
             });
 
             test('Success - send to Parliament', async function () {
+                this.timeout(20000);
+
                 const voteOptions = [
                     {
                         value: 'Option 1'
