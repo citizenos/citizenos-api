@@ -13,9 +13,7 @@
 
 const _ = require('lodash');
 const LEVELS = {
-    none: 'none', // Enables to override inherited permissions.
     read: 'read',
-    edit: 'edit',
     admin: 'admin'
 };
 
