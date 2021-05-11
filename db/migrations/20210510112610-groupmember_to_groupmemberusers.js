@@ -23,7 +23,9 @@ module.exports = {
       await queryInterface.sequelize.query(`ALTER TABLE "GroupMembers" RENAME TO "GroupMemberUsers"`, {transaction: t});
 
       console.info('Update Activites - "GroupMember" to "GroupMemberUser"...');
-      await queryInterface.sequelize.query(`UPDATE "Activities" SET data = (REPLACE(data::text, '"GroupMember"', '"GroupMemberUser"'))::jsonb WHERE data::text LIKE '%"GroupMember"%'`, {transaction: t});
+      const activityResult = await queryInterface.sequelize.query(`UPDATE "Activities" SET data = (REPLACE(data::text, '"GroupMember"', '"GroupMemberUser"'))::jsonb WHERE data::text LIKE '%"GroupMember"%'`, {transaction: t});
+      console.log('... number of Activities modified: ', activityResult[1].rowCount);
+
       await t.commit();
     } catch (err) {
       await t.rollback();
