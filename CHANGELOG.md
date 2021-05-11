@@ -1,3 +1,8 @@
+## 2021-05-2021
+
+* Rename model GroupMember to GroupMemberUser - https://github.com/citizenos/citizenos-api/issues/198
+* Pump version to 2.2.0.
+
 ## 2020-09-29
 
 * Update inviting users to topic behaviour - https://github.com/citizenos/citizenos-fe/issues/254
