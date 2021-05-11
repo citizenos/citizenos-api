@@ -177,7 +177,7 @@ module.exports = function (app) {
                                     tmg."level"::text,
                                     2 as "priority"
                                 FROM "TopicMemberGroups" tmg
-                                LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                                LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
                                 WHERE tmg."deletedAt" IS NULL
                                 AND gm."deletedAt" IS NULL
                                 ORDER BY tmg."level"::"enum_TopicMemberGroups_level" DESC
@@ -687,7 +687,7 @@ module.exports = function (app) {
                         u."email", \
                         u."language", \
                         u.name \
-                     FROM "GroupMembers" gm \
+                     FROM "GroupMemberUsers" gm \
                      LEFT JOIN "Users" u ON (gm."userId" = u.id) \
                      WHERE gm."groupId"::text IN (:toGroupIds) \
                      AND gm."userId" != :fromUserId \

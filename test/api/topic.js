@@ -2040,7 +2040,7 @@ const Partner = models.Partner;
 
 const Moderator = models.Moderator;
 
-const GroupMember = models.GroupMember;
+const GroupMemberUser = models.GroupMemberUser;
 
 const Topic = models.Topic;
 const TopicMemberUser = models.TopicMemberUser;
@@ -2539,12 +2539,12 @@ suite('Users', function () {
 
                                         var memberUser = {
                                             userId: user.id,
-                                            level: GroupMember.LEVELS.read
+                                            level: GroupMemberUser.LEVELS.read
                                         };
 
                                         return Promise.all([
                                             topicMemberGroupsCreatePromised(agentCreator, creator.id, topic.id, memberGroup),
-                                            groupLib.membersCreatePromised(agentCreator, creator.id, group.id, memberUser)
+                                            groupLib.memberUsersCreatePromised(agentCreator, creator.id, group.id, memberUser)
                                         ]);
                                     });
                             });
@@ -2571,7 +2571,7 @@ suite('Users', function () {
                     });
 
                     test('Success - User has direct EDIT access, Group membership revoked', function (done) {
-                        groupLib.membersDelete(agentCreator, creator.id, group.id, user.id, function (err) {
+                        groupLib.memberUsersDelete(agentCreator, creator.id, group.id, user.id, function (err) {
                             if (err) return done(err);
 
                             var topicMemberUser = {
@@ -2700,7 +2700,7 @@ suite('Users', function () {
                     });
 
                     test('Fail - Forbidden - User membership was revoked from Group', function (done) {
-                        groupLib.membersDelete(agentCreator, creator.id, group.id, user.id, function (err) {
+                        groupLib.memberUsersDelete(agentCreator, creator.id, group.id, user.id, function (err) {
                             if (err) return done(err);
 
                             _topicRead(agentUser, user.id, topic.id, null, 403, function (err) {
@@ -3350,10 +3350,10 @@ suite('Users', function () {
 
                 const groupMemberUser = {
                     userId: user.id,
-                    level: GroupMember.LEVELS.read
+                    level: GroupMemberUser.LEVELS.read
                 };
                 await topicMemberGroupsCreatePromised(agentCreator, creator.id, topic.id, topicMemberGroup);
-                return groupLib.membersCreatePromised(agentCreator, creator.id, group.id, groupMemberUser);
+                return groupLib.memberUsersCreatePromised(agentCreator, creator.id, group.id, groupMemberUser);
             });
 
             test('Success', async function () {
@@ -4092,7 +4092,7 @@ suite('Users', function () {
                 });
 
                 test('Success - User removed from Group which granted permissions - has "none" thus no Topics listed', function (done) {
-                    groupLib.membersDelete(agentCreator, creator.id, group.id, user.id, function (err) {
+                    groupLib.memberUsersDelete(agentCreator, creator.id, group.id, user.id, function (err) {
                         if (err) return done(err);
 
                         topicList(agentUser, user.id, null, null, null, null, null, function (err, res) {
@@ -4118,7 +4118,7 @@ suite('Users', function () {
                     topicMemberUsersCreate(agentCreator, creator.id, topic.id, topicMemberUser, function (err) {
                         if (err) return done(err);
 
-                        groupLib.membersDelete(agentCreator, creator.id, group.id, user.id, function (err) {
+                        groupLib.memberUsersDelete(agentCreator, creator.id, group.id, user.id, function (err) {
                             if (err) return done(err);
 
                             topicList(agentUser, user.id, null, null, null, null, null, function (err, res) {
@@ -4213,11 +4213,11 @@ suite('Users', function () {
                                         var members = [
                                             {
                                                 userId: user.id,
-                                                level: GroupMember.LEVELS.read
+                                                level: GroupMemberUser.LEVELS.read
                                             }
                                         ];
 
-                                        groupLib.membersCreate(agent2, user2.id, group2.id, members, cb);
+                                        groupLib.memberUsersCreate(agent2, user2.id, group2.id, members, cb);
                                         groupMemberIds.push(user.id);
                                     });
                                 }
@@ -4253,10 +4253,10 @@ suite('Users', function () {
                                             function (cb) {
                                                 var member = {
                                                     userId: user3.id,
-                                                    level: GroupMember.LEVELS.read
+                                                    level: GroupMemberUser.LEVELS.read
                                                 };
 
-                                                groupLib.membersCreate(agent, user.id, group.id, member, cb);
+                                                groupLib.memberUsersCreate(agent, user.id, group.id, member, cb);
                                                 groupMemberIds.push(user3.id);
                                             },
                                             function (cb) {
@@ -4269,7 +4269,7 @@ suite('Users', function () {
                                                     if (err) return done(err);
 
                                                     if (result && result.body.status.code === 20100) {
-                                                        groupLib.membersDelete(agent2, user2.id, group2.id, user.id, cb);
+                                                        groupLib.memberUsersDelete(agent2, user2.id, group2.id, user.id, cb);
                                                     }
                                                 });
                                             }
@@ -4934,15 +4934,15 @@ suite('Users', function () {
                                                 group = res.body.data;
                                                 var groupMember = {
                                                     userId: groupMemberUser.id,
-                                                    level: GroupMember.LEVELS.read
+                                                    level: GroupMemberUser.LEVELS.read
                                                 };
 
                                                 member = {
                                                     groupId: group.id,
-                                                    level: GroupMember.LEVELS.read
+                                                    level: GroupMemberUser.LEVELS.read
                                                 };
 
-                                                groupLib.membersCreate(agent, user.id, group.id, groupMember, function (err) {
+                                                groupLib.memberUsersCreate(agent, user.id, group.id, groupMember, function (err) {
                                                     if (err) return done(err);
 
                                                     done();

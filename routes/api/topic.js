@@ -119,7 +119,7 @@ module.exports = function (app) {
                             gm."userId",
                             MAX(tmg.level)::text AS level
                         FROM "TopicMemberGroups" tmg
-                            JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                            JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
                         WHERE tmg."deletedAt" IS NULL
                         AND gm."deletedAt" IS NULL
                         GROUP BY "topicId", "userId"
@@ -714,7 +714,7 @@ module.exports = function (app) {
                                 tmg."topicId",
                                 gm."userId" AS "memberId"
                             FROM "TopicMemberGroups" tmg
-                                LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                                LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
                                 JOIN "Groups" gr on gr.id = tmg."groupId"
                             WHERE tmg."deletedAt" IS NULL
                             AND gm."deletedAt" IS NULL
@@ -908,7 +908,7 @@ module.exports = function (app) {
                         gm."userId",
                         MAX(tmg.level)::text AS level
                     FROM "TopicMemberGroups" tmg
-                        LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                        LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
                     WHERE tmg."deletedAt" IS NULL
                     AND gm."deletedAt" IS NULL
                     GROUP BY "topicId", "userId"
@@ -938,7 +938,7 @@ module.exports = function (app) {
                             tmg."topicId",
                             gm."userId" AS "memberId"
                         FROM "TopicMemberGroups" tmg
-                            LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                            LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
                             JOIN "Groups" gr ON gr.id = tmg."groupId"
                         WHERE tmg."deletedAt" IS NULL
                         AND gm."deletedAt" IS NULL
@@ -1090,7 +1090,7 @@ module.exports = function (app) {
                             gm."userId",
                             MAX(tmg.level)::text AS level
                         FROM "TopicMemberGroups" tmg
-                            LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                            LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
                         WHERE tmg."deletedAt" IS NULL
                         AND gm."deletedAt" IS NULL
                         GROUP BY "topicId", "userId"
@@ -1917,7 +1917,7 @@ module.exports = function (app) {
                             gm."userId",
                             MAX(tmg.level)::text AS level
                         FROM "TopicMemberGroups" tmg
-                            LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                            LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
                         WHERE tmg."deletedAt" IS NULL
                         AND gm."deletedAt" IS NULL
                         GROUP BY "topicId", "userId"
@@ -1935,7 +1935,7 @@ module.exports = function (app) {
                                 tmg."topicId",
                                 gm."userId" AS "memberId"
                             FROM "TopicMemberGroups" tmg
-                                JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                                JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
                                 JOIN "Groups" g ON g.id = tmg."groupId"
                             WHERE tmg."deletedAt" IS NULL
                             AND g."deletedAt" IS NULL
@@ -2224,7 +2224,7 @@ module.exports = function (app) {
                                     tmg."topicId",
                                     gm."userId" AS "memberId"
                                 FROM "TopicMemberGroups" tmg
-                                    JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                                    JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
                                     JOIN "Groups" g ON g.id = tmg."groupId"
                                 WHERE tmg."deletedAt" IS NULL
                                 AND g."deletedAt" IS NULL
@@ -2578,11 +2578,11 @@ module.exports = function (app) {
                             SELECT
                                 "groupId",
                                 COUNT(*) as count
-                            FROM "GroupMembers"
+                            FROM "GroupMemberUsers"
                             WHERE "deletedAt" IS NULL
                             GROUP BY 1
                         ) as gmuc ON (gmuc."groupId" = g.id)
-                        LEFT JOIN "GroupMembers" gmu ON (gmu."groupId" = g.id AND gmu."userId" = :userId AND gmu."deletedAt" IS NULL)
+                        LEFT JOIN "GroupMemberUsers" gmu ON (gmu."groupId" = g.id AND gmu."userId" = :userId AND gmu."deletedAt" IS NULL)
                     WHERE tmg."topicId" = :topicId
                         AND tmg."deletedAt" IS NULL
                         AND g."deletedAt" IS NULL
@@ -2628,7 +2628,7 @@ module.exports = function (app) {
                                     tmg."level"::text,
                                     2 as "priority"
                                 FROM "TopicMemberGroups" tmg
-                                LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                                LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
                                 WHERE tmg."deletedAt" IS NULL
                                 AND gm."deletedAt" IS NULL
                                 ORDER BY tmg."level"::"enum_TopicMemberGroups_level" DESC
@@ -2732,7 +2732,7 @@ module.exports = function (app) {
                             tmg."level"::text,
                             2 as "priority"
                         FROM "TopicMemberGroups" tmg
-                        LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                        LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
                         WHERE tmg."deletedAt" IS NULL
                         AND gm."deletedAt" IS NULL
                     ) AS tm ON (tm."topicId" = t.id)
@@ -2743,13 +2743,13 @@ module.exports = function (app) {
                 LEFT JOIN "TopicMemberUsers" tmu ON (tmu."userId" = tm.id AND tmu."topicId" = :topicId)
                 LEFT JOIN (
                     SELECT gm."userId", tmg."groupId", tmg."topicId", tmg.level, g.name
-                    FROM "GroupMembers" gm
+                    FROM "GroupMemberUsers" gm
                     LEFT JOIN "TopicMemberGroups" tmg ON tmg."groupId" = gm."groupId"
                     LEFT JOIN "Groups" g ON g.id = tmg."groupId" AND g."deletedAt" IS NULL
                     WHERE gm."deletedAt" IS NULL
                     AND tmg."deletedAt" IS NULL
                 ) tmg ON tmg."topicId" = :topicId AND (tmg."userId" = tm.id)
-                LEFT JOIN "GroupMembers" gmu ON (gmu."groupId" = tmg."groupId" AND gmu."userId" = :userId)
+                LEFT JOIN "GroupMemberUsers" gmu ON (gmu."groupId" = tmg."groupId" AND gmu."userId" = :userId)
                 LEFT JOIN "UserConnections" uc ON (uc."userId" = tm.id AND uc."connectionId" = 'esteid')
                 ${where}
                 GROUP BY tm.id, tm.level, tmu.level, tm.name, tm.company, tm."imageUrl", tm.email, uc."connectionData"::jsonb
@@ -2832,11 +2832,11 @@ module.exports = function (app) {
                                 SELECT
                                     "groupId",
                                     COUNT(*) as count
-                                FROM "GroupMembers"
+                                FROM "GroupMemberUsers"
                                 WHERE "deletedAt" IS NULL
                                 GROUP BY 1
                             ) as gmuc ON (gmuc."groupId" = g.id)
-                            LEFT JOIN "GroupMembers" gmu ON (gmu."groupId" = g.id AND gmu."userId" = :userId AND gmu."deletedAt" IS NULL)
+                            LEFT JOIN "GroupMemberUsers" gmu ON (gmu."groupId" = g.id AND gmu."userId" = :userId AND gmu."deletedAt" IS NULL)
                         WHERE tmg."topicId" = :topicId
                         AND tmg."deletedAt" IS NULL
                         AND g."deletedAt" IS NULL
@@ -2901,7 +2901,7 @@ module.exports = function (app) {
                     gm."level" AS level, \
                     g.id \
                 FROM "Groups" g \
-                LEFT JOIN "GroupMembers" gm \
+                LEFT JOIN "GroupMemberUsers" gm \
                     ON(gm."groupId" = g.id) \
                 WHERE g.id IN (:groupIds) \
                     AND gm."userId" = :userId \

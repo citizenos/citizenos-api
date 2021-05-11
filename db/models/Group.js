@@ -81,7 +81,7 @@ module.exports = function (sequelize, DataTypes) {
     Group.associate = function (models) {
         // Group can have many Members
         Group.belongsToMany(models.User, {
-            through: models.GroupMember,
+            through: models.GroupMemberUser,
             foreignKey: 'groupId',
             as: {
                 singular: 'member',

@@ -17,7 +17,7 @@ module.exports = function (app) {
     const Group = models.Group;
     const User = models.User;
     const Topic = models.Topic;
-    const GroupMember = models.GroupMember;
+    const GroupMemberUser = models.GroupMemberUser;
     const TopicMemberUser = models.TopicMemberUser;
     const TopicMemberGroup = models.TopicMemberGroup;
     const VoteUserContainer = models.VoteUserContainer;
@@ -283,8 +283,8 @@ module.exports = function (app) {
                             object = TopicMemberGroup.build(activity.data[field]).toJSON();
                             object['@type'] = activity.data[field]['@type'];
                             break;
-                        case 'GroupMember':
-                            object = GroupMember.build(activity.data[field]).toJSON();
+                        case 'GroupMemberUser':
+                            object = GroupMemberUser.build(activity.data[field]).toJSON();
                             object['@type'] = activity.data[field]['@type'];
                             break;
                         default:
@@ -489,7 +489,7 @@ module.exports = function (app) {
                                 gm."userId", \
                                 MAX(tmg.level)::text AS level \
                             FROM "TopicMemberGroups" tmg \
-                                LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
+                                LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId") \
                             WHERE tmg."deletedAt" IS NULL \
                             AND gm."deletedAt" IS NULL \
                             GROUP BY "topicId", "userId" \
@@ -509,11 +509,11 @@ module.exports = function (app) {
                     SELECT \
                         g.id \
                     FROM "Groups" g \
-                        JOIN "GroupMembers" gm ON (gm."groupId" = g.id) \
+                        JOIN "GroupMemberUsers" gm ON (gm."groupId" = g.id) \
                         JOIN "Users" c ON (c.id = g."creatorId") \
                         JOIN ( \
                             SELECT "groupId", count("userId") AS "count" \
-                            FROM "GroupMembers" \
+                            FROM "GroupMemberUsers" \
                             WHERE "deletedAt" IS NULL \
                             GROUP BY "groupId" \
                         ) AS mc ON (mc."groupId" = g.id) \
@@ -808,7 +808,7 @@ module.exports = function (app) {
                                 gm."userId", \
                                 MAX(tmg.level)::text AS level \
                             FROM "TopicMemberGroups" tmg \
-                                LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
+                                LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId") \
                             WHERE tmg."deletedAt" IS NULL \
                             AND gm."deletedAt" IS NULL \
                             GROUP BY "topicId", "userId" \
@@ -828,11 +828,11 @@ module.exports = function (app) {
                     SELECT \
                         g.id \
                     FROM "Groups" g \
-                        JOIN "GroupMembers" gm ON (gm."groupId" = g.id) \
+                        JOIN "GroupMemberUsers" gm ON (gm."groupId" = g.id) \
                         JOIN "Users" c ON (c.id = g."creatorId") \
                         JOIN ( \
                             SELECT "groupId", count("userId") AS "count" \
-                            FROM "GroupMembers" \
+                            FROM "GroupMemberUsers" \
                             WHERE "deletedAt" IS NULL \
                             GROUP BY "groupId" \
                         ) AS mc ON (mc."groupId" = g.id) \
@@ -1163,7 +1163,7 @@ module.exports = function (app) {
             .catch(next);
     });
 
-    app.get('/api/users/:userId/groups/:groupId/activities', loginCheck(['partner']), groupLib.hasPermission(GroupMember.LEVELS.read, true), function (req, res, next) {
+    app.get('/api/users/:userId/groups/:groupId/activities', loginCheck(['partner']), groupLib.hasPermission(GroupMemberUser.LEVELS.read, true), function (req, res, next) {
         return groupActivitiesList(req, res, next)
             .then(function (results) {
                 return res.ok(results);

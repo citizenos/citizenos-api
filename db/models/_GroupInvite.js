@@ -15,11 +15,11 @@ module.exports.model = function (sequelize, DataTypes) {
 
     // Parent model for this model
     const Invite = require('./_Invite').model(sequelize, DataTypes);
-    const GroupMember = require('./_GroupMember').model(sequelize, DataTypes);
+    const _GroupMember = require('./_GroupMember').model(sequelize, DataTypes);
 
     // NOTE: Topic invite extends Invite and TopicMember. While it makes code harder to read, it gives consistency guarantees
     const GroupInvite = {
-        attributes: Object.assign({}, Invite.attributes, GroupMember.attributes) // All attributes inherited from parent models Invite and TopicMember
+        attributes: Object.assign({}, Invite.attributes, _GroupMember.attributes) // All attributes inherited from parent models Invite and GroupMember
     };
 
     return GroupInvite;

@@ -23,7 +23,7 @@ module.exports = function (app) {
 
     const Group = models.Group;
     const GroupInviteUser = models.GroupInviteUser;
-    const GroupMember = models.GroupMember;
+    const GroupMemberUser = models.GroupMemberUser;
     const User = models.User;
 
     const _hasPermission = function (groupId, userId, level, allowPublic, allowSelf) {
@@ -31,12 +31,12 @@ module.exports = function (app) {
             .query('\
                     SELECT \
                         g.visibility = \'public\' AS "isPublic", \
-                        gm.level::"enum_GroupMembers_level" >= :level AS "allowed", \
+                        gm.level::"enum_GroupMemberUsers_level" >= :level AS "allowed", \
                         gm."userId" AS uid, \
                         gm."level" AS level, \
                         g.id \
                     FROM "Groups" g \
-                    LEFT JOIN "GroupMembers" gm \
+                    LEFT JOIN "GroupMemberUsers" gm \
                         ON(gm."groupId" = g.id) \
                     WHERE g.id = :groupId \
                         AND gm."userId" = :userId \
@@ -130,7 +130,7 @@ module.exports = function (app) {
                             ,
                             {
                                 through: {
-                                    level: GroupMember.LEVELS.admin
+                                    level: GroupMemberUser.LEVELS.admin
                                 },
                                 transaction: t
                             }
@@ -147,7 +147,7 @@ module.exports = function (app) {
     /**
      * Read a Group
      */
-    app.get('/api/users/:userId/groups/:groupId', loginCheck(['partner']), hasPermission(GroupMember.LEVELS.read, null, null), function (req, res, next) {
+    app.get('/api/users/:userId/groups/:groupId', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), function (req, res, next) {
         db
             .query(
                 'SELECT \
@@ -164,7 +164,7 @@ module.exports = function (app) {
                     LEFT JOIN "Users" c ON (c.id = g."creatorId") \
                     LEFT JOIN ( \
                         SELECT "groupId", count("userId") AS "count" \
-                        FROM "GroupMembers" \
+                        FROM "GroupMemberUsers" \
                         WHERE "deletedAt" IS NULL \
                         GROUP BY "groupId" \
                     ) AS mc ON (mc."groupId" = g.id) \
@@ -191,7 +191,7 @@ module.exports = function (app) {
     /**
      * Update Group info
      */
-    app.put('/api/users/:userId/groups/:groupId', loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, null), function (req, res, next) {
+    app.put('/api/users/:userId/groups/:groupId', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.admin, null, null), function (req, res, next) {
         const groupId = req.params.groupId;
         const groupName = req.body.name;
 
@@ -249,7 +249,7 @@ module.exports = function (app) {
                                                         "Users" c ON (c.id = g."creatorId") \
                                                             LEFT JOIN ( \
                                                                 SELECT "groupId", count("userId") AS "count" \
-                                                                FROM "GroupMembers" \
+                                                                FROM "GroupMemberUsers" \
                                                                 WHERE "deletedAt" IS NULL \
                                                                 GROUP BY "groupId" \
                                                             ) AS mc ON (mc."groupId" = g.id);'
@@ -282,7 +282,7 @@ module.exports = function (app) {
     /**
      * Delete Group
      */
-    app.delete('/api/users/:userId/groups/:groupId', loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, null), function (req, res, next) {
+    app.delete('/api/users/:userId/groups/:groupId', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.admin, null, null), function (req, res, next) {
         Group
             .findByPk(req.params.groupId)
             .then(function (group) {
@@ -293,7 +293,7 @@ module.exports = function (app) {
                 }
 
                 return db.transaction(function (t) {
-                    return GroupMember.destroy({where: {groupId: group.id}}, {transaction: t})
+                    return GroupMemberUser.destroy({where: {groupId: group.id}}, {transaction: t})
                         .then(function () {
                             return group.destroy({transaction: t});
                         })
@@ -363,7 +363,7 @@ module.exports = function (app) {
                                     \'user\' as type, \
                                     gmu."groupId" as "groupId", \
                                     gmu.level::text as "memberLevel" \
-                                FROM "GroupMembers" gmu \
+                                FROM "GroupMemberUsers" gmu \
                                 LEFT JOIN "Users" u \
                                 ON u.id = gmu."userId" \
                                 WHERE gmu."deletedAt" IS NULL';
@@ -378,7 +378,7 @@ module.exports = function (app) {
                                 tmg.level::text, \
                                 2 as "priority" \
                             FROM "TopicMemberGroups" tmg \
-                                LEFT JOIN "GroupMembers" gm \
+                                LEFT JOIN "GroupMemberUsers" gm \
                             ON tmg."groupId" = gm."groupId" \
                             WHERE tmg."deletedAt" IS NULL \
                              \
@@ -417,11 +417,11 @@ module.exports = function (app) {
                     ' + returnFields + ' \
                     gt.title as "members.topics.latest.title" \
                 FROM "Groups" g \
-                    JOIN "GroupMembers" gm ON (gm."groupId" = g.id) \
+                    JOIN "GroupMemberUsers" gm ON (gm."groupId" = g.id) \
                     JOIN "Users" c ON (c.id = g."creatorId") \
                     JOIN ( \
                         SELECT "groupId", count("userId") AS "count" \
-                        FROM "GroupMembers" \
+                        FROM "GroupMemberUsers" \
                         WHERE "deletedAt" IS NULL \
                         GROUP BY "groupId" \
                     ) AS mc ON (mc."groupId" = g.id) \
@@ -537,13 +537,13 @@ module.exports = function (app) {
 
 
     /**
-     * Create new members (GroupMember) to a Group
+     * Create new members (GroupMemberUser) to a Group
      *
      * @deprecated Use Invite API instead - POST /api/users/:userId/groups/:groupId/invites/users
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/348
      */
-    app.post(['/api/users/:userId/groups/:groupId/members/users'], DEPRECATED('Use invite API - https://github.com/citizenos/citizenos-fe/issues/348'), loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, null), function (req, res, next) {
+    app.post(['/api/users/:userId/groups/:groupId/members/users'], DEPRECATED('Use invite API - https://github.com/citizenos/citizenos-fe/issues/348'), loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.admin, null, null), function (req, res, next) {
         let members = req.body;
         const groupId = req.params.groupId;
 
@@ -664,14 +664,14 @@ module.exports = function (app) {
 
                     return db
                         .transaction(function (t) {
-                            return GroupMember
+                            return GroupMemberUser
                                 .findOrCreate({
                                     where: {
                                         groupId: member.groupId,
                                         userId: member.userId
                                     },
                                     defaults: {
-                                        level: member.level || GroupMember.LEVELS.read
+                                        level: member.level || GroupMemberUser.LEVELS.read
                                     },
                                     transaction: t
                                 });
@@ -724,7 +724,7 @@ module.exports = function (app) {
     /**
      * Get Group member Users
      */
-    app.get(['/api/users/:userId/groups/:groupId/members/users'], loginCheck(['partner']), hasPermission(GroupMember.LEVELS.read, null, null), async function (req, res, next) {
+    app.get(['/api/users/:userId/groups/:groupId/members/users'], loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), async function (req, res, next) {
         //FIXME: Deprecation warning - https://github.com/citizenos/citizenos-fe/issues/348
 
         const groupId = req.params.groupId;
@@ -748,7 +748,7 @@ module.exports = function (app) {
                         u."imageUrl",
                         gm.level,
                         count(*) OVER()::integer AS "countTotal"
-                    FROM "GroupMembers" gm
+                    FROM "GroupMemberUsers" gm
                         JOIN "Users" u ON (u.id = gm."userId")
                     WHERE gm."groupId" = :groupId
                     AND gm."deletedAt" IS NULL
@@ -788,16 +788,16 @@ module.exports = function (app) {
     /**
      * Update membership information
      */
-    app.put(['/api/users/:userId/groups/:groupId/members/users/:memberId'], loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, null), function (req, res, next) {
+    app.put(['/api/users/:userId/groups/:groupId/members/users/:memberId'], loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.admin, null, null), function (req, res, next) {
         const newLevel = req.body.level;
         const memberId = req.params.memberId;
         const groupId = req.params.groupId;
 
-        GroupMember
+        GroupMemberUser
             .findAll({
                 where: {
                     groupId: groupId,
-                    level: GroupMember.LEVELS.admin
+                    level: GroupMemberUser.LEVELS.admin
                 },
                 attributes: ['userId'],
                 raw: true
@@ -807,21 +807,21 @@ module.exports = function (app) {
                     return res.badRequest('Cannot revoke admin permissions from the last admin member.');
                 }
 
-                return GroupMember
+                return GroupMemberUser
                     .findOne({
                         where: {
                             groupId: groupId,
                             userId: memberId
                         }
                     })
-                    .then(function (groupMember) {
-                        groupMember.level = newLevel;
+                    .then(function (groupMemberUser) {
+                        groupMemberUser.level = newLevel;
 
                         return db
                             .transaction(function (t) {
                                 return cosActivities
                                     .updateActivity(
-                                        groupMember,
+                                        groupMemberUser,
                                         null,
                                         {
                                             type: 'User',
@@ -832,7 +832,7 @@ module.exports = function (app) {
                                         req.method + ' ' + req.path, t
                                     )
                                     .then(function () {
-                                        return groupMember
+                                        return groupMemberUser
                                             .save({
                                                 transaction: t
                                             });
@@ -849,15 +849,15 @@ module.exports = function (app) {
     /**
      * Delete membership information
      */
-    app.delete(['/api/users/:userId/groups/:groupId/members/users/:memberId'], loginCheck(['partner']), hasPermission(GroupMember.LEVELS.admin, null, true), function (req, res, next) {
+    app.delete(['/api/users/:userId/groups/:groupId/members/users/:memberId'], loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.admin, null, true), function (req, res, next) {
         const groupId = req.params.groupId;
         const memberId = req.params.memberId;
 
-        GroupMember
+        GroupMemberUser
             .findAll({
                 where: {
                     groupId: groupId,
-                    level: GroupMember.LEVELS.admin
+                    level: GroupMemberUser.LEVELS.admin
                 },
                 attributes: ['userId'],
                 raw: true
@@ -894,11 +894,11 @@ module.exports = function (app) {
                                     .query(
                                         '\
                                         DELETE FROM \
-                                            "GroupMembers" \
+                                            "GroupMemberUsers" \
                                         WHERE ctid IN (\
                                             SELECT \
                                                 ctid \
-                                            FROM "GroupMembers" \
+                                            FROM "GroupMemberUsers" \
                                             WHERE "groupId" = :groupId \
                                             AND "userId" = :userId \
                                             LIMIT 1 \
@@ -930,7 +930,7 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/348
      */
-    app.post('/api/users/:userId/groups/:groupId/invites/users', loginCheck(), hasPermission(GroupMember.LEVELS.admin, null, null), asyncMiddleware(async function (req, res) {
+    app.post('/api/users/:userId/groups/:groupId/invites/users', loginCheck(), hasPermission(GroupMemberUser.LEVELS.admin, null, null), asyncMiddleware(async function (req, res) {
         //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
         const groupId = req.params.groupId;
         const userId = req.user.id;
@@ -1048,7 +1048,7 @@ module.exports = function (app) {
             validUserIdMembers = validUserIdMembers.filter(function (member) {
                 return member.userId !== req.user.id; // Make sure user does not invite self
             });
-            const currentMembers = await GroupMember.findAll({
+            const currentMembers = await GroupMemberUser.findAll({
                 where: {
                     groupId: groupId
                 }
@@ -1059,7 +1059,7 @@ module.exports = function (app) {
                     return cmember.userId === member.userId;
                 });
                 if (existingMember) {
-                    const levelsArray = Object.keys(GroupMember.LEVELS);
+                    const levelsArray = Object.keys(GroupMemberUser.LEVELS);
                     if (existingMember.level !== member.level) {
                         if (levelsArray.indexOf(member.level) > levelsArray.indexOf(existingMember.level)) {
                             await existingMember.update({
@@ -1141,7 +1141,7 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/348
      */
-    app.get('/api/users/:userId/groups/:groupId/invites/users', loginCheck(), hasPermission(GroupMember.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
+    app.get('/api/users/:userId/groups/:groupId/invites/users', loginCheck(), hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
@@ -1266,7 +1266,7 @@ module.exports = function (app) {
 
             let hasAccess;
             try {
-                hasAccess = await _hasPermission(groupId, invite.userId, GroupMember.LEVELS.read, null, null);
+                hasAccess = await _hasPermission(groupId, invite.userId, GroupMemberUser.LEVELS.read, null, null);
             } catch (e) {
                 hasAccess = false;
             }
@@ -1297,7 +1297,7 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/348
      */
-    app.delete(['/api/groups/:groupId/invites/users/:inviteId', '/api/users/:userId/groups/:groupId/invites/users/:inviteId'], loginCheck(), hasPermission(GroupMember.LEVELS.admin), asyncMiddleware(async function (req, res) {
+    app.delete(['/api/groups/:groupId/invites/users/:inviteId', '/api/users/:userId/groups/:groupId/invites/users/:inviteId'], loginCheck(), hasPermission(GroupMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
         const groupId = req.params.groupId;
         const inviteId = req.params.inviteId;
 
@@ -1345,7 +1345,7 @@ module.exports = function (app) {
             );
 
         // Find out if the User is already a member of the Group
-        const memberUserExisting = await GroupMember
+        const memberUserExisting = await GroupMemberUser
             .findOne({
                 where: {
                     groupId: groupId,
@@ -1360,7 +1360,7 @@ module.exports = function (app) {
 
             if (memberUserExisting) {
                 // User already a member, see if we need to update the level
-                const levelsArray = Object.keys(GroupMember.LEVELS);
+                const levelsArray = Object.keys(GroupMemberUser.LEVELS);
                 if (levelsArray.indexOf(memberUserExisting.level) < levelsArray.indexOf(invite.level)) {
                     const memberUserUpdated = await memberUserExisting.update({
                         level: invite.level
@@ -1384,11 +1384,11 @@ module.exports = function (app) {
                 });
 
                 const memberUserCreated = await db.transaction(async function (t) {
-                    const member = await GroupMember.create(
+                    const member = await GroupMemberUser.create(
                         {
                             groupId: invite.groupId,
                             userId: invite.userId,
-                            level: GroupMember.LEVELS[invite.level]
+                            level: GroupMemberUser.LEVELS[invite.level]
                         },
                         {
                             transaction: t
@@ -1434,7 +1434,7 @@ module.exports = function (app) {
     /**
      * Get Group Topics
      */
-    app.get('/api/users/:userId/groups/:groupId/topics', loginCheck(['partner']), hasPermission(GroupMember.LEVELS.read, null, null), function (req, res, next) {
+    app.get('/api/users/:userId/groups/:groupId/topics', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), function (req, res, next) {
         db
             .query(
                 'SELECT \
@@ -1470,7 +1470,7 @@ module.exports = function (app) {
                             gm."userId", \
                             MAX(tmg.level)::text AS level \
                         FROM "TopicMemberGroups" tmg \
-                            LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
+                            LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId") \
                         WHERE tmg."deletedAt" IS NULL \
                         AND gm."deletedAt" IS NULL \
                         GROUP BY "topicId", "userId" \
@@ -1487,7 +1487,7 @@ module.exports = function (app) {
                                 tmg."topicId", \
                                 gm."userId" AS "memberId" \
                             FROM "TopicMemberGroups" tmg \
-                                JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId") \
+                                JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId") \
                             WHERE tmg."deletedAt" IS NULL \
                             AND gm."deletedAt" IS NULL \
                         ) AS tmu GROUP BY "topicId" \
@@ -1527,7 +1527,7 @@ module.exports = function (app) {
     /**
      * Get Group member Topics
      */
-    app.get('/api/users/:userId/groups/:groupId/members/topics', loginCheck(['partner']), hasPermission(GroupMember.LEVELS.read, null, null), async function (req, res, next) {
+    app.get('/api/users/:userId/groups/:groupId/members/topics', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), async function (req, res, next) {
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         const search = req.query.search;
@@ -1580,7 +1580,7 @@ module.exports = function (app) {
                                 gm."userId",
                                 MAX(tmg.level)::text AS level
                             FROM "TopicMemberGroups" tmg
-                                LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                                LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
                             WHERE tmg."deletedAt" IS NULL
                             AND gm."deletedAt" IS NULL
                             GROUP BY "topicId", "userId"
@@ -1597,7 +1597,7 @@ module.exports = function (app) {
                                     tmg."topicId",
                                     gm."userId" AS "memberId"
                                 FROM "TopicMemberGroups" tmg
-                                    JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                                    JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
                                 WHERE tmg."deletedAt" IS NULL
                                 AND gm."deletedAt" IS NULL
                             ) AS tmu GROUP BY "topicId"

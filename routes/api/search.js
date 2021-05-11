@@ -202,7 +202,7 @@ module.exports = function (app) {
                                             gm."userId",
                                             MAX(tmg.level)::text AS level
                                         FROM "TopicMemberGroups" tmg
-                                            LEFT JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                                            LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
                                         WHERE tmg."deletedAt" IS NULL
                                         AND gm."deletedAt" IS NULL
                                         GROUP BY "topicId", "userId"
@@ -219,7 +219,7 @@ module.exports = function (app) {
                                                 tmg."topicId",
                                                 gm."userId" AS "memberId"
                                             FROM "TopicMemberGroups" tmg
-                                                JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                                                JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
                                             WHERE tmg."deletedAt" IS NULL
                                             AND gm."deletedAt" IS NULL
                                         ) AS tmu GROUP BY "topicId"
@@ -288,7 +288,7 @@ module.exports = function (app) {
                                 }
                             });
 
-                            whereCondition += ` AND gm.level::"enum_GroupMembers_level" ${levelComparer} :level `;
+                            whereCondition += ` AND gm.level::"enum_GroupMemberUsers_level" ${levelComparer} :level `;
 
                             const groupsResult = await db
                                 .query(
@@ -298,7 +298,7 @@ module.exports = function (app) {
                                         g.name,
                                         gm.level as "permission.level"
                                     FROM "Groups" g
-                                        JOIN "GroupMembers" gm ON (gm."groupId" = g.id)
+                                        JOIN "GroupMemberUsers" gm ON (gm."groupId" = g.id)
                                     WHERE g.name ILIKE :str
                                         AND g."deletedAt" IS NULL
                                         AND gm."deletedAt" is NULL

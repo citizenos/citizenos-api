@@ -43,7 +43,7 @@ module.exports = function (app) {
                                     gm."userId",
                                     MAX(tmg.level)::text AS level
                                 FROM "TopicMemberGroups" tmg
-                                    JOIN "GroupMembers" gm ON (tmg."groupId" = gm."groupId")
+                                    JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
                                 WHERE tmg."deletedAt" IS NULL
                                 AND gm."deletedAt" IS NULL
                                 GROUP BY "topicId", "userId"
