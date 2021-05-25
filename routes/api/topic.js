@@ -1536,29 +1536,14 @@ module.exports = function (app) {
         // NOTE: Description is handled separately below
         const fieldsAllowedToUpdate = ['visibility', 'status', 'categories', 'endsAt', 'hashtag', 'sourcePartnerObjectId'];
 
-        const fieldsToUpdate = [];
         Object.keys(req.body).forEach(function (key) {
             if (fieldsAllowedToUpdate.indexOf(key) >= 0) {
-                fieldsToUpdate.push(key);
+                topic.set(key, req.body[key]);
             }
         });
 
         await db
             .transaction(async function (t) {
-                await topic
-                    .update(
-                        req.body,
-                        {
-                            fields: fieldsToUpdate,
-                            where: {
-                                id: topicId
-                            }
-                        },
-                        {
-                            transaction: t
-                        }
-                    );
-
                 await cosActivities
                     .updateActivity(
                         topic,
@@ -1572,6 +1557,7 @@ module.exports = function (app) {
                         req.method + ' ' + req.path,
                         t
                     );
+                await topic.save({transaction: t});
 
                 if (isBackToVoting) {
                     await cosSignature.deleteFinalBdoc(topicId, vote.id);
@@ -7192,7 +7178,7 @@ module.exports = function (app) {
         try {
             await db
                 .transaction(async function (t) {
-                    const [topicPin, created]= await TopicPin.findOrCreate({
+                    await TopicPin.findOrCreate({
                         where: {
                             topicId: topicId,
                             userId: userId
@@ -7200,32 +7186,10 @@ module.exports = function (app) {
                         transaction: t
                     });
 
-                    if (created) {
-                        const topic = await Topic.findOne({
-                            where: {
-                                id: topicId
-                            }
-                        });
-
-                        topic.description = null;
-
-                        return cosActivities
-                            .addActivity(
-                                topic,
-                                {
-                                    type: 'User',
-                                    id: userId,
-                                    ip: req.ip
-                                },
-                                null,
-                                topicPin,
-                                req.method + ' ' + req.path,
-                                t
-                            );
-                    }
+                    t.afterCommit(() => {
+                        return res.ok();
+                    })
                 });
-
-            return res.ok();
         } catch (err) {
             return next(err);
         }
@@ -7254,29 +7218,19 @@ module.exports = function (app) {
 
                         topic.description = null;
 
-                        await cosActivities.deleteActivity(
-                            topicPin,
-                            topic,
-                            {
-                                type: 'User',
-                                id: req.user.id,
-                                ip: req.ip
-                            },
-                            req.method + ' ' + req.path,
-                            t
-                        );
-
-                        return TopicPin.destroy({
+                        await TopicPin.destroy({
                             where: {
                                 userId: userId,
                                 topicId: topicId
                             },
                             transaction: t
                         });
+
+                        t.afterCommit (() => {
+                            return res.ok();
+                        });
                     });
             }
-
-            return res.ok();
         } catch (err) {
             return next(err);
         }

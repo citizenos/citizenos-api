@@ -69,7 +69,7 @@
     "pg-query-stream": "3.2.3",
     "prerender-node": "3.2.5",
     "sanitize-filename": "1.6.3",
-    "sequelize": "6.3.5",
+    "sequelize": "6.6.2",
     "sequelize-cli": "6.2.0",
     "smart-id-rest": "1.2.0",
     "soap": "0.33.0",
