@@ -1635,20 +1635,24 @@ module.exports = function (app) {
     /**
      * Update Topic info
      */
-    app.put('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit), function (req, res, next) {
-        _topicUpdate(req, res, next)
-            .then(function () {
-                return res.ok();
-            })
-            .catch(next);
+    app.put('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+        try {
+            await _topicUpdate(req, res, next);
+
+            return res.ok();
+        } catch(err) {
+            next(err);
+        }
     });
 
-    app.patch('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit), function (req, res, next) {
-        _topicUpdate(req, res, next)
-            .then(function () {
-                return res.noContent();
-            })
-            .catch(next);
+    app.patch('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+        try {
+            await _topicUpdate(req, res, next);
+
+            return res.noContent();
+        } catch(err) {
+            next(err);
+        }
     });
 
     /**
@@ -1658,7 +1662,7 @@ module.exports = function (app) {
      *
      * @see https://trello.com/c/ezqHssSL/124-refactoring-put-tokenjoin-to-be-part-of-put-topics-topicid
      */
-    app.put('/api/users/:userId/topics/:topicId/tokenJoin', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/tokenJoin', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), function (req, res, next) {
 
         return Topic
             .findOne({
@@ -2944,7 +2948,7 @@ module.exports = function (app) {
     /**
      * Create new member Groups to a Topic
      */
-    app.post('/api/users/:userId/topics/:topicId/members/groups', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/members/groups', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         let members = req.body;
         const topicId = req.params.topicId;
 
@@ -2956,107 +2960,97 @@ module.exports = function (app) {
         members.forEach(function (member) {
             groupIds.push(member.groupId);
         });
+        try {
+            const allowedGroups = await checkPermissionsForGroups(groupIds, req.user.id); // Checks if all groups are allowed
+            if (allowedGroups && allowedGroups[0]) {
+                await db.transaction(async function (t) {
 
-        checkPermissionsForGroups(groupIds, req.user.id) // Checks if all groups are allowed
-            .then(function (allowedGroups) {
-                if (allowedGroups && allowedGroups[0]) {
-                    return db
-                        .transaction(function (t) {
-                            return Topic
-                                .findOne({
-                                    where: {
-                                        id: topicId
-                                    },
-                                    transaction: t
-                                })
-                                .then(function (topic) {
-                                    const findOrCreateTopicMemberGroups = allowedGroups.map(function (group) {
-                                        const member = _.find(members, function (o) {
-                                            return o.groupId === group.id;
-                                        });
+                    const topic = await Topic.findOne({
+                        where: {
+                            id: topicId
+                        },
+                        transaction: t
+                    });
 
-                                        return TopicMemberGroup
-                                            .findOrCreate({
-                                                where: {
-                                                    topicId: topicId,
-                                                    groupId: member.groupId
-                                                },
-                                                defaults: {
-                                                    level: member.level || TopicMemberUser.LEVELS.read
-                                                },
-                                                transaction: t
-                                            });
-                                    });
-
-                                    const groupIdsToInvite = [];
-                                    const memberGroupActivities = [];
-                                    return Promise
-                                        .allSettled(findOrCreateTopicMemberGroups)
-                                        .each(function (inspection) {
-                                            if (inspection.isFulfilled()) {
-                                                var memberGroup = inspection.value()[0].toJSON();
-                                                groupIdsToInvite.push(memberGroup.groupId);
-                                                const groupData = _.find(allowedGroups, function (item) {
-                                                    return item.id === memberGroup.groupId;
-                                                });
-                                                const group = Group.build(groupData);
-
-                                                const addActivity = cosActivities.addActivity(
-                                                    topic,
-                                                    {
-                                                        type: 'User',
-                                                        id: req.user.id,
-                                                        ip: req.ip
-                                                    },
-                                                    null,
-                                                    group,
-                                                    req.method + ' ' + req.path,
-                                                    t
-                                                );
-                                                memberGroupActivities.push(addActivity);
-
-                                            } else {
-                                                logger.error('Adding Group failed', inspection.reason());
-                                            }
-                                        }).then(function () {
-                                            return Promise
-                                                    .all(memberGroupActivities)
-                                                    .then(function () {
-                                                        return emailLib.sendTopicMemberGroupCreate(groupIdsToInvite, req.user.id, topicId);
-                                                    })
-                                                    .then(function (res) {
-                                                        if (res && res.errors) {
-                                                            logger.error('ERRORS', res.errors);
-                                                        }
-                                                    });
-                                        });
-
-
-                                    });
+                    const findOrCreateTopicMemberGroups = allowedGroups.map(function (group) {
+                        const member = _.find(members, function (o) {
+                            return o.groupId === group.id;
                         });
-                } else {
-                    return Promise.reject();
-                }
-            })
-            .then(function () {
-                return res.created();
-            })
-            .catch(function (err) {
-                if (err) {
-                    logger.error('Adding Group to Topic failed', req.path, err);
 
-                    return next(err);
-                }
+                        return TopicMemberGroup
+                            .findOrCreate({
+                                where: {
+                                    topicId: topicId,
+                                    groupId: member.groupId
+                                },
+                                defaults: {
+                                    level: member.level || TopicMemberUser.LEVELS.read
+                                },
+                                transaction: t
+                            });
+                    });
 
+                    const groupIdsToInvite = [];
+                    const memberGroupActivities = [];
+                    await Promise
+                        .allSettled(findOrCreateTopicMemberGroups)
+                        .each(function (inspection) {
+                            if (inspection.isFulfilled()) {
+                                var memberGroup = inspection.value()[0].toJSON();
+                                groupIdsToInvite.push(memberGroup.groupId);
+                                const groupData = _.find(allowedGroups, function (item) {
+                                    return item.id === memberGroup.groupId;
+                                });
+                                const group = Group.build(groupData);
+
+                                const addActivity = cosActivities.addActivity(
+                                    topic,
+                                    {
+                                        type: 'User',
+                                        id: req.user.id,
+                                        ip: req.ip
+                                    },
+                                    null,
+                                    group,
+                                    req.method + ' ' + req.path,
+                                    t
+                                );
+                                memberGroupActivities.push(addActivity);
+
+                            } else {
+                                logger.error('Adding Group failed', inspection.reason());
+                            }
+                        });
+                        await Promise.all(memberGroupActivities);
+                        const emailResult = await emailLib.sendTopicMemberGroupCreate(groupIdsToInvite, req.user.id, topicId);
+                        if (emailResult && emailResult.errors) {
+                            logger.error('ERRORS', emailResult.errors);
+                        }
+
+                        t.afterCommit(() => {
+                            return res.created();
+                        });
+                    });
+            } else {
                 return res.forbidden();
-            });
+            }
+
+        } catch(err) {
+            if (err) {
+                logger.error('Adding Group to Topic failed', req.path, err);
+
+                return next(err);
+            }
+
+            return res.forbidden();
+        }
     });
 
 
     /**
      * Update User membership information
      */
-    app.put('/api/users/:userId/topics/:topicId/members/users/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/members/users/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), function (req, res, next) {
         const newLevel = req.body.level;
         const memberId = req.params.memberId;
         const topicId = req.params.topicId;
@@ -3130,323 +3124,296 @@ module.exports = function (app) {
     /**
      * Update Group membership information
      */
-    app.put('/api/users/:userId/topics/:topicId/members/groups/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/members/groups/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp] ), async function (req, res, next) {
         const newLevel = req.body.level;
         const memberId = req.params.memberId;
         const topicId = req.params.topicId;
 
-        checkPermissionsForGroups(memberId, req.user.id)
-            .then(
-                function (results) {
-                    if (results && results[0] && results[0].id === memberId) {
-                        TopicMemberGroup
-                            .findOne({
-                                where: {
-                                    topicId: topicId,
-                                    groupId: memberId
-                                }
-                            })
-                            .then(function (topicMemberGroup) {
-                                return db
-                                    .transaction(function (t) {
-                                        topicMemberGroup.level = newLevel;
+        try {
+            let results;
+            try {
+                results = await checkPermissionsForGroups(memberId, req.user.id);
+            } catch (err) {
+                return res.forbidden();
+            }
 
-                                        return cosActivities
-                                            .updateActivity(
-                                                topicMemberGroup,
-                                                null,
-                                                {
-                                                    type: 'User',
-                                                    id: req.user.id,
-                                                    ip: req.ip
-                                                },
-                                                null,
-                                                req.method + ' ' + req.path,
-                                                t
-                                            )
-                                            .then(function () {
-                                                return topicMemberGroup.save({transaction: t});
-                                            })
-                                            .catch(next);
-                                    });
-                            })
-                            .then(function () {
-                                return res.ok();
-                            })
-                            .catch(next);
-                    } else {
-                        return res.forbidden();
+            if (results && results[0] && results[0].id === memberId) {
+                const topicMemberGroup = await TopicMemberGroup.findOne({
+                    where: {
+                        topicId: topicId,
+                        groupId: memberId
                     }
-                },
-                function () {
-                    return res.forbidden();
-                }
-            )
-            .catch(next);
+                });
+
+                await db.transaction(async function (t) {
+                    topicMemberGroup.level = newLevel;
+
+                    await cosActivities.updateActivity(
+                        topicMemberGroup,
+                        null,
+                        {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        },
+                        null,
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
+                    await topicMemberGroup.save({transaction: t});
+
+                    t.afterCommit(()=> res.ok());
+                });
+            } else {
+                return res.forbidden();
+            }
+
+        } catch (err) {
+            return next(err);
+        }
     });
 
 
     /**
      * Delete User membership information
      */
-    app.delete('/api/users/:userId/topics/:topicId/members/users/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, null, true), function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/members/users/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp], true), async function (req, res, next) {
         const topicId = req.params.topicId;
         const memberId = req.params.memberId;
-
-        TopicMemberUser
-            .findAll({
+        try {
+            const result = await TopicMemberUser.findAll({
                 where: {
                     topicId: topicId,
                     level: TopicMemberUser.LEVELS.admin
                 },
                 attributes: ['userId'],
                 raw: true
-            })
-            .then(function (result) {
-                // At least 1 admin member has to remain at all times..
-                if (result.length === 1 && _.find(result, {userId: memberId})) {
-                    res.badRequest('Cannot delete the last admin member.', 10);
+            });
 
-                    return Promise.reject();
-                }
-            })
-            .then(function () {
-                // TODO: Used to use TopicMemberUser.destroy, but that broke when moving 2.x->3.x - https://github.com/sequelize/sequelize/issues/4465
-                // NOTE: Postgres does not support LIMIT for DELETE, thus the hidden "ctid" column and subselect is used
-                return db
-                    .query(
-                        '\
-                        SELECT \
-                            t.id as "Topic.id", \
-                            t.title as "Topic.title", \
-                            t.description as "Topic.description", \
-                            t.status as "Topic.status", \
-                            t.visibility as "Topic.visibility", \
-                            t."tokenJoin" as "Topic.tokenJoin", \
-                            t.categories as "Topic.categories", \
-                            t."padUrl" as "Topic.padUrl", \
-                            t."sourcePartnerId" as "Topic.sourcePartnerId", \
-                            t."endsAt" as "Topic.endsAt", \
-                            t.hashtag as "Topic.hashtag", \
-                            t."createdAt" as "Topic.createdAt", \
-                            t."updatedAt" as "Topic.updatedAt", \
-                            u.id as "User.id", \
-                            u.name as "User.name", \
-                            u.company as "User.company", \
-                            u.language as "User.language", \
-                            u.email as "User.email", \
-                            u."imageUrl" as "User.imageUrl" \
-                        FROM \
-                            "TopicMemberUsers" tmu \
-                        JOIN "Topics" t \
-                            ON t.id = tmu."topicId" \
-                        JOIN "Users" u \
-                            ON u.id = tmu."userId" \
-                            WHERE \
-                            tmu."userId" = :userId \
-                            AND \
-                            tmu."topicId" = :topicId \
-                        ;',
-                        {
-                            replacements: {
-                                topicId: topicId,
-                                userId: memberId
-                            },
-                            type: db.QueryTypes.SELECT,
-                            raw: true,
-                            nest: true
-                        }
-                    )
-                    .then(function (topicMemberUser) {
-                        const topic = Topic.build(topicMemberUser.Topic);
-                        const user = User.build(topicMemberUser.User);
-                        topic.dataValues.id = topicId;
-                        user.dataValues.id = memberId;
-                        let activityPromise;
+            // At least 1 admin member has to remain at all times..
+            if (result.length === 1 && _.find(result, {userId: memberId})) {
+                return res.badRequest('Cannot delete the last admin member.', 10);
+            }
+            // TODO: Used to use TopicMemberUser.destroy, but that broke when moving 2.x->3.x - https://github.com/sequelize/sequelize/issues/4465
+            // NOTE: Postgres does not support LIMIT for DELETE, thus the hidden "ctid" column and subselect is used
+            const topicMemberUser = await db
+                .query(
+                    `SELECT
+                        t.id as "Topic.id",
+                        t.title as "Topic.title",
+                        t.description as "Topic.description",
+                        t.status as "Topic.status",
+                        t.visibility as "Topic.visibility",
+                        t."tokenJoin" as "Topic.tokenJoin",
+                        t.categories as "Topic.categories",
+                        t."padUrl" as "Topic.padUrl",
+                        t."sourcePartnerId" as "Topic.sourcePartnerId",
+                        t."endsAt" as "Topic.endsAt",
+                        t.hashtag as "Topic.hashtag",
+                        t."createdAt" as "Topic.createdAt",
+                        t."updatedAt" as "Topic.updatedAt",
+                        u.id as "User.id",
+                        u.name as "User.name",
+                        u.company as "User.company",
+                        u.language as "User.language",
+                        u.email as "User.email",
+                        u."imageUrl" as "User.imageUrl"
+                    FROM
+                        "TopicMemberUsers" tmu
+                    JOIN "Topics" t
+                        ON t.id = tmu."topicId"
+                    JOIN "Users" u
+                        ON u.id = tmu."userId"
+                        WHERE
+                        tmu."userId" = :userId
+                        AND
+                        tmu."topicId" = :topicId
+                    ;`,
+                    {
+                        replacements: {
+                            topicId: topicId,
+                            userId: memberId
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true,
+                        nest: true
+                    }
+                )
+            const topic = Topic.build(topicMemberUser.Topic);
+            const user = User.build(topicMemberUser.User);
+            topic.dataValues.id = topicId;
+            user.dataValues.id = memberId;
 
-                        return db
-                            .transaction(function (t) {
-                                if (memberId === req.user.id) {
-                                    // User leaving a Topic
-                                    logger.debug('Member is leaving the Topic', {
-                                        memberId: memberId,
-                                        topicId: topicId
-                                    });
-                                    activityPromise = function () {
-                                        return cosActivities
-                                            .leaveActivity(topic, {
-                                                type: 'User',
-                                                id: req.user.id,
-                                                ip: req.ip
-                                            }, req.method + ' ' + req.path, t);
-                                    };
-                                } else {
-                                    activityPromise = function () {
-                                        return cosActivities
-                                            .deleteActivity(user, topic, {
-                                                type: 'User',
-                                                id: req.user.id,
-                                                ip: req.ip
-                                            }, req.method + ' ' + req.path, t);
-                                    };
-                                }
+            await db
+                .transaction(async function (t) {
+                    if (memberId === req.user.id) {
+                        // User leaving a Topic
+                        logger.debug('Member is leaving the Topic', {
+                            memberId: memberId,
+                            topicId: topicId
+                        });
+                        await cosActivities
+                            .leaveActivity(topic, {
+                                type: 'User',
+                                id: req.user.id,
+                                ip: req.ip
+                            }, req.method + ' ' + req.path, t);
+                    } else {
+                        await cosActivities
+                            .deleteActivity(user, topic, {
+                                type: 'User',
+                                id: req.user.id,
+                                ip: req.ip
+                            }, req.method + ' ' + req.path, t);
+                    }
 
-                                return activityPromise()
-                                    .then(function () {
-                                        return db
-                                            .query(
-                                                '\
-                                                DELETE FROM \
-                                                    "TopicMemberUsers" \
-                                                WHERE ctid IN (\
-                                                    SELECT \
-                                                        ctid \
-                                                    FROM "TopicMemberUsers" \
-                                                    WHERE "topicId" = :topicId \
-                                                       AND "userId" = :userId \
-                                                    LIMIT 1 \
-                                                ) \
-                                                ',
-                                                {
-                                                    replacements: {
-                                                        topicId: topicId,
-                                                        userId: memberId
-                                                    },
-                                                    type: db.QueryTypes.DELETE,
-                                                    transaction: t,
-                                                    raw: true
-                                                }
-                                            );
-                                    });
-                            });
-                    });
+                    await db
+                        .query(
+                            `
+                            DELETE FROM
+                                "TopicMemberUsers"
+                            WHERE ctid IN (
+                                SELECT
+                                    ctid
+                                FROM "TopicMemberUsers"
+                                WHERE "topicId" = :topicId
+                                    AND "userId" = :userId
+                                LIMIT 1
+                            )
+                            `,
+                            {
+                                replacements: {
+                                    topicId: topicId,
+                                    userId: memberId
+                                },
+                                type: db.QueryTypes.DELETE,
+                                transaction: t,
+                                raw: true
+                            }
+                        );
 
-            })
-            .then(function () {
-                return res.ok();
-            })
-            .catch(next);
+                    return res.ok();
+                });
+        } catch (err) {
+            return next(err);
+        }
     });
 
 
     /**
      * Delete Group membership information
      */
-    app.delete('/api/users/:userId/topics/:topicId/members/groups/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/members/groups/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), async function (req, res, next) {
         const topicId = req.params.topicId;
         const memberId = req.params.memberId;
 
-        checkPermissionsForGroups(memberId, req.user.id)
-            .then(
-                function (results) {
-                    if (results && results[0] && results[0].id === memberId) {
-                        // TODO: Used to use TopicMemberGroups.destroy, but that broke when moving 2.x->3.x - https://github.com/sequelize/sequelize/issues/4465
-                        // NOTE: Postgres does not support LIMIT for DELETE, thus the hidden "ctid" column and subselect is used
-                        return db
+        try {
+            let results;
+            try {
+                results = await checkPermissionsForGroups(memberId, req.user.id);
+            } catch (err) {
+                logger.error(err);
+
+                return res.forbidden();
+            }
+
+            if (results && results[0] && results[0].id === memberId) {
+                // TODO: Used to use TopicMemberGroups.destroy, but that broke when moving 2.x->3.x - https://github.com/sequelize/sequelize/issues/4465
+                // NOTE: Postgres does not support LIMIT for DELETE, thus the hidden "ctid" column and subselect is used
+                const topicMemberGroup = await db
+                    .query(
+                        `
+                        SELECT
+                            t.id as "Topic.id",
+                            t.title as "Topic.title",
+                            t.description as "Topic.description",
+                            t.status as "Topic.status",
+                            t.visibility as "Topic.visibility",
+                            t."tokenJoin" as "Topic.tokenJoin",
+                            t.categories as "Topic.categories",
+                            t."padUrl" as "Topic.padUrl",
+                            t."sourcePartnerId" as "Topic.sourcePartnerId",
+                            t."endsAt" as "Topic.endsAt",
+                            t.hashtag as "Topic.hashtag",
+                            t."createdAt" as "Topic.createdAt",
+                            t."updatedAt" as "Topic.updatedAt",
+                            g.id as "Group.id",
+                            g."parentId" as "Group.parentId",
+                            g.name as "Group.name",
+                            g."creatorId" as "Group.creator.id",
+                            g.visibility as "Group.visibility"
+                        FROM
+                            "TopicMemberGroups" tmg
+                        JOIN "Topics" t
+                            ON t.id = tmg."topicId"
+                        JOIN "Groups" g
+                            ON g.id = tmg."groupId"
+                            WHERE
+                            tmg."groupId" = :groupId
+                            AND
+                            tmg."topicId" = :topicId
+                        ;`,
+                        {
+                            replacements: {
+                                topicId: topicId,
+                                groupId: memberId
+                            },
+                            type: db.QueryTypes.SELECT,
+                            raw: true,
+                            nest: true
+                        }
+                    );
+                    const topic = Topic.build(topicMemberGroup.Topic);
+                    topic.dataValues.id = topicId;
+                    const group = Group.build(topicMemberGroup.Group);
+                    group.dataValues.id = memberId;
+
+                    await db.transaction(async function (t) {
+                        await cosActivities.deleteActivity(
+                            group,
+                            topic,
+                            {
+                                type: 'User',
+                                id: req.user.id,
+                                ip: req.ip
+                            },
+                            req.method + ' ' + req.path,
+                            t
+                        );
+
+                        await db
                             .query(
-                                '\
-                                SELECT \
-                                    t.id as "Topic.id", \
-                                    t.title as "Topic.title", \
-                                    t.description as "Topic.description", \
-                                    t.status as "Topic.status", \
-                                    t.visibility as "Topic.visibility", \
-                                    t."tokenJoin" as "Topic.tokenJoin", \
-                                    t.categories as "Topic.categories", \
-                                    t."padUrl" as "Topic.padUrl", \
-                                    t."sourcePartnerId" as "Topic.sourcePartnerId", \
-                                    t."endsAt" as "Topic.endsAt", \
-                                    t.hashtag as "Topic.hashtag", \
-                                    t."createdAt" as "Topic.createdAt", \
-                                    t."updatedAt" as "Topic.updatedAt", \
-                                    g.id as "Group.id", \
-                                    g."parentId" as "Group.parentId", \
-                                    g.name as "Group.name", \
-                                    g."creatorId" as "Group.creator.id", \
-                                    g.visibility as "Group.visibility" \
-                                FROM \
-                                    "TopicMemberGroups" tmg \
-                                JOIN "Topics" t \
-                                    ON t.id = tmg."topicId" \
-                                JOIN "Groups" g \
-                                    ON g.id = tmg."groupId" \
-                                    WHERE \
-                                    tmg."groupId" = :groupId \
-                                    AND \
-                                    tmg."topicId" = :topicId \
-                                ;',
+                                `
+                                DELETE FROM
+                                    "TopicMemberGroups"
+                                WHERE ctid IN (
+                                    SELECT
+                                        ctid
+                                    FROM "TopicMemberGroups"
+                                    WHERE "topicId" = :topicId
+                                    AND "groupId" = :groupId
+                                    LIMIT 1
+                                )
+                                `,
                                 {
                                     replacements: {
                                         topicId: topicId,
                                         groupId: memberId
                                     },
-                                    type: db.QueryTypes.SELECT,
-                                    raw: true,
-                                    nest: true
+                                    type: db.QueryTypes.DELETE,
+                                    raw: true
                                 }
-                            )
-                            .then(function (topicMemberGroup) {
-                                const topic = Topic.build(topicMemberGroup.Topic);
-                                topic.dataValues.id = topicId;
-                                const group = Group.build(topicMemberGroup.Group);
-                                group.dataValues.id = memberId;
+                            );
+                        t.afterCommit(() => res.ok());
+                    });
+            } else {
+                return res.forbidden();
+            }
 
-                                return db
-                                    .transaction(function (t) {
-                                        return cosActivities
-                                            .deleteActivity(
-                                                group,
-                                                topic,
-                                                {
-                                                    type: 'User',
-                                                    id: req.user.id,
-                                                    ip: req.ip
-                                                },
-                                                req.method + ' ' + req.path,
-                                                t
-                                            )
-                                            .then(function () {
-                                                return db
-                                                    .query(
-                                                        '\
-                                                        DELETE FROM \
-                                                            "TopicMemberGroups" \
-                                                        WHERE ctid IN (\
-                                                            SELECT \
-                                                                ctid \
-                                                            FROM "TopicMemberGroups" \
-                                                            WHERE "topicId" = :topicId \
-                                                            AND "groupId" = :groupId \
-                                                            LIMIT 1 \
-                                                        ) \
-                                                        ',
-                                                        {
-                                                            replacements: {
-                                                                topicId: topicId,
-                                                                groupId: memberId
-                                                            },
-                                                            type: db.QueryTypes.DELETE,
-                                                            raw: true
-                                                        }
-                                                    );
-                                            });
-                                    })
-                                    .then(function () {
-                                        return res.ok();
-                                    })
-                                    .catch(next);
-                            });
-                    } else {
-                        return res.forbidden();
-                    }
-                },
-                function (err) {
-                    logger.error(err);
-
-                    return res.forbidden();
-                }
-            )
-            .catch(next);
+        } catch (err) {
+            return next(err);
+        }
 
     });
 
@@ -3457,7 +3424,7 @@ module.exports = function (app) {
      *
      * @see /api/users/:userId/topics/:topicId/members/users "Auto accept" - Adds a Member to the Topic instantly and sends a notification to the User.
      */
-    app.post('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
+    app.post('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin, false, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
         //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
         const topicId = req.params.topicId;
         const userId = req.user.id;
@@ -4013,7 +3980,7 @@ module.exports = function (app) {
      * Add Topic Attachment
      */
 
-    app.post('/api/users/:userId/topics/:topicId/attachments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/attachments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const topicId = req.params.topicId;
         const name = req.body.name;
         const type = req.body.type;
@@ -4076,7 +4043,7 @@ module.exports = function (app) {
         }
     });
 
-    app.put('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit), function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), function (req, res, next) {
         const newName = req.body.name;
 
         const updateAttachment = {};
@@ -4122,7 +4089,7 @@ module.exports = function (app) {
     /**
      * Delete Topic Attachment
      */
-    app.delete('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, null, true), function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp], true), function (req, res, next) {
 
         Attachment
             .findOne({
@@ -4391,29 +4358,32 @@ module.exports = function (app) {
     }));
 
     /** Send a Topic report for review - User let's Moderators know that the violations have been corrected **/
-    app.post(['/api/users/:userId/topics/:topicId/reports/:reportId/review', '/api/topics/:topicId/reports/:reportId/review'], loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), asyncMiddleware(async function (req, res) {
+    app.post(['/api/users/:userId/topics/:topicId/reports/:reportId/review', '/api/topics/:topicId/reports/:reportId/review'], loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), asyncMiddleware(async function (req, res, next) {
         const topicId = req.params.topicId;
         const reportId = req.params.reportId;
         const text = req.body.text;
-
-        if (!text || text.length < 10 || text.length > 4000) {
-            return res.badRequest(null, 1, {text: 'Parameter "text" has to be between 10 and 4000 characters'});
-        }
-
-        const topicReport = await TopicReport.findOne({
-            where: {
-                topicId: topicId,
-                id: reportId
+        try {
+            if (!text || text.length < 10 || text.length > 4000) {
+                return res.badRequest(null, 1, {text: 'Parameter "text" has to be between 10 and 4000 characters'});
             }
-        });
 
-        if (!topicReport) {
-            return res.notFound('Topic report not found');
+            const topicReport = await TopicReport.findOne({
+                where: {
+                    topicId: topicId,
+                    id: reportId
+                }
+            });
+
+            if (!topicReport) {
+                return res.notFound('Topic report not found');
+            }
+
+            await emailLib.sendTopicReportReview(topicReport, text);
+
+            return res.ok();
+        } catch (err) {
+            return next(err);
         }
-
-        await emailLib.sendTopicReportReview(topicReport, text);
-
-        return res.ok();
     }));
 
     /**
@@ -7092,6 +7062,9 @@ module.exports = function (app) {
                         id: topicId
                     }
                 });
+            if (topic.status === Topic.STATUSES.closed) {
+                return res.forbidden();
+            }
 
             return db
                 .transaction(async function (t) {
@@ -7133,7 +7106,7 @@ module.exports = function (app) {
     };
 
     /** Create an Event **/
-    app.post('/api/users/:userId/topics/:topicId/events', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.followUp, Topic.STATUSES.closed]), topicEventsCreate);
+    app.post('/api/users/:userId/topics/:topicId/events', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.followUp]), topicEventsCreate);
 
 
     /**

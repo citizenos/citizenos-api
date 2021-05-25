@@ -209,23 +209,41 @@ var topicUpdateField = function (agent, userId, topicId, topic, callback) {
     _topicUpdateField(agent, userId, topicId, topic, 204, callback);
 };
 
-// TODO: https://trello.com/c/ezqHssSL/124-refactoring-put-tokenjoin-to-be-part-of-put-topics-topicid
-var _topicUpdateTokenJoin = function (agent, userId, topicId, expectedHttpCode, callback) {
-    var path = '/api/users/:userId/topics/:topicId/tokenJoin'
+const _topicUpdateFieldPromised = async function (agent, userId, topicId, topic, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId'
         .replace(':userId', userId)
         .replace(':topicId', topicId);
 
-    agent
+    topic.id = topicId;
+
+    return agent
+        .patch(path)
+        .set('Content-Type', 'application/json')
+        .send(topic)
+        .expect(expectedHttpCode);
+};
+
+var topicUpdateFieldPromised = async function (agent, userId, topicId, topic) {
+    return _topicUpdateFieldPromised(agent, userId, topicId, topic, 204);
+};
+
+// TODO: https://trello.com/c/ezqHssSL/124-refactoring-put-tokenjoin-to-be-part-of-put-topics-topicid
+
+var _topicUpdateTokenJoinPromised = async function (agent, userId, topicId, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/tokenJoin'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId);
+
+    return agent
         .put(path)
         .set('Content-Type', 'application/json')
         .send()
         .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
+        .expect('Content-Type', /json/);
 };
 
-var topicUpdateTokenJoin = function (agent, userId, topicId, callback) {
-    _topicUpdateTokenJoin(agent, userId, topicId, 200, callback);
+var topicUpdateTokenJoinPromised = async function (agent, userId, topicId) {
+    return _topicUpdateTokenJoinPromised(agent, userId, topicId, 200);
 };
 
 // TODO: Should be part of PUT /topics/:topicId
@@ -896,6 +914,29 @@ var _topicReportsReview = function (agent, userId, topicId, reportId, text, expe
 
 var topicReportsReview = function (agent, userId, topicId, reportId, text, callback) {
     _topicReportsReview(agent, userId, topicId, reportId, text, 200, callback);
+};
+
+const _topicReportsReviewPromised = async function (agent, userId, topicId, reportId, text, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/reports/:reportId/review'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':reportId', reportId);
+
+    const body = {};
+    if (text) {
+        body.text = text;
+    }
+
+    return agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .send(body)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicReportsReviewPromised = async function (agent, userId, topicId, reportId, text) {
+    return _topicReportsReviewPromised(agent, userId, topicId, reportId, text, 200);
 };
 
 var _topicReportsResolve = function (agent, topicId, reportId, expectedHttpCode, callback) {
@@ -1897,6 +1938,26 @@ var topicEventCreateUnauth = function (agent, topicId, token, subject, text, cal
     _topicEventCreateUnauth(agent, topicId, token, subject, text, 201, callback);
 };
 
+const _topicEventCreateUnauthPromised = async function (agent, topicId, token, subject, text, expectedHttpCode) {
+    const path = '/api/topics/:topicId/events'
+        .replace(':topicId', topicId);
+
+    return agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .set('Authorization', 'Bearer ' + token)
+        .send({
+            subject: subject,
+            text: text
+        })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicEventCreateUnauthPromised = async function (agent, topicId, token, subject, text) {
+    return _topicEventCreateUnauthPromised(agent, topicId, token, subject, text, 201);
+};
+
 var _topicEventList = function (agent, userId, topicId, expectedHttpCode, callback) {
     var path = '/api/users/:userId/topics/:topicId/events'
         .replace(':userId', userId)
@@ -1913,21 +1974,35 @@ var topicEventList = function (agent, userId, topicId, callback) {
     _topicEventList(agent, userId, topicId, 200, callback);
 };
 
-var _topicEventDelete = function (agent, userId, topicId, eventId, expectedHttpCode, callback) {
-    var path = '/api/users/:userId/topics/:topicId/events/:eventId'
+const _topicEventListPromised = async function (agent, userId, topicId, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/events'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId);
+
+    return agent
+        .get(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicEventListPromised = async function (agent, userId, topicId) {
+    return _topicEventListPromised(agent, userId, topicId, 200);
+};
+
+var _topicEventDeletePromised = function (agent, userId, topicId, eventId, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/events/:eventId'
         .replace(':userId', userId)
         .replace(':topicId', topicId)
         .replace(':eventId', eventId);
 
-    agent
+    return agent
         .delete(path)
         .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
+        .expect('Content-Type', /json/);
 };
 
-var topicEventDelete = function (agent, userId, topicId, eventId, callback) {
-    _topicEventDelete(agent, userId, topicId, eventId, 200, callback);
+const topicEventDeletePromised = async function (agent, userId, topicId, eventId) {
+    return _topicEventDeletePromised(agent, userId, topicId, eventId, 200);
 };
 
 var _topicFavouriteCreate = function (agent, userId, topicId, expectedHttpCode, callback) {
@@ -2512,62 +2587,43 @@ suite('Users', function () {
                     let creator, user, user2, topic, group;
 
                     setup(async function () {
-                        return Promise.all([
+                        [creator, user, user2] = await Promise.all([
                             userLib.createUserAndLoginPromised(agentCreator, null, null, null),
                             userLib.createUserAndLoginPromised(agentUser, null, null, null),
                             userLib.createUserAndLoginPromised(agentUser2, null, null, null)
-                        ])
-                            .then(function (results) {
-                                creator = results[0];
-                                user = results[1];
-                                user2 = results[2];
+                        ]);
 
-                                return Promise
-                                    .all([
-                                        groupLib.createPromised(agentCreator, creator.id, 'Group', null, null),
-                                        topicCreatePromised(agentCreator, creator.id, Topic.VISIBILITY.private, null, null, null, null)
-                                    ])
-                                    .then(function (results) {
-                                        group = results[0].body.data;
-                                        topic = results[1].body.data;
+                        group = (await groupLib.createPromised(agentCreator, creator.id, 'Group', null, null)).body.data;
+                        topic = (await topicCreatePromised(agentCreator, creator.id, Topic.VISIBILITY.private, null, null, null, null)).body.data;
 
-                                        // Add Group to Topic members and User to that Group
-                                        var memberGroup = {
-                                            groupId: group.id,
-                                            level: TopicMemberGroup.LEVELS.read
-                                        };
+                        // Add Group to Topic members and User to that Group
+                        var memberGroup = {
+                            groupId: group.id,
+                            level: TopicMemberGroup.LEVELS.read
+                        };
 
-                                        var memberUser = {
-                                            userId: user.id,
-                                            level: GroupMemberUser.LEVELS.read
-                                        };
+                        var memberUser = {
+                            userId: user.id,
+                            level: GroupMemberUser.LEVELS.read
+                        };
 
-                                        return Promise.all([
-                                            topicMemberGroupsCreatePromised(agentCreator, creator.id, topic.id, memberGroup),
-                                            groupLib.memberUsersCreatePromised(agentCreator, creator.id, group.id, memberUser)
-                                        ]);
-                                    });
-                            });
+                        await topicMemberGroupsCreatePromised(agentCreator, creator.id, topic.id, memberGroup);
+                        await groupLib.memberUsersCreatePromised(agentCreator, creator.id, group.id, memberUser);
                     });
 
-                    test('Success - User is a member of a Group that has READ access', function (done) {
-                        topicRead(agentUser, user.id, topic.id, null, function (err, res) {
-                            if (err) return done(err);
+                    test('Success - User is a member of a Group that has READ access', async function () {
+                        const topicData = (await topicReadPromised(agentUser, user.id, topic.id, null)).body.data;
 
-                            var topic = res.body.data;
+                        assert.isUndefined(topicData.creator.email);
 
-                            assert.isUndefined(topic.creator.email);
+                        const padUrl = topicData.padUrl;
+                        const parsedUrl = _parsePadUrl(padUrl);
+                        const padAgent = request.agent(parsedUrl.host);
 
-                            var padUrl = topic.padUrl;
-                            var parsedUrl = _parsePadUrl(padUrl);
-                            var padAgent = request.agent(parsedUrl.host);
-
-                            padAgent
-                                .get(parsedUrl.path)
-                                .expect(200)
-                                .expect('x-ep-auth-citizenos-authorize', 'readonly')
-                                .end(done);
-                        });
+                        padAgent
+                            .get(parsedUrl.path)
+                            .expect(200)
+                            .expect('x-ep-auth-citizenos-authorize', 'readonly');
                     });
 
                     test('Success - User has direct EDIT access, Group membership revoked', function (done) {
@@ -2817,23 +2873,18 @@ suite('Users', function () {
                             );
                     });
 
-                    test('Success - User can read public Topic', function (done) {
-                        topicRead(agentUser, user.id, topic.id, null, function (err, res) {
-                            if (err) return done(err);
+                    test('Success - User can read public Topic', async function () {
+                        const topicData = (await topicReadPromised(agentUser, user.id, topic.id, null)).body.data;
 
-                            var topic = res.body.data;
+                        const padUrl = topicData.padUrl;
+                        const parsedUrl = _parsePadUrl(padUrl);
+                        const padAgent = request.agent(parsedUrl.host);
 
-                            var padUrl = topic.padUrl;
-                            var parsedUrl = _parsePadUrl(padUrl);
-                            var padAgent = request.agent(parsedUrl.host);
-
-                            // TODO: PADREAD: Move to reusable code
-                            padAgent
-                                .get(parsedUrl.path)
-                                .expect(200)
-                                .expect('x-ep-auth-citizenos-authorize', 'readonly')
-                                .end(done);
-                        });
+                        // TODO: PADREAD: Move to reusable code
+                        padAgent
+                            .get(parsedUrl.path)
+                            .expect(200)
+                            .expect('x-ep-auth-citizenos-authorize', 'readonly');
                     });
 
                     test('Success - User has Global Moderator permissions', function (done) {
@@ -2860,73 +2911,48 @@ suite('Users', function () {
 
         suite('Update', function () {
 
-            var agent = request.agent(app);
-            var email = 'test_topicu_' + new Date().getTime() + '@test.ee';
-            var password = 'testPassword123';
+            const agent = request.agent(app);
+            const email = 'test_topicu_' + new Date().getTime() + '@test.ee';
+            const password = 'testPassword123';
 
-            var topicStatusNew = Topic.STATUSES.inProgress;
-            var topicVisibilityNew = Topic.VISIBILITY.public;
-            var topicEndsAtNew = new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000);
+            const topicStatusNew = Topic.STATUSES.inProgress;
+            const topicVisibilityNew = Topic.VISIBILITY.public;
+            const topicEndsAtNew = new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000);
 
-            var user;
-            var topic;
+            let user;
+            let topic;
 
-            suiteSetup(function (done) {
-                userLib.createUserAndLogin(agent, email, password, null, function (err, res) {
-                    if (err) return done(err);
-                    user = res;
-                    done();
-                });
+            suiteSetup(async function () {
+                user = await userLib.createUserAndLoginPromised(agent, email, password, null);
             });
 
-            setup(function (done) {
-                topicCreate(agent, user.id, null, null, null, null, 'testtag', function (err, res) {
-                    if (err) return done(err);
-                    topic = res.body.data;
-                    done();
-                });
+            setup(async function () {
+                topic = (await topicCreatePromised(agent, user.id, null, null, null, null, 'testtag')).body.data;
             });
 
-            test('Success', function (done) {
-                topicUpdate(agent, user.id, topic.id, topicStatusNew, topicVisibilityNew, null, topicEndsAtNew, null, function (err) {
-                    if (err) return done(err);
+            test('Success', async function () {
+                await topicUpdatePromised(agent, user.id, topic.id, topicStatusNew, topicVisibilityNew, null, topicEndsAtNew, null);
+                const topicNew = (await topicReadPromised(agent, user.id, topic.id, null)).body.data;
 
-                    topicRead(agent, user.id, topic.id, null, function (err, res) {
-                        if (err) return done(err);
-
-                        var topicNew = res.body.data;
-
-                        assert.equal(topicNew.status, topicStatusNew);
-                        assert.equal(topicNew.visibility, topicVisibilityNew);
-                        assert.equalTime(new Date(topicNew.endsAt), topicEndsAtNew);
-
-                        done();
-                    });
-                });
+                assert.equal(topicNew.status, topicStatusNew);
+                assert.equal(topicNew.visibility, topicVisibilityNew);
+                assert.equalTime(new Date(topicNew.endsAt), topicEndsAtNew);
             });
 
-            test('Success - update field', function (done) {
-                topicUpdateField(agent, user.id, topic.id, {visibility: Topic.VISIBILITY.public}, function (err, res) {
-                    if (err) return done(err);
+            test('Success - update field', async function () {
+                const resBody = (await topicUpdateFieldPromised(agent, user.id, topic.id, {visibility: Topic.VISIBILITY.public})).body;
 
-                    assert.isObject(res.body);
-                    assert.deepEqual(res.body, {});
+                assert.isObject(resBody);
+                assert.deepEqual(resBody, {});
 
-                    topicRead(agent, user.id, topic.id, null, function (err, res) {
-                        if (err) return done(err);
+                const topicNew = (await topicReadPromised(agent, user.id, topic.id, null)).body.data;
 
-                        var topicNew = res.body.data;
-
-                        assert.equal(topicNew.status, topicStatusNew);
-                        assert.equal(topicNew.visibility, topicVisibilityNew);
-
-                        done();
-                    });
-                });
+                assert.equal(topicNew.status, topicStatusNew);
+                assert.equal(topicNew.visibility, topicVisibilityNew);
             });
 
-            test('Success - status from "followUp" to "voting"', function (done) {
-                var options = [
+            test('Success - status from "followUp" to "voting"', async function () {
+                const options = [
                     {
                         value: 'Option 1'
                     },
@@ -2937,26 +2963,12 @@ suite('Users', function () {
                         value: 'Option 3'
                     }
                 ];
-                topicVoteCreate(agent, user.id, topic.id, options, 1, 1, false, null, null, Vote.TYPES.regular, Vote.AUTH_TYPES.soft, function (err) {
-                    if (err) return done(err);
+                await topicVoteCreatePromised(agent, user.id, topic.id, options, 1, 1, false, null, null, Vote.TYPES.regular, Vote.AUTH_TYPES.soft);
+                await topicUpdateStatusPromised(agent, user.id, topic.id, Topic.STATUSES.followUp);
+                await topicUpdateStatusPromised(agent, user.id, topic.id, Topic.STATUSES.voting);
 
-                    topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.followUp, function (err) {
-                        if (err) return done(err);
-
-                        topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting, function (err) {
-                            if (err) return done(err);
-
-                            topicRead(agent, user.id, topic.id, null, function (err, res) {
-                                if (err) return done(err);
-
-                                var topic = res.body.data;
-                                assert.equal(topic.status, Topic.STATUSES.voting);
-
-                                done();
-                            });
-                        });
-                    });
-                });
+                const topicRes = (await topicReadPromised(agent, user.id, topic.id, null)).body.data
+                assert.equal(topicRes.status, Topic.STATUSES.voting);
             });
 
             test('Success - send to Parliament', async function () {
@@ -3014,125 +3026,80 @@ suite('Users', function () {
                 await _topicUpdatePromised(agent, user.id, topic.id, Topic.STATUSES.voting, Topic.VISIBILITY.public, null, null, contact, 400);
             });
 
-            test('Fail - Page Not Found - topicId is null', function (done) {
-                _topicUpdate(agent, user.id, null, topicStatusNew, topicVisibilityNew, null, null, null, 404, done);
+            test('Fail - update - status closed', async function () {
+                const contact = {
+                    name: 'Test',
+                    email: 'test@test.com',
+                    phone: '+3725100000'
+                };
+                await topicUpdateStatusPromised(agent, user.id, topic.id, Topic.STATUSES.closed);
+                await _topicUpdatePromised(agent, user.id, topic.id, Topic.STATUSES.inProgress, Topic.VISIBILITY.private, [], new Date(), contact, 403);
+            });
+            test('Fail - Page Not Found - topicId is null', async function () {
+                await _topicUpdatePromised(agent, user.id, null, topicStatusNew, topicVisibilityNew, null, null, null, 404);
             });
 
-            test('Fail - Bad Request - status is null - should not modify existing value', function (done) {
-                _topicUpdate(agent, user.id, topic.id, null, topicVisibilityNew, [], null, null, 400, function (err) {
-                    if (err) return done(err);
+            test('Fail - Bad Request - status is null - should not modify existing value', async function () {
+                await _topicUpdatePromised(agent, user.id, topic.id, null, topicVisibilityNew, [], null, null, 400);
 
-                    topicRead(agent, user.id, topic.id, null, function (err, res) {
-                        if (err) return done(err);
+                const topicNew = (await topicReadPromised(agent, user.id, topic.id, null)).body.data;
 
-                        var topicNew = res.body.data;
-
-                        assert.equal(topicNew.status, topic.status);
-
-                        done();
-                    });
-                });
+                assert.equal(topicNew.status, topic.status);
             });
 
-            test('Fail - Bad Request - update field - status is null - should not modify existing value', function (done) {
-                _topicUpdateField(agent, user.id, topic.id, {status: null}, 400, function (err) {
-                    if (err) return done(err);
+            test('Fail - Bad Request - update field - status is null - should not modify existing value', async function () {
+                await _topicUpdateFieldPromised(agent, user.id, topic.id, {status: null}, 400);
 
-                    topicRead(agent, user.id, topic.id, null, function (err, res) {
-                        if (err) return done(err);
+                const topicNew = (await topicReadPromised(agent, user.id, topic.id, null)).body.data
 
-                        var topicNew = res.body.data;
-
-                        assert.equal(topicNew.status, topic.status);
-
-                        done();
-                    });
-                });
+                assert.equal(topicNew.status, topic.status);
             });
 
-            test('Fail - Bad Request - status is "voting" - should not modify existing value', function (done) {
-                var topicStatusNew = Topic.STATUSES.voting;
-                _topicUpdate(agent, user.id, topic.id, topicStatusNew, topicVisibilityNew, null, null, null, 400, function (err) {
-                    if (err) return done(err);
+            test('Fail - Bad Request - status is "voting" - should not modify existing value', async function () {
+                const topicStatusNew = Topic.STATUSES.voting;
+                await _topicUpdatePromised(agent, user.id, topic.id, topicStatusNew, topicVisibilityNew, null, null, null, 400);
 
-                    topicRead(agent, user.id, topic.id, null, function (err, res) {
-                        if (err) return done(err);
+                const topicNew = (await topicReadPromised(agent, user.id, topic.id, null)).body.data;
 
-                        var topicNew = res.body.data;
-
-                        assert.equal(topicNew.status, topic.status);
-
-                        done();
-                    });
-                });
+                assert.equal(topicNew.status, topic.status);
             });
 
-            test('Fail - Bad Request - status is "closed", trying to set back to "inProgress" - should not modify existing value', function (done) {
-                topicUpdate(agent, user.id, topic.id, Topic.STATUSES.closed, topicVisibilityNew, null, null, null, function (err) {
-                    if (err) return done(err);
+            test('Fail - Bad Request - status is "closed", trying to set back to "inProgress" - should not modify existing value', async function () {
+                await topicUpdatePromised(agent, user.id, topic.id, Topic.STATUSES.closed, topicVisibilityNew, null, null, null);
 
-                    _topicUpdate(agent, user.id, topic.id, Topic.STATUSES.inProgress, topicVisibilityNew, null, null, null, 400, function (err) {
-                        if (err) return done(err);
+                await _topicUpdatePromised(agent, user.id, topic.id, Topic.STATUSES.inProgress, topicVisibilityNew, null, null, null, 403);
 
-                        topicRead(agent, user.id, topic.id, null, function (err, res) {
-                            if (err) return done(err);
+                const topicNew = (await topicReadPromised(agent, user.id, topic.id, null)).body.data;
 
-                            var topicNew = res.body.data;
-
-                            assert.equal(topicNew.status, Topic.STATUSES.closed);
-
-                            done();
-                        });
-                    });
-                });
+                assert.equal(topicNew.status, Topic.STATUSES.closed);
             });
 
-            test('Fail - Bad Request - visibility is null - should not modify existing value', function (done) {
-                _topicUpdate(agent, user.id, topic.id, topicStatusNew, null, null, null, null, 400, function (err) {
-                    if (err) return done(err);
+            test('Fail - Bad Request - visibility is null - should not modify existing value', async function () {
+                await _topicUpdatePromised(agent, user.id, topic.id, topicStatusNew, null, null, null, null, 400);
 
-                    topicRead(agent, user.id, topic.id, null, function (err, res) {
-                        if (err) return done(err);
+                const topicNew = (await topicReadPromised(agent, user.id, topic.id, null)).body.data;
 
-                        var topicNew = res.body.data;
-
-                        assert.equal(topicNew.visibility, topic.visibility);
-
-                        done();
-                    });
-                });
+                assert.equal(topicNew.visibility, topic.visibility);
             });
 
-            test('Fail - Bad Request - too many categories', function (done) {
-                var categories = [Topic.CATEGORIES.culture, Topic.CATEGORIES.agriculture, Topic.CATEGORIES.education, Topic.CATEGORIES.varia];
+            test('Fail - Bad Request - too many categories', async function () {
+                const categories = [Topic.CATEGORIES.culture, Topic.CATEGORIES.agriculture, Topic.CATEGORIES.education, Topic.CATEGORIES.varia];
 
-                _topicUpdate(agent, user.id, topic.id, topicStatusNew, Topic.VISIBILITY.private, categories, null, null, 400, function (err, res) {
-                    if (err) return done(err);
+                const errors  = (await _topicUpdatePromised(agent, user.id, topic.id, topicStatusNew, Topic.VISIBILITY.private, categories, null, null, 400)).body.errors;
 
-                    var errors = res.body.errors;
-
-                    assert.equal(errors.categories, 'Maximum of :count categories allowed.'.replace(':count', Topic.CATEGORIES_COUNT_MAX));
-
-                    done();
-                });
+                assert.equal(errors.categories, 'Maximum of :count categories allowed.'.replace(':count', Topic.CATEGORIES_COUNT_MAX));
             });
 
-            test('Fail - Bad Request - endsAt is in the past', function (done) {
+            test('Fail - Bad Request - endsAt is in the past', async function () {
 
-                var topicEndsAtNewInPast = new Date(new Date().getTime() - 24 * 60 * 60 * 1000);
-                _topicUpdate(agent, user.id, topic.id, topicStatusNew, Topic.VISIBILITY.private, null, topicEndsAtNewInPast, null, 400, function (err, res) {
-                    if (err) return done(err);
+                const topicEndsAtNewInPast = new Date(new Date().getTime() - 24 * 60 * 60 * 1000);
+                const errors = (await _topicUpdatePromised(agent, user.id, topic.id, topicStatusNew, Topic.VISIBILITY.private, null, topicEndsAtNewInPast, null, 400)).body.errors;
 
-                    var errors = res.body.errors;
-
-                    assert.equal(errors.endsAt, 'Topic deadline must be in the future.');
-
-                    done();
-                });
+                assert.equal(errors.endsAt, 'Topic deadline must be in the future.');
             });
 
-            test('Fail - Bad Request - send to Parliament - invalid contact info. Missing or invalid name, email or phone', function (done) {
-                var voteOptions = [
+            test('Fail - Bad Request - send to Parliament - invalid contact info. Missing or invalid name, email or phone', async function () {
+                const voteOptions = [
                     {
                         value: 'Option 1'
                     },
@@ -3141,30 +3108,24 @@ suite('Users', function () {
                     }
                 ];
 
-                topicVoteCreate(agent, user.id, topic.id, voteOptions, 1, 1, false, null, null, Vote.TYPES.regular, Vote.AUTH_TYPES.hard, function (err) {
-                    if (err) return done(err);
+                await topicVoteCreatePromised(agent, user.id, topic.id, voteOptions, 1, 1, false, null, null, Vote.TYPES.regular, Vote.AUTH_TYPES.hard)
 
-                    var contact = {};
+                const contact = {};
 
-                    _topicUpdate(agent, user.id, topic.id, Topic.STATUSES.followUp, Topic.VISIBILITY.public, null, null, contact, 400, function (err, res) {
-                        if (err) return done(err);
+                const resBody = (await _topicUpdatePromised(agent, user.id, topic.id, Topic.STATUSES.followUp, Topic.VISIBILITY.public, null, null, contact, 400)).body;
 
-                        var expectedBody = {
-                            status: {
-                                code: 40000,
-                                message: 'Invalid contact info. Missing or invalid name, email or phone'
-                            }
-                        };
+                const expectedBody = {
+                    status: {
+                        code: 40000,
+                        message: 'Invalid contact info. Missing or invalid name, email or phone'
+                    }
+                };
 
-                        assert.deepEqual(res.body, expectedBody);
-
-                        done();
-                    });
-                });
+                assert.deepEqual(resBody, expectedBody);
             });
 
-            test('Fail - Bad Request - send to Parliament - not enough votes to send to Parliament', function (done) {
-                var voteOptions = [
+            test('Fail - Bad Request - send to Parliament - not enough votes to send to Parliament', async function () {
+                const voteOptions = [
                     {
                         value: 'Option 1'
                     },
@@ -3173,57 +3134,46 @@ suite('Users', function () {
                     }
                 ];
 
-                topicVoteCreate(agent, user.id, topic.id, voteOptions, 1, 1, false, null, null, Vote.TYPES.regular, Vote.AUTH_TYPES.hard, function (err) {
-                    if (err) return done(err);
+                await topicVoteCreatePromised(agent, user.id, topic.id, voteOptions, 1, 1, false, null, null, Vote.TYPES.regular, Vote.AUTH_TYPES.hard);
+                const contact = {
+                    name: 'Test',
+                    email: 'test@test.com',
+                    phone: '+3725100000'
+                };
 
-                    var contact = {
-                        name: 'Test',
-                        email: 'test@test.com',
-                        phone: '+3725100000'
-                    };
+                const resBody = (await _topicUpdatePromised(agent, user.id, topic.id, Topic.STATUSES.followUp, Topic.VISIBILITY.public, null, null, contact, 400)).body;
 
-                    _topicUpdate(agent, user.id, topic.id, Topic.STATUSES.followUp, Topic.VISIBILITY.public, null, null, contact, 400, function (err, res) {
-                        if (err) return done(err);
+                const expectedBody = {
+                    status: {
+                        code: 40010,
+                        message: 'Not enough votes to send to Parliament. Votes required - ' + config.features.sendToParliament.voteCountMin
+                    }
+                };
 
-                        var expectedBody = {
-                            status: {
-                                code: 40010,
-                                message: 'Not enough votes to send to Parliament. Votes required - ' + config.features.sendToParliament.voteCountMin
-                            }
-                        };
-
-                        assert.deepEqual(res.body, expectedBody);
-
-                        done();
-                    });
-                });
+                assert.deepEqual(resBody, expectedBody);
             });
 
-            test('Fail - Forbidden - at least edit permissions required', function (done) {
-                var agent = request.agent(app);
-                userLib.createUserAndLogin(agent, null, null, null, function (err, u) {
-                    if (err) return done(err);
+            test('Fail - Forbidden - at least edit permissions required', async function () {
+                const agent = request.agent(app);
+                const u = await userLib.createUserAndLoginPromised(agent, null, null, null);
 
-                    _topicUpdate(agent, u.id, topic.id, topicStatusNew, topicVisibilityNew, null, null, null, 403, function (err) {
-                        if (err) return done(err);
-
-                        done();
-                    });
-                });
+                await _topicUpdatePromised(agent, u.id, topic.id, topicStatusNew, topicVisibilityNew, null, null, null, 403);
             });
 
             suite('TokenJoin', function () {
 
-                test('Success', function (done) {
-                    var tokenJoinBeforeUpdate = topic.tokenJoin;
-                    topicUpdateTokenJoin(agent, user.id, topic.id, function (err, res) {
-                        if (err) return done(err);
+                test('Success', async function () {
+                    const tokenJoinBeforeUpdate = topic.tokenJoin;
+                    const tokenJoin = (await topicUpdateTokenJoinPromised(agent, user.id, topic.id)).body.data.tokenJoin;
+                    assert.notEqual(tokenJoin, tokenJoinBeforeUpdate);
+                });
 
-                        var tokenJoin = res.body.data.tokenJoin;
-                        assert.notEqual(tokenJoin, tokenJoinBeforeUpdate);
-
-                        done();
-                    });
+                test('Fail - topic status = closed', async function () {
+                    await topicUpdateStatusPromised(agent, user.id, topic.id, Topic.STATUSES.closed);
+                    const tokenJoinBeforeUpdate = topic.tokenJoin;
+                    await _topicUpdateTokenJoinPromised(agent, user.id, topic.id, 403);
+                    const tokenJoin = (await topicReadPromised(agent, user.id, topic.id, null)).body.data.tokenJoin;
+                    assert.equal(tokenJoin, tokenJoinBeforeUpdate);
                 });
 
             });
@@ -5488,6 +5438,18 @@ suite('Users', function () {
                         const invalidUser = await userLib.createUserAndLoginPromised(agentInvalidUser, null, null, null);
 
                         await _topicInviteUsersCreatePromised(agentInvalidUser, invalidUser.id, topic.id, [], 403);
+                    });
+
+                    test('Fail - 40300 - topic is closed', async function () {
+                        const invitation = [
+                            {
+                                userId: userToInvite.id,
+                                level: TopicMemberUser.LEVELS.read
+                            }
+                        ];
+                        await topicUpdateStatusPromised(agentCreator, userCreator.id, topic.id, Topic.STATUSES.closed);
+
+                        await _topicInviteUsersCreatePromised(agentCreator, userCreator.id, topic.id, invitation, 403);
                     });
                 });
 
@@ -8681,7 +8643,7 @@ suite('Users', function () {
                                 });
 
                                 test('Success - Vote, delete account, re-vote & count, delete account re-count', async () => {
-                                    const pid = 10101010005;
+                                    const pid = 30303039914;
                                     const countryCode = 'EE';
                                     const topic = (await topicCreatePromised(agent, user.id, Topic.VISIBILITY.public, null, null, '<html><head></head><body><h2>TEST VOTE AND DELETE ACCOUNT AND RE-VOTE</h2></body></html>', null)).body.data;
                                     const agentUser1 = request.agent(app);
@@ -8881,7 +8843,7 @@ suite('Users', function () {
                                 .destroy({
                                     where: {
                                         connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
-                                        connectionUserId: ['PNOEE-10101010016', 'PNOEE-10101010005', 'PNOEE-11412090004']
+                                        connectionUserId: ['PNOEE-30403039917', 'PNOEE-30303039914', 'PNOEE-11412090004']
                                     },
                                     force: true
                                 });
@@ -8891,13 +8853,13 @@ suite('Users', function () {
                             await UserConnection.destroy({
                                 where: {
                                     connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
-                                    connectionUserId: ['PNOEE-10101010016', 'PNOEE-10101010005', 'PNOEE-11412090004']
+                                    connectionUserId: ['PNOEE-30403039917', 'PNOEE-30303039914', 'PNOEE-11412090004']
                                 },
                                 force: true
                             });
 
                             const countryCode = 'EE';
-                            const pid = '10101010005';
+                            const pid = '30303039914';
 
                             const voteList = [
                                 {
@@ -8916,13 +8878,13 @@ suite('Users', function () {
                             await UserConnection.destroy({
                                 where: {
                                     connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
-                                    connectionUserId: ['PNOEE-10101010016', 'PNOEE-10101010005', 'PNOEE-11412090004']
+                                    connectionUserId: ['PNOEE-30403039917', 'PNOEE-30303039914', 'PNOEE-11412090004']
                                 },
                                 force: true
                             });
 
                             const countryCode = 'EE';
-                            const pid = '10101010005';
+                            const pid = '30303039914';
 
                             const voteList = [
                                 {
@@ -8937,7 +8899,7 @@ suite('Users', function () {
 
                         test('Success - Latvian PID', async function () {
                             const countryCode = 'LV';
-                            const pid = '010101-10006';
+                            const pid = '030303-10012';
 
                             const voteList = [
                                 {
@@ -8952,7 +8914,7 @@ suite('Users', function () {
 
                         test('Success - Lithuanian PID', async function () {
                             const countryCode = 'LT';
-                            const pid = '10101010005';
+                            const pid = '30303039914';
 
                             const voteList = [
                                 {
@@ -8967,7 +8929,7 @@ suite('Users', function () {
 
                         test('Success - Personal ID already connected to another user account.', async function () {
                             const countryCode = 'EE';
-                            const pid = '10101010005';
+                            const pid = '30303039914';
 
                             const voteList = [
                                 {
@@ -8992,7 +8954,7 @@ suite('Users', function () {
                             this.timeout(30000); //eslint-disable-line no-invalid-this
 
                             const countryCode = 'EE';
-                            const pid = '10101010005';
+                            const pid = '30303039914';
 
                             const voteList = [
                                 {
@@ -9067,7 +9029,7 @@ suite('Users', function () {
                             this.timeout(15000); // eslint-disable-line no-invalid-this
 
                             const countryCode = 'EE';
-                            const pid = '10101010016';
+                            const pid = '30403039917';
 
                             const voteList = [
                                 {
@@ -9124,7 +9086,7 @@ suite('Users', function () {
                             this.timeout(55000); //eslint-disable-line no-invalid-this
 
                             const countryCode = 'LV';
-                            const pid = '010101-10014';
+                            const pid = '030403-10016';
 
                             const voteList = [
                                 {
@@ -9188,7 +9150,7 @@ suite('Users', function () {
                                 }
                             });
                             const countryCode = 'EE';
-                            const pid = '10101010005';
+                            const pid = '30303039914';
 
                             const voteList = [
                                 {
@@ -10536,8 +10498,8 @@ suite('Users', function () {
                         );
                 });
 
-                test('Success', function (done) {
-                    topicReportsReview(agentCreator, userCreator.id, topic.id, report.id, 'Please review, I have made many changes', done);
+                test('Success', async function () {
+                    topicReportsReviewPromised(agentCreator, userCreator.id, topic.id, report.id, 'Please review, I have made many changes');
                 });
 
                 test('Fail - 40300 - Unauthorized, restricted to Users with access', function (done) {
@@ -12807,92 +12769,68 @@ suite('Topics', function () {
     suite('Events', function () {
 
         suite('Create, list, delete', function () {
-            var agent = request.agent(app);
+            const agent = request.agent(app);
 
-            var user;
-            var topic;
+            let user;
+            let topic;
 
-            setup(function (done) {
-                userLib.createUserAndLogin(agent, null, null, null, function (err, res) {
-                    if (err) return done(err);
-                    user = res;
-
-                    topicCreate(agent, user.id, null, null, null, null, null, function (err, res) {
-                        if (err) return done(err);
-
-                        topic = res.body.data;
-
-                        topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.followUp, function (err) {
-                            if (err) return done(err);
-
-                            done();
-                        });
-                    });
-                });
+            setup(async function () {
+                user = await userLib.createUserAndLoginPromised(agent, null, null, null);
+                topic = (await topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
+                await topicUpdateStatusPromised(agent, user.id, topic.id, Topic.STATUSES.followUp);
             });
 
-            test('Success', function (done) {
-                var subject = 'Test Event title';
-                var text = 'Test Event description';
+            test('Success', async function () {
+                const subject = 'Test Event title';
+                const text = 'Test Event description';
 
-                topicEventCreate(agent, user.id, topic.id, subject, text, function (err, res) {
-                    if (err) return done(err);
+                const resBody = (await topicEventCreatePromised(agent, user.id, topic.id, subject, text)).body;
 
-                    assert.equal(res.body.status.code, 20100);
+                assert.equal(resBody.status.code, 20100);
 
-                    var event = res.body.data;
-                    assert.equal(event.subject, subject);
-                    assert.equal(event.text, text);
-                    assert.property(event, 'createdAt');
-                    assert.property(event, 'id');
+                const event = resBody.data;
+                assert.equal(event.subject, subject);
+                assert.equal(event.text, text);
+                assert.property(event, 'createdAt');
+                assert.property(event, 'id');
 
-                    topicEventList(agent, user.id, topic.id, function (err, res) {
-                        if (err) return done(err);
+                const eventList = (await topicEventListPromised(agent, user.id, topic.id)).body;
 
-                        var expectedBody = {
-                            status: {
-                                code: 20000
-                            },
-                            data: {
-                                count: 1,
-                                rows: [event]
-                            }
-                        };
+                const expectedBody = {
+                    status: {
+                        code: 20000
+                    },
+                    data: {
+                        count: 1,
+                        rows: [event]
+                    }
+                };
 
-                        assert.deepEqual(res.body, expectedBody);
+                assert.deepEqual(eventList, expectedBody);
 
-                        topicEventDelete(agent, user.id, topic.id, event.id, function (err) {
-                            if (err) return done(err);
+                await topicEventDeletePromised(agent, user.id, topic.id, event.id);
 
-                            topicEventList(agent, user.id, topic.id, function (err, res) {
-                                if (err) return done(err);
+                const eventListNew = (await topicEventListPromised(agent, user.id, topic.id)).body;
+                const expectedBody2 = {
+                    status: {
+                        code: 20000
+                    },
+                    data: {
+                        count: 0,
+                        rows: []
+                    }
+                };
 
-                                var expectedBody = {
-                                    status: {
-                                        code: 20000
-                                    },
-                                    data: {
-                                        count: 0,
-                                        rows: []
-                                    }
-                                };
-
-                                assert.deepEqual(res.body, expectedBody);
-
-                                done();
-                            });
-                        });
-                    });
-                });
+                assert.deepEqual(eventListNew, expectedBody2);
             });
 
-            test('Success - with token', function (done) {
-                var agent = request.agent(app);
+            test('Success - with token', async function () {
+                const agent = request.agent(app);
 
-                var subject = 'Test Event title, testing with token';
-                var text = 'Test Event description, testing with token';
+                const subject = 'Test Event title, testing with token';
+                const text = 'Test Event description, testing with token';
 
-                var token = cosJwt.getTokenRestrictedUse(
+                const token = cosJwt.getTokenRestrictedUse(
                     {},
                     [
                         'POST /api/topics/:topicId/events'
@@ -12903,80 +12841,89 @@ suite('Topics', function () {
                     }
                 );
 
-                topicEventCreateUnauth(agent, topic.id, token, subject, text, function (err, res) {
-                    if (err) return done(err);
-
-                    var event = res.body.data;
-                    assert.property(event, 'id');
-                    assert.property(event, 'createdAt');
-                    assert.equal(event.subject, subject);
-                    assert.equal(event.text, text);
-
-                    done();
-                });
+                const event = (await topicEventCreateUnauthPromised(agent, topic.id, token, subject, text)).body.data;
+                assert.property(event, 'id');
+                assert.property(event, 'createdAt');
+                assert.equal(event.subject, subject);
+                assert.equal(event.text, text);
             });
 
-            test('Fail - Unauthorized - Invalid token', function (done) {
-                var agent = request.agent(app);
-                var token = 'FOOBAR';
+            test ('Fail - Unauthorize - topic is closed', async function () {
+                await topicUpdateStatusPromised(agent, user.id, topic.id, Topic.STATUSES.closed);
+                var subject = 'Test Event title';
+                var text = 'Test Event description';
 
-                _topicEventCreateUnauth(agent, topic.id, token, 'notimportant', 'notimportant', 401, function (err, res) {
-                    if (err) return done(err);
+                await _topicEventCreatePromised(agent, user.id, topic.id, subject, text, 403);
 
-                    var expectedBody = {
-                        status: {
-                            code: 40100,
-                            message: 'Invalid JWT token'
-                        }
-                    };
-                    assert.deepEqual(res.body, expectedBody);
-
-                    done();
-                });
             });
 
-            test('Fail - Unauthorized - Invalid JWT token - invalid path', function (done) {
-                var agent = request.agent(app);
-                var token = jwt.sign({path: '/this/is/wrong'}, config.session.privateKey, {
+            test('Fail - with token', async function () {
+                const agentNew = request.agent(app);
+
+                const subject = 'Test Event title, testing with token';
+                const text = 'Test Event description, testing with token';
+
+                const token = cosJwt.getTokenRestrictedUse(
+                    {},
+                    [
+                        'POST /api/topics/:topicId/events'
+                            .replace(':topicId', topic.id)
+                    ],
+                    {
+                        expiresIn: '1d'
+                    }
+                );
+                await topicUpdateStatusPromised(agent, user.id, topic.id, Topic.STATUSES.closed);
+
+                await _topicEventCreateUnauthPromised(agentNew, topic.id, token, subject, text, 403);
+            });
+
+            test('Fail - Unauthorized - Invalid token', async function () {
+                const agent = request.agent(app);
+                const token = 'FOOBAR';
+
+                const resBody = (await _topicEventCreateUnauthPromised(agent, topic.id, token, 'notimportant', 'notimportant', 401)).body;
+                const expectedBody = {
+                    status: {
+                        code: 40100,
+                        message: 'Invalid JWT token'
+                    }
+                };
+                assert.deepEqual(resBody, expectedBody);
+            });
+
+            test('Fail - Unauthorized - Invalid JWT token - invalid path', async function () {
+                const agent = request.agent(app);
+                const token = jwt.sign({path: '/this/is/wrong'}, config.session.privateKey, {
                     expiresIn: '1m',
                     algorithm: config.session.algorithm
                 });
 
-                _topicEventCreateUnauth(agent, topic.id, token, 'notimportant', 'notimportant', 401, function (err, res) {
-                    if (err) return done(err);
-
-                    var expectedBody = {
-                        status: {
-                            code: 40100,
-                            message: 'Invalid JWT token'
-                        }
-                    };
-                    assert.deepEqual(res.body, expectedBody);
-
-                    done();
-                });
+                const resBody = (await _topicEventCreateUnauthPromised(agent, topic.id, token, 'notimportant', 'notimportant', 401)).body;
+                const expectedBody = {
+                    status: {
+                        code: 40100,
+                        message: 'Invalid JWT token'
+                    }
+                };
+                assert.deepEqual(resBody, expectedBody);
             });
 
-            test('Fail - Unauthorized - JWT token expired', function (done) {
-                var agent = request.agent(app);
-                var token = jwt.sign({path: '/not/important'}, config.session.privateKey, {
+            test('Fail - Unauthorized - JWT token expired', async function () {
+                const agent = request.agent(app);
+                const token = jwt.sign({path: '/not/important'}, config.session.privateKey, {
                     expiresIn: '.1ms',
                     algorithm: config.session.algorithm
                 });
 
-                _topicEventCreateUnauth(agent, 'notimportant', token, 'notimportant', 'notimportant', 401, function (err, res) {
-                    if (err) return done(err);
-
-                    var expectedResponse = {
-                        status: {
-                            code: 40100,
-                            message: 'JWT token has expired'
-                        }
-                    };
-                    assert.deepEqual(res.body, expectedResponse);
-
-                    done();
-                });
+                const resBody = (await _topicEventCreateUnauthPromised(agent, 'notimportant', token, 'notimportant', 'notimportant', 401)).body;
+                const expectedResponse = {
+                    status: {
+                        code: 40100,
+                        message: 'JWT token has expired'
+                    }
+                };
+                assert.deepEqual(resBody, expectedResponse);
             });
         });
 
