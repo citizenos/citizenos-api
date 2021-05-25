@@ -959,7 +959,7 @@ suite('Auth', function () {
 
         suite('Smart-ID', function () {
             suite('Init', function () {
-                let pid = '10101010005';
+                let pid = '30303039914';
                 teardown(async function () {
                     return UserConnection
                         .destroy({
@@ -1005,7 +1005,7 @@ suite('Auth', function () {
             });
 
             suite('Status', function () {
-                let pid = '10101010005';
+                let pid = '30303039914';
 
                 suite('New User', function () {
                     teardown(async function () {
@@ -1029,17 +1029,17 @@ suite('Auth', function () {
                         assert.equal(userInfoFromSmartIdStatusResponse.status.code, 20003);
                         const userFromStatus = (await statusPromised(agent)).body.data;
                         assert.deepEqual(userFromStatus, userInfoFromSmartIdStatusResponse.data);
-                        assert.equal(userInfoFromSmartIdStatusResponse.data.name, 'Demo Smart-Id'); // Special check for encoding issues
+                        assert.equal('Qualified Ok1 Testnumber', userInfoFromSmartIdStatusResponse.data.name); // Special check for encoding issues
                     });
 
                     test('Fail - 40010 - User refused', async function () {
                         this.timeout(35000); //eslint-disable-line no-invalid-this
 
-                        pid = '10101010016';
+                        pid = '30403039939';
                         const agent = request.agent(app);
 
                         const initResponse = (await loginSmartIdInitPromised(agent, pid)).body.data;
-                        const smartIdStatusResponse = (await loginSmartIdStatusPromised(agent, initResponse.token)).body;
+                        const smartIdStatusResponse = (await loginSmartIdStatusPromised(agent, initResponse.token, 1000)).body;
                         const expectedResponse = {
                             status: {
                                 code: 40010,
@@ -1052,7 +1052,7 @@ suite('Auth', function () {
 
                     test('Fail - 40011 - Timeout', async function () {
                         this.timeout(120000); //eslint-disable-line no-invalid-this
-                        pid = '10101010027'
+                        pid = '30403039983'
                         const agent = request.agent(app);
 
                         const initResponse = (await loginSmartIdInitPromised(agent, pid)).body.data;
@@ -1073,7 +1073,7 @@ suite('Auth', function () {
 
                     test('Success - 20002 - existing User', async function () {
                         this.timeout(30000); //eslint-disable-line no-invalid-this
-                        pid = '10101010005';
+                        pid = '30303039914';
                         const user = await userLib.createUserPromised(agent2, null, null, null);
 
                         return UserConnection

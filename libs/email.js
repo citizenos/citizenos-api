@@ -1422,7 +1422,7 @@ module.exports = function (app) {
                     );
                     emailOptions.linkedData.translations = template.translations;
 
-                    return await emailClient.sendStringAsync(template.body, emailOptions);
+                    return emailClient.sendStringAsync(template.body, emailOptions);
                 };
                 sendEmailPromises.push(sendTopicModeratorEmail());
             } else {
