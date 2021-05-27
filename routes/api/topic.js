@@ -3164,7 +3164,7 @@ module.exports = function (app) {
     /**
      * Delete User membership information
      */
-    app.delete('/api/users/:userId/topics/:topicId/members/users/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp], true), async function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/members/users/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, null, true), async function (req, res, next) {
         const topicId = req.params.topicId;
         const memberId = req.params.memberId;
         try {
@@ -3227,6 +3227,9 @@ module.exports = function (app) {
                     }
                 )
             const topic = Topic.build(topicMemberUser.Topic);
+            if (topic.status === Topic.STATUSES.closed && req.user.id !== memberId) {
+                return res.forbidden();
+            }
             const user = User.build(topicMemberUser.User);
             topic.dataValues.id = topicId;
             user.dataValues.id = memberId;
