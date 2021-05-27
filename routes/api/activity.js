@@ -26,34 +26,34 @@ module.exports = function (app) {
      * Read (List) public Topic Activities
      */
 
-    const activitiesDataFunction = '\
-    CREATE OR REPLACE FUNCTION pg_temp.getActivityData(uuid, text[], text[], text[]) \
-        RETURNS TABLE (id uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone, topicIds text[], topics jsonb, groups jsonb, users jsonb) \
-        AS $$ \
-        SELECT DISTINCT \
-        a.id, \
-        a.data, \
-        a."createdAt", \
-        a."updatedAt", \
-        a."deletedAt", \
-        string_to_array(array_to_string($2, \',\'), \',\') AS "topicIds", \
-        jsonb_agg(t.*) AS topics, \
-        jsonb_agg(g.*) AS groups, \
-        jsonb_agg(u.*) AS users \
-        FROM \
-            "Activities" a \
-            LEFT JOIN \
-                "Topics" t ON ARRAY[t.id::text] <@ string_to_array(array_to_string($2, \',\'), \',\') \
-            LEFT JOIN \
-                "Groups" g ON ARRAY[g.id::text] <@ string_to_array(array_to_string($3, \',\'), \',\') \
-            LEFT JOIN \
-                "Users" u ON ARRAY[u.id::text] <@ string_to_array(array_to_string($4, \',\'), \',\') \
-        WHERE a.id = $1 \
-        GROUP BY a.id \
-        LIMIT 1 \
-        ;$$ \
-        LANGUAGE SQL IMMUTABLE ;\
-    ';
+    const activitiesDataFunction = `
+        CREATE OR REPLACE FUNCTION pg_temp.getActivityData(uuid, text[], text[], text[])
+            RETURNS TABLE (id uuid, data jsonb, "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone, topicIds text[], topics jsonb, groups jsonb, users jsonb)
+            AS $$
+            SELECT DISTINCT
+            a.id,
+            a.data,
+            a."createdAt",
+            a."updatedAt",
+            a."deletedAt",
+            string_to_array(array_to_string($2, ','), ',') AS "topicIds",
+            jsonb_agg(t.*) AS topics,
+            jsonb_agg(g.*) AS groups,
+            jsonb_agg(u.*) AS users
+            FROM
+                "Activities" a
+                LEFT JOIN
+                    "Topics" t ON ARRAY[t.id::text] <@ string_to_array(array_to_string($2, ','), ',')
+                LEFT JOIN
+                    "Groups" g ON ARRAY[g.id::text] <@ string_to_array(array_to_string($3, ','), ',')
+                LEFT JOIN
+                    "Users" u ON ARRAY[u.id::text] <@ string_to_array(array_to_string($4, ','), ',')
+            WHERE a.id = $1
+            GROUP BY a.id
+            LIMIT 1
+            ;$$
+            LANGUAGE SQL IMMUTABLE ;
+    `;
 
     const buildActivityFeedIncludeString = function (req, visibility) {
         let queryInclude = req.query.include || [];
@@ -81,109 +81,109 @@ module.exports = function (app) {
         const includedSql = [];
 
         if (req.user && req.user.id && (!visibility || visibility !== 'public')) {
-            const viewActivity = 'SELECT \
-                va.id, \
-                va.data, \
-                va."topicIds", \
-                va."groupIds", \
-                va."userIds", \
-                va."createdAt", \
-                va."updatedAt", \
-                va."deletedAt" \
-                FROM "Activities" va \
-                WHERE \
-                va."actorType" = \'User\' AND va."actorId" = :userId::text \
-                AND va.data@>\'{"type": "View"}\' \
-                AND va.data#>>\'{object, @type}\' = \'Activity\' \
-                ';
+            const viewActivity = `SELECT
+                va.id,
+                va.data,
+                va."topicIds",
+                va."groupIds",
+                va."userIds",
+                va."createdAt",
+                va."updatedAt",
+                va."deletedAt"
+                FROM "Activities" va
+                WHERE
+                va."actorType" = 'User' AND va."actorId" = :userId::text
+                AND va.data@>'{"type": "View"}'
+                AND va.data#>>'{object, @type}' = 'Activity'
+                `;
             includedSql.push(viewActivity);
         }
 
         include.forEach(function (item) {
             switch (item) {
                 case 'user':
-                    includedSql.push('SELECT \
-                        ua.id, \
-                        ua.data, \
-                        ua."topicIds", \
-                        ua."groupIds", \
-                        ua."userIds", \
-                        ua."createdAt", \
-                        ua."updatedAt", \
-                        ua."deletedAt" \
-                    FROM \
-                        pg_temp.getUserActivities(:userId) ua \
-                    ');
+                    includedSql.push(`SELECT
+                        ua.id,
+                        ua.data,
+                        ua."topicIds",
+                        ua."groupIds",
+                        ua."userIds",
+                        ua."createdAt",
+                        ua."updatedAt",
+                        ua."deletedAt"
+                    FROM
+                        pg_temp.getUserActivities(:userId) ua
+                    `);
                     break;
                 case 'self':
-                    includedSql.push('SELECT \
-                        guaaa.id, \
-                        guaaa.data, \
-                        guaaa."topicIds", \
-                        guaaa."groupIds", \
-                        guaaa."userIds", \
-                        guaaa."createdAt", \
-                        guaaa."updatedAt", \
-                        guaaa."deletedAt" \
-                    FROM \
-                        pg_temp.getUserAsActorActivities(:userId) guaaa \
-                    ');
+                    includedSql.push(`SELECT
+                        guaaa.id,
+                        guaaa.data,
+                        guaaa."topicIds",
+                        guaaa."groupIds",
+                        guaaa."userIds",
+                        guaaa."createdAt",
+                        guaaa."updatedAt",
+                        guaaa."deletedAt"
+                    FROM
+                        pg_temp.getUserAsActorActivities(:userId) guaaa
+                    `);
                     break;
                 case 'userTopics':
-                    includedSql.push('SELECT \
-                        guta.id, \
-                        guta.data, \
-                        guta."topicIds", \
-                        guta."groupIds", \
-                        guta."userIds", \
-                        guta."createdAt", \
-                        guta."updatedAt", \
-                        guta."deletedAt" \
-                    FROM \
-                        pg_temp.getUserTopicActivities(:userId) guta \
-                    ');
+                    includedSql.push(`SELECT
+                        guta.id,
+                        guta.data,
+                        guta."topicIds",
+                        guta."groupIds",
+                        guta."userIds",
+                        guta."createdAt",
+                        guta."updatedAt",
+                        guta."deletedAt"
+                    FROM
+                        pg_temp.getUserTopicActivities(:userId) guta
+                    `);
                     break;
                 case 'userGroups':
-                    includedSql.push('SELECT \
-                        guga.id, \
-                        guga.data, \
-                        guga."topicIds", \
-                        guga."groupIds", \
-                        guga."userIds", \
-                        guga."createdAt", \
-                        guga."updatedAt", \
-                        guga."deletedAt" \
-                    FROM \
-                        pg_temp.getUserGroupActivities(:userId) guga \
-                    ');
+                    includedSql.push(`SELECT
+                        guga.id,
+                        guga.data,
+                        guga."topicIds",
+                        guga."groupIds",
+                        guga."userIds",
+                        guga."createdAt",
+                        guga."updatedAt",
+                        guga."deletedAt"
+                    FROM
+                        pg_temp.getUserGroupActivities(:userId) guga
+                    `);
                     break;
                 case 'publicTopics':
-                    includedSql.push('SELECT \
-                        guta.id, \
-                        guta.data, \
-                        guta."topicIds", \
-                        guta."groupIds", \
-                        guta."userIds", \
-                        guta."createdAt", \
-                        guta."updatedAt", \
-                        guta."deletedAt" \
-                    FROM \
-                        pg_temp.getPublicTopicActivities() guta \
-                    ');
+                    includedSql.push(`SELECT
+                        guta.id,
+                        guta.data,
+                        guta."topicIds",
+                        guta."groupIds",
+                        guta."userIds",
+                        guta."createdAt",
+                        guta."updatedAt",
+                        guta."deletedAt"
+                    FROM
+                        pg_temp.getPublicTopicActivities() guta
+                    `);
                     break;
                 case 'publicGroups':
-                    includedSql.push('SELECT \
-                        guga.id, \
-                        guga.data, \
-                        guga."topicIds", \
-                        guga."groupIds", \
-                        guga."userIds", \
-                        guga."createdAt", \
-                        guga."updatedAt", \
-                        guga."deletedAt" \
-                    FROM \
-                        pg_temp.getPublicGroupActivities() guga \
-                    ');
+                    includedSql.push(`SELECT
+                        guga.id,
+                        guga.data,
+                        guga."topicIds",
+                        guga."groupIds",
+                        guga."userIds",
+                        guga."createdAt",
+                        guga."updatedAt",
+                        guga."deletedAt"
+                    FROM
+                        pg_temp.getPublicGroupActivities() guga
+                    `);
                     break;
                 default:
                 // Do nothing
@@ -274,6 +274,19 @@ module.exports = function (app) {
                         case 'VoteUserContainer':
                             object = VoteUserContainer.build(activity.data[field]).toJSON();
                             object['@type'] = activity.data[field]['@type'];
+                            break;
+                        case 'VoteFinalContainer':
+                            delete returnActivity.data[field].creator;
+                            delete returnActivity.data[field].description;
+                            delete returnActivity.data[field].tokenJoin;
+                            if (field === 'origin' && activity.data.type === 'Update') break;
+                            topic = _.find(activity.topics, function (t) {return t.id === activity.data[field].topicId});
+                            object = Topic.build(topic).toJSON();
+                            object['@type'] = activity.data[field]['@type'];
+                            object.creatorId = topic.creatorId;
+                            delete object.creator;
+                            delete object.description;
+                            delete object.tokenJoin;
                             break;
                         case 'TopicMemberUser':
                             object = TopicMemberUser.build(activity.data[field]).toJSON();
