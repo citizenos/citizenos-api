@@ -6766,6 +6766,22 @@ module.exports = function (app) {
                 return Promise.reject();
             }
 
+            let userId = '';
+            if (req.user) {
+                userId = req.user.id
+            }
+
+            await cosActivities
+                .downloadFinalContainerActivity({
+                    voteId, topicId
+                }, {
+                    type: 'User',
+                    id: userId,
+                    ip: req.ip
+                },
+                    req.method + ' ' + req.path
+                );
+
             if (req.query.accept === 'application/x-7z-compressed') {
                 res.set('Content-disposition', 'attachment; filename=final.7z');
                 res.set('Content-type', 'application/x-7z-compressed');
