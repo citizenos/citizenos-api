@@ -1,4 +1,8 @@
-## 2021-05-2021
+## 2021-06-01 - v. 2.2.1
+
+* API /logout not to try unset Etherpad cookies as it does not work cross domains - https://github.com/citizenos/citizenos-fe/issues/676 
+
+## 2021-05-11
 
 * Rename model GroupMember to GroupMemberUser - https://github.com/citizenos/citizenos-api/issues/198
 * Pump version to 2.2.0.

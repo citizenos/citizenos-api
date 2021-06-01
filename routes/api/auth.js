@@ -235,7 +235,6 @@ module.exports = function (app) {
             path: config.session.cookie.path,
             domain: config.session.cookie.domain
         });
-        res.clearCookie('express_sid'); // FIXME: Absolutely hate this solution. This deletes the EP session, so that on logout also EP session is destroyed. - https://trello.com/c/CkkFUz5D/235-ep-api-authorization-the-way-ep-session-is-invalidated-on-logout
     };
 
     /**
