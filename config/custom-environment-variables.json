@@ -4,87 +4,38 @@
     "fe": "CITIZENOS_URL_FE"
   },
   "db": {
-    "url": "DATABASE_URL",
-    "options": {
-      "pool": {
-        "max": "DATABASE_OPTIONS_POOL_MAX"
-      }
-    }
+    "__name": "DB_CONFIG",
+    "__format": "json"
   },
   "topic": {
     "titleLengthMax": "TITLE_LENGTH_MAX"
   },
-  "session": {
-    "privateKey": "CITIZENOS_SESSION_PRIVATEKEY",
-    "publicKey": "CITIZENOS_SESSION_PUBLICKEY",
-    "secret": "CITIZENOS_SESSION_SECRET"
+  "session":  {
+    "__name": "CITIZENOS_SESSION",
+    "__format": "json"
   },
   "api": {
     "key": "CITIZENOS_API_KEY"
   },
   "services": {
-    "idCard": {
-      "serviceUrl": "CITIZENOS_SERVICES_IDCARD_SERVICE_URL",
-      "apiKey": "CITIZENOS_SERVICES_IDCARD_APIKEY"
-    },
-    "etherpad": {
-      "host": "CITIZENOS_SERVICES_ETHERPAD_HOST",
-      "port": "CITIZENOS_SERVICES_ETHERPAD_PORT",
-      "apikey": "CITIZENOS_SERVICES_ETHERPAD_APIKEY"
-    },
-    "signature": {
-      "certificates": {
-        "tls": "CITIZENOS_SERVICES_SIGNATURE_CERTIFICATES_TLS"
-      },
-      "timemarkUrl": "CITIZENOS_SERVICES_SIGNATURE_TIMEMARK_URL",
-      "timestampUrl": "CITIZENOS_SERVICES_SIGNATURE_TIMESTAMP_URL"
-    },
-    "smartId": {
-      "relyingPartyUUID": "CITIZENOS_SERVICES_SMARTID_RELYING_PARTY_UUID",
-      "replyingPartyName": "CITIZENOS_SERVICES_SMARTID_RELYING_PARTY_NAME"
-    },
-    "mobileId": {
-      "relyingPartyUUID": "CITIZENOS_SERVICES_MOBILEID_RELYING_PARTY_UUID",
-      "replyingPartyName": "CITIZENOS_SERVICES_MOBILEID_RELYING_PARTY_NAME"
-    },
-    "twitter": {
-      "consumer_key": "CITZENOS_SERVICES_TWITTER_CONSUMER_KEY",
-      "consumer_secret": "CITZENOS_SERVICES_TWITTER_CONSUMER_SECRET",
-      "access_token": "CITZENOS_SERVICES_TWITTER_ACCESS_TOKEN",
-      "access_token_secret": "CITZENOS_SERVICES_TWITTER_ACCESS_TOKEN_SECRET",
-      "timeout_ms": "CITZENOS_SERVICES_TWITTER_TIMEOUT_MS"
-    },
-    "prerender":{
-      "serviceUrl": "CITIZENOS_SERVICES_PRERENDER_SERVICEURL",
-      "apiKey": "CITIZENOS_SERVICES_PRERENDER_APIKEY"
-    }
+    "__name": "CITIZENOS_SERVICES",
+    "__format": "json"
   },
-  "email": "CITIZENOS_EMAIL",
+  "email": {
+    "__name": "CITIZENOS_EMAIL",
+    "__format": "json"
+  },
   "logging": "CITIZENOS_LOGGING",
   "passport": {
-    "google": {
-      "clientId": "CITIZENOS_PASSPORT_GOOGLE_CLIENTID",
-      "clientSecret": "CITIZENOS_PASSPORT_GOOGLE_CLIENTSECRET"
-    },
-    "facebook": {
-      "clientId": "CITIZENOS_PASSPORT_FACEBOOK_CLIENTID",
-      "clientSecret": "CITIZENOS_PASSPORT_FACEBOOK_CLIENTSECRET"
-    }
+    "__name": "CITIZENOS_PASSPORT",
+    "__format": "json"
   },
   "attachments": {
     "limit": "ATTACHMENTS_LIMIT"
   },
   "storage": {
-    "type": "S3",
-    "accessKeyId": "AWS_ACCESS_KEY_ID",
-    "secretAccessKey": "AWS_SECRET_ACCESS_KEY",
-    "bucket": "AWS_S3_BUCKET_NAME",
-    "region": "AWS_S3_REGION",
-    "allowedFileTypes": "STORAGE_ALLOWED_FILE_TYPES",
-    "allowedMimeTypes":"STORAGE_ALLOWED_FILE_MIME_TYPES",
-    "maxFileSize": "STORAGE_MAX_FILE_SIZE",
-    "baseFolder": "STORAGE_BASE_FOLDER",
-    "baseURL": "STORAGE_BASE_URL"
+    "__name": "CITIZENOS_STORAGE",
+    "__format": "json"
   },
   "features": {
     "sendToParliament": {
