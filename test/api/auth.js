@@ -288,7 +288,6 @@ const logout = function (agent, callback) {
         .set('Content-Type', 'application/json')
         .expect(200)
         .expect('Content-Type', /json/)
-        .expect('set-cookie', /express_sid=;/)// FIXME: Hate this - https://trello.com/c/CkkFUz5D/235-ep-api-authorization-the-way-ep-session-is-invalidated-on-logout
         .end(callback);
 };
 
@@ -300,7 +299,6 @@ const logoutPromised = function (agent) {
         .set('Content-Type', 'application/json')
         .expect(200)
         .expect('Content-Type', /json/)
-        .expect('set-cookie', /express_sid=;/)// FIXME: Hate this - https://trello.com/c/CkkFUz5D/235-ep-api-authorization-the-way-ep-session-is-invalidated-on-logout
 };
 
 /**
