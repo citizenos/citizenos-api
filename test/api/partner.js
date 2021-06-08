@@ -12,7 +12,7 @@ const topicLib = require('./topic');
 const Topic = models.Topic;
 const Partner = models.Partner;
 
-const _partnerReadPromised = async function (agent, partnerId, expectedHttpCode) {
+const _partnerRead = async function (agent, partnerId, expectedHttpCode) {
     const path = '/api/partners/:partnerId'
         .replace(':partnerId', partnerId);
 
@@ -23,12 +23,12 @@ const _partnerReadPromised = async function (agent, partnerId, expectedHttpCode)
         .expect('Content-Type', /json/);
 };
 
-const partnerReadPromised = async function (agent, partnerId) {
-    return _partnerReadPromised(agent, partnerId, 200);
+const partnerRead = async function (agent, partnerId) {
+    return _partnerRead(agent, partnerId, 200);
 };
 
 
-const _partnerTopicReadPromised = async function (agent, partnerId, sourcePartnerObjectId, expectedHttpCode) {
+const _partnerTopicRead = async function (agent, partnerId, sourcePartnerObjectId, expectedHttpCode) {
     const path = '/api/partners/:partnerId/topics/:sourcePartnerObjectId'
         .replace(':partnerId', partnerId)
         .replace(':sourcePartnerObjectId', sourcePartnerObjectId);
@@ -40,8 +40,8 @@ const _partnerTopicReadPromised = async function (agent, partnerId, sourcePartne
         .expect('Content-Type', /json/);
 };
 
-const partnerTopicReadPromised = async function (agent, partnerId, sourcePartnerObjectId) {
-    return _partnerTopicReadPromised(agent, partnerId, sourcePartnerObjectId, 200);
+const partnerTopicRead = async function (agent, partnerId, sourcePartnerObjectId) {
+    return _partnerTopicRead(agent, partnerId, sourcePartnerObjectId, 200);
 };
 
 suite('Partners', function () {
@@ -73,14 +73,14 @@ suite('Partners', function () {
         test('Success', async function () {
             partner.createdAt = null;
             partner.updatedAt = null;
-            const resPartnerInfo = (await partnerReadPromised(request.agent(app), partner.id)).body.data;
+            const resPartnerInfo = (await partnerRead(request.agent(app), partner.id)).body.data;
             resPartnerInfo.createdAt = null;
             resPartnerInfo.updatedAt = null;
             assert.deepEqual(resPartnerInfo, partner);
         });
 
         test('Fail - 40400 - Not found', async function () {
-            return _partnerReadPromised(request.agent(app), 'b4ab4adb-f76c-4093-a0be-2006ad66ab0f', 404);
+            return _partnerRead(request.agent(app), 'b4ab4adb-f76c-4093-a0be-2006ad66ab0f', 404);
         });
     });
 
@@ -95,7 +95,7 @@ suite('Partners', function () {
             let topic;
 
             suiteSetup(async function () {
-                user = await userLib.createUserAndLoginPromised(agent, null, null, null);
+                user = await userLib.createUserAndLogin(agent, null, null, null);
                 return Partner
                     .findOrCreate({
                         where: {
@@ -108,7 +108,7 @@ suite('Partners', function () {
                     })
                     .then(async function (resultPartner) {
                         partner = resultPartner[0];
-                        topic = (await topicLib.topicCreatePromised(agent, user.id, null, null, null, null, null)).body.data;
+                        topic = (await topicLib.topicCreate(agent, user.id, null, null, null, null, null)).body.data;
 
                         return Topic
                             .update(
@@ -126,7 +126,7 @@ suite('Partners', function () {
             });
 
             test('Success', async function () {
-                const partnerTopic = (await partnerTopicReadPromised(request.agent(app), partner.id, partnerObjectId)).body.data;
+                const partnerTopic = (await partnerTopicRead(request.agent(app), partner.id, partnerObjectId)).body.data;
                 const expectedResult = {
                     id: topic.id,
                     sourcePartnerObjectId: partnerObjectId
@@ -136,7 +136,7 @@ suite('Partners', function () {
             });
 
             test('Fail - 404', async function () {
-                return _partnerTopicReadPromised(request.agent(app), partner.id, 'DOESNOTEXIST', 404);
+                return _partnerTopicRead(request.agent(app), partner.id, 'DOESNOTEXIST', 404);
             });
 
         });

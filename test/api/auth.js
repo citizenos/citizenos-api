@@ -7,50 +7,12 @@
  * @param {string} email E-mail
  * @param {string} password Password
  * @param {string} expectedHttpCode Expected HTTP code
- * @param {function} callback (err, res)
- *
- * @return {void}
- *
- * @private
- */
-const _login = function (agent, email, password, expectedHttpCode, callback) {
-    const path = '/api/auth/login';
-
-    const a = agent
-        .post(path)
-        .set('Content-Type', 'application/json')
-        .send({
-            email: email,
-            password: password
-        })
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/);
-
-    if (expectedHttpCode === 200) {
-        a.expect('set-cookie', /.*\.sid=.*; Path=\/api; Expires=.*; HttpOnly/);
-    }
-
-    a.end(callback);
-};
-
-
-const login = function (agent, email, password, callback) {
-    _login(agent, email, password, 200, callback);
-};
-
-/**
- * Log in - call '/api/auth/login' API endpoint
- *
- * @param {object} agent SuperAgent is in the interface so other tests preparing data could provide their agent. Useful when agent holds a state (for ex session).
- * @param {string} email E-mail
- * @param {string} password Password
- * @param {string} expectedHttpCode Expected HTTP code
  *
  * @returns {Promise<Object>} SuperAgent response object
  *
  * @private
  */
-const _loginPromised = async function (agent, email, password, expectedHttpCode) {
+const _login = async function (agent, email, password, expectedHttpCode) {
     const path = '/api/auth/login';
 
     const a = agent
@@ -70,11 +32,11 @@ const _loginPromised = async function (agent, email, password, expectedHttpCode)
     return a;
 };
 
-const loginPromised = async function (agent, email, password) {
-    return _loginPromised(agent, email, password, 200);
+const login = async function (agent, email, password) {
+    return _login(agent, email, password, 200);
 };
 
-const _loginIdPromised = async function (agent, token, clientCert, expectedHttpCode) {
+const _loginId = async function (agent, token, clientCert, expectedHttpCode) {
     const path = '/api/auth/id';
 
     const a = agent
@@ -107,14 +69,13 @@ const _loginIdPromised = async function (agent, token, clientCert, expectedHttpC
  * @param {string} pid Personal identification number
  * @param {string} phoneNumber Phone number
  * @param {number} expectedHttpCode Expected HTTP response code
- * @param {function} callback (err, res)
  *
  * @return {void}
  *
  * @private
  */
 
-const _loginMobileInitPromised = async function (agent, pid, phoneNumber, expectedHttpCode) {
+const _loginMobileInit = async function (agent, pid, phoneNumber, expectedHttpCode) {
     const path = '/api/auth/mobile/init';
     return agent
         .post(path)
@@ -127,8 +88,8 @@ const _loginMobileInitPromised = async function (agent, pid, phoneNumber, expect
         .expect('Content-Type', /json/);
 };
 
-const loginMobileInitPromised = async function (agent, pid, phoneNumber) {
-    return _loginMobileInitPromised(agent, pid, phoneNumber, 200);
+const loginMobileInit = async function (agent, pid, phoneNumber) {
+    return _loginMobileInit(agent, pid, phoneNumber, 200);
 };
 
 /**
@@ -137,14 +98,13 @@ const loginMobileInitPromised = async function (agent, pid, phoneNumber) {
  * @param {object} agent SuperAgent is in the interface so other tests preparing data could provide their agent. Useful when agent holds a state (for ex session).
  * @param {string} pid Personal identification number
  * @param {number} expectedHttpCode Expected HTTP response code
- * @param {function} callback (err, res)
  *
  * @return {void}
  *
  * @private
  */
 
-const _loginSmartIdInitPromised = async function (agent, pid, expectedHttpCode) {
+const _loginSmartIdInit = async function (agent, pid, expectedHttpCode) {
     const path = '/api/auth/smartid/init';
     return agent
         .post(path)
@@ -154,8 +114,8 @@ const _loginSmartIdInitPromised = async function (agent, pid, expectedHttpCode) 
         .expect('Content-Type', /json/);
 };
 
-const loginSmartIdInitPromised = async function (agent, pid) {
-    return _loginSmartIdInitPromised(agent, pid, 200);
+const loginSmartIdInit = async function (agent, pid) {
+    return _loginSmartIdInit(agent, pid, 200);
 };
 
 /**
@@ -164,14 +124,13 @@ const loginSmartIdInitPromised = async function (agent, pid) {
  * @param {object} agent SuperAgent is in the interface so other tests preparing data could provide their agent. Useful when agent holds a state (for ex session).
  * @param {string} token JWT token issued when login was initiated
  * @param {number} expectedHttpCode Expected HTTP response code
- * @param {function} callback (err, res)
  *
  * @return {void}
  *
  * @private
  */
 
-const _loginMobileStatusPromised = async function (agent, token, expectedHttpCode) {
+const _loginMobilestatus = async function (agent, token, expectedHttpCode) {
     const path = '/api/auth/mobile/status';
 
     return agent
@@ -183,7 +142,7 @@ const _loginMobileStatusPromised = async function (agent, token, expectedHttpCod
         .expect('Content-Type', /json/)
 };
 
-const loginMobileStatusPromised = async function (agent, token) {
+const loginMobilestatus = async function (agent, token) {
     return new Promise(function (resolve, reject) {
         const maxRetries = 20;
         const retryInterval = 1000; // milliseconds;
@@ -195,7 +154,7 @@ const loginMobileStatusPromised = async function (agent, token) {
                 if (retries < maxRetries) {
                     retries++;
 
-                    const loginMobileStatusResponse = await _loginMobileStatusPromised(agent, token, 200);
+                    const loginMobileStatusResponse = await _loginMobilestatus(agent, token, 200);
                     if (loginMobileStatusResponse.body.status.code !== 20001) {
                         clearInterval(statusInterval);
                         return resolve(loginMobileStatusResponse);
@@ -221,14 +180,13 @@ const loginMobileStatusPromised = async function (agent, token) {
  *
  * @param {object} agent SuperAgent is in the interface so other tests preparing data could provide their agent. Useful when agent holds a state (for ex session).
  * @param {string} token JWT token that was issued when flow was initiated
- * @param {function} callback (err, res)
  *
  * @return {void}
  *
  * @private
  */
 
-const _loginSmartIdStatusPromised = function (agent, token) {
+const _loginSmartIdstatus = async function (agent, token) {
     const path = '/api/auth/smartid/status';
 
     return agent
@@ -239,7 +197,7 @@ const _loginSmartIdStatusPromised = function (agent, token) {
         .expect('Content-Type', /json/);
 };
 
-const loginSmartIdStatusPromised = function (agent, token, interval) {
+const loginSmartIdstatus = async function (agent, token, interval) {
     return new Promise(function (resolve, reject) {
         const maxRetries = 20;
         const retryInterval = interval || 1000; // milliseconds;
@@ -251,7 +209,7 @@ const loginSmartIdStatusPromised = function (agent, token, interval) {
                 if (retries < maxRetries) {
                     retries++;
 
-                    const loginSmartIdStatusResponse = await _loginSmartIdStatusPromised(agent, token, 200);
+                    const loginSmartIdStatusResponse = await _loginSmartIdstatus(agent, token, 200);
                     if (loginSmartIdStatusResponse.body.status.code !== 20001) {
                         clearInterval(statusInterval);
                         return resolve(loginSmartIdStatusResponse);
@@ -276,22 +234,11 @@ const loginSmartIdStatusPromised = function (agent, token, interval) {
  * Log out - call '/api/auth/logout' API endpoint
  *
  * @param {object} agent SuperAgent is in the interface so other tests preparing data could provide their agent. Useful when agent holds a state (for ex session).
- * @param {function} callback (err, res)
  *
  * @return {void}
  */
-const logout = function (agent, callback) {
-    const path = '/api/auth/logout';
 
-    agent
-        .post(path)
-        .set('Content-Type', 'application/json')
-        .expect(200)
-        .expect('Content-Type', /json/)
-        .end(callback);
-};
-
-const logoutPromised = function (agent) {
+const logout = async function (agent) {
     const path = '/api/auth/logout';
 
     return agent
@@ -308,45 +255,11 @@ const logoutPromised = function (agent) {
  * @param {string} email E-mail
  * @param {string} password Password
  * @param {string} language Users preferred language ISO 2 char language code
- * @param {number} expectedHttpCode Expected HTTP response code
- * @param {function} callback (err, res)
- *
- * @return {void}
- *
- * @private
- */
-const _signup = function (agent, email, password, language, expectedHttpCode, callback) {
-    const path = '/api/auth/signup';
-
-    agent
-        .post(path)
-        .set('Content-Type', 'application/json')
-        .send({
-            email: email,
-            password: password,
-            language: language
-        })
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
-};
-
-/**
- * Sign up - call '/api/auth/signup' API endpoint
- *
- * @param {object} agent SuperAgent is in the interface so other tests preparing data could provide their agent. Useful when agent holds a state (for ex session).
- * @param {string} email E-mail
- * @param {string} password Password
- * @param {string} language Users preferred language ISO 2 char language code
- * @param {function} callback (err, res)
  *
  * @return {void}
  */
-const signup = function (agent, email, password, language, callback) {
-    _signup(agent, email, password, language, 200, callback);
-};
 
-const _signupPromised = function (agent, email, password, language, expectedHttpCode) {
+const _signup = async function (agent, email, password, language, expectedHttpCode) {
     const path = '/api/auth/signup';
 
     return agent
@@ -361,8 +274,8 @@ const _signupPromised = function (agent, email, password, language, expectedHttp
         .expect('Content-Type', /json/);
 };
 
-const signupPromised = function (agent, email, password, language) {
-    return _signupPromised(agent, email, password, language, 200);
+const signup = async function (agent, email, password, language) {
+    return _signup(agent, email, password, language, 200);
 };
 
 /**
@@ -372,28 +285,13 @@ const signupPromised = function (agent, email, password, language) {
  * @param {string} currentPassword Current password
  * @param {string} newPassword New password
  * @param {number} expectedHttpCode Expected HTTP response code
- * @param {function} callback (err, res)
  *
  * @return {void}
  *
  * @private
  */
-const _passwordSet = function (agent, currentPassword, newPassword, expectedHttpCode, callback) {
-    const path = '/api/auth/password';
 
-    agent
-        .post(path)
-        .set('Content-Type', 'application/json')
-        .send({
-            currentPassword: currentPassword,
-            newPassword: newPassword
-        })
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
-};
-
-const _passwordSetPromised = async function (agent, currentPassword, newPassword, expectedHttpCode) {
+const _passwordSet = async function (agent, currentPassword, newPassword, expectedHttpCode) {
     const path = '/api/auth/password';
 
     return agent
@@ -412,16 +310,12 @@ const _passwordSetPromised = async function (agent, currentPassword, newPassword
  * @param {object} agent SuperAgent is in the interface so other tests preparing data could provide their agent. Useful when agent holds a state (for ex session).
  * @param {string} currentPassword Current password
  * @param {string} newPassword New password
- * @param {function} callback (err, res)
  *
  * @return {void}
  */
-const passwordSet = function (agent, currentPassword, newPassword, callback) {
-    _passwordSet(agent, currentPassword, newPassword, 200, callback);
-};
 
-const passwordSetPromised = async function (agent, currentPassword, newPassword) {
-    return _passwordSetPromised(agent, currentPassword, newPassword, 200);
+const passwordSet = async function (agent, currentPassword, newPassword) {
+    return _passwordSet(agent, currentPassword, newPassword, 200);
 };
 
 /**
@@ -430,25 +324,13 @@ const passwordSetPromised = async function (agent, currentPassword, newPassword)
  * @param {object} agent SuperAgent is in the interface so other tests preparing data could provide their agent. Useful when agent holds a state (for ex session).
  * @param {string} email E-mail of the user who's password is to be reset
  * @param {number} expectedHttpCode Expected HTTP response code
- * @param {function} callback (err, res)
  *
  * @return {void}
  *
  * @private
  */
-const _passwordResetSend = function (agent, email, expectedHttpCode, callback) {
-    const path = '/api/auth/password/reset/send';
 
-    agent
-        .post(path)
-        .set('Content-Type', 'application/json')
-        .send({email: email})
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
-};
-
-const _passwordResetSendPromised = async function (agent, email, expectedHttpCode) {
+const _passwordResetSend = async function (agent, email, expectedHttpCode) {
     const path = '/api/auth/password/reset/send';
 
     return agent
@@ -458,24 +340,12 @@ const _passwordResetSendPromised = async function (agent, email, expectedHttpCod
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
-/**
- * Send user password reset email with reset code - call '/api/auth/password/reset' API endpoint
- *
- * @param {object} agent SuperAgent is in the interface so other tests preparing data could provide their agent. Useful when agent holds a state (for ex session).
- * @param {string} email E-mail of the user who's password is to be reset
- * @param {function} callback (err, res)
- *
- * @return {void}
- */
-const passwordResetSend = function (agent, email, callback) {
-    _passwordResetSend(agent, email, 200, callback);
+
+const passwordResetSend = function (agent, email) {
+    return _passwordResetSend(agent, email, 200);
 };
 
-const passwordResetSendPromised = function (agent, email) {
-    return _passwordResetSendPromised(agent, email, 200);
-};
-
-const _passwordResetCompletePromised = async function (agent, email, password, passwordResetCode, expectedHttpCode) {
+const _passwordResetComplete = async function (agent, email, password, passwordResetCode, expectedHttpCode) {
     const path = '/api/auth/password/reset';
 
     return agent
@@ -490,8 +360,8 @@ const _passwordResetCompletePromised = async function (agent, email, password, p
         .expect('Content-Type', /json/);
 };
 
-const passwordResetCompletePromised = async function (agent, email, password, passwordResetCode) {
-    return _passwordResetCompletePromised(agent, email, password, passwordResetCode, 200);
+const passwordResetComplete = async function (agent, email, password, passwordResetCode) {
+    return _passwordResetComplete(agent, email, password, passwordResetCode, 200);
 };
 
 
@@ -500,18 +370,16 @@ const passwordResetCompletePromised = async function (agent, email, password, pa
  *
  * @param {object} agent SuperAgent is in the interface so other tests preparing data could provide their agent. Useful when agent holds a state (for ex session).
  * @param {string} emailVerificationCode Verification code e-mailed to the user.
- * @param {function} callback (err, res)
  *
  * @return {void}
  */
-const verify = function (agent, emailVerificationCode, callback) {
+const verify = async function (agent, emailVerificationCode) {
     const path = '/api/auth/verify/:code'.replace(':code', emailVerificationCode);
 
-    agent
+    return agent
         .get(path)
         .expect(302)
-        .expect('Location', /\/account\/login\?email=.*/)
-        .end(callback);
+        .expect('Location', /\/account\/login\?email=.*/);
 };
 
 /**
@@ -519,24 +387,13 @@ const verify = function (agent, emailVerificationCode, callback) {
  *
  * @param {object} agent SuperAgent is in the interface so other tests preparing data could provide their agent. Useful when agent holds a state (for ex session).
  * @param {number} expectedHttpCode Expected HTTP response code
- * @param {function} callback (err, res)
  *
  * @return {void}
  *
  * @private
  */
-const _status = function (agent, expectedHttpCode, callback) {
-    const path = '/api/auth/status';
 
-    agent
-        .get(path)
-        .set('Content-Type', 'application/json')
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/)
-        .end(callback);
-};
-
-const _statusPromised = async function (agent, expectedHttpCode) {
+const _status = async function (agent, expectedHttpCode) {
     const path = '/api/auth/status';
 
     return agent
@@ -550,19 +407,15 @@ const _statusPromised = async function (agent, expectedHttpCode) {
  * Check auth status - call '/api/auth/status'
  *
  * @param {object} agent SuperAgent is in the interface so other tests preparing data could provide their agent. Useful when agent holds a state (for ex session).
- * @param {function} callback (err, res)
  *
  * @return {void}
  */
-const status = function (agent, callback) {
-    _status(agent, 200, callback);
+
+const status = async function (agent) {
+    return _status(agent, 200);
 };
 
-const statusPromised = async function (agent) {
-    return _statusPromised(agent, 200);
-};
-
-const _openIdAuthorizePromised = async function (agent, responseType, clientId, redirectUri, nonce, scope, state, expectedHttpCode) {
+const _openIdAuthorize = async function (agent, responseType, clientId, redirectUri, nonce, scope, state, expectedHttpCode) {
     const path = '/api/auth/openid/authorize';
 
     return agent
@@ -578,24 +431,22 @@ const _openIdAuthorizePromised = async function (agent, responseType, clientId, 
         .expect(expectedHttpCode);
 };
 
-const openIdAuthorizePromised = async function (agent, responseType, clientId, redirectUri, scope, state, nonce) {
-    return _openIdAuthorizePromised(agent, responseType, clientId, redirectUri, nonce, scope, state, 302);
+const openIdAuthorize = async function (agent, responseType, clientId, redirectUri, scope, state, nonce) {
+    return _openIdAuthorize(agent, responseType, clientId, redirectUri, nonce, scope, state, 302);
 };
 
 //Export the above function call so that other tests could use it to prepare data.
 module.exports.login = login;
-module.exports.loginPromised = loginPromised;
+module.exports.login = login;
 module.exports.logout = logout;
-module.exports.logoutPromised = logoutPromised;
+module.exports.logout = logout;
 module.exports.signup = signup;
-module.exports.signupPromised = signupPromised;
+module.exports.signup = signup;
 module.exports.verify = verify;
-module.exports.passwordSet = passwordSet;
-module.exports.passwordResetSend = passwordResetSend;
 module.exports.status = status;
 module.exports._status = _status;
-module.exports.statusPromised = statusPromised;
-module.exports._statusPromised = _statusPromised;
+module.exports.status = status;
+module.exports._status = _status;
 
 const request = require('supertest');
 const app = require('../../app');
@@ -620,10 +471,9 @@ const db = models.sequelize;
 
 suite('Auth', function () {
 
-    suiteSetup(function (done) {
-        shared
-            .syncDb()
-            .finally(done);
+    suiteSetup(async function () {
+        return shared
+            .syncDb();
     });
 
     suite('Login', function () {
@@ -635,11 +485,11 @@ suite('Auth', function () {
             const password = 'Test123';
 
             suiteSetup(async function () {
-                await userLib.createUserPromised(agent, email, password, null);
+                await userLib.createUser(agent, email, password, null);
             });
 
             test('Success', async function () {
-                const res = await loginPromised(agent, email, password);
+                const res = await login(agent, email, password);
                 const user = res.body.data;
                 assert.equal(user.email, email);
                 assert.property(user, 'id');
@@ -653,7 +503,7 @@ suite('Auth', function () {
             });
 
             test('Fail - 40001 - account does not exist', async function () {
-                return agent
+                const res = await agent
                     .post('/api/auth/login')
                     .set('Content-Type', 'application/json')
                     .send({
@@ -661,12 +511,10 @@ suite('Auth', function () {
                         password: password
                     })
                     .expect(400)
-                    .expect('Content-Type', /json/)
-                    .then(function (res) {
-                        const status = res.body.status;
-                        assert.equal(status.code, 40001);
-                        assert.equal(status.message, 'The account does not exists.');
-                    });
+                    .expect('Content-Type', /json/);
+                const status = res.body.status;
+                assert.equal(status.code, 40001);
+                assert.equal(status.message, 'The account does not exists.');
             });
 
             test('Fail - 40002 - account has not been verified', async function () {
@@ -676,8 +524,8 @@ suite('Auth', function () {
                 const password = 'Test123';
 
 
-                await signupPromised(agent, email, password, null);
-                const res = await _loginPromised(agent, email, password, 400);
+                await signup(agent, email, password, null);
+                const res = await _login(agent, email, password, 400);
                 const status = res.body.status;
 
                 assert.equal(status.code, 40002);
@@ -685,7 +533,7 @@ suite('Auth', function () {
             });
 
             test('Fail - 40003 - wrong password', async function () {
-                return agent
+                const res = await agent
                     .post('/api/auth/login')
                     .set('Content-Type', 'application/json')
                     .send({
@@ -693,13 +541,12 @@ suite('Auth', function () {
                         password: 'thisinvalidpassword'
                     })
                     .expect(400)
-                    .expect('Content-Type', /json/)
-                    .then(function (res) {
-                        const status = res.body.status;
+                    .expect('Content-Type', /json/);
 
-                        assert.equal(status.code, 40003);
-                        assert.equal(res.body.errors.password, 'Invalid password');
-                    });
+                const status = res.body.status;
+
+                assert.equal(status.code, 40003);
+                assert.equal(res.body.errors.password, 'Invalid password');
             });
         });
 
@@ -720,11 +567,11 @@ suite('Auth', function () {
 
                 const agent = request.agent(app);
                 const cert = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign.pem', {encoding: 'utf8'}).replace(/\n/g, ''); //eslint-disable-line no-sync
-                await _loginIdPromised(agent, null, cert, 200);
+                await _loginId(agent, null, cert, 200);
             });
 
             test('Fail - no token or client certificate in header', async function () {
-                await _loginIdPromised(request.agent(app), null, null, 400);
+                await _loginId(request.agent(app), null, null, 400);
             });
         });
 
@@ -732,7 +579,7 @@ suite('Auth', function () {
 
             suite('Init', function () {
 
-                suiteSetup(async function () {
+                setup(async function () {
                     return UserConnection
                         .destroy({
                             where: {
@@ -748,7 +595,7 @@ suite('Auth', function () {
 
                     const phoneNumber = '+37200000766';
                     const pid = '60001019906';
-                    const response = (await loginMobileInitPromised(request.agent(app), pid, phoneNumber)).body;
+                    const response = (await loginMobileInit(request.agent(app), pid, phoneNumber)).body;
 
                     assert.equal(response.status.code, 20001);
                     assert.match(response.data.challengeID, /[0-9]{4}/);
@@ -756,7 +603,7 @@ suite('Auth', function () {
                     const loginMobileFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
                     assert.property(loginMobileFlowData, 'sessionHash');
 
-                    const responseData = (await loginMobileStatusPromised(request.agent(app), response.data.token)).body.data;
+                    const responseData = (await loginMobilestatus(request.agent(app), response.data.token)).body.data;
 
                     assert.property(responseData, 'id');
                     delete responseData.id;
@@ -776,7 +623,7 @@ suite('Auth', function () {
                     const phoneNumber = '+372519';
                     const pid = '51001091072';
 
-                    const response = (await _loginMobileInitPromised(request.agent(app), pid, phoneNumber, 400)).body;
+                    const response = (await _loginMobileInit(request.agent(app), pid, phoneNumber, 400)).body;
 
                     assert.equal(response.status.code, 40000);
 
@@ -793,7 +640,7 @@ suite('Auth', function () {
                     const phoneNumber = '+37260000007';
                     const pid = '1072';
 
-                    const response = (await _loginMobileInitPromised(request.agent(app), pid, phoneNumber, 400)).body;
+                    const response = (await _loginMobileInit(request.agent(app), pid, phoneNumber, 400)).body;
                     const expectedResponse = {
                         status: {
                             code: 40000,
@@ -808,8 +655,8 @@ suite('Auth', function () {
                     const phoneNumber = '+37200000266';
                     const pid = '60001019939';
 
-                    const response = (await loginMobileInitPromised(request.agent(app), pid, phoneNumber)).body.data;
-                    const responseData = (await _loginMobileStatusPromised(request.agent(app), response.token, 400)).body;
+                    const response = (await loginMobileInit(request.agent(app), pid, phoneNumber)).body.data;
+                    const responseData = (await _loginMobilestatus(request.agent(app), response.token, 400)).body;
                     const expectedResponse = {
                         status: {
                             code: 40013,
@@ -823,8 +670,8 @@ suite('Auth', function () {
                     const phoneNumber = '+37060000266';
                     const pid = '50001018832';
 
-                    const response = (await loginMobileInitPromised(request.agent(app), pid, phoneNumber)).body.data;
-                    const responseData = (await _loginMobileStatusPromised(request.agent(app), response.token, 400)).body;
+                    const response = (await loginMobileInit(request.agent(app), pid, phoneNumber)).body.data;
+                    const responseData = (await _loginMobilestatus(request.agent(app), response.token, 400)).body;
                     const expectedResponse = {
                         status: {
                             code: 40013,
@@ -838,8 +685,8 @@ suite('Auth', function () {
                     const phoneNumber = '+37200001';
                     const pid = '38002240211';
 
-                    const response = (await loginMobileInitPromised(request.agent(app), pid, phoneNumber)).body.data;
-                    const responseData = (await _loginMobileStatusPromised(request.agent(app), response.token, 400)).body;
+                    const response = (await loginMobileInit(request.agent(app), pid, phoneNumber)).body.data;
+                    const responseData = (await _loginMobilestatus(request.agent(app), response.token, 400)).body;
 
                     const expectedResponse = {
                         status: {
@@ -854,8 +701,8 @@ suite('Auth', function () {
                     const phoneNumber = '+37060000001';
                     const pid = '51001091006';
 
-                    const response = (await loginMobileInitPromised(request.agent(app), pid, phoneNumber)).body.data;
-                    const responseData = (await _loginMobileStatusPromised(request.agent(app), response.token, 400)).body;
+                    const response = (await loginMobileInit(request.agent(app), pid, phoneNumber)).body.data;
+                    const responseData = (await _loginMobilestatus(request.agent(app), response.token, 400)).body;
                     const expectedResponse = {
                         status: {
                             code: 40013,
@@ -881,7 +728,7 @@ suite('Auth', function () {
                 const pid = '60001019906';
 
                 suite('New User', function () {
-                    suiteSetup(async function () {
+                    setup(async function () {
                         return UserConnection
                             .destroy({
                                 where: {
@@ -897,10 +744,10 @@ suite('Auth', function () {
 
                         const agent = request.agent(app);
 
-                        const response = (await loginMobileInitPromised(agent, pid, phoneNumber)).body.data;
-                        const userInfoFromMobiilIdStatusResponse = (await loginMobileStatusPromised(agent, response.token)).body;
+                        const response = (await loginMobileInit(agent, pid, phoneNumber)).body.data;
+                        const userInfoFromMobiilIdStatusResponse = (await loginMobilestatus(agent, response.token)).body;
                         assert.equal(userInfoFromMobiilIdStatusResponse.status.code, 20003);
-                        const userFromStatus = (await statusPromised(agent)).body.data;
+                        const userFromStatus = (await status(agent)).body.data;
                         // Makes sure login succeeded AND consistency between /auth/status and /auth/mobile/status endpoints
                         assert.deepEqual(userFromStatus, userInfoFromMobiilIdStatusResponse.data);
                         assert.equal(userInfoFromMobiilIdStatusResponse.data.name, 'Mary Änn O’Connež-Šuslik Testnumber'); // Special check for encoding issues
@@ -911,8 +758,8 @@ suite('Auth', function () {
                 suite('Existing User', function () {
                     const agent2 = request.agent(app);
 
-                    suiteSetup(async function () {
-                        const user = await userLib.createUserPromised(agent2, null, null, null);
+                    setup(async function () {
+                        const user = await userLib.createUser(agent2, null, null, null);
                         return UserConnection
                             .findOrCreate({
                                 where: {
@@ -941,10 +788,10 @@ suite('Auth', function () {
                     test('Success - 20002 - existing User', async function () {
                         this.timeout(35000); //eslint-disable-line no-invalid-this
 
-                        const response = (await loginMobileInitPromised(agent2, pid, phoneNumber)).body.data;
-                        const userInfoFromMobiilIdStatusResponse = (await loginMobileStatusPromised(agent2, response.token)).body;
+                        const response = (await loginMobileInit(agent2, pid, phoneNumber)).body.data;
+                        const userInfoFromMobiilIdStatusResponse = (await loginMobilestatus(agent2, response.token)).body;
                         assert.equal(userInfoFromMobiilIdStatusResponse.status.code, 20002);
-                        const userFromStatus = (await statusPromised(agent2)).body.data;
+                        const userFromStatus = (await status(agent2)).body.data;
 
                         assert.deepEqual(userFromStatus, userInfoFromMobiilIdStatusResponse.data);
                     });
@@ -971,7 +818,7 @@ suite('Auth', function () {
 
                 test('Success - 20001 - Estonian PID', async function () {
                     this.timeout(5000); //eslint-disable-line no-invalid-this
-                    const response = (await loginSmartIdInitPromised(request.agent(app), pid)).body;
+                    const response = (await loginSmartIdInit(request.agent(app), pid)).body;
                     assert.equal(response.status.code, 20001);
                     assert.match(response.data.challengeID, /[0-9]{4}/);
 
@@ -990,7 +837,7 @@ suite('Auth', function () {
                 test('Fail - 40400 - Invalid PID', async function () {
                     pid = '1010101';
 
-                    const response = (await _loginSmartIdInitPromised(request.agent(app), pid, 404)).body;
+                    const response = (await _loginSmartIdInit(request.agent(app), pid, 404)).body;
                     const expectedResponse = {
                         status: {
                             code: 40400,
@@ -1018,26 +865,26 @@ suite('Auth', function () {
                     });
 
                     test('Success - 20003 - created', async function () {
-                        this.timeout(35000); //eslint-disable-line no-invalid-this
+                        this.timeout(40000); //eslint-disable-line no-invalid-this
 
                         const agent = request.agent(app);
 
-                        const initResponse = (await loginSmartIdInitPromised(agent, pid)).body.data;
-                        const userInfoFromSmartIdStatusResponse = (await loginSmartIdStatusPromised(agent, initResponse.token)).body;
+                        const initResponse = (await loginSmartIdInit(agent, pid)).body.data;
+                        const userInfoFromSmartIdStatusResponse = (await loginSmartIdstatus(agent, initResponse.token)).body;
                         assert.equal(userInfoFromSmartIdStatusResponse.status.code, 20003);
-                        const userFromStatus = (await statusPromised(agent)).body.data;
+                        const userFromStatus = (await status(agent)).body.data;
                         assert.deepEqual(userFromStatus, userInfoFromSmartIdStatusResponse.data);
                         assert.equal('Qualified Ok1 Testnumber', userInfoFromSmartIdStatusResponse.data.name); // Special check for encoding issues
                     });
 
                     test('Fail - 40010 - User refused', async function () {
-                        this.timeout(35000); //eslint-disable-line no-invalid-this
+                        this.timeout(40000); //eslint-disable-line no-invalid-this
 
                         pid = '30403039939';
                         const agent = request.agent(app);
 
-                        const initResponse = (await loginSmartIdInitPromised(agent, pid)).body.data;
-                        const smartIdStatusResponse = (await loginSmartIdStatusPromised(agent, initResponse.token, 1000)).body;
+                        const initResponse = (await loginSmartIdInit(agent, pid)).body.data;
+                        const smartIdStatusResponse = (await loginSmartIdstatus(agent, initResponse.token, 2000)).body;
                         const expectedResponse = {
                             status: {
                                 code: 40010,
@@ -1053,8 +900,8 @@ suite('Auth', function () {
                         pid = '30403039983'
                         const agent = request.agent(app);
 
-                        const initResponse = (await loginSmartIdInitPromised(agent, pid)).body.data;
-                        const smartIdStatusResponse = (await loginSmartIdStatusPromised(agent, initResponse.token, 5000)).body;
+                        const initResponse = (await loginSmartIdInit(agent, pid)).body.data;
+                        const smartIdStatusResponse = (await loginSmartIdstatus(agent, initResponse.token, 5000)).body;
                         const expectedResponse = {
                             status: {
                                 code: 40011,
@@ -1072,9 +919,9 @@ suite('Auth', function () {
                     test('Success - 20002 - existing User', async function () {
                         this.timeout(30000); //eslint-disable-line no-invalid-this
                         pid = '30303039914';
-                        const user = await userLib.createUserPromised(agent2, null, null, null);
+                        const user = await userLib.createUser(agent2, null, null, null);
 
-                        return UserConnection
+                        await UserConnection
                             .findOrCreate({
                                 where: {
                                     connectionId: UserConnection.CONNECTION_IDS.smartid,
@@ -1085,14 +932,12 @@ suite('Auth', function () {
                                     connectionId: UserConnection.CONNECTION_IDS.smartid,
                                     connectionUserId: pid
                                 }
-                            })
-                            .then(async function () {
-                                const initResponse = (await loginSmartIdInitPromised(agent2, pid)).body.data;
-                                const smartIdStatusResponse = (await loginSmartIdStatusPromised(agent2, initResponse.token, 5000)).body;
-                                assert.equal(smartIdStatusResponse.status.code, 20002);
-                                const userFromStatus = (await statusPromised(agent2)).body.data;
-                                assert.deepEqual(userFromStatus, smartIdStatusResponse.data);
                             });
+                        const initResponse = (await loginSmartIdInit(agent2, pid)).body.data;
+                        const smartIdStatusResponse = (await loginSmartIdstatus(agent2, initResponse.token, 5000)).body;
+                        assert.equal(smartIdStatusResponse.status.code, 20002);
+                        const userFromStatus = (await status(agent2)).body.data;
+                        assert.deepEqual(userFromStatus, smartIdStatusResponse.data);
                     });
 
                 });
@@ -1108,15 +953,15 @@ suite('Auth', function () {
             const email = 'test_' + new Date().getTime() + '@test.ee';
             const password = 'Test123';
 
-            const user = await userLib.createUserAndLoginPromised(agent, email, password, null);
-            const userFromStatus = (await statusPromised(agent)).body.data;
+            const user = await userLib.createUserAndlogin(agent, email, password, null);
+            const userFromStatus = (await status(agent)).body.data;
             let expectedUser = user.toJSON();
             expectedUser.termsVersion = user.termsVersion;
             expectedUser.termsAcceptedAt = user.termsAcceptedAt;
 
             assert.deepEqual(expectedUser, userFromStatus);
-            await logoutPromised(agent);
-            const statusResponse = (await _statusPromised(agent, 401)).body;
+            await logout(agent);
+            const statusResponse = (await _status(agent, 401)).body;
             const expectedBody = {
                 status: {
                     code: 40100,
@@ -1135,7 +980,7 @@ suite('Auth', function () {
             const email = 'test_' + new Date().getTime() + '@test.ee';
             const password = 'Test123';
 
-            const user = (await signupPromised(agent, email, password, null)).body.data;
+            const user = (await signup(agent, email, password, null)).body.data;
             assert.equal(user.email, email);
             assert.property(user, 'id');
             assert.notProperty(user, 'password');
@@ -1155,18 +1000,15 @@ suite('Auth', function () {
             const password = 'Test123';
             const language = 'et';
 
-            return User
-                .create({
-                    email: email,
-                    password: null,
-                    name: email,
-                    source: User.SOURCES.citizenos
-                })
-                .then(async function (user) {
-                    const userSignedup = (await signupPromised(agent, user.email, password, language)).body.data;
-                    assert.equal(userSignedup.email, email);
-                    assert.equal(userSignedup.language, user.language);
-                });
+            const user = await User.create({
+                email: email,
+                password: null,
+                name: email,
+                source: User.SOURCES.citizenos
+            });
+            const userSignedup = (await signup(agent, user.email, password, language)).body.data;
+            assert.equal(userSignedup.email, email);
+            assert.equal(userSignedup.language, user.language);
 
         });
 
@@ -1174,7 +1016,7 @@ suite('Auth', function () {
             const email = null;
             const password = 'Test123';
 
-            const signupResult = (await _signupPromised(agent, email, password, null, 400)).body;
+            const signupResult = (await _signup(agent, email, password, null, 400)).body;
             const expected = {
                 status: {
                     code: 40000
@@ -1191,7 +1033,7 @@ suite('Auth', function () {
             const email = 'this is an invalid email';
             const password = 'Test123';
 
-            const signupResult = (await _signupPromised(agent, email, password, null, 400)).body;
+            const signupResult = (await _signup(agent, email, password, null, 400)).body;
             const expected = {
                 status: {
                     code: 40000
@@ -1208,7 +1050,7 @@ suite('Auth', function () {
             const email = 'test_' + new Date().getTime() + '@test.ee';
             const password = null;
 
-            const signupResult = (await _signupPromised(agent, email, password, null, 400)).body;
+            const signupResult = (await _signup(agent, email, password, null, 400)).body;
             const expected = {
                 status: {
                     code: 40000
@@ -1225,7 +1067,7 @@ suite('Auth', function () {
             const email = 'test_' + new Date().getTime() + '@test.ee';
             const password = 'nonumbersoruppercase';
 
-            const signupResult = (await _signupPromised(agent, email, password, null, 400)).body;
+            const signupResult = (await _signup(agent, email, password, null, 400)).body;
             const expected = {
                 status: {
                     code: 40000
@@ -1241,7 +1083,7 @@ suite('Auth', function () {
             const email = 'notvalidatall';
             const password = 'nonumbersoruppercase';
 
-            const signupResult = (await _signupPromised(agent, email, password, null, 400)).body;
+            const signupResult = (await _signup(agent, email, password, null, 400)).body;
             const expected = {
                 status: {
                     code: 40000
@@ -1258,8 +1100,8 @@ suite('Auth', function () {
             const email = 'test_emailinuse_' + new Date().getTime() + '@test.ee';
             const password = 'Test123';
 
-            await signupPromised(agent, email, password, null);
-            const signupResult = (await _signupPromised(agent, email, password, null, 400)).body;
+            await signup(agent, email, password, null);
+            const signupResult = (await _signup(agent, email, password, null, 400)).body;
             const expected = {
                 status: {
                     code: 40001
@@ -1298,12 +1140,12 @@ suite('Auth', function () {
             const newPassword = 'newPassword123';
 
             suiteSetup(async function () {
-                return userLib.createUserAndLoginPromised(agent, email, password, null);
+                return userLib.createUserAndlogin(agent, email, password, null);
             });
 
             test('Success', async function () {
-                await passwordSetPromised(agent, password, newPassword);
-                const loginResult = (await loginPromised(request.agent(app), email, newPassword)).body;
+                await passwordSet(agent, password, newPassword);
+                const loginResult = (await login(request.agent(app), email, newPassword)).body;
                 assert.equal(loginResult.status.code, 20000);
                 assert.equal(loginResult.data.email, email);
             });
@@ -1311,7 +1153,7 @@ suite('Auth', function () {
             test('Fail - invalid new password which does not contain special characters needed', async function () {
                 const currentPassword = newPassword;
                 const invalidNewPassword = 'nospecialchars';
-                const resultBody = (await _passwordSetPromised(agent, currentPassword, invalidNewPassword, 400)).body;
+                const resultBody = (await _passwordSet(agent, currentPassword, invalidNewPassword, 400)).body;
 
                 const expected = {
                     status: {
@@ -1328,13 +1170,13 @@ suite('Auth', function () {
             test('Fail - invalid old password', async function () {
                 const invalidCurrentPassword = 'thiscannotbevalid';
                 const validNewPassword = 'Test123ASD';
-                const resultBody = (await _passwordSetPromised(agent, invalidCurrentPassword, validNewPassword, 400)).body;
+                const resultBody = (await _passwordSet(agent, invalidCurrentPassword, validNewPassword, 400)).body;
                 assert.equal(resultBody.status.message, 'Invalid email or new password.');
             });
 
             test('Fail - Unauthorized', async function () {
                 const agent = request.agent(app);
-                await _passwordSetPromised(agent, 'oldPassSomething', 'newPassSomething', 401);
+                await _passwordSet(agent, 'oldPassSomething', 'newPassSomething', 401);
             });
 
         });
@@ -1346,28 +1188,25 @@ suite('Auth', function () {
             const language = 'et';
 
             suiteSetup(async function () {
-                return userLib.createUserPromised(agent, email, password, language);
+                return userLib.createUser(agent, email, password, language);
             });
 
             suite('Send', function () {
                 test('Success', async function () {
-                    await passwordResetSendPromised(agent, email);
+                    await passwordResetSend(agent, email);
 
-                    return User
-                        .findOne({
-                            where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
-                        })
-                        .then(function (user) {
-                            const passwordResetCode = user.passwordResetCode;
+                    const user = await User.findOne({
+                        where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
+                    });
+                    const passwordResetCode = user.passwordResetCode;
 
-                            assert.property(user, 'passwordResetCode');
-                            assert.isNotNull(passwordResetCode);
-                            assert.lengthOf(passwordResetCode, 36);
-                        });
+                    assert.property(user, 'passwordResetCode');
+                    assert.isNotNull(passwordResetCode);
+                    assert.lengthOf(passwordResetCode, 36);
                 });
 
                 test('Fail - 40000 - missing email', async function () {
-                    const resetBody = (await _passwordResetSendPromised(agent, null, 400)).body;
+                    const resetBody = (await _passwordResetSend(agent, null, 400)).body;
                     const expectedBody = {
                         status: {
                             code: 40000
@@ -1381,7 +1220,7 @@ suite('Auth', function () {
                 });
 
                 test('Fail - 40001 - non existent email', async function () {
-                    const resetBody = (await _passwordResetSendPromised(agent, 'test_this_user_we_dont_have@test.com', 400)).body;
+                    const resetBody = (await _passwordResetSend(agent, 'test_this_user_we_dont_have@test.com', 400)).body;
                     const expectedBody = {
                         status: {
                             code: 40002
@@ -1400,29 +1239,26 @@ suite('Auth', function () {
                 let passwordResetCode;
 
                 suiteSetup(async function () {
-                    await passwordResetSendPromised(agent, email);
-                    return User
-                        .findOne({
-                            where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
-                        })
-                        .then(function (user) {
-                            passwordResetCode = user.passwordResetCode;
-                        });
+                    await passwordResetSend(agent, email);
+                    const user = await User.findOne({
+                        where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
+                    });
+                    passwordResetCode = user.passwordResetCode;
                 });
 
                 test('Fail - invalid reset code', async function () {
-                    const resBody = (await _passwordResetCompletePromised(agent, email, password, uuid.v4(), 400)).body
+                    const resBody = (await _passwordResetComplete(agent, email, password, uuid.v4(), 400)).body
                     assert.equal(resBody.status.message, 'Invalid email, password or password reset code.');
                 });
 
                 test('Fail - missing reset code', async function () {
-                    const resBody = (await _passwordResetCompletePromised(agent, email, password, null, 400)).body
+                    const resBody = (await _passwordResetComplete(agent, email, password, null, 400)).body
                     assert.equal(resBody.status.message, 'Invalid email, password or password reset code.');
                 });
 
 
                 test('Fail - invalid password', async function () {
-                    const resBody = (await _passwordResetCompletePromised(agent, email, 'thispassisnotinvalidformat', passwordResetCode, 400)).body
+                    const resBody = (await _passwordResetComplete(agent, email, 'thispassisnotinvalidformat', passwordResetCode, 400)).body
                     const expected = {
                         status: {
                             code: 40000
@@ -1436,7 +1272,7 @@ suite('Auth', function () {
                 });
 
                 test('Fail - invalid email', async function () {
-                    const resBody = (await _passwordResetCompletePromised(agent, 'test_invalidemail@test.com', password, passwordResetCode, 400)).body
+                    const resBody = (await _passwordResetComplete(agent, 'test_invalidemail@test.com', password, passwordResetCode, 400)).body
                     assert.equal(resBody.status.message, 'Invalid email, password or password reset code.');
                 });
 
@@ -1445,24 +1281,20 @@ suite('Auth', function () {
                     const email = 'test_' + new Date().getTime() + '@test.ee';
                     const password = 'testPassword123';
 
-                    await signupPromised(agent, email, password, null);
-                    const resBody = (await _passwordResetCompletePromised(agent, email, password, null, 400)).body
+                    await signup(agent, email, password, null);
+                    const resBody = (await _passwordResetComplete(agent, email, password, null, 400)).body
 
                     assert.equal(resBody.status.message, 'Invalid email, password or password reset code.');
                 });
 
                 test('Success', async function () {
-                    await passwordResetCompletePromised(agent, email, password, passwordResetCode);
-                    const loginRes = await loginPromised(agent, email, password);
+                    await passwordResetComplete(agent, email, password, passwordResetCode);
+                    const loginRes = await login(agent, email, password);
                     assert.equal(email, loginRes.body.data.email);
-                    return User
-                        .findOne({
-                            where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
-                        })
-                        .then(function (user) {
-                            // A new password reset code was to be generated - https://github.com/citizenos/citizenos-api/issues/68
-                            assert.notEqual(user.passwordResetCode, passwordResetCode);
-                        });
+                    const user = await User.findOne({
+                        where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
+                    });
+                    assert.notEqual(user.passwordResetCode, passwordResetCode);
                 });
 
             });
@@ -1477,17 +1309,17 @@ suite('Auth', function () {
         const password = 'testPassword123';
 
         suiteSetup(async function () {
-            return userLib.createUserPromised(agent, email, password, null);
+            return userLib.createUser(agent, email, password, null);
         });
 
         test('Success', async function () {
-            await loginPromised(agent, email, password);
-            const user = (await statusPromised(agent)).body.data;
+            await login(agent, email, password);
+            const user = (await status(agent)).body.data;
             assert.equal(user.email, email);
         });
 
         test('Fail - Unauthorized', async function () {
-            await _statusPromised(request.agent(app), 401);
+            await _status(request.agent(app), 401);
         });
 
         test('Fail - Unauthorized - JWT token expired', async function () {
@@ -1502,21 +1334,20 @@ suite('Auth', function () {
                 algorithm: config.session.algorithm
             });
 
-            return agent
+            const res = await agent
                 .get(path)
                 .set('Content-Type', 'application/json')
                 .set('Authorization', 'Bearer ' + token)
                 .expect(401)
-                .expect('Content-Type', /json/)
-                .then(function (res) {
-                    const expectedResponse = {
-                        status: {
-                            code: 40100,
-                            message: 'JWT token has expired'
-                        }
-                    };
-                    assert.deepEqual(res.body, expectedResponse);
-                });
+                .expect('Content-Type', /json/);
+
+            const expectedResponse = {
+                status: {
+                    code: 40100,
+                    message: 'JWT token has expired'
+                }
+            };
+            assert.deepEqual(res.body, expectedResponse);
         });
 
     });
@@ -1546,29 +1377,27 @@ suite('Auth', function () {
 
             test('Success - 302 - User is logged in to CitizenOS AND has agreed before -> redirect_uri', async function () {
                 const agent = request.agent(app);
-                const user = await userLib.createUserAndLoginPromised(agent, null, null, null);
-                return UserConsent
-                    .create({
-                        userId: user.id,
-                        partnerId: TEST_PARTNER.id
-                    })
-                    .then(async function () {
-                        const state = '123213asdasas1231';
-                        const authRes = await openIdAuthorizePromised(agent, TEST_RESPONSE_TYPE, TEST_PARTNER.id, TEST_CALLBACK_URI, 'openid', state, 'dasd12312sdasAA');
+                const user = await userLib.createUserAndlogin(agent, null, null, null);
+                await UserConsent.create({
+                    userId: user.id,
+                    partnerId: TEST_PARTNER.id
+                });
 
-                        const uriParts = authRes.headers.location.split('#');
-                        assert.equal(uriParts[0], TEST_CALLBACK_URI);
+                const state = '123213asdasas1231';
+                const authRes = await openIdAuthorize(agent, TEST_RESPONSE_TYPE, TEST_PARTNER.id, TEST_CALLBACK_URI, 'openid', state, 'dasd12312sdasAA');
 
-                        const hashParams = uriParts[1];
-                        const matchExp = new RegExp('^access_token=[^&]*&id_token=[^&]*&state=' + state + '$');
-                        assert.match(hashParams, matchExp);
-                    });
+                const uriParts = authRes.headers.location.split('#');
+                assert.equal(uriParts[0], TEST_CALLBACK_URI);
+
+                const hashParams = uriParts[1];
+                const matchExp = new RegExp('^access_token=[^&]*&id_token=[^&]*&state=' + state + '$');
+                assert.match(hashParams, matchExp);
             });
 
             test('Success - 302 - User is logged in to CitizenOS AND has NOT agreed before -> /consent -> redirect_uri', async function () {
                 const agent = request.agent(app);
-                await userLib.createUserAndLoginPromised(agent, null, null, null);
-                const authRes = await openIdAuthorizePromised(agent, TEST_RESPONSE_TYPE, TEST_PARTNER.id, TEST_CALLBACK_URI, 'openid', '123213asdasas1231', 'dasd12312sdasAA');
+                await userLib.createUserAndlogin(agent, null, null, null);
+                const authRes = await openIdAuthorize(agent, TEST_RESPONSE_TYPE, TEST_PARTNER.id, TEST_CALLBACK_URI, 'openid', '123213asdasas1231', 'dasd12312sdasAA');
                 const expectedUrl = urlLib.getFe('/:language/partners/:partnerId/consent', {
                     partnerId: TEST_PARTNER.id,
                     language: 'en'
@@ -1587,51 +1416,50 @@ suite('Auth', function () {
             });
 
             test('Fail - 400 - Invalid or missing "client_id" parameter value', async function () {
-                const authRes = await _openIdAuthorizePromised(agent, null, null, null, null, null, null, 400);
+                const authRes = await _openIdAuthorize(agent, null, null, null, null, null, null, 400);
                 assert.equal(authRes.text, 'Invalid or missing "client_id" parameter value.');
             });
 
             test('Fail - 400 - Invalid partner configuration. Please contact system administrator.', async function () {
-                const authRes = await _openIdAuthorizePromised(agent, null, uuid.v4(), null, null, null, null, 400);
+                const authRes = await _openIdAuthorize(agent, null, uuid.v4(), null, null, null, null, 400);
                 assert.equal(authRes.text, 'Invalid partner configuration. Please contact system administrator.');
             });
 
             test('Fail - 400 - Invalid referer. Referer header does not match expected partner URI scheme.', async function () {
-                return agent
+                const res = await agent
                     .get('/api/auth/openid/authorize')
                     .set('Referer', 'https://invalidtest.ee/invalid/referer')
                     .query({
                         client_id: TEST_PARTNER.id
                     })
-                    .expect(400)
-                    .then(function (res) {
-                        assert.equal(res.text, 'Invalid referer. Referer header does not match expected partner URI scheme.');
-                    });
+                    .expect(400);
+
+                assert.equal(res.text, 'Invalid referer. Referer header does not match expected partner URI scheme.');
             });
 
             test('Fail - 400 - Invalid or missing "redirect_uri" parameter value.', async function () {
-                const authRes = await _openIdAuthorizePromised(agent, null, TEST_PARTNER.id, 'https://invalidtest.ee/callback', null, null, null, 400);
+                const authRes = await _openIdAuthorize(agent, null, TEST_PARTNER.id, 'https://invalidtest.ee/callback', null, null, null, 400);
                 assert.equal(authRes.text, 'Invalid or missing "redirect_uri" parameter value.');
             });
 
             test('Fail - 400 - Invalid "redirect_uri". Cannot contain fragment component "#".', async function () {
-                const authRes = await _openIdAuthorizePromised(agent, null, TEST_PARTNER.id, TEST_CALLBACK_URI + '#', null, null, null, 400);
+                const authRes = await _openIdAuthorize(agent, null, TEST_PARTNER.id, TEST_CALLBACK_URI + '#', null, null, null, 400);
                 assert.equal(authRes.text, 'Invalid "redirect_uri". Cannot contain fragment component "#".');
             });
 
             test('Fail - 302 - Unsupported "response_type" parameter value. Only "token id_token" is supported.', async function () {
-                const authRes = await openIdAuthorizePromised(agent, 'code', TEST_PARTNER.id, TEST_CALLBACK_URI, null, null, null);
+                const authRes = await openIdAuthorize(agent, 'code', TEST_PARTNER.id, TEST_CALLBACK_URI, null, null, null);
                 assert.equal(authRes.headers.location, TEST_CALLBACK_URI + '#error=unsupported_response_type&error_description=Unsupported%20%22response_type%22%20parameter%20value.%20Only%20%22token%20id_token%22%20is%20supported.');
             });
 
             test('Fail - 302 - Unsupported "scope" parameter value. Only "openid" is supported.', async function () {
-                const authRes = await openIdAuthorizePromised(agent, TEST_RESPONSE_TYPE, TEST_PARTNER.id, TEST_CALLBACK_URI, 'invalid', null, null);
+                const authRes = await openIdAuthorize(agent, TEST_RESPONSE_TYPE, TEST_PARTNER.id, TEST_CALLBACK_URI, 'invalid', null, null);
                 assert.equal(authRes.headers.location, TEST_CALLBACK_URI + '#error=invalid_scope&error_description=Unsupported%20%22scope%22%20parameter%20value.%20Only%20%22openid%22%20is%20supported.');
 
             });
 
             test('Fail - 302 - Invalid or missing "nonce" parameter value. "nonce" must be a random string with at least 14 characters of length.', async function () {
-                const authRes = await openIdAuthorizePromised(agent, TEST_RESPONSE_TYPE, TEST_PARTNER.id, TEST_CALLBACK_URI, 'openid', null, null);
+                const authRes = await openIdAuthorize(agent, TEST_RESPONSE_TYPE, TEST_PARTNER.id, TEST_CALLBACK_URI, 'openid', null, null);
                 assert.equal(authRes.headers.location, TEST_CALLBACK_URI + '#error=invalid_request&error_description=Invalid%20or%20missing%20%22nonce%22%20parameter%20value.%20%22nonce%22%20must%20be%20a%20random%20string%20with%20at%20least%2014%20characters%20of%20length.&error_uri=http%3A%2F%2Fopenid.net%2Fspecs%2Fopenid-connect-implicit-1_0.html%23RequestParameters');
             });
 

@@ -54,7 +54,7 @@ suite('Users', function () {
             let user;
 
             suiteSetup(async function () {
-                user = await userLib.createUserAndLoginPromised(agent, null, null, null);
+                user = await userLib.createUserAndLogin(agent, null, null, null);
             });
 
             test('Success', async function () {

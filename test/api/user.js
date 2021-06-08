@@ -30,7 +30,7 @@ const _userUpdate = async function (agent, userId, name, email, password, langua
         .expect('Content-Type', /json/);
 };
 
-const _userDeletePromised = async function (agent, userId, expectedHttpCode) {
+const _userDelete = async function (agent, userId, expectedHttpCode) {
     const path = '/api/users/:userId'
         .replace('userId', userId);
 
@@ -41,8 +41,8 @@ const _userDeletePromised = async function (agent, userId, expectedHttpCode) {
         .expect('Content-Type', /json/);
 };
 
-const userDeletePromised = async function (agent, userId) {
-    return _userDeletePromised(agent, userId, 200);
+const userDelete = async function (agent, userId) {
+    return _userDelete(agent, userId, 200);
 };
 
 const userUpdate = async function (agent, userId, name, email, password, language) {
@@ -110,7 +110,7 @@ const userConnectionsList = async function (agent, userId) {
     return _userConnectionsList(agent, userId, 200);
 };
 
-exports.userDeletePromised = userDeletePromised;
+exports.userDelete = userDelete;
 
 const request = require('supertest');
 const app = require('../../app');
@@ -147,7 +147,7 @@ suite('User', function () {
             email = 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@test.com';
             password = 'Test123';
 
-            user = await userLib.createUserAndLoginPromised(agent, email, password, null);
+            user = await userLib.createUserAndlogin(agent, email, password, null);
         });
 
         test('Success - change name & password', async function () {
@@ -155,8 +155,8 @@ suite('User', function () {
             const passwordNew = 'aaAA123';
 
             await userUpdate(agent, user.id, nameNew, null, passwordNew, null);
-            await auth.logoutPromised(agent);
-            await auth.loginPromised(agent, email, passwordNew);
+            await auth.logout(agent);
+            await auth.login(agent, email, passwordNew);
             const u = await User.findOne({
                 where: {id: user.id}
             });
@@ -173,7 +173,7 @@ suite('User', function () {
             const passwordNew = 'aaAA123';
 
             await userUpdate(agent, user.id, nameNew, emailNew, passwordNew, null);
-            await auth.logoutPromised(agent);
+            await auth.logout(agent);
             let u = await User.findOne({
                 where: {id: user.id}
             });
@@ -188,7 +188,7 @@ suite('User', function () {
                 }
             );
 
-            await auth.loginPromised(agent, emailNew, passwordNew);
+            await auth.login(agent, emailNew, passwordNew);
 
             u = await User.findOne({
                 where: {id: user.id}
@@ -276,7 +276,7 @@ suite('User', function () {
             suiteSetup(async function () {
                 agent = request.agent(app);
 
-                user = await userLib.createUserAndLoginPromised(agent, null, null, null);
+                user = await userLib.createUserAndlogin(agent, null, null, null);
                 return Partner.upsert(TEST_PARTNER)
             });
             test('Success', async function () {
@@ -297,7 +297,7 @@ suite('User', function () {
             suiteSetup(async function () {
                 agent = request.agent(app);
 
-                user = await userLib.createUserAndLoginPromised(agent, null, null, null);
+                user = await userLib.createUserAndlogin(agent, null, null, null);
                 return Partner.upsert(TEST_PARTNER)
             });
 
@@ -333,7 +333,7 @@ suite('User', function () {
             suiteSetup(async function () {
                 agent = request.agent(app);
 
-                user = await userLib.createUserAndLoginPromised(agent, null, null, null);
+                user = await userLib.createUserAndlogin(agent, null, null, null);
                 return Partner.upsert(TEST_PARTNER)
             });
 
@@ -357,16 +357,16 @@ suite('User', function () {
             email = 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@test.com';
             email2 = 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A2@test.com';
             password = 'Test123';
-            user = await userLib.createUserAndLoginPromised(agent, email, password, null);
-            user2 = await userLib.createUserPromised(agent2, email2, password, null);
+            user = await userLib.createUserAndlogin(agent, email, password, null);
+            user2 = await userLib.createUser(agent2, email2, password, null);
         });
 
         test('Success', async function () {
-            return userDeletePromised(agent, user.id);
+            return userDelete(agent, user.id);
         });
 
         test('Fail - try deleting other user', async function () {
-            return _userDeletePromised(agent2, user.id, 401);
+            return _userDelete(agent2, user.id, 401);
         });
 
         teardown(async function () {
@@ -385,7 +385,7 @@ suite('User', function () {
         let user;
 
         setup(async function () {
-            user = await userLib.createUserPromised(agent); // Creates connection with e-mail
+            user = await userLib.createUser(agent); // Creates connection with e-mail
         });
 
         test('Success - 20000 - 1 connection - emails only', async function () {

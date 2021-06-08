@@ -39,7 +39,6 @@ module.exports = function (app) {
     const loginCheck = app.get('middleware.loginCheck');
     const authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
     const partnerParser = app.get('middleware.partnerParser');
-    const DEPRECATED = app.get('middleware.deprecated'); // CAPS for ease of spotting in the code
     const asyncMiddleware = app.get('middleware.asyncMiddleware');
     const authUser = require('./auth')(app);
     const User = models.User;
@@ -2357,184 +2356,6 @@ module.exports = function (app) {
     });
 
     /**
-     * Create new member Users to a Topic
-     *
-     * You can add User with e-mail or User id.
-     * If e-mail does not exist, User is created in the DB with NULL password.
-     *
-     * @deprecated Use POST /api/users/:userId/topics/:topicId/invites/user instead
-     */
-    app.post('/api/users/:userId/topics/:topicId/members/users', DEPRECATED('Use invite API - https://github.com/citizenos/citizenos-fe/issues/112'), loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), partnerParser, asyncMiddleware(async function (req, res) {
-        //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
-        const topicId = req.params.topicId;
-        let members = req.body;
-        if (!Array.isArray(members)) {
-            members = [members];
-        }
-
-        const validEmailMembers = [];
-        const validUserIdMembers = [];
-
-        // userId can be actual UUID or e-mail, sort to relevant buckets
-        _(members).forEach(function (m) {
-            if (m.userId) {
-                m.userId = m.userId.trim();
-
-                // Is it an e-mail?
-                if (validator.isEmail(m.userId)) {
-                    validEmailMembers.push(m); // The whole member object with level
-                } else if (validator.isUUID(m.userId, 4)) {
-                    validUserIdMembers.push(m);
-                } else {
-                    logger.warn('Invalid member ID, is not UUID or email thus ignoring', req.method, req.path, m, req.body);
-                }
-            } else {
-                logger.warn('Missing member id, ignoring', req.method, req.path, m, req.body);
-            }
-        });
-
-        const validEmails = _.map(validEmailMembers, 'userId');
-
-        // Find out which e-mails already exist
-        if (validEmails.length) {
-            const usersExistingEmail = await User
-                .findAll({
-                    where: {
-                        email: {
-                            [Op.iLike]: {
-                                [Op.any]: validEmails
-                            }
-                        }
-                    },
-                    attributes: ['id', 'email']
-                });
-                _(usersExistingEmail).forEach(function (u) {
-                    const member = _.find(validEmailMembers, {userId: u.email});
-                    if (member) {
-                        member.userId = u.id;
-                        validUserIdMembers.push(member);
-                        _.remove(validEmailMembers, member); // Remove the e-mail, so that by the end of the day only e-mails that did not exist remain.
-                    }
-                });
-        }
-
-        await db.transaction(async function (t) {
-            let createdUsers;
-
-            // The leftovers are e-mails for which User did not exist
-            if (validEmailMembers.length) {
-                const usersToCreate = [];
-                _(validEmailMembers).forEach(function (m) {
-                    usersToCreate.push({
-                        email: m.userId,
-                        language: m.language,
-                        password: null,
-                        name: util.emailToDisplayName(m.userId),
-                        source: User.SOURCES.citizenos
-                    });
-                });
-
-                createdUsers = await User.bulkCreate(usersToCreate, {transaction: t});
-
-                const createdUsersActivitiesCreatePromises = createdUsers.map(async function (user) {
-                    return cosActivities.createActivity(
-                        user,
-                        null,
-                        {
-                            type: 'System',
-                            ip: req.ip
-                        },
-                        req.method + ' ' + req.path,
-                        t
-                    );
-                });
-
-                await Promise.all(createdUsersActivitiesCreatePromises);
-            }
-
-            if (createdUsers && createdUsers.length) {
-                _(createdUsers).forEach(function (u) {
-                    const member = {
-                        userId: u.id
-                    };
-
-                    // Sequelize defaultValue has no effect if "undefined" or "null" is set for attribute...
-                    const level = _.find(validEmailMembers, {userId: u.email}).level;
-                    if (level) {
-                        member.level = level;
-                    }
-
-                    validUserIdMembers.push(member);
-                });
-            }
-
-            // TODO: Creates 1 DB call per Member which is not wise when thinking of performance.
-            // Change once http://sequelize.readthedocs.org/en/latest/api/model/#bulkcreaterecords-options-promisearrayinstance suppors "bulkUpsert"
-            const findOrCreateMembersPromises = validUserIdMembers.map(function (member) {
-                member.topicId = topicId;
-                member.type = 'TopicMemberUser';
-
-                return TopicMemberUser
-                    .findOrCreate({
-                        where: {
-                            topicId: member.topicId,
-                            userId: member.userId
-                        },
-                        defaults: {
-                            level: member.level || TopicMemberUser.LEVELS.read
-                        },
-                        transaction: t
-                    });
-            });
-
-            const findOrCreateMembersResult = await Promise.allSettled(
-                findOrCreateMembersPromises
-            );
-
-            const topic = await Topic
-                .findOne({
-                    where: {
-                        id: topicId
-                    },
-                    transaction: t
-                });
-
-            const userIdsToInvite = [];
-            const activityCreatePromises = findOrCreateMembersResult.map(async function (memberResult, i) {
-                if (memberResult.isFulfilled()) {
-                    const [member, created] = memberResult.value(); // findOrCreate returns [[instance, created=true/false]]
-
-                    if (created && member) {
-                        userIdsToInvite.push(validUserIdMembers[i].userId);
-                        const user = User.build({id: member.userId});
-                        user.dataValues.id = member.userId;
-                        return cosActivities.addActivity( // Fire and forget!
-                            user,
-                            {
-                                type: 'User',
-                                id: req.user.id,
-                                ip: req.ip
-                            },
-                            null,
-                            topic,
-                            req.method + ' ' + req.path,
-                            t
-                        );
-                    }
-                } else {
-                    logger.error('Failed to add a TopicMemberUser', validUserIdMembers[i]);
-                }
-            });
-            await Promise.all(activityCreatePromises);
-
-            return await emailLib.sendTopicMemberUserCreate(userIdsToInvite, req.user.id, topicId, req.locals.partner);
-        });
-
-        return res.created();
-    }));
-
-
-    /**
      * Get all members of the Topic
      */
     app.get('/api/users/:userId/topics/:topicId/members', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), async function (req, res, next) {
@@ -3036,74 +2857,61 @@ module.exports = function (app) {
     /**
      * Update User membership information
      */
-    app.put('/api/users/:userId/topics/:topicId/members/users/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/members/users/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const newLevel = req.body.level;
         const memberId = req.params.memberId;
         const topicId = req.params.topicId;
 
-        const promises = [];
-        const userAdminFindPromise = TopicMemberUser
-            .findAll({
-                where: {
-                    topicId: topicId,
-                    level: TopicMemberUser.LEVELS.admin
-                },
-                attributes: ['userId'],
-                raw: true
-            });
-        promises.push(userAdminFindPromise);
-        const userFindPromise = TopicMemberUser
-            .findOne({
+        try {
+            const topicAdminMembers = await TopicMemberUser
+                .findAll({
+                    where: {
+                        topicId: topicId,
+                        level: TopicMemberUser.LEVELS.admin
+                    },
+                    attributes: ['userId'],
+                    raw: true
+                });
+            const topicMemberUser = await TopicMemberUser.findOne({
                 where: {
                     topicId: topicId,
                     userId: memberId
                 }
             });
-        promises.push(userFindPromise);
-        Promise
-            .all(promises)
-            .then(function (results) {
-                const topicAdminMembers = results[0];
-                const topicMemberUser = results[1];
-                if (topicAdminMembers && topicAdminMembers.length === 1 && _.find(topicAdminMembers, {userId: memberId})) {
-                    return res.badRequest('Cannot revoke admin permissions from the last admin member.');
-                }
 
-                // TODO: UPSERT - sequelize has "upsert" from new version, use that if it works - http://sequelize.readthedocs.org/en/latest/api/model/#upsert
-                if (topicMemberUser) {
-                    return db.transaction(function (t) {
-                        topicMemberUser.level = newLevel;
+            if (topicAdminMembers && topicAdminMembers.length === 1 && _.find(topicAdminMembers, {userId: memberId})) {
+                return res.badRequest('Cannot revoke admin permissions from the last admin member.');
+            }
 
-                        return cosActivities
-                            .updateActivity(topicMemberUser, null, {
-                                type: 'User',
-                                id: req.user.id,
-                                ip: req.ip
-                            }, null, req.method + ' ' + req.path, t)
-                            .then(function () {
-                                return topicMemberUser
-                                    .save({
-                                        transaction: t
-                                    });
-                            });
+            // TODO: UPSERT - sequelize has "upsert" from new version, use that if it works - http://sequelize.readthedocs.org/en/latest/api/model/#upsert
+            if (topicMemberUser) {
+                await db.transaction(async function (t) {
+                    topicMemberUser.level = newLevel;
 
-                    }).then(function () {
+                    await cosActivities.updateActivity(topicMemberUser, null, {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        }, null, req.method + ' ' + req.path, t)
+                    await topicMemberUser.save({
+                        transaction: t
+                    });
+
+                    t.afterCommit(() => {
                         return res.ok();
-                    }).catch(next);
-                } else {
-                    return TopicMemberUser
-                        .create({
-                            topicId: topicId,
-                            userId: memberId,
-                            level: newLevel
-                        })
-                        .then(function () {
-                            return res.ok();
-                        })
-                        .catch(next);
-                }
-            })
-            .catch(next);
+                    });
+                });
+            } else {
+                await TopicMemberUser.create({
+                    topicId: topicId,
+                    userId: memberId,
+                    level: newLevel
+                });
+                return res.ok();
+            }
+        } catch (e) {
+            return next(e);
+        }
     });
 
 

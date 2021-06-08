@@ -1,6 +1,6 @@
 'use strict';
 
-const _activitiesReadPromised = async function (agent, userId, filters, expectedHttpCode) {
+const _activitiesRead = async function (agent, userId, filters, expectedHttpCode) {
     const path = '/api/users/:userId/activities'.replace(':userId', userId);
 
     return agent
@@ -10,11 +10,11 @@ const _activitiesReadPromised = async function (agent, userId, filters, expected
         .expect('Content-Type', /json/);
 };
 
-const activitiesReadPromised = async function (agent, userId, filters) {
-    return _activitiesReadPromised(agent, userId, filters, 200);
+const activitiesRead = async function (agent, userId, filters) {
+    return _activitiesRead(agent, userId, filters, 200);
 };
 
-const _activitiesUnreadCountReadPromised = async function (agent, userId, expectedHttpCode) {
+const _activitiesUnreadCountRead = async function (agent, userId, expectedHttpCode) {
     const path = '/api/users/:userId/activities/unread'.replace(':userId', userId);
 
     return agent
@@ -23,11 +23,11 @@ const _activitiesUnreadCountReadPromised = async function (agent, userId, expect
         .expect('Content-Type', /json/);
 };
 
-const activitiesUnreadCountReadPromised = async function (agent, userId) {
-    return _activitiesUnreadCountReadPromised(agent, userId, 200);
+const activitiesUnreadCountRead = async function (agent, userId) {
+    return _activitiesUnreadCountRead(agent, userId, 200);
 };
 
-const _activitiesReadUnauthPromised = async function (agent, filters, expectedHttpCode) {
+const _activitiesReadUnauth = async function (agent, filters, expectedHttpCode) {
     const path = '/api/activities';
 
     return agent
@@ -37,8 +37,8 @@ const _activitiesReadUnauthPromised = async function (agent, filters, expectedHt
         .expect('Content-Type', /json/);
 };
 
-const activitiesReadUnauthPromised = function (agent, filters) {
-    return _activitiesReadUnauthPromised(agent, filters, 200);
+const activitiesReadUnauth = async function (agent, filters) {
+    return _activitiesReadUnauth(agent, filters, 200);
 };
 
 const chai = require('chai');
@@ -51,6 +51,7 @@ const models = app.get('models');
 
 const shared = require('../utils/shared');
 const userLib = require('./lib/user')(app);
+const memberLib = require('./lib/members')(app);
 const topicLib = require('./topic');
 
 const Partner = models.Partner;
@@ -61,10 +62,8 @@ const TopicMemberUser = models.TopicMemberUser;
 // API - /api/users*
 suite('Users', function () {
 
-    suiteSetup(function (done) {
-        shared
-            .syncDb()
-            .finally(done);
+    suiteSetup(async function () {
+        return shared.syncDb();
     });
 
     // API - /api/users/:userId/activities*
@@ -76,12 +75,12 @@ suite('Users', function () {
             let user;
 
             suiteSetup(async function () {
-                user = await userLib.createUserAndLoginPromised(agent, null, null, null);
-                await topicLib.topicCreatePromised(agent, user.id, null, null, null, null, null);
+                user = await userLib.createUserAndLogin(agent, null, null, null);
+                await topicLib.topicCreate(agent, user.id, null, null, null, null, null);
             });
 
             test('Success', async function () {
-                const activities = (await activitiesReadPromised(agent, user.id, null)).body.data;
+                const activities = (await activitiesRead(agent, user.id, null)).body.data;
                 assert.equal(activities.length, 3);
                 activities.forEach(function (activity) {
                     assert.notProperty(activity.data.actor, 'email');
@@ -91,7 +90,7 @@ suite('Users', function () {
             });
 
             test('Success - filter', async function () {
-                const activities = (await activitiesReadPromised(agent, user.id, {filter: 'Topic'})).body.data;
+                const activities = (await activitiesRead(agent, user.id, {filter: 'Topic'})).body.data;
 
                 assert.equal(activities.length, 1);
                 activities.forEach(function (activity) {
@@ -109,8 +108,7 @@ suite('Users', function () {
 suite('Activities', function () {
     suiteSetup(async function () {
         process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-        return shared
-            .syncDb();
+        return shared.syncDb();
     });
 
     suite('Read', function () {
@@ -123,10 +121,10 @@ suite('Activities', function () {
         let partner;
 
         suiteSetup(async function () {
-            user = await userLib.createUserAndLoginPromised(agent, null, null, null);
-            await topicLib.topicCreatePromised(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null);
-            topic = (await topicLib.topicCreatePromised(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null)).body.data;
-            user2 = userLib.createUserPromised(agent2, null, null, null);
+            user = await userLib.createUserAndLogin(agent, null, null, null);
+            await topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null);
+            topic = (await topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null)).body.data;
+            user2 = await userLib.createUser(agent2, null, null, null);
             partner = await Partner.create({
                 website: 'notimportant',
                 redirectUriRegexp: 'notimportant'
@@ -142,9 +140,7 @@ suite('Activities', function () {
                     }
                 }
             );
-            await topicLib.topicMemberUsersCreatePromised(
-                agent,
-                user.id,
+            await memberLib.topicMemberUsersCreate(
                 topic.id,
                 [
                     {
@@ -156,7 +152,7 @@ suite('Activities', function () {
         });
 
         test('Success', async function () {
-            const activities = (await activitiesReadUnauthPromised(agent2, {sourcePartnerId: partner.id})).body.data;
+            const activities = (await activitiesReadUnauth(agent2, {sourcePartnerId: partner.id})).body.data;
 
             assert.equal(activities.length, 2);
             activities.forEach(function (activity) {
@@ -176,7 +172,7 @@ suite('Activities', function () {
         });
 
         test('Success - filter', async function () {
-            const activities = (await activitiesReadUnauthPromised(agent2, {sourcePartnerId: partner.id, filter: ['User']})).body.data;
+            const activities = (await activitiesReadUnauth(agent2, {sourcePartnerId: partner.id, filter: ['User']})).body.data;
             assert.equal(activities.length, 0);
             activities.forEach(function (activity) {
                 assert.notProperty(activity.data.actor, 'email');
@@ -195,7 +191,7 @@ suite('Activities', function () {
         });
 
         test('Success - filter with invalid value', async function () {
-            const activities = (await activitiesReadUnauthPromised(agent2, {sourcePartnerId: partner.id, filter: ['Hello', 'Hack']})).body.data;
+            const activities = (await activitiesReadUnauth(agent2, {sourcePartnerId: partner.id, filter: ['Hello', 'Hack']})).body.data;
             assert.equal(activities.length, 2);
             activities.forEach(function (activity) {
                 assert.notProperty(activity.data.actor, 'email');
@@ -214,7 +210,7 @@ suite('Activities', function () {
         });
 
         test('Success - without partnerId', async function () {
-            const activities = (await activitiesReadUnauthPromised(agent2, null)).body.data;
+            const activities = (await activitiesReadUnauth(agent2, null)).body.data;
             activities.forEach(function (activity) {
                 assert.notProperty(activity.data.actor, 'email');
                 assert.notProperty(activity.data.actor, 'imageUrl');
@@ -242,10 +238,10 @@ suite('Activities', function () {
         let partner;
 
         suiteSetup(async function () {
-            user = await userLib.createUserAndLoginPromised(agent, null, null, null)
-            await topicLib.topicCreatePromised(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null);
-            topic = (await topicLib.topicCreatePromised(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST2</h2></body></html>', null)).body.data;
-            user2 = await (userLib.createUserPromised(agent2, null, null, null));
+            user = await userLib.createUserAndLogin(agent, null, null, null)
+            await topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null);
+            topic = (await topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST2</h2></body></html>', null)).body.data;
+            user2 = await (userLib.createUser(agent2, null, null, null));
             partner = await Partner
                 .create({
                     website: 'notimportant',
@@ -263,25 +259,25 @@ suite('Activities', function () {
                 }
             );
 
-            await topicLib.topicMemberUsersCreatePromised(agent, user.id,topic.id,[{userId: user2.id,level: TopicMemberUser.LEVELS.read}]);
+            await memberLib.topicMemberUsersCreate(topic.id,[{userId: user2.id,level: TopicMemberUser.LEVELS.read}]);
         });
 
         test('Success - count 0 - user has never viewed activity feed', async function () {
-            const count = (await activitiesUnreadCountReadPromised (agent, {sourcePartnerId: partner.id})).body.data.count;
+            const count = (await activitiesUnreadCountRead (agent, {sourcePartnerId: partner.id})).body.data.count;
             assert.equal(count, 0);
         });
 
         test('Success', async function () {
-            const activities = (await activitiesReadPromised(agent, user.id, null)).body.data
+            const activities = (await activitiesRead(agent, user.id, null)).body.data
             assert.isTrue(activities.length > 0);
-            await topicLib.topicCreatePromised(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST3</h2></body></html>', null);
+            await topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST3</h2></body></html>', null);
 
-            const count = (await activitiesUnreadCountReadPromised(agent, {sourcePartnerId: partner.id})).body.data.count;
+            const count = (await activitiesUnreadCountRead(agent, {sourcePartnerId: partner.id})).body.data.count;
             assert.equal(count, 2);
         });
 
         test('Success - user has viewed all activities', async function () {
-            const activities = (await activitiesReadPromised(agent, user.id, null)).body.data;
+            const activities = (await activitiesRead(agent, user.id, null)).body.data;
             assert.isTrue(activities.length > 0);
             activities.forEach(function (activity) {
                 assert.notProperty(activity.data.actor, 'email');
@@ -289,12 +285,12 @@ suite('Activities', function () {
                 assert.notProperty(activity.data.actor, 'language');
             });
 
-            const count = (await activitiesUnreadCountReadPromised(agent, {sourcePartnerId: partner.id})).body.data.count;
+            const count = (await activitiesUnreadCountRead(agent, {sourcePartnerId: partner.id})).body.data.count;
             assert.equal(count, 0);
         });
 
         test('Fail - user not logged in', async function () {
-            const message = (await _activitiesReadPromised(agent2, user.id, null, 401)).body
+            const message = (await _activitiesRead(agent2, user.id, null, 401)).body
             const expectedResult = {
                 status: {
                     code: 40100,

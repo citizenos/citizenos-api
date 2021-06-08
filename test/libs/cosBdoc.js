@@ -33,8 +33,7 @@ suite('cosBdoc', function () {
     let voteFileDir;
 
     suiteSetup(async function () {
-        return shared
-            .syncDb();
+        return shared.syncDb();
     });
 
     // FIXME: Proper test
@@ -319,7 +318,7 @@ suite('cosBdoc', function () {
                     });
             });
 
-            setup(function (done) {
+            setup(async function () {
                 runGC();
 
                 const mem = process.memoryUsage();
@@ -356,8 +355,6 @@ suite('cosBdoc', function () {
                 }, 1000);
 
                 timeStart = new Date().getTime();
-
-                done();
             });
 
             test('Success - a lot of signatures', async function () {

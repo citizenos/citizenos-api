@@ -1,111 +1,101 @@
 'use strict';
 
 suite('cosJwt', function () {
-    var assert = require('chai').assert;
+    const assert = require('chai').assert;
 
-    var app = require('../../app');
-    var cosJwt = app.get('cosJwt');
-    var jwt = app.get('jwt');
-    var config = app.get('config');
+    const app = require('../../app');
+    const cosJwt = app.get('cosJwt');
+    const jwt = app.get('jwt');
+    const config = app.get('config');
 
-    test('Success', function (done) {
-        var testPayload = {foo: 'bar'};
-        var testAudience = 'POST /api/foo/bar';
+    test('Success', async function () {
+        const testPayload = {foo: 'bar'};
+        const testAudience = 'POST /api/foo/bar';
 
-        var token = cosJwt.getTokenRestrictedUse(testPayload, testAudience);
-        var decoded = cosJwt.verifyTokenRestrictedUse(token, testAudience);
+        const token = cosJwt.getTokenRestrictedUse(testPayload, testAudience);
+        const decoded = cosJwt.verifyTokenRestrictedUse(token, testAudience);
 
         assert.equal(decoded.foo, testPayload.foo);
         assert.deepEqual(decoded.aud, [testAudience]);
-
-        done();
     });
 
-    test('Success - multiple audiences (scopes)', function (done) {
-        var testPayload = {foo: 'bar'};
-        var testAudiences = ['GET /asd', 'POST /api/foo/bar'];
+    test('Success - multiple audiences (scopes)', async function () {
+        const testPayload = {foo: 'bar'};
+        const testAudiences = ['GET /asd', 'POST /api/foo/bar'];
 
-        var token = cosJwt.getTokenRestrictedUse(testPayload, testAudiences);
+        const token = cosJwt.getTokenRestrictedUse(testPayload, testAudiences);
 
-        var decoded1 = cosJwt.verifyTokenRestrictedUse(token, testAudiences[0]);
+        const decoded1 = cosJwt.verifyTokenRestrictedUse(token, testAudiences[0]);
 
         assert.equal(decoded1.foo, testPayload.foo);
         assert.deepEqual(decoded1.aud, testAudiences);
 
-        var decoded2 = cosJwt.verifyTokenRestrictedUse(token, testAudiences[1]);
+        const decoded2 = cosJwt.verifyTokenRestrictedUse(token, testAudiences[1]);
 
         assert.equal(decoded2.foo, testPayload.foo);
         assert.deepEqual(decoded2.aud, testAudiences);
-
-        done();
     });
 
 
-    test('Success - expiry', function (done) {
-        var testPayload = {foo: 'bar'};
-        var testAudience = 'POST /api/foo/bar';
-        var testOptions = {
+    test('Success - expiry', async function () {
+        const testPayload = {foo: 'bar'};
+        const testAudience = 'POST /api/foo/bar';
+        const testOptions = {
             expiresIn: '1m'
         };
 
-        var token = cosJwt.getTokenRestrictedUse(testPayload, testAudience, testOptions);
-        var decoded = cosJwt.verifyTokenRestrictedUse(token, testAudience);
+        const token = cosJwt.getTokenRestrictedUse(testPayload, testAudience, testOptions);
+        const decoded = cosJwt.verifyTokenRestrictedUse(token, testAudience);
 
         assert.equal(decoded.foo, testPayload.foo);
         assert.property(decoded, 'exp');
-
-        return done();
     });
 
-    test('Fail - expired token', function (done) {
-        var testPayload = {foo: 'bar'};
-        var testAudience = 'POST /api/foo/bar';
-        var testOptions = {
+    test('Fail - expired token', async function () {
+        const testPayload = {foo: 'bar'};
+        const testAudience = 'POST /api/foo/bar';
+        const testOptions = {
             expiresIn: '1ms'
         };
 
-        var token = cosJwt.getTokenRestrictedUse(testPayload, testAudience, testOptions);
+        const token = cosJwt.getTokenRestrictedUse(testPayload, testAudience, testOptions);
 
         try {
             cosJwt.verifyTokenRestrictedUse(token, testAudience);
 
-            return done(new Error('Should fail due to token expiry!'));
+            throw new Error('Should fail due to token expiry!');
         } catch (err) {
             assert.instanceOf(err, jwt.TokenExpiredError);
-
-            done();
         }
     });
 
-    test('Fail - invalid audience (scope)', function (done) {
-        var testPayload = {foo: 'bar'};
-        var testAudience = 'POST /api/foo/bar';
-        var testInvalidAudience = 'POST /api/invalid';
-        var testOptions = {
+    test('Fail - invalid audience (scope)', async function () {
+        const testPayload = {foo: 'bar'};
+        const testAudience = 'POST /api/foo/bar';
+        const testInvalidAudience = 'POST /api/invalid';
+        const testOptions = {
             expiresIn: '1m'
         };
 
-        var token = cosJwt.getTokenRestrictedUse(testPayload, testAudience, testOptions);
+        const token = cosJwt.getTokenRestrictedUse(testPayload, testAudience, testOptions);
 
         try {
             cosJwt.verifyTokenRestrictedUse(token, testInvalidAudience);
 
-            return done(new Error('Should fail due to invalid audience!'));
+            throw new Error('Should fail due to invalid audience!');
         } catch (err) {
             assert.instanceOf(err, jwt.JsonWebTokenError);
             assert.equal(err.message, 'jwt audience invalid. expected: ' + testInvalidAudience);
-
-            done();
         }
     });
 
-    test('Fail - missing audience (scope)', function (done) {
-        var testAudience = 'GET /foo/bar';
-        var testPayload = {
+    test('Fail - missing audience (scope)', async function () {
+        const testAudience = 'GET /foo/bar';
+        const testPayload = {
             foo: 'bar'
         };
 
-        var token = jwt.sign(
+        const token = jwt.sign(
             testPayload,
             config.session.privateKey,
             {
@@ -116,42 +106,42 @@ suite('cosJwt', function () {
         try {
             cosJwt.verifyTokenRestrictedUse(token, testAudience);
 
-            return done(new Error('Should fail due to invalid audience!'));
+            throw new Error('Should fail due to invalid audience!');
         } catch (err) {
             assert.instanceOf(err, jwt.JsonWebTokenError);
             assert.equal(err.message, 'jwt audience invalid. expected: ' + testAudience);
-
-            done();
         }
     });
 
     suite('getTokenRestrictedUse', function () {
 
-        test('Fail - missing required parameters - payload', function (done) {
+        test('Fail - missing required parameters - payload', async function () {
             try {
                 cosJwt.getTokenRestrictedUse();
+
+                throw new Error('Should throw an error if payload parameter is missing!');
             } catch (err) {
-                return done();
+                return;
             }
-            done(new Error('Should throw an error if payload parameter is missing!'));
         });
 
-        test('Fail - missing required parameters - audience', function (done) {
+        test('Fail - missing required parameters - audience', async function () {
             try {
                 cosJwt.getTokenRestrictedUse({foo: 'bar'});
+                throw new Error('Should throw an error if audience parameter is missing!');
             } catch (err) {
-                return done();
+                return;
             }
-            done(new Error('Should throw an error if audience parameter is missing!'));
         });
 
-        test('Fail - invalid parameters - audience in wrong format', function (done) {
+        test('Fail - invalid parameters - audience in wrong format', async function () {
             try {
                 cosJwt.getTokenRestrictedUse({foo: 'bar'}, ['/no/method/for/path']);
+
+                throw new Error('Should throw an error if audience parameter value is in invalid format!');
             } catch (err) {
-                return done();
+                return;
             }
-            done(new Error('Should throw an error if audience parameter value is in invalid format!'));
         });
 
     });

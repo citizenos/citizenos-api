@@ -1,35 +1,32 @@
 'use strict';
 
-var app = require('../../../app');
-var db = app.get('models').sequelize;
-var QueryStream = require('pg-query-stream');
-var assert = require('chai').assert;
+const app = require('../../../app');
+const db = app.get('models').sequelize;
+const QueryStream = require('pg-query-stream');
+const assert = require('chai').assert;
 
 suite('Sequelize', function () {
 
-    test('connectionManager.getConnection()', function (done) {
-        var connectionManager = db.connectionManager;
-        connectionManager
-            .getConnection()
-            .then(function (connection) {
-                var seriesSize = 10;
-                var rows = 0;
+    test('connectionManager.getConnection()', async function () {
+        const connectionManager = db.connectionManager;
+        const connection = await connectionManager.getConnection();
+        const seriesSize = 10;
+        let rows = 0;
 
-                var query = new QueryStream('SELECT * FROM generate_series(1, $1) num', [seriesSize]);
-                var stream = connection.query(query);
+        const query = new QueryStream('SELECT * FROM generate_series(1, $1) num', [seriesSize]);
+        const stream = connection.query(query);
 
-                stream.on('data', function () {
-                    rows++;
-                });
+        stream.on('data', function () {
+            rows++;
+        });
 
-                stream.on('error', done);
+        stream.on('error', Promise.reject);
 
-                stream.on('end', function () {
-                    assert.equal(rows, seriesSize);
-                    connectionManager.releaseConnection(connection);
-                    done();
-                });
-            });
+        stream.on('end', function () {
+            assert.equal(rows, seriesSize);
+            connectionManager.releaseConnection(connection);
+            return Promise.resolve()
+        });
     });
 
 });

@@ -72,7 +72,7 @@ suite('Invite', function () {
                 .replace(':email', email)
                 .replace(':topicId', topicId);
 
-            await userLib.createUserAndLoginPromised(agent, email, null, null);
+            await userLib.createUserAndLogin(agent, email, null, null);
             const expectedLocation = urlLib.getFe('/topics/:topicId', {topicId: topicId});
 
             return agent
@@ -91,7 +91,7 @@ suite('Invite', function () {
                 .replace(':email', email)
                 .replace(':groupId', groupId);
 
-            await userLib.createUserAndLoginPromised(agent, email, null, null);
+            await userLib.createUserAndLogin(agent, email, null, null);
             const expectedLocation = urlLib.getFe('/my/groups/:groupId', {groupId: groupId});
 
             return agent
@@ -109,7 +109,7 @@ suite('Invite', function () {
             const path = '/api/invite/view?email=:email'
                 .replace(':email', email);
 
-            await auth.signupPromised(agent, email, password, null);
+            await auth.signup(agent, email, password, null);
 
             const expectedLocation = urlLib.getFe('/account/login', null, {
                 email: email,
@@ -132,7 +132,7 @@ suite('Invite', function () {
                 .replace(':email', email)
                 .replace(':topicId', topicId);
 
-            await userLib.createUserPromised(agent, email, null, null);
+            await userLib.createUser(agent, email, null, null);
 
             const expectedLocation = urlLib.getFe('/account/login', null, {
                 email: email,
@@ -156,7 +156,7 @@ suite('Invite', function () {
                 .replace(':topicId', topicId);
 
             const redirectUri = urlLib.getFe('/topics/:topicId', {topicId: topicId});
-            await userLib.createUserAndLoginPromised(agent, null, null, null);
+            await userLib.createUserAndLogin(agent, null, null, null);
             const expectedLocation = urlLib.getFe('/account/signup', null, {email: email, redirectSuccess: redirectUri});
 
             return agent
@@ -164,7 +164,7 @@ suite('Invite', function () {
                 .expect(302)
                 .expect('Location', expectedLocation)
                 .then(async function () {
-                    await auth._statusPromised(agent, 401); // Verify that the existing user was logged out.
+                    await auth._status(agent, 401); // Verify that the existing user was logged out.
                 });
         });
 
@@ -174,8 +174,8 @@ suite('Invite', function () {
             const email = 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@foo.com';
             const topicId = 't12321321321312';
 
-            await userLib.createUserPromised(request.agent(app), email, null, null);
-            await userLib.createUserAndLoginPromised(agent, null, null, null);
+            await userLib.createUser(request.agent(app), email, null, null);
+            await userLib.createUserAndLogin(agent, null, null, null);
             const path = '/api/invite/view?email=:email&topicId=:topicId'
                 .replace(':email', email)
                 .replace(':topicId', topicId);
@@ -186,7 +186,7 @@ suite('Invite', function () {
                 .expect(302)
                 .expect('Location', expectedLocation)
                 .then(async function () {
-                    await auth._statusPromised(agent, 401); // Verify that the existing user was logged out.
+                    await auth._status(agent, 401); // Verify that the existing user was logged out.
                 });
         });
     });

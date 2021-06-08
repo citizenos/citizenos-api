@@ -28,7 +28,7 @@ suite('Util', function () {
         });
 
         test('Fail - not an email - no @', async function () {
-            var displayName = 'noatinthismail';
+            const displayName = 'noatinthismail';
             assert.isNull(util.emailToDisplayName(displayName));
         });
 
@@ -37,7 +37,7 @@ suite('Util', function () {
     suite('emailToMaskedEmail', function() {
 
         test('Success', async function () {
-            var email = 'foo@bar.com';
+            const email = 'foo@bar.com';
             assert.equal(util.emailToMaskedEmail(email), 'fo******@bar.com');
         });
 
@@ -46,12 +46,12 @@ suite('Util', function () {
     suite('randomString', function () {
 
         test('Success - default 8 character string', async function () {
-            var str = util.randomString();
+            const str = util.randomString();
             assert.match(str, /[A-Za-z0-9]{8}/);
         });
 
         test('Success - default 16 character string', async function () {
-            var str = util.randomString(16);
+            const str = util.randomString(16);
             assert.match(str, /[A-Za-z0-9]{16}/);
         });
 
@@ -61,11 +61,11 @@ suite('Util', function () {
         this.timeout(5000);
 
         test('Success', async function () {
-            var min = 23;
-            var max = 99999;
+            const min = 23;
+            const max = 99999;
 
-            for (var i = 0; i < 100000; i++) {
-                var nr = util.randomNumber(min, max);
+            for (let i = 0; i < 100000; i++) {
+                const nr = util.randomNumber(min, max);
                 assert.isTrue(nr >= min && nr <= max);
             }
         });
@@ -77,8 +77,8 @@ suite('Util', function () {
         test('Success', async function () {
             this.timeout(5000);
 
-            for (var i = 0; i < 100000; i++) {
-                var str = util.randomPid();
+            for (let i = 0; i < 100000; i++) {
+                const str = util.randomPid();
                 assert.match(str, /[1-6]{1}[0-9]{10}/);
             }
         });
