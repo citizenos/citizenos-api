@@ -1,6 +1,14 @@
+## 2021-06-01 - v. 3.0.0
+
+* Remove Topic and Group auto-accept user endpoints
+    * Remove API POST /api/users/:userId/groups/:groupId/members/users is now replaced with  POST /groups/groupId:/invites
+    * Remove API POST /api/users/:userId/topics/:topicId/members/users is now replaced with  POST /topics/topicId:/invites
+    * Removed all related test
+* All tests updated to async await structure
+
 ## 2021-06-01 - v. 2.2.1
 
-* API /logout not to try unset Etherpad cookies as it does not work cross domains - https://github.com/citizenos/citizenos-fe/issues/676 
+* API /logout not to try unset Etherpad cookies as it does not work cross domains - https://github.com/citizenos/citizenos-fe/issues/676
 
 ## 2021-05-11
 
