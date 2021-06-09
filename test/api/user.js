@@ -147,7 +147,7 @@ suite('User', function () {
             email = 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@test.com';
             password = 'Test123';
 
-            user = await userLib.createUserAndlogin(agent, email, password, null);
+            user = await userLib.createUserAndLogin(agent, email, password, null);
         });
 
         test('Success - change name & password', async function () {
@@ -276,7 +276,7 @@ suite('User', function () {
             suiteSetup(async function () {
                 agent = request.agent(app);
 
-                user = await userLib.createUserAndlogin(agent, null, null, null);
+                user = await userLib.createUserAndLogin(agent, null, null, null);
                 return Partner.upsert(TEST_PARTNER)
             });
             test('Success', async function () {
@@ -297,7 +297,7 @@ suite('User', function () {
             suiteSetup(async function () {
                 agent = request.agent(app);
 
-                user = await userLib.createUserAndlogin(agent, null, null, null);
+                user = await userLib.createUserAndLogin(agent, null, null, null);
                 return Partner.upsert(TEST_PARTNER)
             });
 
@@ -333,7 +333,7 @@ suite('User', function () {
             suiteSetup(async function () {
                 agent = request.agent(app);
 
-                user = await userLib.createUserAndlogin(agent, null, null, null);
+                user = await userLib.createUserAndLogin(agent, null, null, null);
                 return Partner.upsert(TEST_PARTNER)
             });
 
@@ -357,7 +357,7 @@ suite('User', function () {
             email = 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@test.com';
             email2 = 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A2@test.com';
             password = 'Test123';
-            user = await userLib.createUserAndlogin(agent, email, password, null);
+            user = await userLib.createUserAndLogin(agent, email, password, null);
             user2 = await userLib.createUser(agent2, email2, password, null);
         });
 

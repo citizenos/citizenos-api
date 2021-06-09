@@ -509,12 +509,12 @@ suite('Users', function () {
             });
 
             test('Success', async function () {
-                const groupList = (await groupList(agentCreator, user.id, null)).body.data;
-                assert.equal(groupList.count, 1);
-                assert.isArray(groupList.rows);
-                assert.equal(groupList.rows.length, 1);
+                const list = (await groupList(agentCreator, user.id, null)).body.data;
+                assert.equal(list.count, 1);
+                assert.isArray(list.rows);
+                assert.equal(list.rows.length, 1);
 
-                const group = groupList.rows[0];
+                const group = list.rows[0];
                 assert.property(group, 'id');
                 assert.equal(group.name, groupName);
                 assert.isNull(group.parent.id);
@@ -570,10 +570,10 @@ suite('Users', function () {
             });
 
             test('Success - include users and topics', async function () {
-                const groupList = (await groupList(agentCreator, user.id, ['member.user', 'member.topic'])).body.data;
-                assert.equal(groupList.count, 2);
+                const list = (await groupList(agentCreator, user.id, ['member.user', 'member.topic'])).body.data;
+                assert.equal(list.count, 2);
 
-                groupList.rows.forEach(function (memberGroup) {
+                list.rows.forEach(function (memberGroup) {
                     assert.isAbove(memberGroup.members.users.count, 0);
                     assert.equal(memberGroup.members.users.count, memberGroup.members.users.rows.length);
                     if (group.id === memberGroup.id) {
@@ -586,9 +586,9 @@ suite('Users', function () {
             });
 
             test('Success - include only users', async function () {
-                const groupList = (await groupList(agentCreator, user.id, 'member.user')).body.data;
+                const list = (await groupList(agentCreator, user.id, 'member.user')).body.data;
 
-                groupList.rows.forEach(function (group) {
+                list.rows.forEach(function (group) {
                     assert.isAbove(group.members.users.count, 0);
                     assert.equal(group.members.users.count, group.members.users.rows.length);
                     assert.notProperty(group.members.topics, 'rows');
@@ -596,10 +596,10 @@ suite('Users', function () {
             });
 
             test('Success - include only topics', async function () {
-                const groupList = (await groupList(agentCreator, user.id, 'member.topic')).body.data;
-                assert.equal(groupList.count, 2);
-                assert.equal(groupList.rows.length, 2);
-                groupList.rows.forEach(function (memberGroup) {
+                const list = (await groupList(agentCreator, user.id, 'member.topic')).body.data;
+                assert.equal(list.count, 2);
+                assert.equal(list.rows.length, 2);
+                list.rows.forEach(function (memberGroup) {
                     if (group.id === memberGroup.id) {
                         assert.isAbove(memberGroup.members.topics.count, 0);
                     } else {

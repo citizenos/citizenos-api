@@ -1753,7 +1753,6 @@ suite('Users', function () {
                         ];
 
                         const response = (await topicVoteVote(voteAgent, creator.id, voteTopic.id, vote.id, voteList, null, pid, phoneNumber, null)).body;
-                        console.log(response);
                         assert.equal(response.status.code, 20001);
                         assert.match(response.data.challengeID, /[0-9]{4}/);
 
@@ -1761,7 +1760,6 @@ suite('Users', function () {
                             .replace(':topicId', voteTopic.id)
                             .replace(':voteId', vote.id);
                         const statusresponse = (await topicVoteStatus(voteAgent, creator.id, voteTopic.id, vote.id, response.data.token)).body;
-                        console.log('STATUS', statusresponse);
                         assert.equal(statusresponse.status.code, 20002);
                         assert.property(statusresponse.data, 'bdocUri');
                         const bdocUri = statusresponse.data.bdocUri;
@@ -4899,7 +4897,7 @@ suite('Users', function () {
                 let toUser8;
                 const agentToUser8 = request.agent(app);
 
-                suiteSetup(async function () {
+                setup(async function () {
                     const usersCreatePromises = [
                         userLib.createUserAndLogin(agent, null, null, null),
                         userLib.createUserAndLogin(agentToUser1, null, null, 'et'),

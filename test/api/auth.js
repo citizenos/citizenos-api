@@ -580,7 +580,7 @@ suite('Auth', function () {
             suite('Init', function () {
 
                 setup(async function () {
-                    return UserConnection
+                    await UserConnection
                         .destroy({
                             where: {
                                 connectionId: UserConnection.CONNECTION_IDS.esteid,
@@ -764,12 +764,12 @@ suite('Auth', function () {
                             .findOrCreate({
                                 where: {
                                     connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId: pid
+                                    connectionUserId: 'PNOEE-'+pid
                                 },
                                 defaults: {
                                     userId: user.id,
                                     connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId: pid
+                                    connectionUserId: 'PNOEE-'+pid
                                 }
                             });
                     });
@@ -925,12 +925,12 @@ suite('Auth', function () {
                             .findOrCreate({
                                 where: {
                                     connectionId: UserConnection.CONNECTION_IDS.smartid,
-                                    connectionUserId: pid
+                                    connectionUserId: 'PNOEE-'+pid
                                 },
                                 defaults: {
                                     userId: user.id,
                                     connectionId: UserConnection.CONNECTION_IDS.smartid,
-                                    connectionUserId: pid
+                                    connectionUserId: 'PNOEE-'+pid
                                 }
                             });
                         const initResponse = (await loginSmartIdInit(agent2, pid)).body.data;
@@ -953,7 +953,7 @@ suite('Auth', function () {
             const email = 'test_' + new Date().getTime() + '@test.ee';
             const password = 'Test123';
 
-            const user = await userLib.createUserAndlogin(agent, email, password, null);
+            const user = await userLib.createUserAndLogin(agent, email, password, null);
             const userFromStatus = (await status(agent)).body.data;
             let expectedUser = user.toJSON();
             expectedUser.termsVersion = user.termsVersion;
@@ -1140,7 +1140,7 @@ suite('Auth', function () {
             const newPassword = 'newPassword123';
 
             suiteSetup(async function () {
-                return userLib.createUserAndlogin(agent, email, password, null);
+                return userLib.createUserAndLogin(agent, email, password, null);
             });
 
             test('Success', async function () {
@@ -1377,7 +1377,7 @@ suite('Auth', function () {
 
             test('Success - 302 - User is logged in to CitizenOS AND has agreed before -> redirect_uri', async function () {
                 const agent = request.agent(app);
-                const user = await userLib.createUserAndlogin(agent, null, null, null);
+                const user = await userLib.createUserAndLogin(agent, null, null, null);
                 await UserConsent.create({
                     userId: user.id,
                     partnerId: TEST_PARTNER.id
@@ -1396,7 +1396,7 @@ suite('Auth', function () {
 
             test('Success - 302 - User is logged in to CitizenOS AND has NOT agreed before -> /consent -> redirect_uri', async function () {
                 const agent = request.agent(app);
-                await userLib.createUserAndlogin(agent, null, null, null);
+                await userLib.createUserAndLogin(agent, null, null, null);
                 const authRes = await openIdAuthorize(agent, TEST_RESPONSE_TYPE, TEST_PARTNER.id, TEST_CALLBACK_URI, 'openid', '123213asdasas1231', 'dasd12312sdasAA');
                 const expectedUrl = urlLib.getFe('/:language/partners/:partnerId/consent', {
                     partnerId: TEST_PARTNER.id,
