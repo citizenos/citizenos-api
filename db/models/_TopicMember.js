@@ -32,6 +32,8 @@ module.exports.model = function (sequelize, DataTypes) {
                     model: 'Topics',
                     key: 'id'
                 },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE',
                 primaryKey: true
             },
             level: {

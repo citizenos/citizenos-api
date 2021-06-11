@@ -29,6 +29,8 @@ module.exports.model = function (sequelize, DataTypes) {
                     model: 'Groups',
                     key: 'id'
                 },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE',
                 primaryKey: true
             },
             level: {

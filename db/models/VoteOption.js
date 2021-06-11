@@ -35,7 +35,9 @@ module.exports = function (sequelize, DataTypes) {
                 references: {
                     model: 'Votes',
                     key: 'id'
-                }
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
             },
             value: {
                 type: DataTypes.STRING(VALUE_MAX_LENGTH),

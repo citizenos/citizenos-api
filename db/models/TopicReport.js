@@ -26,6 +26,8 @@ module.exports = function (sequelize, DataTypes) {
                 model: 'Topics',
                 key: 'id'
             },
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE',
             primaryKey: true,
             comment: 'Id if the Topic which the Report belongs to.'
         },

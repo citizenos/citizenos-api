@@ -26,6 +26,8 @@ module.exports.model = function (sequelize, DataTypes) {
                 type: DataTypes.UUID,
                 allowNull: false,
                 comment: 'User who created the invite.',
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE',
                 references: {
                     model: 'Users',
                     key: 'id'

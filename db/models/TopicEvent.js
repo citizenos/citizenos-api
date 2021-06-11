@@ -29,7 +29,9 @@ module.exports = function (sequelize, DataTypes) {
                 references: {
                     model: 'Topics',
                     key: 'id'
-                }
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
             },
             subject: {
                 type: DataTypes.STRING(TITLE_LENGTH_MAX),

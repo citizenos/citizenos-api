@@ -37,17 +37,23 @@ module.exports = function (sequelize, DataTypes) {
     TopicInviteUser.associate = function (models) {
         TopicInviteUser.belongsTo(models.Topic, {
             foreignKey: 'topicId',
-            as: 'topic'
+            as: 'topic',
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE'
         });
 
         TopicInviteUser.belongsTo(models.User, {
             foreignKey: 'creatorId',
-            as: 'creator'
+            as: 'creator',
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE'
         });
 
         TopicInviteUser.belongsTo(models.User, {
             foreignKey: 'userId',
-            as: 'user'
+            as: 'user',
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE'
         });
     };
 

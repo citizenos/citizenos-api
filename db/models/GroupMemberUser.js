@@ -33,6 +33,8 @@ module.exports = function (sequelize, DataTypes) {
                 model: 'Users',
                 key: 'id'
             },
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE',
             primaryKey: true
         }
     }, _GroupMember.attributes);

@@ -30,7 +30,9 @@ module.exports = function (sequelize, DataTypes) {
                 references: {
                     model: 'Votes',
                     key: 'id'
-                }
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
             },
             fileName: {
                 type: DataTypes.STRING(255),

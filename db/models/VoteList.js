@@ -1,7 +1,5 @@
 'use strict';
 
-const { trimEnd } = require("lodash");
-
 /**
  * VoteList
  *

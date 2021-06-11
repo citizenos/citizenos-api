@@ -23,6 +23,8 @@ module.exports = function (sequelize, DataTypes) {
                     model: 'Comments',
                     key: 'id'
                 },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE',
                 primaryKey: true
             },
             reportId: {
@@ -33,6 +35,8 @@ module.exports = function (sequelize, DataTypes) {
                     model: 'Reports',
                     key: 'id'
                 },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE',
                 primaryKey: true
             }
         },

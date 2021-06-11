@@ -23,6 +23,8 @@ module.exports = function (sequelize, DataTypes) {
                     model: 'Topics',
                     key: 'id'
                 },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE',
                 primaryKey: true
             },
             attachmentId: {
@@ -33,6 +35,8 @@ module.exports = function (sequelize, DataTypes) {
                     model: 'Attachments',
                     key: 'id'
                 },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE',
                 primaryKey: true
             }
         },

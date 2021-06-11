@@ -38,17 +38,23 @@ module.exports = function (sequelize, DataTypes) {
     GroupInviteUser.associate = function (models) {
         GroupInviteUser.belongsTo(models.Group, {
             foreignKey: 'groupId',
-            as: 'group'
+            as: 'group',
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE'
         });
 
         GroupInviteUser.belongsTo(models.User, {
             foreignKey: 'creatorId',
-            as: 'creator'
+            as: 'creator',
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE'
         });
 
         GroupInviteUser.belongsTo(models.User, {
             foreignKey: 'userId',
-            as: 'user'
+            as: 'user',
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE'
         });
     };
 

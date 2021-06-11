@@ -29,6 +29,8 @@ module.exports = function (sequelize, DataTypes) {
                 model: 'Groups',
                 key: 'id'
             },
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE',
             primaryKey: true
         }
     }, TopicMember.attributes);
