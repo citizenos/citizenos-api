@@ -1,0 +1,38 @@
+<!-- E-mail sent to User who reports a Topic -->
+<p>
+    Olá, <span class="blue">{{userReporter.name}}</span>,
+</p>
+<p class="important">
+    <b>Sua denúncia <span class="blue">#{{report.id}}</span> sobre o tópico "<a href="{{linkViewTopic}}">{{topic.title}}</a>" foi enviada aos moderadores do Citizen OS</b>
+</p>
+
+<h1>E agora?</h1>
+<p>
+<ol>
+    <li class="li">Os moderadores irão avaliar a denúncia. Se uma violação for confirmada, o acesso ao tópico será restringido e um aviso de
+conteúdo inapropriado será exibido.
+    </li>
+    <li class="li">Enquanto isso, os administradores e editores do tópico denunciado serão solicitados a modificá-lo. Quando o conteúdo inapropriado do tópico for
+        melhorado, os moderadores irão rever novamente e cancelarão as restrições caso todas as violações tenham sido removidas.
+    </li>
+    <li class="li">
+        Notificaremos você se:
+        <ul>
+            <li>Moderadores aplicarem restrições ao tópico;</li>
+            <li>Todas as violações forem removidas e as restrições canceladas.</li>
+        </ul>
+    </li>
+</ol>
+</p>
+<p><a href="{{linkViewModerationGuidelines}}">Você pode encontrar mais detalhes sobre o processo de moderação do Citizen OS aqui.</a></p>
+
+<h1>Resumo da denúncia</h1>
+<p>Tópico: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
+<p>Número de referência da denúncia: <b>{{report.id}}</b>
+<p>Tipo de violação: <b>"{{report.type}}"</b>
+<p>Sua explicação: <b>"{{report.text}}"</b>
+
+<hr/>
+<p>
+    Obrigado por nos ajudar a manter uma qualidade de conteúdo elevada na comunidade de usuários do Citizen OS!
+</p>
