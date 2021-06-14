@@ -1,0 +1,38 @@
+<!-- E-mail sent to User who reports a Topic -->
+<p>
+    Ahoj <span class="blue">{{userReporter.name}}</span>,
+</p>
+<p class="important">
+    <b>Vaša správa <span class="blue">#{{report.id}}</span> ohľadne témy "<a href="{{linkViewTopic}}">{{topic.title}}</a>" bola odoslaná moderátorom</b>
+</p>
+
+<h1>Čo bude nasledovať?</h1>
+<p>
+<ol>
+    <li class="li">Moderátori správu preskúmajú. Ak sa porušenie pravidiel potvrdí, prístup k téme bude obmedzený a zobrazí sa
+        upozornenie na nevhodný obsah.
+    </li>
+    <li class="li">Medzitým budú admini a editori nahlásenej témy požiadaní o jej úpravu. Keď bude nevhodný obsah témy
+        skorigovaný, moderátori ju znovu preskúmajú a ak budú všetky porušenia pravidiel zmazané, odstránia obmedzenia.
+    </li>
+    <li class="li">
+        Upovedomíme vás, ak:
+        <ul>
+            <li>moderátori uplatnia na tému obmedzenia</li>
+            <li>sa všetky porušenia pravidiel zmažú a obmedzenia odstránia.</li>
+        </ul>
+    </li>
+</ol>
+</p>
+<p><a href="{{linkViewModerationGuidelines}}">O procese moderovania Citizen OS nájdete viac podrobností tu.</a></p>
+
+<h1>Zhrnutie správy</h1>
+<p>Téma: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
+<p>Referenčné číslo správy: <b>{{report.id}}</b>
+<p>Typ porušenia: <b>"{{report.type}}"</b>
+<p>Vaše vysvetlenie: <b>"{{report.text}}"</b>
+
+<hr/>
+<p>
+    Vďaka za pomoc pri zabezpečovaní vysokej kvality obsahu v užívateľskej komunite na Citizen OS!
+</p>
