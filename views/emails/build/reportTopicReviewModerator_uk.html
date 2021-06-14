@@ -1,0 +1,29 @@
+<!-- E-mail sent to moderators when a Topic report is sent for a review -->
+<p>
+    Доброго дня, <span class="blue">{{userModerator.name}}</span>,
+</p>
+<p class="important">
+    <b>Ви отримали це повідомлення у якості модератора спільноти Citizen OS.</b>
+    <br><br>
+    Тема Citizen OS "<a href="{{linkViewTopic}}">{{topic.title}}</a>", оскаржена як недоречна, була переглянута адміністратором/редактором цієї теми. Вони надіслали зміни на перегляд і надали наступне пояснення:
+    <br><br>
+    <i>{{reviewRequestText}}</i>
+</p>
+
+<h1>Ви або інший модератор раніше вирішили обмежити доступ до теми.</h1>
+<p>
+<ul>
+    <li class="li">Тип порушення: "{{report.moderatedReasonType}}"</li>
+    <li class="li">Пояснення: "{{report.moderatedReasonText}}"</li>
+</ul>
+</p>
+<p>
+    <b>Будь ласка, передивіться тему "<a href="{{linkViewTopic}}">{{topic.title}}</a>" і вирішіть, чи відповідає вона тепер рекомендаціям для спільноти, і чи потрібно знімати обмеження доступу.</b>
+</p>
+<p><a href="{{linkViewModerationGuidelines}}">Ви можете більш детально ознайомитися з процесом модерації Citizen OS тут.</a></p>
+
+<hr/>
+
+<p>
+    Дякуємо! Разом ми можемо підтримувати високу якість вмісту у користувацькій спільноті Citizen OS.
+</p>

@@ -1,0 +1,29 @@
+<!-- E-mail sent to moderators when a Topic report is sent for a review -->
+<p>
+    Ahoj <span class="blue">{{userModerator.name}}</span>,
+</p>
+<p class="important">
+    <b>Tento mail ste obdržali ako komunitný moderátor na Citizen OS.</b>
+    <br><br>
+    Téma "<a href="{{linkViewTopic}}">{{topic.title}}</a>" na Citizen OS, ktorá bola nahlásená ako nevhodná, bola zrevidovaná adminom / editorom tej témy. Predložili svoje zmeny na preskúmanie a poskytli nasledujúce vysvetlenie:
+    <br><br>
+    <i>{{reviewRequestText}}</i>
+</p>
+
+<h1>Vy alebo iný moderátor ste sa pôvodne rozhodli obmedziť prístup k tejto téme.</h1>
+<p>
+<ul>
+    <li class="li">Typ porušenia pravidiel: "{{report.moderatedReasonType}}"</li>
+    <li class="li">Zdôvodnenie: "{{report.moderatedReasonText}}"</li>
+</ul>
+</p>
+<p>
+    <b>Preskúmajte prosím tému "<a href="{{linkViewTopic}}">{{topic.title}}</a>" a rozhodnite, či už je v súlade s pravidlami a či môže byť obmedzenie prístupu do nej odstránené alebo nie.</b>
+</p>
+<p><a href="{{linkViewModerationGuidelines}}">O procese moderovania Citizen OS nájdete viac podrobností tu.</a></p>
+
+<hr/>
+
+<p>
+    Ďakujeme! Spolu môžme udržať vysokú kvalitu obsahu v komunite užívateľov Citizen OS.
+</p>

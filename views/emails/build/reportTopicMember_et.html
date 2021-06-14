@@ -1,0 +1,40 @@
+<!-- E-mail sent to Topic members of a reporter Topic -->
+<p>
+    Tere, <span class="blue">{{userMember.name}}</span>!
+</p>
+<p class="important">
+    <b>Üks Citizen OS-i kasutaja arvab, et Sinu loodud teema "<a href="{{linkViewTopic}}">{{topic.title}}</a>" rikub Citizen OS-i kogukonna nõudeid, ja esitas selle kohta raporti <span class="blue">#{{report.id}}</span>.</b>
+    <br><br>
+    See raport saadetakse kõigile selle teema toimetajatele ja kogukonna moderaatoritele. Palun tutvu üksikasjadega allpool.
+</p>
+
+<h1>Mis edasi saab?</h1>
+<p>
+<ol>
+    <li class="li">Moderaatorid vaatavad praegu seda teemat üle. Kui Su teema tõesti reegleid rikub, piiravad nad juurdepääsu sellele teemale.
+    </li>
+    <li class="li">Sinul ja teistel selle teema toimetajatel on aga igal ajal õigus võimalikud rikkumised kõrvaldada. Pärast teema sisu reeglitepäraseks muutmist, võid saata selle ülevaatamiseks 
+        Citizen OS-i moderaatoritele.
+    </li>
+    <li class="li">Ülevaatamistaotluse saamisel kontrollivad moderaatorid teema uuesti üle ja, kui kõik on reeglitepärane, siis eemaldavad piirangu.</li>
+    <li class="li">
+        Anname Sulle teada, kui:
+        <ul>
+            <li>moderaatorid määravad teemale piirangu,</li>
+            <li>rikkumiste kõrvaldamine on üle kontrollitud ja piirangud eemaldatud.</li>
+        </ul>
+    </li>
+</ol>
+</p>
+<p><a href="{{linkViewModerationGuidelines}}">Täpsemalt võid Citizen OS-i modereerimisprotsessi kohta lugeda siit.</a></p>
+
+<h1>Raporti üksikasjad</h1>
+<p>Teema: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
+<p>Raporti viitenumber: <b>{{report.id}}</b>
+<p>Rikkumise tüüp: <b>"{{report.type}}"</b>
+<p>Sinu selgitus: <b>"{{report.text}}"</b>
+
+<hr/>
+<p>
+    Palun kontrolli, et Sinu algatatud teemas "<a href="{{linkViewTopic}}">{{topic.title}}</a>" poleks kogukonnareegleid rikkuvat sisu. Koostöös saame Citizen OS-i kasutajakogukonnas avaldatud sisu kõrge kvaliteedi lihtsamini tagada.
+</p>

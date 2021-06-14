@@ -1,0 +1,40 @@
+<!-- E-mail sent to Topic members of a reporter Topic -->
+<p>
+    Ahoj, <span class="blue">{{userMember.name}}</span>
+</p>
+<p class="important">
+    <b>Užívateľ Citizen OS sa domnieva, že vo vašej téme "<a href="{{linkViewTopic}}">{{topic.title}}</a>" došlo k porušeniu komunitných pravidiel a nahlásil to správou <span class="blue">#{{report.id}}</span>.</b>
+    <br><br>
+    Všetci editori témy a komunitní moderátori túto správu dostali, podrobnosti nájdete nižšie.
+</p>
+
+<h1>Čo bude nasledovať?</h1>
+<p>
+<ol>
+    <li class="li">Moderátori teraz preskúmajú tému. Ak potvrdia porušenie pravidiel, obmedzia k téme prístup.
+    </li>
+    <li class="li">Vy a ďalší editori však môžte tému kedykoľvek upraviť, aby ste vymazali možné porušenia pravidiel. Ak budú porušenia pravidiel vymazané, téma sa odošle k preskúmaniu
+        moderátorom na Citizen OS.
+    </li>
+    <li class="li">Po prijatí požiadavky o preskúmanie, moderátori tému preskúmajú a, ak boli porušenia pravidiel vymazané, odstránia všetky obmedzenia.</li>
+    <li class="li">
+        Upovedomíme vás, ak:
+        <ul>
+            <li>moderátori použijú na tému obmedzenia</li>
+            <li>Odstránenie porušení pravidiel bolo preskúmané a obmedzenia stiahnuté.</li>
+        </ul>
+    </li>
+</ol>
+</p>
+<p><a href="{{linkViewModerationGuidelines}}">O procese moderovania Citizen OS nájdete viac podrobností tu.</a></p>
+
+<h1>Podrobnosti správy</h1>
+<p>Téma: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
+<p>Referenčné číslo správy: <b>{{report.id}}</b>
+<p>Typ porušenia: <b>{{report.type}}</b>
+<p>Vaše vysvetlenie: <b>{{report.text}}</b>
+
+<hr/>
+<p>
+    Preskúmajte prosím vašu tému <a href="{{linkViewTopic}}">{{topic.title}}</a> či obsahuje porušenia usmernení komunity. Spolu môžme udržať vysokú kvalitu obsahu v komunite užívateľov Citizen OS.
+</p>

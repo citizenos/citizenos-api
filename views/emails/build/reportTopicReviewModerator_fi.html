@@ -1,0 +1,29 @@
+<!-- E-mail sent to moderators when a Topic report is sent for a review -->
+<p>
+    Hei <span class="blue">{{userModerator.name}}</span>,
+</p>
+<p class="important">
+    <b> Saat tämän sähköpostin Citizen OS:n yhteisön moderoijana.</b>
+    <br><br>
+    Citizen OS:n aihe ”<a href="{{linkViewTopic}}">{{topic.title}}</a>”, jonka ilmoitettiin olevan sisällöltään sopimaton, on korjattu, korjaajana kyseisen aiheen ylläpitäjä/muokkaaja. Hän on jättänyt muutoksensa arvioitavaksi ja antanut seuraavan selityksen:
+    <br><br>
+    <i>{{reviewRequestText}}</i>
+</p>
+
+<h1>Sinä tai joku toinen moderoija päätitte alkuaan rajoittaa aiheen käyttöoikeuksia.</h1>
+<p>
+<ul>
+    <li class="li">Sääntörikkomuksen tyyppi: {{report.moderatedReasonType}}</li>
+    <li class="li">Perusteet: {{report.moderatedReasonText}}</li>
+</ul>
+</p>
+<p>
+    <b>Ole hyvä ja tarkista aihe ”<a href="{{linkViewTopic}}">{{topic.title}}</a>”. Päätä sitten, onko se nyt ohjeiden mukainen ja pitäisikö käyttöoikeuksien rajoitus poistaa vai ei.</b>
+</p>
+<p><a href="{{linkViewModerationGuidelines}}">Voit löytää lisää tietoja Citizen OS:n moderointiprosessista täältä.</a></p>
+
+<hr/>
+
+<p>
+    Kiitos! Voimme yhdessä ylläpitää sisällön korkeaa laatua Citizen OS:n käyttäjäyhteisössä.
+</p>
