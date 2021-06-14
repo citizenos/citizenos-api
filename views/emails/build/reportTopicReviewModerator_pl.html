@@ -1,0 +1,29 @@
+<!-- E-mail sent to moderators when a Topic report is sent for a review -->
+<p>
+    Witaj <span class="blue">{{userModerator.name}}</span>,
+</p>
+<p class="important">
+    <b>Otrzymujesz ten e-mail jako moderator społeczności CitizenOS. </b>
+    <br><br>
+    Temat CitizenOS "<a href="{{linkViewTopic}}">{{topic.title}}</a>", który został zgłoszony jako nieodpowiedni, został zmieniony przez administratora/edytora tego tematu. Przesłali swoje zmiany do przeglądu i dostarczyli następujące wyjaśnienie:
+    <br><br>
+    <i>{{reviewRequestText}}</i>
+</p>
+
+<h1>Ty lub inny moderator pierwotnie zdecydował się ograniczyć dostęp do tematu.</h1>
+<p>
+<ul>
+    <li class="li">Typ naruszenia: "{{report.moderatedReasonType}}"</li>
+    <li class="li">Powód: "{{report.moderatedReasonText}}"</li>
+</ul>
+</p>
+<p>
+    <b>Przejrzyj temat "<a href="{{linkViewTopic}}">{{topic.title}}</a>" i zdecyduj, czy jest on teraz zgodny z wytycznymi, a ograniczenie dostępu powinno zostać usunięte czy nie.</b>
+</p>
+<p><a href="{{linkViewModerationGuidelines}}">Więcej szczegółów na temat procesu moderacji w Citizen OS znajdziesz tutaj.</a></p>
+
+<hr/>
+
+<p>
+    Dziękujemy! Razem możemy utrzymać wysoką jakość treści w społeczności użytkowników CitizenOS.
+</p>
