@@ -1,0 +1,40 @@
+<!-- E-mail sent to Topic members of a reporter Topic -->
+<p>
+    Halo <span class="blue">{{userMember.name}}</span>,
+</p>
+<p class="important">
+    <b>Seorang pengguna Citizen OS berpendapat ada pelanggaran terhadap panduan masyarakat Citizen OS dalam topik Anda "<a href="{{linkViewTopic}}">{{topic.title}}</a>" dan telah mengajukan laporan <span class="blue">#{{report.id}}</span>.</b>
+    <br><br>
+    Semua editor dari topik itu dan moderator masyarakat menerima laporan ini, silakan melihat detail di bawah ini.
+</p>
+
+<h1>Apa yang terjadi kemudian?</h1>
+<p>
+<ol>
+    <li class="li">Saat ini moderator sedang memeriksa topik itu. Jika mereka mengonfirmasi adanya pelanggaran, mereka akan membatasi akses ke topik itu.
+    </li>
+    <li class="li">Namun demikian, Anda dan editor lainnya dapat mengedit topik itu kapan saja untuk meluruskan kemungkinan pelanggaran. Jika pelanggaran telah diluruskan, topik itu dapat dikirimkan untuk penilaian kepada moderator
+        Citizen OS.
+    </li>
+    <li class="li">Setelah permintaan pemeriksaan, moderator akan memeriksa topik dan menarik semua pembatasan jika pelanggaran telah diluruskan.</li>
+    <li class="li">
+        Kami akan memberi tahu Anda jika:
+        <ul>
+            <li>moderator menerapkan pembatasan pada topik itu</li>
+            <li>Penghapusan pelanggaran telah diperiksa dan pembatasan telah dicabut.</li>
+        </ul>
+    </li>
+</ol>
+</p>
+<p><a href="{{linkViewModerationGuidelines}}">Anda dapat menemukan detail lebih lanjut tentang proses moderasi Citizen OS di sini.</a></p>
+
+<h1>Detail tentang laporan</h1>
+<p>Topik: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
+<p>Nomor referensi laporan: <b>{{report.id}}</b>
+<p>Jenis pelanggaran: <b>"{{report.type}}"</b>
+<p>Penjelasan Anda: <b>"{{report.text}}"</b>
+
+<hr/>
+<p>
+    Silakan memeriksa topik "<a href="{{linkViewTopic}}">{{topic.title}}</a>" Anda dan melihat jika itu memuat pelanggaran terhadap panduan masyarakat. Bersama kita dapat menjaga konten yang berkualitas tinggi dalam masyarakat pengguna Citizen OS.
+</p>
