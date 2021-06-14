@@ -1,0 +1,36 @@
+<!-- E-mail sent to User who reports a Topic -->
+<p>
+    Sveiki <span class="blue">{{userReporter.name}}</span>,
+</p>
+<p class="important">
+    <b>Jūsu ziņojums <span class="blue">#{{report.id}}</span> par tematu "<a href="{{linkViewTopic}}">{{topic.title}}</a>" ir nosūtīts Citizen OS moderatoriem</b>
+</p>
+
+<h1>Kas notiks tālāk?</h1>
+<p>
+<ol>
+    <li class="li">Moderatori pārbaudīs ziņojumu. Ja pārkāpums tiks apstiprināts, piekļuve šim tematam tiks ierobežota un tiks atspoguļots brīdinājums par neatbilstošu saturu.
+    </li>
+    <li class="li">Tikmēr temata, par kuru saņemts ziņojums, administratoriem un redaktoriem tiks lūgts veikt izmaiņas. Pēc temata neatbilstošā satura labojumu veikšanas, moderatori atkārtoti pārskatīs tematu un noņems ierobežojumus, ja visi pārkāpumi ir novērsti.
+    </li>
+    <li class="li">
+        Mēs informēsim jūs, ja:
+        <ul>
+            <li>moderatori ierobežos piekļuvi šim tematam</li>
+            <li>visi pārkāpumi tiks novērsti un ierobežojumi atcelti.</li>
+        </ul>
+    </li>
+</ol>
+</p>
+<p><a href="{{linkViewModerationGuidelines}}">Vairāk informācijas par Citizen OS moderācijas procesu atradīsiet šeit.</a></p>
+
+<h1>Ziņojuma kopsavilkums</h1>
+<p>Temats: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
+<p>Ziņojuma uzskaites numurs: <b>{{report.id}}</b>
+<p>Pārkāpuma veids: <b>"{{report.type}}"</b>
+<p>Jūsu skaidrojums: <b>"{{report.text}}"</b>
+
+<hr/>
+<p>
+    Paldies par palīdzību augstas kvalitātes satura nodrošināšanā Citizen OS lietotāju kopienā!
+</p>
