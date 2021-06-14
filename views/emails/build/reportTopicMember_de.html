@@ -1,0 +1,40 @@
+<!-- E-mail sent to Topic members of a reporter Topic -->
+<p>
+    Hallo <span class="blue">{{userMember.name}}</span>,
+</p>
+<p class="important">
+    <b>Ein Citizen OS-Benutzer ist der Meinung, das in Ihrem Thema "<a href="{{linkViewTopic}}">{{topic.title}}</a>" eine Verletzung der Gemeinschaftsrichtlinien von Citizen OS vorliegt und hat einen Bericht <span class="blue">#{{report.id}}</span> eingereicht.</b>
+    <br><br>
+    Alle Bearbeiter und Moderatoren des Themas erhalten diesen Bericht, Details dazu finden Sie unten.
+</p>
+
+<h1>Was passiert als Nächstes?</h1>
+<p>
+<ol>
+    <li class="li">Das Thema wird derzeit von den Moderatoren geprüft. Wenn sie eine Verletzung bestätigen, werden sie den Zugriff auf das Thema einschränken.
+    </li>
+    <li class="li">Sie und andere Bearbeiter können das Thema jedoch jederzeit bearbeiten, um mögliche Verletzungen zu entfernen. Sobald die Verletzungen gelöscht wurden, kann das Thema zur Überprüfung an die Citizen OS-
+        Moderatoren gesendet werden.
+    </li>
+    <li class="li">Nach einer Prüfanforderung prüfen die Moderatoren das Thema und entfernen Einschränkungen, sobald Verletzungen entfernt wurden.</li>
+    <li class="li">
+        Wir werden Sie in den folgenden Fällen benachrichtigen:
+        <ul>
+            <li>Moderatoren wenden Beschränkungen für das Thema an</li>
+            <li>Das Entfernen von Verletzungen wurde geprüft und Beschränkungen entfernt.</li>
+        </ul>
+    </li>
+</ol>
+</p>
+<p><a href="{{linkViewModerationGuidelines}}">Weitere Details über den Moderationsprozess von Citizen OS finden Sie hier.</a></p>
+
+<h1>Berichtdetails</h1>
+<p>Thema: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
+<p>Bericht-Referenznummer: <b>{{report.id}}</b>
+<p>Art der Verletzung: <b>"{{report.type}}"</b>
+<p>Ihre Erklärung: <b>"{{report.text}}"</b>
+
+<hr/>
+<p>
+    Bitte prüfen Sie Ihr Thema  "<a href="{{linkViewTopic}}">{{topic.title}}</a>" und stellen Sie fest, ob es die Gemeinschaftsrichtlinien verletzt. Gemeinsam können wir eine hohe Qualität der Inhalte in der Citizen OS-Benutzergemeinschaft sicherstellen.
+</p>
