@@ -1,0 +1,38 @@
+<!-- E-mail sent to User who reports a Topic -->
+<p>
+    Halo <span class="blue">{{userReporter.name}}</span>,
+</p>
+<p class="important">
+    <b>Laporan Anda <span class="blue">#{{report.id}}</span> mengenai topik "<a href="{{linkViewTopic}}">{{topic.title}}</a>" telah dikirimkan kepada moderator Citizen OS</b>
+</p>
+
+<h1>Apa yang terjadi kemudian?</h1>
+<p>
+<ol>
+    <li class="li">Moderator akan memeriksa laporan itu. Jika pelanggaran dikonfirmasi, akses pada topik itu akan dibatasi dan peringatan
+        tentang konten yang tidak pantas akan ditampilkan.
+    </li>
+    <li class="li">Sementara itu, admin dan editor dari topik yang dilaporkan akan diminta untuk memodifikasinya. Ketika konten yang tidak pantas dari topik telah
+        diperbaiki, moderator akan memeriksanya sekali lagi dan akan menghapus pembatasan jika semua pelanggaran telah diluruskan.
+    </li>
+    <li class="li">
+        Kami akan memberi tahu Anda jika:
+        <ul>
+            <li>moderator menerapkan pembatasan pada topik itu</li>
+            <li>semua pelanggaran telah diluruskan dan pembatasan dicabut.</li>
+        </ul>
+    </li>
+</ol>
+</p>
+<p><a href="{{linkViewModerationGuidelines}}">Anda dapat menemukan detail lebih lanjut tentang proses moderasi Citizen OS di sini.</a></p>
+
+<h1>Ringkasan laporan</h1>
+<p>Topik: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
+<p>Nomor referensi laporan: <b>{{report.id}}</b>
+<p>Jenis pelanggaran: <b>"{{report.type}}"</b>
+<p>Penjelasan Anda: <b>"{{report.text}}"</b>
+
+<hr/>
+<p>
+    Terima kasih telah membantu kami memastikan konten yang berkualitas tinggi dalam masyarakat pengguna Citizen OS!
+</p>
