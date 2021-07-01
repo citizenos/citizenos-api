@@ -19,6 +19,7 @@ module.exports = function (app) {
     const cosActivities = app.get('cosActivities');
     const path = require('path');
     const fs = app.get('fs');
+    const https = require('https');
 
     const Topic = models.Topic;
     const User = models.User;
@@ -75,6 +76,19 @@ module.exports = function (app) {
             .deletePadAsync({padID: topicId});
     };
 
+    const _createToken = (userId, name) => {
+        const jwtPayload = {
+            user: {
+                id: userId,
+                name: name
+            }
+        };
+
+        return jwt.sign(jwtPayload, config.session.privateKey, {
+            expiresIn: '1m',
+            algorithm: config.session.algorithm
+        });
+    }
     /**
      * Create JWT token for session handover
      *
@@ -88,6 +102,7 @@ module.exports = function (app) {
      *
      * @private
      */
+
     const _getUserAccessUrl = function (topic, userId, name, language, partner) {
 
         /**
@@ -98,17 +113,8 @@ module.exports = function (app) {
          *
          * NOTE: If the payload gets too big, we may hit GET request length limit of 2048 bytes for some browsers!
          */
-        const jwtPayload = {
-            user: {
-                id: userId,
-                name: name
-            }
-        };
 
-        const token = jwt.sign(jwtPayload, config.session.privateKey, {
-            expiresIn: '1m',
-            algorithm: config.session.algorithm
-        });
+        const token = _createToken(userId, name);
         let url = topic.padUrl + '?jwt=' + token + '&lang=' + language;
 
         if (partner) {
@@ -247,6 +253,44 @@ module.exports = function (app) {
         });
     };
 
+    const _getTopicInlineCommentReplies = async (topicId, userId, name) => {
+        const token = _createToken(userId, name);
+        const options = config.services.etherpad;
+        options.rootPath = '/p/:pad/0/'.replace(':pad', topicId);
+        const etherpadClient = require('etherpad-lite-client').connect(options);
+
+        return new Promise ((resolve, reject) => {
+            etherpadClient.call('commentReplies', {
+                apiKey: options.apikey,
+                jwt: token
+            } ,(err, data) => {
+                if (err) {
+                    return reject(err);
+                }
+                return resolve(data);
+            });
+        });
+    };
+
+    const _getTopicInlineComments = async (topicId, userId, name) => {
+        const token = _createToken(userId, name);
+        const options = config.services.etherpad;
+        options.rootPath = '/p/:pad/0/'.replace(':pad', topicId);
+        const etherpadClient = require('etherpad-lite-client').connect(options);
+
+        return new Promise ((resolve, reject) => {
+            etherpadClient.call('comments', {
+                apiKey: options.apikey,
+                jwt: token
+            } ,(err, data) => {
+                if (err) {
+                    return reject(err);
+                }
+                return resolve(data);
+            });
+        });
+    };
+
     return {
         createTopic: _createTopic,
         updateTopic: _updateTopic,
@@ -255,6 +299,8 @@ module.exports = function (app) {
         getTopicPadUrl: _getTopicPadUrl,
         syncTopicWithPad: _syncTopicWithPad,
         getTopicTitleFromPadContent: _getTopicTitleFromPadContent,
-        getTopicPadAuthors: _getTopicPadAuthors
+        getTopicPadAuthors: _getTopicPadAuthors,
+        getTopicInlineComments: _getTopicInlineComments,
+        getTopicInlineCommentReplies: _getTopicInlineCommentReplies
     };
 };

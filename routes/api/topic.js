@@ -1471,6 +1471,28 @@ module.exports = function (app) {
         }
     });
 
+    app.get('/api/users/:userId/topics/:topicId/inlinecomments', loginCheck(['partner']), async (req, res, next) => {
+        const topicId = req.params.topicId;
+        const user = req.user;
+
+        try {
+            const commentRequest = await cosEtherpad.getTopicInlineComments(topicId, user.id, user.name);
+            const replyRequest = await cosEtherpad.getTopicInlineCommentReplies(topicId, user.id, user.name);
+            const replies = Object.values(replyRequest.replies);
+            const result = commentRequest.comments;
+            replies.forEach(function (reply) {
+                if (!result[reply.commentId].replies) {
+                    result[reply.commentId].replies = [];
+                }
+                result[reply.commentId].replies.push(reply);
+            });
+
+            return res.ok(result);
+        } catch (err) {
+            return next(err);
+        }
+    });
+
     const _topicUpdate = async function (req, res) {
         const topicId = req.params.topicId;
         const contact = req.body.contact; // TODO: This logic is specific to Rahvaalgatus.ee, with next Partner we have to make it more generic - https://trello.com/c/Sj3XRF5V/353-raa-ee-followup-email-to-riigikogu-and-token-access-to-events-api
