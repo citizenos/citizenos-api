@@ -1525,7 +1525,7 @@ module.exports = function (app) {
                 if (vote.authType === Vote.AUTH_TYPES.hard) {
                     const voteResults = await getVoteResults(vote.id);
                     const optionMax = _.maxBy(voteResults, 'voteCount');
-                    if (optionMax && optionMax.voteCount >= config.features.sendToParliament.voteCountMin) {
+                    if (optionMax && parseInt(optionMax.voteCount) >= parseInt(config.features.sendToParliament.voteCountMin)) {
                         return res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew + ' when the Topic has been sent to Parliament');
                     } else {
                         isBackToVoting = true;
