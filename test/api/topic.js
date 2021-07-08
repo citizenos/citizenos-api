@@ -1184,23 +1184,31 @@ const topicVoteDownloadBdocUser = async function (agent, topicId, voteId, token)
     return _topicVoteDownloadBdocUser(agent, topicId, voteId, token, 200);
 };
 
-const _topicVoteDownloadBdocFinal = async function (agent, topicId, voteId, token, expectedHttpCode) {
+const _topicVoteDownloadBdocFinal = async function (agent, topicId, voteId, token, include, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/votes/:voteId/downloads/bdocs/final'
         .replace(':userId', 'self')
         .replace(':topicId', topicId)
         .replace(':voteId', voteId);
 
+    const query = {
+        token
+    }
+
+    if (include) {
+        query.include = include;
+    }
+
     return agent
         .get(path)
-        .query({token: token})
+        .query(query)
         .send()
         .expect(expectedHttpCode)
         .expect('Content-Type', 'application/vnd.etsi.asic-e+zip')
         .expect('Content-Disposition', 'attachment; filename=final.bdoc');
 };
 
-const topicVoteDownloadBdocFinal = async function (agent, topicId, voteId, token) {
-    return _topicVoteDownloadBdocFinal(agent, topicId, voteId, token, 200);
+const topicVoteDownloadBdocFinal = async function (agent, topicId, voteId, token, include) {
+    return _topicVoteDownloadBdocFinal(agent, topicId, voteId, token, include, 200);
 };
 
 const _topicVoteDelegationCreate = async function (agent, userId, topicId, voteId, toUserId, expectedHttpCode) {
@@ -6948,7 +6956,7 @@ suite('Users', function () {
                                     assert.isNotNull(finalBdocUrlMatches);
 
                                     const finalBdocDownloadToken = finalBdocUrlMatches[1];
-                                    await topicVoteDownloadBdocFinal(agent, topic.id, voteRead.id, finalBdocDownloadToken);
+                                    await topicVoteDownloadBdocFinal(agent, topic.id, voteRead.id, finalBdocDownloadToken, ['csv']);
 
                                     const pathFinalBdoc = `./test/tmp/final_${voteRead.id}_${user.id}.bdoc`;
                                     const fileWriteStream = fs.createWriteStream(pathFinalBdoc);
@@ -6956,7 +6964,10 @@ suite('Users', function () {
 
                                     request('')
                                         .get(voteReadAfterVoteClosed.downloads.bdocFinal.split('?')[0])
-                                        .query({token: finalBdocDownloadToken})
+                                        .query({
+                                            include: 'csv',
+                                            token: finalBdocDownloadToken,
+                                        })
                                         .pipe(fileWriteStream);
 
                                     await fileWriteStreamPromised;
@@ -6981,20 +6992,22 @@ suite('Users', function () {
 
                                     const fileListExpected = [
                                         'mimetype',
+                                        'document.docx',
                                         '__metainfo.html',
                                         `${options[0].value}.html`,
                                         `${options[1].value}.html`,
                                         `${options[2].value}.html`,
-                                        'document.docx',
                                         `PNOEE-${pid}.bdoc`,
                                         'votes.csv',
+                                        'graph.pdf',
                                         'META-INF/manifest.xml'
                                     ];
-
+                                    const fileListReturned = [];
                                     bdocFileList.forEach(function (f) {
-                                        assert.include(fileListExpected, f.file);
+                                        fileListReturned.push(f.file);
                                     });
 
+                                    assert.deepEqual(fileListExpected, fileListReturned);
                                     // Clean up
                                     fs.unlinkSync(pathFinalBdoc);
                                 });
@@ -7398,44 +7411,16 @@ suite('Users', function () {
                             assert.equal(response.status.code, 20001);
                             assert.match(response.data.challengeID, /[0-9]{4}/);
 
-                            const maxRetries = 20;
-                            const retryInterval = 1000; // milliseconds;
-
-                            let retries = 0;
-
-                            const statusInterval = setInterval(async function () {
-                                try {
-                                    if (retries < maxRetries) {
-                                        retries++;
-
-                                        const topicVoteStatusResponse = await _topicVoteStatus(agent, user.id, topic.id, vote.id, response.data.token, 400);
-                                        if (topicVoteStatusResponse.body.status.code === 20001 && topicVoteStatusResponse.body.status.message === 'Signing in progress') {
-                                            // Signing is in progress, we shall journey on...
-                                        } else {
-                                            // Its HTTP 200 and NOT 20001 - Signing in progress, so we have our result, WE'RE DONE HERE
-                                            clearInterval(statusInterval);
-
-                                            const expectedResponse = {
-                                                status:
-                                                    {
-                                                        code: 40010,
-                                                        message: 'User has cancelled the signing process'
-                                                    }
-                                            }
-                                            assert.equal(topicVoteStatusResponse.body.status.code, 40010);
-                                            assert.deepEqual(topicVoteStatusResponse.body, expectedResponse);
-                                        }
-                                    } else {
-                                        clearInterval(statusInterval);
-
-                                        throw new Error(`topicVoteStatus maximum retry limit ${maxRetries} reached!`);
+                            const topicVoteStatusResponse = await _topicVoteStatus(agent, user.id, topic.id, vote.id, response.data.token, 400);
+                            const expectedResponse = {
+                                status:
+                                    {
+                                        code: 40010,
+                                        message: 'User has cancelled the signing process'
                                     }
-                                } catch (err) {
-                                    if (err.message !== 'expected 400 "Bad Request", got 200 "OK"') {
-                                        console.log(err);
-                                    }
-                                }
-                            }, retryInterval);
+                            }
+                            assert.equal(topicVoteStatusResponse.body.status.code, 40010);
+                            assert.deepEqual(topicVoteStatusResponse.body, expectedResponse);
                         });
 
                         // FIXME: Known to fail, needs some attention. More details from @ilmartyrk
@@ -7455,43 +7440,16 @@ suite('Users', function () {
                             assert.equal(response.status.code, 20001);
                             assert.match(response.data.challengeID, /[0-9]{4}/);
 
-                            const maxRetries = 20;
-                            const retryInterval = 1000; // milliseconds;
-
-                            let retries = 0;
-                            const statusInterval = setInterval(async function () {
-                                try {
-                                    if (retries < maxRetries) {
-                                        retries++;
-
-                                        const topicVoteStatusResponse = await _topicVoteStatus(agent, user.id, topic.id, vote.id, response.data.token, 400);
-                                        if (topicVoteStatusResponse.body.status.code === 20001 && topicVoteStatusResponse.body.status.message === 'Signing in progress') {
-                                            // Signing is in progress, we shall journey on...
-                                        } else {
-                                            // Its HTTP 200 and NOT 20001 - Signing in progress, so we have our result, WE'RE DONE HERE
-                                            clearInterval(statusInterval);
-
-                                            const expectedResponse = {
-                                                status:
-                                                    {
-                                                        code: 40010,
-                                                        message: 'User has cancelled the signing process'
-                                                    }
-                                            }
-                                            assert.equal(topicVoteStatusResponse.body.status.code, 40010);
-                                            assert.deepEqual(topicVoteStatusResponse.body, expectedResponse);
-                                        }
-                                    } else {
-                                        clearInterval(statusInterval);
-
-                                        throw new Error(`topicVoteStatus maximum retry limit ${maxRetries} reached!`);
+                            const topicVoteStatusResponse = await _topicVoteStatus(agent, user.id, topic.id, vote.id, response.data.token, 400);
+                            const expectedResponse = {
+                                status:
+                                    {
+                                        code: 40010,
+                                        message: 'User has cancelled the signing process'
                                     }
-                                } catch (err) {
-                                    if (err.message !== 'expected 400 "Bad Request", got 200 "OK"') {
-                                        console.log(err);
-                                    }
-                                }
-                            }, retryInterval);
+                            }
+                            assert.equal(topicVoteStatusResponse.body.status.code, 40010);
+                            assert.deepEqual(topicVoteStatusResponse.body, expectedResponse);
                         });
 
                         test('Fail - 40031 - User account already connected to another PID.', async function () {

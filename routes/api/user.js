@@ -5,7 +5,6 @@ module.exports = function (app) {
     const db = models.sequelize;
 
     const loginCheck = app.get('middleware.loginCheck');
-    const asyncMiddleware = app.get('middleware.asyncMiddleware');
     const emailLib = app.get('email');
     const config = app.get('config');
     const cosActivities = app.get('cosActivities');
@@ -22,80 +21,70 @@ module.exports = function (app) {
     /**
      * Update User info
      */
-    app.put('/api/users/:userId', loginCheck(['partner']), function (req, res, next) {
+    app.put('/api/users/:userId', loginCheck(['partner']), async function (req, res, next) {
+        try {
+            const fields = ['name', 'company', 'email', 'language', 'imageUrl', 'termsVersion'];
+            if (!req.user.partnerId) { // Allow only our own app change the password
+                fields.push('password');
+            }
+            let updateEmail = false;
 
-        const fields = ['name', 'company', 'email', 'language', 'imageUrl', 'termsVersion'];
-        if (!req.user.partnerId) { // Allow only our own app change the password
-            fields.push('password');
-        }
-        let updateEmail = false;
-
-        User
-            .findOne({
+            let user = await User.findOne({
                 where: {
                     id: req.user.id
                 }
-            })
-            .then(function (user) {
-                if (req.body.email && req.body.email !== user.email) {
-                    updateEmail = true;
-                    fields.push('emailIsVerified');
-                    fields.push('emailVerificationCode');
-                    req.body.emailIsVerified = false;
-                    req.body.emailVerificationCode = uuid.v4(); // Generate new emailVerificationCode
+            });
+
+            if (req.body.email && req.body.email !== user.email) {
+                updateEmail = true;
+                fields.push('emailIsVerified');
+                fields.push('emailVerificationCode');
+                req.body.emailIsVerified = false;
+                req.body.emailVerificationCode = uuid.v4(); // Generate new emailVerificationCode
+            }
+            if (req.body.termsVersion && req.body.termsVersion !== user.termsVersion) {
+                fields.push('termsAcceptedAt');
+                req.body.termsAcceptedAt = moment().format();
+            }
+
+            const results = await User.update(
+                req.body,
+                {
+                    where: {
+                        id: req.user.id
+                    },
+                    fields: fields,
+                    limit: 1,
+                    returning: true
                 }
-                if (req.body.termsVersion && req.body.termsVersion !== user.termsVersion) {
-                    fields.push('termsAcceptedAt');
-                    req.body.termsAcceptedAt = moment().format();
-                }
+            );
 
-                return User
-                    .update(
-                        req.body,
-                        {
-                            where: {
-                                id: req.user.id
-                            },
-                            fields: fields,
-                            limit: 1,
-                            returning: true
-                        }
-                    );
+            if (!results[1]) return res.ok();
 
-            })
-            .then(function (results) {
-                if (!results[1]) return res.ok();
-                const user = results[1][0];
+            user = results[1][0];
 
-                let sendEmailPromise = Promise.resolve();
+            if (updateEmail) {
+                await UserConnection.update({
+                    connectionData: user
+                }, {
+                    where: {
+                        connectionId: UserConnection.CONNECTION_IDS.citizenos,
+                        userId: user.id
+                    }
+                });
+                const tokenData = {
+                    redirectSuccess: urlLib.getFe() // TODO: Misleading naming, would like to use "redirectUri" (OpenID convention) instead, but needs RAA.ee to update codebase.
+                };
 
-                if (updateEmail) {
-                    UserConnection
-                        .update({
-                            connectionData: user
-                        }, {
-                            where: {
-                                connectionId: UserConnection.CONNECTION_IDS.citizenos,
-                                userId: user.id
-                            }
-                        })
-                        .then(function () {
-                            const tokenData = {
-                                redirectSuccess: urlLib.getFe() // TODO: Misleading naming, would like to use "redirectUri" (OpenID convention) instead, but needs RAA.ee to update codebase.
-                            };
+                const token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
 
-                            const token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
+                await emailLib.sendAccountVerification(user.email, user.emailVerificationCode, token);
+            }
 
-                            sendEmailPromise = emailLib.sendAccountVerification(user.email, user.emailVerificationCode, token);
-                        });
-                }
-
-                return sendEmailPromise
-                    .then(function () {
-                        return res.ok(user.toJSON());
-                    });
-            })
-            .catch(next);
+            return res.ok(user.toJSON());
+        } catch (err) {
+            return next(err);
+        }
     });
 
     /**
@@ -103,141 +92,142 @@ module.exports = function (app) {
      *
      * Right now only supports getting info for logged in User
      */
-    app.get('/api/users/:userId', loginCheck(['partner']), function (req, res, next) {
-        User
-            .findOne({
+    app.get('/api/users/:userId', loginCheck(['partner']), async function (req, res, next) {
+        try {
+            const user = await User.findOne({
                 where: {
                     id: req.user.id
                 }
-            })
-            .then(function (user) {
-                if (!user) {
-                    return res.notFound();
-                }
+            });
 
-                return res.ok(user.toJSON());
-            })
-            .catch(next);
+            if (!user) {
+                return res.notFound();
+            }
+
+            return res.ok(user.toJSON());
+        } catch (err) {
+            return next(err);
+        }
     });
 
     /**
      * Delete User
      */
-    app.delete('/api/users/:userId', loginCheck(), function (req, res, next) {
-        User
+    app.delete('/api/users/:userId', loginCheck(), async function (req, res, next) {
+        try {
+            const user = await User
             .findOne({
                 where: {
                     id: req.user.id
                 }
-            })
-            .then(function (user) {
-                if (!user) {
-                    return res.notFound();
-                }
-                return db
-                    .transaction(function (t) {
-                        return User
-                            .update(
-                                {
-                                    name: 'Anonymous',
-                                    email: null,
-                                    company: null,
-                                    imageUrl: null,
-                                    sourceId: null
+            });
 
-                                },
-                                {
-                                    where: {
-                                        id: req.user.id
-                                    },
-                                    limit: 1,
-                                    returning: true,
-                                    transaction: t
-                                }
-                            )
-                            .then(function () {
-                                return User.destroy({
-                                    where: {
-                                        id: req.user.id
-                                    },
-                                    transaction: t
-                                });
-                            })
-                            .then(function () {
-                                return UserConnection.destroy({
-                                    where: {
-                                        userId: req.user.id
-                                    },
-                                    force: true,
-                                    transaction: t
-                                })
-                            });
-                    })
-            })
-            .then(function () {
-                return res.ok();
-            })
-            .catch(next);
+        if (!user) {
+            return res.notFound();
+        }
+        await db
+            .transaction(async function (t) {
+                await User.update(
+                    {
+                        name: 'Anonymous',
+                        email: null,
+                        company: null,
+                        imageUrl: null,
+                        sourceId: null
+
+                    },
+                    {
+                        where: {
+                            id: req.user.id
+                        },
+                        limit: 1,
+                        returning: true,
+                        transaction: t
+                    }
+                );
+
+                await User.destroy({
+                    where: {
+                        id: req.user.id
+                    },
+                    transaction: t
+                });
+
+                await UserConnection.destroy({
+                    where: {
+                        userId: req.user.id
+                    },
+                    force: true,
+                    transaction: t
+                });
+
+                t.afterCommit(() => {
+                    return res.ok();
+                });
+            });
+        } catch (err) {
+            return next(err);
+        }
+
     });
     /**
      * Create UserConsent
      */
-    app.post('/api/users/:userId/consents', loginCheck(), function (req, res, next) {
+    app.post('/api/users/:userId/consents', loginCheck(), async function (req, res, next) {
         const userId = req.user.id;
         const partnerId = req.body.partnerId;
-
-        db
-            .transaction(function (t) {
-                return UserConsent
-                    .upsert({
+        try {
+            await db
+                .transaction(async function (t) {
+                    const created = await UserConsent.upsert({
                         userId: userId,
                         partnerId: partnerId
                     }, {
                         transaction: t
-                    })
-                    .then(function (created) {
-                        if (created) {
-                            const userConsent = UserConsent.build({
-                                userId: userId,
-                                partnerId: partnerId
-                            });
-
-                            return cosActivities
-                                .createActivity(userConsent, null, {
-                                    type: 'User',
-                                    id: userId,
-                                    ip: req.ip
-                                }, req.method + ' ' + req.path, t);
-                        }
-
-                        return created;
                     });
-            })
-            .then(function () {
-                return res.ok();
-            })
-            .catch(next);
+
+                    if (created) {
+                        const userConsent = UserConsent.build({
+                            userId: userId,
+                            partnerId: partnerId
+                        });
+
+                        await cosActivities
+                            .createActivity(userConsent, null, {
+                                type: 'User',
+                                id: userId,
+                                ip: req.ip
+                            }, req.method + ' ' + req.path, t);
+                    }
+
+                    t.afterCommit(() => {
+                        return res.ok();
+                    });
+                });
+
+        } catch (err) {
+            return next(err);
+        }
     });
 
     /**
      * Read User consents
      */
-    app.get('/api/users/:userId/consents', loginCheck(), function (req, res, next) {
+    app.get('/api/users/:userId/consents', loginCheck(), async function (req, res, next) {
         const userId = req.user.id;
-
-        db
-            .query(
-                '\
-                SELECT \
-                    p.id, \
-                    p.website, \
-                    p."createdAt", \
-                    p."updatedAt" \
-                FROM "UserConsents" uc \
-                LEFT JOIN "Partners" p ON (p.id = uc."partnerId") \
-                WHERE uc."userId" = :userId \
-                  AND uc."deletedAt" IS NULL \
-                ;',
+        try {
+            const results = await db.query(
+                `
+                SELECT
+                    p.id,
+                    p.website,
+                    p."createdAt",
+                    p."updatedAt"
+                FROM "UserConsents" uc
+                LEFT JOIN "Partners" p ON (p.id = uc."partnerId")
+                WHERE uc."userId" = :userId
+                    AND uc."deletedAt" IS NULL
+                ;`,
                 {
                     replacements: {
                         userId: userId
@@ -246,63 +236,65 @@ module.exports = function (app) {
                     raw: true,
                     nest: true
                 }
-            )
-            .then(function (results) {
-                return res.ok({
-                    count: results.length,
-                    rows: results
-                });
-            })
-            .catch(next);
+            );
+
+            return res.ok({
+                count: results.length,
+                rows: results
+            });
+        } catch(err) {
+            return next(err);
+        }
     });
 
     /**
      * Delete User consent
      */
-    app.delete('/api/users/:userId/consents/:partnerId', loginCheck(), function (req, res, next) {
+    app.delete('/api/users/:userId/consents/:partnerId', loginCheck(), async function (req, res, next) {
         const userId = req.user.id;
         const partnerId = req.params.partnerId;
 
-        db
-            .transaction(function (t) {
-                return UserConsent
-                    .destroy(
-                        {
-                            where: {
-                                userId: userId,
-                                partnerId: partnerId
-                            },
-                            limit: 1,
-                            force: true
-                        },
-                        {
-                            transaction: t
-                        }
-                    )
-                    .then(function () {
-                        const consent = UserConsent.build({
+        try {
+            await db.transaction(async function (t) {
+                await UserConsent.destroy(
+                    {
+                        where: {
                             userId: userId,
                             partnerId: partnerId
-                        });
+                        },
+                        limit: 1,
+                        force: true
+                    },
+                    {
+                        transaction: t
+                    }
+                );
 
-                        return cosActivities
-                            .deleteActivity(
-                                consent,
-                                null,
-                                {
-                                    type: 'User',
-                                    id: req.user.id,
-                                    ip: req.ip
-                                },
-                                req.method + ' ' + req.path,
-                                t
-                            );
-                    });
-            })
-            .then(function () {
-                return res.ok();
-            })
-            .catch(next);
+                const consent = UserConsent.build({
+                    userId: userId,
+                    partnerId: partnerId
+                });
+
+                await cosActivities.deleteActivity(
+                    consent,
+                    null,
+                    {
+                        type: 'User',
+                        id: req.user.id,
+                        ip: req.ip
+                    },
+                    req.method + ' ' + req.path,
+                    t
+                );
+
+                t.afterCommit(() => {
+                    return res.ok();
+                });
+            });
+
+        } catch (err) {
+            return next(err);
+        }
     });
 
 
@@ -311,7 +303,8 @@ module.exports = function (app) {
      *
      * Get UserConnections, that is list of methods User can use to authenticate.
      */
-    app.get('/api/users/:userId/userconnections', asyncMiddleware(async function (req, res) {
+    app.get('/api/users/:userId/userconnections', async function (req, res, next) {
+        try {
             const userId = req.params.userId;
             let where;
 
@@ -366,7 +359,9 @@ module.exports = function (app) {
                 count: userConnections.length,
                 rows: userConnections
             });
+        } catch (err) {
+            return next(err);
         }
-    ));
+    });
 
 };

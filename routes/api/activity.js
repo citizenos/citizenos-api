@@ -329,79 +329,79 @@ module.exports = function (app) {
         return returnList;
     };
 
-    const topicActivitiesList = function (req, res, next, visibility) {
-        const limitMax = 50;
-        const limitDefault = 10;
-        const topicId = req.params.topicId;
-        let userId = null;
-        if (req.user && !visibility) {
-            userId = req.user.id;
-        }
-        const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
-        let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
-        let visibilityCondition = '';
-        if (visibility) {
-            visibilityCondition = 't.visibility = :visibility AND';
-        }
+    const topicActivitiesList = async function (req, res, next, visibility) {
+        try {
+            const limitMax = 50;
+            const limitDefault = 10;
+            const topicId = req.params.topicId;
+            let userId = null;
+            if (req.user && !visibility) {
+                userId = req.user.id;
+            }
+            const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
+            let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+            let visibilityCondition = '';
+            if (visibility) {
+                visibilityCondition = 't.visibility = :visibility AND';
+            }
 
-        if (limit > limitMax) limit = limitDefault;
+            if (limit > limitMax) limit = limitDefault;
 
-        const allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User', 'VoteList'];
-        let queryFilters = req.query.filter || [];
-        if (queryFilters && !Array.isArray(queryFilters)) {
-            queryFilters = [queryFilters];
-        }
+            const allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User', 'VoteList'];
+            let queryFilters = req.query.filter || [];
+            if (queryFilters && !Array.isArray(queryFilters)) {
+                queryFilters = [queryFilters];
+            }
 
-        const filters = queryFilters.filter(function (item, key, input) {
-            return allowedFilters.indexOf(item) > -1 && (input.indexOf(item) === key);
-        });
-
-        let filterSql = '';
-
-        if (filters.length) {
-            const filtersEscaped = filters.map(function (filter) {
-                return db.escape(filter);
-            });
-            filterSql += 'AND a.data#>>\'{object, @type}\' IN (' + filtersEscaped.join(',') + ') OR a.data#>>\'{object, 0, @type}\' IN (' + filtersEscaped.join(',') + ') ';
-        }
-
-        return db.transaction(function (t) {
-            const activity = Activity.build({
-                data: {
-                    offset: offset,
-                    limit: limit
-                }
+            const filters = queryFilters.filter(function (item, key, input) {
+                return allowedFilters.indexOf(item) > -1 && (input.indexOf(item) === key);
             });
 
-            return db
-                .query(
-                    '\
-                    ' + activitiesDataFunction + ' \
-                    SELECT \
-                        ad.* \
-                    FROM \
-                    (SELECT \
-                        a.id, a."topicIds", a."groupIds", a."userIds" \
-                        FROM \
-                        "Activities" a \
-                        JOIN "Topics" t ON t.id = :topicId \
-                        WHERE \
-                        ' + visibilityCondition + ' \
-                        ARRAY[:topicId] <@  a."topicIds" \
-                        ' + filterSql + ' \
-                        OR \
-                        a.data@>\'{"type": "View"}\' \
-                        AND \
-                        a."actorType" = \'User\' \
-                        AND \
-                        a."actorId" = :userId \
-                        AND \
-                        a.data#>>\'{object, @type}\' = \'Activity\' \
-                        ORDER BY a."updatedAt" DESC \
-                        LIMIT :limit OFFSET :offset) a \
-                    JOIN pg_temp.getActivityData(a.id, a."topicIds", a."groupIds", a."userIds") ad ON ad."id" = a.id \
-                    ORDER BY ad."updatedAt" DESC \
-                    ;',
+            let filterSql = '';
+
+            if (filters.length) {
+                const filtersEscaped = filters.map(function (filter) {
+                    return db.escape(filter);
+                });
+                filterSql += `AND a.data#>>'{object, @type}' IN (${filtersEscaped.join(',')}) OR a.data#>>'{object, 0, @type}' IN (${filtersEscaped.join(',')}) `;
+            }
+
+            await db.transaction(async function (t) {
+                const activity = Activity.build({
+                    data: {
+                        offset: offset,
+                        limit: limit
+                    }
+                });
+
+                const results = await db.query(
+                    `
+                    ${activitiesDataFunction}
+                    SELECT
+                        ad.*
+                    FROM
+                    (SELECT
+                        a.id, a."topicIds", a."groupIds", a."userIds"
+                        FROM
+                        "Activities" a
+                        JOIN "Topics" t ON t.id = :topicId
+                        WHERE
+                        ${visibilityCondition}
+                        ARRAY[:topicId] <@  a."topicIds"
+                        ${filterSql}
+                        OR
+                        a.data@>'{"type": "View"}'
+                        AND
+                        a."actorType" = 'User'
+                        AND
+                        a."actorId" = :userId
+                        AND
+                        a.data#>>'{object, @type}' = 'Activity'
+                        ORDER BY a."updatedAt" DESC
+                        LIMIT :limit OFFSET :offset) a
+                    JOIN pg_temp.getActivityData(a.id, a."topicIds", a."groupIds", a."userIds") ad ON ad."id" = a.id
+                    ORDER BY ad."updatedAt" DESC
+                    ;`,
                     {
                         replacements: {
                             topicId: topicId,
@@ -415,61 +415,58 @@ module.exports = function (app) {
                         nest: true,
                         raw: true
                     }
-                )
-                .then(function (results) {
-                    if (userId && !visibility) {
-                        return cosActivities
-                            .viewActivityFeedActivity(
-                                activity,
-                                {
-                                    type: 'User',
-                                    id: req.user.id,
-                                    ip: req.ip
-                                },
-                                req.method + ' ' + req.path,
-                                t
-                            )
-                            .then(function () {
-                                return parseActivitiesResults(results);
-                            });
+                );
+
+                if (userId && !visibility) {
+                    await cosActivities
+                        .viewActivityFeedActivity(
+                            activity,
+                            {
+                                type: 'User',
+                                id: req.user.id,
+                                ip: req.ip
+                            },
+                            req.method + ' ' + req.path,
+                            t
+                        )
+                }
+
+                const finalResults = parseActivitiesResults(results);
+
+                t.afterCommit(() => {
+                    if (finalResults && finalResults.length && finalResults[0]) {
+                        return res.ok(finalResults);
                     }
 
-                    return parseActivitiesResults(results);
+                    return res.notFound();
                 });
-        });
+            });
+        } catch (err) {
+            return next(err);
+        }
     };
 
-    app.get('/api/topics/:topicId/activities', function (req, res, next) {
-        return topicActivitiesList(req, res, next, 'public')
-            .then(function (results) {
-                if (results && results.length && results[0]) {
-                    return res.ok(results);
-                } else {
-                    return res.notFound();
-                }
-            })
-            .catch(next);
+    app.get('/api/topics/:topicId/activities', async function (req, res, next) {
+        return topicActivitiesList(req, res, next, 'public');
     });
 
     app.get('/api/test/users/:userId/activities', function (req, res, next) {
         req.user = {id: req.params.userId};
+
         return activitiesList(req, res, next);
     });
 
     app.get('/api/test/old/users/:userId/activities', function (req, res, next) {
         req.user = {id: req.params.userId};
+
         return activitiesList(req, res, next);
     });
 
     app.get('/api/users/:userId/topics/:topicId/activities', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), function (req, res, next) {
-        return topicActivitiesList(req, res, next)
-            .then(function (results) {
-                return res.ok(results);
-            })
-            .catch(next);
+        return topicActivitiesList(req, res, next);
     });
 
-    app.get('/api/users/:userId/activities/unread', loginCheck(['partner']), function (req, res, next) {
+    app.get('/api/users/:userId/activities/unread', loginCheck(['partner']), async function (req, res, next) {
         const userId = req.user.id;
         const sourcePartnerId = req.query.sourcePartnerId;
 
@@ -480,568 +477,569 @@ module.exports = function (app) {
             wherePartnerTopics = ' AND t."sourcePartnerId" = :sourcePartnerId ';
             wherePartnerGroups = ' AND g."sourcePartnerId" = :sourcePartnerId ';
         }
+        try {
+            const query = `
+                CREATE OR REPLACE FUNCTION pg_temp.getUserTopics(uuid)
+                    RETURNS TABLE("topicId" uuid)
+                    AS $$
+                        SELECT
+                                t.id
+                        FROM "Topics" t
+                            LEFT JOIN (
+                                SELECT
+                                    tmu."topicId",
+                                    tmu."userId",
+                                    tmu.level::text AS level
+                                FROM "TopicMemberUsers" tmu
+                                WHERE tmu."deletedAt" IS NULL
+                            ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = $1)
+                            LEFT JOIN (
+                                SELECT
+                                    tmg."topicId",
+                                    gm."userId",
+                                    MAX(tmg.level)::text AS level
+                                FROM "TopicMemberGroups" tmg
+                                    LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
+                                WHERE tmg."deletedAt" IS NULL
+                                AND gm."deletedAt" IS NULL
+                                GROUP BY "topicId", "userId"
+                            ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = $1)
+                            LEFT JOIN "Users" c ON (c.id = t."creatorId")
+                        WHERE
+                            t.title IS NOT NULL
+                            ${wherePartnerTopics}
+                            AND COALESCE(tmup.level, tmgp.level, 'none')::"enum_TopicMemberUsers_level" > 'none'
+                        ORDER BY t."updatedAt" DESC
+                    ; $$
+                LANGUAGE SQL IMMUTABLE ;
 
-        const query = '\
-            CREATE OR REPLACE FUNCTION pg_temp.getUserTopics(uuid) \
-                RETURNS TABLE("topicId" uuid) \
-                AS $$ \
-                    SELECT \
-                            t.id \
-                    FROM "Topics" t \
-                        LEFT JOIN ( \
-                            SELECT \
-                                tmu."topicId", \
-                                tmu."userId", \
-                                tmu.level::text AS level \
-                            FROM "TopicMemberUsers" tmu \
-                            WHERE tmu."deletedAt" IS NULL \
-                        ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = $1) \
-                        LEFT JOIN ( \
-                            SELECT \
-                                tmg."topicId", \
-                                gm."userId", \
-                                MAX(tmg.level)::text AS level \
-                            FROM "TopicMemberGroups" tmg \
-                                LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId") \
-                            WHERE tmg."deletedAt" IS NULL \
-                            AND gm."deletedAt" IS NULL \
-                            GROUP BY "topicId", "userId" \
-                        ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = $1) \
-                        LEFT JOIN "Users" c ON (c.id = t."creatorId") \
-                    WHERE \
-                        t.title IS NOT NULL \
-                        ' + wherePartnerTopics + ' \
-                        AND COALESCE(tmup.level, tmgp.level, \'none\')::"enum_TopicMemberUsers_level" > \'none\' \
-                    ORDER BY t."updatedAt" DESC \
-                ; $$ \
-            LANGUAGE SQL IMMUTABLE ; \
-                \
-            CREATE OR REPLACE FUNCTION pg_temp.getUserGroups(uuid) \
-                RETURNS TABLE("groupId" uuid) \
-                AS $$ \
-                    SELECT \
-                        g.id \
-                    FROM "Groups" g \
-                        JOIN "GroupMemberUsers" gm ON (gm."groupId" = g.id) \
-                        JOIN "Users" c ON (c.id = g."creatorId") \
-                        JOIN ( \
-                            SELECT "groupId", count("userId") AS "count" \
-                            FROM "GroupMemberUsers" \
-                            WHERE "deletedAt" IS NULL \
-                            GROUP BY "groupId" \
-                        ) AS mc ON (mc."groupId" = g.id) \
-                        LEFT JOIN ( \
-                            SELECT \
-                                tmg."groupId", \
-                                count(tmg."topicId") AS "count" \
-                            FROM "TopicMemberGroups" tmg \
-                            WHERE tmg."deletedAt" IS NULL \
-                            GROUP BY tmg."groupId" \
-                        ) AS gtc ON (gtc."groupId" = g.id) \
-                        LEFT JOIN ( \
-                            SELECT \
-                                tmg."groupId", \
-                                tmg."topicId", \
-                                t.title \
-                            FROM "TopicMemberGroups" tmg \
-                                LEFT JOIN "Topics" t ON (t.id = tmg."topicId") \
-                            WHERE tmg."deletedAt" IS NULL \
-                            ORDER BY t."updatedAt" ASC \
-                        ) AS gt ON (gt."groupId" = g.id) \
-                    WHERE gm."deletedAt" is NULL \
-                        ' + wherePartnerGroups + ' \
-                        AND gm."userId" = $1 \
-                    GROUP BY g.id \
-                    ORDER BY g."updatedAt" DESC, g.id \
-                ; $$ \
-            LANGUAGE SQL IMMUTABLE; \
-            \
-            CREATE OR REPLACE FUNCTION pg_temp.getUserTopicActivities(uuid) \
-                RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
-                AS $$ \
-                    SELECT \
-                        a.id, \
-                        a.data, \
-                        a."topicIds", \
-                        a."groupIds", \
-                        a."userIds", \
-                        a."createdAt", \
-                        a."updatedAt", \
-                        a."deletedAt" \
-                    FROM \
-                        "Activities" a, \
-                        pg_temp.getUserTopics($1) ut \
-                        WHERE \
-                        ARRAY[ut."topicId"::text] <@ (a."topicIds") \
-                        ORDER BY a."updatedAt" DESC \
-                ; $$ \
-            LANGUAGE SQL IMMUTABLE; \
-            \
-            CREATE OR REPLACE FUNCTION pg_temp.getUserGroupActivities(uuid) \
-                RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
-                AS $$ \
-                    SELECT \
-                        a.id, \
-                        a.data, \
-                        a."topicIds", \
-                        a."groupIds", \
-                        a."userIds", \
-                        a."createdAt", \
-                        a."updatedAt", \
-                        a."deletedAt" \
-                    FROM \
-                        "Activities" a, \
-                        pg_temp.getUserGroups($1) ug \
-                        WHERE \
-                        ARRAY[ug."groupId"::text] <@ (a."groupIds") \
-                        ORDER BY a."updatedAt" DESC \
-                ; $$ \
-            LANGUAGE SQL IMMUTABLE; \
-            \
-            CREATE OR REPLACE FUNCTION  pg_temp.getUserActivities(uuid) \
-                RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
-                AS $$ \
-                    SELECT \
-                        a.id, \
-                        a.data, \
-                        a."topicIds", \
-                        a."groupIds", \
-                        a."userIds", \
-                        a."createdAt", \
-                        a."updatedAt", \
-                        a."deletedAt" \
-                    FROM \
-                        "Activities" a \
-                        WHERE \
-                        ARRAY[$1::text] <@ (a."userIds") \
-                        ORDER BY a."updatedAt" DESC \
-                ; $$ \
-            LANGUAGE SQL IMMUTABLE; \
-            \
-            CREATE OR REPLACE FUNCTION  pg_temp.getUserAsActorActivities(uuid) \
-                RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
-                AS $$ \
-                    SELECT \
-                        a.id, \
-                        a.data, \
-                        a."topicIds", \
-                        a."groupIds", \
-                        a."userIds", \
-                        a."createdAt", \
-                        a."updatedAt", \
-                        a."deletedAt" \
-                    FROM \
-                        "Activities" a \
-                        WHERE \
-                            a."actorType" = \'User\' AND a."actorId" = $1::text \
-                        ORDER BY a."updatedAt" DESC \
-                ; $$ \
-            LANGUAGE SQL IMMUTABLE; \
-            \
-            SELECT \
-                    COUNT(uac.id) AS count \
-                FROM \
-                    ( \
-                        SELECT \
-                            ua.id, \
-                            ua.data, \
-                            ua."createdAt", \
-                            ua."updatedAt", \
-                            ua."deletedAt" \
-                        FROM \
-                            pg_temp.getUserActivities(:userId) ua \
-                        UNION \
-                        SELECT \
-                            guta.id, \
-                            guta.data, \
-                            guta."createdAt", \
-                            guta."updatedAt", \
-                            guta."deletedAt" \
-                        FROM \
-                            pg_temp.getUserTopicActivities(:userId) guta \
-                        UNION \
-                        SELECT \
-                            guga.id, \
-                            guga.data, \
-                            guga."createdAt", \
-                            guga."updatedAt", \
-                            guga."deletedAt" \
-                        FROM \
-                            pg_temp.getUserGroupActivities(:userId) guga \
-                        UNION \
-                        SELECT \
-                            guaaa.id, \
-                            guaaa.data, \
-                            guaaa."createdAt", \
-                            guaaa."updatedAt", \
-                            guaaa."deletedAt" \
-                        FROM \
-                            pg_temp.getUserAsActorActivities(:userId) guaaa \
-                    ) uac \
-            JOIN (\
-                SELECT \
-                    va.id, \
-                    va.data, \
-                    va."createdAt", \
-                    va."updatedAt", \
-                    va."deletedAt" \
-                FROM "Activities" va \
-                WHERE \
-                    va."actorType" = \'User\' AND va."actorId" = :userId::text \
-                AND va.data@>\'{"type": "View"}\' \
-                AND va.data#>>\'{object, @type}\' = \'Activity\' \
-            ) ua ON ua.id = ua.id \
-            WHERE \
-                uac.id <> ua.id \
-                AND \
-                uac."createdAt" > ua."updatedAt" \
-            OR \
-                uac.id <> ua.id \
-                AND \
-                uac."updatedAt" > ua."updatedAt" \
-            ;';
+                CREATE OR REPLACE FUNCTION pg_temp.getUserGroups(uuid)
+                    RETURNS TABLE("groupId" uuid)
+                    AS $$
+                        SELECT
+                            g.id
+                        FROM "Groups" g
+                            JOIN "GroupMemberUsers" gm ON (gm."groupId" = g.id)
+                            JOIN "Users" c ON (c.id = g."creatorId")
+                            JOIN (
+                                SELECT "groupId", count("userId") AS "count"
+                                FROM "GroupMemberUsers"
+                                WHERE "deletedAt" IS NULL
+                                GROUP BY "groupId"
+                            ) AS mc ON (mc."groupId" = g.id)
+                            LEFT JOIN (
+                                SELECT
+                                    tmg."groupId",
+                                    count(tmg."topicId") AS "count"
+                                FROM "TopicMemberGroups" tmg
+                                WHERE tmg."deletedAt" IS NULL
+                                GROUP BY tmg."groupId"
+                            ) AS gtc ON (gtc."groupId" = g.id)
+                            LEFT JOIN (
+                                SELECT
+                                    tmg."groupId",
+                                    tmg."topicId",
+                                    t.title
+                                FROM "TopicMemberGroups" tmg
+                                    LEFT JOIN "Topics" t ON (t.id = tmg."topicId")
+                                WHERE tmg."deletedAt" IS NULL
+                                ORDER BY t."updatedAt" ASC
+                            ) AS gt ON (gt."groupId" = g.id)
+                        WHERE gm."deletedAt" is NULL
+                            ${wherePartnerGroups}
+                            AND gm."userId" = $1
+                        GROUP BY g.id
+                        ORDER BY g."updatedAt" DESC, g.id
+                    ; $$
+                LANGUAGE SQL IMMUTABLE;
 
-        return db
-            .query(
-                query,
-                {
-                    replacements: {
-                        userId: userId,
-                        sourcePartnerId: sourcePartnerId
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true,
-                    nest: true
-                }
-            )
-            .then(function (results) {
-                return res.ok(results[0]);
-            })
-            .catch(next);
+                CREATE OR REPLACE FUNCTION pg_temp.getUserTopicActivities(uuid)
+                    RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone)
+                    AS $$
+                        SELECT
+                            a.id,
+                            a.data,
+                            a."topicIds",
+                            a."groupIds",
+                            a."userIds",
+                            a."createdAt",
+                            a."updatedAt",
+                            a."deletedAt"
+                        FROM
+                            "Activities" a,
+                            pg_temp.getUserTopics($1) ut
+                            WHERE
+                            ARRAY[ut."topicId"::text] <@ (a."topicIds")
+                            ORDER BY a."updatedAt" DESC
+                    ; $$
+                LANGUAGE SQL IMMUTABLE;
+
+                CREATE OR REPLACE FUNCTION pg_temp.getUserGroupActivities(uuid)
+                    RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone)
+                    AS $$
+                        SELECT
+                            a.id,
+                            a.data,
+                            a."topicIds",
+                            a."groupIds",
+                            a."userIds",
+                            a."createdAt",
+                            a."updatedAt",
+                            a."deletedAt"
+                        FROM
+                            "Activities" a,
+                            pg_temp.getUserGroups($1) ug
+                            WHERE
+                            ARRAY[ug."groupId"::text] <@ (a."groupIds")
+                            ORDER BY a."updatedAt" DESC
+                    ; $$
+                LANGUAGE SQL IMMUTABLE;
+
+                CREATE OR REPLACE FUNCTION  pg_temp.getUserActivities(uuid)
+                    RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone)
+                    AS $$
+                        SELECT
+                            a.id,
+                            a.data,
+                            a."topicIds",
+                            a."groupIds",
+                            a."userIds",
+                            a."createdAt",
+                            a."updatedAt",
+                            a."deletedAt"
+                        FROM
+                            "Activities" a
+                            WHERE
+                            ARRAY[$1::text] <@ (a."userIds")
+                            ORDER BY a."updatedAt" DESC
+                    ; $$
+                LANGUAGE SQL IMMUTABLE;
+
+                CREATE OR REPLACE FUNCTION  pg_temp.getUserAsActorActivities(uuid)
+                    RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone)
+                    AS $$
+                        SELECT
+                            a.id,
+                            a.data,
+                            a."topicIds",
+                            a."groupIds",
+                            a."userIds",
+                            a."createdAt",
+                            a."updatedAt",
+                            a."deletedAt"
+                        FROM
+                            "Activities" a
+                            WHERE
+                                a."actorType" = 'User' AND a."actorId" = $1::text
+                            ORDER BY a."updatedAt" DESC
+                    ; $$
+                LANGUAGE SQL IMMUTABLE;
+
+                SELECT
+                        COUNT(uac.id) AS count
+                    FROM
+                        (
+                            SELECT
+                                ua.id,
+                                ua.data,
+                                ua."createdAt",
+                                ua."updatedAt",
+                                ua."deletedAt"
+                            FROM
+                                pg_temp.getUserActivities(:userId) ua
+                            UNION
+                            SELECT
+                                guta.id,
+                                guta.data,
+                                guta."createdAt",
+                                guta."updatedAt",
+                                guta."deletedAt"
+                            FROM
+                                pg_temp.getUserTopicActivities(:userId) guta
+                            UNION
+                            SELECT
+                                guga.id,
+                                guga.data,
+                                guga."createdAt",
+                                guga."updatedAt",
+                                guga."deletedAt"
+                            FROM
+                                pg_temp.getUserGroupActivities(:userId) guga
+                            UNION
+                            SELECT
+                                guaaa.id,
+                                guaaa.data,
+                                guaaa."createdAt",
+                                guaaa."updatedAt",
+                                guaaa."deletedAt"
+                            FROM
+                                pg_temp.getUserAsActorActivities(:userId) guaaa
+                        ) uac
+                JOIN (
+                    SELECT
+                        va.id,
+                        va.data,
+                        va."createdAt",
+                        va."updatedAt",
+                        va."deletedAt"
+                    FROM "Activities" va
+                    WHERE
+                        va."actorType" = 'User' AND va."actorId" = :userId::text
+                    AND va.data@>'{"type": "View"}'
+                    AND va.data#>>'{object, @type}' = 'Activity'
+                ) ua ON ua.id = ua.id
+                WHERE
+                    uac.id <> ua.id
+                    AND
+                    uac."createdAt" > ua."updatedAt"
+                OR
+                    uac.id <> ua.id
+                    AND
+                    uac."updatedAt" > ua."updatedAt"
+                ;`;
+
+            const results = await db
+                .query(
+                    query,
+                    {
+                        replacements: {
+                            userId: userId,
+                            sourcePartnerId: sourcePartnerId
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true,
+                        nest: true
+                    }
+                );
+
+            return res.ok(results[0]);
+
+        } catch (err) {
+            return next(err);
+        }
 
     });
 
-    const activitiesList = function (req, res, next, visibility) {
-        const limitMax = 50;
-        const limitDefault = 10;
-        const allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User', 'VoteList'];
-        let userId;
+    const activitiesList = async function (req, res, next, visibility) {
+        try {
+            const limitMax = 50;
+            const limitDefault = 10;
+            const allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User', 'VoteList'];
+            let userId;
 
-        if (req.user) {
-            userId = req.user.id;
-        }
-        const sourcePartnerId = req.query.sourcePartnerId;
-        const page = parseInt(req.query.page, 10);
-        let offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
-        let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+            if (req.user) {
+                userId = req.user.id;
+            }
+            const sourcePartnerId = req.query.sourcePartnerId;
+            const page = parseInt(req.query.page, 10);
+            let offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
+            let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
 
-        const includeSql = buildActivityFeedIncludeString(req, visibility);
-        let queryFilters = req.query.filter || [];
-        if (queryFilters && !Array.isArray(queryFilters)) {
-            queryFilters = [queryFilters];
-        }
+            const includeSql = buildActivityFeedIncludeString(req, visibility);
+            let queryFilters = req.query.filter || [];
+            if (queryFilters && !Array.isArray(queryFilters)) {
+                queryFilters = [queryFilters];
+            }
 
-        const filters = queryFilters.filter(function (item, key, input) {
-            return allowedFilters.indexOf(item) > -1 && (input.indexOf(item) === key);
-        });
-
-        let where = '';
-
-        if (filters.length) {
-            const filtersEscaped = filters.map(function (filter) {
-                return db.escape(filter);
+            const filters = queryFilters.filter(function (item, key, input) {
+                return allowedFilters.indexOf(item) > -1 && (input.indexOf(item) === key);
             });
-            where += 'a.data#>>\'{object, @type}\' IN (' + filtersEscaped.join(',') + ') OR a.data#>>\'{object, 0, @type}\' IN (' + filtersEscaped.join(',') + ') ';
-        }
 
-        if (where) {
-            where = 'WHERE ' + where;
-        }
+            let where = '';
 
-        if (page && page > 0) {
-            offset = page * limitDefault - limitDefault;
-            limit = limitDefault;
-        }
+            if (filters.length) {
+                const filtersEscaped = filters.map(function (filter) {
+                    return db.escape(filter);
+                });
+                where += `a.data#>>'{object, @type}' IN (${filtersEscaped.join(',')}) OR a.data#>>'{object, 0, @type}' IN (${filtersEscaped.join(',')}) `;
+            }
 
-        if (limit > limitMax) limit = limitDefault;
+            if (where) {
+                where = 'WHERE ' + where;
+            }
 
-        // All partners should see only Topics created by their site, but our own app sees all.
-        let wherePartnerTopics = '';
-        let wherePartnerGroups = '';
-        if (sourcePartnerId) {
-            wherePartnerTopics = ' AND t."sourcePartnerId" = :sourcePartnerId ';
-            wherePartnerGroups = ' AND g."sourcePartnerId" = :sourcePartnerId ';
-        }
+            if (page && page > 0) {
+                offset = page * limitDefault - limitDefault;
+                limit = limitDefault;
+            }
 
-        const query = '\
-            ' + activitiesDataFunction + '\
-            CREATE OR REPLACE FUNCTION pg_temp.getPublicTopics() \
-                RETURNS TABLE("topicId" uuid) \
-                AS $$ \
-                    SELECT \
-                            t.id \
-                    FROM "Topics" t \
-                        LEFT JOIN "Users" c ON (c.id = t."creatorId") \
-                    WHERE \
-                        t.title IS NOT NULL \
-                        AND t.visibility = \'public\' \
-                        ' + wherePartnerTopics + ' \
-                ; $$ \
-            LANGUAGE SQL IMMUTABLE; \
-            \
-            CREATE OR REPLACE FUNCTION pg_temp.getPublicGroups() \
-                RETURNS TABLE("groupId" uuid) \
-                AS $$ \
-                    SELECT \
-                        g.id \
-                    FROM "Groups" g \
-                    WHERE g."visibility" = \'public\' \
-                        ' + wherePartnerGroups + ' \
-                    GROUP BY g.id \
-                ; $$ \
-            LANGUAGE SQL IMMUTABLE; \
-            \
-            CREATE OR REPLACE FUNCTION pg_temp.getUserTopics(uuid) \
-                RETURNS TABLE("topicId" uuid) \
-                AS $$ \
-                    SELECT \
-                            t.id \
-                    FROM "Topics" t \
-                        LEFT JOIN ( \
-                            SELECT \
-                                tmu."topicId", \
-                                tmu."userId", \
-                                tmu.level::text AS level \
-                            FROM "TopicMemberUsers" tmu \
-                            WHERE tmu."deletedAt" IS NULL \
-                        ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = $1) \
-                        LEFT JOIN ( \
-                            SELECT \
-                                tmg."topicId", \
-                                gm."userId", \
-                                MAX(tmg.level)::text AS level \
-                            FROM "TopicMemberGroups" tmg \
-                                LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId") \
-                            WHERE tmg."deletedAt" IS NULL \
-                            AND gm."deletedAt" IS NULL \
-                            GROUP BY "topicId", "userId" \
-                        ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = $1) \
-                        LEFT JOIN "Users" c ON (c.id = t."creatorId") \
-                    WHERE \
-                        t.title IS NOT NULL \
-                        ' + wherePartnerTopics + ' \
-                        AND COALESCE(tmup.level, tmgp.level, \'none\')::"enum_TopicMemberUsers_level" > \'none\' \
-                    ORDER BY t."updatedAt" DESC \
-                ; $$ \
-            LANGUAGE SQL IMMUTABLE; \
-                \
-            CREATE OR REPLACE FUNCTION pg_temp.getUserGroups(uuid) \
-                RETURNS TABLE("groupId" uuid) \
-                AS $$ \
-                    SELECT \
-                        g.id \
-                    FROM "Groups" g \
-                        JOIN "GroupMemberUsers" gm ON (gm."groupId" = g.id) \
-                        JOIN "Users" c ON (c.id = g."creatorId") \
-                        JOIN ( \
-                            SELECT "groupId", count("userId") AS "count" \
-                            FROM "GroupMemberUsers" \
-                            WHERE "deletedAt" IS NULL \
-                            GROUP BY "groupId" \
-                        ) AS mc ON (mc."groupId" = g.id) \
-                        LEFT JOIN ( \
-                            SELECT \
-                                tmg."groupId", \
-                                count(tmg."topicId") AS "count" \
-                            FROM "TopicMemberGroups" tmg \
-                            WHERE tmg."deletedAt" IS NULL \
-                            GROUP BY tmg."groupId" \
-                        ) AS gtc ON (gtc."groupId" = g.id) \
-                        LEFT JOIN ( \
-                            SELECT \
-                                tmg."groupId", \
-                                tmg."topicId", \
-                                t.title \
-                            FROM "TopicMemberGroups" tmg \
-                                LEFT JOIN "Topics" t ON (t.id = tmg."topicId") \
-                            WHERE tmg."deletedAt" IS NULL \
-                            ORDER BY t."updatedAt" ASC \
-                        ) AS gt ON (gt."groupId" = g.id) \
-                    WHERE gm."deletedAt" is NULL \
-                        ' + wherePartnerGroups + ' \
-                        AND gm."userId" = $1 \
-                    GROUP BY g.id \
-                ; $$ \
-            LANGUAGE SQL IMMUTABLE; \
-                \
-            CREATE OR REPLACE FUNCTION pg_temp.getPublicTopicActivities() \
-                RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
-                AS $$ \
-                    SELECT \
-                        a.id, \
-                        a.data, \
-                        a."topicIds", \
-                        a."groupIds", \
-                        a."userIds", \
-                        a."createdAt", \
-                        a."updatedAt", \
-                        a."deletedAt" \
-                    FROM \
-                        "Activities" a, \
-                        pg_temp.getPublicTopics() ut \
-                        WHERE \
-                        ARRAY[ut."topicId"::text] <@ (a."topicIds") \
-                ; $$ \
-            LANGUAGE SQL IMMUTABLE; \
-            \
-            CREATE OR REPLACE FUNCTION pg_temp.getPublicGroupActivities() \
-                RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
-                AS $$ \
-                    SELECT \
-                        a.id, \
-                        a.data, \
-                        a."topicIds", \
-                        a."groupIds", \
-                        a."userIds", \
-                        a."createdAt", \
-                        a."updatedAt", \
-                        a."deletedAt" \
-                    FROM \
-                        "Activities" a, \
-                        pg_temp.getPublicGroups() ug \
-                        WHERE \
-                        ARRAY[ug."groupId"::text] <@ (a."groupIds") \
-                ; $$ \
-            LANGUAGE SQL IMMUTABLE; \
-            \
-            CREATE OR REPLACE FUNCTION pg_temp.getUserTopicActivities(uuid) \
-                RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
-                AS $$ \
-                    SELECT \
-                        a.id, \
-                        a.data, \
-                        a."topicIds", \
-                        a."groupIds", \
-                        a."userIds", \
-                        a."createdAt", \
-                        a."updatedAt", \
-                        a."deletedAt" \
-                    FROM \
-                        "Activities" a, \
-                        pg_temp.getUserTopics($1) ut \
-                        WHERE \
-                        ARRAY[ut."topicId"::text] <@ (a."topicIds") \
-                ; $$ \
-            LANGUAGE SQL IMMUTABLE; \
-            \
-            CREATE OR REPLACE FUNCTION pg_temp.getUserGroupActivities(uuid) \
-                RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
-                AS $$ \
-                    SELECT \
-                        a.id, \
-                        a.data, \
-                        a."topicIds", \
-                        a."groupIds", \
-                        a."userIds", \
-                        a."createdAt", \
-                        a."updatedAt", \
-                        a."deletedAt" \
-                    FROM \
-                        "Activities" a, \
-                        pg_temp.getUserGroups($1) ug \
-                        WHERE \
-                        ARRAY[ug."groupId"::text] <@ (a."groupIds") \
-                ; $$ \
-            LANGUAGE SQL IMMUTABLE; \
-            \
-            CREATE OR REPLACE FUNCTION  pg_temp.getUserActivities(uuid) \
-                RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
-                AS $$ \
-                    SELECT \
-                        a.id, \
-                        a.data, \
-                        a."topicIds", \
-                        a."groupIds", \
-                        a."userIds", \
-                        a."createdAt", \
-                        a."updatedAt", \
-                        a."deletedAt" \
-                    FROM \
-                        "Activities" a \
-                        WHERE \
-                        ARRAY[$1::text] <@ (a."userIds") \
-                ; $$ \
-            LANGUAGE SQL IMMUTABLE; \
-            \
-            CREATE OR REPLACE FUNCTION  pg_temp.getUserAsActorActivities(uuid) \
-                RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone) \
-                AS $$ \
-                    SELECT \
-                        a.id, \
-                        a.data, \
-                        a."topicIds", \
-                        a."groupIds", \
-                        a."userIds", \
-                        a."createdAt", \
-                        a."updatedAt", \
-                        a."deletedAt" \
-                    FROM \
-                        "Activities" a \
-                        WHERE \
-                            a."actorType" = \'User\' AND a."actorId" = $1::text \
-                ; $$ \
-            LANGUAGE SQL IMMUTABLE; \
-            \
-            SELECT \
-                ad.* \
-            FROM \
-                ( \
-                    SELECT a.* FROM \
-                    ( \
-                    ' + includeSql + ' \
-                    ) a \
-                    ' + where + ' \
-                    ORDER BY a."updatedAt" DESC \
-                    LIMIT :limit OFFSET :offset \
-                ) uac \
-            JOIN pg_temp.getActivityData(uac.id, uac."topicIds", uac."groupIds", uac."userIds") ad ON ad."id" = uac.id \
-                ORDER BY ad."updatedAt" DESC \
-            ;';
+            if (limit > limitMax) limit = limitDefault;
 
-        let activity;
+            // All partners should see only Topics created by their site, but our own app sees all.
+            let wherePartnerTopics = '';
+            let wherePartnerGroups = '';
+            if (sourcePartnerId) {
+                wherePartnerTopics = ' AND t."sourcePartnerId" = :sourcePartnerId ';
+                wherePartnerGroups = ' AND g."sourcePartnerId" = :sourcePartnerId ';
+            }
 
-        return db
-            .transaction(function (t) {
-                if (userId) {
-                    activity = Activity.build({
-                        data: {
-                            offset: offset,
-                            limit: limit
-                        }
-                    });
-                }
+            const query = `
+                ${activitiesDataFunction}
+                CREATE OR REPLACE FUNCTION pg_temp.getPublicTopics()
+                    RETURNS TABLE("topicId" uuid)
+                    AS $$
+                        SELECT
+                                t.id
+                        FROM "Topics" t
+                            LEFT JOIN "Users" c ON (c.id = t."creatorId")
+                        WHERE
+                            t.title IS NOT NULL
+                            AND t.visibility = 'public'
+                            ${wherePartnerTopics}
+                    ; $$
+                LANGUAGE SQL IMMUTABLE;
 
-                return db
-                    .query(
-                        query,
-                        {
-                            replacements: {
-                                userId: userId,
-                                sourcePartnerId: sourcePartnerId,
-                                limit: limit,
-                                offset: offset
-                            },
-                            type: db.QueryTypes.SELECT,
-                            raw: true,
-                            nest: true,
-                            transaction: t
-                        }
-                    ).then(function (results) {
-                        if (!userId) {
-                            return results;
-                        }
+                CREATE OR REPLACE FUNCTION pg_temp.getPublicGroups()
+                    RETURNS TABLE("groupId" uuid)
+                    AS $$
+                        SELECT
+                            g.id
+                        FROM "Groups" g
+                        WHERE g."visibility" = 'public'
+                            ${wherePartnerGroups}
+                        GROUP BY g.id
+                    ; $$
+                LANGUAGE SQL IMMUTABLE;
 
-                        return cosActivities
+                CREATE OR REPLACE FUNCTION pg_temp.getUserTopics(uuid)
+                    RETURNS TABLE("topicId" uuid)
+                    AS $$
+                        SELECT
+                                t.id
+                        FROM "Topics" t
+                            LEFT JOIN (
+                                SELECT
+                                    tmu."topicId",
+                                    tmu."userId",
+                                    tmu.level::text AS level
+                                FROM "TopicMemberUsers" tmu
+                                WHERE tmu."deletedAt" IS NULL
+                            ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = $1)
+                            LEFT JOIN (
+                                SELECT
+                                    tmg."topicId",
+                                    gm."userId",
+                                    MAX(tmg.level)::text AS level
+                                FROM "TopicMemberGroups" tmg
+                                    LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
+                                WHERE tmg."deletedAt" IS NULL
+                                AND gm."deletedAt" IS NULL
+                                GROUP BY "topicId", "userId"
+                            ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = $1)
+                            LEFT JOIN "Users" c ON (c.id = t."creatorId")
+                        WHERE
+                            t.title IS NOT NULL
+                            ${wherePartnerTopics}
+                            AND COALESCE(tmup.level, tmgp.level, 'none')::"enum_TopicMemberUsers_level" > 'none'
+                        ORDER BY t."updatedAt" DESC
+                    ; $$
+                LANGUAGE SQL IMMUTABLE;
+
+                CREATE OR REPLACE FUNCTION pg_temp.getUserGroups(uuid)
+                    RETURNS TABLE("groupId" uuid)
+                    AS $$
+                        SELECT
+                            g.id
+                        FROM "Groups" g
+                            JOIN "GroupMemberUsers" gm ON (gm."groupId" = g.id)
+                            JOIN "Users" c ON (c.id = g."creatorId")
+                            JOIN (
+                                SELECT "groupId", count("userId") AS "count"
+                                FROM "GroupMemberUsers"
+                                WHERE "deletedAt" IS NULL
+                                GROUP BY "groupId"
+                            ) AS mc ON (mc."groupId" = g.id)
+                            LEFT JOIN (
+                                SELECT
+                                    tmg."groupId",
+                                    count(tmg."topicId") AS "count"
+                                FROM "TopicMemberGroups" tmg
+                                WHERE tmg."deletedAt" IS NULL
+                                GROUP BY tmg."groupId"
+                            ) AS gtc ON (gtc."groupId" = g.id)
+                            LEFT JOIN (
+                                SELECT
+                                    tmg."groupId",
+                                    tmg."topicId",
+                                    t.title
+                                FROM "TopicMemberGroups" tmg
+                                    LEFT JOIN "Topics" t ON (t.id = tmg."topicId")
+                                WHERE tmg."deletedAt" IS NULL
+                                ORDER BY t."updatedAt" ASC
+                            ) AS gt ON (gt."groupId" = g.id)
+                        WHERE gm."deletedAt" is NULL
+                            ${wherePartnerGroups}
+                            AND gm."userId" = $1
+                        GROUP BY g.id
+                    ; $$
+                LANGUAGE SQL IMMUTABLE;
+
+                CREATE OR REPLACE FUNCTION pg_temp.getPublicTopicActivities()
+                    RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone)
+                    AS $$
+                        SELECT
+                            a.id,
+                            a.data,
+                            a."topicIds",
+                            a."groupIds",
+                            a."userIds",
+                            a."createdAt",
+                            a."updatedAt",
+                            a."deletedAt"
+                        FROM
+                            "Activities" a,
+                            pg_temp.getPublicTopics() ut
+                            WHERE
+                            ARRAY[ut."topicId"::text] <@ (a."topicIds")
+                    ; $$
+                LANGUAGE SQL IMMUTABLE;
+
+                CREATE OR REPLACE FUNCTION pg_temp.getPublicGroupActivities()
+                    RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone)
+                    AS $$
+                        SELECT
+                            a.id,
+                            a.data,
+                            a."topicIds",
+                            a."groupIds",
+                            a."userIds",
+                            a."createdAt",
+                            a."updatedAt",
+                            a."deletedAt"
+                        FROM
+                            "Activities" a,
+                            pg_temp.getPublicGroups() ug
+                            WHERE
+                            ARRAY[ug."groupId"::text] <@ (a."groupIds")
+                    ; $$
+                LANGUAGE SQL IMMUTABLE;
+
+                CREATE OR REPLACE FUNCTION pg_temp.getUserTopicActivities(uuid)
+                    RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone)
+                    AS $$
+                        SELECT
+                            a.id,
+                            a.data,
+                            a."topicIds",
+                            a."groupIds",
+                            a."userIds",
+                            a."createdAt",
+                            a."updatedAt",
+                            a."deletedAt"
+                        FROM
+                            "Activities" a,
+                            pg_temp.getUserTopics($1) ut
+                            WHERE
+                            ARRAY[ut."topicId"::text] <@ (a."topicIds")
+                    ; $$
+                LANGUAGE SQL IMMUTABLE;
+
+                CREATE OR REPLACE FUNCTION pg_temp.getUserGroupActivities(uuid)
+                    RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone)
+                    AS $$
+                        SELECT
+                            a.id,
+                            a.data,
+                            a."topicIds",
+                            a."groupIds",
+                            a."userIds",
+                            a."createdAt",
+                            a."updatedAt",
+                            a."deletedAt"
+                        FROM
+                            "Activities" a,
+                            pg_temp.getUserGroups($1) ug
+                            WHERE
+                            ARRAY[ug."groupId"::text] <@ (a."groupIds")
+                    ; $$
+                LANGUAGE SQL IMMUTABLE;
+
+                CREATE OR REPLACE FUNCTION  pg_temp.getUserActivities(uuid)
+                    RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone)
+                    AS $$
+                        SELECT
+                            a.id,
+                            a.data,
+                            a."topicIds",
+                            a."groupIds",
+                            a."userIds",
+                            a."createdAt",
+                            a."updatedAt",
+                            a."deletedAt"
+                        FROM
+                            "Activities" a
+                            WHERE
+                            ARRAY[$1::text] <@ (a."userIds")
+                    ; $$
+                LANGUAGE SQL IMMUTABLE;
+
+                CREATE OR REPLACE FUNCTION  pg_temp.getUserAsActorActivities(uuid)
+                    RETURNS TABLE ("id" uuid, data jsonb, "topicIds" text[], "groupIds" text[], "userIds" text[], "createdAt" timestamp with time zone, "updatedAt" timestamp with time zone, "deletedAt" timestamp with time zone)
+                    AS $$
+                        SELECT
+                            a.id,
+                            a.data,
+                            a."topicIds",
+                            a."groupIds",
+                            a."userIds",
+                            a."createdAt",
+                            a."updatedAt",
+                            a."deletedAt"
+                        FROM
+                            "Activities" a
+                            WHERE
+                                a."actorType" = 'User' AND a."actorId" = $1::text
+                    ; $$
+                LANGUAGE SQL IMMUTABLE;
+
+                SELECT
+                    ad.*
+                FROM
+                    (
+                        SELECT a.* FROM
+                        (
+                        ${includeSql}
+                        ) a
+                        ${where}
+                        ORDER BY a."updatedAt" DESC
+                        LIMIT :limit OFFSET :offset
+                    ) uac
+                JOIN pg_temp.getActivityData(uac.id, uac."topicIds", uac."groupIds", uac."userIds") ad ON ad."id" = uac.id
+                    ORDER BY ad."updatedAt" DESC
+                ;`;
+
+            let activity;
+
+            await db
+                .transaction(async function (t) {
+                    if (userId) {
+                        activity = Activity.build({
+                            data: {
+                                offset: offset,
+                                limit: limit
+                            }
+                        });
+                    }
+
+                    const results = await db
+                        .query(
+                            query,
+                            {
+                                replacements: {
+                                    userId: userId,
+                                    sourcePartnerId: sourcePartnerId,
+                                    limit: limit,
+                                    offset: offset
+                                },
+                                type: db.QueryTypes.SELECT,
+                                raw: true,
+                                nest: true,
+                                transaction: t
+                            }
+                        );
+
+                    if (userId) {
+                        await cosActivities
                             .viewActivityFeedActivity(
                                 activity,
                                 {
@@ -1051,17 +1049,17 @@ module.exports = function (app) {
                                 },
                                 req.method + ' ' + req.path,
                                 t
-                            )
-                            .then(function () {
-                                return results;
-                            });
-                    });
-            }).then(function (results) {
-                const finalResults = parseActivitiesResults(results);
+                            );
+                    }
+                    const finalResults = parseActivitiesResults(results);
 
-                return res.ok(finalResults);
-            })
-            .catch(next);
+                    t.afterCommit(() => {
+                        return res.ok(finalResults);
+                    });
+                });
+        } catch(err) {
+            return next(err);
+        }
     };
 
     app.get('/api/users/:userId/activities', loginCheck(['partner']), function (req, res, next) {
@@ -1076,111 +1074,108 @@ module.exports = function (app) {
      * Read (List) public Group Activities
      */
 
-    const groupActivitiesList = function (req, res, next, visibility) {
-        const limitMax = 50;
-        const limitDefault = 10;
-        const groupId = req.params.groupId;
-        let userId = null;
-        if (req.user && !visibility) {
-            userId = req.user.id;
-        }
-        const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
-        let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
-        let visibilityCondition = '';
-        if (visibility) {
-            visibilityCondition = 'g.visibility = :visibility AND';
-        }
+    const groupActivitiesList = async function (req, res, next, visibility) {
+        try {
+            const limitMax = 50;
+            const limitDefault = 10;
+            const groupId = req.params.groupId;
+            let userId = null;
+            if (req.user && !visibility) {
+                userId = req.user.id;
+            }
+            const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
+            let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+            let visibilityCondition = '';
+            if (visibility) {
+                visibilityCondition = 'g.visibility = :visibility AND';
+            }
 
-        if (limit > limitMax) limit = limitDefault;
+            if (limit > limitMax) limit = limitDefault;
 
-        return db.transaction(function (t) {
-            const activity = Activity.build({
-                data: {
-                    offset: offset,
-                    limit: limit
+            await db.transaction(async function (t) {
+                const activity = Activity.build({
+                    data: {
+                        offset: offset,
+                        limit: limit
+                    }
+                });
+
+                const results = await db
+                    .query(`
+                        ${activitiesDataFunction}
+                        SELECT
+                            ad.*
+                        FROM
+                        (
+                            SELECT a.id, a."topicIds", a."groupIds", a."userIds"
+                            FROM
+                            "Activities" a
+                            JOIN "Groups" g ON g.id = :groupId
+                            WHERE
+                            ${visibilityCondition}
+                            ARRAY[:groupId] <@  a."groupIds"
+                            OR
+                            a.data@>'{"type": "View"}'
+                            AND
+                            a."actorType" = 'User'
+                            AND
+                            a."actorId" = :userId
+                            AND
+                            a.data#>>'{object, @type}' = 'Activity'
+                            ORDER BY a."updatedAt" DESC
+                            LIMIT :limit OFFSET :offset
+                        ) a
+                        JOIN pg_temp.getActivityData(a.id, a."topicIds", a."groupIds", a."userIds") ad ON ad.id = a.id
+                        ORDER BY ad."updatedAt" DESC
+                    ;`, {
+                        replacements: {
+                            groupId: groupId,
+                            userId: userId,
+                            visibility: visibility,
+                            limit: limit,
+                            offset: offset
+                        },
+                        type: db.QueryTypes.SELECT,
+                        transaction: t,
+                        nest: true,
+                        raw: true
+                    });
+
+                if (userId && !visibility) {
+                    await cosActivities
+                        .viewActivityFeedActivity(
+                            activity,
+                            {
+                                type: 'User',
+                                id: req.user.id,
+                                ip: req.ip
+                            },
+                            req.method + ' ' + req.path,
+                            t
+                        );
                 }
-            });
 
-            return db
-                .query('\
-                ' + activitiesDataFunction + '\
-                    SELECT \
-                        ad.* \
-                    FROM \
-                    ( \
-                        SELECT a.id, a."topicIds", a."groupIds", a."userIds" \
-                        FROM \
-                        "Activities" a \
-                        JOIN "Groups" g ON g.id = :groupId \
-                        WHERE \
-                        ' + visibilityCondition + ' \
-                        ARRAY[:groupId] <@  a."groupIds" \
-                        OR \
-                        a.data@>\'{"type": "View"}\' \
-                        AND \
-                        a."actorType" = \'User\' \
-                        AND \
-                        a."actorId" = :userId \
-                        AND \
-                        a.data#>>\'{object, @type}\' = \'Activity\' \
-                        ORDER BY a."updatedAt" DESC \
-                        LIMIT :limit OFFSET :offset \
-                    ) a \
-                    JOIN pg_temp.getActivityData(a.id, a."topicIds", a."groupIds", a."userIds") ad ON ad.id = a.id \
-                    ORDER BY ad."updatedAt" DESC \
-            ;', {
-                    replacements: {
-                        groupId: groupId,
-                        userId: userId,
-                        visibility: visibility,
-                        limit: limit,
-                        offset: offset
-                    },
-                    type: db.QueryTypes.SELECT,
-                    transaction: t,
-                    nest: true,
-                    raw: true
-                })
-                .then(function (results) {
-                    if (userId && !visibility) {
-                        return cosActivities
-                            .viewActivityFeedActivity(
-                                activity,
-                                {
-                                    type: 'User',
-                                    id: req.user.id,
-                                    ip: req.ip
-                                },
-                                req.method + ' ' + req.path,
-                                t
-                            )
-                            .then(function () {
-                                return parseActivitiesResults(results);
-                            });
+                const finalResults = parseActivitiesResults(results);
+
+                t.afterCommit(() => {
+                    if (finalResults && finalResults.length && finalResults[0]) {
+                        return res.ok(finalResults);
+                    } else {
+                        return res.notFound();
                     }
 
-                    return parseActivitiesResults(results);
                 });
-        });
+            });
+        } catch (err) {
+            return next(err);
+        }
     };
 
     app.get('/api/groups/:groupId/activities', function (req, res, next) {
         return groupActivitiesList(req, res, next, 'public')
-            .then(function (results) {
-                if (results && results.length && results[0]) {
-                    return res.ok(results);
-                } else {
-                    return res.notFound();
-                }
-            })
-            .catch(next);
     });
 
     app.get('/api/users/:userId/groups/:groupId/activities', loginCheck(['partner']), groupLib.hasPermission(GroupMemberUser.LEVELS.read, true), function (req, res, next) {
-        return groupActivitiesList(req, res, next)
-            .then(function (results) {
-                return res.ok(results);
-            })
-            .catch(next);
+        return groupActivitiesList(req, res, next);
     });
 };

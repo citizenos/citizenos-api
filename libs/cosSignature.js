@@ -23,6 +23,8 @@ module.exports = function (app) {
     const Certificate = require('undersign/lib/certificate');
     const Asic = require('undersign/lib/asic');
     const Tsl = require('undersign/lib/tsl');
+    const pdf = require('html-pdf');
+
     let tslCertificates;
 
     const tslPath = config.services.signature.certificates.tsl;
@@ -49,7 +51,7 @@ module.exports = function (app) {
 
 
     const VoteContainerFile = models.VoteContainerFile;
-    const UserConnection = models.UserConnection;
+    const Vote = models.Vote;
     const Signature = models.Signature;
 
     const FILE_CREATE_MODE = '0760';
@@ -86,6 +88,12 @@ module.exports = function (app) {
     const USER_BDOC_FILE = {
         name: ':pid.bdoc',
         mimeType: 'application/vnd.etsi.asic-e+zip'
+    };
+
+    const VOTE_RESULTS_GRAPH_FILE = {
+        template: 'bdoc/results_graph.html',
+        name: 'graph.pdf',
+        mimeType: 'application/pdf'
     };
 
 
@@ -712,7 +720,6 @@ module.exports = function (app) {
             logger.error('_generateFinalContainer', 'Generating vote CSV FAILED', err);
 
             csvStream.end();
-            finalContainer.finalize();
             connectionManager.releaseConnection(connection);
         });
 
@@ -720,11 +727,229 @@ module.exports = function (app) {
             logger.debug('_generateFinalContainer', 'Generating vote CSV succeeded');
 
             csvStream.end();
-            finalContainer.finalize();
             connectionManager.releaseConnection(connection);
         });
     };
 
+    const _generateResultGraphPDF = async function (voteId, finalContainer) {
+        let sql = `
+            WITH
+            RECURSIVE delegations("voteId", "toUserId", "byUserId", depth) AS (
+                SELECT
+                        "voteId",
+                        "toUserId",
+                        "byUserId",
+                            1
+                        FROM "VoteDelegations" vd
+                        WHERE vd."voteId" = :voteId
+                            AND vd."deletedAt" IS NULL
+
+                        UNION ALL
+
+                        SELECT
+                            vd."voteId",
+                            vd."toUserId",
+                            dc."byUserId",
+                            dc.depth+1
+                        FROM delegations dc, "VoteDelegations" vd
+                        WHERE vd."byUserId" = dc."toUserId"
+                            AND vd."voteId" = dc."voteId"
+                            AND vd."deletedAt" IS NULL
+                    ),
+                    indirect_delegations("voteId", "toUserId", "byUserId", depth) AS (
+                        SELECT DISTINCT ON("byUserId")
+                            "voteId",
+                            "toUserId",
+                            "byUserId",
+                            depth
+                        FROM delegations
+                        ORDER BY "byUserId", depth DESC
+                    ),
+                    vote_groups("voteId", "userId", "optionGroupId", "updatedAt") AS (
+                        SELECT DISTINCT ON (vl."userId") vl."voteId", vl."userId", vli."optionGroupId", vl."updatedAt"
+                        FROM (
+                            SELECT DISTINCT ON (vl."userHash", MAX(vl."updatedAt"))
+                            vl."userId",
+                            vl."voteId",
+                            MAX(vl."updatedAt") as "updatedAt"
+                            FROM "VoteLists" vl
+                            WHERE vl."voteId" = :voteId
+                            AND vl."deletedAt" IS NULL
+                            GROUP BY vl."userHash", vl."userId", vl."voteId"
+                            ORDER BY MAX(vl."updatedAt") DESC
+                        ) vl
+                        JOIN "VoteLists" vli
+                        ON
+                            vli."userId" = vl."userId"
+                            AND vl."voteId" = vli."voteId"
+                            AND vli."updatedAt" = vl."updatedAt"
+                        WHERE vl."voteId" = :voteId
+                    ),
+                    votes("voteId", "userId", "optionId", "optionGroupId") AS (
+                        SELECT
+                            vl."voteId",
+                            vl."userId",
+                            vl."optionId",
+                            vl."optionGroupId"
+                        FROM "VoteLists" vl
+                        JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."optionGroupId" = vg."optionGroupId")
+                        JOIN "Votes" v ON v.id = vl."voteId"
+                        WHERE v."authType"='${Vote.AUTH_TYPES.soft}' AND vl."voteId" = :voteId
+                        UNION ALL
+                        SELECT
+                            vl."voteId",
+                            vl."userId",
+                            vl."optionId",
+                            vl."optionGroupId"
+                        FROM "VoteLists" vl
+                        JOIN vote_groups vg ON (vl."voteId" = vg."voteId" AND vl."optionGroupId" = vg."optionGroupId")
+                        JOIN "Votes" v ON v.id = vl."voteId"
+                        WHERE v."authType"='${Vote.AUTH_TYPES.hard}' AND vl."voteId" = :voteId
+                        AND vl."userId" IN (
+                            SELECT "userId" FROM (
+                                SELECT DISTINCT ON (vl."userHash")
+                                vl."userId",
+                                vl."userHash",
+                                MAX(vl."updatedAt")
+                                FROM "VoteLists" vl
+                                WHERE vl."voteId" = :voteId
+                                GROUP BY vl."userId", vl."userHash", vl."updatedAt" ORDER BY vl."userHash", vl."updatedAt" DESC
+                            ) vu
+                        )
+                    ),
+                    votes_with_delegations("voteId", "userId", "optionId", "optionGroupId", "byUserId", depth) AS (
+                        SELECT
+                            v."voteId",
+                            v."userId",
+                            v."optionId",
+                            v."optionGroupId",
+                            id."byUserId",
+                            id."depth"
+                        FROM votes v
+                        LEFT JOIN indirect_delegations id ON (v."userId" = id."toUserId")
+                        WHERE v."userId" NOT IN (SELECT "byUserId" FROM indirect_delegations WHERE "voteId"=v."voteId")
+                    )
+
+                SELECT
+                    COALESCE(SUM(v."voteCount"), 0) as "voteCount",
+                    v."optionId",
+                    vo."value"
+                FROM "VoteOptions" vo
+                LEFT JOIN (
+                    SELECT
+                        COUNT(v."optionId") + 1 as "voteCount",
+                        v."optionId",
+                        v."optionGroupId",
+                        v."voteId"
+                    FROM votes_with_delegations v
+                    WHERE v.depth IS NOT NULL
+                    GROUP BY v."optionId", v."optionGroupId", v."voteId"
+
+                    UNION ALL
+
+                    SELECT
+                        COUNT(v."optionId") as "voteCount",
+                        v."optionId",
+                        v."optionGroupId",
+                        v."voteId"
+                    FROM votes_with_delegations v
+                    WHERE v.depth IS NULL
+                    GROUP BY v."optionId", v."optionGroupId", v."voteId"
+                ) v
+                ON (v."optionId" = vo."id")
+                WHERE vo."voteId" = :voteId
+                GROUP BY v."optionId", v."voteId", vo."value"
+        ;`;
+
+        const voteResult = await db.query(
+            sql,
+            {
+                replacements: {
+                    voteId: voteId
+                },
+                type: db.QueryTypes.SELECT,
+                raw: true
+            }
+        );
+        const topic = await db.query(
+            `SELECT
+                t.title
+            FROM "Topics" t
+            JOIN "TopicVotes" tv ON t.id = tv."topicId"
+            WHERE tv."voteId" = :voteId
+            ;`,
+            {
+                replacements: {
+                    voteId: voteId
+                },
+                type: db.QueryTypes.SELECT,
+                raw: true
+            }
+        );
+
+        return new Promise (function (resolve) {
+            let rows = '';
+            let longText = '';
+            let totalVotes = 0;
+            let winner;
+            voteResult.forEach(function (row) {
+                row.voteCount = parseInt(row.voteCount);
+                if (!winner || row.voteCount > winner) {
+                    winner = row.voteCount
+                }
+
+                totalVotes += row.voteCount;
+            });
+
+            voteResult.forEach(function (row, index) {
+                let activeClass = '';
+                if (row.voteCount === winner) {
+                    activeClass = 'active';
+                }
+                const letter = String.fromCharCode(65 + index);
+                const percentage = ((row.voteCount/totalVotes)*100);
+
+                rows += `
+                    <div class="graph_row ${activeClass}">
+                        <div class="graph_row_fill" style="width: ${percentage}%;">
+                            <div class="graph_row_text_wrap">
+                                <div class="table_cell">
+                                    <div class="graph_row_text">
+                                        <span>${row.value}</span><br>
+                                        <span class="bold">${row.voteCount}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+
+                longText += `
+                    <div class="long_text ${activeClass}">
+                        <span class="bold">${letter}.</span> <span>${row.value}</span>
+                    </div>`;
+            })
+
+            let finalData = '';
+            const mufileStream = mu
+                .compileAndRender(VOTE_RESULTS_GRAPH_FILE.template, {rows: rows, title: topic[0].title, longText: longText})
+
+            mufileStream
+                .on('data', function (data) {
+                    finalData += data.toString();
+                });
+
+            mufileStream
+                .on('end', function () {
+                    pdf.create(finalData).toBuffer(function(err, buffer){
+                        finalContainer.append(buffer, {
+                            name: VOTE_RESULTS_GRAPH_FILE.name,
+                            mimeType: VOTE_RESULTS_GRAPH_FILE.mimeType
+                        });
+                        return resolve();
+                    });
+                });
+        });
+    }
     const _generateFinalContainer = async function (topicId, voteId, type, include, wrap) {
         const voteFileDir = _getVoteFileDir(topicId, voteId, include);
         const finalContainerPath = `${voteFileDir}/final.${type}`;
@@ -742,7 +967,6 @@ module.exports = function (app) {
         } catch (err) {
             try {
                 logger.info('_generateFinalContainer', 'Cache miss for final BDOC file', finalContainerDownloadPath);
-                console.log()
                 await fsExtra.mkdirsAsync(voteFileDir);
 
                 finalContainerFileStream = fs.createWriteStream(finalContainerPath);
@@ -830,6 +1054,9 @@ module.exports = function (app) {
 
                 if (type !== 'bdoc' || (include && include.indexOf('csv') > -1)) {
                     await _generateFinalCSV(voteId, type, finalContainer);
+                    await _generateResultGraphPDF(voteId, finalContainer);
+
+                    finalContainer.finalize();
                 } else {
                     finalContainer.finalize();
                 }

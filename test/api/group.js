@@ -1670,7 +1670,6 @@ suite('Users', function () {
                         await memberLib.groupMemberUsersCreate(group.id, members);
                         const groupR = (await groupRead(agent, creator.id, group.id)).body.data;
                         assert.equal(groupR.members.count, 2);
-                        return;
                     });
 
                     test('Success - Remove Topic from Group after Topic delete', async function () {
