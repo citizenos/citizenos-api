@@ -652,6 +652,7 @@ module.exports = function (app) {
                     , tv."maxChoices" as "vote.maxChoices"
                     , tv."minChoices" as "vote.minChoices"
                     , tv."type" as "vote.type"
+                    , tv."autoClose" as "vote.autoClose"
                 `;
             }
             if (include.indexOf('event') > -1) {
@@ -751,7 +752,8 @@ module.exports = function (app) {
                             v."endsAt",
                             v."maxChoices",
                             v."minChoices",
-                            v."type"
+                            v."type",
+                            v."autoClose"
                         FROM "TopicVotes" tv INNER JOIN
                             (
                                 SELECT
@@ -814,6 +816,7 @@ module.exports = function (app) {
                     , tv."maxChoices" as "vote.maxChoices"
                     , tv."minChoices" as "vote.minChoices"
                     , tv."type" as "vote.type"
+                    , tv."autoClose" as "vote.autoClose"
                     `;
             }
 
@@ -964,7 +967,8 @@ module.exports = function (app) {
                         v."endsAt",
                         v."maxChoices",
                         v."minChoices",
-                        v."type"
+                        v."type",
+                        v."autoClose"
                     FROM "TopicVotes" tv INNER JOIN
                         (
                             SELECT
@@ -1813,6 +1817,7 @@ module.exports = function (app) {
             , tv."maxChoices" as "vote.maxChoices"
             , tv."minChoices" as "vote.minChoices"
             , tv."type" as "vote.type"
+            , tv."autoClose" as "vote.autoClose"
             `;
             voteResults = await getAllVotesResults(userId);
         }
@@ -1976,7 +1981,8 @@ module.exports = function (app) {
                             v."endsAt",
                             v."maxChoices",
                             v."minChoices",
-                            v."type"
+                            v."type",
+                            v."autoClose"
                         FROM "TopicVotes" tv INNER JOIN
                             (
                                 SELECT
@@ -2286,7 +2292,8 @@ module.exports = function (app) {
                                 v."endsAt",
                                 v."maxChoices",
                                 v."minChoices",
-                                v."type"
+                                v."type",
+                                v."autoClose"
                             FROM "TopicVotes" tv INNER JOIN
                                 (
                                     SELECT
@@ -2379,10 +2386,7 @@ module.exports = function (app) {
         }
     });
 
-    /**
-     * Get all members of the Topic
-     */
-    app.get('/api/users/:userId/topics/:topicId/members', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), async function (req, res, next) {
+    const _getAllTopicMembers = async (topicId, userId) => {
         const response = {
             groups: {
                 count: 0,
@@ -2393,108 +2397,117 @@ module.exports = function (app) {
                 rows: []
             }
         };
-        try {
-            const groups = await db
-                .query(
-                    `
-                    SELECT
-                        g.id,
-                        CASE
-                            WHEN gmu.level IS NOT NULL THEN g.name
-                            ELSE NULL
-                        END as "name",
-                        tmg.level,
-                        gmu.level as "permission.level",
-                        g.visibility,
-                        gmuc.count as "members.users.count"
-                    FROM "TopicMemberGroups" tmg
-                        JOIN "Groups" g ON (tmg."groupId" = g.id)
-                        JOIN (
+
+        const groups = await db
+            .query(
+                `
+                SELECT
+                    g.id,
+                    CASE
+                        WHEN gmu.level IS NOT NULL THEN g.name
+                        ELSE NULL
+                    END as "name",
+                    tmg.level,
+                    gmu.level as "permission.level",
+                    g.visibility,
+                    gmuc.count as "members.users.count"
+                FROM "TopicMemberGroups" tmg
+                    JOIN "Groups" g ON (tmg."groupId" = g.id)
+                    JOIN (
+                        SELECT
+                            "groupId",
+                            COUNT(*) as count
+                        FROM "GroupMemberUsers"
+                        WHERE "deletedAt" IS NULL
+                        GROUP BY 1
+                    ) as gmuc ON (gmuc."groupId" = g.id)
+                    LEFT JOIN "GroupMemberUsers" gmu ON (gmu."groupId" = g.id AND gmu."userId" = :userId AND gmu."deletedAt" IS NULL)
+                WHERE tmg."topicId" = :topicId
+                    AND tmg."deletedAt" IS NULL
+                    AND g."deletedAt" IS NULL
+                ORDER BY level DESC;`,
+                {
+                    replacements: {
+                        topicId: topicId,
+                        userId: userId
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
+
+        const users = await db
+            .query(
+                `
+                SELECT
+                    tm.*
+                FROM (
+                    SELECT DISTINCT ON(id)
+                        tm."memberId" as id,
+                        tm."level",
+                        tmu."level" as "levelUser",
+                        u.name,
+                        u.company,
+                        u."imageUrl"
+                    FROM "Topics" t
+                    JOIN (
+                        SELECT
+                            tmu."topicId",
+                            tmu."userId" AS "memberId",
+                            tmu."level"::text,
+                            1 as "priority"
+                        FROM "TopicMemberUsers" tmu
+                        WHERE tmu."deletedAt" IS NULL
+                        UNION
+                        (
                             SELECT
-                                "groupId",
-                                COUNT(*) as count
-                            FROM "GroupMemberUsers"
-                            WHERE "deletedAt" IS NULL
-                            GROUP BY 1
-                        ) as gmuc ON (gmuc."groupId" = g.id)
-                        LEFT JOIN "GroupMemberUsers" gmu ON (gmu."groupId" = g.id AND gmu."userId" = :userId AND gmu."deletedAt" IS NULL)
-                    WHERE tmg."topicId" = :topicId
-                        AND tmg."deletedAt" IS NULL
-                        AND g."deletedAt" IS NULL
-                    ORDER BY level DESC;`,
-                    {
-                        replacements: {
-                            topicId: req.params.topicId,
-                            userId: req.user.id
-                        },
-                        type: db.QueryTypes.SELECT,
-                        raw: true,
-                        nest: true
-                    }
-                );
-
-            const users = await db
-                .query(
-                    `
-                    SELECT
-                        tm.*
-                    FROM (
-                        SELECT DISTINCT ON(id)
-                            tm."memberId" as id,
-                            tm."level",
-                            tmu."level" as "levelUser",
-                            u.name,
-                            u.company,
-                            u."imageUrl"
-                        FROM "Topics" t
-                        JOIN (
-                            SELECT
-                                tmu."topicId",
-                                tmu."userId" AS "memberId",
-                                tmu."level"::text,
-                                1 as "priority"
-                            FROM "TopicMemberUsers" tmu
-                            WHERE tmu."deletedAt" IS NULL
-                            UNION
-                            (
-                                SELECT
-                                    tmg."topicId",
-                                    gm."userId" AS "memberId",
-                                    tmg."level"::text,
-                                    2 as "priority"
-                                FROM "TopicMemberGroups" tmg
-                                LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
-                                WHERE tmg."deletedAt" IS NULL
-                                AND gm."deletedAt" IS NULL
-                                ORDER BY tmg."level"::"enum_TopicMemberGroups_level" DESC
-                            )
-                        ) AS tm ON (tm."topicId" = t.id)
-                        JOIN "Users" u ON (u.id = tm."memberId")
-                        LEFT JOIN "TopicMemberUsers" tmu ON (tmu."userId" = tm."memberId" AND tmu."topicId" = t.id)
-                        WHERE t.id = :topicId
-                        ORDER BY id, tm.priority
-                    ) tm
-                    ORDER BY name ASC
-                    ;`,
-                    {
-                        replacements: {
-                            topicId: req.params.topicId
-                        },
-                        type: db.QueryTypes.SELECT,
-                        raw: true
-                    }
-                );
+                                tmg."topicId",
+                                gm."userId" AS "memberId",
+                                tmg."level"::text,
+                                2 as "priority"
+                            FROM "TopicMemberGroups" tmg
+                            LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
+                            WHERE tmg."deletedAt" IS NULL
+                            AND gm."deletedAt" IS NULL
+                            ORDER BY tmg."level"::"enum_TopicMemberGroups_level" DESC
+                        )
+                    ) AS tm ON (tm."topicId" = t.id)
+                    JOIN "Users" u ON (u.id = tm."memberId")
+                    LEFT JOIN "TopicMemberUsers" tmu ON (tmu."userId" = tm."memberId" AND tmu."topicId" = t.id)
+                    WHERE t.id = :topicId
+                    ORDER BY id, tm.priority
+                ) tm
+                ORDER BY name ASC
+                ;`,
+                {
+                    replacements: {
+                        topicId: topicId
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true
+                }
+            );
 
 
-            if (groups && groups.length) {
-                response.groups.count = groups.length;
-                response.groups.rows = groups;
-            }
+        if (groups && groups.length) {
+            response.groups.count = groups.length;
+            response.groups.rows = groups;
+        }
 
-            if (users && users.length) {
-                response.users.count = users.length;
-                response.users.rows = users;
-            }
+        if (users && users.length) {
+            response.users.count = users.length;
+            response.users.rows = users;
+        }
+
+        return response;
+    }
+    /**
+     * Get all members of the Topic
+     */
+    app.get('/api/users/:userId/topics/:topicId/members', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), async function (req, res, next) {
+        try{
+            const response = await _getAllTopicMembers(req.params.topicId, req.user.id);
 
             return res.ok(response);
         } catch(err) {
@@ -5434,7 +5447,8 @@ module.exports = function (app) {
                 endsAt: req.body.endsAt,
                 description: req.body.description,
                 type: req.body.type || Vote.TYPES.regular,
-                authType: authType
+                authType: authType,
+                autoClose: req.body.autoClose
             });
 
 
@@ -5808,6 +5822,44 @@ module.exports = function (app) {
         return vote;
     };
 
+    const _handleVoteAutoCloseConditions = async (voteId, topicId, userId) => {
+        const vote = await Vote
+            .findOne({
+                where: {id: voteId},
+                include: [
+                    {
+                        model: Topic,
+                        where: {id: topicId}
+                    }
+                ]
+            });
+
+        if (vote.autoClose) {
+            const promises = vote.autoClose.map(async (condition) => {
+                if (condition.value === Vote.AUTO_CLOSE.allMembersVoted) {
+                    const topicMembers = await _getAllTopicMembers(topicId, userId);
+                    const voteResults = await getVoteResults(voteId, userId);
+                    if (topicMembers.users.count === voteResults[0].votersCount) {
+                        await Topic.update({
+                            status: Topic.STATUSES.closed
+                        }, {
+                            where: {
+                                id: topicId
+                            }
+                        });
+
+                        return true;
+                    }
+                }
+            });
+            const isClosed = await Promise.all(promises);
+
+            return isClosed.includes(true);
+        } else {
+            return false;
+        }
+    };
+
     const handleVoteLists = async (req, userId, topicId, voteId, voteOptions, context, transaction) => {
         await VoteList.destroy({
             where: {
@@ -5880,10 +5932,15 @@ module.exports = function (app) {
                 });
 
                 await handleVoteLists(req, userId, topicId, voteId, voteOptions, req.method + ' ' + req.path, t);
-                t.afterCommit(() => {
-                    return res.ok();
-                });
             });
+
+        const isClosed = await _handleVoteAutoCloseConditions(voteId, topicId, userId);
+
+        if (isClosed) {
+            return res.reload();
+        }
+
+        return res.ok();
     };
 
     const _checkAuthenticatedUser = async function (userId, personalInfo, transaction) {
@@ -6388,22 +6445,24 @@ module.exports = function (app) {
                             }
                         );
                 }
-
-                t.afterCommit(() => {
-                    return res.ok(
-                        'Signing has been completed',
-                        2,
-                        {
-                            bdocUri: getBdocURL({
-                                userId: userId,
-                                topicId: topicId,
-                                voteId: voteId,
-                                type: 'user'
-                            })
-                        }
-                    );
-                });
             });
+
+            const isClosed = await _handleVoteAutoCloseConditions(voteId, topicId, userId);
+
+            const resBody = {
+                bdocUri: getBdocURL({
+                    userId: userId,
+                    topicId: topicId,
+                    voteId: voteId,
+                    type: 'user'
+                })
+            };
+
+            if (isClosed) {
+                return res.reload('Signing has been completed and vote is now closed', 2, resBody);
+            }
+
+            return res.ok( 'Signing has been completed', 2, resBody);
         } catch (err) {
             let statusCode;
             if (err.result && err.result.endResult) {

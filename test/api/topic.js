@@ -911,7 +911,7 @@ const topicMentionListTestUnauth = async function (agent, topicId) {
     return _topicMentionListTestUnauth(agent, topicId, 200);
 };
 
-const _topicVoteCreate = async function (agent, userId, topicId, options, minChoices, maxChoices, delegationIsAllowed, endsAt, description, type, authType, expectedHttpCode) {
+const _topicVoteCreate = async function (agent, userId, topicId, options, minChoices, maxChoices, delegationIsAllowed, endsAt, description, type, authType, autoClose, expectedHttpCode) {
     authType = authType || null;
     const path = '/api/users/:userId/topics/:topicId/votes'
         .replace(':userId', userId)
@@ -928,14 +928,15 @@ const _topicVoteCreate = async function (agent, userId, topicId, options, minCho
             endsAt: endsAt,
             description: description,
             type: type,
-            authType: authType
+            authType: authType,
+            autoClose: autoClose
         })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
 
-const topicVoteCreate = async function (agent, userId, topicId, options, minChoices, maxChoices, delegationIsAllowed, endsAt, description, type, authType) {
-    return _topicVoteCreate(agent, userId, topicId, options, minChoices, maxChoices, delegationIsAllowed, endsAt, description, type, authType, 201);
+const topicVoteCreate = async function (agent, userId, topicId, options, minChoices, maxChoices, delegationIsAllowed, endsAt, description, type, authType, autoClose) {
+    return _topicVoteCreate(agent, userId, topicId, options, minChoices, maxChoices, delegationIsAllowed, endsAt, description, type, authType, autoClose, 201);
 };
 
 const _topicVoteRead = async function (agent, userId, topicId, voteId, expectedHttpCode) {
@@ -4503,6 +4504,7 @@ suite('Users', function () {
                     assert.isNull(vote.endsAt);
                     assert.equal(vote.description, description);
                     assert.equal(vote.authType, Vote.AUTH_TYPES.soft);
+                    assert.deepEqual(vote.autoClose, []);
 
                     // Topic should end up in "voting" status
                     const t = await Topic
@@ -4540,6 +4542,7 @@ suite('Users', function () {
                     assert.isNull(vote.endsAt);
                     assert.equal(vote.description, description);
                     assert.equal(vote.authType, Vote.AUTH_TYPES.soft);
+                    assert.deepEqual(vote.autoClose, []);
 
                     // Topic should end up in "voting" status
                     const t = await Topic
@@ -4572,14 +4575,14 @@ suite('Users', function () {
 
                     const voteContainerFiles = await db
                         .query(
-                            ' \
-                             SELECT \
-                                "mimeType", \
-                                "fileName" \
-                             FROM "VoteContainerFiles" \
-                             WHERE "voteId" = :voteId \
-                             ORDER BY "fileName" \
-                            ',
+                            `
+                             SELECT
+                                "mimeType",
+                                "fileName"
+                             FROM "VoteContainerFiles"
+                             WHERE "voteId" = :voteId
+                             ORDER BY "fileName"
+                            `,
                             {
                                 replacements: {
                                     voteId: vote.id
@@ -4622,7 +4625,7 @@ suite('Users', function () {
                             value: 'Option 1'
                         }
                     ];
-                    const resBody = (await _topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null, 400)).body;
+                    const resBody = (await _topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null, null, 400)).body;
 
                     const expectedBody = {
                         status: {
@@ -4649,7 +4652,7 @@ suite('Users', function () {
 
                     const description = 'Vote description';
 
-                    const resBody = (await _topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, description, null, Vote.AUTH_TYPES.hard, 400)).body;
+                    const resBody = (await _topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, description, null, Vote.AUTH_TYPES.hard, null, 400)).body;
                     const expectedBody = {
                         status: {
                             code: 40002,
@@ -4672,7 +4675,7 @@ suite('Users', function () {
 
                     const description = 'Vote description';
 
-                    const resBody = (await _topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, description, null, Vote.AUTH_TYPES.hard, 400)).body;
+                    const resBody = (await _topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, description, null, Vote.AUTH_TYPES.hard, null, 400)).body;
                     const expectedBody = {
                         status: {
                             code: 40004,
@@ -4695,7 +4698,7 @@ suite('Users', function () {
 
                     const dateInThePast = new Date().setDate(new Date().getDate() - 1);
 
-                    const resBody = (await _topicVoteCreate(agent, user.id, topic.id, options, null, null, null, dateInThePast, null, null, null, 400)).body;
+                    const resBody = (await _topicVoteCreate(agent, user.id, topic.id, options, null, null, null, dateInThePast, null, null, null, null, 400)).body;
 
                     const expectedBody = {
                         status: {
@@ -4722,7 +4725,7 @@ suite('Users', function () {
                     const authType = Vote.AUTH_TYPES.hard;
                     const delegationIsAllowed = true;
 
-                    const resBody = (await _topicVoteCreate(agent, user.id, topic.id, options, null, null, delegationIsAllowed, null, null, null, authType, 400)).body;
+                    const resBody = (await _topicVoteCreate(agent, user.id, topic.id, options, null, null, delegationIsAllowed, null, null, null, authType, null, 400)).body;
                     const expectedBody = {
                         status: {
                             code: 40003,
@@ -4745,7 +4748,7 @@ suite('Users', function () {
 
                     // Create a vote, that will set it to "inVoting" status, thus further Vote creation should not be allowed.
                     await topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null);
-                    await _topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null, 403);
+                    await _topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null, null, 403);
                 });
 
                 test('Fail - Bad Request - Vote option too long', async function () {
@@ -4759,7 +4762,7 @@ suite('Users', function () {
                     ];
 
 
-                    const resBody = (await _topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null, 400)).body;
+                    const resBody = (await _topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null, null, 400)).body;
                     const expectedBody = {
                         status: {
                             code: 40000
@@ -5511,6 +5514,39 @@ suite('Users', function () {
                         });
                     });
 
+                    test('Success - auto close', async function () {
+                        const options = [
+                            {
+                                value: 'Option 1'
+                            },
+                            {
+                                value: 'Option 2'
+                            },
+                            {
+                                value: 'Option 3'
+                            }
+                        ];
+
+                        const vote = (await topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null, [{value: 'allMembersVoted'}])).body.data;
+                        const voteRead = (await topicVoteRead(agent, user.id, topic.id, vote.id)).body.data;
+
+                        const voteList = [
+                            {
+                                optionId: voteRead.options.rows[0].id
+                            }
+                        ];
+                        await _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, null, null, null, 205);
+                        const voteReadAfterVote = (await topicVoteRead(agent, user.id, topic.id, vote.id)).body.data;
+
+                        _(voteList).forEach(function (voteOption) {
+                            const option = _.find(voteReadAfterVote.options.rows, {id: voteOption.optionId});
+                            assert.equal(option.voteCount, 1);
+                        });
+
+                        const topicR = (await topicRead(agent, user.id, topic.id, null)).body.data;
+                        assert.equal(topicR.status, Topic.STATUSES.closed);
+                    });
+
                     test('Success - multiple choice - vote and re-vote', async function () {
                         const options = [
                             {
@@ -6130,6 +6166,39 @@ suite('Users', function () {
                             const voteResult = (await topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null)).body;
                             assert.equal(voteResult.status.code, 20001);
                             assert.match(voteResult.data.challengeID, /[0-9]{4}/);
+                        });
+
+                        test('Success - auto close', async function () {
+                            const topicNew = (await topicCreate(agent, user.id, null, null, null, null, null)).body.data;
+                            const options = [
+                                {
+                                    value: 'Option 1'
+                                },
+                                {
+                                    value: 'Option 2'
+                                },
+                                {
+                                    value: 'Option 3'
+                                }
+                            ];
+
+                            const vote = (await topicVoteCreate(agent, user.id, topicNew.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard, [{value: 'allMembersVoted'}])).body.data;
+                            const phoneNumber = '+37200000766';
+                            const pid = '60001019906';
+
+                            const voteList = [
+                                {
+                                    optionId: vote.options.rows[0].id
+                                }
+                            ];
+
+                            const voteResult = (await topicVoteVote(agent, user.id, topicNew.id, vote.id, voteList, null, pid, phoneNumber, null)).body;
+                            assert.equal(voteResult.status.code, 20001);
+                            assert.match(voteResult.data.challengeID, /[0-9]{4}/);
+                            await _topicVoteStatus(agent, user.id, topicNew.id, vote.id, voteResult.data.token, 205);
+
+                            const topicR = (await topicRead(agent, user.id, topicNew.id, null)).body.data;
+                            assert.equal(topicR.status, Topic.STATUSES.closed);
                         });
 
                         test('Success - Estonian mobile number and PID - multiple choice - vote and re-vote', async function () {
