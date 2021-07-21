@@ -1,42 +1,41 @@
 'use strict';
 
-var config = require('config');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var bodyParser = require('body-parser');
-var cors = require('cors');
-var log4js = require('log4js');
-var models = require('./db/models');
-var QueryStream = require('pg-query-stream');
-var morgan = require('morgan');
-var lodash = require('lodash');
-var Promise = require('bluebird');
-var moment = require('moment');
-var mu = require('mu2');
-var fs = require('fs');
-var querystring = require('querystring');
-var stream = require('stream');
-var fsExtra = require('fs-extra');
-var sanitizeFilename = require('sanitize-filename');
-var uuid = require('uuid');
-var jwt = require('jsonwebtoken');
-var objectEncrypter = require('object-encrypter');
-var fastCsv = require('fast-csv');
-var Bdoc = require('./libs/bdoc');
-var cosHtmlToDocx = require('./libs/cosHtmlToDocx');
-var superagent = require('superagent');
-var CachemanMemory = require('cacheman-memory');
-var Cacheman = require('cacheman');
-var Entities = require('html-entities').AllHtmlEntities;
-var striptags = require('striptags');
-var device = require('express-device');
-var SevenZip = require('node-7z');
-var swaggerUi = require('swagger-ui-express');
-var swaggerDocument = require('./swagger.json');
-var Busboy = require('busboy');
-var StreamUpload = require('stream_upload');
-var app = express();
+const config = require('config');
+const express = require('express');
+const path = require('path');
+const cookieParser = require('cookie-parser');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const log4js = require('log4js');
+const models = require('./db/models');
+const QueryStream = require('pg-query-stream');
+const morgan = require('morgan');
+const lodash = require('lodash');
+const Promise = require('bluebird');
+const moment = require('moment');
+const mu = require('mu2');
+const fs = require('fs');
+const querystring = require('querystring');
+const stream = require('stream');
+const fsExtra = require('fs-extra');
+const sanitizeFilename = require('sanitize-filename');
+const uuid = require('uuid');
+const jwt = require('jsonwebtoken');
+const objectEncrypter = require('object-encrypter');
+const fastCsv = require('fast-csv');
+const Bdoc = require('./libs/bdoc');
+const cosHtmlToDocx = require('./libs/cosHtmlToDocx');
+const superagent = require('superagent');
+const CachemanMemory = require('cacheman-memory');
+const Cacheman = require('cacheman');
+const striptags = require('striptags');
+const device = require('express-device');
+const SevenZip = require('node-7z');
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('./swagger.json');
+const Busboy = require('busboy');
+const StreamUpload = require('stream_upload');
+const app = express();
 
 // Express settings
 // TODO: Would be nice if conf had express.settings.* and all from there would be set
@@ -45,19 +44,19 @@ if (app.get('env') === 'production' || app.get('env') === 'test') {
 }
 
 app.use('/documentation', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-var prerender = require('prerender-node');
+const prerender = require('prerender-node');
 prerender.set('prerenderServiceUrl', config.services.prerender.serviceUrl).set('prerenderToken', config.services.prerender.apiKey);
 app.use(prerender);
 
 app.set('x-powered-by', false);
 
 // App settings
-var APP_ROOT = __dirname;
-var PUBLIC_ROOT = path.join(APP_ROOT, 'public');
-var FILE_ROOT = path.join(APP_ROOT, 'files');
-var TEMPLATE_ROOT = path.join(APP_ROOT, 'views');
-var EMAIL_TEMPLATE_ROOT = path.join(APP_ROOT, 'views/emails');
-var EMAIL_TEMPLATE_ROOT_LOCAL = path.join(APP_ROOT, 'config/emails');
+const APP_ROOT = __dirname;
+const PUBLIC_ROOT = path.join(APP_ROOT, 'public');
+const FILE_ROOT = path.join(APP_ROOT, 'files');
+const TEMPLATE_ROOT = path.join(APP_ROOT, 'views');
+const EMAIL_TEMPLATE_ROOT = path.join(APP_ROOT, 'views/emails');
+const EMAIL_TEMPLATE_ROOT_LOCAL = path.join(APP_ROOT, 'config/emails');
 
 app.set('APP_ROOT', APP_ROOT);
 app.set('PUBLIC_ROOT', PUBLIC_ROOT);
@@ -74,11 +73,11 @@ if (typeof config.logging === 'string') {
     config.logging = JSON.parse(config.logging); // Support JSON string from ENV
 }
 log4js.configure(config.logging.log4js);
-var logger = log4js.getLogger(app.settings.env);
+const logger = log4js.getLogger(app.settings.env);
 app.set('logger', logger);
 app.set('config', config);
 
-var reqLogger = morgan(config.logging.morgan.format, { // HTTP request logger - https://github.com/expressjs/morgan
+const reqLogger = morgan(config.logging.morgan.format, { // HTTP request logger - https://github.com/expressjs/morgan
     stream: {
         write: function (str) {
             logger.info(str);
@@ -87,14 +86,14 @@ var reqLogger = morgan(config.logging.morgan.format, { // HTTP request logger - 
 });
 app.use(reqLogger);
 
-var etherpadClient = require('etherpad-lite-client').connect(config.services.etherpad);
+const etherpadClient = require('etherpad-lite-client').connect(config.services.etherpad);
 
-var twitter = require('twit')(config.services.twitter);
-var options = {
+const twitter = require('twit')(config.services.twitter);
+const options = {
     ttl: '-1',
     engine: new CachemanMemory({count: 50})
 };
-var hashtagCache = new Cacheman('hashtagCache', options);
+const hashtagCache = new Cacheman('hashtagCache', options);
 
 // Promisifications
 Promise.promisifyAll(fs);
@@ -134,7 +133,6 @@ app.set('superagent', superagent);
 app.set('moment', moment);
 app.set('twitter', twitter);
 app.set('hashtagCache', hashtagCache);
-app.set('encoder', new Entities());
 app.set('striptags', striptags);
 app.set('SevenZip', SevenZip);
 app.set('busboy', Busboy);
@@ -153,7 +151,7 @@ app.set('cosEtherpad', require('./libs/cosEtherpad')(app));
 app.set('cosJwt', require('./libs/cosJwt')(app));
 
 //Config smartId
-var smartId = require('smart-id-rest')();
+const smartId = require('smart-id-rest')();
 smartId.init({
     hostname: config.services.smartId.hostname,
     apiPath: config.services.smartId.apiPath,
@@ -164,7 +162,7 @@ smartId.init({
 });
 app.set('smartId', smartId);
 //Config mobiilId
-var mobileId = require('mobiil-id-rest')();
+const mobileId = require('mobiil-id-rest')();
 mobileId.init({
     hostname: config.services.mobileId.hostname,
     apiPath: config.services.mobileId.apiPath,
@@ -186,7 +184,7 @@ app.set('email', require('./libs/email')(app));
 app.set('cryptoLib', require('./libs/crypto'));
 
 // Authentication with Passport - http://passportjs.org/guide/
-var passport = require('passport');
+const passport = require('passport');
 app.set('passport', passport);
 require('./libs/passport/index')(app).init();
 
@@ -198,13 +196,13 @@ app.use(bodyParser.json({type: 'application/csp-report'}));
 app.use(bodyParser.urlencoded({extended: false}));
 
 // CORS
-var corsOptions = config.api.cors;
-var corsPaths = lodash.cloneDeep(config.api.cors.paths);
+const corsOptions = config.api.cors;
+const corsPaths = lodash.cloneDeep(config.api.cors.paths);
 delete corsOptions.paths; // Remove the paths just in case it will conflict with CORS MW options now or in the future
 corsOptions.origin.forEach(function (pattern, i) {
     corsOptions.origin[i] = new RegExp(pattern, 'i');
 });
-var corsMiddleware = cors(corsOptions);
+const corsMiddleware = cors(corsOptions);
 app.use(corsPaths, corsMiddleware); // CORS
 app.options(corsPaths, corsMiddleware); // Enable CORS preflight - https://github.com/expressjs/cors#enabling-cors-pre-flight
 
@@ -216,22 +214,22 @@ app.use('/static', express.static(PUBLIC_ROOT)); // If you move static below ses
 app.use(require('./libs/middleware/response'));
 
 // Load public and private key to config. Keys are used for signing JWT tokens
-var sessionPrivateKey = config.session.privateKey;
+const sessionPrivateKey = config.session.privateKey;
 if (!sessionPrivateKey || sessionPrivateKey.indexOf('PRIVATE KEY') < 0) {
     throw new Error('Invalid configuration! Invalid value for "session.privateKey". Was: "' + sessionPrivateKey + '"');
 }
 
-var sessionPublicKey = config.session.publicKey;
+const sessionPublicKey = config.session.publicKey;
 if (!sessionPublicKey || sessionPublicKey.indexOf('PUBLIC KEY') < 0) {
     throw new Error('Invalid configuration! Invalid value for "session.publicKey". Was: "' + sessionPublicKey + '"');
 }
 
-var cookieSecret = config.session.secret;
+const cookieSecret = config.session.secret;
 if (!cookieSecret) {
     throw new Error('Invalid configuration! Invalid value for "session.secret". Was: "' + cookieSecret + '". See https://github.com/expressjs/session#secret');
 }
 
-var cosApiKey = config.api.key;
+const cosApiKey = config.api.key;
 if (!cosApiKey) {
     throw new Error('Invalid configuration! Invalid value for "api.key". Was: "' + cosApiKey + '". Must be something unique. This value is used for authenticating to webhooks ("/routes/api/internal") and originally used by Etherpad');
 }
@@ -258,7 +256,7 @@ app.set('middleware.asyncMiddleware', require('./libs/middleware/asyncMiddleware
 app.use(require('./libs/middleware/botHeaderLogger'));
 
 // Load all API routes
-var routesApi = './routes/api/';
+const routesApi = './routes/api/';
 fs.readdirSync(routesApi).forEach(function (file) {
     if (!file.match(/\.js$/)) { // Exclude folders
         return;
@@ -267,7 +265,7 @@ fs.readdirSync(routesApi).forEach(function (file) {
 });
 
 // Load all internal API routes
-var routesApiInternal = './routes/api/internal/';
+const routesApiInternal = './routes/api/internal/';
 fs.readdirSync(routesApiInternal).forEach(function (file) {
     if (!file.match(/\.js$/)) { // Exclude folders
         return;

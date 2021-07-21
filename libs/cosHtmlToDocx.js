@@ -8,13 +8,13 @@ const docx = require('docx');
 
 // Used to create docx files
 const htmlparser = require('htmlparser2');
-const encoder = require('html-entities').AllHtmlEntities;
+const decode = require('html-entities').decode;
 const fs = require('fs');
 const fsExtra = require('fs-extra');
 const https = require('https');
 const path = require('path');
 const sizeOf = require('image-size')
-const { AlignmentType, Document, HeadingLevel, Packer, Paragraph, TextRun, Media} = docx;
+const { AlignmentType, Document, HeadingLevel, Packer, Paragraph, TextRun, ImageRun} = docx;
 
 const _addStyles = function (params) {
     params.styles = {
@@ -186,12 +186,11 @@ function CosHtmlToDocx (html, title, resPath) {
     this.html = html;
     this.path = resPath;
     const finalParagraphs = [];
-    let params = {creator: 'citizenos.com'};
+    let params = {creator: 'citizenos.com', sections: []};
     if (title) {
         params.title = title;
     }
     _addStyles(params);
-    const finalDoc = new Document(params);
 
     const _isElement = (element, name) => {
         if (element.type === 'tag' && element.name) {
@@ -367,7 +366,17 @@ function CosHtmlToDocx (html, title, resPath) {
         if (_isElement(item, 'img')) {
             const path = await getImageFile(item.attribs.src, resPath);
             const imagesize = scaleImage(path);
-            const image = Media.addImage(finalDoc, fs.readFileSync(path),imagesize.width, imagesize.height);
+            const image = {
+                children: [
+                    new ImageRun({
+                        data: fs.readFileSync(path),
+                        transformation: {
+                            width: imagesize.width,
+                            height: imagesize.height,
+                        },
+                    })
+            ]};
+
             finalParagraphs.push(new Paragraph(image));
 
             return null;
@@ -404,7 +413,7 @@ function CosHtmlToDocx (html, title, resPath) {
 
         if (item.type === 'text') {
             const textNode = attributes;
-            textNode.text = encoder.decode(item.data);
+            textNode.text = decode(item.data);
             children.push( new TextRun (textNode));
         } if (item.children) {
             for await (let gc of item.children) {
@@ -535,8 +544,13 @@ function CosHtmlToDocx (html, title, resPath) {
                     return reject(err);
                 }
                 await _handleParserResult(result);
-                finalDoc.addSection({children: finalParagraphs});
-                return resolve(Buffer.from(await Packer.toBase64String(finalDoc), 'base64'));
+                params.sections = [{children: finalParagraphs}];
+
+                const finalDoc = new Document(params);
+                const b64string = await Packer.toBase64String(finalDoc);
+                const buffer = Buffer.from(b64string, 'base64');
+
+                return resolve(buffer);
             });
             const parser = new htmlparser.Parser(handler);
             parser.parseComplete(processHtml);

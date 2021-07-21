@@ -217,27 +217,25 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _createMetainfoFile = function (topic, vote, transaction) {
+    const _createMetainfoFile = async function (topic, vote, transaction) {
         const templateStream = mu.compileAndRender(METAINFO_FILE.template, {
             topic: topic,
             vote: vote
         });
 
-        return util.streamToBuffer(templateStream)
-            .then(function (templateBuffer) {
-                return VoteContainerFile
-                    .create(
-                        {
-                            voteId: vote.id,
-                            fileName: METAINFO_FILE.name,
-                            mimeType: METAINFO_FILE.mimeType,
-                            content: templateBuffer
-                        },
-                        {
-                            transaction: transaction
-                        }
-                    );
-            });
+        const templateBuffer = await util.streamToBuffer(templateStream);
+
+        return VoteContainerFile.create(
+            {
+                voteId: vote.id,
+                fileName: METAINFO_FILE.name,
+                mimeType: METAINFO_FILE.mimeType,
+                content: templateBuffer
+            },
+            {
+                transaction: transaction
+            }
+        );
     };
 
     /**
@@ -250,24 +248,22 @@ module.exports = function (app) {
      * @returns {Promise} Promise
      * @private
      */
-    const _createVoteOptionFile = function (vote, voteOption, transaction) {
+    const _createVoteOptionFile = async function (vote, voteOption, transaction) {
         const templateStream = mu.compileAndRender(VOTE_OPTION_FILE.template, voteOption);
 
-        return util.streamToBuffer(templateStream)
-            .then(function (templateBuffer) {
-                return VoteContainerFile
-                    .create(
-                        {
-                            voteId: vote.id,
-                            fileName: _getVoteOptionFileName(voteOption),
-                            mimeType: VOTE_OPTION_FILE.mimeType,
-                            content: templateBuffer
-                        },
-                        {
-                            transaction: transaction
-                        }
-                    );
-            });
+        const templateBuffer = await util.streamToBuffer(templateStream);
+
+        return VoteContainerFile.create(
+            {
+                voteId: vote.id,
+                fileName: _getVoteOptionFileName(voteOption),
+                mimeType: VOTE_OPTION_FILE.mimeType,
+                content: templateBuffer
+            },
+            {
+                transaction: transaction
+            }
+        );
     };
 
     /**
@@ -350,67 +346,66 @@ module.exports = function (app) {
     };
 
     const _createUserBdoc = async function (voteId, userId, voteOptions, cert, certFormat, transaction) {
-        let containerFiles = [];
-        const certificate = new Certificate(Buffer.from(cert, certFormat));
-        const chosenVoteOptionFileNames = voteOptions.map(_getVoteOptionFileName);
+        try {
+            let containerFiles = [];
+            const certificate = new Certificate(Buffer.from(cert, certFormat));
+            const chosenVoteOptionFileNames = voteOptions.map(_getVoteOptionFileName);
 
-        const voteContainerFiles = await VoteContainerFile
-            .findAll({
-                where: {
-                    voteId: voteId
-                },
-                transaction
+            const voteContainerFiles = await VoteContainerFile
+                .findAll({
+                    where: {
+                        voteId: voteId
+                    },
+                    transaction
+                })
+
+            voteContainerFiles.forEach(function (voteContainerFile) {
+                const fileName = voteContainerFile.fileName;
+                const mimeType = voteContainerFile.mimeType;
+                const content = voteContainerFile.content;
+                switch (voteContainerFile.fileName) {
+                    case TOPIC_FILE.name:
+                    case METAINFO_FILE.name:
+                        break;
+                    default:
+                        // Must be option file
+                        if (chosenVoteOptionFileNames.indexOf(fileName) === -1) {
+                            //Skip the option that User did not choose
+                            return;
+                        }
+                }
+
+                containerFiles.push({
+                    path: fileName,
+                    type: mimeType,
+                    hash: Crypto.createHash('sha256').update(content).digest()
+                });
             })
 
-        voteContainerFiles.forEach(function (voteContainerFile) {
-            const fileName = voteContainerFile.fileName;
-            const mimeType = voteContainerFile.mimeType;
-            const content = voteContainerFile.content;
-            switch (voteContainerFile.fileName) {
-                case TOPIC_FILE.name:
-                case METAINFO_FILE.name:
-                    break;
-                default:
-                    // Must be option file
-                    if (chosenVoteOptionFileNames.indexOf(fileName) === -1) {
-                        //Skip the option that User did not choose
-                        return;
-                    }
-            }
-
-            containerFiles.push({
-                path: fileName,
-                type: mimeType,
-                hash: Crypto.createHash('sha256').update(content).digest()
-            });
-        })
-
-        return new Promise(function (resolve) {
-            let finalData = '';
-            const mufileStream = mu
-                .compileAndRender(USERINFO_FILE.template, {user: {id: userId}});
-            mufileStream
-                .on('data', function (data) {
-                    finalData += data.toString();
-                });
-            mufileStream
-                .on('end', function () {
-                    containerFiles.push({
-                        path: USERINFO_FILE.name,
-                        type: 'text/html',
-                        hash: Crypto.createHash('sha256').update(Buffer.from(finalData)).digest()
+            const files= await new Promise(function (resolve) {
+                let finalData = '';
+                const mufileStream = mu
+                    .compileAndRender(USERINFO_FILE.template, {user: {id: userId}});
+                mufileStream
+                    .on('data', function (data) {
+                        finalData += data.toString();
                     });
+                mufileStream
+                    .on('end', function () {
+                        containerFiles.push({
+                            path: USERINFO_FILE.name,
+                            type: 'text/html',
+                            hash: Crypto.createHash('sha256').update(Buffer.from(finalData)).digest()
+                        });
 
-                    return resolve(containerFiles);
-                });
-        }).then(function (files) {
-            const xades = hades.new(certificate, files, {policy: "bdoc"});
+                        return resolve(containerFiles);
+                    });
+            });
 
-            return Promise.resolve(xades);
-        }).catch(function (e) {
+            return hades.new(certificate, files, {policy: "bdoc"});
+        } catch(e) {
             logger.error(e)
-        });
-
+        }
     };
 
 
@@ -541,28 +536,34 @@ module.exports = function (app) {
         }
     };
 
-    const _getSmartIdSignedDoc = function (sessionId, signableHash, signatureId, voteId, userId, voteOptions, timeoutMs) {
-        return smartId.statusSign(sessionId, timeoutMs)
-            .then(function (signResult) {
-                if (signResult.signature) {
-                    return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value);
-                }
-                logger.error(signResult);
+    const _getSmartIdSignedDoc = async function (sessionId, signableHash, signatureId, voteId, userId, voteOptions, timeoutMs) {
+        try {
+            const signResult = await smartId.statusSign(sessionId, timeoutMs);
+            if (signResult.signature) {
+                return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value);
+            }
 
-                return Promise.reject(signResult);
-            });
+            logger.error(signResult);
+            return Promise.reject(signResult);
+        } catch (error) {
+            logger.error(error);
+            throw error;
+        }
     };
 
-    const _getMobileIdSignedDoc = function (sessionId, signableHash, signatureId, voteId, userId, voteOptions, timeoutMs) {
-        return mobileId.statusSign(sessionId, timeoutMs)
-            .then(function (signResult) {
-                if (signResult.signature) {
-                    return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value);
-                }
-                logger.error(signResult);
+    const _getMobileIdSignedDoc = async function (sessionId, signableHash, signatureId, voteId, userId, voteOptions, timeoutMs) {
+        try {
+            const signResult = await mobileId.statusSign(sessionId, timeoutMs)
+            if (signResult.signature) {
+                return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value);
+            }
 
-                return Promise.reject(signResult);
-            });
+            logger.error(signResult);
+            return Promise.reject(signResult);
+        } catch (error) {
+            logger.error(error);
+            throw error;
+        }
     };
 
     const _signUserBdoc = function (voteId, userId, voteOptions, signableHash, signatureId, signatureValue) {

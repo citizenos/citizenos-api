@@ -37,6 +37,7 @@ module.exports = function (req, res, next) {
 
     res.ok = buildJsonResponse(200);
     res.noContent = buildJsonResponse(204);
+    res.reload = buildJsonResponse(205);
     res.created = buildJsonResponse(201);
     res.badRequest = buildJsonResponse(400, 'Bad request');
     res.unauthorised = buildJsonResponse(401, 'Unauthorized');

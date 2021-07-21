@@ -15,7 +15,7 @@ module.exports = function (app) {
     const config = app.get('config');
     const logger = app.get('logger');
     const jwt = app.get('jwt');
-    const encoder = app.get('encoder');
+    const decode = require('html-entities').decode;
     const cosActivities = app.get('cosActivities');
     const path = require('path');
     const fs = app.get('fs');
@@ -169,7 +169,7 @@ module.exports = function (app) {
         // Remove all HTML tags
         title = title.replace(/<[^>]*>/gm, '');
         // Etherpad has HTML encoded everything, we want it stored not encoded
-        title = encoder.decode(title);
+        title = decode(title);
 
         if (title.length > Topic.TITLE_LENGTH_MAX) {
             title = title.substr(0, Topic.TITLE_LENGTH_MAX - 1 - 3) + '...';

@@ -1,7 +1,7 @@
 'use strict';
 
-var _ = require('lodash');
-var hooks = require('../../libs/sequelize/hooks');
+const _ = require('lodash');
+const hooks = require('../../libs/sequelize/hooks');
 
 /**
  * Vote
@@ -14,23 +14,27 @@ var hooks = require('../../libs/sequelize/hooks');
  * @see http://sequelizejs.com/docs/latest/models
  */
 module.exports = function (sequelize, DataTypes) {
-    var TYPES = {
+    const TYPES = {
         regular: 'regular',
         multiple: 'multiple'
     };
 
-    var AUTH_TYPES = {
+    const AUTH_TYPES = {
         soft: 'soft',
         hard: 'hard'
     };
 
-    var SIGNING_METHODS = {
+    const SIGNING_METHODS = {
         mid: 'mid',
         idCard: 'idCard',
         smartId: 'smartId'
     };
 
-    var Vote = sequelize.define(
+    const AUTO_CLOSE = {
+        allMembersVoted: 'allMembersVoted'
+    }
+
+    const Vote = sequelize.define(
         'Vote',
         {
             id: {
@@ -94,7 +98,27 @@ module.exports = function (sequelize, DataTypes) {
                 allowNull: false,
                 comment: 'Authorization types. Soft - user has to be logged in to Vote. Hard - user has to digitally sign a vote.',
                 defaultValue: AUTH_TYPES.soft
-            }
+            },
+            autoClose: {
+                type: DataTypes.ARRAY(DataTypes.JSON), // While Sequelize does not support ARRAY of ENUM I'll use ARRAY of Strings - https://github.com/sequelize/sequelize/issues/1498
+                defaultValue: [],
+                validate: {
+                    isArrayOfautoCloseConditions: function (value) {
+                        if (!value) return; // Since Sequelize 5.x custom validators are run when allowNull is true.
+
+                        if (!Array.isArray(value)) {
+                            throw new Error('Must be an array.');
+                        }
+
+                        value.forEach((condition) => {
+                            if (!AUTO_CLOSE[condition.value]) {
+                                throw new Error(`Invalid condition ${condition.value}`);
+                            }
+                        });
+                    }
+                },
+                allowNull: true
+            },
         }
     );
 
@@ -126,7 +150,7 @@ module.exports = function (sequelize, DataTypes) {
     // Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
     Vote.prototype.toJSON = function () {
         // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
-        var data = {
+        const data = {
             id: this.dataValues.id,
             minChoices: this.dataValues.minChoices,
             maxChoices: this.dataValues.maxChoices,
@@ -136,6 +160,7 @@ module.exports = function (sequelize, DataTypes) {
             description: this.dataValues.description,
             type: this.dataValues.type,
             authType: this.dataValues.authType,
+            autoClose: this.dataValues.autoClose,
             downloads: this.dataValues.downloads, // TODO: should be virtual?
             votersCount: this.dataValues.votersCount// TODO: should be virtual?
         };
@@ -151,9 +176,9 @@ module.exports = function (sequelize, DataTypes) {
         // If Vote eagerly loads VoteDelegation
         if (this.dataValues.VoteDelegations && this.dataValues.VoteDelegations.length) {
             // Eager loaded is always an array, but we know there is only 1 delegation possible.
-            var delegation = this.dataValues.VoteDelegations[0];
+            const delegation = this.dataValues.VoteDelegations[0];
             if (delegation) {
-                var User = delegation.dataValues.User;
+                const User = delegation.dataValues.User;
                 if (User) {
                     data.delegation = User;
                 }
@@ -175,6 +200,7 @@ module.exports = function (sequelize, DataTypes) {
     Vote.TYPES = TYPES;
     Vote.AUTH_TYPES = AUTH_TYPES;
     Vote.SIGNING_METHODS = SIGNING_METHODS;
+    Vote.AUTO_CLOSE = AUTO_CLOSE;
 
     return Vote;
 };
