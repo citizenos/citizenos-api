@@ -5542,9 +5542,7 @@ suite('Users', function () {
                             const option = _.find(voteReadAfterVote.options.rows, {id: voteOption.optionId});
                             assert.equal(option.voteCount, 1);
                         });
-
-                        const topicR = (await topicRead(agent, user.id, topic.id, null)).body.data;
-                        assert.equal(topicR.status, Topic.STATUSES.closed);
+                        assert.closeTo(new Date(voteReadAfterVote.endsAt).getTime(), new Date().getTime(), 1000);
                     });
 
                     test('Success - multiple choice - vote and re-vote', async function () {
@@ -6196,9 +6194,9 @@ suite('Users', function () {
                             assert.equal(voteResult.status.code, 20001);
                             assert.match(voteResult.data.challengeID, /[0-9]{4}/);
                             await _topicVoteStatus(agent, user.id, topicNew.id, vote.id, voteResult.data.token, 205);
+                            const voteReadAfterVote = (await topicVoteRead(agent, user.id, topicNew.id, vote.id)).body.data;
 
-                            const topicR = (await topicRead(agent, user.id, topicNew.id, null)).body.data;
-                            assert.equal(topicR.status, Topic.STATUSES.closed);
+                            assert.closeTo(new Date(voteReadAfterVote.endsAt).getTime(), new Date().getTime(), 1000);
                         });
 
                         test('Success - Estonian mobile number and PID - multiple choice - vote and re-vote', async function () {

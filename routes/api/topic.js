@@ -5845,13 +5845,8 @@ module.exports = function (app) {
                     const topicMembers = await _getAllTopicMembers(topicId, userId);
                     const voteResults = await getVoteResults(voteId, userId);
                     if (topicMembers.users.count === voteResults[0].votersCount) {
-                        await Topic.update({
-                            status: Topic.STATUSES.closed
-                        }, {
-                            where: {
-                                id: topicId
-                            }
-                        });
+                        vote.endsAt = moment().format();
+                        await vote.save();
 
                         return true;
                     }
