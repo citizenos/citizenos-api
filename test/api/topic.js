@@ -1409,6 +1409,7 @@ const padRead = async function (padUrl) {
 };
 
 module.exports.topicCreate = topicCreate;
+module.exports.topicFavouriteCreate = topicFavouriteCreate;
 module.exports.topicDelete = topicDelete;
 module.exports.topicMemberGroupsCreate = topicMemberGroupsCreate;
 

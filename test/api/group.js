@@ -224,19 +224,30 @@ const groupMemberUsersDelete = async function (agent, userId, groupId, memberId)
     return _groupMemberUsersDelete(agent, userId, groupId, memberId, 200);
 };
 
-const _groupMembersTopicsList = async function (agent, userId, groupId, expectedHttpCode) {
+const _groupMembersTopicsList = async function (agent, userId, groupId, offset, limit, statuses, visibility, creatorId, pinned, hasVoted, showModerated, expectedHttpCode) {
     const path = '/api/users/:userId/groups/:groupId/members/topics'
         .replace(':userId', userId)
         .replace(':groupId', groupId);
 
     return agent
         .get(path)
+        .query({
+            offset,
+            limit,
+            statuses,
+            visibility,
+            creatorId,
+            pinned,
+            hasVoted,
+            showModerated,
+
+        })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
 
-const groupMembersTopicsList = async function (agent, userId, groupId) {
-    return _groupMembersTopicsList(agent, userId, groupId, 200);
+const groupMembersTopicsList = async function (agent, userId, groupId, offset, limit, statuses, visibility, creatorId, pinned, hasVoted, showModerated) {
+    return _groupMembersTopicsList(agent, userId, groupId, offset, limit, statuses, visibility, creatorId, pinned, hasVoted, showModerated, 200);
 };
 
 module.exports.create = groupCreate;
@@ -257,6 +268,7 @@ const memberLib = require('./lib/members')(app);
 const topicLib = require('./topic');
 
 const Group = models.Group;
+const Topic = models.Topic;
 const GroupMemberUser = models.GroupMemberUser;
 const TopicMemberUser = models.TopicMemberUser;
 const TopicMemberGroup = models.TopicMemberGroup;
@@ -677,7 +689,7 @@ suite('Users', function () {
                     });
 
                     test('Success - 20100 - invite a single User with non-existing e-mail', async function () {
-                        const userToInvite = await userLib.createUser(request.agent(app), null, null, null);
+                        await userLib.createUser(request.agent(app), null, null, null);
 
                         const invitation = {
                             userId: 'groupInviteTest_' + cosUtil.randomString() + '@invitetest.com',
@@ -1605,28 +1617,44 @@ suite('Users', function () {
                 suite('List', function () {
 
                     const agent = request.agent(app);
+                    const userAgent = request.agent(app);
 
                     const creatorEmail = 'test_gmemberstopicsgd_c_' + new Date().getTime() + '@test.ee';
                     const creatorPassword = 'testPassword123';
 
-                    let creator, group;
+                    let creator, user, group, topicCreated, topicCreated2;
 
                     suiteSetup(async function () {
                         creator = await userLib.createUserAndLogin(agent, creatorEmail, creatorPassword, null);
+                        user = await userLib.createUserAndLogin(userAgent, 'test_gmemberstopicsgd_u_' + new Date().getTime() + '@test.ee', creatorPassword, null);
 
                         group = (await groupCreate(agent, creator.id, 'Test Group list member topics', null, null)).body.data;
-                        const topicCreated = (await topicLib.topicCreate(agent, creator.id, null, null, null, '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>', null)).body.data;
+                        const members = [
+                            {
+                                userId: user.id,
+                                level: GroupMemberUser.LEVELS.read
+                            }
+                        ];
+
+                        await memberLib.groupMemberUsersCreate(group.id, members);
+                        topicCreated = (await topicLib.topicCreate(agent, creator.id, null, null, null, '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>', null)).body.data;
+                        topicCreated2 = (await topicLib.topicCreate(agent, creator.id, null, null, null, '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>', null)).body.data;
                         const memberGroup = {
                             groupId: group.id,
                             level: TopicMemberGroup.LEVELS.edit
                         };
                         await topicLib.topicMemberGroupsCreate(agent, creator.id, topicCreated.id, memberGroup);
+                        const memberGroup2 = {
+                            groupId: group.id,
+                            level: TopicMemberGroup.LEVELS.edit
+                        };
+                        await topicLib.topicMemberGroupsCreate(agent, creator.id, topicCreated2.id, memberGroup2);
                     });
 
 
                     test('Success', async function () {
                         const topicsList = (await groupMembersTopicsList(agent, creator.id, group.id)).body.data;
-                        assert.equal(topicsList.rows.length, 1);
+                        assert.equal(topicsList.rows.length, 2);
 
                         const groupMemberTopic = topicsList.rows[0];
 
@@ -1643,6 +1671,53 @@ suite('Users', function () {
 
                     });
 
+                    test('Success - filter status', async function () {
+                        const topicsListInProgress = (await groupMembersTopicsList(agent, creator.id, group.id, null, null, Topic.STATUSES.inProgress)).body.data;
+                        assert.equal(topicsListInProgress.rows.length, 2);
+                        const topicsListVoting = (await groupMembersTopicsList(agent, creator.id, group.id, null, null, Topic.STATUSES.voting)).body.data;
+                        assert.equal(topicsListVoting.rows.length, 0);
+                        await Topic
+                            .update(
+                                {
+                                    status: Topic.STATUSES.voting
+                                },
+                                {
+                                    where: {
+                                        id: topicCreated.id
+                                    }
+                                }
+                            );
+
+                        const topicsListVoting2 = (await groupMembersTopicsList(agent, creator.id, group.id, null, null, Topic.STATUSES.voting)).body.data;
+                        assert.equal(topicsListVoting2.rows.length, 1);
+                        const topicsListFollowUp = (await groupMembersTopicsList(agent, creator.id, group.id, null, null, Topic.STATUSES.followUp)).body.data;
+                        assert.equal(topicsListFollowUp.rows.length, 0);
+                        const topicsListClosed = (await groupMembersTopicsList(agent, creator.id, group.id, null, null, Topic.STATUSES.closed)).body.data;
+                        assert.equal(topicsListClosed.rows.length, 0);
+                    });
+
+                    test('Success - filters', async function () {
+                        const topicsListPrivate = (await groupMembersTopicsList(agent, creator.id, group.id, null, null, null, Topic.VISIBILITY.private)).body.data;
+                        assert.equal(topicsListPrivate.rows.length, 2);
+                        const topicsListPublic = (await groupMembersTopicsList(agent, creator.id, group.id, null, null, null, Topic.VISIBILITY.public)).body.data;
+                        assert.equal(topicsListPublic.rows.length, 0);
+                        const topicsListCreator = (await groupMembersTopicsList(userAgent, user.id, group.id, null, null, null, null, null)).body.data;
+                        assert.equal(topicsListCreator.rows.length, 2);
+                        const topicsListCreator1 = (await groupMembersTopicsList(userAgent, user.id, group.id, null, null, null, null, user.id)).body.data;
+                        assert.equal(topicsListCreator1.rows.length, 0);
+                        const topicsListCreator2 = (await groupMembersTopicsList(agent, creator.id, group.id, null, null, null, null, creator.id)).body.data;
+                        assert.equal(topicsListCreator2.rows.length, 2);
+                        assert.equal(topicsListCreator2.rows[0].creator.id, creator.id);
+                        topicLib.topicFavouriteCreate(agent, creator.id, topicCreated.id);
+                        const topicsListPinned = (await groupMembersTopicsList(agent, creator.id, group.id, null, null, null, null, null, true)).body.data;
+                        assert.equal(topicsListPinned.rows.length, 1);
+                        const topicsListPinnedUser = (await groupMembersTopicsList(userAgent, user.id, group.id, null, null, null, null, null, true)).body.data;
+                        assert.equal(topicsListPinnedUser.rows.length, 0);
+                        const topicsListVoted = (await groupMembersTopicsList(userAgent, user.id, group.id, null, null, null, null, null, null, true)).body.data;
+                        assert.equal(topicsListVoted.rows.length, 0);
+                        const topicsListModerated = (await groupMembersTopicsList(userAgent, user.id, group.id, null, null, null, null, null, null, null, true)).body.data;
+                        assert.equal(topicsListModerated.rows.length, 0);
+                    });
                 });
 
                 suite('Delete', function () {

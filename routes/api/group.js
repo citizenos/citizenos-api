@@ -1292,7 +1292,7 @@ module.exports = function (app) {
 
         if (creatorId) {
             if (creatorId === userId) {
-                where += ` AND c.id =:creatorId `;
+                where += ` AND u.id =:creatorId `;
             } else {
                 return res.badRequest('No rights!');
             }
@@ -1315,6 +1315,7 @@ module.exports = function (app) {
                         t.hashtag,
                         t."updatedAt",
                         t."createdAt",
+                        COALESCE(ta."lastActivity", t."updatedAt") as "lastActivity",
                         COALESCE(tmup.level, tmgp.level, 'none') as "permission.level",
                         muc.count as "members.users.count",
                         COALESCE(mgc.count, 0) as "members.groups.count"
@@ -1388,6 +1389,10 @@ module.exports = function (app) {
                             LEFT JOIN "Votes" v
                                     ON v.id = tv."voteId"
                         ) AS tv ON (tv."topicId" = t.id)
+                        LEFT JOIN (
+                            SELECT t.id, MAX(a."updatedAt") as "lastActivity"
+                            FROM "Topics" t JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds" GROUP BY t.id
+                        ) ta ON (ta.id = t.id)
                     WHERE ${where}
                     ORDER BY "pinned" DESC, t."updatedAt" DESC
                         ;`
@@ -1395,7 +1400,9 @@ module.exports = function (app) {
                 {
                     replacements: {
                         groupId: req.params.groupId,
-                        userId: req.user.id
+                        userId: req.user.id,
+                        statuses,
+                        visibility
                     },
                     type: db.QueryTypes.SELECT,
                     raw: true,
@@ -1431,6 +1438,19 @@ module.exports = function (app) {
         const pinned = req.query.pinned;
         const hasVoted = req.query.hasVoted; // Filter out Topics where User has participated in the voting process.
         const showModerated = req.query.showModerated || false;
+        const sort = req.query.sort;
+        const sortOrder = req.query.sortOrder || 'ASC';
+
+        let sortSql = ` ORDER BY `;
+
+        if (sort) {
+            switch (sort) {
+                case ('status'):
+                    sortSql += ` t.status ${sortOrder} `
+            }
+        } else {
+            sortSql += `"pinned" DESC, t."updatedAt" DESC`;
+        }
         if (statuses && !Array.isArray(statuses)) {
             statuses = [statuses];
         }
@@ -1463,7 +1483,7 @@ module.exports = function (app) {
 
         if (creatorId) {
             if (creatorId === userId) {
-                where += ` AND c.id =:creatorId `;
+                where += ` AND u.id =:creatorId `;
             }
         }
 
@@ -1484,6 +1504,7 @@ module.exports = function (app) {
                         t.hashtag,
                         t."updatedAt",
                         t."createdAt",
+                        COALESCE(ta."lastActivity", t."updatedAt") as "lastActivity",
                         u.id as "creator.id",
                         u.name as "creator.name",
                         u.company as "creator.company",
@@ -1564,22 +1585,29 @@ module.exports = function (app) {
                             LEFT JOIN "Votes" v
                                     ON v.id = tv."voteId"
                         ) AS tv ON (tv."topicId" = t.id)
+                        LEFT JOIN (
+                            SELECT t.id, MAX(a."updatedAt") as "lastActivity"
+                            FROM "Topics" t JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds" GROUP BY t.id
+                        ) ta ON (ta.id = t.id)
                     WHERE gt."groupId" = :groupId
                         AND gt."deletedAt" IS NULL
                         AND t."deletedAt" IS NULL
                         AND COALESCE(tmup.level, tmgp.level, 'none')::"enum_TopicMemberUsers_level" > 'none'
                         ${where}
-                    ORDER BY "pinned" DESC, t."updatedAt" DESC
+                    ${sortSql}
                     LIMIT :limit
                     OFFSET :offset
                     ;`,
                     {
                         replacements: {
                             groupId: req.params.groupId,
-                            userId: req.user.id,
+                            userId: userId,
+                            creatorId: userId,
                             limit,
                             offset,
                             search: `%${search}%`,
+                            statuses,
+                            visibility
                         },
                         type: db.QueryTypes.SELECT,
                         raw: true,
