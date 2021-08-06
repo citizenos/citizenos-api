@@ -25,46 +25,44 @@ module.exports = function (app) {
     const GroupMemberUser = models.GroupMemberUser;
     const User = models.User;
 
-    const _hasPermission = function (groupId, userId, level, allowPublic, allowSelf) {
-        return db
-            .query('\
-                    SELECT \
-                        g.visibility = \'public\' AS "isPublic", \
-                        gm.level::"enum_GroupMemberUsers_level" >= :level AS "allowed", \
-                        gm."userId" AS uid, \
-                        gm."level" AS level, \
-                        g.id \
-                    FROM "Groups" g \
-                    LEFT JOIN "GroupMemberUsers" gm \
-                        ON(gm."groupId" = g.id) \
-                    WHERE g.id = :groupId \
-                        AND gm."userId" = :userId \
-                        AND gm."deletedAt" IS NULL \
-                        AND g."deletedAt" IS NULL \
-                    GROUP BY id, uid, level;', {
-                replacements: {
-                    groupId: groupId,
-                    userId: userId,
-                    level: level
-                },
-                type: db.QueryTypes.SELECT,
-                raw: true
-            })
-            .then(function (result) {
-                if (result && result[0]) {
-                    const isPublic = result[0].isPublic;
-                    const isAllowed = result[0].allowed;
+    const _hasPermission = async function (groupId, userId, level, allowPublic, allowSelf) {
+        try {
+            const result = await db.query(`
+                SELECT
+                    g.visibility = \'public\' AS "isPublic",
+                    gm.level::"enum_GroupMemberUsers_level" >= :level AS "allowed",
+                    gm."userId" AS uid,
+                    gm."level" AS level,
+                    g.id
+                FROM "Groups" g
+                LEFT JOIN "GroupMemberUsers" gm
+                    ON(gm."groupId" = g.id)
+                WHERE g.id = :groupId
+                    AND gm."userId" = :userId
+                    AND gm."deletedAt" IS NULL
+                    AND g."deletedAt" IS NULL
+                GROUP BY id, uid, level;`, {
+            replacements: {
+                groupId: groupId,
+                userId: userId,
+                level: level
+            },
+            type: db.QueryTypes.SELECT,
+            raw: true
+        });
+        if (result && result[0]) {
+            const isPublic = result[0].isPublic;
+            const isAllowed = result[0].allowed;
 
-                    if (isAllowed || (allowPublic && isPublic) || allowSelf) {
-                        return Promise.resolve(true);
-                    }
-                }
+            if (isAllowed || (allowPublic && isPublic) || allowSelf) {
+                return true;
+            }
+        }
 
-                return Promise.reject();
-            })
-            .catch(function (err) {
-                return Promise.reject(err);
-            });
+            return Promise.reject();
+        } catch(err) {
+            return Promise.reject(err);
+        }
     };
     const hasPermission = function (level, allowPublic, allowSelf) {
         return function (req, res, next) {
@@ -281,40 +279,34 @@ module.exports = function (app) {
     /**
      * Delete Group
      */
-    app.delete('/api/users/:userId/groups/:groupId', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.admin, null, null), function (req, res, next) {
-        Group
-            .findByPk(req.params.groupId)
-            .then(function (group) {
-                if (!group) {
-                    res.notFound('No such Group found.');
+    app.delete('/api/users/:userId/groups/:groupId', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.admin, null, null), async function (req, res, next) {
+        try {
+            const group = await Group.findByPk(req.params.groupId);
+            if (!group) {
+                return res.notFound('No such Group found.');
+            }
 
-                    return Promise.reject();
-                }
-
-                return db.transaction(function (t) {
-                    return GroupMemberUser.destroy({where: {groupId: group.id}}, {transaction: t})
-                        .then(function () {
-                            return group.destroy({transaction: t});
-                        })
-                        .then(function () {
-                            return cosActivities
-                                .deleteActivity(
-                                    group,
-                                    null,
-                                    {
-                                        type: 'User',
-                                        id: req.user.id,
-                                        ip: req.ip
-                                    },
-                                    req.method + ' ' + req.path, t
-                                );
-                        });
+            await db.transaction(async function (t) {
+                await GroupMemberUser.destroy({where: {groupId: group.id}}, {transaction: t});
+                await group.destroy({transaction: t});
+                await cosActivities.deleteActivity(
+                    group,
+                    null,
+                    {
+                        type: 'User',
+                        id: req.user.id,
+                        ip: req.ip
+                    },
+                    req.method + ' ' + req.path, t
+                );
+                t.afterCommit(() => {
+                    return res.ok();
                 });
-            })
-            .then(function () {
-                return res.ok();
-            })
-            .catch(next);
+            });
+        }
+        catch(err) {
+            return next (err);
+        }
     });
 
 
@@ -1438,19 +1430,26 @@ module.exports = function (app) {
         const pinned = req.query.pinned;
         const hasVoted = req.query.hasVoted; // Filter out Topics where User has participated in the voting process.
         const showModerated = req.query.showModerated || false;
-        const sort = req.query.sort;
+        const order = req.query.order;
         const sortOrder = req.query.sortOrder || 'ASC';
 
         let sortSql = ` ORDER BY `;
 
-        if (sort) {
-            switch (sort) {
-                case ('status'):
-                    sortSql += ` t.status ${sortOrder} `
+        if (order) {
+            switch (order) {
+                case 'status':
+                    sortSql += ` t.status ${sortOrder} `;
+                    break;
+                case 'pinned':
+                    sortSql += ` pinned ${sortOrder} `;
+                    break;
+                case 'lastActivity':
+                    sortSql += ` "lastActivity" ${sortOrder}`;
             }
         } else {
             sortSql += `"pinned" DESC, t."updatedAt" DESC`;
         }
+
         if (statuses && !Array.isArray(statuses)) {
             statuses = [statuses];
         }

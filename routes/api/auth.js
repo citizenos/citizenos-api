@@ -693,7 +693,7 @@ module.exports = function (app) {
      *
      * Authentication is initialized with /api/auth/mid/init, after that client is polling this endpoint for authentication status. In case of success, User session is created and logged in.
      */
-    app.get('/api/auth/mobile/status', function (req, res, next) {
+    app.get('/api/auth/mobile/status', async function (req, res, next) {
         const token = req.query.token;
         const timeoutMs = req.query.timeoutMs || 5000;
         if (!token) {
@@ -702,75 +702,54 @@ module.exports = function (app) {
 
         const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
         const loginMobileFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
+        try {
+            const authResult = await mobileId.statusAuth(loginMobileFlowData.sessionId, loginMobileFlowData.sessionHash, timeoutMs);
+            let statusCode;
+            if (authResult.result) {
+                statusCode = authResult.result;
+            } else {
+                statusCode = authResult.state;
+            }
 
-        mobileId
-            .statusAuth(loginMobileFlowData.sessionId, loginMobileFlowData.sessionHash, timeoutMs)
-            .then(function (authResult) {
-                let statusCode
-                if (authResult.result) {
-                    statusCode = authResult.result;
-                } else {
-                    statusCode = authResult.state;
-                }
+            switch (statusCode) {
+                case 'RUNNING':
+                    return res.ok('Log in progress', 1);
+                case 'OK':
+                    break;
+                case 'TIMEOUT':
+                    logger.error('There was a timeout, i.e. end user did not confirm or refuse the operation within maximum time frame allowed (can change, around two minutes).', statusCode);
+                    return res.badRequest('There was a timeout, i.e. end user did not confirm or refuse the operation within maximum time frame allowed (can change, around two minutes).', 10);
+                case 'NOT_MID_CLIENT':
+                    return res.badRequest('Mobile-ID functionality of the phone is not yet ready', 13);
+                case 'USER_CANCELLED':
+                    return res.badRequest('User has cancelled the log in process', 10);
+                case 'SIGNATURE_HASH_MISMATCH':
+                    return res.badRequest('Signature is not valid', 12);
+                case 'PHONE_ABSENT':
+                    return res.badRequest('Delivery of the message was not successful, mobile phone is probably switched off or out of coverage;', 14);
+                case 'DELIVERY_ERROR':
+                    return res.badRequest('Other error when sending message (phone is incapable of receiving the message, error in messaging server etc.)', 15);
+                case 'SIM_ERROR':
+                    return res.badRequest('SIM application error.', 16);
+                default:
+                    logger.error('Unknown status code when trying to log in with mobile', authResult.result);
+                    return res.internalServerError();
+            }
+            if (authResult.personalInfo) {
+                const userData = await _getUserByPersonalId(authResult.personalInfo, UserConnection.CONNECTION_IDS.esteid, req);
+                const user = userData[0];
+                const created = userData[1];
+                setAuthCookie(req, res, user.id);
 
-                switch (statusCode) {
-                    case 'RUNNING':
-                        res.ok('Log in progress', 1);
+                return res.ok(user, created);
+            }
+        } catch (error) {
+            if (error && error.name === 'ValidationError') {
+                return res.badRequest(error.message);
+            }
 
-                        return Promise.reject();
-                    case 'OK':
-                        return Promise.resolve(authResult.personalInfo);
-                    case 'TIMEOUT':
-                        logger.error('There was a timeout, i.e. end user did not confirm or refuse the operation within maximum time frame allowed (can change, around two minutes).', statusCode);
-                        res.badRequest('There was a timeout, i.e. end user did not confirm or refuse the operation within maximum time frame allowed (can change, around two minutes).', 10);
-
-                        return Promise.reject();
-                    case 'NOT_MID_CLIENT':
-                        res.badRequest('Mobile-ID functionality of the phone is not yet ready', 13);
-
-                        return Promise.reject();
-                    case 'USER_CANCELLED':
-                        res.badRequest('User has cancelled the log in process', 10);
-
-                        return Promise.reject();
-                    case 'SIGNATURE_HASH_MISMATCH':
-                        res.badRequest('Signature is not valid', 12);
-
-                        return Promise.reject();
-                    case 'PHONE_ABSENT':
-                        res.badRequest('Delivery of the message was not successful, mobile phone is probably switched off or out of coverage;', 14);
-
-                        return Promise.reject();
-                    case 'DELIVERY_ERROR':
-                        res.badRequest('Other error when sending message (phone is incapable of receiving the message, error in messaging server etc.)', 15);
-
-                        return Promise.reject();
-                    case 'SIM_ERROR':
-                        res.badRequest('SIM application error.', 16);
-
-                        return Promise.reject();
-                    default:
-                        logger.error('Unknown status code when trying to log in with mobile', authResult.result);
-                        res.internalServerError();
-
-                        return Promise.reject();
-                }
-            })
-            .then(function (personalInfo) {
-                return _getUserByPersonalId(personalInfo, UserConnection.CONNECTION_IDS.esteid, req)
-                    .then(function (userData) {
-                        const user = userData[0];
-                        const created = userData[1];
-                        setAuthCookie(req, res, user.id);
-
-                        return res.ok(user, created);
-                    });
-            }, function (error) {
-                if (error && error.name === 'ValidationError') {
-                    return res.badRequest(error.message);
-                }
-            })
-            .catch(next);
+            return next(error);
+        }
     });
 
 

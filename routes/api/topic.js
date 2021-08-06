@@ -5679,9 +5679,7 @@ module.exports = function (app) {
                 ]
             });
             if (!topic || !topic.Votes || !topic.Votes.length) {
-                res.notFound();
-
-                return Promise.reject();
+                return res.notFound();
             }
 
             const vote = topic.Votes[0];
@@ -5787,15 +5785,11 @@ module.exports = function (app) {
             });
 
         if (!vote) {
-            res.notFound();
-
-            return Promise.reject();
+            return res.notFound();
         }
 
         if (vote.endsAt && new Date() > vote.endsAt) {
-            res.badRequest('The Vote has ended.');
-
-            return Promise.reject();
+            return res.badRequest('The Vote has ended.');
         }
 
         const singleOptions = _.filter(vote.VoteOptions, function (option) {
@@ -5817,11 +5811,9 @@ module.exports = function (app) {
         }
 
         if (!isSingelOption && (!voteOptions || !Array.isArray(voteOptions) || voteOptions.length > vote.maxChoices || voteOptions.length < vote.minChoices)) {
-            res.badRequest('The options must be an array of minimum :minChoices and maximum :maxChoices options.'
+            return res.badRequest('The options must be an array of minimum :minChoices and maximum :maxChoices options.'
                 .replace(':minChoices', vote.minChoices)
                 .replace(':maxChoices', vote.maxChoices));
-
-            return Promise.reject();
         }
 
         return vote;
@@ -6621,9 +6613,7 @@ module.exports = function (app) {
 
             // TODO: Once we implement the the "endDate>now -> followUp" we can remove Topic.STATUSES.voting check
             if ((vote.endsAt && vote.endsAt.getTime() > new Date().getTime() && topic.status === Topic.STATUSES.voting) || topic.status === Topic.STATUSES.voting) {
-                res.badRequest('The Vote has not ended.');
-
-                return Promise.reject();
+                return res.badRequest('The Vote has not ended.');
             }
 
             let userId = '';
