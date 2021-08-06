@@ -113,7 +113,6 @@ etherpadClient.checkTokenAsync()
 
 app.set('url', require('url'));
 app.set('lodash', lodash);
-app.set('async', require('async'));
 app.set('validator', require('validator'));
 app.set('Promise', Promise);
 app.set('fs', fs);
