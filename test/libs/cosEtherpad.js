@@ -7,7 +7,7 @@
 suite('cosEtherpad', function () {
 
     const assert = require('chai').assert;
-    const uuid = require('node-uuid');
+    const uuid = require('uuid');
 
     const app = require('../../app');
     const models = app.get('models');

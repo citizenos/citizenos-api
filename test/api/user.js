@@ -115,7 +115,7 @@ exports.userDelete = userDelete;
 const request = require('supertest');
 const app = require('../../app');
 const models = app.get('models');
-const uuid = require('node-uuid');
+const uuid = require('uuid');
 const cosUtil = app.get('util');
 
 const assert = require('chai').assert;

@@ -451,7 +451,7 @@ module.exports._status = _status;
 const request = require('supertest');
 const app = require('../../app');
 const models = app.get('models');
-const uuid = require('node-uuid');
+const uuid = require('uuid');
 const fs = require('fs');
 
 const assert = require('chai').assert;
