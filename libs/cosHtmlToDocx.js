@@ -14,7 +14,7 @@ const fsExtra = require('fs-extra');
 const https = require('https');
 const path = require('path');
 const sizeOf = require('image-size')
-const { AlignmentType, Document, HeadingLevel, Packer, Paragraph, TextRun, ImageRun} = docx;
+const { AlignmentType, Document, HeadingLevel, Packer, Paragraph, TextRun, ImageRun, LevelFormat} = docx;
 
 const _addStyles = function (params) {
     params.styles = {
@@ -51,6 +51,41 @@ const _addStyles = function (params) {
                         text: "%1.%1.%1",
                         format: "decimal",
                         alignment: AlignmentType.LEFT,
+                    },
+                ],
+            },
+            {
+                reference: "bullet",
+                levels: [
+                    {
+                        level: 0,
+                        format: LevelFormat.BULLET,
+                        alignment: AlignmentType.LEFT,
+                        style: {
+                            paragraph: {
+                                indent: { left: 720, hanging: 260 },
+                            },
+                        },
+                    },
+                    {
+                        level: 1,
+                        format: LevelFormat.BULLET,
+                        alignment: AlignmentType.LEFT,
+                        style: {
+                            paragraph: {
+                                indent: { left: 1440, hanging: 980 },
+                            },
+                        },
+                    },
+                    {
+                        level: 2,
+                        format: LevelFormat.BULLET,
+                        alignment: AlignmentType.LEFT,
+                        style: {
+                            paragraph: {
+                                indent: { left: 2160, hanging: 1700 },
+                            },
+                        },
                     },
                 ],
             },
@@ -331,7 +366,7 @@ function CosHtmlToDocx (html, title, resPath) {
         if (_isBulletListElement(element)) {
             depth = _getItemDepth(element, null, true);
             if (!attribs.bullet)
-            attribs.bullet = {level: depth};
+            attribs.numbering = {reference: "bullet", level: depth};
         } else if (element.name && element.name === 'ol') {
             depth = _getItemDepth(element, null, true);
             if (!attribs.numbering)

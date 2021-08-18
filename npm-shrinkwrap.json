@@ -517,9 +517,9 @@
       }
     },
     "aws-sdk": {
-      "version": "2.969.0",
-      "resolved": "https://registry.npmjs.org/aws-sdk/-/aws-sdk-2.969.0.tgz",
-      "integrity": "sha512-bDQenWDH9CdPIsgh7E6zgq2bO576teSnlQv1Oz0IwxVq+AbGsArSJXjNrvniV1l9TrqPOZk9dqBa/q4mOzwyLw==",
+      "version": "2.970.0",
+      "resolved": "https://registry.npmjs.org/aws-sdk/-/aws-sdk-2.970.0.tgz",
+      "integrity": "sha512-9+ktvE5xgpHr3RsFOcq1SrhXLvU+jUji44jbecFZb5C2lzoEEB29aeN39OLJMW0ZuOrR+3TNum8c3f8YVx6A7w==",
       "requires": {
         "buffer": "4.9.2",
         "events": "1.1.1",
@@ -6868,9 +6868,9 @@
       }
     },
     "supertest": {
-      "version": "6.1.5",
-      "resolved": "https://registry.npmjs.org/supertest/-/supertest-6.1.5.tgz",
-      "integrity": "sha512-Is3pFB2TxSFPohDS2tIM8h2JOMvUQwbJ9TvTfsWAm89ZZv1CF4VTLAsQz+5+5S1wOgaMqFqSpFriU15L3e2AXQ==",
+      "version": "6.1.6",
+      "resolved": "https://registry.npmjs.org/supertest/-/supertest-6.1.6.tgz",
+      "integrity": "sha512-0hACYGNJ8OHRg8CRITeZOdbjur7NLuNs0mBjVhdpxi7hP6t3QIbOzLON5RTUmZcy2I9riuII3+Pr2C7yztrIIg==",
       "dev": true,
       "requires": {
         "methods": "^1.1.2",
