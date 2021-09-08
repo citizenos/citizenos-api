@@ -308,6 +308,10 @@ function CosHtmlToDocx (html, title, resPath) {
         return element.attribs && element.attribs.class && element.attribs.class.match(/font-size/g);
     };
 
+    const _isFootNoteElement = (element) => {
+        return element.attribs && element.attribs.class && element.attribs.class.match(/fnEndLine/g);
+    };
+
     const _handleHeadingAttributes = (element, attribs) => {
         if (_isHeadingElement(element)) {
             attribs.heading = HeadingLevel['HEADING_'+element.name.replace('h','')]
@@ -444,12 +448,19 @@ function CosHtmlToDocx (html, title, resPath) {
             attributes.strike = {};
         } else if (_isFontSizeElement(item)) {
             attributes.size = _getElementFontSizeFromStyle(item);
+        } else if (_isFootNoteElement(item)) {
+            attributes.size = 17;
         }
 
         if (item.type === 'text') {
             const textNode = attributes;
             textNode.text = decode(item.data);
-            children.push( new TextRun (textNode));
+
+            if(attributes.superScript && item.parent.name !== 'sup') {
+                delete attributes.superScript;
+            }
+
+            children.push(new TextRun (textNode));
         } if (item.children) {
             for await (let gc of item.children) {
                 if (!_isListElement(gc))
