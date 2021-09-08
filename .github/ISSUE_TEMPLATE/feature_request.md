@@ -2,7 +2,7 @@
 name: Feature request
 about: Request a feature to improve the product
 title: ''
-labels: 'feature'
+labels: feature
 assignees: ''
 
 ---
