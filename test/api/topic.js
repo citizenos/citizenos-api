@@ -1408,6 +1408,21 @@ const padRead = async function (padUrl) {
     return _padRead(padUrl, 200);
 };
 
+const _duplicateTopic = async function (agent, userId, topicId, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/duplicate'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId);
+
+    return agent
+        .get(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const duplicateTopic = async function (agent, userId, topicId) {
+    return _duplicateTopic(agent, userId, topicId, 201);
+};
+
 module.exports.topicCreate = topicCreate;
 module.exports.topicFavouriteCreate = topicFavouriteCreate;
 module.exports.topicDelete = topicDelete;
@@ -10609,6 +10624,53 @@ suite('Topics', function () {
                 };
 
                 assert.deepEqual(resBody2, expectedBody2);
+            });
+        });
+    });
+
+    suite('Duplicate', function () {
+        const agent = request.agent(app);
+        const agent2 = request.agent(app);
+
+        let user;
+        let user2;
+        let topic;
+        const description = 'Public topic description';
+
+        setup(async function () {
+            user = await userLib.createUserAndLogin(agent, null, null, null);
+            user2 = await userLib.createUserAndLogin(agent2, null, null, null);
+            topic = (await topicCreate(agent, user.id, 'public', null, null, description, null)).body.data;
+            const members = [
+                {
+                    userId: user2.id,
+                    level: TopicMemberUser.LEVELS.read
+                }
+            ];
+            await memberLib.topicMemberUsersCreate(topic.id, members);
+        });
+
+        suite('Create', function () {
+            test('Success', async function () {
+                const resBody = (await duplicateTopic(agent, user.id, topic.id)).body.data;
+                const matchingValueKeys = ['title', 'status', 'permission', 'endsAt', 'hashtag'];
+                Object.entries(resBody).forEach(([key, value]) => {
+                    if (matchingValueKeys.indexOf(key) > -1) {
+                        assert.deepEqual(value, topic[key]);
+                    }
+                });
+                assert.equal(resBody.visibility, Topic.VISIBILITY.private);
+            });
+
+            test('Fail - no permissions', async function () {
+                const resultMessage = (await _duplicateTopic(agent2, user2.id, topic.id, 403)).body;
+                const expectedResult = {
+                    status: {
+                        code: 40300,
+                        message: 'Forbidden'
+                    }
+                };
+                assert.deepEqual(resultMessage, expectedResult);
             });
         });
     });
