@@ -20,20 +20,20 @@ const Sequelize = require('sequelize');
 module.exports = function (sequelize, DataTypes) {
 
     // The order of the status properties is important - you can move from top down (inProgress->voting->followUp..)
-    var STATUSES = {
+    const STATUSES = {
         inProgress: 'inProgress', // Being worked on
         voting: 'voting', // Is being voted which means the Topic is locked and cannot be edited.
         followUp: 'followUp', // Done editing Topic and executing on the follow up plan.
         closed: 'closed' // Final status - Topic is completed and no editing/reopening/voting can occur.
     };
 
-    var VISIBILITY = {
+    const VISIBILITY = {
         public: 'public', // Everyone has read-only on the Topic.  Pops up in the searches..
         private: 'private' // No-one can see except collaborators
     };
 
     // Categories - https://trello.com/c/CydUreyf/69-topics-category-support
-    var CATEGORIES = {
+    const CATEGORIES = {
         business: 'business', // Business and industry
         transport: 'transport', // Public transport and road safety
         taxes: 'taxes', // Taxes and budgeting
@@ -53,16 +53,16 @@ module.exports = function (sequelize, DataTypes) {
         society: 'society' //Democracy and civil society
     };
 
-    var CATEGORIES_COUNT_MAX = 3; // Maximum of 3 categories allowed at the time.
-    var TITLE_LENGTH_MAX = config.topic.titleLengthMax; // Maximum length of "title"
+    const CATEGORIES_COUNT_MAX = 3; // Maximum of 3 categories allowed at the time.
+    let TITLE_LENGTH_MAX = config.topic.titleLengthMax; // Maximum length of "title"
     if (!parseInt(TITLE_LENGTH_MAX, 10) || TITLE_LENGTH_MAX > 1000) {
         TITLE_LENGTH_MAX = 1000;
     }
-    var HASHTAG_BYTES_LENGTH_MAX = 59; //Maximum bytelenght of twitter hashtag in search API.
+    const HASHTAG_BYTES_LENGTH_MAX = 59; //Maximum bytelenght of twitter hashtag in search API.
 
-    var Op = Sequelize.Op;
+    const Op = Sequelize.Op;
 
-    var Topic = sequelize.define(
+    const Topic = sequelize.define(
         'Topic',
         {
             id: {
