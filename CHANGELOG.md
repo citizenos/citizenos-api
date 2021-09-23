@@ -1,3 +1,9 @@
+## 2021-09-23 - v. 4.0.0
+
+* Add API `PUT /api/users/:userId/topics/:topicId/join` - generation of join links with specific access level - https://github.com/citizenos/citizenos-fe/issues/311
+* Add API `PUT /api/users/:userId/topics/:topicId/join/:token` - assign access level for given join token - https://github.com/citizenos/citizenos-fe/issues/311
+* Remove API `PUT /api/users/:userId/topics/:topicId/tokenJoin` - use the new API-s above - https://github.com/citizenos/citizenos-fe/issues/311
+
 ## 2021-06-01 - v. 3.0.0
 
 * Remove Topic and Group auto-accept user endpoints

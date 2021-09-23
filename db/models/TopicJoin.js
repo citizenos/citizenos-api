@@ -56,5 +56,15 @@ module.exports = function (sequelize, DataTypes) {
         return stringUtil.randomString(TOKEN_LENGTH);
     };
 
+    TopicJoin.LEVELS = LEVELS;
+
+    TopicJoin.prototype.toJSON = function () {
+        // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
+        return {
+            token: this.dataValues.token,
+            level: this.dataValues.level,
+        };
+    };
+
     return TopicJoin;
 };

@@ -146,7 +146,7 @@ module.exports = function (sequelize, DataTypes) {
                 onUpdate: 'CASCADE',
                 onDelete: 'CASCADE'
             },
-            tokenJoin: {
+            tokenJoin: { // FIXME: Remove - that is migrate
                 type: DataTypes.STRING(8),
                 comment: 'Token for joining the Topic. Used for sharing public urls for Users to join the Topic.',
                 allowNull: false,
