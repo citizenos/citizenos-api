@@ -76,7 +76,7 @@ module.exports = function (app) {
         hmac.update(dataToHash);
 
         return hmac.digest('hex');
-    }
+    };
 
     const _hasPermission = async function (topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelf, partnerId) {
         const LEVELS = {
@@ -218,6 +218,7 @@ module.exports = function (app) {
             if (topicStatusesAllowed && !Array.isArray(topicStatusesAllowed)) {
                 throw new Error('topicStatusesAllowed must be an array but was ', topicStatusesAllowed);
             }
+
             try {
                 const authorizationResult = await _hasPermission(topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelfDelete, partnerId)
                 // Add "req.locals" to store info collected from authorization for further use in the request. Might save a query or two for some use cases.
@@ -459,16 +460,16 @@ module.exports = function (app) {
                         JOIN "Votes" v ON v.id = vl."voteId"
                         WHERE v."authType"='${Vote.AUTH_TYPES.hard}' AND vl."voteId" = :voteId
                         AND vl."userId" IN (
-							SELECT "userId" FROM (
-								SELECT DISTINCT ON (vl."userHash")
-								vl."userId",
-								vl."userHash",
-								MAX(vl."updatedAt")
-								FROM "VoteLists" vl
-								WHERE vl."voteId" = :voteId
-								GROUP BY vl."userId", vl."userHash", vl."updatedAt" ORDER BY vl."userHash", vl."updatedAt" DESC
-							) vu
-						)
+                            SELECT "userId" FROM (
+                                SELECT DISTINCT ON (vl."userHash")
+                                vl."userId",
+                                vl."userHash",
+                                MAX(vl."updatedAt")
+                                FROM "VoteLists" vl
+                                WHERE vl."voteId" = :voteId
+                                GROUP BY vl."userId", vl."userHash", vl."updatedAt" ORDER BY vl."userHash", vl."updatedAt" DESC
+                            ) vu
+                        )
                     ),
                     votes_with_delegations("voteId", "userId", "optionId", "optionGroupId", "byUserId", depth) AS (
                         SELECT
@@ -489,23 +490,23 @@ module.exports = function (app) {
                     v."voteId",
                     (SELECT vc.count + vd.count + dt.count
                         FROM (
-						SELECT COUNT (*) FROM (
-                            SELECT DISTINCT ON ("userId")
-								"userId"
-                            FROM votes_with_delegations
-                            WHERE "byUserId" IS NULL
-							) nd
+                            SELECT COUNT (*) FROM (
+                                SELECT DISTINCT ON ("userId")
+                                     "userId"
+                                FROM votes_with_delegations
+                                WHERE "byUserId" IS NULL
+                            ) nd
                         ) vc
                         JOIN (
                             SELECT COUNT(*) FROM (
                                 SELECT "byUserId" FROM votes_with_delegations WHERE "byUserId" IS NOT NULL GROUP BY "byUserId"
                                 ) d
                         ) vd ON vd."count" = vd."count"
-						JOIN (
-						SELECT COUNT(*) FROM (
-							SELECT vl."userId" FROM "VoteLists" vl JOIN votes_with_delegations vd ON vd."userId" = vl."userId" WHERE vd."byUserId" IS NOT NULL GROUP BY vl."userId"
-							) dt
-						) dt ON dt."count" = dt."count"
+                        JOIN (
+                        SELECT COUNT(*) FROM (
+                            SELECT vl."userId" FROM "VoteLists" vl JOIN votes_with_delegations vd ON vd."userId" = vl."userId" WHERE vd."byUserId" IS NOT NULL GROUP BY vl."userId"
+                            ) dt
+                        ) dt ON dt."count" = dt."count"
                     ) AS "votersCount",
                     vo."value"
                     ${includeVoted}
@@ -616,7 +617,7 @@ module.exports = function (app) {
 
         const urlOptions = {
             token: cosJwt.getTokenRestrictedUse(tokenPayload, 'GET ' + path, tokenOptions)
-        }
+        };
 
         urlOptions.accept = 'application/x-7z-compressed';
 
@@ -1336,6 +1337,15 @@ module.exports = function (app) {
 
             await db.transaction(async function (t) {
                 await topic.save({transaction: t});
+                const topicJoin = await TopicJoin.create(
+                    {
+                        topicId: topic.id
+                    },
+                    {
+                        transaction: t
+                    }
+                );
+
                 await topic.addMemberUser(// Magic method by Sequelize - https://github.com/sequelize/sequelize/wiki/API-Reference-Associations#hasmanytarget-options
                     user.id,
                     {
@@ -1345,6 +1355,7 @@ module.exports = function (app) {
                         transaction: t
                     }
                 );
+
                 await cosActivities.createActivity(
                     topic,
                     null,
@@ -1356,46 +1367,49 @@ module.exports = function (app) {
                     , req.method + ' ' + req.path,
                     t
                 );
+
+                // Topic was created with description, force EP to sync with app database for updated title and description
+                if (topicDescription) {
+                    topic = await cosEtherpad.syncTopicWithPad( // eslint-disable-line require-atomic-updates
+                        topic.id,
+                        req.method + ' ' + req.path,
+                        {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        }
+                    );
+                }
+
+                const authorIds = topic.authorIds;
+                const authors = await User.findAll({
+                    where: {
+                        id: authorIds
+                    },
+                    attributes: ['id', 'name'],
+                    raw: true
+                });
+
+                const resObject = topic.toJSON();
+                resObject.authors = authors;
+                resObject.padUrl = cosEtherpad.getUserAccessUrl(topic, user.id, user.name, user.language, req.locals.partner);
+                resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+
+                if (req.locals.partner) {
+                    resObject.sourcePartnerId = req.locals.partner.id;
+                } else {
+                    resObject.sourcePartnerId = null;
+                }
+
+                resObject.pinned = false;
+                resObject.permission = {
+                    level: TopicMemberUser.LEVELS.admin
+                };
+
+                resObject.join = topicJoin.toJSON();
+
+                return res.created(resObject);
             });
-
-            // Topic was created with description, force EP to sync with app database for updated title and description
-            if (topicDescription) {
-                topic = await cosEtherpad.syncTopicWithPad( // eslint-disable-line require-atomic-updates
-                    topic.id,
-                    req.method + ' ' + req.path,
-                    {
-                        type: 'User',
-                        id: req.user.id,
-                        ip: req.ip
-                    }
-                );
-            }
-            const authorIds = topic.authorIds;
-            const authors = await User.findAll({
-                where: {
-                    id: authorIds
-                },
-                attributes: ['id', 'name'],
-                raw: true
-            });
-
-            const resObject = topic.toJSON();
-            resObject.authors = authors;
-            resObject.padUrl = cosEtherpad.getUserAccessUrl(topic, user.id, user.name, user.language, req.locals.partner);
-            resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
-
-            if (req.locals.partner) {
-                resObject.sourcePartnerId = req.locals.partner.id;
-            } else {
-                resObject.sourcePartnerId = null;
-            }
-
-            resObject.pinned = false;
-            resObject.permission = {
-                level: TopicMemberUser.LEVELS.admin
-            };
-
-            return res.created(resObject);
         } catch (err) {
             return next(err);
         }
@@ -1698,24 +1712,24 @@ module.exports = function (app) {
             const tokenJoin = Topic.generateTokenJoin();
             topic.tokenJoin = tokenJoin;
 
-                await db
-                    .transaction(async function (t) {
-                        await cosActivities
-                            .updateActivity(topic, null, {
-                                type: 'User',
-                                id: req.user.id,
-                                ip: req.ip
-                            }, null, req.method + ' ' + req.path, t);
+            await db
+                .transaction(async function (t) {
+                    await cosActivities
+                        .updateActivity(topic, null, {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        }, null, req.method + ' ' + req.path, t);
 
-                        await topic.save({
-                            transaction: t
-                        });
-
-                        t.afterCommit(() => {
-                            return res.ok({tokenJoin: tokenJoin});
-                        });
+                    await topic.save({
+                        transaction: t
                     });
-        } catch(err) {
+
+                    t.afterCommit(() => {
+                        return res.ok({tokenJoin: tokenJoin});
+                    });
+                });
+        } catch (err) {
             return next(err);
         }
     });
@@ -1728,12 +1742,16 @@ module.exports = function (app) {
     app.put('/api/users/:userId/topics/:topicId/join', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         try {
             const topicId = req.params.topicId;
-            const level = req.body.level || TopicJoin.LEVELS.read;
+            const level = req.body.level;
 
-            const tokenJoin = await TokenJoin
+            if (!Object.values(TopicJoin.LEVELS).includes(level)) {
+                return res.badRequest('Invalid value for property \"level\". Possible values are ' + Object.values(TopicJoin.LEVELS) + '.', 1);
+            }
+
+            const topicJoin = await TopicJoin
                 .update(
                     {
-                        token: TokenJoin.generateToken(),
+                        token: TopicJoin.generateToken(),
                         level: level
                     },
                     {
@@ -1745,7 +1763,7 @@ module.exports = function (app) {
                 );
 
             // FIXME: Activity
-            return res.ok(tokenJoin.toJSON());
+            return res.ok(topicJoin[1][0]);
         } catch (err) {
             return next(err);
         }
@@ -1762,27 +1780,27 @@ module.exports = function (app) {
             const token = req.params.token;
             const level = req.body.level;
 
-            if (!level) {
-                return req.badRequest('Parameter \"level\" is required.', 1);
+            if (!Object.values(TopicJoin.LEVELS).includes(level)) {
+                return res.badRequest('Invalid value for property \"level\". Possible values are ' + Object.values(TopicJoin.LEVELS) + '.', 1);
             }
 
-            const tokenJoin = await TopicJoin.findOne({
+            const topicJoin = await TopicJoin.findOne({
                 where: {
                     topicId: topicId,
                     token: token
                 }
             });
 
-            if (!tokenJoin) {
+            if (!topicJoin) {
                 return res.notFound('Nothing found for topicId and token combination.');
             }
 
-            tokenJoin.level = level;
+            topicJoin.level = level;
 
-            await tokenJoin.save();
+            await topicJoin.save();
 
             // FIXME: Activity
-            return res.ok(tokenJoin.toJSON());
+            return res.ok(topicJoin.toJSON());
         } catch (err) {
             return next(err);
         }

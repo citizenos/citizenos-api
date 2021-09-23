@@ -19,44 +19,48 @@ module.exports = function (sequelize, DataTypes) {
 
     const TOKEN_LENGTH = 12;
 
-    const TopicJoin = {
-        attributes: {
-            topicId: {
-                type: DataTypes.UUID,
-                allowNull: false,
-                comment: 'Topic to which the Join information belongs.',
-                references: {
-                    model: 'Topics',
-                    key: 'id'
-                },
-                onUpdate: 'CASCADE',
-                onDelete: 'CASCADE',
-                primaryKey: true
-            },
-            token: {
-                type: DataTypes.STRING(TOKEN_LENGTH),
-                comment: 'Token for joining the Topic. Used for sharing public urls for Users to join the Topic.',
-                allowNull: false,
-                unique: true,
-                defaultValue: function () {
-                    return TopicJoin.generateTokenJoin();
-                }
-            },
-            level: {
-                type: DataTypes.ENUM,
-                values: Object.values(LEVELS),
-                allowNull: false,
-                defaultValue: LEVELS.read,
-                comment: 'Join level, that is what level access will the join token provide'
-            }
-        }
-    };
-
-    TopicJoin.generateToken = function() {
+    const generateTokenJoin = function () {
         return stringUtil.randomString(TOKEN_LENGTH);
     };
 
+    const attributes = {
+        topicId: {
+            type: DataTypes.UUID,
+            allowNull: false,
+            comment: 'Topic to which the Join information belongs.',
+            references: {
+                model: 'Topics',
+                key: 'id'
+            },
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE',
+            primaryKey: true
+        },
+        token: {
+            type: DataTypes.STRING(TOKEN_LENGTH),
+            comment: 'Token for joining the Topic. Used for sharing public urls for Users to join the Topic.',
+            allowNull: false,
+            unique: true,
+            defaultValue: function () {
+                return generateTokenJoin();
+            }
+        },
+        level: {
+            type: DataTypes.ENUM,
+            values: Object.values(LEVELS),
+            allowNull: false,
+            defaultValue: LEVELS.read,
+            comment: 'Join level, that is what level access will the join token provide'
+        }
+    };
+
+    // FIXME: Indexes!
+    const TopicJoin = sequelize.define('TopicJoin', attributes);
+
+    TopicJoin.generateToken = generateTokenJoin;
+
     TopicJoin.LEVELS = LEVELS;
+    TopicJoin.TOKEN_LENGTH = TOKEN_LENGTH;
 
     TopicJoin.prototype.toJSON = function () {
         // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.

@@ -113,23 +113,44 @@ const topicUpdateField = async function (agent, userId, topicId, topic) {
     return _topicUpdateField(agent, userId, topicId, topic, 204);
 };
 
-// TODO: https://trello.com/c/ezqHssSL/124-refactoring-put-tokenjoin-to-be-part-of-put-topics-topicid
-
-const _topicUpdateTokenJoin = async function (agent, userId, topicId, expectedHttpCode) {
-    const path = '/api/users/:userId/topics/:topicId/tokenJoin'
+const _topicUpdateTokenJoin = async function (agent, userId, topicId, level, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/join'
         .replace(':userId', userId)
         .replace(':topicId', topicId);
 
     return agent
         .put(path)
         .set('Content-Type', 'application/json')
-        .send()
+        .send({
+            level: level
+        })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
 
-const topicUpdateTokenJoin = async function (agent, userId, topicId) {
-    return _topicUpdateTokenJoin(agent, userId, topicId, 200);
+
+const topicUpdateTokenJoin = async function (agent, userId, topicId, level) {
+    return _topicUpdateTokenJoin(agent, userId, topicId, level, 200);
+};
+
+const _topicUpdateTokenJoinLevel = async function (agent, userId, topicId, token, level, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/join/:token'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':token', token);
+
+    return agent
+        .put(path)
+        .set('Content-Type', 'application/json')
+        .send({
+            level: level
+        })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicUpdateTokenJoinLevel = async function (agent, userId, topicId, token, level) {
+    return _topicUpdateTokenJoinLevel(agent, userId, topicId, token, level, 200);
 };
 
 // TODO: Should be part of PUT /topics/:topicId
@@ -246,7 +267,7 @@ const _topicMemberUsersDelete = async function (agent, userId, topicId, memberId
 };
 
 const topicMemberUsersDelete = async function (agent, userId, topicId, memberId) {
-   return _topicMemberUsersDelete(agent, userId, topicId, memberId, 200);
+    return _topicMemberUsersDelete(agent, userId, topicId, memberId, 200);
 };
 
 const _topicMemberGroupsCreate = async function (agent, userId, topicId, members, expectedHttpCode) {
@@ -603,7 +624,7 @@ const _topicCommentEdit = async function (agent, userId, topicId, commentId, sub
 };
 
 const topicCommentEdit = async function (agent, userId, topicId, commentId, subject, text, type) {
-   return _topicCommentEdit(agent, userId, topicId, commentId, subject, text, type, 200);
+    return _topicCommentEdit(agent, userId, topicId, commentId, subject, text, type, 200);
 };
 
 const _topicCommentList = async function (agent, userId, topicId, orderBy, expectedHttpCode) {
@@ -974,7 +995,7 @@ const _topicVoteUpdate = async function (agent, userId, topicId, voteId, endsAt,
 };
 
 const topicVoteUpdate = async function (agent, userId, topicId, voteId, endsAt) {
-   return _topicVoteUpdate(agent, userId, topicId, voteId, endsAt, 200);
+    return _topicVoteUpdate(agent, userId, topicId, voteId, endsAt, 200);
 };
 
 const _topicVoteReadUnauth = async function (agent, topicId, voteId, expectedHttpCode) {
@@ -1454,6 +1475,7 @@ const Topic = models.Topic;
 const TopicMemberUser = models.TopicMemberUser;
 const TopicMemberGroup = models.TopicMemberGroup;
 const TopicInviteUser = models.TopicInviteUser;
+const TopicJoin = models.TopicJoin;
 
 const Comment = models.Comment;
 
@@ -2241,24 +2263,6 @@ suite('Users', function () {
                 await _topicUpdate(agent, u.id, topic.id, topicStatusNew, topicVisibilityNew, null, null, null, 403);
             });
 
-            suite('TokenJoin', function () {
-
-                test('Success', async function () {
-                    const tokenJoinBeforeUpdate = topic.tokenJoin;
-                    const tokenJoin = (await topicUpdateTokenJoin(agent, user.id, topic.id)).body.data.tokenJoin;
-                    assert.notEqual(tokenJoin, tokenJoinBeforeUpdate);
-                });
-
-                test('Fail - topic status = closed', async function () {
-                    await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.closed);
-                    const tokenJoinBeforeUpdate = topic.tokenJoin;
-                    await _topicUpdateTokenJoin(agent, user.id, topic.id, 403);
-                    const tokenJoin = (await topicRead(agent, user.id, topic.id, null)).body.data.tokenJoin;
-                    assert.equal(tokenJoin, tokenJoinBeforeUpdate);
-                });
-
-            });
-
         });
 
         suite('Delete', function () {
@@ -2283,16 +2287,16 @@ suite('Users', function () {
                         id: topic.id
                     }
                 });
-                            // Topic table should not have any lines for this Group
-                            assert.equal(tcount, 0);
+                // Topic table should not have any lines for this Group
+                assert.equal(tcount, 0);
 
-                            // Also if Topic is gone so should TopicMemberUser
+                // Also if Topic is gone so should TopicMemberUser
                 const tmCount = await TopicMemberUser.count({
                     where: {
                         topicId: topic.id
                     }
                 });
-                            assert.equal(tmCount, 0);
+                assert.equal(tmCount, 0);
 
                 try {
                     await etherpadClient.getRevisionsCountAsync({padID: topic.id});
@@ -2477,7 +2481,7 @@ suite('Users', function () {
                 const list = (await topicList(agentUser, user.id, null, null, null, null, null, null, null)).body.data
                 assert.equal(list.count, 1);
 
-                const listOfTopics =list.rows;
+                const listOfTopics = list.rows;
 
                 assert.equal(list.count, listOfTopics.length);
                 listOfTopics.forEach(function (resTopic) {
@@ -2519,7 +2523,7 @@ suite('Users', function () {
                 const list = (await topicList(agentUser, user.id, null, null, null, null, null, true, null)).body.data;
                 assert.equal(list.count, 1);
 
-                const listOfTopics =list.rows;
+                const listOfTopics = list.rows;
 
                 assert.equal(list.count, listOfTopics.length);
                 listOfTopics.forEach(function (resTopic) {
@@ -3022,7 +3026,7 @@ suite('Users', function () {
             suite('Levels', function () {
 
                 test('Success - User has "edit" via Group', async function () {
-                    const listOfTopics =(await topicList(agentUser, user.id, null, null, null, null, null)).body.data;
+                    const listOfTopics = (await topicList(agentUser, user.id, null, null, null, null, null)).body.data;
 
                     assert.equal(listOfTopics.count, 1);
                     assert.equal(listOfTopics.rows.length, 1);
@@ -3043,7 +3047,7 @@ suite('Users', function () {
                     };
 
                     await memberLib.topicMemberUsersCreate(topic.id, [topicMemberUser]);
-                    const listOfTopics =(await topicList(agentUser, user.id, null, null, null, null, null)).body.data;
+                    const listOfTopics = (await topicList(agentUser, user.id, null, null, null, null, null)).body.data;
 
                     assert.equal(listOfTopics.count, 1);
                     assert.equal(listOfTopics.rows.length, 1);
@@ -3065,7 +3069,7 @@ suite('Users', function () {
                     };
 
                     await memberLib.topicMemberUsersCreate(topic.id, [topicMemberUser]);
-                    const listOfTopics =(await topicList(agentUser, user.id, null, null, null, null, null)).body.data;
+                    const listOfTopics = (await topicList(agentUser, user.id, null, null, null, null, null)).body.data;
 
                     assert.equal(listOfTopics.count, 0);
                     assert.property(listOfTopics, 'rows');
@@ -3074,7 +3078,7 @@ suite('Users', function () {
 
                 test('Success - User removed from Group which granted permissions - has "none" thus no Topics listed', async function () {
                     await groupLib.memberUsersDelete(agentCreator, creator.id, group.id, user.id);
-                    const listOfTopics =(await topicList(agentUser, user.id, null, null, null, null, null)).body.data;
+                    const listOfTopics = (await topicList(agentUser, user.id, null, null, null, null, null)).body.data;
 
                     assert.equal(listOfTopics.count, 0);
                     assert.property(listOfTopics, 'rows');
@@ -3090,7 +3094,7 @@ suite('Users', function () {
                     await memberLib.topicMemberUsersCreate(topic.id, [topicMemberUser]);
                     await groupLib.memberUsersDelete(agentCreator, creator.id, group.id, user.id);
 
-                    const listOfTopics =(await topicList(agentUser, user.id, null, null, null, null, null)).body.data;
+                    const listOfTopics = (await topicList(agentUser, user.id, null, null, null, null, null)).body.data;
 
                     assert.equal(listOfTopics.count, 1);
                     assert.equal(listOfTopics.rows.length, 1);
@@ -4460,6 +4464,99 @@ suite('Users', function () {
 
             test('Fail - 40100 - Unauthorized', async function () {
                 await _topicJoin(request.agent(app), topic.tokenJoin, 401);
+            });
+
+            suite('Token', async function () {
+
+                suite('Update', async function () {
+
+                    test('Success - regenerate token', async function () {
+                        const resData = (await topicUpdateTokenJoin(agentCreator, creator.id, topic.id, TopicJoin.LEVELS.edit)).body.data;
+
+                        assert.match(resData.token, new RegExp('^[a-zA-Z0-9]{' + TopicJoin.TOKEN_LENGTH + '}$'));
+                        assert.equal(resData.level, TopicJoin.LEVELS.edit);
+                    });
+
+                    test('Fail - 40001 - Bad request - missing required property "level"', async function () {
+                        const resBody = (await _topicUpdateTokenJoin(agentCreator, creator.id, topic.id, null, 400)).body;
+                        const resBodyExpected = {
+                            status: {
+                                code: 40001,
+                                message: 'Invalid value for property "level". Possible values are read,edit,admin.'
+                            }
+                        };
+
+                        assert.deepEqual(resBody, resBodyExpected);
+                    });
+
+                    test('Fail - 40100 - No permissions', async function () {
+                        const resBody = (await _topicUpdateTokenJoin(agentUser, user.id, topic.id, null, 403)).body;
+                        const resBodyExpected = {
+                            status: {
+                                code: 40300,
+                                message: 'Insufficient permissions'
+                            }
+                        };
+
+                        assert.deepEqual(resBody, resBodyExpected);
+                    });
+
+                    suite('Level', async function () {
+
+                        test('Success', async function () {
+                            const token = topic.join.token;
+
+                            const resBody = (await topicUpdateTokenJoinLevel(agentCreator, creator.id, topic.id, token, TopicJoin.LEVELS.admin)).body;
+                            const resBodyExpected = {
+                                status: {code: 20000},
+                                data: {
+                                    token: token,
+                                    level: TopicJoin.LEVELS.admin
+                                }
+                            };
+
+                            assert.deepEqual(resBody, resBodyExpected);
+                        });
+
+                        test('Fail - 40400 - Not found - invalid token', async function () {
+                            const token = TopicJoin.generateToken();
+
+                            const resBody = (await _topicUpdateTokenJoinLevel(agentCreator, creator.id, topic.id, token, TopicJoin.LEVELS.edit, 404)).body;
+                            const resBodyExpected = {
+                                status: {
+                                    code: 40400,
+                                    message: 'Nothing found for topicId and token combination.'
+                                }
+                            };
+
+                            assert.deepEqual(resBody, resBodyExpected);
+                        });
+
+                        test('Fail - 40001 - Bad request - missing required property "level"', async function () {
+                            const resBody = (await _topicUpdateTokenJoinLevel(agentCreator, creator.id, topic.id, topic.join.token, null, 400)).body;
+                            const resBodyExpected = {
+                                status: {
+                                    code: 40001,
+                                    message: 'Invalid value for property "level". Possible values are read,edit,admin.'
+                                }
+                            };
+
+                            assert.deepEqual(resBody, resBodyExpected);
+                        });
+
+                        test('Fail - 40100 - No permissions', async function () {
+                            const resBody = (await _topicUpdateTokenJoinLevel(agentUser, user.id, topic.id, topic.join.token, null, 403)).body;
+                            const resBodyExpected = {
+                                status: {
+                                    code: 40300,
+                                    message: 'Insufficient permissions'
+                                }
+                            };
+
+                            assert.deepEqual(resBody, resBodyExpected);
+                        });
+                    });
+                });
             });
 
         });
@@ -6291,7 +6388,7 @@ suite('Users', function () {
                             assert.deepEqual(topicReadAfterVoting.vote, voteReadAfterVote2);
 
                             // Make sure the results match with the result read with Topic list (/api/users/:userId/topics)
-                            const listOfTopics =(await topicList(agent, user.id, ['vote'], null, null, null, null, null, null)).body.data;
+                            const listOfTopics = (await topicList(agent, user.id, ['vote'], null, null, null, null, null, null)).body.data;
                             const topicVotedOn = _.find(listOfTopics.rows, {id: topic.id});
 
                             // Topic list included votes dont have downloads
@@ -6424,7 +6521,7 @@ suite('Users', function () {
                                 }
                             ];
                             await memberLib.topicMemberUsersCreate(topic.id, members);
-                            const listOfTopics =(await topicList(agentUser2, user2.id, ['vote'], null, null, null, true, null, null)).body.data;
+                            const listOfTopics = (await topicList(agentUser2, user2.id, ['vote'], null, null, null, true, null, null)).body.data;
                             const topicVotedOn = _.find(listOfTopics.rows, {id: topic.id});
 
                             assert.deepEqual(topicVotedOn.vote, voteReadAfterVote2);
@@ -6627,7 +6724,7 @@ suite('Users', function () {
                                 }
                             ];
                             await memberLib.topicMemberUsersCreate(topic.id, members);
-                            const listOfTopics =(await topicList(agentUser2, user2.id, ['vote'], null, null, null, true, null, null)).body.data;
+                            const listOfTopics = (await topicList(agentUser2, user2.id, ['vote'], null, null, null, true, null, null)).body.data;
                             const topicVotedOn = _.find(listOfTopics.rows, {id: topic.id});
                             assert.deepEqual(topicVotedOn.vote, voteReadAfterVote2);
                         });
@@ -7609,9 +7706,11 @@ suite('Users', function () {
                     assert.equal(comment.creator.id, user.id);
                 });
 
-                test.skip('Success - public Topic', async function () {});
+                test.skip('Success - public Topic', async function () {
+                });
 
-                test.skip('Fail - 403 - Forbidden - cannot comment on Topic you\'re not a member of or the Topic is not public', async function () {});
+                test.skip('Fail - 403 - Forbidden - cannot comment on Topic you\'re not a member of or the Topic is not public', async function () {
+                });
 
             });
 
@@ -8229,7 +8328,8 @@ suite('Users', function () {
                 assert.equal(list.rows.length, 0);
             });
 
-            test.skip('Get signed download url', async function () {});
+            test.skip('Get signed download url', async function () {
+            });
 
             suite('List', function () {
 
@@ -8548,8 +8648,8 @@ suite('Users', function () {
                 const topicDescription = '<!DOCTYPE HTML><html><body><h1>Topic report test</h1><br>Topic report test desc<br><br></body></html>'
                     .replace(':topicTitle', topicTitle);
 
-                    const reportType = Report.TYPES.hate;
-                    const reportText = 'Topic hate speech report test';
+                const reportType = Report.TYPES.hate;
+                const reportText = 'Topic hate speech report test';
 
                 let userCreator;
                 let userModerator;
@@ -8625,7 +8725,7 @@ suite('Users', function () {
                 });
 
                 test('Fail - 40300 - Review requests are only allowed for Topic members', async function () {
-                   return _topicReportsReview(agentReporter, userReporter.id, topic.id, report.id, 'Please review, I have made many changes', 403);
+                    return _topicReportsReview(agentReporter, userReporter.id, topic.id, report.id, 'Please review, I have made many changes', 403);
                 });
             });
 
@@ -8673,7 +8773,7 @@ suite('Users', function () {
                 });
 
                 test('Fail - 40100 - Only Moderators can resolve a report', async function () {
-                   return _topicReportsResolve(agentReporter, topic.id, report.id, 401);
+                    return _topicReportsResolve(agentReporter, topic.id, report.id, 401);
                 });
             });
         });
@@ -9019,7 +9119,7 @@ suite('Topics', function () {
                 )
             const partnerTopic = (await topicCreate(creatorAgent, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health], null, null, null)).body.data;
 
-                // Set "title" to Topic, otherwise there will be no results because of the "title NOT NULL" in the query
+            // Set "title" to Topic, otherwise there will be no results because of the "title NOT NULL" in the query
             await Topic.update(
                 {
                     title: 'TEST PUBLIC PARTNER',
@@ -9076,7 +9176,7 @@ suite('Topics', function () {
                         }
                     }
                 );
-                const vote = (await topicVoteCreate (creatorAgent, creator.id, topic.id, options, 1, 1, false, null, null, Vote.TYPES.regular, null)).body.data;
+                const vote = (await topicVoteCreate(creatorAgent, creator.id, topic.id, options, 1, 1, false, null, null, Vote.TYPES.regular, null)).body.data;
                 const voteRead = (await topicVoteRead(creatorAgent, creator.id, topic.id, vote.id)).body.data;
                 const voteReadUnauth = (await topicVoteReadUnauth(userAgent, topic.id, vote.id)).body.data;
 
@@ -10375,7 +10475,7 @@ suite('Topics', function () {
                 assert.equal(event.text, text);
             });
 
-            test ('Fail - Unauthorize - topic is closed', async function () {
+            test('Fail - Unauthorize - topic is closed', async function () {
                 await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.closed);
                 const subject = 'Test Event title';
                 const text = 'Test Event description';
