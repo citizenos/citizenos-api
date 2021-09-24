@@ -1335,9 +1335,11 @@ module.exports = function (app) {
             // Create topic on Etherpad side
             await cosEtherpad.createTopic(topic.id, user.language, topicDescription);
 
+            let topicJoin;
+
             await db.transaction(async function (t) {
                 await topic.save({transaction: t});
-                const topicJoin = await TopicJoin.create(
+                topicJoin = await TopicJoin.create(
                     {
                         topicId: topic.id
                     },
@@ -1367,49 +1369,49 @@ module.exports = function (app) {
                     , req.method + ' ' + req.path,
                     t
                 );
-
-                // Topic was created with description, force EP to sync with app database for updated title and description
-                if (topicDescription) {
-                    topic = await cosEtherpad.syncTopicWithPad( // eslint-disable-line require-atomic-updates
-                        topic.id,
-                        req.method + ' ' + req.path,
-                        {
-                            type: 'User',
-                            id: req.user.id,
-                            ip: req.ip
-                        }
-                    );
-                }
-
-                const authorIds = topic.authorIds;
-                const authors = await User.findAll({
-                    where: {
-                        id: authorIds
-                    },
-                    attributes: ['id', 'name'],
-                    raw: true
-                });
-
-                const resObject = topic.toJSON();
-                resObject.authors = authors;
-                resObject.padUrl = cosEtherpad.getUserAccessUrl(topic, user.id, user.name, user.language, req.locals.partner);
-                resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
-
-                if (req.locals.partner) {
-                    resObject.sourcePartnerId = req.locals.partner.id;
-                } else {
-                    resObject.sourcePartnerId = null;
-                }
-
-                resObject.pinned = false;
-                resObject.permission = {
-                    level: TopicMemberUser.LEVELS.admin
-                };
-
-                resObject.join = topicJoin.toJSON();
-
-                return res.created(resObject);
             });
+
+            // Topic was created with description, force EP to sync with app database for updated title and description
+            if (topicDescription) {
+                topic = await cosEtherpad.syncTopicWithPad( // eslint-disable-line require-atomic-updates
+                    topic.id,
+                    req.method + ' ' + req.path,
+                    {
+                        type: 'User',
+                        id: req.user.id,
+                        ip: req.ip
+                    }
+                );
+            }
+
+            const authorIds = topic.authorIds;
+            const authors = await User.findAll({
+                where: {
+                    id: authorIds
+                },
+                attributes: ['id', 'name'],
+                raw: true
+            });
+
+            const resObject = topic.toJSON();
+            resObject.authors = authors;
+            resObject.padUrl = cosEtherpad.getUserAccessUrl(topic, user.id, user.name, user.language, req.locals.partner);
+            resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+
+            if (req.locals.partner) {
+                resObject.sourcePartnerId = req.locals.partner.id;
+            } else {
+                resObject.sourcePartnerId = null;
+            }
+
+            resObject.pinned = false;
+            resObject.permission = {
+                level: TopicMemberUser.LEVELS.admin
+            };
+
+            resObject.join = topicJoin.toJSON();
+
+            return res.created(resObject);
         } catch (err) {
             return next(err);
         }
