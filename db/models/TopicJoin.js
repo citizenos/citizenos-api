@@ -55,7 +55,10 @@ module.exports = function (sequelize, DataTypes) {
     };
 
     // FIXME: Indexes!
-    const TopicJoin = sequelize.define('TopicJoin', attributes);
+    const TopicJoin = sequelize.define(
+        'TopicJoin',
+        attributes
+    );
 
     TopicJoin.generateToken = generateTokenJoin;
 

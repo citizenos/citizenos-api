@@ -8810,7 +8810,7 @@ suite('Topics', function () {
             topicR.data.permission.level = TopicMemberUser.LEVELS.none;
             assert.notProperty(topicR.data, 'events');
 
-            delete topicR.data.tokenJoin; // Unauth read of Topic should not give out token!
+            delete topicR.data.join; // Unauth read of Topic should not give out TopicJoin info!
             delete topicR.data.pinned; // Unauth read of Topic should not give out pinned tag value!
 
             // Also, padUrl will not have authorization token
@@ -8835,7 +8835,7 @@ suite('Topics', function () {
                 // The only difference between auth and unauth is the permission, thus modify it in expected response.
                 topicR.data.permission.level = TopicMemberUser.LEVELS.none;
 
-                delete topicR.data.tokenJoin; // Unauth read of Topic should not give out token!
+                delete topicR.data.join; // Unauth read of Topic should not give out TopicJoin info!
                 delete topicR.data.pinned; // Unauth read of Topic should not give out pinned tag value!
 
                 // Also, padUrl will not have authorization token
@@ -8864,7 +8864,7 @@ suite('Topics', function () {
                 // The only difference between auth and unauth is the permission, thus modify it in expected response.
                 topicR.data.permission.level = TopicMemberUser.LEVELS.none;
 
-                delete topicR.data.tokenJoin; // Unauth read of Topic should not give out token!
+                delete topicR.data.join; // Unauth read of Topic should not give out TopicJoin info!
                 delete topicR.data.pinned; // Unauth read of Topic should not give out pinned tag value!
 
                 // Also, padUrl will not have authorization token
@@ -8897,7 +8897,7 @@ suite('Topics', function () {
             // The only difference between auth and unauth is the permission, thus modify it in expected response.
             topicR.data.permission.level = TopicMemberUser.LEVELS.none;
 
-            delete topicR.data.tokenJoin; // Unauth read of Topic should not give out token!
+            delete topicR.data.join; // Unauth read of Topic should not give out TopicJoin info!
             delete topicR.data.pinned; // Unauth read of Topic should not give out pinned tag value!
 
             // Also, padUrl will not have authorization token

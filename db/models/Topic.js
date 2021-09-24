@@ -146,15 +146,6 @@ module.exports = function (sequelize, DataTypes) {
                 onUpdate: 'CASCADE',
                 onDelete: 'CASCADE'
             },
-            tokenJoin: { // FIXME: Remove - that is migrate
-                type: DataTypes.STRING(8),
-                comment: 'Token for joining the Topic. Used for sharing public urls for Users to join the Topic.',
-                allowNull: false,
-                unique: true,
-                defaultValue: function () {
-                    return Topic.generateTokenJoin();
-                }
-            },
             padUrl: {
                 type: DataTypes.STRING(255),
                 allowNull: false,
@@ -277,11 +268,6 @@ module.exports = function (sequelize, DataTypes) {
         });
     };
 
-    // Class Method
-    Topic.generateTokenJoin = function () {
-        return stringUtil.randomString();
-    };
-
     // Overrides the default toJSON() to avoid sensitive data from ending up in the output.
     // Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
     Topic.prototype.toJSON = function () {
@@ -292,7 +278,6 @@ module.exports = function (sequelize, DataTypes) {
             description: this.dataValues.description,
             status: this.dataValues.status,
             visibility: this.dataValues.visibility,
-            tokenJoin: this.dataValues.tokenJoin,
             categories: this.dataValues.categories,
             padUrl: this.dataValues.padUrl,
             sourcePartnerId: this.dataValues.sourcePartnerId,
@@ -317,6 +302,10 @@ module.exports = function (sequelize, DataTypes) {
                     rows: this.dataValues.memberGroups
                 }
             };
+        }
+
+        if (this.dataValues.join) { // TopicJoin
+            data.join = this.dataValues.join;
         }
 
         return data;

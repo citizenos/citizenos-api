@@ -864,9 +864,13 @@ module.exports = function (app) {
                     t.visibility,
                     t.hashtag,
                     CASE
-                    WHEN COALESCE(tmup.level, tmgp.level, 'none') =  'admin' THEN t."tokenJoin"
+                    WHEN COALESCE(tmup.level, tmgp.level, 'none') = 'admin' THEN tj.token
                     ELSE NULL
-                    END as "tokenJoin",
+                    END as "join.token",
+                    CASE
+                    WHEN COALESCE(tmup.level, tmgp.level, 'none') = 'admin' THEN tj.level
+                    ELSE NULL
+                    END as "join.level",
                     CASE
                     WHEN tp."topicId" = t.id THEN true
                     ELSE false
@@ -984,6 +988,7 @@ module.exports = function (app) {
                 ) AS tv ON (tv."topicId" = t.id)
                 LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId
                 LEFT JOIN "TopicReports" tr ON (tr."topicId" = t.id AND tr."resolvedById" IS NULL AND tr."deletedAt" IS NULL)
+                LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                 ${join}
             WHERE t.id = :topicId
                 AND t."deletedAt" IS NULL
@@ -1981,9 +1986,13 @@ module.exports = function (app) {
                      t.visibility,
                      t.hashtag,
                      CASE
-                        WHEN COALESCE(tmup.level, tmgp.level, 'none') = 'admin' THEN t."tokenJoin"
-                        ELSE NULL
-                     END as "tokenJoin",
+                     WHEN COALESCE(tmup.level, tmgp.level, 'none') = 'admin' THEN tj.token
+                     ELSE NULL
+                     END as "join.token",
+                     CASE
+                     WHEN COALESCE(tmup.level, tmgp.level, 'none') = 'admin' THEN tj.level
+                     ELSE NULL
+                     END as "join.level",
                      CASE
                         WHEN tp."topicId" = t.id THEN true
                         ELSE false
@@ -2106,7 +2115,8 @@ module.exports = function (app) {
                                 ) AS tcc
                             GROUP BY tcc."topicId"
                     ) AS com ON (com."topicId" = t.id)
-                    LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId
+                    LEFT JOIN "TopicPins" tp ON (tp."topicId" = t.id AND tp."userId" = :userId)
+                    LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                     ${join}
                 WHERE ${where}
                 ORDER BY "pinned" DESC, "order" ASC, t."updatedAt" DESC
@@ -2296,7 +2306,8 @@ module.exports = function (app) {
                         t.status,
                         t.visibility,
                         t.hashtag,
-                        t."tokenJoin",
+                        tj."token" AS "join.token",
+                        tj."level" AS "join.level",
                         t.categories,
                         t."endsAt",
                         t."createdAt",
@@ -2399,6 +2410,7 @@ module.exports = function (app) {
                             SELECT t.id, MAX(a."updatedAt") as "lastActivity"
                             FROM "Topics" t JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds" GROUP BY t.id
                         ) ta ON (ta.id = t.id)
+                        LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                         ${join}
                     WHERE ${where}
                     ORDER BY "lastActivity" DESC
@@ -3125,7 +3137,8 @@ module.exports = function (app) {
                         t.description as "Topic.description",
                         t.status as "Topic.status",
                         t.visibility as "Topic.visibility",
-                        t."tokenJoin" as "Topic.tokenJoin",
+                        tj."token" as "Topic.join.token",
+                        tj."level" as "Topic.join.level",
                         t.categories as "Topic.categories",
                         t."padUrl" as "Topic.padUrl",
                         t."sourcePartnerId" as "Topic.sourcePartnerId",
@@ -3143,6 +3156,8 @@ module.exports = function (app) {
                         "TopicMemberUsers" tmu
                     JOIN "Topics" t
                         ON t.id = tmu."topicId"
+                    JOIN "TopicJoins" tj 
+                        ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                     JOIN "Users" u
                         ON u.id = tmu."userId"
                         WHERE
@@ -3159,7 +3174,8 @@ module.exports = function (app) {
                         raw: true,
                         nest: true
                     }
-                )
+                );
+
             const topic = Topic.build(topicMemberUser.Topic);
             if (topic.status === Topic.STATUSES.closed && req.user.id !== memberId) {
                 return res.forbidden();
@@ -3253,7 +3269,8 @@ module.exports = function (app) {
                             t.description as "Topic.description",
                             t.status as "Topic.status",
                             t.visibility as "Topic.visibility",
-                            t."tokenJoin" as "Topic.tokenJoin",
+                            tj."token" as "Topic.join.token",
+                            tj."level" as "Topic.join.level",
                             t.categories as "Topic.categories",
                             t."padUrl" as "Topic.padUrl",
                             t."sourcePartnerId" as "Topic.sourcePartnerId",
@@ -3270,6 +3287,8 @@ module.exports = function (app) {
                             "TopicMemberGroups" tmg
                         JOIN "Topics" t
                             ON t.id = tmg."topicId"
+                        JOIN "TopicJoins" tj 
+                            ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                         JOIN "Groups" g
                             ON g.id = tmg."groupId"
                             WHERE
