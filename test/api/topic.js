@@ -4430,7 +4430,7 @@ suite('Users', function () {
                 topic = (await topicCreate(agentCreator, creator.id, null, null, null, null, null)).body.data;
             });
 
-            test('Success - 20000', async function () {
+            test('Success - 20000 - default level (read)', async function () {
                 const res = await topicJoin(agentUser, topic.join.token);
 
                 delete topic.permission;
@@ -4450,6 +4450,35 @@ suite('Users', function () {
 
                 const topicR = (await topicRead(agentUser, user.id, topic.id, null)).body.data;
                 assert.equal(topicR.permission.level, TopicMemberUser.LEVELS.read);
+            });
+
+            test('Success - 20000 - non-default level (edit) with double join attempt (admin)', async function () {
+                const resTopicJoinEdit = (await topicUpdateTokenJoin(agentCreator, creator.id, topic.id, TopicJoin.LEVELS.edit)).body.data;
+                const resJoinEdit = await topicJoin(agentUser, resTopicJoinEdit.token);
+
+                delete topic.permission;
+                delete topic.pinned;
+                delete topic.join;
+
+                topic.padUrl = topic.padUrl.split('?')[0]; // Pad url will not have JWT token as the user gets read-only by default
+
+                const expectedResult = {
+                    status: {
+                        code: 20000
+                    },
+                    data: topic
+                };
+
+                assert.deepEqual(resJoinEdit.body, expectedResult);
+
+                const topicR = (await topicRead(agentUser, user.id, topic.id, null)).body.data;
+                assert.equal(topicR.permission.level, TopicMemberUser.LEVELS.edit);
+
+                // Modify join token level to admin, same User tries to join, but the level should remain the same (edit)
+                const resTopicJoinAdmin = (await topicUpdateTokenJoin(agentCreator, creator.id, topic.id, TopicJoin.LEVELS.admin)).body.data;
+                await topicJoin(agentUser, resTopicJoinAdmin.token);
+                const topicReadAfterRejoin = (await topicRead(agentUser, user.id, topic.id, null)).body.data;
+                assert.equal(topicReadAfterRejoin.permission.level, TopicMemberUser.LEVELS.edit);
             });
 
             test('Fail - 40101 - Matching token not found', async function () {

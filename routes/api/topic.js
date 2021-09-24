@@ -3898,7 +3898,7 @@ module.exports = function (app) {
                         userId: userId
                     },
                     defaults: {
-                        level: TopicMemberUser.LEVELS.read
+                        level: topicJoin.level
                     },
                     transaction: t
                 });
@@ -3916,7 +3916,7 @@ module.exports = function (app) {
                             type: 'User',
                             id: user.id,
                             ip: req.ip,
-                            level: TopicMemberUser.LEVELS.read
+                            level: topicJoin.level
                         },
                         req.method + ' ' + req.path,
                         t
