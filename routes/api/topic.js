@@ -3869,23 +3869,27 @@ module.exports = function (app) {
      * Join authenticated User to Topic with a given token.
      *
      * Allows sharing of private join urls for example in forums, on conference screen...
-     *
-     * TODO: API url is fishy.. maybe should be POST /api/topics/:joinToken/members
      */
-    app.post('/api/topics/join/:tokenJoin', loginCheck(['partner']), async function (req, res, next) {
-        const tokenJoin = req.params.tokenJoin;
+    app.post('/api/topics/join/:token', loginCheck(['partner']), async function (req, res, next) {
+        const token = req.params.token;
         const userId = req.user.id;
 
         try {
-            const topic = await Topic.findOne({
+            const topicJoin = await TopicJoin.findOne({
                 where: {
-                    tokenJoin: tokenJoin
+                    token: token
                 }
             });
 
-            if (!topic) {
+            if (!topicJoin) {
                 return res.badRequest('Matching token not found', 1);
             }
+
+            const topic = await Topic.findOne({
+                where: {
+                    id: topicJoin.topicId
+                }
+            });
 
             await db.transaction(async function (t) {
                 const [memberUser, created] = await TopicMemberUser.findOrCreate({ // eslint-disable-line
@@ -3918,24 +3922,23 @@ module.exports = function (app) {
                         t
                     );
                 }
-
-                const authorIds = topic.authorIds;
-                const authors = await User.findAll({
-                    where: {
-                        id: authorIds
-                    },
-                    attributes: ['id', 'name'],
-                    raw: true
-                });
-
-                const resObject = topic.toJSON();
-                resObject.authors = authors;
-                resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
-
-                t.afterCommit(() => {
-                    return res.ok(resObject);
-                });
             });
+
+            const authorIds = topic.authorIds;
+            const authors = await User.findAll({
+                where: {
+                    id: authorIds
+                },
+                attributes: ['id', 'name'],
+                raw: true
+            });
+
+            const resObject = topic.toJSON();
+
+            resObject.authors = authors;
+            resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+
+            return res.ok(resObject);
         } catch (err) {
             next(err);
         }

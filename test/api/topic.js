@@ -475,9 +475,9 @@ const topicInviteUsersAccept = async function (agent, userId, topicId, inviteId)
     return _topicInviteUsersAccept(agent, userId, topicId, inviteId, 201);
 };
 
-const _topicJoin = async function (agent, tokenJoin, expectedHttpCode) {
-    const path = '/api/topics/join/:tokenJoin'
-        .replace(':tokenJoin', tokenJoin);
+const _topicJoin = async function (agent, token, expectedHttpCode) {
+    const path = '/api/topics/join/:token'
+        .replace(':token', token);
 
     return agent
         .post(path)
@@ -485,8 +485,8 @@ const _topicJoin = async function (agent, tokenJoin, expectedHttpCode) {
         .expect('Content-Type', /json/);
 };
 
-const topicJoin = async function (agent, tokenJoin) {
-    return _topicJoin(agent, tokenJoin, 200);
+const topicJoin = async function (agent, token) {
+    return _topicJoin(agent, token, 200);
 };
 
 const _topicReportCreate = async function (agent, topicId, type, text, expectedHttpCode) {
@@ -4431,10 +4431,12 @@ suite('Users', function () {
             });
 
             test('Success - 20000', async function () {
-                const res = await topicJoin(agentUser, topic.tokenJoin);
+                const res = await topicJoin(agentUser, topic.join.token);
 
                 delete topic.permission;
                 delete topic.pinned;
+                delete topic.join;
+
                 topic.padUrl = topic.padUrl.split('?')[0]; // Pad url will not have JWT token as the user gets read-only by default
 
                 const expectedResult = {
@@ -4463,7 +4465,7 @@ suite('Users', function () {
             });
 
             test('Fail - 40100 - Unauthorized', async function () {
-                await _topicJoin(request.agent(app), topic.tokenJoin, 401);
+                await _topicJoin(request.agent(app), topic.join.token, 401);
             });
 
             suite('Token', async function () {
