@@ -4471,6 +4471,8 @@ suite('Users', function () {
 
                 assert.deepEqual(resJoinEdit.body, expectedResult);
 
+                // FIXME: Check for Activity!
+
                 const topicR = (await topicRead(agentUser, user.id, topic.id, null)).body.data;
                 assert.equal(topicR.permission.level, TopicMemberUser.LEVELS.edit);
 

@@ -1731,11 +1731,9 @@ module.exports = function (app) {
                     await topic.save({
                         transaction: t
                     });
-
-                    t.afterCommit(() => {
-                        return res.ok({tokenJoin: tokenJoin});
-                    });
                 });
+
+            return res.ok({tokenJoin: tokenJoin});
         } catch (err) {
             return next(err);
         }
@@ -1755,22 +1753,35 @@ module.exports = function (app) {
                 return res.badRequest('Invalid value for property \"level\". Possible values are ' + Object.values(TopicJoin.LEVELS) + '.', 1);
             }
 
-            const topicJoin = await TopicJoin
-                .update(
-                    {
-                        token: TopicJoin.generateToken(),
-                        level: level
-                    },
-                    {
-                        where: {
-                            topicId: topicId
-                        },
-                        returning: true
-                    }
-                );
+            const topicJoin = await TopicJoin.findOne({
+                where: {
+                    topicId: topicId
+                }
+            });
 
-            // FIXME: Activity
-            return res.ok(topicJoin[1][0]);
+            topicJoin.token = TopicJoin.generateToken();
+            topicJoin.level = level;
+
+            await db
+                .transaction(async function (t) {
+                    await cosActivities
+                        .updateActivity(
+                            topicJoin,
+                            null,
+                            {
+                                type: 'User',
+                                id: req.user.id,
+                                ip: req.ip
+                            },
+                            null,
+                            req.method + ' ' + req.path,
+                            t
+                        );
+
+                   await topicJoin.save({transaction: t});
+                });
+
+            return res.ok(topicJoin);
         } catch (err) {
             return next(err);
         }
@@ -1804,10 +1815,26 @@ module.exports = function (app) {
 
             topicJoin.level = level;
 
-            await topicJoin.save();
+            await db
+                .transaction(async function (t) {
+                    await cosActivities
+                        .updateActivity(
+                            topicJoin,
+                            null,
+                            {
+                                type: 'User',
+                                id: req.user.id,
+                                ip: req.ip
+                            },
+                            null,
+                            req.method + ' ' + req.path,
+                            t
+                        );
 
-            // FIXME: Activity
-            return res.ok(topicJoin.toJSON());
+                    await topicJoin.save({transaction: t});
+                });
+
+            return res.ok(topicJoin);
         } catch (err) {
             return next(err);
         }
