@@ -4471,8 +4471,6 @@ suite('Users', function () {
 
                 assert.deepEqual(resJoinEdit.body, expectedResult);
 
-                // FIXME: Check for Activity!
-
                 const topicR = (await topicRead(agentUser, user.id, topic.id, null)).body.data;
                 assert.equal(topicR.permission.level, TopicMemberUser.LEVELS.edit);
 
@@ -4508,6 +4506,40 @@ suite('Users', function () {
 
                         assert.match(resData.token, new RegExp('^[a-zA-Z0-9]{' + TopicJoin.TOKEN_LENGTH + '}$'));
                         assert.equal(resData.level, TopicJoin.LEVELS.edit);
+
+                        // FIXME: Check for activity!
+                        const activityExpected = {
+                            "type": "Update",
+                            "actor": {
+                                "id": "893028f3-b678-49f3-98cc-98997c184015",
+                                "ip": "::ffff:127.0.0.1",
+                                "type": "User"
+                            },
+                            "object": {
+                                "@type": "TopicJoin",
+                                "level": "read",
+                                "token": "CvoV8hphRxGg",
+                                "topicId": "4cca4a44-e699-4222-87d2-7ea0490901da"
+                            },
+                            "origin": {
+                                "@type": "TopicJoin",
+                                "level": "read",
+                                "token": "CvoV8hphRxGg"
+                            },
+                            "result": [
+                                {
+                                    "op": "replace",
+                                    "path": "/token",
+                                    "value": "f0Zkqt76yNbs"
+                                },
+                                {
+                                    "op": "replace",
+                                    "path": "/level",
+                                    "value": "edit"
+                                }
+                            ],
+                            "context": "PUT /api/users/893028f3-b678-49f3-98cc-98997c184015/topics/4cca4a44-e699-4222-87d2-7ea0490901da/join"
+                        };
                     });
 
                     test('Fail - 40001 - Bad request - missing required property "level"', async function () {
@@ -4546,6 +4578,35 @@ suite('Users', function () {
                                     token: token,
                                     level: TopicJoin.LEVELS.admin
                                 }
+                            };
+
+                            // FIXME: Check for activity
+                            const activityExpected = {
+                                "type": "Update",
+                                "actor": {
+                                    "id": "60077a1c-61df-44d6-93cc-08a63ddf9421",
+                                    "ip": "::ffff:127.0.0.1",
+                                    "type": "User"
+                                },
+                                "object": {
+                                    "@type": "TopicJoin",
+                                    "level": "read",
+                                    "token": "Ko3pXvCKf7jA",
+                                    "topicId": "a463ebff-4c79-4dc8-a088-f5633d372568"
+                                },
+                                "origin": {
+                                    "@type": "TopicJoin",
+                                    "level": "read",
+                                    "token": "Ko3pXvCKf7jA"
+                                },
+                                "result": [
+                                    {
+                                        "op": "replace",
+                                        "path": "/level",
+                                        "value": "admin"
+                                    }
+                                ],
+                                "context": "PUT /api/users/60077a1c-61df-44d6-93cc-08a63ddf9421/topics/a463ebff-4c79-4dc8-a088-f5633d372568/join/Ko3pXvCKf7jA"
                             };
 
                             assert.deepEqual(resBody, resBodyExpected);
