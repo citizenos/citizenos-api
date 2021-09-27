@@ -4586,36 +4586,41 @@ suite('Users', function () {
                                 }
                             };
 
-                            // FIXME: Check for activity
-                            const activityExpected = {
+                            assert.deepEqual(resBody, resBodyExpected);
+
+                            const userActivities = (await activityLib.activitiesRead(agentCreator, creator.id)).body.data;
+                            const tokenJoinLevelUpdateActivityActual = userActivities[0].data;
+
+                            const tokenJoinLevelUpdateActivityExpected = {
                                 "type": "Update",
                                 "actor": {
-                                    "id": "60077a1c-61df-44d6-93cc-08a63ddf9421",
-                                    "ip": "::ffff:127.0.0.1",
-                                    "type": "User"
+                                    "type": "User",
+                                    "id": creator.id,
+                                    "name": creator.name,
+                                    "company": creator.company
                                 },
                                 "object": {
                                     "@type": "TopicJoin",
-                                    "level": "read",
-                                    "token": "Ko3pXvCKf7jA",
-                                    "topicId": "a463ebff-4c79-4dc8-a088-f5633d372568"
+                                    "level": topic.join.level,
+                                    "token": topic.join.token,
+                                    "topicId": topic.id
                                 },
                                 "origin": {
                                     "@type": "TopicJoin",
-                                    "level": "read",
-                                    "token": "Ko3pXvCKf7jA"
+                                    "level": topic.join.level,
+                                    "token": topic.join.token
                                 },
                                 "result": [
                                     {
                                         "op": "replace",
                                         "path": "/level",
-                                        "value": "admin"
+                                        "value": resBody.data.level
                                     }
                                 ],
-                                "context": "PUT /api/users/60077a1c-61df-44d6-93cc-08a63ddf9421/topics/a463ebff-4c79-4dc8-a088-f5633d372568/join/Ko3pXvCKf7jA"
+                                "context": `PUT /api/users/${creator.id}/topics/${topic.id}/join/${topic.join.token}`
                             };
 
-                            assert.deepEqual(resBody, resBodyExpected);
+                            assert.deepEqual(tokenJoinLevelUpdateActivityActual, tokenJoinLevelUpdateActivityExpected);
                         });
 
                         test('Fail - 40400 - Not found - invalid token', async function () {
