@@ -1462,6 +1462,7 @@ const userLib = require('./lib/user')(app);
 const memberLib = require('./lib/members')(app);
 const groupLib = require('./group');
 const authLib = require('./auth');
+const activityLib = require('./activity');
 
 const UserConnection = models.UserConnection;
 
@@ -4507,39 +4508,44 @@ suite('Users', function () {
                         assert.match(resData.token, new RegExp('^[a-zA-Z0-9]{' + TopicJoin.TOKEN_LENGTH + '}$'));
                         assert.equal(resData.level, TopicJoin.LEVELS.edit);
 
-                        // FIXME: Check for activity!
-                        const activityExpected = {
+                        const userActivities = (await activityLib.activitiesRead(agentCreator, creator.id)).body.data;
+                        const tokenJoinUpdateActivityActual = userActivities[0].data;
+
+                        const tokenJoinUpdateActivityExpected = {
                             "type": "Update",
                             "actor": {
-                                "id": "893028f3-b678-49f3-98cc-98997c184015",
-                                "ip": "::ffff:127.0.0.1",
-                                "type": "User"
+                                "type": "User",
+                                "id": creator.id,
+                                "name": creator.name,
+                                "company": creator.company
                             },
                             "object": {
                                 "@type": "TopicJoin",
-                                "level": "read",
-                                "token": "CvoV8hphRxGg",
-                                "topicId": "4cca4a44-e699-4222-87d2-7ea0490901da"
+                                "level": topic.join.level, // previous level
+                                "token": topic.join.token, // previous token
+                                "topicId": topic.id
                             },
                             "origin": {
                                 "@type": "TopicJoin",
-                                "level": "read",
-                                "token": "CvoV8hphRxGg"
+                                "level": topic.join.level, // previous level
+                                "token": topic.join.token // previous token
                             },
                             "result": [
                                 {
                                     "op": "replace",
                                     "path": "/token",
-                                    "value": "f0Zkqt76yNbs"
+                                    "value": resData.token
                                 },
                                 {
                                     "op": "replace",
                                     "path": "/level",
-                                    "value": "edit"
+                                    "value": resData.level
                                 }
                             ],
-                            "context": "PUT /api/users/893028f3-b678-49f3-98cc-98997c184015/topics/4cca4a44-e699-4222-87d2-7ea0490901da/join"
+                            "context": `PUT /api/users/${creator.id}/topics/${topic.id}/join`
                         };
+
+                        assert.deepEqual(tokenJoinUpdateActivityActual, tokenJoinUpdateActivityExpected);
                     });
 
                     test('Fail - 40001 - Bad request - missing required property "level"', async function () {
