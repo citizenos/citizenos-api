@@ -10653,12 +10653,14 @@ suite('Topics', function () {
         suite('Create', function () {
             test('Success', async function () {
                 const resBody = (await duplicateTopic(agent, user.id, topic.id)).body.data;
+                // description is excluded because how Etherpad handles final lines and <br> tags
                 const matchingValueKeys = ['title', 'status', 'permission', 'endsAt', 'hashtag'];
                 Object.entries(resBody).forEach(([key, value]) => {
                     if (matchingValueKeys.indexOf(key) > -1) {
                         assert.deepEqual(value, topic[key]);
                     }
                 });
+                assert.equal(topic.description, resBody.description.replace('<br><br><br>', '<br><br>'));
                 assert.equal(resBody.visibility, Topic.VISIBILITY.private);
             });
 

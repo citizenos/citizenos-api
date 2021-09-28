@@ -1436,6 +1436,15 @@ module.exports = function (app) {
             await db.transaction(async function (t) {
                 await cosEtherpad.createPadCopy(req.params.topicId, topic.id);
                 await topic.save({transaction: t});
+                await topic.addMemberUser(// Magic method by Sequelize - https://github.com/sequelize/sequelize/wiki/API-Reference-Associations#hasmanytarget-options
+                    user.id,
+                    {
+                        through: {
+                            level: TopicMemberUser.LEVELS.admin
+                        },
+                        transaction: t
+                    }
+                );
 
                 const attachments = await getTopicAttachments(req.params.topicId);
 
@@ -1465,15 +1474,6 @@ module.exports = function (app) {
                     );
                 });
 
-                await topic.addMemberUser(// Magic method by Sequelize - https://github.com/sequelize/sequelize/wiki/API-Reference-Associations#hasmanytarget-options
-                    user.id,
-                    {
-                        through: {
-                            level: TopicMemberUser.LEVELS.admin
-                        },
-                        transaction: t
-                    }
-                );
                 await cosActivities.createActivity(
                     topic,
                     null,

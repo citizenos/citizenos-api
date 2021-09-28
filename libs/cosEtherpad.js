@@ -1,5 +1,7 @@
 'use strict';
 
+const { HttpResponse } = require('aws-sdk');
+
 /**
  * Encapsulate Etherpad (EP) logic that is specific to Toru
  *
@@ -300,7 +302,7 @@ module.exports = function (app) {
         } catch(err) {
             console.log('ERR', err);
         }
-    }
+    };
 
     return {
         createTopic: _createTopic,
