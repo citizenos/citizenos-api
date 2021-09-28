@@ -1704,6 +1704,7 @@ module.exports = function (app) {
      * Update Topic join token (tokenJoin)
      *
      * TODO: Should be part of PUT /topics/:topicId, but that is allowed for "edit". Token changing should only be allowed for "admin".
+     * FIXME: REMOVE
      *
      * @see https://trello.com/c/ezqHssSL/124-refactoring-put-tokenjoin-to-be-part-of-put-topics-topicid
      */
@@ -1741,6 +1742,8 @@ module.exports = function (app) {
 
     /**
      * Update (regenerate) Topic join token (tokenJoin) with a level
+     *
+     * PUT as there is one TopicJoin for each Topic. Always overwrites previous.
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/311
      */
