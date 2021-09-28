@@ -4482,6 +4482,15 @@ suite('Users', function () {
                 assert.equal(topicReadAfterRejoin.permission.level, TopicMemberUser.LEVELS.edit);
             });
 
+            test('Success - 20000 - User already a member, joins with a link SHOULD NOT update permissions', async function () {
+                const resTopicJoinAdmin = (await topicUpdateTokenJoin(agentCreator, creator.id, topic.id, TopicJoin.LEVELS.admin)).body.data;
+                await topicMemberUsersUpdate(agentCreator, creator.id, topic.id, user.id, TopicMemberUser.LEVELS.read);
+                await topicJoin(agentUser, resTopicJoinAdmin.token);
+                const topicReadAfterJoin = (await topicRead(agentUser, user.id, topic.id, null)).body.data;
+
+                assert.equal(topicReadAfterJoin.permission.level, TopicMemberUser.LEVELS.read);
+            });
+
             test('Fail - 40101 - Matching token not found', async function () {
                 const res = await _topicJoin(agentUser, 'nonExistentToken', 400);
 

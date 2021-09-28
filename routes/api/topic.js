@@ -1701,47 +1701,7 @@ module.exports = function (app) {
     });
 
     /**
-     * Update Topic join token (tokenJoin)
-     *
-     * TODO: Should be part of PUT /topics/:topicId, but that is allowed for "edit". Token changing should only be allowed for "admin".
-     * FIXME: REMOVE
-     *
-     * @see https://trello.com/c/ezqHssSL/124-refactoring-put-tokenjoin-to-be-part-of-put-topics-topicid
-     */
-    app.put('/api/users/:userd/topics/:topicId/tokenJoin', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
-        // FIXME: REMOVE
-        try {
-            const topic = await Topic.findOne({
-                where: {
-                    id: req.params.topicId
-                }
-            });
-
-            const tokenJoin = Topic.generateTokenJoin();
-            topic.tokenJoin = tokenJoin;
-
-            await db
-                .transaction(async function (t) {
-                    await cosActivities
-                        .updateActivity(topic, null, {
-                            type: 'User',
-                            id: req.user.id,
-                            ip: req.ip
-                        }, null, req.method + ' ' + req.path, t);
-
-                    await topic.save({
-                        transaction: t
-                    });
-                });
-
-            return res.ok({tokenJoin: tokenJoin});
-        } catch (err) {
-            return next(err);
-        }
-    });
-
-    /**
-     * Update (regenerate) Topic join token (tokenJoin) with a level
+     * Update (regenerate) Topic join token (TopicJoin) with a level
      *
      * PUT as there is one TopicJoin for each Topic. Always overwrites previous.
      *

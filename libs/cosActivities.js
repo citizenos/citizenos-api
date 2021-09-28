@@ -368,7 +368,6 @@ module.exports = function (app) {
         const changeSet = _getInstanceChangeSet(instance);
 
         if (changeSet.length === 0) {
-            console.log('NO CHANGES', instance.constructor.name);
             return Promise.resolve();
         }
 
