@@ -1,3 +1,7 @@
+## 2021-09-28 - v. 3.0.1
+
+* Add duplicate topic endpoint /api/users/:userId/topics/:topicId/duplicate - https://github.com/citizenos/citizenos-fe/issues/416
+
 ## 2021-06-01 - v. 3.0.0
 
 * Remove Topic and Group auto-accept user endpoints
