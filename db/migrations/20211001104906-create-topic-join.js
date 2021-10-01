@@ -1,4 +1,5 @@
 const stringUtil = require('../../libs/util');
+const path = require('path');
 
 'use strict';
 module.exports = {
@@ -87,6 +88,66 @@ module.exports = {
                     transaction: t
                 }
             );
+
+            // Update all "Topic.tokenJoin" modification activities to "TopicJoin.token" activities
+
+            const queryUpdateActivities = `
+                UPDATE "Activities" a
+                SET "data" = (
+                    replace(
+                        replace(
+                            replace(
+                                replace(
+                                    replace(
+                                        '{
+                                            "type": "Update",
+                                            "actor": {
+                                                "id": ":USER_ID",
+                                                "type": "User"
+                                            },
+                                            "object": {
+                                                "@type": "TopicJoin",
+                                                "level": "read",
+                                                "token": ":TOKEN_OLD",
+                                                "topicId": ":TOPIC_ID"
+                                            },
+                                            "origin": {
+                                                "@type": "TopicJoin",
+                                                "level": "read",
+                                                "token": ":TOKEN_OLD"
+                                            },
+                                            "result": [
+                                                {
+                                                    "op": "replace",
+                                                    "path": "/token",
+                                                    "value": ":TOKEN_NEW"
+                                                }
+                                            ],
+                                            "context": "PUT /api/users/:USER_ID/topics/:TOPIC_ID/join",
+                                            "__migratedAt": ":MIGRATION_TIMESTAMP",
+                                            "__migrationId: "${path.basename(__filename)}"
+                                        }'
+                                        , ':TOPIC_ID'
+                                        , a."topicIds"[1]
+                                    )
+                                    , ':USER_ID'
+                                    , a."actorId"
+                                )
+                                , ':TOKEN_OLD'
+                                , a.data#>>'{origin, tokenJoin}'
+                            )
+                            , ':TOKEN_NEW'
+                            , (a.data->'result'#>'{0}')#>>'{value}'
+                        )
+                        , ':MIGRATION_TIMESTAMP'
+                        , NOW()::text
+                    )
+                )::jsonb
+                WHERE 
+                    a.data @> '{"type": "Update"}'::jsonb
+                    AND (a.data->'result')::text ILIKE '%/tokenJoin%'
+            `;
+            // FIXME TEST AND FINISH
 
             throw new Error('Incomplete migration, force rollback with error!'); // FIXME: REMOVE ONCE COMPLETE
         });
