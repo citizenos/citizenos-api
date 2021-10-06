@@ -90,7 +90,6 @@ module.exports = {
             );
 
             // Update all "Topic.tokenJoin" modification activities to "TopicJoin.token" activities
-
             const queryUpdateActivities = `
                 UPDATE "Activities" a
                 SET "data" = (
@@ -108,19 +107,19 @@ module.exports = {
                                             "object": {
                                                 "@type": "TopicJoin",
                                                 "level": "read",
-                                                "token": ":TOKEN_OLD",
+                                                "token": "0000:TOKEN_OLD",
                                                 "topicId": ":TOPIC_ID"
                                             },
                                             "origin": {
                                                 "@type": "TopicJoin",
                                                 "level": "read",
-                                                "token": ":TOKEN_OLD"
+                                                "token": "0000:TOKEN_OLD"
                                             },
                                             "result": [
                                                 {
                                                     "op": "replace",
                                                     "path": "/token",
-                                                    "value": ":TOKEN_NEW"
+                                                    "value": "0000:TOKEN_NEW"
                                                 }
                                             ],
                                             "context": "PUT /api/users/:USER_ID/topics/:TOPIC_ID/join",
@@ -147,7 +146,13 @@ module.exports = {
                     a.data @> '{"type": "Update"}'::jsonb
                     AND (a.data->'result')::text ILIKE '%/tokenJoin%'
             `;
-            // FIXME TEST AND FINISH
+
+            await queryInterface.sequelize.query(
+                queryUpdateActivities,
+                {
+                    transaction: t
+                }
+            );
 
             throw new Error('Incomplete migration, force rollback with error!'); // FIXME: REMOVE ONCE COMPLETE
         });
