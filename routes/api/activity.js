@@ -200,7 +200,9 @@ module.exports = function (app) {
             delete activity.data.actor.ip;
             activity.actor = activity.data.actor;
             if (activity.data.actor.type === 'User') {
-                const actor = _.find(activity.users, function(o) { return o.id === activity.data.actor.id; });
+                const actor = _.find(activity.users, function (o) {
+                    return o.id === activity.data.actor.id;
+                });
                 activity.actor.company = actor.company;
                 activity.actor.name = actor.name;
             }
@@ -226,13 +228,15 @@ module.exports = function (app) {
                 let topic;
                 let group;
                 let user;
-                if (activity.data[field] && activity.data[field]['@type']) {
+                if (activity.data[field]) {
                     switch (activity.data[field]['@type']) {
                         case 'Topic':
                             delete returnActivity.data[field].creator;
                             delete returnActivity.data[field].description;
                             if (field === 'origin' && activity.data.type === 'Update') break;
-                            topic = _.find(activity.topics, function (t) {return t.id === activity.data[field].id});
+                            topic = _.find(activity.topics, function (t) {
+                                return t.id === activity.data[field].id
+                            });
                             object = Topic.build(topic).toJSON();
                             object['@type'] = activity.data[field]['@type'];
                             object.creatorId = topic.creatorId;
@@ -242,7 +246,9 @@ module.exports = function (app) {
                         case 'Group':
                             delete returnActivity.data[field].creator;
                             if (field === 'origin' && activity.data.type === 'Update') break;
-                            group = _.find(activity.groups, function (t) {return t.id === activity.data[field].id});
+                            group = _.find(activity.groups, function (t) {
+                                return t.id === activity.data[field].id
+                            });
                             object = Group.build(group).toJSON();
                             object['@type'] = activity.data[field]['@type'];
                             object.createdAt = activity.data[field].createdAt;
@@ -255,7 +261,9 @@ module.exports = function (app) {
                         case 'User':
                             delete returnActivity.data[field].language;
                             if (field === 'origin' && activity.data.type === 'Update') break;
-                            user = _.find(activity.users, function (t) {return t.id === activity.data[field].id});
+                            user = _.find(activity.users, function (t) {
+                                return t.id === activity.data[field].id
+                            });
                             object = User.build(user).toJSON();
                             object['@type'] = activity.data[field]['@type'];
                             if (activity.data[field].level) { // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
@@ -277,7 +285,9 @@ module.exports = function (app) {
                             delete returnActivity.data[field].creator;
                             delete returnActivity.data[field].description;
                             if (field === 'origin' && activity.data.type === 'Update') break;
-                            topic = _.find(activity.topics, function (t) {return t.id === activity.data[field].topicId});
+                            topic = _.find(activity.topics, function (t) {
+                                return t.id === activity.data[field].topicId
+                            });
                             object = Topic.build(topic).toJSON();
                             object['@type'] = activity.data[field]['@type'];
                             object.creatorId = topic.creatorId;
@@ -297,6 +307,18 @@ module.exports = function (app) {
                             object['@type'] = activity.data[field]['@type'];
                             break;
                         default:
+                            object = activity.data[field];
+                    }
+
+                    // If the there is "topicId" present in the origin/target/object, it is not a Topic object.
+                    // To show Topic title in the feed, we need to populate these objects with "topicTitle" property.
+                    // Example cases are TopicMemberUsers level change activity, TopicJoin link change activity etc which have no Topic object in them.
+                    // @see https://github.com/citizenos/citizenos-fe/issues/311
+                    if (object.topicId) {
+                        const topic = returnActivity.topics.find(function (el) {
+                            return el.id === object.topicId;
+                        });
+                        object.topicTitle = topic.title;
                     }
                 } else if (activity.data.object && activity.data.object.object) {
                     if (activity.data.object.object['@type'] === 'Topic') {
@@ -1052,7 +1074,7 @@ module.exports = function (app) {
                         return res.ok(finalResults);
                     });
                 });
-        } catch(err) {
+        } catch (err) {
             return next(err);
         }
     };
