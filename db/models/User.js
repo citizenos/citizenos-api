@@ -149,17 +149,21 @@ module.exports = function (sequelize, DataTypes) {
                 allowNull: true,
                 comment: 'Etherpad authorID for the user'
             },
-            settings: {
+            preferences: {
                 type: Sequelize.JSONB,
                 allowNull: true,
-                comment: 'User settings JSON object',
+                comment: 'User preferences JSON object',
                 set (value) {
+
                     let final = {};
                     const allowedFields = ['showInSearch'];
-                    allowedFields.forEach((field) => {
-                        final[field] = value[field];
-                    });
-                    this.setDataValue('settings', final);
+                    if (value) {
+                        allowedFields.forEach((field) => {
+                            final[field] = value[field];
+                        });
+                    }
+
+                    this.setDataValue('preferences', final);
                 }
             }
         }
@@ -197,8 +201,7 @@ module.exports = function (sequelize, DataTypes) {
             company: this.dataValues.company,
             language: this.dataValues.language,
             email: this.dataValues.email, //TODO: probably should take this out of the responses, is email sensitive? Seems a bit so as used for log-in.
-            imageUrl: this.dataValues.imageUrl,
-            settings: this.dataValues.settings
+            imageUrl: this.dataValues.imageUrl
         };
 
         return user;

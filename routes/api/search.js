@@ -404,7 +404,7 @@ module.exports = function (app) {
                                         ],
                                         [Op.and]: [
                                             {
-                                                settings: {
+                                                preferences: {
                                                     showInSearch: true
                                                 }
                                             }

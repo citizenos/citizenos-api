@@ -122,7 +122,7 @@ module.exports = function (app) {
         const company = req.body.company;
         const language = req.body.language;
         const redirectSuccess = req.body.redirectSuccess || urlLib.getFe();
-        const settings = req.body.settings;
+        const preferences = req.body.preferences;
 
         let created = false;
         try {
@@ -152,7 +152,7 @@ module.exports = function (app) {
                                     company,
                                     source: User.SOURCES.citizenos,
                                     language,
-                                    settings
+                                    preferences
                                 },
                                 transaction: t
                             });
@@ -413,6 +413,7 @@ module.exports = function (app) {
             const userData = user.toJSON();
             userData.termsVersion = user.dataValues.termsVersion;
             userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
+            userData.preferences = user.dataValues.preferences;
 
             return res.ok(userData);
         } catch (err) {
@@ -515,6 +516,7 @@ module.exports = function (app) {
                 let userData = user.toJSON();
                 userData.termsVersion = user.dataValues.termsVersion;
                 userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
+                userData.preferences = user.dataValues.preferences;
 
                 return [userData, 3]; // New user was created
             } else {
@@ -525,6 +527,7 @@ module.exports = function (app) {
                     const userData = user.toJSON();
                     userData.termsVersion = user.dataValues.termsVersion;
                     userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
+                    userData.preferences = user.dataValues.preferences;
 
                     return [userData, 2]; // Existing User found and logged in
                 }
