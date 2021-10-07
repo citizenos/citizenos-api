@@ -314,7 +314,7 @@ module.exports = function (app) {
                     // To show Topic title in the feed, we need to populate these objects with "topicTitle" property.
                     // Example cases are TopicMemberUsers level change activity, TopicJoin link change activity etc which have no Topic object in them.
                     // @see https://github.com/citizenos/citizenos-fe/issues/311
-                    if (object.topicId) {
+                    if (object && object.topicId) {
                         const topic = returnActivity.topics.find(function (el) {
                             return el.id === object.topicId;
                         });
