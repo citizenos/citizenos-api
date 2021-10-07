@@ -4564,20 +4564,20 @@ suite('Users', function () {
                             "object": {
                                 "@type": "TopicJoin",
                                 "level": topic.join.level, // previous level
-                                "token": topic.join.token, // previous token
+                                "token": topic.join.token.replace(topic.join.token.substr(2, 8), '********'), // previous token
                                 "topicId": topic.id,
                                 "topicTitle": topic.title
                             },
                             "origin": {
                                 "@type": "TopicJoin",
                                 "level": topic.join.level, // previous level
-                                "token": topic.join.token // previous token
+                                "token": topic.join.token.replace(topic.join.token.substr(2, 8), '********'), // previous token
                             },
                             "result": [
                                 {
                                     "op": "replace",
                                     "path": "/token",
-                                    "value": resData.token
+                                    "value": resData.token.replace(resData.token.substr(2, 8), '********'), // new token
                                 },
                                 {
                                     "op": "replace",
@@ -4645,14 +4645,14 @@ suite('Users', function () {
                                 "object": {
                                     "@type": "TopicJoin",
                                     "level": topic.join.level,
-                                    "token": topic.join.token,
+                                    "token": topic.join.token.replace(topic.join.token.substr(2, 8), '********'),
                                     "topicId": topic.id,
                                     "topicTitle": topic.title
                                 },
                                 "origin": {
                                     "@type": "TopicJoin",
                                     "level": topic.join.level,
-                                    "token": topic.join.token
+                                    "token": topic.join.token.replace(topic.join.token.substr(2, 8), '********'),
                                 },
                                 "result": [
                                     {

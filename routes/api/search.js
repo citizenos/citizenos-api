@@ -164,7 +164,6 @@ module.exports = function (app) {
 
                             // TODO: NOT THE MOST EFFICIENT QUERY IN THE WORLD, tune it when time.
                             // TODO: That casting to "enum_TopicMemberUsers_level". Sequelize does not support naming enums, through inheritance I have 2 enums that are the same but with different name thus different type in PG. Feature request - https://github.com/sequelize/sequelize/issues/2577
-                            // FIXME: Fix query to return "token"
                             const myTopicQuery = `
                                 SELECT
                                     COUNT(t.id) OVER() as count,
@@ -174,9 +173,13 @@ module.exports = function (app) {
                                     t.visibility,
                                     t.hashtag,
                                     CASE
-                                    WHEN COALESCE(tmup.level, tmgp.level, 'none') = 'admin' THEN t."tokenJoin"
+                                    WHEN COALESCE(tmup.level, tmgp.level, 'none') = 'admin' THEN tj.token
                                     ELSE NULL
-                                    END as "tokenJoin",
+                                    END as "join.token",
+                                    CASE
+                                    WHEN COALESCE(tmup.level, tmgp.level, 'none') = 'admin' THEN tj.level
+                                    ELSE NULL
+                                    END as "join.level",
                                     CASE
                                     WHEN tp."topicId" = t.id THEN true
                                     ELSE false
@@ -234,6 +237,7 @@ module.exports = function (app) {
                                     LEFT JOIN "TopicVotes" tv
                                         ON (tv."topicId" = t.id)
                                     LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId
+                                    LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                                 WHERE ${myTopicWhere}
                                 GROUP BY t.id, tmup.level, tmgp.level, muc.count, mgc.count, tv."voteId", tp."topicId"
                                 ORDER BY t.title ASC

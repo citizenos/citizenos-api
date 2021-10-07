@@ -17,6 +17,7 @@ module.exports = function (app) {
     const Group = models.Group;
     const User = models.User;
     const Topic = models.Topic;
+    const TopicJoin = models.TopicJoin;
     const GroupMemberUser = models.GroupMemberUser;
     const TopicMemberUser = models.TopicMemberUser;
     const TopicMemberGroup = models.TopicMemberGroup;
@@ -305,6 +306,31 @@ module.exports = function (app) {
                         case 'GroupMemberUser':
                             object = GroupMemberUser.build(activity.data[field]).toJSON();
                             object['@type'] = activity.data[field]['@type'];
+                            break;
+                        case 'TopicJoin': // https://github.com/citizenos/citizenos-fe/issues/311
+                            object = activity.data[field];
+
+                            // At the moment, we have no Activity feed data modifications based on User access level.
+                            // That is, every objects activity and it's data is visible to EVERY User that has access to the object.
+                            // When a token can ONLY be modified and shared by admin level Users, we CANNOT leak the token to Users with lesser permissions.
+                            // Instead of taking on the journey (LONG ONE) to filter/mask data based on permissions, I take the shortcut of masking the token in the feed for ALL Users.
+                            // IDEALLY I FEEL like all the filtering SHOULD be done in the Models "toJSON(permission)" function which MUST then be used for filtering API output as well.
+                            // @see https://github.com/citizenos/citizenos-fe/issues/311
+
+                            if (object.token) {
+                                object.token = object.token.replace(object.token.substr(2, 8), '********');
+                            }
+
+                            if (activity.data.result) {
+                                for (const obj of activity.data.result) {
+                                    if (obj.path && obj.path ==='/token') {
+                                        obj.value = obj.value.replace(obj.value.substr(2, 8), '********');
+                                        break;
+                                    }
+                                }
+                            }
+
+                            returnActivity.data.result = activity.data.result;
                             break;
                         default:
                             object = activity.data[field];
