@@ -231,7 +231,6 @@ module.exports = function (app) {
                         case 'Topic':
                             delete returnActivity.data[field].creator;
                             delete returnActivity.data[field].description;
-                            delete returnActivity.data[field].tokenJoin;
                             if (field === 'origin' && activity.data.type === 'Update') break;
                             topic = _.find(activity.topics, function (t) {return t.id === activity.data[field].id});
                             object = Topic.build(topic).toJSON();
@@ -239,7 +238,6 @@ module.exports = function (app) {
                             object.creatorId = topic.creatorId;
                             delete object.creator;
                             delete object.description;
-                            delete object.tokenJoin;
                             break;
                         case 'Group':
                             delete returnActivity.data[field].creator;
@@ -278,7 +276,6 @@ module.exports = function (app) {
                         case 'VoteFinalContainer':
                             delete returnActivity.data[field].creator;
                             delete returnActivity.data[field].description;
-                            delete returnActivity.data[field].tokenJoin;
                             if (field === 'origin' && activity.data.type === 'Update') break;
                             topic = _.find(activity.topics, function (t) {return t.id === activity.data[field].topicId});
                             object = Topic.build(topic).toJSON();
@@ -286,7 +283,6 @@ module.exports = function (app) {
                             object.creatorId = topic.creatorId;
                             delete object.creator;
                             delete object.description;
-                            delete object.tokenJoin;
                             break;
                         case 'TopicMemberUser':
                             object = TopicMemberUser.build(activity.data[field]).toJSON();
@@ -306,7 +302,6 @@ module.exports = function (app) {
                     if (activity.data.object.object['@type'] === 'Topic') {
                         delete returnActivity.data.object.object.creator;
                         delete returnActivity.data.object.object.description;
-                        delete returnActivity.data.object.object.tokenJoin;
                     }
                 }
                 if (object) {

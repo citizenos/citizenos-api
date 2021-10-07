@@ -164,6 +164,7 @@ module.exports = function (app) {
 
                             // TODO: NOT THE MOST EFFICIENT QUERY IN THE WORLD, tune it when time.
                             // TODO: That casting to "enum_TopicMemberUsers_level". Sequelize does not support naming enums, through inheritance I have 2 enums that are the same but with different name thus different type in PG. Feature request - https://github.com/sequelize/sequelize/issues/2577
+                            // FIXME: Fix query to return "token"
                             const myTopicQuery = `
                                 SELECT
                                     COUNT(t.id) OVER() as count,

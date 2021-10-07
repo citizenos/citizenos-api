@@ -1214,7 +1214,7 @@ const _topicVoteDownloadBdocFinal = async function (agent, topicId, voteId, toke
 
     const query = {
         token
-    }
+    };
 
     if (include) {
         query.include = include;
@@ -4457,11 +4457,44 @@ suite('Users', function () {
                 const resTopicJoinEdit = (await topicUpdateTokenJoin(agentCreator, creator.id, topic.id, TopicJoin.LEVELS.edit)).body.data;
                 const resJoinEdit = await topicJoin(agentUser, resTopicJoinEdit.token);
 
+                const userActivities = (await activityLib.activitiesRead(agentUser, user.id)).body.data;
+                const topicJoinActivityActual = userActivities[0].data;
+
+                topic.padUrl = topic.padUrl.split('?')[0]; // Pad url will not have JWT token as the user gets read-only by default
+
+                const topicJoinActivityExpected = {
+                    type: 'Join',
+                    actor: {
+                        id: user.id,
+                        type: 'User',
+                        level: TopicJoin.LEVELS.edit,
+                        company: user.company,
+                        name: user.name
+                    },
+                    object: {
+                        '@type': 'Topic',
+                        creatorId: creator.id,
+                        id: topic.id,
+                        title: topic.title,
+                        status: topic.status,
+                        visibility: topic.visibility,
+                        categories: topic.categories,
+                        padUrl: topic.padUrl, // NOTE: topic.padUrl has JWT tokens etc, but we modify the url above!
+                        sourcePartnerId: topic.sourcePartnerId,
+                        sourcePartnerObjectId: topic.sourcePartnerObjectId,
+                        endsAt: topic.endsAt,
+                        hashtag: topic.hashtag,
+                        createdAt: topic.createdAt,
+                        updatedAt: topic.updatedAt,
+                    },
+                    context: `POST /api/topics/join/${resTopicJoinEdit.token}`
+                };
+
+                assert.deepEqual(topicJoinActivityActual, topicJoinActivityExpected);
+
                 delete topic.permission;
                 delete topic.pinned;
                 delete topic.join;
-
-                topic.padUrl = topic.padUrl.split('?')[0]; // Pad url will not have JWT token as the user gets read-only by default
 
                 const expectedResult = {
                     status: {
@@ -4532,7 +4565,8 @@ suite('Users', function () {
                                 "@type": "TopicJoin",
                                 "level": topic.join.level, // previous level
                                 "token": topic.join.token, // previous token
-                                "topicId": topic.id
+                                "topicId": topic.id,
+                                "topicTitle": topic.title
                             },
                             "origin": {
                                 "@type": "TopicJoin",
@@ -4612,7 +4646,8 @@ suite('Users', function () {
                                     "@type": "TopicJoin",
                                     "level": topic.join.level,
                                     "token": topic.join.token,
-                                    "topicId": topic.id
+                                    "topicId": topic.id,
+                                    "topicTitle": topic.title
                                 },
                                 "origin": {
                                     "@type": "TopicJoin",
