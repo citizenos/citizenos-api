@@ -259,23 +259,24 @@ const logout = async function (agent) {
  * @return {void}
  */
 
-const _signup = async function (agent, email, password, language, expectedHttpCode) {
+const _signup = async function (agent, email, password, language, settings, expectedHttpCode) {
     const path = '/api/auth/signup';
 
     return agent
         .post(path)
         .set('Content-Type', 'application/json')
         .send({
-            email: email,
-            password: password,
-            language: language
+            email,
+            password,
+            language,
+            settings
         })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
 
-const signup = async function (agent, email, password, language) {
-    return _signup(agent, email, password, language, 200);
+const signup = async function (agent, email, password, language, settings) {
+    return _signup(agent, email, password, language, settings, 200);
 };
 
 /**

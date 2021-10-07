@@ -19,7 +19,6 @@ module.exports = function (app) {
     const objectEncrypter = app.get('objectEncrypter');
     const querystring = app.get('querystring');
     const urlLib = app.get('urlLib');
-    const Promise = app.get('Promise');
     const superagent = app.get('superagent');
     const url = app.get('url');
     const mobileId = app.get('mobileId');
@@ -123,6 +122,7 @@ module.exports = function (app) {
         const company = req.body.company;
         const language = req.body.language;
         const redirectSuccess = req.body.redirectSuccess || urlLib.getFe();
+        const settings = req.body.settings;
 
         let created = false;
         try {
@@ -146,12 +146,13 @@ module.exports = function (app) {
                             .findOrCreate({
                                 where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email)), // Well, this will allow user to log in either using User and pass or just Google.. I think it's ok..
                                 defaults: {
-                                    name: name,
-                                    email: email,
-                                    password: password,
-                                    company: company,
+                                    name,
+                                    email,
+                                    password,
+                                    company,
                                     source: User.SOURCES.citizenos,
-                                    language: language
+                                    language,
+                                    settings
                                 },
                                 transaction: t
                             });

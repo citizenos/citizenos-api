@@ -23,7 +23,7 @@ module.exports = function (app) {
      */
     app.put('/api/users/:userId', loginCheck(['partner']), async function (req, res, next) {
         try {
-            const fields = ['name', 'company', 'email', 'language', 'imageUrl', 'termsVersion'];
+            const fields = ['name', 'company', 'email', 'language', 'imageUrl', 'termsVersion', 'settings'];
             if (!req.user.partnerId) { // Allow only our own app change the password
                 fields.push('password');
             }

@@ -18,7 +18,7 @@ module.exports = function (app) {
     const Group = models.Group;
     const Topic = models.Topic;
 
-    app.get('/api/search', loginCheck(['partner']), async function (req, res, next) {
+/*app.get('/api/search', loginCheck(['partner']), async function (req, res, next) {
         const str = req.query.str; // Search string
         try {
             const users = await User.findAll({
@@ -64,8 +64,8 @@ module.exports = function (app) {
             return next(e);
         }
     });
-
-    app.get('/api/v2/search', async function (req, res, next) {
+*/
+    app.get('/api/search', async function (req, res, next) {
         try {
             const str = req.query.str; // Search string
             const limitMax = 100;
@@ -401,9 +401,16 @@ module.exports = function (app) {
                                                     [Op.iLike]: str + '%'
                                                 }
                                             }
+                                        ],
+                                        [Op.and]: [
+                                            {
+                                                settings: {
+                                                    showInSearch: true
+                                                }
+                                            }
                                         ]
                                     },
-                                    attributes: ['id', 'name', 'company', 'imageUrl'],
+                                    attributes: ['id', 'name', 'email', 'company', 'imageUrl'],
                                     limit: limit,
                                     offset: offset
                                 });

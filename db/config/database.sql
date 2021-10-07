@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 10.17 (Ubuntu 10.17-0ubuntu0.18.04.1)
--- Dumped by pg_dump version 10.17 (Ubuntu 10.17-0ubuntu0.18.04.1)
+-- Dumped from database version 10.18 (Ubuntu 10.18-0ubuntu0.18.04.1)
+-- Dumped by pg_dump version 10.18 (Ubuntu 10.18-0ubuntu0.18.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -1317,7 +1317,8 @@ CREATE TABLE public."Users" (
     "authorId" character varying(255),
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone
+    "deletedAt" timestamp with time zone,
+    settings jsonb
 );
 
 
@@ -1410,6 +1411,13 @@ COMMENT ON COLUMN public."Users"."termsAcceptedAt" IS 'Time when the terms were 
 --
 
 COMMENT ON COLUMN public."Users"."authorId" IS 'Etherpad authorID for the user';
+
+
+--
+-- Name: COLUMN "Users".settings; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Users".settings IS 'User settings JSON object';
 
 
 --
@@ -2601,6 +2609,8 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 202103251231-alter-vote-lists-add-userhash.js
 20210329141948-alter-vote-user-containers.js
 20210510112610-groupmember_to_groupmemberusers.js
-202111061127-alter-relations-add-on-cascade.js
 202107151231-alter-vote-add-auto-close.js
+202106111127-alter-relations-add-on-cascade.js
+20210722084618-alter-vote-add-auto-close.js
+20211004193321-alter-user-add-settings.js
 \.

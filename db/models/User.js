@@ -1,8 +1,8 @@
 'use strict';
 
-var _ = require('lodash');
-var cryptoLib = require('../../libs/crypto');
-var hooks = require('../../libs/sequelize/hooks');
+const _ = require('lodash');
+const cryptoLib = require('../../libs/crypto');
+const hooks = require('../../libs/sequelize/hooks');
 const Sequelize = require('sequelize');
 
 /**
@@ -17,14 +17,14 @@ const Sequelize = require('sequelize');
  */
 module.exports = function (sequelize, DataTypes) {
 
-    var SOURCES = {
+    const SOURCES = {
         citizenos: 'citizenos',
         citizenosSystem: 'citizenosSystem', // Created by CitizenOS systems - migrations, data import etc.
         google: 'google',
         facebook: 'facebook'
     };
 
-    var User = sequelize.define(
+    const User = sequelize.define(
         'User',
         {
             id: {
@@ -83,7 +83,7 @@ module.exports = function (sequelize, DataTypes) {
                 comment: 'Password hash. NULL if User was created on invitation and has not registered.',
                 validate: {
                     isValidPassword: function (v) {
-                        var passwordRegexp = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{6,}$/;
+                        const passwordRegexp = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{6,}$/;
                         if (!passwordRegexp.test(v)) {
                             throw Error('Password must be at least 6 character long, containing at least 1 digit, 1 lower and upper case character.');
                         }
@@ -99,7 +99,7 @@ module.exports = function (sequelize, DataTypes) {
                         return;
                     }
 
-                    var uuid = Sequelize.Utils.toDefaultValue(DataTypes.UUIDV4());
+                    const uuid = Sequelize.Utils.toDefaultValue(DataTypes.UUIDV4());
 
                     this.setDataValue('passwordResetCode', uuid);
                 }
@@ -148,6 +148,19 @@ module.exports = function (sequelize, DataTypes) {
                 type: DataTypes.STRING,
                 allowNull: true,
                 comment: 'Etherpad authorID for the user'
+            },
+            settings: {
+                type: Sequelize.JSONB,
+                allowNull: true,
+                comment: 'User settings JSON object',
+                set (value) {
+                    let final = {};
+                    const allowedFields = ['showInSearch'];
+                    allowedFields.forEach((field) => {
+                        final[field] = value[field];
+                    });
+                    this.setDataValue('settings', final);
+                }
             }
         }
     );
@@ -178,13 +191,14 @@ module.exports = function (sequelize, DataTypes) {
     // Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
     User.prototype.toJSON = function () {
         // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
-        var user = {
+        const user = {
             id: this.dataValues.id,
             name: this.dataValues.name,
             company: this.dataValues.company,
             language: this.dataValues.language,
             email: this.dataValues.email, //TODO: probably should take this out of the responses, is email sensitive? Seems a bit so as used for log-in.
-            imageUrl: this.dataValues.imageUrl
+            imageUrl: this.dataValues.imageUrl,
+            settings: this.dataValues.settings
         };
 
         return user;
