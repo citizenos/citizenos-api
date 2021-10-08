@@ -1204,7 +1204,7 @@
         }
       }
     },
-    "/api/users/:userId/topics/:topicId/tokenJoin": {
+    "/api/users/:userId/topics/:topicId/join": {
       "put": {
         "tags": [
           "topic"
@@ -1240,7 +1240,7 @@
           }
         ],
         "responses": {
-          "201": {
+          "200": {
             "description": "Topics join token updated successfully",
             "content": {
               "application/json": {
@@ -1252,14 +1252,100 @@
                       "properties": {
                         "code": {
                           "type": "integer",
-                          "example": 20100
+                          "example": 20000
                         },
                         "data": {
                           "type": "object",
                           "properties": {
-                            "tokenJoin": {
+                            "token": {
                               "type": "string",
-                              "example": "1234abcd"
+                              "example": "as1AbCA1012"
+                            },
+                            "level": {
+                              "type": "string",
+                              "example": "edit"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/:userId/topics/:topicId/join/:token": {
+      "put": {
+        "tags": [
+          "topic"
+        ],
+        "summary": "Update level of a topic join token",
+        "description": "Update level of a topic join token",
+        "operationId": "updateTopicTokenJoinLevel",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "topicId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "requested topics id"
+          },
+          {
+            "in": "path",
+            "name": "token",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "access token"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Topics join token updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        },
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "token": {
+                              "type": "string",
+                              "example": "as1AbCA1012"
+                            },
+                            "level": {
+                              "type": "string",
+                              "example": "admin"
                             }
                           }
                         }
@@ -2089,7 +2175,7 @@
         }
       }
     },
-    "/api/topics/join/:tokenJoin": {
+    "/api/topics/join/:token": {
       "post": {
         "tags": [
           "topic"
@@ -2107,7 +2193,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "tokenJoin",
+            "name": "token",
             "schema": {
               "type": "string"
             },
@@ -2194,11 +2280,6 @@
                               "example": "John Smith"
                             }
                           }
-                        },
-                        "tokenJoin": {
-                          "type": "string",
-                          "nullable": true,
-                          "maxLength": 8
                         },
                         "padUrl": {
                           "type": "string",
@@ -4601,7 +4682,9 @@
     },
     "/api/users/:userId/topics/:topicId/pin": {
       "post": {
-        "tags": ["pinned"],
+        "tags": [
+          "pinned"
+        ],
         "summary": "Add Topic as pinned",
         "description": "Add Topic as pinned",
         "operationId": "pinTopic",

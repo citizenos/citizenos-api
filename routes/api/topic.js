@@ -6454,6 +6454,7 @@ module.exports = function (app) {
         try {
             tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
             idSignFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
+            idSignFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
         } catch (err) {
             if (err.name === 'TokenExpiredError') {
                 logger.info('loginCheck - JWT token has expired', req.method, req.path, err);
