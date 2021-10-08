@@ -152,8 +152,6 @@ module.exports = {
             );
             console.info('Activity migration updated row count:', activityMigrationResult[1].rowCount);
         });
-
-
     },
     down: async (queryInterface, Sequelize) => {
         const path = require('path');
