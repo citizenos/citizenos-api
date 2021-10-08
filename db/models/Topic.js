@@ -1,10 +1,9 @@
 'use strict';
 
-var _ = require('lodash');
-var hooks = require('../../libs/sequelize/hooks');
-var util = require('util');
-var stringUtil = require('../../libs/util');
-var config = require('config');
+const _ = require('lodash');
+const hooks = require('../../libs/sequelize/hooks');
+const util = require('util');
+const config = require('config');
 const Sequelize = require('sequelize');
 
 /**

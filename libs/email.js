@@ -17,7 +17,6 @@ module.exports = function (app) {
     const fs = app.get('fs');
     const path = require('path');
     const moment = app.get('moment');
-    const url = app.get('url');
     const cosJwt = app.get('cosJwt');
 
     const User = models.User;

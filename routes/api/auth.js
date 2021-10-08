@@ -19,7 +19,6 @@ module.exports = function (app) {
     const objectEncrypter = app.get('objectEncrypter');
     const querystring = app.get('querystring');
     const urlLib = app.get('urlLib');
-    const Promise = app.get('Promise');
     const superagent = app.get('superagent');
     const url = app.get('url');
     const mobileId = app.get('mobileId');

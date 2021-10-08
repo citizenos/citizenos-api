@@ -1840,7 +1840,7 @@ module.exports = function (app) {
             const level = req.body.level;
 
             if (!Object.values(TopicJoin.LEVELS).includes(level)) {
-                return res.badRequest('Invalid value for property \"level\". Possible values are ' + Object.values(TopicJoin.LEVELS) + '.', 1);
+                return res.badRequest('Invalid value for property "level". Possible values are ' + Object.values(TopicJoin.LEVELS) + '.', 1);
             }
 
             const topicJoin = await TopicJoin.findOne({
@@ -1889,7 +1889,7 @@ module.exports = function (app) {
             const level = req.body.level;
 
             if (!Object.values(TopicJoin.LEVELS).includes(level)) {
-                return res.badRequest('Invalid value for property \"level\". Possible values are ' + Object.values(TopicJoin.LEVELS) + '.', 1);
+                return res.badRequest('Invalid value for property "level". Possible values are ' + Object.values(TopicJoin.LEVELS) + '.', 1);
             }
 
             const topicJoin = await TopicJoin.findOne({

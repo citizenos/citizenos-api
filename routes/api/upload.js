@@ -130,7 +130,7 @@ module.exports = function (app) {
         try {
             await _deleteFromS3(filename, folder);
 
-            return  res.ok();
+            return res.ok();
         } catch (e) {
             return next(e);
         }
@@ -209,7 +209,10 @@ module.exports = function (app) {
                     busboy.emit('error', error);
                 });
 
-                uploadResult = imageUpload.upload(file, {type: mimetype, filename: savedFilename});
+                uploadResult = imageUpload.upload(file, {
+                    type: mimetype,
+                    filename: savedFilename
+                });
 
             });
 

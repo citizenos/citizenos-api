@@ -17,7 +17,6 @@ module.exports = function (app) {
     const Group = models.Group;
     const User = models.User;
     const Topic = models.Topic;
-    const TopicJoin = models.TopicJoin;
     const GroupMemberUser = models.GroupMemberUser;
     const TopicMemberUser = models.TopicMemberUser;
     const TopicMemberGroup = models.TopicMemberGroup;

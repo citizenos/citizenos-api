@@ -5,7 +5,7 @@
  */
 
 module.exports = {
-  up: async (queryInterface, Sequelize) => {
+  up: async (queryInterface, Sequelize) => { //eslint-disable-line no-unused-vars
     const t = await queryInterface.sequelize.transaction();
     try {
       console.info('Modify ENUM "enum_GroupInviteUsers_level" - remove "edit" and "none" values...');
@@ -33,7 +33,7 @@ module.exports = {
     }
   },
 
-  down: async (queryInterface, Sequelize) => {
+  down: async (queryInterface, Sequelize) => { //eslint-disable-line no-unused-vars
     console.log('NO ROLLBACK FOR THIS MIGRATION.');
     console.log('IF ANY PARTS OF THE MIGRATION FAILED, THE WHOLE MIGRATION WAS ROLLED BACK.');
   }

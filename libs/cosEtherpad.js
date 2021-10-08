@@ -1,7 +1,5 @@
 'use strict';
 
-const { HttpResponse } = require('aws-sdk');
-
 /**
  * Encapsulate Etherpad (EP) logic that is specific to Toru
  *
@@ -21,7 +19,6 @@ module.exports = function (app) {
     const cosActivities = app.get('cosActivities');
     const path = require('path');
     const fs = app.get('fs');
-    const https = require('https');
 
     const Topic = models.Topic;
     const User = models.User;

@@ -1,7 +1,5 @@
 'use strict';
 
-const util = require('../../libs/util');
-
 /**
  * GroupInviteUser
  *

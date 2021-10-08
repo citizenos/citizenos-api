@@ -153,7 +153,7 @@ module.exports = {
             console.info('Activity migration updated row count:', activityMigrationResult[1].rowCount);
         });
     },
-    down: async (queryInterface, Sequelize) => {
+    down: async () => {
         const path = require('path');
 
         console.warn('Down is not implemented for migration ', path.basename(__filename), '. Did not find a need for it as the migration runs in a transaction.');
