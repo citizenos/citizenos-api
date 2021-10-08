@@ -1,5 +1,7 @@
 'use strict';
 
+const { HttpResponse } = require('aws-sdk');
+
 /**
  * Encapsulate Etherpad (EP) logic that is specific to Toru
  *
@@ -275,7 +277,7 @@ module.exports = function (app) {
     const _getTopicInlineComments = async (topicId, userId, name) => {
         const token = _createToken(userId, name);
         const options = config.services.etherpad;
-        options.rootPath = '/p/:pad/0/'.replace(':pad', topicId);
+        options.rootPath = '/p/:pad/1.2.15/'.replace(':pad', topicId);
         const etherpadClient = require('etherpad-lite-client').connect(options);
 
         return new Promise ((resolve, reject) => {
@@ -291,6 +293,17 @@ module.exports = function (app) {
         });
     };
 
+    const _createPadCopy = async(sourceTopicId, newtopicId) => {
+        try {
+            const contents = await etherpadClient
+                .copyPadWithoutHistoryAsync({sourceID: sourceTopicId, destinationID: newtopicId});
+
+            return contents;
+        } catch(err) {
+            console.log('ERR', err);
+        }
+    };
+
     return {
         createTopic: _createTopic,
         updateTopic: _updateTopic,
@@ -301,6 +314,7 @@ module.exports = function (app) {
         getTopicTitleFromPadContent: _getTopicTitleFromPadContent,
         getTopicPadAuthors: _getTopicPadAuthors,
         getTopicInlineComments: _getTopicInlineComments,
-        getTopicInlineCommentReplies: _getTopicInlineCommentReplies
+        getTopicInlineCommentReplies: _getTopicInlineCommentReplies,
+        createPadCopy: _createPadCopy
     };
 };

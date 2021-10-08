@@ -1422,6 +1422,133 @@ module.exports = function (app) {
         }
     });
 
+    //Copy topic
+    app.get('/api/users/:userId/topics/:topicId/duplicate', loginCheck(['partner']), partnerParser, async function (req, res, next) {
+        try {
+            // I wish Sequelize Model.build supported "fields". This solution requires you to add a field here once new are defined in model.
+            const sourceTopic = await Topic.findOne({
+                where: {
+                    id: req.params.topicId
+                }
+            });
+
+            if (sourceTopic.creatorId !== req.user.id) {
+                return res.forbidden();
+            }
+
+            let topic = Topic.build({
+                visibility: Topic.VISIBILITY.private,
+                creatorId: req.user.id,
+                authorIds: [req.user.id]
+            });
+
+            topic.padUrl = cosEtherpad.getTopicPadUrl(topic.id);
+
+            if (req.locals.partner) {
+                topic.sourcePartnerId = req.locals.partner.id;
+            }
+
+            const user = await User.findOne({
+                where: {
+                    id: req.user.id
+                },
+                attributes: ['id', 'name', 'language']
+            });
+
+            await db.transaction(async function (t) {
+                await cosEtherpad.createPadCopy(req.params.topicId, topic.id);
+                await topic.save({transaction: t});
+                await topic.addMemberUser(// Magic method by Sequelize - https://github.com/sequelize/sequelize/wiki/API-Reference-Associations#hasmanytarget-options
+                    user.id,
+                    {
+                        through: {
+                            level: TopicMemberUser.LEVELS.admin
+                        },
+                        transaction: t
+                    }
+                );
+
+                const attachments = await getTopicAttachments(req.params.topicId);
+
+                attachments.forEach(async (attachment) => {
+                    const attachmentClone = await Attachment.create(
+                        {
+                            name: attachment.name,
+                            size: attachment.size,
+                            source: attachment.source,
+                            type: attachment.type,
+                            link: attachment.link,
+                            creatorId: attachment.creator.id
+                        },
+                        {
+                            transaction: t
+                        }
+                    );
+
+                    await TopicAttachment.create(
+                        {
+                            topicId: topic.id,
+                            attachmentId: attachmentClone.id
+                        },
+                        {
+                            transaction: t
+                        }
+                    );
+                });
+
+                await cosActivities.createActivity(
+                    topic,
+                    null,
+                    {
+                        type: 'User',
+                        id: req.user.id,
+                        ip: req.ip
+                    }
+                    , req.method + ' ' + req.path,
+                    t
+                );
+            });
+
+            topic = await cosEtherpad.syncTopicWithPad( // eslint-disable-line require-atomic-updates
+                topic.id,
+                req.method + ' ' + req.path,
+                {
+                    type: 'User',
+                    id: req.user.id,
+                    ip: req.ip
+                }
+            );
+            const authorIds = topic.authorIds;
+            const authors = await User.findAll({
+                where: {
+                    id: authorIds
+                },
+                attributes: ['id', 'name'],
+                raw: true
+            });
+
+            const resObject = topic.toJSON();
+            resObject.authors = authors;
+            resObject.padUrl = cosEtherpad.getUserAccessUrl(topic, user.id, user.name, user.language, req.locals.partner);
+            resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+
+            if (req.locals.partner) {
+                resObject.sourcePartnerId = req.locals.partner.id;
+            } else {
+                resObject.sourcePartnerId = null;
+            }
+
+            resObject.pinned = false;
+            resObject.permission = {
+                level: TopicMemberUser.LEVELS.admin
+            };
+
+            return res.created(resObject);
+        } catch(err) {
+            return next(err);
+        }
+
+    });
     /**
      * Read a Topic
      */
@@ -1815,7 +1942,13 @@ module.exports = function (app) {
             }
 
             await db.transaction(async function (t) {
-                await cosEtherpad.deleteTopic(topic.id);
+                try {
+                    await cosEtherpad.deleteTopic(topic.id);
+                } catch (err) {
+                    if (!err.message || err.message !== 'padID does not exist') {
+                        throw err;
+                    }
+                }
 
                 // Delete TopicMembers beforehand. Sequelize does not cascade and set "deletedAt" for related objects if "paranoid: true".
                 await TopicMemberUser.destroy({
@@ -4079,37 +4212,40 @@ module.exports = function (app) {
         }
     });
 
+    const getTopicAttachments = async (topicId) => {
+        return await db
+            .query(
+                `
+                SELECT
+                    a.id,
+                    a.name,
+                    a.size,
+                    a.source,
+                    a.type,
+                    a.link,
+                    a."createdAt",
+                    c.id as "creator.id",
+                    c.name as "creator.name"
+                FROM "TopicAttachments" ta
+                JOIN "Attachments" a ON a.id = ta."attachmentId"
+                JOIN "Users" c ON c.id = a."creatorId"
+                WHERE ta."topicId" = :topicId
+                AND a."deletedAt" IS NULL
+                ;
+                `,
+                {
+                    replacements: {
+                        topicId: topicId
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
+    }
     const topicAttachmentsList = async function (req, res, next) {
         try {
-            const attachments = await db
-                .query(
-                    `
-                    SELECT
-                        a.id,
-                        a.name,
-                        a.size,
-                        a.source,
-                        a.type,
-                        a.link,
-                        a."createdAt",
-                        c.id as "creator.id",
-                        c.name as "creator.name"
-                    FROM "TopicAttachments" ta
-                    JOIN "Attachments" a ON a.id = ta."attachmentId"
-                    JOIN "Users" c ON c.id = a."creatorId"
-                    WHERE ta."topicId" = :topicId
-                    AND a."deletedAt" IS NULL
-                    ;
-                    `,
-                    {
-                        replacements: {
-                            topicId: req.params.topicId
-                        },
-                        type: db.QueryTypes.SELECT,
-                        raw: true,
-                        nest: true
-                    }
-                );
+            const attachments = await getTopicAttachments(req.params.topicId);
 
             return res.ok({
                 count: attachments.length,

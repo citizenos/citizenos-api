@@ -1,8 +1,12 @@
-## 2021-09-28 - v. 4.0.0
+## 2021-10-08 - v. 4.0.0
 
 * Add API `PUT /api/users/:userId/topics/:topicId/join` - generation of join links with specific access level - https://github.com/citizenos/citizenos-fe/issues/311
 * Add API `PUT /api/users/:userId/topics/:topicId/join/:token` - assign access level for given join token - https://github.com/citizenos/citizenos-fe/issues/311
 * Remove API `PUT /api/users/:userId/topics/:topicId/tokenJoin` - use the new API-s above - https://github.com/citizenos/citizenos-fe/issues/311
+
+## 2021-09-28 - v. 3.0.1
+
+* Add duplicate topic endpoint /api/users/:userId/topics/:topicId/duplicate - https://github.com/citizenos/citizenos-fe/issues/416
 
 ## 2021-06-01 - v. 3.0.0
 
