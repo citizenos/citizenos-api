@@ -144,12 +144,13 @@ module.exports = {
                     AND (a.data->'result')::text ILIKE '%/tokenJoin%'
             `;
 
-            await queryInterface.sequelize.query(
+            const activityMigrationResult = await queryInterface.sequelize.query(
                 queryUpdateActivities,
                 {
                     transaction: t
                 }
             );
+            console.info('Activity migration updated row count:', activityMigrationResult[1].rowCount);
         });
 
 
