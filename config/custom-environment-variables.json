@@ -4,8 +4,11 @@
     "fe": "CITIZENOS_URL_FE"
   },
   "db": {
-    "__name": "DB_CONFIG",
-    "__format": "json"
+    "url": "DATABASE_URL",
+    "options": {
+      "__name": "DATABASE_OPTIONS",
+      "__format": "json"
+    }
   },
   "topic": {
     "titleLengthMax": "TITLE_LENGTH_MAX"
