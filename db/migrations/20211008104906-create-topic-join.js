@@ -70,11 +70,8 @@ module.exports = {
             // Create a TokenJoins entry for each Topic to pull over old token, pad them 0-s as they are shorter
             await queryInterface.sequelize.query(
                 `
-                INSERT INTO 
-                    "TopicJoins"
-                VALUES (
-                    SELECT "id", LPAD("tokenJoin", 12, '0'), 'read', NOW(), NOW(), null FROM "Topics"
-                );
+                INSERT INTO "TopicJoins"
+                    SELECT id, LPAD("tokenJoin", 12, '0'), 'read', NOW(), NOW(), null FROM "Topics"
                 `,
                 {
                     transaction: t
@@ -153,8 +150,6 @@ module.exports = {
                     transaction: t
                 }
             );
-
-            throw new Error('Incomplete migration, force rollback with error!'); // FIXME: REMOVE ONCE COMPLETE
         });
 
 

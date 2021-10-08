@@ -1471,6 +1471,7 @@ const crypto = require('crypto');
 const cosJwt = app.get('cosJwt');
 const moment = app.get('moment');
 const validator = app.get('validator');
+const uuid = app.get('uuid');
 
 const shared = require('../utils/shared');
 const userLib = require('./lib/user')(app);
@@ -9192,7 +9193,7 @@ suite('Topics', function () {
         });
 
         test('Success - non-authenticated User - show "public" Topics with status', async function () {
-            const data = (await topicsListUnauth(userAgent, Topic.STATUSES.inProgress, null, null, null, null, null, null)).body.data
+            const data = (await topicsListUnauth(userAgent, Topic.STATUSES.inProgress, null, null, null, null, null, null)).body.data;
 
             assert.property(data, 'countTotal');
 
@@ -9251,7 +9252,7 @@ suite('Topics', function () {
 
         test('Success - non-authenticated User - show "public" Topics with sourcePartnerId', async function () {
             const now = moment().format();
-            const partnerId = '4b511ad1-5b20-4c13-a6da-0b95d07b6900';
+            const partnerId = uuid.v4();
             await db
                 .query(
                     `
@@ -9280,7 +9281,8 @@ suite('Topics', function () {
                         type: db.QueryTypes.INSERT,
                         raw: true
                     }
-                )
+                );
+
             const partnerTopic = (await topicCreate(creatorAgent, creator.id, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health], null, null, null)).body.data;
 
             // Set "title" to Topic, otherwise there will be no results because of the "title NOT NULL" in the query
@@ -9295,7 +9297,7 @@ suite('Topics', function () {
                     }
                 }
             );
-            const data = (await topicsListUnauth(userAgent, null, null, null, null, null, ['4b511ad1-5b20-4c13-a6da-0b95d07b6901', partnerId], null)).body.data;
+            const data = (await topicsListUnauth(userAgent, null, null, null, null, null, partnerId, null)).body.data;
 
             assert.property(data, 'countTotal');
 
