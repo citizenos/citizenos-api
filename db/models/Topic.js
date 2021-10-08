@@ -1,10 +1,9 @@
 'use strict';
 
-var _ = require('lodash');
-var hooks = require('../../libs/sequelize/hooks');
-var util = require('util');
-var stringUtil = require('../../libs/util');
-var config = require('config');
+const _ = require('lodash');
+const hooks = require('../../libs/sequelize/hooks');
+const util = require('util');
+const config = require('config');
 const Sequelize = require('sequelize');
 
 /**
@@ -20,20 +19,20 @@ const Sequelize = require('sequelize');
 module.exports = function (sequelize, DataTypes) {
 
     // The order of the status properties is important - you can move from top down (inProgress->voting->followUp..)
-    var STATUSES = {
+    const STATUSES = {
         inProgress: 'inProgress', // Being worked on
         voting: 'voting', // Is being voted which means the Topic is locked and cannot be edited.
         followUp: 'followUp', // Done editing Topic and executing on the follow up plan.
         closed: 'closed' // Final status - Topic is completed and no editing/reopening/voting can occur.
     };
 
-    var VISIBILITY = {
+    const VISIBILITY = {
         public: 'public', // Everyone has read-only on the Topic.  Pops up in the searches..
         private: 'private' // No-one can see except collaborators
     };
 
     // Categories - https://trello.com/c/CydUreyf/69-topics-category-support
-    var CATEGORIES = {
+    const CATEGORIES = {
         business: 'business', // Business and industry
         transport: 'transport', // Public transport and road safety
         taxes: 'taxes', // Taxes and budgeting
@@ -53,16 +52,16 @@ module.exports = function (sequelize, DataTypes) {
         society: 'society' //Democracy and civil society
     };
 
-    var CATEGORIES_COUNT_MAX = 3; // Maximum of 3 categories allowed at the time.
-    var TITLE_LENGTH_MAX = config.topic.titleLengthMax; // Maximum length of "title"
+    const CATEGORIES_COUNT_MAX = 3; // Maximum of 3 categories allowed at the time.
+    let TITLE_LENGTH_MAX = config.topic.titleLengthMax; // Maximum length of "title"
     if (!parseInt(TITLE_LENGTH_MAX, 10) || TITLE_LENGTH_MAX > 1000) {
         TITLE_LENGTH_MAX = 1000;
     }
-    var HASHTAG_BYTES_LENGTH_MAX = 59; //Maximum bytelenght of twitter hashtag in search API.
+    const HASHTAG_BYTES_LENGTH_MAX = 59; //Maximum bytelenght of twitter hashtag in search API.
 
-    var Op = Sequelize.Op;
+    const Op = Sequelize.Op;
 
-    var Topic = sequelize.define(
+    const Topic = sequelize.define(
         'Topic',
         {
             id: {
@@ -145,15 +144,6 @@ module.exports = function (sequelize, DataTypes) {
                 },
                 onUpdate: 'CASCADE',
                 onDelete: 'CASCADE'
-            },
-            tokenJoin: {
-                type: DataTypes.STRING(8),
-                comment: 'Token for joining the Topic. Used for sharing public urls for Users to join the Topic.',
-                allowNull: false,
-                unique: true,
-                defaultValue: function () {
-                    return Topic.generateTokenJoin();
-                }
             },
             padUrl: {
                 type: DataTypes.STRING(255),
@@ -277,11 +267,6 @@ module.exports = function (sequelize, DataTypes) {
         });
     };
 
-    // Class Method
-    Topic.generateTokenJoin = function () {
-        return stringUtil.randomString();
-    };
-
     // Overrides the default toJSON() to avoid sensitive data from ending up in the output.
     // Must do until scopes arrive to Sequelize - https://github.com/sequelize/sequelize/issues/1462
     Topic.prototype.toJSON = function () {
@@ -292,7 +277,6 @@ module.exports = function (sequelize, DataTypes) {
             description: this.dataValues.description,
             status: this.dataValues.status,
             visibility: this.dataValues.visibility,
-            tokenJoin: this.dataValues.tokenJoin,
             categories: this.dataValues.categories,
             padUrl: this.dataValues.padUrl,
             sourcePartnerId: this.dataValues.sourcePartnerId,
@@ -317,6 +301,10 @@ module.exports = function (sequelize, DataTypes) {
                     rows: this.dataValues.memberGroups
                 }
             };
+        }
+
+        if (this.dataValues.join) { // TopicJoin
+            data.join = this.dataValues.join;
         }
 
         return data;

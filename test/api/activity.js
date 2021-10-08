@@ -58,6 +58,7 @@ const Partner = models.Partner;
 const Topic = models.Topic;
 const TopicMemberUser = models.TopicMemberUser;
 
+module.exports.activitiesRead = activitiesRead;
 
 // API - /api/users*
 suite('Users', function () {

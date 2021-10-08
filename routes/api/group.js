@@ -29,7 +29,7 @@ module.exports = function (app) {
         try {
             const result = await db.query(`
                 SELECT
-                    g.visibility = \'public\' AS "isPublic",
+                    g.visibility = 'public' AS "isPublic",
                     gm.level::"enum_GroupMemberUsers_level" >= :level AS "allowed",
                     gm."userId" AS uid,
                     gm."level" AS level,

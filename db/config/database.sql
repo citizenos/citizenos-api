@@ -138,6 +138,17 @@ CREATE TYPE public."enum_TopicInviteUsers_level" AS ENUM (
 
 
 --
+-- Name: enum_TopicJoins_level; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public."enum_TopicJoins_level" AS ENUM (
+    'read',
+    'edit',
+    'admin'
+);
+
+
+--
 -- Name: enum_TopicMemberGroups_level; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -903,6 +914,41 @@ COMMENT ON COLUMN public."TopicInviteUsers".level IS 'User membership level.';
 
 
 --
+-- Name: TopicJoins; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."TopicJoins" (
+    "topicId" uuid NOT NULL,
+    token character varying(12) NOT NULL,
+    level public."enum_TopicJoins_level" DEFAULT 'read'::public."enum_TopicJoins_level" NOT NULL,
+    "createdAt" timestamp with time zone NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL,
+    "deletedAt" timestamp with time zone
+);
+
+
+--
+-- Name: COLUMN "TopicJoins"."topicId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicJoins"."topicId" IS 'Topic to which the Join information belongs.';
+
+
+--
+-- Name: COLUMN "TopicJoins".token; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicJoins".token IS 'Token for joining the Topic. Used for sharing public urls for Users to join the Topic.';
+
+
+--
+-- Name: COLUMN "TopicJoins".level; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicJoins".level IS 'Join level, that is what level access will the join token provide';
+
+
+--
 -- Name: TopicMemberGroups; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1137,7 +1183,6 @@ CREATE TABLE public."Topics" (
     "sourcePartnerId" uuid,
     "sourcePartnerObjectId" character varying(255),
     "creatorId" uuid NOT NULL,
-    "tokenJoin" character varying(8) NOT NULL,
     "padUrl" character varying(255) NOT NULL,
     "endsAt" timestamp with time zone,
     hashtag character varying(60) DEFAULT NULL::character varying,
@@ -1195,13 +1240,6 @@ COMMENT ON COLUMN public."Topics"."sourcePartnerObjectId" IS 'The Partner object
 --
 
 COMMENT ON COLUMN public."Topics"."creatorId" IS 'User ID of the creator of the Topic.';
-
-
---
--- Name: COLUMN "Topics"."tokenJoin"; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public."Topics"."tokenJoin" IS 'Token for joining the Topic. Used for sharing public urls for Users to join the Topic.';
 
 
 --
@@ -1315,10 +1353,10 @@ CREATE TABLE public."Users" (
     "termsVersion" character varying(255),
     "termsAcceptedAt" timestamp with time zone,
     "authorId" character varying(255),
+    preferences jsonb,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone,
-    settings jsonb
+    "deletedAt" timestamp with time zone
 );
 
 
@@ -1414,10 +1452,10 @@ COMMENT ON COLUMN public."Users"."authorId" IS 'Etherpad authorID for the user';
 
 
 --
--- Name: COLUMN "Users".settings; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN "Users".preferences; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public."Users".settings IS 'User settings JSON object';
+COMMENT ON COLUMN public."Users".preferences IS 'User preferences JSON object';
 
 
 --
@@ -1893,6 +1931,22 @@ ALTER TABLE ONLY public."TopicInviteUsers"
 
 
 --
+-- Name: TopicJoins TopicJoins_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicJoins"
+    ADD CONSTRAINT "TopicJoins_pkey" PRIMARY KEY ("topicId");
+
+
+--
+-- Name: TopicJoins TopicJoins_token_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicJoins"
+    ADD CONSTRAINT "TopicJoins_token_key" UNIQUE (token);
+
+
+--
 -- Name: TopicMemberGroups TopicMemberGroups_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1938,14 +1992,6 @@ ALTER TABLE ONLY public."TopicVotes"
 
 ALTER TABLE ONLY public."Topics"
     ADD CONSTRAINT "Topics_pkey" PRIMARY KEY (id);
-
-
---
--- Name: Topics Topics_tokenJoin_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."Topics"
-    ADD CONSTRAINT "Topics_tokenJoin_key" UNIQUE ("tokenJoin");
 
 
 --
@@ -2374,6 +2420,14 @@ ALTER TABLE ONLY public."TopicInviteUsers"
 
 
 --
+-- Name: TopicJoins TopicJoins_topicId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicJoins"
+    ADD CONSTRAINT "TopicJoins_topicId_fkey" FOREIGN KEY ("topicId") REFERENCES public."Topics"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: TopicMemberGroups TopicMemberGroups_groupId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2605,6 +2659,8 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 202002192021-alter-user-connection.js
 20200225152502-remove-vote-user-container-activity.js
 202010261616-alter-user-add-auhorID.js
+20211004193321-alter-user-add-preferences.js
+20211008104906-create-topic-join.js
 20210310104918-create-group-invite-user.js
 202103251231-alter-vote-lists-add-userhash.js
 20210329141948-alter-vote-user-containers.js
@@ -2612,5 +2668,4 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 202107151231-alter-vote-add-auto-close.js
 202106111127-alter-relations-add-on-cascade.js
 20210722084618-alter-vote-add-auto-close.js
-20211004193321-alter-user-add-settings.js
 \.

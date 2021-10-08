@@ -47,6 +47,7 @@ module.exports = function (app) {
     const Topic = models.Topic;
     const TopicMemberUser = models.TopicMemberUser;
     const TopicMemberGroup = models.TopicMemberGroup;
+    const TopicJoin = models.TopicJoin;
     const TopicReport = models.TopicReport;
     const TopicInviteUser = models.TopicInviteUser;
 
@@ -75,7 +76,7 @@ module.exports = function (app) {
         hmac.update(dataToHash);
 
         return hmac.digest('hex');
-    }
+    };
 
     const _hasPermission = async function (topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelf, partnerId) {
         const LEVELS = {
@@ -135,55 +136,55 @@ module.exports = function (app) {
                     raw: true
                 }
             );
-            if (result && result[0]) {
-                const isPublic = result[0].isPublic;
-                const status = result[0].status;
-                const hasDirectAccess = result[0].hasDirectAccess;
-                const level = result[0].level;
-                const sourcePartnerId = result[0].sourcePartnerId;
-                if (hasDirectAccess || (allowPublic && isPublic) || allowSelf) {
-                    // If Topic status is not in the allowed list, deny access.
-                    if (topicStatusesAllowed && !(topicStatusesAllowed.indexOf(status) > -1)) {
-                        logger.warn('Access denied to topic due to status mismatch! ', 'topicStatusesAllowed:', topicStatusesAllowed, 'status:', status);
+        if (result && result[0]) {
+            const isPublic = result[0].isPublic;
+            const status = result[0].status;
+            const hasDirectAccess = result[0].hasDirectAccess;
+            const level = result[0].level;
+            const sourcePartnerId = result[0].sourcePartnerId;
+            if (hasDirectAccess || (allowPublic && isPublic) || allowSelf) {
+                // If Topic status is not in the allowed list, deny access.
+                if (topicStatusesAllowed && !(topicStatusesAllowed.indexOf(status) > -1)) {
+                    logger.warn('Access denied to topic due to status mismatch! ', 'topicStatusesAllowed:', topicStatusesAllowed, 'status:', status);
 
-                        return false
-                    }
-
-                    // Don't allow Partner to edit other Partners topics
-                    if (!isPublic && partnerId && sourcePartnerId) {
-                        if (partnerId !== sourcePartnerId) {
-                            logger.warn('Access denied to topic due to Partner mismatch! ', 'partnerId:', partnerId, 'sourcePartnerId:', sourcePartnerId);
-
-                            return false;
-                        }
-                    }
-
-                    if (!allowSelf && (LEVELS[minRequiredLevel] > LEVELS[level])) {
-                        logger.warn('Access denied to topic due to member without permissions trying to delete user! ', 'userId:', userId);
-
-                        return false
-                    }
-
-                    const authorizationResult = {
-                        topic: {
-                            id: topicId,
-                            isPublic: isPublic,
-                            sourcePartnerId: sourcePartnerId,
-                            status: status,
-                            permissions: {
-                                level: level,
-                                hasDirectAccess: hasDirectAccess
-                            }
-                        }
-                    };
-
-                    return authorizationResult;
-                } else {
                     return false
                 }
+
+                // Don't allow Partner to edit other Partners topics
+                if (!isPublic && partnerId && sourcePartnerId) {
+                    if (partnerId !== sourcePartnerId) {
+                        logger.warn('Access denied to topic due to Partner mismatch! ', 'partnerId:', partnerId, 'sourcePartnerId:', sourcePartnerId);
+
+                        return false;
+                    }
+                }
+
+                if (!allowSelf && (LEVELS[minRequiredLevel] > LEVELS[level])) {
+                    logger.warn('Access denied to topic due to member without permissions trying to delete user! ', 'userId:', userId);
+
+                    return false
+                }
+
+                const authorizationResult = {
+                    topic: {
+                        id: topicId,
+                        isPublic: isPublic,
+                        sourcePartnerId: sourcePartnerId,
+                        status: status,
+                        permissions: {
+                            level: level,
+                            hasDirectAccess: hasDirectAccess
+                        }
+                    }
+                };
+
+                return authorizationResult;
             } else {
                 return false
             }
+        } else {
+            return false
+        }
     };
 
     /**
@@ -217,6 +218,7 @@ module.exports = function (app) {
             if (topicStatusesAllowed && !Array.isArray(topicStatusesAllowed)) {
                 throw new Error('topicStatusesAllowed must be an array but was ', topicStatusesAllowed);
             }
+
             try {
                 const authorizationResult = await _hasPermission(topicId, userId, level, allowPublic, topicStatusesAllowed, allowSelfDelete, partnerId)
                 // Add "req.locals" to store info collected from authorization for further use in the request. Might save a query or two for some use cases.
@@ -250,7 +252,7 @@ module.exports = function (app) {
                 }
 
                 return next();
-            } catch(err) {
+            } catch (err) {
                 return next(err);
             }
         };
@@ -347,7 +349,7 @@ module.exports = function (app) {
                 } else {
                     return res.unauthorised();
                 }
-            } catch(err) {
+            } catch (err) {
                 return next(err);
             }
         };
@@ -458,16 +460,16 @@ module.exports = function (app) {
                         JOIN "Votes" v ON v.id = vl."voteId"
                         WHERE v."authType"='${Vote.AUTH_TYPES.hard}' AND vl."voteId" = :voteId
                         AND vl."userId" IN (
-							SELECT "userId" FROM (
-								SELECT DISTINCT ON (vl."userHash")
-								vl."userId",
-								vl."userHash",
-								MAX(vl."updatedAt")
-								FROM "VoteLists" vl
-								WHERE vl."voteId" = :voteId
-								GROUP BY vl."userId", vl."userHash", vl."updatedAt" ORDER BY vl."userHash", vl."updatedAt" DESC
-							) vu
-						)
+                            SELECT "userId" FROM (
+                                SELECT DISTINCT ON (vl."userHash")
+                                vl."userId",
+                                vl."userHash",
+                                MAX(vl."updatedAt")
+                                FROM "VoteLists" vl
+                                WHERE vl."voteId" = :voteId
+                                GROUP BY vl."userId", vl."userHash", vl."updatedAt" ORDER BY vl."userHash", vl."updatedAt" DESC
+                            ) vu
+                        )
                     ),
                     votes_with_delegations("voteId", "userId", "optionId", "optionGroupId", "byUserId", depth) AS (
                         SELECT
@@ -488,23 +490,23 @@ module.exports = function (app) {
                     v."voteId",
                     (SELECT vc.count + vd.count + dt.count
                         FROM (
-						SELECT COUNT (*) FROM (
-                            SELECT DISTINCT ON ("userId")
-								"userId"
-                            FROM votes_with_delegations
-                            WHERE "byUserId" IS NULL
-							) nd
+                            SELECT COUNT (*) FROM (
+                                SELECT DISTINCT ON ("userId")
+                                     "userId"
+                                FROM votes_with_delegations
+                                WHERE "byUserId" IS NULL
+                            ) nd
                         ) vc
                         JOIN (
                             SELECT COUNT(*) FROM (
                                 SELECT "byUserId" FROM votes_with_delegations WHERE "byUserId" IS NOT NULL GROUP BY "byUserId"
                                 ) d
                         ) vd ON vd."count" = vd."count"
-						JOIN (
-						SELECT COUNT(*) FROM (
-							SELECT vl."userId" FROM "VoteLists" vl JOIN votes_with_delegations vd ON vd."userId" = vl."userId" WHERE vd."byUserId" IS NOT NULL GROUP BY vl."userId"
-							) dt
-						) dt ON dt."count" = dt."count"
+                        JOIN (
+                        SELECT COUNT(*) FROM (
+                            SELECT vl."userId" FROM "VoteLists" vl JOIN votes_with_delegations vd ON vd."userId" = vl."userId" WHERE vd."byUserId" IS NOT NULL GROUP BY vl."userId"
+                            ) dt
+                        ) dt ON dt."count" = dt."count"
                     ) AS "votersCount",
                     vo."value"
                     ${includeVoted}
@@ -615,7 +617,7 @@ module.exports = function (app) {
 
         const urlOptions = {
             token: cosJwt.getTokenRestrictedUse(tokenPayload, 'GET ' + path, tokenOptions)
-        }
+        };
 
         urlOptions.accept = 'application/x-7z-compressed';
 
@@ -862,9 +864,13 @@ module.exports = function (app) {
                     t.visibility,
                     t.hashtag,
                     CASE
-                    WHEN COALESCE(tmup.level, tmgp.level, 'none') =  'admin' THEN t."tokenJoin"
+                    WHEN COALESCE(tmup.level, tmgp.level, 'none') = 'admin' THEN tj.token
                     ELSE NULL
-                    END as "tokenJoin",
+                    END as "join.token",
+                    CASE
+                    WHEN COALESCE(tmup.level, tmgp.level, 'none') = 'admin' THEN tj.level
+                    ELSE NULL
+                    END as "join.level",
                     CASE
                     WHEN tp."topicId" = t.id THEN true
                     ELSE false
@@ -982,6 +988,7 @@ module.exports = function (app) {
                 ) AS tv ON (tv."topicId" = t.id)
                 LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId
                 LEFT JOIN "TopicReports" tr ON (tr."topicId" = t.id AND tr."resolvedById" IS NULL AND tr."deletedAt" IS NULL)
+                LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                 ${join}
             WHERE t.id = :topicId
                 AND t."deletedAt" IS NULL
@@ -1333,8 +1340,19 @@ module.exports = function (app) {
             // Create topic on Etherpad side
             await cosEtherpad.createTopic(topic.id, user.language, topicDescription);
 
+            let topicJoin;
+
             await db.transaction(async function (t) {
                 await topic.save({transaction: t});
+                topicJoin = await TopicJoin.create(
+                    {
+                        topicId: topic.id
+                    },
+                    {
+                        transaction: t
+                    }
+                );
+
                 await topic.addMemberUser(// Magic method by Sequelize - https://github.com/sequelize/sequelize/wiki/API-Reference-Associations#hasmanytarget-options
                     user.id,
                     {
@@ -1344,6 +1362,7 @@ module.exports = function (app) {
                         transaction: t
                     }
                 );
+
                 await cosActivities.createActivity(
                     topic,
                     null,
@@ -1369,6 +1388,7 @@ module.exports = function (app) {
                     }
                 );
             }
+
             const authorIds = topic.authorIds;
             const authors = await User.findAll({
                 where: {
@@ -1393,6 +1413,8 @@ module.exports = function (app) {
             resObject.permission = {
                 level: TopicMemberUser.LEVELS.admin
             };
+
+            resObject.join = topicJoin.toJSON();
 
             return res.created(resObject);
         } catch (err) {
@@ -1790,7 +1812,7 @@ module.exports = function (app) {
             await _topicUpdate(req, res, next);
 
             return res.ok();
-        } catch(err) {
+        } catch (err) {
             next(err);
         }
     });
@@ -1800,47 +1822,110 @@ module.exports = function (app) {
             await _topicUpdate(req, res, next);
 
             return res.noContent();
-        } catch(err) {
+        } catch (err) {
             next(err);
         }
     });
 
     /**
-     * Update Topic join token (tokenJoin)
+     * Update (regenerate) Topic join token (TopicJoin) with a level
      *
-     * TODO: Should be part of PUT /topics/:topicId, but that is allowed for "edit". Token changing should only be allowed for "admin".
+     * PUT as there is one TopicJoin for each Topic. Always overwrites previous.
      *
-     * @see https://trello.com/c/ezqHssSL/124-refactoring-put-tokenjoin-to-be-part-of-put-topics-topicid
+     * @see https://github.com/citizenos/citizenos-fe/issues/311
      */
-    app.put('/api/users/:userId/topics/:topicId/tokenJoin', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/join', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         try {
-            const topic = await Topic.findOne({
+            const topicId = req.params.topicId;
+            const level = req.body.level;
+
+            if (!Object.values(TopicJoin.LEVELS).includes(level)) {
+                return res.badRequest('Invalid value for property "level". Possible values are ' + Object.values(TopicJoin.LEVELS) + '.', 1);
+            }
+
+            const topicJoin = await TopicJoin.findOne({
                 where: {
-                    id: req.params.topicId
+                    topicId: topicId
                 }
             });
 
-            const tokenJoin = Topic.generateTokenJoin();
-            topic.tokenJoin = tokenJoin;
+            topicJoin.token = TopicJoin.generateToken();
+            topicJoin.level = level;
 
-                await db
-                    .transaction(async function (t) {
-                        await cosActivities
-                            .updateActivity(topic, null, {
+            await db
+                .transaction(async function (t) {
+                    await cosActivities
+                        .updateActivity(
+                            topicJoin,
+                            null,
+                            {
                                 type: 'User',
                                 id: req.user.id,
                                 ip: req.ip
-                            }, null, req.method + ' ' + req.path, t);
+                            },
+                            null,
+                            req.method + ' ' + req.path,
+                            t
+                        );
 
-                        await topic.save({
-                            transaction: t
-                        });
+                   await topicJoin.save({transaction: t});
+                });
 
-                        t.afterCommit(() => {
-                            return res.ok({tokenJoin: tokenJoin});
-                        });
-                    });
-        } catch(err) {
+            return res.ok(topicJoin);
+        } catch (err) {
+            return next(err);
+        }
+    });
+
+    /**
+     * Update level of an existing token WITHOUT regenerating the token
+     *
+     * @see https://github.com/citizenos/citizenos-fe/issues/311
+     */
+    app.put('/api/users/:userId/topics/:topicId/join/:token', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+        try {
+            const topicId = req.params.topicId;
+            const token = req.params.token;
+            const level = req.body.level;
+
+            if (!Object.values(TopicJoin.LEVELS).includes(level)) {
+                return res.badRequest('Invalid value for property "level". Possible values are ' + Object.values(TopicJoin.LEVELS) + '.', 1);
+            }
+
+            const topicJoin = await TopicJoin.findOne({
+                where: {
+                    topicId: topicId,
+                    token: token
+                }
+            });
+
+            if (!topicJoin) {
+                return res.notFound('Nothing found for topicId and token combination.');
+            }
+
+            topicJoin.level = level;
+
+            await db
+                .transaction(async function (t) {
+                    await cosActivities
+                        .updateActivity(
+                            topicJoin,
+                            null,
+                            {
+                                type: 'User',
+                                id: req.user.id,
+                                ip: req.ip
+                            },
+                            null,
+                            req.method + ' ' + req.path,
+                            t
+                        );
+
+                    await topicJoin.save({transaction: t});
+                });
+
+            return res.ok(topicJoin);
+        } catch (err) {
             return next(err);
         }
     });
@@ -1892,7 +1977,7 @@ module.exports = function (app) {
                     ip: req.ip
                 }, req.method + ' ' + req.path, t);
 
-                t.afterCommit( () => {
+                t.afterCommit(() => {
                     return res.ok();
                 });
             });
@@ -2024,9 +2109,13 @@ module.exports = function (app) {
                      t.visibility,
                      t.hashtag,
                      CASE
-                        WHEN COALESCE(tmup.level, tmgp.level, 'none') = 'admin' THEN t."tokenJoin"
-                        ELSE NULL
-                     END as "tokenJoin",
+                     WHEN COALESCE(tmup.level, tmgp.level, 'none') = 'admin' THEN tj.token
+                     ELSE NULL
+                     END as "join.token",
+                     CASE
+                     WHEN COALESCE(tmup.level, tmgp.level, 'none') = 'admin' THEN tj.level
+                     ELSE NULL
+                     END as "join.level",
                      CASE
                         WHEN tp."topicId" = t.id THEN true
                         ELSE false
@@ -2149,7 +2238,8 @@ module.exports = function (app) {
                                 ) AS tcc
                             GROUP BY tcc."topicId"
                     ) AS com ON (com."topicId" = t.id)
-                    LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId
+                    LEFT JOIN "TopicPins" tp ON (tp."topicId" = t.id AND tp."userId" = :userId)
+                    LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                     ${join}
                 WHERE ${where}
                 ORDER BY "pinned" DESC, "order" ASC, t."updatedAt" DESC
@@ -2181,7 +2271,7 @@ module.exports = function (app) {
             };
 
             if (rowCount > 0) {
-                rows.forEach( (topic) => {
+                rows.forEach((topic) => {
                     topic.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
 
                     if (include.indexOf('vote') > -1) {
@@ -2339,7 +2429,8 @@ module.exports = function (app) {
                         t.status,
                         t.visibility,
                         t.hashtag,
-                        t."tokenJoin",
+                        tj."token" AS "join.token",
+                        tj."level" AS "join.level",
                         t.categories,
                         t."endsAt",
                         t."createdAt",
@@ -2442,6 +2533,7 @@ module.exports = function (app) {
                             SELECT t.id, MAX(a."updatedAt") as "lastActivity"
                             FROM "Topics" t JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds" GROUP BY t.id
                         ) ta ON (ta.id = t.id)
+                        LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                         ${join}
                     WHERE ${where}
                     ORDER BY "lastActivity" DESC
@@ -2639,11 +2731,11 @@ module.exports = function (app) {
      * Get all members of the Topic
      */
     app.get('/api/users/:userId/topics/:topicId/members', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), async function (req, res, next) {
-        try{
+        try {
             const response = await _getAllTopicMembers(req.params.topicId, req.user.id);
 
             return res.ok(response);
-        } catch(err) {
+        } catch (err) {
             return next(err);
         }
     });
@@ -2738,19 +2830,19 @@ module.exports = function (app) {
                 LIMIT :limit
                 OFFSET :offset
                 ;`,
-                {
-                    replacements: {
-                        topicId: req.params.topicId,
-                        userId: req.user.id,
-                        search: '%'+search+'%',
-                        limit,
-                        offset
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true,
-                    nest: true
-                }
-            )
+                    {
+                        replacements: {
+                            topicId: req.params.topicId,
+                            userId: req.user.id,
+                            search: '%' + search + '%',
+                            limit,
+                            offset
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true,
+                        nest: true
+                    }
+                )
             let countTotal = 0;
             if (users && users.length) {
                 countTotal = users[0].countTotal;
@@ -2760,7 +2852,7 @@ module.exports = function (app) {
 
                 userRow.groups.rows.forEach(function (group, index) {
                     if (group.id === null) {
-                        userRow.groups.rows.splice(index,1);
+                        userRow.groups.rows.splice(index, 1);
                     } else if (group.level === null) {
                         group.name = null;
                     }
@@ -2773,7 +2865,7 @@ module.exports = function (app) {
                 count: users.length,
                 rows: users
             });
-        } catch(err) {
+        } catch (err) {
             return next(err);
         }
     });
@@ -2853,7 +2945,7 @@ module.exports = function (app) {
                 count: groups.length,
                 rows: groups
             });
-        } catch(err) {
+        } catch (err) {
             return next(err);
         }
     });
@@ -2997,21 +3089,21 @@ module.exports = function (app) {
                                 logger.error('Adding Group failed', inspection.reason());
                             }
                         });
-                        await Promise.all(memberGroupActivities);
-                        const emailResult = await emailLib.sendTopicMemberGroupCreate(groupIdsToInvite, req.user.id, topicId);
-                        if (emailResult && emailResult.errors) {
-                            logger.error('ERRORS', emailResult.errors);
-                        }
+                    await Promise.all(memberGroupActivities);
+                    const emailResult = await emailLib.sendTopicMemberGroupCreate(groupIdsToInvite, req.user.id, topicId);
+                    if (emailResult && emailResult.errors) {
+                        logger.error('ERRORS', emailResult.errors);
+                    }
 
-                        t.afterCommit(() => {
-                            return res.created();
-                        });
+                    t.afterCommit(() => {
+                        return res.created();
                     });
+                });
             } else {
                 return res.forbidden();
             }
 
-        } catch(err) {
+        } catch (err) {
             if (err) {
                 logger.error('Adding Group to Topic failed', req.path, err);
 
@@ -3058,10 +3150,10 @@ module.exports = function (app) {
                     topicMemberUser.level = newLevel;
 
                     await cosActivities.updateActivity(topicMemberUser, null, {
-                            type: 'User',
-                            id: req.user.id,
-                            ip: req.ip
-                        }, null, req.method + ' ' + req.path, t)
+                        type: 'User',
+                        id: req.user.id,
+                        ip: req.ip
+                    }, null, req.method + ' ' + req.path, t)
                     await topicMemberUser.save({
                         transaction: t
                     });
@@ -3087,7 +3179,7 @@ module.exports = function (app) {
     /**
      * Update Group membership information
      */
-    app.put('/api/users/:userId/topics/:topicId/members/groups/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp] ), async function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/members/groups/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const newLevel = req.body.level;
         const memberId = req.params.memberId;
         const topicId = req.params.topicId;
@@ -3126,7 +3218,7 @@ module.exports = function (app) {
 
                     await topicMemberGroup.save({transaction: t});
 
-                    t.afterCommit(()=> res.ok());
+                    t.afterCommit(() => res.ok());
                 });
             } else {
                 return res.forbidden();
@@ -3168,7 +3260,8 @@ module.exports = function (app) {
                         t.description as "Topic.description",
                         t.status as "Topic.status",
                         t.visibility as "Topic.visibility",
-                        t."tokenJoin" as "Topic.tokenJoin",
+                        tj."token" as "Topic.join.token",
+                        tj."level" as "Topic.join.level",
                         t.categories as "Topic.categories",
                         t."padUrl" as "Topic.padUrl",
                         t."sourcePartnerId" as "Topic.sourcePartnerId",
@@ -3186,6 +3279,8 @@ module.exports = function (app) {
                         "TopicMemberUsers" tmu
                     JOIN "Topics" t
                         ON t.id = tmu."topicId"
+                    JOIN "TopicJoins" tj 
+                        ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                     JOIN "Users" u
                         ON u.id = tmu."userId"
                         WHERE
@@ -3202,7 +3297,8 @@ module.exports = function (app) {
                         raw: true,
                         nest: true
                     }
-                )
+                );
+
             const topic = Topic.build(topicMemberUser.Topic);
             if (topic.status === Topic.STATUSES.closed && req.user.id !== memberId) {
                 return res.forbidden();
@@ -3296,7 +3392,8 @@ module.exports = function (app) {
                             t.description as "Topic.description",
                             t.status as "Topic.status",
                             t.visibility as "Topic.visibility",
-                            t."tokenJoin" as "Topic.tokenJoin",
+                            tj."token" as "Topic.join.token",
+                            tj."level" as "Topic.join.level",
                             t.categories as "Topic.categories",
                             t."padUrl" as "Topic.padUrl",
                             t."sourcePartnerId" as "Topic.sourcePartnerId",
@@ -3313,6 +3410,8 @@ module.exports = function (app) {
                             "TopicMemberGroups" tmg
                         JOIN "Topics" t
                             ON t.id = tmg."topicId"
+                        JOIN "TopicJoins" tj 
+                            ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                         JOIN "Groups" g
                             ON g.id = tmg."groupId"
                             WHERE
@@ -3330,27 +3429,27 @@ module.exports = function (app) {
                             nest: true
                         }
                     );
-                    const topic = Topic.build(topicMemberGroup.Topic);
-                    topic.dataValues.id = topicId;
-                    const group = Group.build(topicMemberGroup.Group);
-                    group.dataValues.id = memberId;
+                const topic = Topic.build(topicMemberGroup.Topic);
+                topic.dataValues.id = topicId;
+                const group = Group.build(topicMemberGroup.Group);
+                group.dataValues.id = memberId;
 
-                    await db.transaction(async function (t) {
-                        await cosActivities.deleteActivity(
-                            group,
-                            topic,
-                            {
-                                type: 'User',
-                                id: req.user.id,
-                                ip: req.ip
-                            },
-                            req.method + ' ' + req.path,
-                            t
-                        );
+                await db.transaction(async function (t) {
+                    await cosActivities.deleteActivity(
+                        group,
+                        topic,
+                        {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
 
-                        await db
-                            .query(
-                                `
+                    await db
+                        .query(
+                            `
                                 DELETE FROM
                                     "TopicMemberGroups"
                                 WHERE ctid IN (
@@ -3362,17 +3461,17 @@ module.exports = function (app) {
                                     LIMIT 1
                                 )
                                 `,
-                                {
-                                    replacements: {
-                                        topicId: topicId,
-                                        groupId: memberId
-                                    },
-                                    type: db.QueryTypes.DELETE,
-                                    raw: true
-                                }
-                            );
-                        t.afterCommit(() => res.ok());
-                    });
+                            {
+                                replacements: {
+                                    topicId: topicId,
+                                    groupId: memberId
+                                },
+                                type: db.QueryTypes.DELETE,
+                                raw: true
+                            }
+                        );
+                    t.afterCommit(() => res.ok());
+                });
             } else {
                 return res.forbidden();
             }
@@ -3426,16 +3525,16 @@ module.exports = function (app) {
             if (validEmails.length) {
                 // Find out which e-mails already exist
                 const usersExistingEmail = await User
-                .findAll({
-                    where: {
-                        email: {
-                            [Op.iLike]: {
-                                [Op.any]: validEmails
+                    .findAll({
+                        where: {
+                            email: {
+                                [Op.iLike]: {
+                                    [Op.any]: validEmails
+                                }
                             }
-                        }
-                    },
-                    attributes: ['id', 'email']
-                });
+                        },
+                        attributes: ['id', 'email']
+                    });
 
 
                 _(usersExistingEmail).forEach(function (u) {
@@ -3516,7 +3615,7 @@ module.exports = function (app) {
                 });
 
                 const createInvitePromises = validUserIdMembers.map(async function (member) {
-                    const addedMember = currentMembers.find (function (cmember) {
+                    const addedMember = currentMembers.find(function (cmember) {
                         return cmember.userId === member.userId;
                     });
                     if (addedMember) {
@@ -3586,7 +3685,7 @@ module.exports = function (app) {
                 return !!invite;
             });
 
-            for(let invite of createdInvites) {
+            for (let invite of createdInvites) {
                 invite.inviteMessage = inviteMessage;
             }
 
@@ -3600,7 +3699,7 @@ module.exports = function (app) {
             } else {
                 return res.badRequest('No invites were created. Possibly because no valid userId-s (uuidv4s or emails) were provided.', 1);
             }
-        } catch(err) {
+        } catch (err) {
             return next(err);
         }
     });
@@ -3618,8 +3717,8 @@ module.exports = function (app) {
 
         try {
             const invites = await db
-            .query(
-                `SELECT
+                .query(
+                    `SELECT
                     tiu.id,
                     tiu."creatorId",
                     tiu.level,
@@ -3639,18 +3738,18 @@ module.exports = function (app) {
                 LIMIT :limit
                 OFFSET :offset
                 ;`,
-                {
-                    replacements: {
-                        topicId: req.params.topicId,
-                        limit,
-                        offset,
-                        search: `%${search}%`
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true,
-                    nest: true
-                }
-            )
+                    {
+                        replacements: {
+                            topicId: req.params.topicId,
+                            limit,
+                            offset,
+                            search: `%${search}%`
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true,
+                        nest: true
+                    }
+                )
 
             if (!invites) {
                 return res.notFound();
@@ -3660,7 +3759,7 @@ module.exports = function (app) {
                 countTotal = invites[0].countTotal;
             }
 
-            invites.forEach(function(invite) {
+            invites.forEach(function (invite) {
                 delete invite.countTotal;
             });
 
@@ -3669,7 +3768,7 @@ module.exports = function (app) {
                 count: invites.length,
                 rows: invites
             });
-        } catch(err) {
+        } catch (err) {
             return next(err);
         }
     });
@@ -3738,7 +3837,11 @@ module.exports = function (app) {
             }
 
             // At this point we can already confirm users e-mail
-            await User.update({emailIsVerified: true},{where: { id: invite.userId}, fields: ['emailIsVerified'], limit: 1});
+            await User.update({emailIsVerified: true}, {
+                where: {id: invite.userId},
+                fields: ['emailIsVerified'],
+                limit: 1
+            });
 
             return res.ok(invite);
 
@@ -3767,7 +3870,7 @@ module.exports = function (app) {
             }
 
             return res.ok();
-        } catch(err) {
+        } catch (err) {
             return next(err);
         }
     });
@@ -3889,23 +3992,27 @@ module.exports = function (app) {
      * Join authenticated User to Topic with a given token.
      *
      * Allows sharing of private join urls for example in forums, on conference screen...
-     *
-     * TODO: API url is fishy.. maybe should be POST /api/topics/:joinToken/members
      */
-    app.post('/api/topics/join/:tokenJoin', loginCheck(['partner']), async function (req, res, next) {
-        const tokenJoin = req.params.tokenJoin;
+    app.post('/api/topics/join/:token', loginCheck(['partner']), async function (req, res, next) {
+        const token = req.params.token;
         const userId = req.user.id;
 
         try {
-            const topic = await Topic.findOne({
+            const topicJoin = await TopicJoin.findOne({
                 where: {
-                    tokenJoin: tokenJoin
+                    token: token
                 }
             });
 
-            if (!topic) {
+            if (!topicJoin) {
                 return res.badRequest('Matching token not found', 1);
             }
+
+            const topic = await Topic.findOne({
+                where: {
+                    id: topicJoin.topicId
+                }
+            });
 
             await db.transaction(async function (t) {
                 const [memberUser, created] = await TopicMemberUser.findOrCreate({ // eslint-disable-line
@@ -3914,7 +4021,7 @@ module.exports = function (app) {
                         userId: userId
                     },
                     defaults: {
-                        level: TopicMemberUser.LEVELS.read
+                        level: topicJoin.level
                     },
                     transaction: t
                 });
@@ -3932,31 +4039,30 @@ module.exports = function (app) {
                             type: 'User',
                             id: user.id,
                             ip: req.ip,
-                            level: TopicMemberUser.LEVELS.read
+                            level: topicJoin.level
                         },
                         req.method + ' ' + req.path,
                         t
                     );
                 }
-
-                const authorIds = topic.authorIds;
-                const authors = await User.findAll({
-                    where: {
-                        id: authorIds
-                    },
-                    attributes: ['id', 'name'],
-                    raw: true
-                });
-
-                const resObject = topic.toJSON();
-                resObject.authors = authors;
-                resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
-
-                t.afterCommit(() => {
-                    return res.ok(resObject);
-                });
             });
-        } catch (err){
+
+            const authorIds = topic.authorIds;
+            const authors = await User.findAll({
+                where: {
+                    id: authorIds
+                },
+                attributes: ['id', 'name'],
+                raw: true
+            });
+
+            const resObject = topic.toJSON();
+
+            resObject.authors = authors;
+            resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+
+            return res.ok(resObject);
+        } catch (err) {
             next(err);
         }
     });
@@ -3999,34 +4105,34 @@ module.exports = function (app) {
             });
 
             await db.transaction(async function (t) {
-                    attachment = await attachment.save({transaction: t});
-                    await TopicAttachment.create(
-                        {
-                            topicId: req.params.topicId,
-                            attachmentId: attachment.id
-                        },
-                        {
-                            transaction: t
-                        }
-                    );
-                    await cosActivities.addActivity(
-                        attachment,
-                        {
-                            type: 'User',
-                            id: req.user.id,
-                            ip: req.ip
-                        },
-                        null,
-                        topic,
-                        req.method + ' ' + req.path,
-                        t
-                    );
+                attachment = await attachment.save({transaction: t});
+                await TopicAttachment.create(
+                    {
+                        topicId: req.params.topicId,
+                        attachmentId: attachment.id
+                    },
+                    {
+                        transaction: t
+                    }
+                );
+                await cosActivities.addActivity(
+                    attachment,
+                    {
+                        type: 'User',
+                        id: req.user.id,
+                        ip: req.ip
+                    },
+                    null,
+                    topic,
+                    req.method + ' ' + req.path,
+                    t
+                );
 
-                    t.afterCommit(() => {
-                        return res.ok(attachment.toJSON());
-                    });
+                t.afterCommit(() => {
+                    return res.ok(attachment.toJSON());
+                });
             });
-        } catch(err) {
+        } catch (err) {
             next(err);
         }
     });
@@ -4042,12 +4148,12 @@ module.exports = function (app) {
 
         try {
             const attachment = await Attachment
-            .findOne({
-                where: {
-                    id: req.params.attachmentId
-                },
-                include: [Topic]
-            });
+                .findOne({
+                    where: {
+                        id: req.params.attachmentId
+                    },
+                    include: [Topic]
+                });
 
             attachment.name = newName;
 
@@ -4145,7 +4251,7 @@ module.exports = function (app) {
                 count: attachments.length,
                 rows: attachments
             });
-        } catch(err) {
+        } catch (err) {
             return next(err);
         }
     };
@@ -4467,7 +4573,7 @@ module.exports = function (app) {
             await db
                 .transaction(async function (t) {
                     await comment.save({transaction: t});
-                            //comment.edits.createdAt = JSON.stringify(comment.createdAt);
+                    //comment.edits.createdAt = JSON.stringify(comment.createdAt);
                     const topic = await Topic.findOne({
                         where: {
                             id: req.params.topicId
@@ -4911,7 +5017,7 @@ module.exports = function (app) {
                 },
                 rows: comments
             });
-        } catch(err) {
+        } catch (err) {
             return next(err);
         }
     };
@@ -4974,7 +5080,7 @@ module.exports = function (app) {
                     });
                 });
 
-        } catch(err) {
+        } catch (err) {
             return next(err);
         }
     });
@@ -5122,9 +5228,9 @@ module.exports = function (app) {
                         return res.ok(report);
                     });
                 });
-            } catch (err) {
-                return next(err);
-            }
+        } catch (err) {
+            return next(err);
+        }
     };
 
     app.post(['/api/users/:userId/topics/:topicId/comments/:commentId/reports', '/api/topics/:topicId/comments/:commentId/reports'], loginCheck(['partner']), topicCommentsReportsCreate);
@@ -5425,7 +5531,10 @@ module.exports = function (app) {
                     nest: true
                 });
 
-            return res.ok({rows: results, count: results.length});
+            return res.ok({
+                rows: results,
+                count: results.length
+            });
         } catch (err) {
             return next(err);
         }
@@ -5537,7 +5646,7 @@ module.exports = function (app) {
             }
 
             return res.ok(results[0]);
-        } catch(err) {
+        } catch (err) {
             next(err);
         }
     });
@@ -5692,8 +5801,8 @@ module.exports = function (app) {
                         return res.created(vote.toJSON());
                     })
                 });
-        } catch(err) {
-            return next (err);
+        } catch (err) {
+            return next(err);
         }
     });
 
@@ -5738,8 +5847,7 @@ module.exports = function (app) {
             const voteResults = await getVoteResults(voteId, userId);
             let hasVoted = false;
             if (voteResults && voteResults.length) {
-                voteInfo.dataValues.VoteOptions.forEach(function (option)
-                 {
+                voteInfo.dataValues.VoteOptions.forEach(function (option) {
                     const result = _.find(voteResults, {optionId: option.id});
 
                     if (result) {
@@ -5786,7 +5894,7 @@ module.exports = function (app) {
             }
 
             return res.ok(voteInfo);
-        } catch(e) {
+        } catch (e) {
             return next(e);
         }
     });
@@ -5847,7 +5955,7 @@ module.exports = function (app) {
                 });
 
             });
-        } catch(err) {
+        } catch (err) {
             return next(err);
         }
     });
@@ -5904,7 +6012,7 @@ module.exports = function (app) {
         let voteOptions = req.body.options;
         let isSingelOption = false;
 
-       const vote = await Vote
+        const vote = await Vote
             .findOne({
                 where: {id: voteId},
                 include: [
@@ -5934,7 +6042,7 @@ module.exports = function (app) {
             return optVal === 'neutral' || optVal === 'veto';
         });
         if (singleOptions.length) {
-            for(let i=0; i<voteOptions.length; i++) {
+            for (let i = 0; i < voteOptions.length; i++) {
                 const isOption = _.find(singleOptions, function (opt) {
                     return opt.id === voteOptions[i].optionId;
                 });
@@ -5998,11 +6106,11 @@ module.exports = function (app) {
             transaction: transaction
         });
         const voteList = await VoteList.bulkCreate(
-        voteOptions,
-        {
-            fields: ['optionId', 'voteId', 'userId', 'optionGroupId', 'userHash'],
-            transaction: transaction
-        });
+            voteOptions,
+            {
+                fields: ['optionId', 'voteId', 'userId', 'optionGroupId', 'userHash'],
+                transaction: transaction
+            });
         const topic = await Topic.findOne({
             where: {
                 id: topicId
@@ -6038,7 +6146,7 @@ module.exports = function (app) {
                 },
                 force: true,
                 transaction: transaction
-        });
+            });
     };
 
     const handleTopicVoteSoft = async function (vote, req, res) {
@@ -6189,7 +6297,7 @@ module.exports = function (app) {
                         throw new Error('Invalid signing method ' + signingMethod);
                 }
             });
-                        // Check that the personal ID is not related to another User account. We don't want Users signing Votes from different accounts.
+            // Check that the personal ID is not related to another User account. We don't want Users signing Votes from different accounts.
 
             let sessionData = {
                 voteOptions: vote.VoteOptions,
@@ -6200,9 +6308,9 @@ module.exports = function (app) {
 
             if (signInitResponse.sessionId) {
                 sessionData.sessionId = signInitResponse.sessionId,
-                sessionData.sessionHash = signInitResponse.sessionHash,
-                sessionData.personalInfo = signInitResponse.personalInfo,
-                sessionData.signatureId = signInitResponse.signatureId;
+                    sessionData.sessionHash = signInitResponse.sessionHash,
+                    sessionData.personalInfo = signInitResponse.personalInfo,
+                    sessionData.signatureId = signInitResponse.signatureId;
             } else {
                 switch (signInitResponse.statusCode) {
                     case 0:
@@ -6250,7 +6358,7 @@ module.exports = function (app) {
                 }, 1);
             }
 
-        } catch(error) {
+        } catch (error) {
             switch (error.message) {
                 case 'Personal ID already connected to another user account.':
                     return res.badRequest(error.message, 30)
@@ -6292,7 +6400,7 @@ module.exports = function (app) {
             } else {
                 return handleTopicVoteHard(vote, req, res);
             }
-        }catch(err) {
+        } catch (err) {
             return next(err);
         }
     });
@@ -6402,7 +6510,7 @@ module.exports = function (app) {
                     voteOptionsResult,
                     idSignFlowData.signableHash,
                     idSignFlowData.signatureId,
-                    Buffer.from(signatureValue,'hex').toString('base64')
+                    Buffer.from(signatureValue, 'hex').toString('base64')
                 );
 
                 let connectionUserId = idSignFlowData.personalInfo.pid;
@@ -6444,7 +6552,7 @@ module.exports = function (app) {
                     });
                 });
             });
-        } catch(e) {
+        } catch (e) {
             switch (e.message) {
                 case 'Personal ID already connected to another user account.':
                     return res.badRequest(e.message, 30)
@@ -6481,6 +6589,7 @@ module.exports = function (app) {
 
         try {
             tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+            idSignFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
             idSignFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
         } catch (err) {
             if (err.name === 'TokenExpiredError') {
@@ -6590,7 +6699,7 @@ module.exports = function (app) {
                 return res.reload('Signing has been completed and vote is now closed', 2, resBody);
             }
 
-            return res.ok( 'Signing has been completed', 2, resBody);
+            return res.ok('Signing has been completed', 2, resBody);
         } catch (err) {
             let statusCode;
             if (err.result && err.result.endResult) {
@@ -6662,7 +6771,7 @@ module.exports = function (app) {
             } else {
                 return handleTopicVoteHard(vote, req, res);
             }
-        } catch(e) {
+        } catch (e) {
             next(e);
         }
     });
@@ -6701,12 +6810,12 @@ module.exports = function (app) {
         //TODO: Make use of streaming once Sequelize supports it - https://github.com/sequelize/sequelize/issues/2454
         try {
             const voteUserContainer = await VoteUserContainer
-            .findOne({
-                where: {
-                    userId: userId,
-                    voteId: voteId
-                }
-            });
+                .findOne({
+                    where: {
+                        userId: userId,
+                        voteId: voteId
+                    }
+                });
 
             if (!voteUserContainer) {
                 return res.notFound();
@@ -6719,7 +6828,7 @@ module.exports = function (app) {
 
             return res.send(container);
 
-        } catch(err) {
+        } catch (err) {
             return next(err);
         }
     });
@@ -6731,20 +6840,20 @@ module.exports = function (app) {
         let finalDocStream;
         try {
             const topic = await Topic
-            .findOne({
-                where: {
-                    id: topicId
-                },
-                include: [
-                    {
-                        model: Vote,
-                        where: {
-                            id: voteId,
-                            authType: Vote.AUTH_TYPES.hard
+                .findOne({
+                    where: {
+                        id: topicId
+                    },
+                    include: [
+                        {
+                            model: Vote,
+                            where: {
+                                id: voteId,
+                                authType: Vote.AUTH_TYPES.hard
+                            }
                         }
-                    }
-                ]
-            });
+                    ]
+                });
             const vote = topic.Votes[0];
 
             // TODO: Once we implement the the "endDate>now -> followUp" we can remove Topic.STATUSES.voting check
@@ -6759,12 +6868,13 @@ module.exports = function (app) {
 
             await cosActivities
                 .downloadFinalContainerActivity({
-                    voteId, topicId
-                }, {
-                    type: 'User',
-                    id: userId,
-                    ip: req.ip
-                },
+                        voteId,
+                        topicId
+                    }, {
+                        type: 'User',
+                        id: userId,
+                        ip: req.ip
+                    },
                     req.method + ' ' + req.path
                 );
 
@@ -6821,7 +6931,7 @@ module.exports = function (app) {
             const finalDocStream = await cosSignature.getFinalZip(topicId, voteId, true);
 
             return finalDocStream.pipe(res);
-        } catch(err) {
+        } catch (err) {
             return next(err);
         }
     };
@@ -7090,7 +7200,7 @@ module.exports = function (app) {
                         );
 
                     return res.created(event.toJSON());
-            });
+                });
         } catch (err) {
             return next(err);
         }
@@ -7232,7 +7342,7 @@ module.exports = function (app) {
                             transaction: t
                         });
 
-                        t.afterCommit (() => {
+                        t.afterCommit(() => {
                             return res.ok();
                         });
                     });

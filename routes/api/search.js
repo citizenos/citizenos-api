@@ -173,9 +173,13 @@ module.exports = function (app) {
                                     t.visibility,
                                     t.hashtag,
                                     CASE
-                                    WHEN COALESCE(tmup.level, tmgp.level, 'none') = 'admin' THEN t."tokenJoin"
+                                    WHEN COALESCE(tmup.level, tmgp.level, 'none') = 'admin' THEN tj.token
                                     ELSE NULL
-                                    END as "tokenJoin",
+                                    END as "join.token",
+                                    CASE
+                                    WHEN COALESCE(tmup.level, tmgp.level, 'none') = 'admin' THEN tj.level
+                                    ELSE NULL
+                                    END as "join.level",
                                     CASE
                                     WHEN tp."topicId" = t.id THEN true
                                     ELSE false
@@ -233,6 +237,7 @@ module.exports = function (app) {
                                     LEFT JOIN "TopicVotes" tv
                                         ON (tv."topicId" = t.id)
                                     LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId
+                                    LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                                 WHERE ${myTopicWhere}
                                 GROUP BY t.id, tmup.level, tmgp.level, muc.count, mgc.count, tv."voteId", tp."topicId"
                                 ORDER BY t.title ASC
