@@ -121,7 +121,7 @@ module.exports = {
                                             ],
                                             "context": "PUT /api/users/:USER_ID/topics/:TOPIC_ID/join",
                                             "__migratedAt": ":MIGRATION_TIMESTAMP",
-                                            "__migrationId: "${path.basename(__filename)}"
+                                            "__migrationId": "${path.basename(__filename)}"
                                         }'
                                         , ':TOPIC_ID'
                                         , a."topicIds"[1]
@@ -150,7 +150,6 @@ module.exports = {
                     transaction: t
                 }
             );
-            console.info('Activity migration updated row count:', activityMigrationResult[1].rowCount);
         });
     },
     down: async () => {
