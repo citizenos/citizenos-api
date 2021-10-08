@@ -1,3 +1,10 @@
+## 2021-10-08 - v. 4.0.1
+
+* Rename `GET /api/v2/search` as `GET /api/search`
+* `GET /api/search` only returns users with preferences JSON containing `showInSearch: true`
+* Update `POST /api/auth/signup` AND `PUT /api/users/:userId` - Add preferences option https://github.com/citizenos/citizenos-fe/issues/310
+* Update `GET /api/auth/status` - add prefgerences field
+
 ## 2021-10-08 - v. 4.0.0
 
 * Add API `PUT /api/users/:userId/topics/:topicId/join` - generation of join links with specific access level - https://github.com/citizenos/citizenos-fe/issues/311

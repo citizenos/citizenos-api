@@ -12,59 +12,10 @@ module.exports = function (app) {
     const db = models.sequelize;
     const Op = db.Sequelize.Op;
 
-    const loginCheck = app.get('middleware.loginCheck');
-
     const User = models.User;
     const Group = models.Group;
     const Topic = models.Topic;
 
-/*app.get('/api/search', loginCheck(['partner']), async function (req, res, next) {
-        const str = req.query.str; // Search string
-        try {
-            const users = await User.findAll({
-                where: {
-                    [Op.or]: [
-                        {
-                            name: {
-                                [Op.iLike]: '%' + str + '%'
-                            }
-                        },
-                        {
-                            email: {
-                                [Op.iLike]: str + '%'
-                            }
-                        }
-                    ]
-                },
-                attributes: ['id', 'name', 'company', 'imageUrl'],
-                limit: 10
-            });
-
-            const groups = await Group.findAll({
-                where: {
-                    name: {
-                        [Op.iLike]: str + '%'
-                    }
-                },
-                attributes: ['id', 'name'],
-                limit: 10
-            });
-
-            return res.ok({
-                users: {
-                    count: users.length,
-                    rows: users
-                },
-                groups: {
-                    count: groups.length,
-                    rows: groups
-                }
-            });
-        } catch (e) {
-            return next(e);
-        }
-    });
-*/
     app.get('/api/search', async function (req, res, next) {
         try {
             const str = req.query.str; // Search string
