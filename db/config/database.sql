@@ -1353,10 +1353,10 @@ CREATE TABLE public."Users" (
     "termsVersion" character varying(255),
     "termsAcceptedAt" timestamp with time zone,
     "authorId" character varying(255),
-    preferences jsonb,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone
+    "deletedAt" timestamp with time zone,
+    preferences jsonb
 );
 
 
@@ -2659,8 +2659,8 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 202002192021-alter-user-connection.js
 20200225152502-remove-vote-user-container-activity.js
 202010261616-alter-user-add-auhorID.js
-20211004193321-alter-user-add-preferences.js
 20211008104906-create-topic-join.js
+20211008193321-alter-user-add-preferences.js
 20210310104918-create-group-invite-user.js
 202103251231-alter-vote-lists-add-userhash.js
 20210329141948-alter-vote-user-containers.js

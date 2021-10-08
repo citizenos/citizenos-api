@@ -139,7 +139,7 @@ module.exports = {
                         , NOW()::text
                     )
                 )::jsonb
-                WHERE 
+                WHERE
                     a.data @> '{"type": "Update"}'::jsonb
                     AND (a.data->'result')::text ILIKE '%/tokenJoin%'
             `;
