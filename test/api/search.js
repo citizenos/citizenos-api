@@ -12,7 +12,7 @@ const _search = async (agent, params, expectedHttpCode) => {
 
 const search = async (agent, params) => {
     return _search(agent, params, 200)
-}
+};
 
 const chai = require('chai');
 chai.use(require('chai-datetime'));
@@ -26,6 +26,7 @@ const User = models.User;
 
 const shared = require('../utils/shared');
 const userLib = require('./lib/user')(app);
+const topicLib = require('./topic');
 
 // API - /api/search*
 suite('Search', function () {
@@ -68,6 +69,33 @@ suite('Search', function () {
                 assert.equal(data2.results.public.users.rows[0].email, user.email);
             });
 
+        });
+
+    });
+
+    suite('Authenticated', function() {
+
+        // GET /api/search?include=my.topic&include=my.group&include=public.topic&limit=5&str=test
+
+        let agent;
+        let user;
+
+        setup(async function () {
+            agent = request.agent(app);
+            user = await userLib.createUserAndLogin(agent, null, null, null);
+            const description = '<!DOCTYPE HTML><html><body><h1>SEARCH TEST 1</h1><br><h2>SEARCH TEST H2</h2></body></html>';
+            await topicLib.topicCreate(agent, user.id, null, null, null, description, null);
+        });
+
+        test('Success', async function () {
+
+            const params = {
+                str: 'SEARCH TEST',
+                include: ['my.topic', 'my.group', 'public.topic'],
+                limit: 10
+            };
+
+            await search(agent, params);
         });
 
     });
