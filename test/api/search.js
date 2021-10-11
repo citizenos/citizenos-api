@@ -31,17 +31,21 @@ const userLib = require('./lib/user')(app);
 suite('Search', function () {
 
     suite('Public', async () => {
+
         suite('Users', async () => {
+            let agent;
             let user;
+
             suiteSetup(async () => {
                 const agent = request.agent(app);
                 await shared.syncDb();
                 user = await userLib.createUser(agent);
             });
-            let agent;
+
             setup(async () => {
                 agent = request.agent(app);
             });
+
             test('Success - show only users with preference "showInSearch" set true', async () => {
                 const data = (await search(agent, {str: 'test', include: 'public.user'})).body.data;
                 assert.equal(data.results.public.users.count, 0);
@@ -63,6 +67,9 @@ suite('Search', function () {
                 assert.equal(data2.results.public.users.count, 1);
                 assert.equal(data2.results.public.users.rows[0].email, user.email);
             });
+
         });
+
     });
+
 });
