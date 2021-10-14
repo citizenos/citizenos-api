@@ -475,7 +475,7 @@ const topicInviteUsersAccept = async function (agent, userId, topicId, inviteId)
     return _topicInviteUsersAccept(agent, userId, topicId, inviteId, 201);
 };
 
-const _topicJoinRead = async function (agent, token, expectedHttpCode) {
+const _topicJoinReadUnauth = async function (agent, token, expectedHttpCode) {
     const path = '/api/topics/join/:token'
         .replace(':token', token);
 
@@ -485,8 +485,8 @@ const _topicJoinRead = async function (agent, token, expectedHttpCode) {
         .expect('Content-Type', /json/);
 };
 
-const topicJoinRead = async function (agent, token) {
-    return _topicJoinRead(agent, token, 200);
+const topicJoinReadUnauth = async function (agent, token) {
+    return _topicJoinReadUnauth(agent, token, 200);
 };
 
 const _topicJoinJoin = async function (agent, token, expectedHttpCode) {
@@ -4458,7 +4458,7 @@ suite('Users', function () {
             });
 
             setup(async function () {
-                topic = (await topicCreate(agentCreator, creator.id, null, null, null, null, null)).body.data;
+                topic = (await topicCreate(agentCreator, creator.id, Topic.VISIBILITY.public, null, null, null, null)).body.data;
             });
 
             test('Success - 20000 - default level (read)', async function () {
@@ -4571,6 +4571,17 @@ suite('Users', function () {
             });
 
             suite('Token', async function () {
+
+                suite('Read', function () {
+
+                    test('Success - 20000', async function () {
+                        const topicJoinReadActual = (await topicJoinReadUnauth(request.agent(app), topic.join.token)).body.data;
+                        const topicReadExpected = (await topicReadUnauth(request.agent(app), topic.id)).body.data;
+
+                        assert.deepEqual(topicJoinReadActual, topicReadExpected);
+                    });
+
+                });
 
                 suite('Update', async function () {
 

@@ -602,7 +602,7 @@ module.exports = function (app) {
         const tokenPayload = {};
         const tokenOptions = {
             expiresIn: '1d'
-        }
+        };
 
         if (type === 'final') {
             path = '/api/users/self/topics/:topicId/votes/:voteId/downloads/zip/final';
@@ -624,8 +624,9 @@ module.exports = function (app) {
         return urlLib.getApi(path, null, urlOptions);
     };
 
-    const _topicReadUnauth = function (topicId, include) {
-        _syncTopicAuthors(topicId);
+    const _topicReadUnauth = async function (topicId, include) {
+        await _syncTopicAuthors(topicId); // TODO: On every public topic read we sync authors with EP, can we do better?
+
         let join = '';
         let returncolumns = '';
 
@@ -674,7 +675,7 @@ module.exports = function (app) {
             }
         }
 
-        return db
+        const [topic] = await db
             .query(
                 `SELECT
                      t.id,
@@ -782,10 +783,54 @@ module.exports = function (app) {
                     nest: true
                 }
             );
+
+        topic.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+
+        if (include && include.indexOf('vote') > -1 && topic.vote && topic.vote.id) {
+            const voteResults = await getVoteResults(topic.vote.id);
+            const options = [];
+
+            topic.vote.options.forEach(function (option) {
+                option = option.split(':');
+                const o = {
+                    id: option[0],
+                    value: option[1]
+                };
+                if (voteResults && voteResults.length) {
+                    const res = _.find(voteResults, {'optionId': o.id});
+                    if (res) {
+                        o.voteCount = res.voteCount;
+                    }
+                }
+                options.push(o);
+            });
+
+            if (voteResults && voteResults.length) {
+                topic.vote.votersCount = voteResults[0].votersCount;
+            }
+
+            topic.vote.options = {
+                count: options.length,
+                rows: options
+            };
+
+            if (!topic.report.id) {
+                delete topic.report;
+            }
+        } else {
+            delete topic.vote;
+
+            if (!topic.report.id) {
+                delete topic.report;
+            }
+        }
+
+        return topic;
     };
 
     const _topicReadAuth = async function (topicId, include, user, partner) {
-        _syncTopicAuthors(topicId);
+        await _syncTopicAuthors(topicId);
+
         let join = '';
         let returncolumns = '';
         let authorColumns = ' u.id, u.name ';
@@ -1577,56 +1622,15 @@ module.exports = function (app) {
         if (include && !Array.isArray(include)) {
             include = [include];
         }
+
         try {
-            const result = await _topicReadUnauth(topicId, include);
-            if (result && result.length && result[0]) {
-                const topic = result[0];
-                topic.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
-                if (include && include.indexOf('vote') > -1 && topic.vote && topic.vote.id) {
-                    const voteResults = await getVoteResults(topic.vote.id);
-                    const options = [];
+            const topic = await _topicReadUnauth(topicId, include);
 
-                    topic.vote.options.forEach(function (option) {
-                        option = option.split(':');
-                        const o = {
-                            id: option[0],
-                            value: option[1]
-                        };
-                        if (voteResults && voteResults.length) {
-                            const res = _.find(voteResults, {'optionId': o.id});
-                            if (res) {
-                                o.voteCount = res.voteCount;
-                            }
-                        }
-                        options.push(o);
-                    });
-
-                    if (voteResults && voteResults.length) {
-                        topic.vote.votersCount = voteResults[0].votersCount;
-                    }
-
-                    topic.vote.options = {
-                        count: options.length,
-                        rows: options
-                    };
-
-                    if (!topic.report.id) {
-                        delete topic.report;
-                    }
-
-                    return res.ok(topic);
-                } else {
-                    delete topic.vote;
-
-                    if (!topic.report.id) {
-                        delete topic.report;
-                    }
-
-                    return res.ok(topic);
-                }
-            } else {
+            if (!topic) {
                 return res.notFound();
             }
+
+            return res.ok(topic);
         } catch (err) {
             return next(err);
         }
@@ -3992,6 +3996,8 @@ module.exports = function (app) {
      * Get Topic information for given token
      */
     app.get('/api/topics/join/:token', async function (req, res, next) {
+        const token = req.params.token;
+
         const topicJoin = await TopicJoin.findOne({
             where: {
                 token: token
@@ -4002,18 +4008,12 @@ module.exports = function (app) {
             return res.badRequest('Matching token not found', 1);
         }
 
-        const topic = await Topic.findOne({
-            where: {
-                id: topicJoin.topicId
-            }
-        });
+        const topic = await _topicReadUnauth(topicJoin.topicId, null);
 
-        topic.join = topicJoin;
-
-        return res.ok(topic.toJSON());
+        return res.ok(topic);
     });
 
-    
+
     /**
      * Join authenticated User to Topic with a given token.
      *
