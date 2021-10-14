@@ -3995,7 +3995,7 @@ module.exports = function (app) {
     /**
      * Get Topic information for given token
      */
-    app.get('/api/topics/join/:token', async function (req, res, next) {
+    app.get('/api/topics/join/:token', async function (req, res) {
         const token = req.params.token;
 
         const topicJoin = await TopicJoin.findOne({
