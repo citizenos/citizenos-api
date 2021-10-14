@@ -1544,7 +1544,7 @@ module.exports = function (app) {
             };
 
             return res.created(resObject);
-        } catch(err) {
+        } catch (err) {
             return next(err);
         }
 
@@ -1868,7 +1868,7 @@ module.exports = function (app) {
                             t
                         );
 
-                   await topicJoin.save({transaction: t});
+                    await topicJoin.save({transaction: t});
                 });
 
             return res.ok(topicJoin);
@@ -3988,6 +3988,32 @@ module.exports = function (app) {
         }
     });
 
+    /**
+     * Get Topic information for given token
+     */
+    app.get('/api/topics/join/:token', async function (req, res, next) {
+        const topicJoin = await TopicJoin.findOne({
+            where: {
+                token: token
+            }
+        });
+
+        if (!topicJoin) {
+            return res.badRequest('Matching token not found', 1);
+        }
+
+        const topic = await Topic.findOne({
+            where: {
+                id: topicJoin.topicId
+            }
+        });
+
+        topic.join = topicJoin;
+
+        return res.ok(topic.toJSON());
+    });
+
+    
     /**
      * Join authenticated User to Topic with a given token.
      *

@@ -475,7 +475,21 @@ const topicInviteUsersAccept = async function (agent, userId, topicId, inviteId)
     return _topicInviteUsersAccept(agent, userId, topicId, inviteId, 201);
 };
 
-const _topicJoin = async function (agent, token, expectedHttpCode) {
+const _topicJoinRead = async function (agent, token, expectedHttpCode) {
+    const path = '/api/topics/join/:token'
+        .replace(':token', token);
+
+    return agent
+        .get(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicJoinRead = async function (agent, token) {
+    return _topicJoinRead(agent, token, 200);
+};
+
+const _topicJoinJoin = async function (agent, token, expectedHttpCode) {
     const path = '/api/topics/join/:token'
         .replace(':token', token);
 
@@ -485,8 +499,8 @@ const _topicJoin = async function (agent, token, expectedHttpCode) {
         .expect('Content-Type', /json/);
 };
 
-const topicJoin = async function (agent, token) {
-    return _topicJoin(agent, token, 200);
+const topicJoinJoin = async function (agent, token) {
+    return _topicJoinJoin(agent, token, 200);
 };
 
 const _topicReportCreate = async function (agent, topicId, type, text, expectedHttpCode) {
@@ -4448,7 +4462,7 @@ suite('Users', function () {
             });
 
             test('Success - 20000 - default level (read)', async function () {
-                const res = await topicJoin(agentUser, topic.join.token);
+                const res = await topicJoinJoin(agentUser, topic.join.token);
 
                 delete topic.permission;
                 delete topic.pinned;
@@ -4471,7 +4485,7 @@ suite('Users', function () {
 
             test('Success - 20000 - non-default level (edit) with double join attempt (admin)', async function () {
                 const resTopicJoinEdit = (await topicUpdateTokenJoin(agentCreator, creator.id, topic.id, TopicJoin.LEVELS.edit)).body.data;
-                const resJoinEdit = await topicJoin(agentUser, resTopicJoinEdit.token);
+                const resJoinEdit = await topicJoinJoin(agentUser, resTopicJoinEdit.token);
 
                 const userActivities = (await activityLib.activitiesRead(agentUser, user.id)).body.data;
                 const topicJoinActivityActual = userActivities[0].data;
@@ -4526,7 +4540,7 @@ suite('Users', function () {
 
                 // Modify join token level to admin, same User tries to join, but the level should remain the same (edit)
                 const resTopicJoinAdmin = (await topicUpdateTokenJoin(agentCreator, creator.id, topic.id, TopicJoin.LEVELS.admin)).body.data;
-                await topicJoin(agentUser, resTopicJoinAdmin.token);
+                await topicJoinJoin(agentUser, resTopicJoinAdmin.token);
                 const topicReadAfterRejoin = (await topicRead(agentUser, user.id, topic.id, null)).body.data;
                 assert.equal(topicReadAfterRejoin.permission.level, TopicMemberUser.LEVELS.edit);
             });
@@ -4534,14 +4548,14 @@ suite('Users', function () {
             test('Success - 20000 - User already a member, joins with a link SHOULD NOT update permissions', async function () {
                 const resTopicJoinAdmin = (await topicUpdateTokenJoin(agentCreator, creator.id, topic.id, TopicJoin.LEVELS.admin)).body.data;
                 await topicMemberUsersUpdate(agentCreator, creator.id, topic.id, user.id, TopicMemberUser.LEVELS.read);
-                await topicJoin(agentUser, resTopicJoinAdmin.token);
+                await topicJoinJoin(agentUser, resTopicJoinAdmin.token);
                 const topicReadAfterJoin = (await topicRead(agentUser, user.id, topic.id, null)).body.data;
 
                 assert.equal(topicReadAfterJoin.permission.level, TopicMemberUser.LEVELS.read);
             });
 
             test('Fail - 40101 - Matching token not found', async function () {
-                const res = await _topicJoin(agentUser, 'nonExistentToken', 400);
+                const res = await _topicJoinJoin(agentUser, 'nonExistentToken', 400);
 
                 const expectedResult = {
                     status: {
@@ -4553,7 +4567,7 @@ suite('Users', function () {
             });
 
             test('Fail - 40100 - Unauthorized', async function () {
-                await _topicJoin(request.agent(app), topic.join.token, 401);
+                await _topicJoinJoin(request.agent(app), topic.join.token, 401);
             });
 
             suite('Token', async function () {
