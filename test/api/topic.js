@@ -4458,7 +4458,7 @@ suite('Users', function () {
             });
 
             setup(async function () {
-                topic = (await topicCreate(agentCreator, creator.id, Topic.VISIBILITY.public, null, null, null, null)).body.data;
+                topic = (await topicCreate(agentCreator, creator.id, Topic.VISIBILITY.private, null, null, null, null)).body.data;
             });
 
             test('Success - 20000 - default level (read)', async function () {
@@ -4575,11 +4575,38 @@ suite('Users', function () {
                 suite('Read', function () {
 
                     test('Success - 20000', async function () {
+                        const topic = (await topicCreate(agentCreator, creator.id, Topic.VISIBILITY.public, null, null, null, null)).body.data;
+
                         const topicJoinReadActual = (await topicJoinReadUnauth(request.agent(app), topic.join.token)).body.data;
                         const topicReadExpected = (await topicReadUnauth(request.agent(app), topic.id)).body.data;
 
                         assert.deepEqual(topicJoinReadActual, topicReadExpected);
                     });
+
+                    test('Fail - 40400 - Not found - return 404 for private topic', async function () {
+                        const topicJoinReadActual = (await _topicJoinReadUnauth(request.agent(app), topic.join.token, 404)).body;
+                        const topicReadExpected = {
+                            "status": {
+                                "code": 40400,
+                                "message": "Not Found"
+                            }
+                        };
+
+                        assert.deepEqual(topicJoinReadActual, topicReadExpected);
+                    });
+
+                    test('Fail - 40401 - Not found - invalid token', async function () {
+                        const topicJoinReadActual = (await _topicJoinReadUnauth(request.agent(app), '000000000000', 404)).body;
+                        const topicReadExpected = {
+                            "status": {
+                                "code": 40400,
+                                "message": "Not Found"
+                            }
+                        };
+
+                        assert.deepEqual(topicJoinReadActual, topicReadExpected);
+                    });
+
 
                 });
 

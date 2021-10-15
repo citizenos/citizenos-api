@@ -4010,8 +4010,9 @@ module.exports = function (app) {
         });
 
         if (!topicJoin) {
-            return res.badRequest('Matching token not found', 1);
+            return res.notFound();
         }
+
         const topic = await _topicReadUnauth(topicJoin.topicId, null);
 
         if (!topic) {
