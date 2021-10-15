@@ -784,6 +784,10 @@ module.exports = function (app) {
                 }
             );
 
+        if (!topic) {
+            return;
+        }
+
         topic.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
 
         if (include && include.indexOf('vote') > -1 && topic.vote && topic.vote.id) {
@@ -3993,7 +3997,8 @@ module.exports = function (app) {
     });
 
     /**
-     * Get Topic information for given token
+     * Get PUBLIC Topic information for given token.
+     * Returns 404 for PRIVATE Topic even if it exists.
      */
     app.get('/api/topics/join/:token', async function (req, res) {
         const token = req.params.token;
@@ -4007,8 +4012,11 @@ module.exports = function (app) {
         if (!topicJoin) {
             return res.badRequest('Matching token not found', 1);
         }
-
         const topic = await _topicReadUnauth(topicJoin.topicId, null);
+
+        if (!topic) {
+            return res.notFound();
+        }
 
         return res.ok(topic);
     });
