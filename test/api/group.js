@@ -321,6 +321,7 @@ const memberLib = require('./lib/members')(app);
 const topicLib = require('./topic');
 
 const Group = models.Group;
+const GroupJoin = models.GroupJoin;
 const Topic = models.Topic;
 const GroupMemberUser = models.GroupMemberUser;
 const TopicMemberUser = models.TopicMemberUser;
@@ -350,10 +351,15 @@ suite('Users', function () {
 
             test('Success', async function () {
                 const group = (await groupCreate(agent, user.id, groupName, null, null)).body.data;
+
                 assert.property(group, 'id');
                 assert.equal(group.creator.id, user.id);
                 assert.equal(group.name, groupName);
                 assert.isNull(group.parentId);
+
+                assert.property(group, 'join');
+                assert.equal(group.join.level, GroupMemberUser.LEVELS.read);
+                assert.match(group.join.token, new RegExp('^[a-zA-Z0-9]{' + GroupJoin.TOKEN_LENGTH + '}$'));
             });
 
             test('Success - non-default visibility', async function () {

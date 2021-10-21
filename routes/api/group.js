@@ -23,6 +23,7 @@ module.exports = function (app) {
     const Group = models.Group;
     const GroupInviteUser = models.GroupInviteUser;
     const GroupMemberUser = models.GroupMemberUser;
+    const GroupJoin = models.GroupJoin;
     const User = models.User;
 
     const _hasPermission = async function (groupId, userId, level, allowPublic, allowSelf) {
@@ -42,25 +43,25 @@ module.exports = function (app) {
                     AND gm."deletedAt" IS NULL
                     AND g."deletedAt" IS NULL
                 GROUP BY id, uid, level;`, {
-            replacements: {
-                groupId: groupId,
-                userId: userId,
-                level: level
-            },
-            type: db.QueryTypes.SELECT,
-            raw: true
-        });
-        if (result && result[0]) {
-            const isPublic = result[0].isPublic;
-            const isAllowed = result[0].allowed;
+                replacements: {
+                    groupId: groupId,
+                    userId: userId,
+                    level: level
+                },
+                type: db.QueryTypes.SELECT,
+                raw: true
+            });
+            if (result && result[0]) {
+                const isPublic = result[0].isPublic;
+                const isAllowed = result[0].allowed;
 
-            if (isAllowed || (allowPublic && isPublic) || allowSelf) {
-                return true;
+                if (isAllowed || (allowPublic && isPublic) || allowSelf) {
+                    return true;
+                }
             }
-        }
 
             return Promise.reject();
-        } catch(err) {
+        } catch (err) {
             return Promise.reject(err);
         }
     };
@@ -95,49 +96,57 @@ module.exports = function (app) {
     /**
      * Create a new Group
      */
-    app.post('/api/users/:userId/groups', loginCheck(['partner']), function (req, res, next) {
-        const group = Group
-            .build({
-                name: req.body.name,
-                creatorId: req.user.id,
-                parentId: req.body.parentId, //TODO: check that user actually has Permissions on the Parent and the Parent exists?
-                visibility: req.body.visibility || Group.VISIBILITY.private
-            });
-
-        db
-            .transaction(function (t) {
-                return group
-                    .save({transaction: t})
-                    .then(function () {
-                        return cosActivities
-                            .createActivity(
-                                group,
-                                null,
-                                {
-                                    type: 'User',
-                                    id: req.user.id,
-                                    ip: req.ip
-                                },
-                                req.method + ' ' + req.path, t
-                            );
-                    })
-                    .then(function () {
-                        return group.addMember( // Magic method by Sequelize - https://github.com/sequelize/sequelize/wiki/API-Reference-Associations#hasmanytarget-options
-                            req.user.id
-                            ,
-                            {
-                                through: {
-                                    level: GroupMemberUser.LEVELS.admin
-                                },
-                                transaction: t
-                            }
-                        );
+    app.post('/api/users/:userId/groups', loginCheck(['partner']), async function (req, res) {
+        await db
+            .transaction(async function (t) {
+                const group = Group
+                    .build({
+                        name: req.body.name,
+                        creatorId: req.user.id,
+                        parentId: req.body.parentId, //TODO: check that user actually has Permissions on the Parent and the Parent exists?
+                        visibility: req.body.visibility || Group.VISIBILITY.private
                     });
-            })
-            .then(function () {
-                return res.created(group.toJSON());
-            })
-            .catch(next);
+
+                await group.save({transaction: t});
+
+                const groupJoin = await GroupJoin.create(
+                    {
+                        groupId: group.id
+                    },
+                    {
+                        transaction: t
+                    }
+                );
+
+                await cosActivities
+                    .createActivity(
+                        group,
+                        null,
+                        {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path, t
+                    );
+
+                // Add creator as admin member to the Group
+                await group.addMember( // Magic method by Sequelize - https://github.com/sequelize/sequelize/wiki/API-Reference-Associations#hasmanytarget-options
+                    req.user.id,
+                    {
+                        through: {
+                            level: GroupMemberUser.LEVELS.admin
+                        },
+                        transaction: t
+                    }
+                );
+
+                const resObject = group.toJSON();
+
+                resObject.join = groupJoin.toJSON();
+
+                return res.created(resObject);
+            });
     });
 
 
@@ -303,9 +312,8 @@ module.exports = function (app) {
                     return res.ok();
                 });
             });
-        }
-        catch(err) {
-            return next (err);
+        } catch (err) {
+            return next(err);
         }
     });
 
@@ -679,6 +687,7 @@ module.exports = function (app) {
                     .transaction(function (t) {
                         const group = Group.build({id: groupId});
                         const user = User.build({id: memberId});
+
                         group.dataValues.id = groupId;
                         user.dataValues.id = memberId;
 
@@ -1421,18 +1430,18 @@ module.exports = function (app) {
                     ORDER BY "pinned" DESC, t."updatedAt" DESC
                         ;`
                     ,
-                {
-                    replacements: {
-                        groupId: req.params.groupId,
-                        userId: req.user.id,
-                        statuses,
-                        visibility
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true,
-                    nest: true
-                }
-            );
+                    {
+                        replacements: {
+                            groupId: req.params.groupId,
+                            userId: req.user.id,
+                            statuses,
+                            visibility
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true,
+                        nest: true
+                    }
+                );
 
             return res.ok({
                 count: topics.length,
