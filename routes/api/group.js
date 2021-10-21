@@ -1242,7 +1242,7 @@ module.exports = function (app) {
     /**
      * Get Group Topics
      */
-    app.get('/api/users/:userId/groups/:groupId/topics', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), async function (req, res, next) {
+    app.get('/api/users/:userId/groups/:groupId/topics', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res, next) {
         const userId = req.user.id;
         const visibility = req.query.visibility;
         const creatorId = req.query.creatorId;
@@ -1293,10 +1293,9 @@ module.exports = function (app) {
             }
         }
 
-        try {
-            const topics = await db
-                .query(
-                    `SELECT
+        const topics = await db
+            .query(
+                `SELECT
                         t.id,
                         t.title,
                         t.visibility,
@@ -1391,28 +1390,25 @@ module.exports = function (app) {
                     WHERE ${where}
                     ORDER BY "pinned" DESC, t."updatedAt" DESC
                         ;`
-                    ,
-                    {
-                        replacements: {
-                            groupId: req.params.groupId,
-                            userId: req.user.id,
-                            statuses,
-                            visibility
-                        },
-                        type: db.QueryTypes.SELECT,
-                        raw: true,
-                        nest: true
-                    }
-                );
+                ,
+                {
+                    replacements: {
+                        groupId: req.params.groupId,
+                        userId: req.user.id,
+                        statuses,
+                        visibility
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
 
-            return res.ok({
-                count: topics.length,
-                rows: topics
-            });
-        } catch (err) {
-            return next(err);
-        }
-    });
+        return res.ok({
+            count: topics.length,
+            rows: topics
+        });
+    }));
 
     /**
      * Get Group member Topics
