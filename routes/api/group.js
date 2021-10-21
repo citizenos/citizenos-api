@@ -1242,7 +1242,7 @@ module.exports = function (app) {
     /**
      * Get Group Topics
      */
-    app.get('/api/users/:userId/groups/:groupId/topics', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res, next) {
+    app.get('/api/users/:userId/groups/:groupId/topics', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
         const userId = req.user.id;
         const visibility = req.query.visibility;
         const creatorId = req.query.creatorId;
@@ -1413,7 +1413,7 @@ module.exports = function (app) {
     /**
      * Get Group member Topics
      */
-    app.get('/api/users/:userId/groups/:groupId/members/topics', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), async function (req, res, next) {
+    app.get('/api/users/:userId/groups/:groupId/members/topics', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res, next) {
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         const search = req.query.search;
@@ -1485,10 +1485,9 @@ module.exports = function (app) {
             }
         }
 
-        try {
-            const topics = await db
-                .query(
-                    `SELECT
+        const topics = await db
+            .query(
+                `SELECT
                         t.id,
                         t.title,
                         t.visibility,
@@ -1596,40 +1595,37 @@ module.exports = function (app) {
                     LIMIT :limit
                     OFFSET :offset
                     ;`,
-                    {
-                        replacements: {
-                            groupId: req.params.groupId,
-                            userId: userId,
-                            creatorId: userId,
-                            limit,
-                            offset,
-                            search: `%${search}%`,
-                            statuses,
-                            visibility
-                        },
-                        type: db.QueryTypes.SELECT,
-                        raw: true,
-                        nest: true
-                    }
-                );
+                {
+                    replacements: {
+                        groupId: req.params.groupId,
+                        userId: userId,
+                        creatorId: userId,
+                        limit,
+                        offset,
+                        search: `%${search}%`,
+                        statuses,
+                        visibility
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
 
-            let countTotal = 0;
-            if (topics && topics.length) {
-                countTotal = topics[0].countTotal;
-                topics.forEach(function (member) {
-                    delete member.countTotal;
-                });
-            }
-
-            return res.ok({
-                countTotal,
-                count: topics.length,
-                rows: topics
+        let countTotal = 0;
+        if (topics && topics.length) {
+            countTotal = topics[0].countTotal;
+            topics.forEach(function (member) {
+                delete member.countTotal;
             });
-        } catch (err) {
-            return next(err);
         }
-    });
+
+        return res.ok({
+            countTotal,
+            count: topics.length,
+            rows: topics
+        });
+    }));
 
     /**
      * Group list
