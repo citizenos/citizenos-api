@@ -1685,4 +1685,4 @@ module.exports = function (app) {
     return {
         hasPermission: hasPermission
     };
-}
+};
