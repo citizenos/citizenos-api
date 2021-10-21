@@ -306,7 +306,7 @@ module.exports = function (app) {
     /**
      * Get all Groups User belongs to
      */
-    app.get('/api/users/:userId/groups', loginCheck(['partner']), function (req, res, next) {
+    app.get('/api/users/:userId/groups', loginCheck(['partner']), asyncMiddleware(async function (req, res) {
         let include = req.query.include;
         // Sequelize and associations are giving too eager results + not being the most effective. https://github.com/sequelize/sequelize/issues/2458
         // Falling back to raw SQL
@@ -383,7 +383,7 @@ module.exports = function (app) {
                                 members."memberLevel" as "member.level", ';
         }
 
-        db
+        const rows = await db
             .query(
                 ' \
                 SELECT \
@@ -441,90 +441,83 @@ module.exports = function (app) {
                     raw: true,
                     nest: true
                 }
-            )
-            .then(function (rows) {
-                const results = {
-                    count: 0,
-                    rows: []
-                };
-                const memberGroupIds = [];
+            );
 
-                rows.forEach(function (groupRow) {
-                    const group = _.cloneDeep(groupRow);
-                    const member = _.clone(group.member);
+        const results = {
+            count: 0,
+            rows: []
+        };
+        const memberGroupIds = [];
+
+        rows.forEach(function (groupRow) {
+            const group = _.cloneDeep(groupRow);
+            const member = _.clone(group.member);
 
 
-                    if (memberGroupIds.indexOf(group.id) < 0) {
-                        delete group.member;
-                        group.members.users.rows = [];
-                        group.members.topics.rows = [];
-                        results.rows.push(group);
-                        memberGroupIds.push(group.id);
-                    }
+            if (memberGroupIds.indexOf(group.id) < 0) {
+                delete group.member;
+                group.members.users.rows = [];
+                group.members.topics.rows = [];
+                results.rows.push(group);
+                memberGroupIds.push(group.id);
+            }
 
-                    if (include && member && member.memberId) {
-                        results.rows.find(function (g, index) {
-                            if (g.id === group.id) {
-                                const newMember = {
-                                    id: member.memberId
-                                };
+            if (include && member && member.memberId) {
+                results.rows.find(function (g, index) {
+                    if (g.id === group.id) {
+                        const newMember = {
+                            id: member.memberId
+                        };
 
-                                if (member.memberType === 'topic') {
-                                    newMember.title = member.memberName;
-                                    newMember.level = member.levelTopic;
+                        if (member.memberType === 'topic') {
+                            newMember.title = member.memberName;
+                            newMember.level = member.levelTopic;
 
-                                    const topicInGroup = results.rows[index].members.topics.rows.find(function (t) {
-                                        return t.id === newMember.id;
-                                    });
+                            const topicInGroup = results.rows[index].members.topics.rows.find(function (t) {
+                                return t.id === newMember.id;
+                            });
 
-                                    if (!topicInGroup) {
-                                        results.rows[index].members.topics.rows.push(newMember);
-                                    }
-
-                                    return true;
-                                } else if (member.memberType === 'user') {
-                                    newMember.name = member.memberName;
-                                    newMember.level = member.level;
-                                    results.rows[index].members.users.rows.push(newMember);
-
-                                    return true;
-                                } else {
-                                    return true;
-                                }
+                            if (!topicInGroup) {
+                                results.rows[index].members.topics.rows.push(newMember);
                             }
 
-                            return false;
-                        });
-                    }
-                });
+                            return true;
+                        } else if (member.memberType === 'user') {
+                            newMember.name = member.memberName;
+                            newMember.level = member.level;
+                            results.rows[index].members.users.rows.push(newMember);
 
-                return results;
-            })
-            .then(function (results) {
-                results.rows.forEach(function (row) {
-                    if (!row.members.topics.latest.id) {
-                        delete row.members.topics.latest;
+                            return true;
+                        } else {
+                            return true;
+                        }
                     }
-                    if (!include || include.indexOf('member.user') < 0) {
-                        delete row.members.users.rows;
-                    }
-                    if (!include || include.indexOf('member.topic') < 0) {
-                        delete row.members.topics.rows;
-                    }
-                });
-                results.count = results.rows.length;
 
-                return res.ok(results);
-            })
-            .catch(next);
-    });
+                    return false;
+                });
+            }
+        });
+
+        results.rows.forEach(function (row) {
+            if (!row.members.topics.latest.id) {
+                delete row.members.topics.latest;
+            }
+            if (!include || include.indexOf('member.user') < 0) {
+                delete row.members.users.rows;
+            }
+            if (!include || include.indexOf('member.topic') < 0) {
+                delete row.members.topics.rows;
+            }
+        });
+        results.count = results.rows.length;
+
+        return res.ok(results);
+    }));
 
     /**
      * Get Group member Users
      */
-    app.get(['/api/users/:userId/groups/:groupId/members/users'], loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), async function (req, res, next) {
-        //FIXME: Deprecation warning - https://github.com/citizenos/citizenos-fe/issues/348
-
+    app.get(['/api/users/:userId/groups/:groupId/members/users'], loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
         const groupId = req.params.groupId;
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
@@ -536,10 +529,9 @@ module.exports = function (app) {
             where = ` AND u.name ILIKE :search `
         }
 
-        try {
-            const members = await db
-                .query(
-                    `SELECT
+        const members = await db
+            .query(
+                `SELECT
                         u.id,
                         u.name,
                         u.company,
@@ -554,34 +546,32 @@ module.exports = function (app) {
                     LIMIT :limit
                     OFFSET :offset
                     ;`,
-                    {
-                        replacements: {
-                            groupId,
-                            limit,
-                            offset,
-                            search: `%${search}%`
-                        },
-                        type: db.QueryTypes.SELECT,
-                        raw: true
-                    }
-                );
-            let countTotal = 0;
-            if (members && members.length) {
-                countTotal = members[0].countTotal;
-                members.forEach(function (member) {
-                    delete member.countTotal;
-                });
-            }
+                {
+                    replacements: {
+                        groupId,
+                        limit,
+                        offset,
+                        search: `%${search}%`
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true
+                }
+            );
 
-            return res.ok({
-                countTotal,
-                count: members.length,
-                rows: members
+        let countTotal = 0;
+        if (members && members.length) {
+            countTotal = members[0].countTotal;
+            members.forEach(function (member) {
+                delete member.countTotal;
             });
-        } catch (err) {
-            return next(err);
         }
-    });
+
+        return res.ok({
+            countTotal,
+            count: members.length,
+            rows: members
+        });
+    }));
 
     /**
      * Update membership information
