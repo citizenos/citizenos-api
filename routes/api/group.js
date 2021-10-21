@@ -277,34 +277,30 @@ module.exports = function (app) {
     /**
      * Delete Group
      */
-    app.delete('/api/users/:userId/groups/:groupId', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.admin, null, null), async function (req, res, next) {
-        try {
-            const group = await Group.findByPk(req.params.groupId);
-            if (!group) {
-                return res.notFound('No such Group found.');
-            }
+    app.delete('/api/users/:userId/groups/:groupId', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.admin, null, null), asyncMiddleware(async function (req, res) {
+        const group = await Group.findByPk(req.params.groupId);
 
-            await db.transaction(async function (t) {
-                await GroupMemberUser.destroy({where: {groupId: group.id}}, {transaction: t});
-                await group.destroy({transaction: t});
-                await cosActivities.deleteActivity(
-                    group,
-                    null,
-                    {
-                        type: 'User',
-                        id: req.user.id,
-                        ip: req.ip
-                    },
-                    req.method + ' ' + req.path, t
-                );
-                t.afterCommit(() => {
-                    return res.ok();
-                });
-            });
-        } catch (err) {
-            return next(err);
+        if (!group) {
+            return res.notFound('No such Group found.');
         }
-    });
+
+        await db.transaction(async function (t) {
+            await GroupMemberUser.destroy({where: {groupId: group.id}}, {transaction: t});
+            await group.destroy({transaction: t});
+            await cosActivities.deleteActivity(
+                group,
+                null,
+                {
+                    type: 'User',
+                    id: req.user.id,
+                    ip: req.ip
+                },
+                req.method + ' ' + req.path, t
+            );
+        });
+
+        return res.ok();
+    }));
 
 
     /**
