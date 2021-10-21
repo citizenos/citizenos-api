@@ -1630,59 +1630,59 @@ module.exports = function (app) {
     /**
      * Group list
      */
-    app.get('/api/groups', function (req, res, next) {
-        const limitMax = 100;
-        const limitDefault = 26;
+    app.get('/api/groups', asyncMiddleware(async function (req, res) {
+            const limitMax = 100;
+            const limitDefault = 26;
 
-        const offset = req.query.offset || 0;
-        let limit = req.query.limit || limitDefault;
-        if (limit > limitMax) limit = limitDefault;
+            const offset = req.query.offset || 0;
+            let limit = req.query.limit || limitDefault;
+            if (limit > limitMax) limit = limitDefault;
 
-        const where = {
-            visibility: Group.VISIBILITY.public,
-            name: {
-                [Op.not]: null
-            }
-        };
-
-        const name = req.query.name;
-        if (name) {
-            where.name = {
-                [Op.iLike]: name
+            const where = {
+                visibility: Group.VISIBILITY.public,
+                name: {
+                    [Op.not]: null
+                }
             };
-        }
 
-        const sourcePartnerId = req.query.sourcePartnerId;
-        if (sourcePartnerId) {
-            where.sourcePartnerId = sourcePartnerId;
-        }
-        // TODO: .findAndCount does 2 queries, either write a raw query using PG window functions (http://www.postgresql.org/docs/9.3/static/tutorial-window.html) or wait for Sequelize to fix it - https://github.com/sequelize/sequelize/issues/2465
-        Group
-            .findAndCountAll({
-                where: where,
-                include: [
-                    {
-                        model: User,
-                        as: 'creator',
-                        attributes: ['id', 'name', 'company'] // TODO: Should fix User model not to return "email" by default. I guess requires Sequelize scopes - https://github.com/sequelize/sequelize/issues/1462
+            const name = req.query.name;
+            if (name) {
+                where.name = {
+                    [Op.iLike]: name
+                };
+            }
+
+            const sourcePartnerId = req.query.sourcePartnerId;
+            if (sourcePartnerId) {
+                where.sourcePartnerId = sourcePartnerId;
+            }
+
+            // TODO: .findAndCount does 2 queries, either write a raw query using PG window functions (http://www.postgresql.org/docs/9.3/static/tutorial-window.html) or wait for Sequelize to fix it - https://github.com/sequelize/sequelize/issues/2465
+            const groups = await Group
+                .findAndCountAll({
+                        where: where,
+                        include: [
+                            {
+                                model: User,
+                                as: 'creator',
+                                attributes: ['id', 'name', 'company'] // TODO: Should fix User model not to return "email" by default. I guess requires Sequelize scopes - https://github.com/sequelize/sequelize/issues/1462
+                            }
+                        ],
+                        limit: limit,
+                        offset: offset,
+                        order: [['updatedAt', 'DESC']]
                     }
-                ],
-                limit: limit,
-                offset: offset,
-                order: [['updatedAt', 'DESC']]
-            })
-            .then(function (result) {
-                return res.ok({
-                    countTotal: result.count,
-                    count: result.rows.length,
-                    rows: result.rows
-                });
-            })
-            .catch(next);
-    });
+                );
+
+            return res.ok({
+                countTotal: groups.count,
+                count: groups.rows.length,
+                rows: groups.rows
+            });
+        })
+    );
 
     return {
         hasPermission: hasPermission
     };
 }
-;
