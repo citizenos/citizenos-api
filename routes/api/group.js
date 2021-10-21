@@ -65,6 +65,7 @@ module.exports = function (app) {
             return Promise.reject(err);
         }
     };
+
     const hasPermission = function (level, allowPublic, allowSelf) {
         return function (req, res, next) {
             const groupId = req.params.groupId;
@@ -153,8 +154,8 @@ module.exports = function (app) {
     /**
      * Read a Group
      */
-    app.get('/api/users/:userId/groups/:groupId', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), function (req, res, next) {
-        db
+    app.get('/api/users/:userId/groups/:groupId', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), async function (req, res) {
+        const [group] = await db
             .query(
                 'SELECT \
                      g.id, \
@@ -183,15 +184,9 @@ module.exports = function (app) {
                     raw: true,
                     nest: true
                 }
-            )
-            .then(function (result) {
-                if (result && result.length && result[0]) {
-                    const group = result[0];
+            );
 
-                    return res.ok(group);
-                }
-            })
-            .catch(next);
+        return res.ok(group);
     });
 
     /**
