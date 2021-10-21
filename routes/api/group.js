@@ -97,7 +97,7 @@ module.exports = function (app) {
     /**
      * Create a new Group
      */
-    app.post('/api/users/:userId/groups', loginCheck(['partner']), async function (req, res) {
+    app.post('/api/users/:userId/groups', loginCheck(['partner']), asyncMiddleware(async function (req, res) {
         await db
             .transaction(async function (t) {
                 const group = Group
@@ -148,13 +148,13 @@ module.exports = function (app) {
 
                 return res.created(resObject);
             });
-    });
+    }));
 
 
     /**
      * Read a Group
      */
-    app.get('/api/users/:userId/groups/:groupId', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), async function (req, res) {
+    app.get('/api/users/:userId/groups/:groupId', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
         const [group] = await db
             .query(
                 'SELECT \
@@ -187,98 +187,92 @@ module.exports = function (app) {
             );
 
         return res.ok(group);
-    });
+    }));
 
     /**
      * Update Group info
      */
-    app.put('/api/users/:userId/groups/:groupId', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.admin, null, null), function (req, res, next) {
+    app.put('/api/users/:userId/groups/:groupId', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.admin, null, null), asyncMiddleware(async function (req, res) {
         const groupId = req.params.groupId;
         const groupName = req.body.name;
 
-        Group
+        const group = await Group
             .findOne({
                 where: {
                     id: groupId
                 }
-            })
-            .then(function (group) {
-                group.name = groupName;
+            });
 
-                return group
-                    .validate()
-                    .then(function (group) {
-                        return db
-                            .transaction(function (t) {
-                                return cosActivities
-                                    .updateActivity(
-                                        group,
-                                        null,
-                                        {
-                                            type: 'User',
-                                            id: req.user.id,
-                                            ip: req.ip
-                                        },
-                                        null,
-                                        req.method + ' ' + req.path,
-                                        t
-                                    )
-                                    .then(function () {
-                                        return db
-                                            .query(
-                                                'WITH \
-                                                    updated AS ( \
-                                                        UPDATE \
-                                                            "Groups" SET \
-                                                            "name"= :groupName, \
-                                                            "updatedAt"=:timestamp \
-                                                                WHERE "id" = :groupId \
-                                                            RETURNING * \
-                                                    ) \
-                                                    SELECT  \
-                                                        g.id, \
-                                                        g."parentId" AS "parent.id", \
-                                                        g.name, \
-                                                        g.visibility, \
-                                                        c.id as "creator.id", \
-                                                        c.email as "creator.email", \
-                                                        c.name as "creator.name", \
-                                                        c."createdAt" as "creator.createdAt", \
-                                                        mc.count as "members.count" \
-                                                    FROM updated g \
-                                                    LEFT JOIN \
-                                                        "Users" c ON (c.id = g."creatorId") \
-                                                            LEFT JOIN ( \
-                                                                SELECT "groupId", count("userId") AS "count" \
-                                                                FROM "GroupMemberUsers" \
-                                                                WHERE "deletedAt" IS NULL \
-                                                                GROUP BY "groupId" \
-                                                            ) AS mc ON (mc."groupId" = g.id);'
-                                                , {
-                                                    replacements: {
-                                                        timestamp: moment().format('YYYY-MM-DD HH:mm:ss.SSS ZZ'),
-                                                        groupId: req.params.groupId,
-                                                        groupName: req.body.name
-                                                    },
-                                                    type: db.QueryTypes.SELECT,
-                                                    raw: true,
-                                                    nest: true,
-                                                    transaction: t
-                                                }
-                                            );
-                                    });
-                            });
-                    })
-                    .then(function (result) {
-                        if (result && result.length && result[0]) {
-                            return res.ok(result[0]);
+        group.name = groupName;
+
+        await group.validate();
+
+        const [groupUpdated] = await db
+            .transaction(async function (t) {
+                await cosActivities
+                    .updateActivity(
+                        group,
+                        null,
+                        {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        },
+                        null,
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
+                return await db
+                    .query(
+                        'WITH \
+                            updated AS ( \
+                                UPDATE \
+                                    "Groups" SET \
+                                    "name"= :groupName, \
+                                    "updatedAt"=:timestamp \
+                                        WHERE "id" = :groupId \
+                                    RETURNING * \
+                            ) \
+                            SELECT  \
+                                g.id, \
+                                g."parentId" AS "parent.id", \
+                                g.name, \
+                                g.visibility, \
+                                c.id as "creator.id", \
+                                c.email as "creator.email", \
+                                c.name as "creator.name", \
+                                c."createdAt" as "creator.createdAt", \
+                                mc.count as "members.count" \
+                            FROM updated g \
+                            LEFT JOIN \
+                                "Users" c ON (c.id = g."creatorId") \
+                                    LEFT JOIN ( \
+                                        SELECT "groupId", count("userId") AS "count" \
+                                        FROM "GroupMemberUsers" \
+                                        WHERE "deletedAt" IS NULL \
+                                        GROUP BY "groupId" \
+                                    ) AS mc ON (mc."groupId" = g.id);',
+                        {
+                            replacements: {
+                                timestamp: moment().format('YYYY-MM-DD HH:mm:ss.SSS ZZ'),
+                                groupId: req.params.groupId,
+                                groupName: req.body.name
+                            },
+                            type: db.QueryTypes.SELECT,
+                            raw: true,
+                            nest: true,
+                            transaction: t
                         }
+                    );
+            });
 
-                        return next();
-                    });
-            })
-            .catch(next);
-    });
+        if (!groupUpdated) {
+            return res.badRequest();
+        }
+
+        return res.ok(groupUpdated);
+    }));
 
     /**
      * Delete Group
