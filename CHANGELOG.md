@@ -1,3 +1,8 @@
+## 2021-10-21 - v. 5.0.1
+
+* Update `POST /api/users/:userId/groups' to return Group join token info
+* **TODO!**
+
 ## 2021-10-08 - v. 4.0.1
 
 * Rename `GET /api/v2/search` as `GET /api/search`
