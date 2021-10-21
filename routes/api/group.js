@@ -517,7 +517,7 @@ module.exports = function (app) {
     /**
      * Get Group member Users
      */
-    app.get(['/api/users/:userId/groups/:groupId/members/users'], loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
+    app.get('/api/users/:userId/groups/:groupId/members/users', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
         const groupId = req.params.groupId;
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
@@ -576,12 +576,12 @@ module.exports = function (app) {
     /**
      * Update membership information
      */
-    app.put(['/api/users/:userId/groups/:groupId/members/users/:memberId'], loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.admin, null, null), function (req, res, next) {
+    app.put('/api/users/:userId/groups/:groupId/members/users/:memberId', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.admin, null, null), asyncMiddleware(async function (req, res) {
         const newLevel = req.body.level;
         const memberId = req.params.memberId;
         const groupId = req.params.groupId;
 
-        GroupMemberUser
+        const groupMembers = await GroupMemberUser
             .findAll({
                 where: {
                     groupId: groupId,
@@ -589,50 +589,46 @@ module.exports = function (app) {
                 },
                 attributes: ['userId'],
                 raw: true
-            })
-            .then(function (result) {
-                if (result.length === 1 && _.find(result, {userId: memberId})) {
-                    return res.badRequest('Cannot revoke admin permissions from the last admin member.');
+            });
+
+        if (groupMembers.length === 1 && _.find(groupMembers, {userId: memberId})) {
+            return res.badRequest('Cannot revoke admin permissions from the last admin member.');
+        }
+
+        const groupMemberUser = await GroupMemberUser
+            .findOne({
+                where: {
+                    groupId: groupId,
+                    userId: memberId
                 }
+            });
 
-                return GroupMemberUser
-                    .findOne({
-                        where: {
-                            groupId: groupId,
-                            userId: memberId
-                        }
-                    })
-                    .then(function (groupMemberUser) {
-                        groupMemberUser.level = newLevel;
+        groupMemberUser.level = newLevel;
 
-                        return db
-                            .transaction(function (t) {
-                                return cosActivities
-                                    .updateActivity(
-                                        groupMemberUser,
-                                        null,
-                                        {
-                                            type: 'User',
-                                            id: req.user.id,
-                                            ip: req.ip
-                                        },
-                                        null,
-                                        req.method + ' ' + req.path, t
-                                    )
-                                    .then(function () {
-                                        return groupMemberUser
-                                            .save({
-                                                transaction: t
-                                            });
-                                    });
-                            });
+        await db
+            .transaction(async function (t) {
+                await cosActivities
+                    .updateActivity(
+                        groupMemberUser,
+                        null,
+                        {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        },
+                        null,
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
+                await groupMemberUser
+                    .save({
+                        transaction: t
                     });
-            })
-            .then(function () {
-                return res.ok();
-            })
-            .catch(next);
-    });
+            });
+
+        return res.ok();
+    }));
 
     /**
      * Delete membership information
