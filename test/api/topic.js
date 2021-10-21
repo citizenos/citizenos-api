@@ -128,7 +128,6 @@ const _topicUpdateTokenJoin = async function (agent, userId, topicId, level, exp
         .expect('Content-Type', /json/);
 };
 
-
 const topicUpdateTokenJoin = async function (agent, userId, topicId, level) {
     return _topicUpdateTokenJoin(agent, userId, topicId, level, 200);
 };

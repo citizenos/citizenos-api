@@ -729,6 +729,38 @@ module.exports = function (app) {
     });
 
     /**
+     * Update (regenerate) Group join token (GroupJoin) with a level
+     *
+     * PUT as there is one GroupJoin for each Group. Always overwrites previous.
+     *
+     * @see https://github.com/citizenos/citizenos-fe/issues/325
+     */
+    app.put('/api/users/:userId/groups/:groupId/join', loginCheck(), hasPermission(GroupMemberUser.LEVELS.admin, null, null), async function (req, res, next) {
+        // FIXME: IMPLEMENT
+        return res.notImplemented();
+    });
+
+    /**
+     * Update level of an existing token WITHOUT regenerating the token
+     *
+     * @see https://github.com/citizenos/citizenos-fe/issues/325
+     */
+    app.put('/api/users/:userId/groups/:groupId/join/:token', loginCheck(), hasPermission(GroupMemberUser.LEVELS.admin, null, null), async function (req, res, next) {
+        // FIXME: IMPLEMENT
+        return res.notImplemented();
+    });
+
+    /**
+     * Join authenticated User to Group with a given token.
+     *
+     * Allows sharing of private join urls for example in forums, on conference screen...
+     */
+    app.post('/api/topics/join/:token', loginCheck(), async function (req, res, next) {
+        // FIXME: IMPLEMENT
+        return res.notImplemented();
+    });
+
+    /**
      * Invite new Members to the Group
      *
      * Does NOT add a Member automatically, but will send an invite, which has to accept in order to become a Member of the Group

@@ -250,6 +250,59 @@ const groupMembersTopicsList = async function (agent, userId, groupId, offset, l
     return _groupMembersTopicsList(agent, userId, groupId, offset, limit, statuses, visibility, creatorId, pinned, hasVoted, showModerated, 200);
 };
 
+const _groupUpdateTokenJoin = async function (agent, userId, groupId, level, expectedHttpCode) {
+    const path = '/api/users/:userId/groups/:groupId/join'
+        .replace(':userId', userId)
+        .replace(':groupId', groupId);
+
+    return agent
+        .put(path)
+        .set('Content-Type', 'application/json')
+        .send({
+            level: level
+        })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const groupUpdateTokenJoin = async function (agent, userId, groupId, level) {
+    return _groupUpdateTokenJoin(agent, userId, groupId, level, 200);
+};
+
+const _groupUpdateTokenJoinLevel = async function (agent, userId, groupId, token, level, expectedHttpCode) {
+    const path = '/api/users/:userId/groups/:groupId/join/:token'
+        .replace(':userId', userId)
+        .replace(':groupId', groupId)
+        .replace(':token', token);
+
+    return agent
+        .put(path)
+        .set('Content-Type', 'application/json')
+        .send({
+            level: level
+        })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const groupUpdateTokenJoinLevel = async function (agent, userId, groupId, token, level) {
+    return _groupUpdateTokenJoinLevel(agent, userId, groupId, token, level, 200);
+};
+
+const _groupJoinJoin = async function (agent, token, expectedHttpCode) {
+    const path = '/api/groups/join/:token'
+        .replace(':token', token);
+
+    return agent
+        .post(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const groupJoinJoin = async function (agent, token) {
+    return _groupJoinJoin(agent, token, 200);
+};
+
 module.exports.create = groupCreate;
 module.exports.delete = groupDelete;
 module.exports.memberUsersUpdate = groupMemberUsersUpdate;
@@ -468,7 +521,7 @@ suite('Users', function () {
                 // Group table should not have any lines for this Group
                 assert.equal(gcount, 0);
 
-                        // Also if Group is gone so should GroupMembers
+                // Also if Group is gone so should GroupMembers
                 const gmCount = await GroupMemberUser.count({where: {groupId: group.id}});
                 assert.equal(gmCount, 0);
             });
@@ -1214,7 +1267,7 @@ suite('Users', function () {
                         assert.equal(originalInvite.level, groupInviteCreated1.level);
 
                         const duplicateInvite = invitesList.find(invite => {
-                           return invite.id === groupInviteCreated12.id
+                            return invite.id === groupInviteCreated12.id
                         });
                         assert.isObject(duplicateInvite);
                         assert.equal(duplicateInvite.level, groupInviteCreated12.level);
@@ -1764,6 +1817,228 @@ suite('Users', function () {
                 });
 
             });
+
+        });
+
+        suite('Join', function () {
+
+            const agentCreator = request.agent(app);
+            const agentUser = request.agent(app);
+
+            let creator;
+            let user;
+
+            let group;
+
+            suiteSetup(async function () {
+                creator = await userLib.createUserAndLogin(agentCreator, null, null, null);
+                user = await userLib.createUserAndLogin(agentUser, null, null, null);
+            });
+
+            setup(async function () {
+                group = (await groupCreate(agentCreator, creator.id, `JOIN TEST GROUP ${new Date().getTime()}`, null, Group.VISIBILITY.private)).body.data;
+            });
+
+            test('Success - 20000 - default level (read)', async function () {
+                const res = await topicJoinJoin(agentUser, group.join.token);
+            });
+
+            test('Success - 20000 - non-default level (edit) with double join attempt (admin)', async function () {
+                throw new Error('Implement!');
+            });
+
+            test('Success - 20000 - User already a member, joins with a link SHOULD NOT update permissions', async function () {
+                throw new Error('Implement!');
+            });
+
+            test('Fail - 40101 - Matching token not found', async function () {
+                const res = await _topicJoinJoin(agentUser, 'nonExistentToken', 400);
+
+                const expectedResult = {
+                    status: {
+                        code: 40001,
+                        message: 'Matching token not found'
+                    }
+                };
+                assert.deepEqual(res.body, expectedResult);
+            });
+
+            test('Fail - 40100 - Unauthorized', async function () {
+                await _topicJoinJoin(request.agent(app), group.join.token, 401);
+            });
+
+            suite('Token', async function () {
+
+                suite('Update', async function () {
+
+                    test('Success - regenerate token', async function () {
+                        const resData = (await groupUpdateTokenJoin(agentCreator, creator.id, group.id, Group.LEVELS.edit)).body.data;
+
+                        // assert.match(resData.token, new RegExp('^[a-zA-Z0-9]{' + TopicJoin.TOKEN_LENGTH + '}$'));
+                        // assert.equal(resData.level, TopicJoin.LEVELS.edit);
+                        //
+                        // const userActivities = (await activityLib.activitiesRead(agentCreator, creator.id)).body.data;
+                        // const tokenJoinUpdateActivityActual = userActivities[0].data;
+                        //
+                        // const tokenJoinUpdateActivityExpected = {
+                        //     "type": "Update",
+                        //     "actor": {
+                        //         "type": "User",
+                        //         "id": creator.id,
+                        //         "name": creator.name,
+                        //         "company": creator.company
+                        //     },
+                        //     "object": {
+                        //         "@type": "TopicJoin",
+                        //         "level": topic.join.level, // previous level
+                        //         "token": topic.join.token.replace(topic.join.token.substr(2, 8), '********'), // previous token
+                        //         "topicId": topic.id,
+                        //         "topicTitle": topic.title
+                        //     },
+                        //     "origin": {
+                        //         "@type": "TopicJoin",
+                        //         "level": topic.join.level, // previous level
+                        //         "token": topic.join.token.replace(topic.join.token.substr(2, 8), '********'), // previous token
+                        //     },
+                        //     "result": [
+                        //         {
+                        //             "op": "replace",
+                        //             "path": "/token",
+                        //             "value": resData.token.replace(resData.token.substr(2, 8), '********'), // new token
+                        //         },
+                        //         {
+                        //             "op": "replace",
+                        //             "path": "/level",
+                        //             "value": resData.level
+                        //         }
+                        //     ],
+                        //     "context": `PUT /api/users/${creator.id}/topics/${topic.id}/join`
+                        // };
+                        //
+                        // assert.deepEqual(tokenJoinUpdateActivityActual, tokenJoinUpdateActivityExpected);
+                    });
+
+                    test('Fail - 40001 - Bad request - missing required property "level"', async function () {
+                        const resBody = (await _groupUpdateTokenJoin(agentCreator, creator.id, group.id, null, 400)).body;
+                        const resBodyExpected = {
+                            status: {
+                                code: 40001,
+                                message: 'Invalid value for property "level". Possible values are read,edit,admin.'
+                            }
+                        };
+
+                        assert.deepEqual(resBody, resBodyExpected);
+                    });
+
+                    test('Fail - 40100 - No permissions', async function () {
+                        const resBody = (await _groupUpdateTokenJoin(agentUser, user.id, group.id, null, 403)).body;
+                        const resBodyExpected = {
+                            status: {
+                                code: 40300,
+                                message: 'Insufficient permissions'
+                            }
+                        };
+
+                        assert.deepEqual(resBody, resBodyExpected);
+                    });
+
+                    suite('Level', async function () {
+
+                        test('Success', async function () {
+                            const token = group.join.token;
+
+                            // const resBody = (await groupUpdateTokenJoinLevel(agentCreator, creator.id, group.id, token, GroupJoin.LEVELS.admin)).body;
+                            // const resBodyExpected = {
+                            //     status: {code: 20000},
+                            //     data: {
+                            //         token: token,
+                            //         level: GroupJoin.LEVELS.admin
+                            //     }
+                            // };
+                            //
+                            // assert.deepEqual(resBody, resBodyExpected);
+                            //
+                            // const userActivities = (await activityLib.activitiesRead(agentCreator, creator.id)).body.data;
+                            // const tokenJoinLevelUpdateActivityActual = userActivities[0].data;
+                            //
+                            // const tokenJoinLevelUpdateActivityExpected = {
+                            //     "type": "Update",
+                            //     "actor": {
+                            //         "type": "User",
+                            //         "id": creator.id,
+                            //         "name": creator.name,
+                            //         "company": creator.company
+                            //     },
+                            //     "object": {
+                            //         "@type": "TopicJoin",
+                            //         "level": topic.join.level,
+                            //         "token": topic.join.token.replace(topic.join.token.substr(2, 8), '********'),
+                            //         "topicId": topic.id,
+                            //         "topicTitle": topic.title
+                            //     },
+                            //     "origin": {
+                            //         "@type": "TopicJoin",
+                            //         "level": topic.join.level,
+                            //         "token": topic.join.token.replace(topic.join.token.substr(2, 8), '********'),
+                            //     },
+                            //     "result": [
+                            //         {
+                            //             "op": "replace",
+                            //             "path": "/level",
+                            //             "value": resBody.data.level
+                            //         }
+                            //     ],
+                            //     "context": `PUT /api/users/${creator.id}/topics/${topic.id}/join/${topic.join.token}`
+                            // };
+                            //
+                            // assert.deepEqual(tokenJoinLevelUpdateActivityActual, tokenJoinLevelUpdateActivityExpected);
+                        });
+
+                        test('Fail - 40400 - Not found - invalid token', async function () {
+                            // const token = TopicJoin.generateToken();
+                            //
+                            // const resBody = (await _topicUpdateTokenJoinLevel(agentCreator, creator.id, topic.id, token, TopicJoin.LEVELS.edit, 404)).body;
+                            // const resBodyExpected = {
+                            //     status: {
+                            //         code: 40400,
+                            //         message: 'Nothing found for topicId and token combination.'
+                            //     }
+                            // };
+                            //
+                            // assert.deepEqual(resBody, resBodyExpected);
+                            throw new Error('Implement!');
+                        });
+
+                        test('Fail - 40001 - Bad request - missing required property "level"', async function () {
+                            // const resBody = (await _topicUpdateTokenJoinLevel(agentCreator, creator.id, topic.id, topic.join.token, null, 400)).body;
+                            // const resBodyExpected = {
+                            //     status: {
+                            //         code: 40001,
+                            //         message: 'Invalid value for property "level". Possible values are read,edit,admin.'
+                            //     }
+                            // };
+                            //
+                            // assert.deepEqual(resBody, resBodyExpected);
+                            throw new Error('Implement!');
+                        });
+
+                        test('Fail - 40100 - No permissions', async function () {
+                            // const resBody = (await _topicUpdateTokenJoinLevel(agentUser, user.id, topic.id, topic.join.token, null, 403)).body;
+                            // const resBodyExpected = {
+                            //     status: {
+                            //         code: 40300,
+                            //         message: 'Insufficient permissions'
+                            //     }
+                            // };
+                            //
+                            // assert.deepEqual(resBody, resBodyExpected);
+                            throw new Error('Implement!');
+                        });
+                    });
+                });
+
+            });
+
 
         });
 
