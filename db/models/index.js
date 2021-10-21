@@ -16,11 +16,11 @@ if (typeof config.logging === 'string') {
 log4js.configure(config.logging.log4js);
 const logger = log4js.getLogger(process.env.NOTE_ENV);
 
-var defaultLoggingFunction = function (query) {
+const defaultLoggingFunction = function (query) {
     logger.debug('DB', query);
 };
 
-var dbOptions = config.db.options;
+const dbOptions = config.db.options;
 config.db.options.pool.max = parseInt(config.db.options.pool.max); // FIXME: https://github.com/citizenos/citizenos-api/issues/137
 config.db.options.pool.min = parseInt(config.db.options.pool.min); // FIXME: https://github.com/citizenos/citizenos-api/issues/137
 
@@ -36,7 +36,7 @@ if (dbOptions.operatorsAliases === 'undefined') {
     dbOptions.operatorsAliases = Sequelize.Op;
 }
 
-var dbConfSanitized = _.cloneDeep(config.db);
+const dbConfSanitized = _.cloneDeep(config.db);
 if (process.env.NODE_ENV !== 'development') {
     dbConfSanitized.url = dbConfSanitized.url ? dbConfSanitized.url.replace(/\/\/.*:.*@/g, '//*****:*****@') : dbConfSanitized.url;
     dbConfSanitized.options.username = dbConfSanitized.options.username ? '*******' : dbConfSanitized.options.username;
@@ -86,7 +86,7 @@ Object.keys(db).forEach((modelName) => {
 
 // IF PG is used we need to enable "parseInt8" so that counts would actually be numeric in JS - https://github.com/sequelize/sequelize/issues/2383
 // Might want to find better place for this logic...
-var pg = require('pg');
+const pg = require('pg');
 
 if (pg) {
     // pg is a singleton so the same instance is in Sequelize-s guts thus the settings work.
