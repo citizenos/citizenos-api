@@ -953,7 +953,7 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/348
      */
-    app.get('/api/users/:userId/groups/:groupId/invites/users', loginCheck(), hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res, next) {
+    app.get('/api/users/:userId/groups/:groupId/invites/users', loginCheck(), hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
@@ -964,10 +964,9 @@ module.exports = function (app) {
             where = ` AND u.name ILIKE :search `
         }
 
-        try {
-            const invites = await db
-                .query(
-                    `SELECT
+        const invites = await db
+            .query(
+                `SELECT
                     giu.id,
                     giu."creatorId",
                     giu.level,
@@ -987,39 +986,36 @@ module.exports = function (app) {
                 LIMIT :limit
                 OFFSET :offset
                 ;`,
-                    {
-                        replacements: {
-                            groupId: req.params.groupId,
-                            limit,
-                            offset,
-                            search: `%${search}%`
-                        },
-                        type: db.QueryTypes.SELECT,
-                        raw: true,
-                        nest: true
-                    }
-                );
+                {
+                    replacements: {
+                        groupId: req.params.groupId,
+                        limit,
+                        offset,
+                        search: `%${search}%`
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
 
-            if (!invites) {
-                return res.notFound();
-            }
-            let countTotal = 0;
-            if (invites.length) {
-                countTotal = invites[0].countTotal;
-            }
-
-            invites.forEach(function (invite) {
-                delete invite.countTotal;
-            });
-
-            return res.ok({
-                countTotal,
-                count: invites.length,
-                rows: invites
-            });
-        } catch (err) {
-            return next(err);
+        if (!invites) {
+            return res.notFound();
         }
+        let countTotal = 0;
+        if (invites.length) {
+            countTotal = invites[0].countTotal;
+        }
+
+        invites.forEach(function (invite) {
+            delete invite.countTotal;
+        });
+
+        return res.ok({
+            countTotal,
+            count: invites.length,
+            rows: invites
+        });
     }));
 
     /**
