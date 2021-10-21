@@ -633,11 +633,11 @@ module.exports = function (app) {
     /**
      * Delete membership information
      */
-    app.delete(['/api/users/:userId/groups/:groupId/members/users/:memberId'], loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.admin, null, true), function (req, res, next) {
+    app.delete('/api/users/:userId/groups/:groupId/members/users/:memberId', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.admin, null, true), asyncMiddleware(async function (req, res) {
         const groupId = req.params.groupId;
         const memberId = req.params.memberId;
 
-        GroupMemberUser
+        const groupMemberUsers = await GroupMemberUser
             .findAll({
                 where: {
                     groupId: groupId,
@@ -645,68 +645,63 @@ module.exports = function (app) {
                 },
                 attributes: ['userId'],
                 raw: true
-            })
-            .then(function (result) {
-                // At least 1 admin member has to remain at all times..
-                if (result.length === 1 && _.find(result, {userId: memberId})) {
-                    return res.badRequest('Cannot delete the last admin member.');
-                }
+            });
 
-                // TODO: Used to use GroupMember.destroy, but that broke when moving 2.x->3.x - https://github.com/sequelize/sequelize/issues/4465
-                // NOTE: Postgres does not support LIMIT for DELETE, thus the hidden "ctid" column and subselect is used
-                return db
-                    .transaction(function (t) {
-                        const group = Group.build({id: groupId});
-                        const user = User.build({id: memberId});
+        if (groupMemberUsers.length === 1 && _.find(groupMemberUsers, {userId: memberId})) {
+            return res.badRequest('Cannot delete the last admin member.');
+        }
 
-                        group.dataValues.id = groupId;
-                        user.dataValues.id = memberId;
+        // TODO: Used to use GroupMember.destroy, but that broke when moving 2.x->3.x - https://github.com/sequelize/sequelize/issues/4465
+        // NOTE: Postgres does not support LIMIT for DELETE, thus the hidden "ctid" column and subselect is used
+        await db
+            .transaction(async function (t) {
+                const group = Group.build({id: groupId});
+                const user = User.build({id: memberId});
 
-                        return cosActivities
-                            .deleteActivity(
-                                user,
-                                group,
-                                {
-                                    type: 'User',
-                                    id: req.user.id,
-                                    ip: req.ip
-                                },
-                                req.method + ' ' + req.path,
-                                t
-                            )
-                            .then(function () {
-                                return db
-                                    .query(
-                                        '\
-                                        DELETE FROM \
-                                            "GroupMemberUsers" \
-                                        WHERE ctid IN (\
-                                            SELECT \
-                                                ctid \
-                                            FROM "GroupMemberUsers" \
-                                            WHERE "groupId" = :groupId \
-                                            AND "userId" = :userId \
-                                            LIMIT 1 \
-                                        ) \
-                                        ',
-                                        {
-                                            replacements: {
-                                                groupId: groupId,
-                                                userId: memberId
-                                            },
-                                            type: db.QueryTypes.DELETE,
-                                            transaction: t,
-                                            raw: true
-                                        }
-                                    );
-                            });
-                    });
-            })
-            .then(function () {
-                return res.ok();
-            })
-            .catch(next);
-    });
+                group.dataValues.id = groupId;
+                user.dataValues.id = memberId;
+
+                await cosActivities
+                    .deleteActivity(
+                        user,
+                        group,
+                        {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
+                await db
+                    .query(
+                        '\
+                        DELETE FROM \
+                            "GroupMemberUsers" \
+                        WHERE ctid IN (\
+                            SELECT \
+                                ctid \
+                            FROM "GroupMemberUsers" \
+                            WHERE "groupId" = :groupId \
+                            AND "userId" = :userId \
+                            LIMIT 1 \
+                        ) \
+                        ',
+                        {
+                            replacements: {
+                                groupId: groupId,
+                                userId: memberId
+                            },
+                            type: db.QueryTypes.DELETE,
+                            transaction: t,
+                            raw: true
+                        }
+                    );
+            });
+
+        return res.ok();
+    }));
 
     /**
      * Update (regenerate) Group join token (GroupJoin) with a level
@@ -1701,4 +1696,5 @@ module.exports = function (app) {
     return {
         hasPermission: hasPermission
     };
-};
+}
+;
