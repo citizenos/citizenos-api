@@ -319,6 +319,7 @@ const shared = require('../utils/shared');
 const userLib = require('./lib/user')(app);
 const memberLib = require('./lib/members')(app);
 const topicLib = require('./topic');
+const activityLib = require('./activity');
 
 const Group = models.Group;
 const GroupJoin = models.GroupJoin;
@@ -1846,7 +1847,7 @@ suite('Users', function () {
             });
 
             test('Success - 20000 - default level (read)', async function () {
-                const res = await topicJoinJoin(agentUser, group.join.token);
+                const res = await groupJoinJoin(agentUser, group.join.token);
             });
 
             test('Success - 20000 - non-default level (edit) with double join attempt (admin)', async function () {
@@ -1878,50 +1879,50 @@ suite('Users', function () {
                 suite('Update', async function () {
 
                     test('Success - regenerate token', async function () {
-                        const resData = (await groupUpdateTokenJoin(agentCreator, creator.id, group.id, Group.LEVELS.edit)).body.data;
+                        const resData = (await groupUpdateTokenJoin(agentCreator, creator.id, group.id, GroupJoin.LEVELS.admin)).body.data;
 
-                        // assert.match(resData.token, new RegExp('^[a-zA-Z0-9]{' + TopicJoin.TOKEN_LENGTH + '}$'));
-                        // assert.equal(resData.level, TopicJoin.LEVELS.edit);
-                        //
-                        // const userActivities = (await activityLib.activitiesRead(agentCreator, creator.id)).body.data;
-                        // const tokenJoinUpdateActivityActual = userActivities[0].data;
-                        //
-                        // const tokenJoinUpdateActivityExpected = {
-                        //     "type": "Update",
-                        //     "actor": {
-                        //         "type": "User",
-                        //         "id": creator.id,
-                        //         "name": creator.name,
-                        //         "company": creator.company
-                        //     },
-                        //     "object": {
-                        //         "@type": "TopicJoin",
-                        //         "level": topic.join.level, // previous level
-                        //         "token": topic.join.token.replace(topic.join.token.substr(2, 8), '********'), // previous token
-                        //         "topicId": topic.id,
-                        //         "topicTitle": topic.title
-                        //     },
-                        //     "origin": {
-                        //         "@type": "TopicJoin",
-                        //         "level": topic.join.level, // previous level
-                        //         "token": topic.join.token.replace(topic.join.token.substr(2, 8), '********'), // previous token
-                        //     },
-                        //     "result": [
-                        //         {
-                        //             "op": "replace",
-                        //             "path": "/token",
-                        //             "value": resData.token.replace(resData.token.substr(2, 8), '********'), // new token
-                        //         },
-                        //         {
-                        //             "op": "replace",
-                        //             "path": "/level",
-                        //             "value": resData.level
-                        //         }
-                        //     ],
-                        //     "context": `PUT /api/users/${creator.id}/topics/${topic.id}/join`
-                        // };
-                        //
-                        // assert.deepEqual(tokenJoinUpdateActivityActual, tokenJoinUpdateActivityExpected);
+                        assert.match(resData.token, new RegExp('^[a-zA-Z0-9]{' + GroupJoin.TOKEN_LENGTH + '}$'));
+                        assert.equal(resData.level, GroupJoin.LEVELS.admin);
+
+                        const userActivities = (await activityLib.activitiesRead(agentCreator, creator.id)).body.data;
+                        const tokenJoinUpdateActivityActual = userActivities[0].data;
+
+                        const tokenJoinUpdateActivityExpected = {
+                            "type": "Update",
+                            "actor": {
+                                "type": "User",
+                                "id": creator.id,
+                                "name": creator.name,
+                                "company": creator.company
+                            },
+                            "object": {
+                                "@type": "GroupJoin",
+                                "level": group.join.level, // previous level
+                                "token": group.join.token.replace(group.join.token.substr(2, 8), '********'), // previous token
+                                "groupId": group.id,
+                                "groupName": group.name
+                            },
+                            "origin": {
+                                "@type": "GroupJoin",
+                                "level": group.join.level, // previous level
+                                "token": group.join.token.replace(group.join.token.substr(2, 8), '********'), // previous token
+                            },
+                            "result": [
+                                {
+                                    "op": "replace",
+                                    "path": "/token",
+                                    "value": resData.token.replace(resData.token.substr(2, 8), '********'), // new token
+                                },
+                                {
+                                    "op": "replace",
+                                    "path": "/level",
+                                    "value": resData.level
+                                }
+                            ],
+                            "context": `PUT /api/users/${creator.id}/groups/${group.id}/join`
+                        };
+
+                        assert.deepEqual(tokenJoinUpdateActivityActual, tokenJoinUpdateActivityExpected);
                     });
 
                     test('Fail - 40001 - Bad request - missing required property "level"', async function () {
@@ -1929,7 +1930,7 @@ suite('Users', function () {
                         const resBodyExpected = {
                             status: {
                                 code: 40001,
-                                message: 'Invalid value for property "level". Possible values are read,edit,admin.'
+                                message: 'Invalid value for property "level". Possible values are read,admin.'
                             }
                         };
 

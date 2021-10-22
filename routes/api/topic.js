@@ -37,8 +37,10 @@ module.exports = function (app) {
     const crypto = require('crypto');
 
     const loginCheck = app.get('middleware.loginCheck');
+    const asyncMiddleware = app.get('middleware.asyncMiddleware');
     const authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
     const partnerParser = app.get('middleware.partnerParser');
+
     const authUser = require('./auth')(app);
     const User = models.User;
     const UserConnection = models.UserConnection;
@@ -1842,48 +1844,44 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/311
      */
-    app.put('/api/users/:userId/topics/:topicId/join', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
-        try {
-            const topicId = req.params.topicId;
-            const level = req.body.level;
+    app.put('/api/users/:userId/topics/:topicId/join', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res, next) {
+        const topicId = req.params.topicId;
+        const level = req.body.level;
 
-            if (!Object.values(TopicJoin.LEVELS).includes(level)) {
-                return res.badRequest('Invalid value for property "level". Possible values are ' + Object.values(TopicJoin.LEVELS) + '.', 1);
+        if (!Object.values(TopicJoin.LEVELS).includes(level)) {
+            return res.badRequest('Invalid value for property "level". Possible values are ' + Object.values(TopicJoin.LEVELS) + '.', 1);
+        }
+
+        const topicJoin = await TopicJoin.findOne({
+            where: {
+                topicId: topicId
             }
+        });
 
-            const topicJoin = await TopicJoin.findOne({
-                where: {
-                    topicId: topicId
-                }
+        topicJoin.token = TopicJoin.generateToken();
+        topicJoin.level = level;
+
+        await db
+            .transaction(async function (t) {
+                await cosActivities
+                    .updateActivity(
+                        topicJoin,
+                        null,
+                        {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        },
+                        null,
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
+                await topicJoin.save({transaction: t});
             });
 
-            topicJoin.token = TopicJoin.generateToken();
-            topicJoin.level = level;
-
-            await db
-                .transaction(async function (t) {
-                    await cosActivities
-                        .updateActivity(
-                            topicJoin,
-                            null,
-                            {
-                                type: 'User',
-                                id: req.user.id,
-                                ip: req.ip
-                            },
-                            null,
-                            req.method + ' ' + req.path,
-                            t
-                        );
-
-                    await topicJoin.save({transaction: t});
-                });
-
-            return res.ok(topicJoin);
-        } catch (err) {
-            return next(err);
-        }
-    });
+        return res.ok(topicJoin);
+    }));
 
     /**
      * Update level of an existing token WITHOUT regenerating the token
@@ -4028,79 +4026,75 @@ module.exports = function (app) {
      *
      * Allows sharing of private join urls for example in forums, on conference screen...
      */
-    app.post('/api/topics/join/:token', loginCheck(['partner']), async function (req, res, next) {
+    app.post('/api/topics/join/:token', loginCheck(['partner']), asyncMiddleware(async function (req, res, next) {
         const token = req.params.token;
         const userId = req.user.id;
 
-        try {
-            const topicJoin = await TopicJoin.findOne({
-                where: {
-                    token: token
-                }
-            });
-
-            if (!topicJoin) {
-                return res.badRequest('Matching token not found', 1);
+        const topicJoin = await TopicJoin.findOne({
+            where: {
+                token: token
             }
+        });
 
-            const topic = await Topic.findOne({
+        if (!topicJoin) {
+            return res.badRequest('Matching token not found', 1);
+        }
+
+        const topic = await Topic.findOne({
+            where: {
+                id: topicJoin.topicId
+            }
+        });
+
+        await db.transaction(async function (t) {
+            const [memberUser, created] = await TopicMemberUser.findOrCreate({ // eslint-disable-line
                 where: {
-                    id: topicJoin.topicId
-                }
+                    topicId: topic.id,
+                    userId: userId
+                },
+                defaults: {
+                    level: topicJoin.level
+                },
+                transaction: t
             });
 
-            await db.transaction(async function (t) {
-                const [memberUser, created] = await TopicMemberUser.findOrCreate({ // eslint-disable-line
+            if (created) {
+                const user = await User.findOne({
                     where: {
-                        topicId: topic.id,
-                        userId: userId
-                    },
-                    defaults: {
-                        level: topicJoin.level
-                    },
-                    transaction: t
+                        id: userId
+                    }
                 });
 
-                if (created) {
-                    const user = await User.findOne({
-                        where: {
-                            id: userId
-                        }
-                    });
+                await cosActivities.joinActivity(
+                    topic,
+                    {
+                        type: 'User',
+                        id: user.id,
+                        ip: req.ip,
+                        level: topicJoin.level
+                    },
+                    req.method + ' ' + req.path,
+                    t
+                );
+            }
+        });
 
-                    await cosActivities.joinActivity(
-                        topic,
-                        {
-                            type: 'User',
-                            id: user.id,
-                            ip: req.ip,
-                            level: topicJoin.level
-                        },
-                        req.method + ' ' + req.path,
-                        t
-                    );
-                }
-            });
+        const authorIds = topic.authorIds;
+        const authors = await User.findAll({
+            where: {
+                id: authorIds
+            },
+            attributes: ['id', 'name'],
+            raw: true
+        });
 
-            const authorIds = topic.authorIds;
-            const authors = await User.findAll({
-                where: {
-                    id: authorIds
-                },
-                attributes: ['id', 'name'],
-                raw: true
-            });
+        const resObject = topic.toJSON();
 
-            const resObject = topic.toJSON();
+        resObject.authors = authors;
+        resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
 
-            resObject.authors = authors;
-            resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
-
-            return res.ok(resObject);
-        } catch (err) {
-            next(err);
-        }
-    });
+        return res.ok(resObject);
+    }));
 
 
     /**

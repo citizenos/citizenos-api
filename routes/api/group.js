@@ -302,7 +302,6 @@ module.exports = function (app) {
         return res.ok();
     }));
 
-
     /**
      * Get all Groups User belongs to
      */
@@ -711,8 +710,43 @@ module.exports = function (app) {
      * @see https://github.com/citizenos/citizenos-fe/issues/325
      */
     app.put('/api/users/:userId/groups/:groupId/join', loginCheck(), hasPermission(GroupMemberUser.LEVELS.admin, null, null), async function (req, res, next) {
-        // FIXME: IMPLEMENT
-        return res.notImplemented();
+        const groupId = req.params.groupId;
+        const level = req.body.level;
+
+        if (!Object.values(GroupJoin.LEVELS).includes(level)) {
+            console.log('HERE!');
+            return res.badRequest('Invalid value for property "level". Possible values are ' + Object.values(GroupJoin.LEVELS) + '.', 1);
+        }
+
+        const groupJoin = await GroupJoin.findOne({
+            where: {
+                groupId: groupId
+            }
+        });
+
+        groupJoin.token = GroupJoin.generateToken();
+        groupJoin.level = level;
+
+        await db
+            .transaction(async function (t) {
+                await cosActivities
+                    .updateActivity(
+                        groupJoin,
+                        null,
+                        {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        },
+                        null,
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
+                await groupJoin.save({transaction: t});
+            });
+
+        return res.ok(groupJoin);
     });
 
     /**
@@ -730,10 +764,61 @@ module.exports = function (app) {
      *
      * Allows sharing of private join urls for example in forums, on conference screen...
      */
-    app.post('/api/topics/join/:token', loginCheck(), async function (req, res, next) {
-        // FIXME: IMPLEMENT
-        return res.notImplemented();
-    });
+    app.post('/api/groups/join/:token', loginCheck(), asyncMiddleware(async function (req, res) {
+        const token = req.params.token;
+        const userId = req.user.id;
+
+        const groupJoin = await GroupJoin.findOne({
+            where: {
+                token: token
+            }
+        });
+
+        if (!groupJoin) {
+            return res.badRequest('Matching token not found', 1);
+        }
+
+        const group = await Group.findOne({
+            where: {
+                id: groupJoin.groupId
+            }
+        });
+
+        await db.transaction(async function (t) {
+            const [memberUser, created] = await GroupMemberUser.findOrCreate({ // eslint-disable-line
+                where: {
+                    groupId: group.id,
+                    userId: userId
+                },
+                defaults: {
+                    level: groupJoin.level
+                },
+                transaction: t
+            });
+
+            if (created) {
+                const user = await User.findOne({
+                    where: {
+                        id: userId
+                    }
+                });
+
+                await cosActivities.joinActivity(
+                    group,
+                    {
+                        type: 'User',
+                        id: user.id,
+                        ip: req.ip,
+                        level: groupJoin.level
+                    },
+                    req.method + ' ' + req.path,
+                    t
+                );
+            }
+        });
+
+        return res.ok();
+    }));
 
     /**
      * Invite new Members to the Group
