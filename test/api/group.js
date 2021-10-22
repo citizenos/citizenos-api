@@ -325,7 +325,6 @@ const Group = models.Group;
 const GroupJoin = models.GroupJoin;
 const Topic = models.Topic;
 const GroupMemberUser = models.GroupMemberUser;
-const TopicMemberUser = models.TopicMemberUser;
 const TopicMemberGroup = models.TopicMemberGroup;
 const GroupInviteUser = models.GroupInviteUser;
 
@@ -1726,7 +1725,7 @@ suite('Users', function () {
                         delete creatorExpected.language;
                         assert.deepEqual(groupMemberTopic.creator, creatorExpected);
 
-                        assert.equal(groupMemberTopic.permission.level, TopicMemberUser.LEVELS.admin);
+                        assert.equal(groupMemberTopic.permission.level, GroupMemberUser.LEVELS.admin);
                         assert.equal(groupMemberTopic.permission.levelGroup, TopicMemberGroup.LEVELS.edit);
 
                     });
@@ -1857,8 +1856,51 @@ suite('Users', function () {
                 assert.deepEqual(resActual, resExpected);
             });
 
-            test('Success - 20000 - non-default level (edit) with double join attempt (admin)', async function () {
-                throw new Error('Implement!');
+            test('Success - 20000 - default level (read) with double join attempt (admin)', async function () {
+                const resGroupJoinRead = (await groupUpdateTokenJoin(agentCreator, creator.id, group.id, GroupJoin.LEVELS.read)).body.data;
+                const resJoinRead = await groupJoinJoin(agentUser, resGroupJoinRead.token);
+
+                const userActivities = (await activityLib.activitiesRead(agentUser, user.id)).body.data;
+                const groupJoinActivityActual = userActivities[0].data;
+
+                const groupJoinActivityExpected = {
+                    type: 'Join',
+                    actor: {
+                        id: user.id,
+                        type: 'User',
+                        level: GroupJoin.LEVELS.read,
+                        company: user.company,
+                        name: user.name
+                    },
+                    object: {
+                        '@type': 'Group',
+                        id: group.id,
+                        name: group.name,
+                        parentId: null,
+                        visibility: Group.VISIBILITY.private
+                    },
+                    context: `POST /api/groups/join/${resGroupJoinRead.token}`
+                };
+
+                assert.deepEqual(groupJoinActivityActual, groupJoinActivityExpected);
+
+                const expectedResult = {
+                    status: {
+                        code: 20000
+                    }
+                };
+
+                assert.deepEqual(resJoinRead.body, expectedResult);
+
+                const groupR = (await groupRead(agentUser, user.id, group.id)).body.data;
+                //console.log(groupR);
+                assert.equal(groupR.permission.level, GroupMemberUser.LEVELS.read);
+
+                // Modify join token level to admin, same User tries to join, but the level should remain the same (edit)
+                const resGroupJoinAdmin = (await groupUpdateTokenJoin(agentCreator, creator.id, group.id, GroupJoin.LEVELS.admin)).body.data;
+                await groupJoinJoin(agentUser, resGroupJoinAdmin.token);
+                const groupReadAfterRejoin = (await groupRead(agentUser, user.id, group.id)).body.data;
+                assert.equal(groupReadAfterRejoin.permission.level, GroupMemberUser.LEVELS.read);
             });
 
             test('Success - 20000 - User already a member, joins with a link SHOULD NOT update permissions', async function () {
@@ -1866,7 +1908,7 @@ suite('Users', function () {
             });
 
             test('Fail - 40101 - Matching token not found', async function () {
-                const res = await _topicJoinJoin(agentUser, 'nonExistentToken', 400);
+                const res = await _groupJoinJoin(agentUser, 'nonExistentToken', 400);
 
                 const expectedResult = {
                     status: {
@@ -1878,7 +1920,7 @@ suite('Users', function () {
             });
 
             test('Fail - 40100 - Unauthorized', async function () {
-                await _topicJoinJoin(request.agent(app), group.join.token, 401);
+                await _groupJoinJoin(request.agent(app), group.join.token, 401);
             });
 
             suite('Token', async function () {
