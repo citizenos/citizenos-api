@@ -714,7 +714,6 @@ module.exports = function (app) {
         const level = req.body.level;
 
         if (!Object.values(GroupJoin.LEVELS).includes(level)) {
-            console.log('HERE!');
             return res.badRequest('Invalid value for property "level". Possible values are ' + Object.values(GroupJoin.LEVELS) + '.', 1);
         }
 

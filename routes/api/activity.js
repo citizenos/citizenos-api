@@ -307,6 +307,7 @@ module.exports = function (app) {
                             object['@type'] = activity.data[field]['@type'];
                             break;
                         case 'TopicJoin': // https://github.com/citizenos/citizenos-fe/issues/311
+                        case 'GroupJoin': // https://github.com/citizenos/citizenos-fe/issues/325
                             object = activity.data[field];
 
                             // At the moment, we have no Activity feed data modifications based on User access level.
@@ -315,6 +316,7 @@ module.exports = function (app) {
                             // Instead of taking on the journey (LONG ONE) to filter/mask data based on permissions, I take the shortcut of masking the token in the feed for ALL Users.
                             // IDEALLY I FEEL like all the filtering SHOULD be done in the Models "toJSON(permission)" function which MUST then be used for filtering API output as well.
                             // @see https://github.com/citizenos/citizenos-fe/issues/311
+                            // @see https://github.com/citizenos/citizenos-fe/issues/325
 
                             if (object.token) {
                                 object.token = object.token.replace(object.token.substr(2, 8), '********');
@@ -344,6 +346,14 @@ module.exports = function (app) {
                             return el.id === object.topicId;
                         });
                         object.topicTitle = topic.title;
+                    }
+
+                    // @see https://github.com/citizenos/citizenos-fe/issues/325
+                    if (object && object.groupId) {
+                        const group = returnActivity.groups.find(function (el) {
+                            return el.id === object.groupId;
+                        });
+                        object.groupName = group.name;
                     }
                 } else if (activity.data.object && activity.data.object.object) {
                     if (activity.data.object.object['@type'] === 'Topic') {
