@@ -1900,11 +1900,17 @@ suite('Users', function () {
                 const resGroupJoinAdmin = (await groupUpdateTokenJoin(agentCreator, creator.id, group.id, GroupJoin.LEVELS.admin)).body.data;
                 await groupJoinJoin(agentUser, resGroupJoinAdmin.token);
                 const groupReadAfterRejoin = (await groupRead(agentUser, user.id, group.id)).body.data;
+
                 assert.equal(groupReadAfterRejoin.permission.level, GroupMemberUser.LEVELS.read);
             });
 
             test('Success - 20000 - User already a member, joins with a link SHOULD NOT update permissions', async function () {
-                throw new Error('Implement!');
+                const resGroupJoinAdmin = (await groupUpdateTokenJoin(agentCreator, creator.id, group.id, GroupJoin.LEVELS.admin)).body.data;
+                await groupMemberUsersUpdate(agentCreator, creator.id, group.id, user.id, GroupMemberUser.LEVELS.read);
+                await groupJoinJoin(agentUser, resGroupJoinAdmin.token);
+                const groupReadAfterJoin = (await groupRead(agentUser, user.id, group.id)).body.data;
+
+                assert.equal(groupReadAfterJoin.permission.level, GroupMemberUser.LEVELS.read);
             });
 
             test('Fail - 40101 - Matching token not found', async function () {
