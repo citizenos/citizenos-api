@@ -1847,7 +1847,14 @@ suite('Users', function () {
             });
 
             test('Success - 20000 - default level (read)', async function () {
-                const res = await groupJoinJoin(agentUser, group.join.token);
+                const resActual = (await groupJoinJoin(agentUser, group.join.token)).body;
+                const resExpected = {
+                    status: {
+                        code: 20000
+                    }
+                };
+
+                assert.deepEqual(resActual, resExpected);
             });
 
             test('Success - 20000 - non-default level (edit) with double join attempt (admin)', async function () {

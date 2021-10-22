@@ -753,10 +753,49 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/325
      */
-    app.put('/api/users/:userId/groups/:groupId/join/:token', loginCheck(), hasPermission(GroupMemberUser.LEVELS.admin, null, null), async function (req, res, next) {
-        // FIXME: IMPLEMENT
-        return res.notImplemented();
-    });
+    app.put('/api/users/:userId/groups/:groupId/join/:token', loginCheck(), hasPermission(GroupMemberUser.LEVELS.admin, null, null), asyncMiddleware(async function (req, res, next) {
+        const groupId = req.params.groupId;
+        const token = req.params.token;
+        const level = req.body.level;
+
+        if (!Object.values(GroupJoin.LEVELS).includes(level)) {
+            return res.badRequest('Invalid value for property "level". Possible values are ' + Object.values(GroupJoin.LEVELS) + '.', 1);
+        }
+
+        const groupJoin = await GroupJoin.findOne({
+            where: {
+                groupId: groupId,
+                token: token
+            }
+        });
+
+        if (!groupJoin) {
+            return res.notFound('Nothing found for topicId and token combination.');
+        }
+
+        groupJoin.level = level;
+
+        await db
+            .transaction(async function (t) {
+                await cosActivities
+                    .updateActivity(
+                        groupJoin,
+                        null,
+                        {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        },
+                        null,
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
+                await groupJoin.save({transaction: t});
+            });
+
+        return res.ok(groupJoin);
+    }));
 
     /**
      * Join authenticated User to Group with a given token.

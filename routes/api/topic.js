@@ -1888,53 +1888,49 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/311
      */
-    app.put('/api/users/:userId/topics/:topicId/join/:token', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
-        try {
-            const topicId = req.params.topicId;
-            const token = req.params.token;
-            const level = req.body.level;
+    app.put('/api/users/:userId/topics/:topicId/join/:token', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res, next) {
+        const topicId = req.params.topicId;
+        const token = req.params.token;
+        const level = req.body.level;
 
-            if (!Object.values(TopicJoin.LEVELS).includes(level)) {
-                return res.badRequest('Invalid value for property "level". Possible values are ' + Object.values(TopicJoin.LEVELS) + '.', 1);
+        if (!Object.values(TopicJoin.LEVELS).includes(level)) {
+            return res.badRequest('Invalid value for property "level". Possible values are ' + Object.values(TopicJoin.LEVELS) + '.', 1);
+        }
+
+        const topicJoin = await TopicJoin.findOne({
+            where: {
+                topicId: topicId,
+                token: token
             }
+        });
 
-            const topicJoin = await TopicJoin.findOne({
-                where: {
-                    topicId: topicId,
-                    token: token
-                }
+        if (!topicJoin) {
+            return res.notFound('Nothing found for topicId and token combination.');
+        }
+
+        topicJoin.level = level;
+
+        await db
+            .transaction(async function (t) {
+                await cosActivities
+                    .updateActivity(
+                        topicJoin,
+                        null,
+                        {
+                            type: 'User',
+                            id: req.user.id,
+                            ip: req.ip
+                        },
+                        null,
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
+                await topicJoin.save({transaction: t});
             });
 
-            if (!topicJoin) {
-                return res.notFound('Nothing found for topicId and token combination.');
-            }
-
-            topicJoin.level = level;
-
-            await db
-                .transaction(async function (t) {
-                    await cosActivities
-                        .updateActivity(
-                            topicJoin,
-                            null,
-                            {
-                                type: 'User',
-                                id: req.user.id,
-                                ip: req.ip
-                            },
-                            null,
-                            req.method + ' ' + req.path,
-                            t
-                        );
-
-                    await topicJoin.save({transaction: t});
-                });
-
-            return res.ok(topicJoin);
-        } catch (err) {
-            return next(err);
-        }
-    });
+        return res.ok(topicJoin);
+    }));
 
 
     /**
