@@ -602,6 +602,10 @@ module.exports = function (app) {
                 }
             });
 
+        if (!groupMemberUser) {
+            return res.notFound('User not found', 1);
+        }
+
         groupMemberUser.level = newLevel;
 
         await db

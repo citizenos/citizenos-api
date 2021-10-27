@@ -189,6 +189,22 @@ const groupInviteUsersAccept = function async (agent, userId, groupId, inviteId)
     return _groupInviteUsersAccept(agent, userId, groupId, inviteId, 201);
 };
 
+const _groupMemberUsersList = function async (agent, userId, groupId, expectedHttpCode) {
+    const path = '/api/users/:userId/groups/:groupId/members/users'
+        .replace(':userId', userId)
+        .replace(':groupId', groupId);
+
+    return agent
+        .get(path)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const groupMemberUsersList = function async (agent, userId, groupId) {
+    return _groupMemberUsersList(agent, userId, groupId, 200);
+};
+
 const _groupMemberUsersUpdate = async function (agent, userId, groupId, memberId, level, expectedHttpCode) {
     const path = '/api/users/:userId/groups/:groupId/members/users/:memberId'
         .replace(':userId', userId)
@@ -1892,25 +1908,20 @@ suite('Users', function () {
 
                 assert.deepEqual(resJoinRead.body, expectedResult);
 
-                const groupR = (await groupRead(agentUser, user.id, group.id)).body.data;
-                //console.log(groupR);
-                assert.equal(groupR.permission.level, GroupMemberUser.LEVELS.read);
+                const groupMembersRead = (await groupMemberUsersList(agentUser, user.id, group.id)).body.data;
+                const groupMemberInfo = groupMembersRead.rows.find(function (member) {
+                    return member.id === user.id;
+                });
+                assert.equal(groupMemberInfo.level, GroupMemberUser.LEVELS.read);
 
                 // Modify join token level to admin, same User tries to join, but the level should remain the same (edit)
                 const resGroupJoinAdmin = (await groupUpdateTokenJoin(agentCreator, creator.id, group.id, GroupJoin.LEVELS.admin)).body.data;
                 await groupJoinJoin(agentUser, resGroupJoinAdmin.token);
-                const groupReadAfterRejoin = (await groupRead(agentUser, user.id, group.id)).body.data;
-
-                assert.equal(groupReadAfterRejoin.permission.level, GroupMemberUser.LEVELS.read);
-            });
-
-            test('Success - 20000 - User already a member, joins with a link SHOULD NOT update permissions', async function () {
-                const resGroupJoinAdmin = (await groupUpdateTokenJoin(agentCreator, creator.id, group.id, GroupJoin.LEVELS.admin)).body.data;
-                await groupMemberUsersUpdate(agentCreator, creator.id, group.id, user.id, GroupMemberUser.LEVELS.read);
-                await groupJoinJoin(agentUser, resGroupJoinAdmin.token);
-                const groupReadAfterJoin = (await groupRead(agentUser, user.id, group.id)).body.data;
-
-                assert.equal(groupReadAfterJoin.permission.level, GroupMemberUser.LEVELS.read);
+                const groupMembersReadAfterRejoin = (await groupMemberUsersList(agentUser, user.id, group.id)).body.data;
+                const groupMemberInfoAfterRejoin = groupMembersReadAfterRejoin.rows.find(function (member) {
+                    return member.id === user.id;
+                });
+                assert.equal(groupMemberInfoAfterRejoin.level, GroupMemberUser.LEVELS.read);
             });
 
             test('Fail - 40101 - Matching token not found', async function () {
