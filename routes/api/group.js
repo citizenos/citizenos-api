@@ -713,7 +713,7 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/325
      */
-    app.put('/api/users/:userId/groups/:groupId/join', loginCheck(), hasPermission(GroupMemberUser.LEVELS.admin, null, null), async function (req, res, next) {
+    app.put('/api/users/:userId/groups/:groupId/join', loginCheck(), hasPermission(GroupMemberUser.LEVELS.admin, null, null), async function (req, res) {
         const groupId = req.params.groupId;
         const level = req.body.level;
 
@@ -757,7 +757,7 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/325
      */
-    app.put('/api/users/:userId/groups/:groupId/join/:token', loginCheck(), hasPermission(GroupMemberUser.LEVELS.admin, null, null), asyncMiddleware(async function (req, res, next) {
+    app.put('/api/users/:userId/groups/:groupId/join/:token', loginCheck(), hasPermission(GroupMemberUser.LEVELS.admin, null, null), asyncMiddleware(async function (req, res) {
         const groupId = req.params.groupId;
         const token = req.params.token;
         const level = req.body.level;
@@ -1540,7 +1540,7 @@ module.exports = function (app) {
     /**
      * Get Group member Topics
      */
-    app.get('/api/users/:userId/groups/:groupId/members/topics', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res, next) {
+    app.get('/api/users/:userId/groups/:groupId/members/topics', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         const search = req.query.search;

@@ -1844,7 +1844,7 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/311
      */
-    app.put('/api/users/:userId/topics/:topicId/join', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/join', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const level = req.body.level;
 
@@ -1888,7 +1888,7 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/311
      */
-    app.put('/api/users/:userId/topics/:topicId/join/:token', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/join/:token', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const token = req.params.token;
         const level = req.body.level;
@@ -4022,7 +4022,7 @@ module.exports = function (app) {
      *
      * Allows sharing of private join urls for example in forums, on conference screen...
      */
-    app.post('/api/topics/join/:token', loginCheck(['partner']), asyncMiddleware(async function (req, res, next) {
+    app.post('/api/topics/join/:token', loginCheck(['partner']), asyncMiddleware(async function (req, res) {
         const token = req.params.token;
         const userId = req.user.id;
 
