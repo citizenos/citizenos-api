@@ -435,6 +435,11 @@ suite('Users', function () {
 
             test('Success', async function () {
                 const groupR = (await groupRead(agent, user.id, group.id)).body.data;
+                const groupJoin = (await GroupJoin.findOne({
+                    where: {
+                        groupId: group.id
+                    }
+                }));
 
                 const expected = {
                     id: group.id,
@@ -448,6 +453,10 @@ suite('Users', function () {
                         name: user.name,
                         email: user.email,
                         createdAt: JSON.parse(JSON.stringify(user.createdAt)) // In User object the "createdAt" is Date object so to get valid string we stringify and then parse
+                    },
+                    join: {
+                        token: groupJoin.token,
+                        level: groupJoin.level
                     },
                     members: {
                         count: 1
@@ -495,6 +504,7 @@ suite('Users', function () {
                 assert.equal(returnedGroup.id, group.id);
 
                 const expectedGroup = (await groupRead(agent, user.id, group.id)).body.data;
+                delete expectedGroup.join; // Update does not return GroupJoin info
 
                 assert.deepEqual(returnedGroup, expectedGroup);
             });
@@ -1457,6 +1467,11 @@ suite('Users', function () {
                         assert.property(groupMemberUser, 'createdAt');
                         assert.property(groupMemberUser, 'updatedAt');
                         assert.property(groupMemberUser, 'deletedAt');
+
+                        const groupR = (await groupRead(agentUserToInvite, userToInvite.id, group.id)).body.data;
+
+                        // Do not return token for people with insufficient permission - https://github.com/citizenos/citizenos-fe/issues/325
+                        assert.notProperty(groupR, 'join');
                     });
 
                     test('Success - 20000 - User already a Member, but accepts an Invite', async function () {

@@ -2728,7 +2728,9 @@ module.exports = function (app) {
         }
 
         return response;
-    }
+    };
+
+
     /**
      * Get all members of the Topic
      */

@@ -155,36 +155,52 @@ module.exports = function (app) {
      * Read a Group
      */
     app.get('/api/users/:userId/groups/:groupId', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
+        const userId = req.user.id;
+        const groupId = req.params.groupId;
+
         const [group] = await db
             .query(
-                'SELECT \
-                     g.id, \
-                     g."parentId" AS "parent.id", \
-                     g.name, \
-                     g.visibility, \
-                     c.id as "creator.id", \
-                     c.email as "creator.email", \
-                     c.name as "creator.name", \
-                     c."createdAt" as "creator.createdAt", \
-                     mc.count as "members.count" \
-                FROM "Groups" g \
-                    LEFT JOIN "Users" c ON (c.id = g."creatorId") \
-                    LEFT JOIN ( \
-                        SELECT "groupId", count("userId") AS "count" \
-                        FROM "GroupMemberUsers" \
-                        WHERE "deletedAt" IS NULL \
-                        GROUP BY "groupId" \
-                    ) AS mc ON (mc."groupId" = g.id) \
-                WHERE g.id = :groupId;',
+                `SELECT
+                     g.id,
+                     g."parentId" AS "parent.id",
+                     g.name,
+                     g.visibility,
+                     c.id as "creator.id",
+                     c.email as "creator.email",
+                     c.name as "creator.name",
+                     c."createdAt" as "creator.createdAt",
+                     CASE
+                     WHEN gmu.level = 'admin' THEN gj.token
+                     ELSE NULL
+                     END as "join.token",
+                     gj.level as "join.level",
+                     mc.count as "members.count"
+                FROM "Groups" g
+                    LEFT JOIN "Users" c ON (c.id = g."creatorId")
+                    LEFT JOIN (
+                        SELECT "groupId", count("userId") AS "count"
+                        FROM "GroupMemberUsers"
+                        WHERE "deletedAt" IS NULL
+                        GROUP BY "groupId"
+                    ) AS mc ON (mc."groupId" = g.id)
+                    LEFT JOIN "GroupJoins" gj ON (gj."groupId" = g.id)
+                    LEFT JOIN "GroupMemberUsers" gmu ON (gmu."groupId" = g.id AND gmu."userId" = :userId AND gmu."deletedAt" IS NULL)
+                WHERE g.id = :groupId;`,
                 {
                     replacements: {
-                        groupId: req.params.groupId
+                        groupId: groupId,
+                        userId: userId
                     },
                     type: db.QueryTypes.SELECT,
                     raw: true,
                     nest: true
                 }
             );
+
+        // Do not return token for people with insufficient permission - https://github.com/citizenos/citizenos-fe/issues/325
+        if (group.join && !group.join.token) {
+            delete group.join;
+        }
 
         return res.ok(group);
     }));
