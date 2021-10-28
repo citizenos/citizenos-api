@@ -774,7 +774,7 @@ module.exports = function (app) {
         });
 
         if (!groupJoin) {
-            return res.notFound('Nothing found for topicId and token combination.');
+            return res.notFound('Nothing found for groupId and token combination.');
         }
 
         groupJoin.level = level;
