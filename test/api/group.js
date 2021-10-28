@@ -1909,8 +1909,7 @@ suite('Users', function () {
                         name: group.name,
                         parentId: null,
                         visibility: Group.VISIBILITY.private
-                    },
-                    context: `POST /api/groups/join/${resGroupJoinRead.token}`
+                    }
                 };
 
                 assert.deepEqual(groupJoinActivityActual, groupJoinActivityExpected);
@@ -1929,7 +1928,7 @@ suite('Users', function () {
                 });
                 assert.equal(groupMemberInfo.level, GroupMemberUser.LEVELS.read);
 
-                // Modify join token level to admin, same User tries to join, but the level should remain the same (edit)
+                // Modify join token level to admin, same User tries to join, but the level should remain the same (read)
                 const resGroupJoinAdmin = (await groupUpdateTokenJoin(agentCreator, creator.id, group.id, GroupJoin.LEVELS.admin)).body.data;
                 await groupJoinJoin(agentUser, resGroupJoinAdmin.token);
                 const groupMembersReadAfterRejoin = (await groupMemberUsersList(agentUser, user.id, group.id)).body.data;
@@ -1999,8 +1998,7 @@ suite('Users', function () {
                                     "path": "/level",
                                     "value": resData.level
                                 }
-                            ],
-                            "context": `PUT /api/users/${creator.id}/groups/${group.id}/join`
+                            ]
                         };
 
                         assert.deepEqual(tokenJoinUpdateActivityActual, tokenJoinUpdateActivityExpected);
@@ -2077,8 +2075,7 @@ suite('Users', function () {
                                         "path": "/level",
                                         "value": resBody.data.level
                                     }
-                                ],
-                                "context": `PUT /api/users/${creator.id}/groups/${group.id}/join/${group.join.token}`
+                                ]
                             };
 
                             assert.deepEqual(tokenJoinLevelUpdateActivityActual, tokenJoinLevelUpdateActivityExpected);

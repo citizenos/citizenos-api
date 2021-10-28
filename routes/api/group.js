@@ -51,6 +51,7 @@ module.exports = function (app) {
                 type: db.QueryTypes.SELECT,
                 raw: true
             });
+
             if (result && result[0]) {
                 const isPublic = result[0].isPublic;
                 const isAllowed = result[0].allowed;
@@ -79,17 +80,19 @@ module.exports = function (app) {
             }
 
             return _hasPermission(groupId, userId, level, allowPublic, allowDeleteSelf)
-                .then(function () {
-                    return new Promise(function (resolve) {
-                        return resolve(next(null, req, res));
-                    });
-                }, function (err) {
-                    if (err) {
-                        return next(err);
-                    }
+                .then(
+                    function () {
+                        return new Promise(function (resolve) {
+                            return resolve(next(null, req, res));
+                        });
+                    },
+                    function (err) {
+                        if (err) {
+                            return next(err);
+                        }
 
-                    return res.forbidden('Insufficient permissions');
-                })
+                        return res.forbidden('Insufficient permissions');
+                    })
                 .catch(next);
         };
     };

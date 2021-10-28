@@ -4515,8 +4515,7 @@ suite('Users', function () {
                         hashtag: topic.hashtag,
                         createdAt: topic.createdAt,
                         updatedAt: topic.updatedAt,
-                    },
-                    context: `POST /api/topics/join/${resTopicJoinEdit.token}`
+                    }
                 };
 
                 assert.deepEqual(topicJoinActivityActual, topicJoinActivityExpected);
@@ -4651,8 +4650,7 @@ suite('Users', function () {
                                     "path": "/level",
                                     "value": resData.level
                                 }
-                            ],
-                            "context": `PUT /api/users/${creator.id}/topics/${topic.id}/join`
+                            ]
                         };
 
                         assert.deepEqual(tokenJoinUpdateActivityActual, tokenJoinUpdateActivityExpected);
@@ -4727,8 +4725,7 @@ suite('Users', function () {
                                         "path": "/level",
                                         "value": resBody.data.level
                                     }
-                                ],
-                                "context": `PUT /api/users/${creator.id}/topics/${topic.id}/join/${topic.join.token}`
+                                ]
                             };
 
                             assert.deepEqual(tokenJoinLevelUpdateActivityActual, tokenJoinLevelUpdateActivityExpected);

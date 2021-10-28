@@ -882,7 +882,7 @@ module.exports = function (app) {
         }
 
         return _saveActivity(activity, transaction);
-    }
+    };
 
     return {
         getInstanceChangeSet: _getInstanceChangeSet,

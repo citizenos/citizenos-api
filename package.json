@@ -1,6 +1,6 @@
 {
   "name": "citizenos-api",
-  "version": "4.0.1",
+  "version": "5.0.1",
   "private": false,
   "license": "Apache-2.0",
   "main": "./bin/www",

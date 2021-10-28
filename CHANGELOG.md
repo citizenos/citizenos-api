@@ -1,7 +1,7 @@
-## 2021-10-21 - v. 5.0.1
+## 2021-10-28 - v. 5.0.1
 
-* Update `POST /api/users/:userId/groups' to return Group join token info
-* **TODO!**
+* Update `POST /api/users/:userId/groups' to return Group join token info - https://github.com/citizenos/citizenos-fe/issues/325
+* Update `GET /activites` - do not return `context` property - https://github.com/citizenos/citizenos-fe/issues/325
 
 ## 2021-10-08 - v. 4.0.1
 

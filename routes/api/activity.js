@@ -197,7 +197,9 @@ module.exports = function (app) {
         const returnList = [];
         activities.forEach(function (activity) {
             const returnActivity = _.cloneDeep(activity);
-            delete activity.data.actor.ip;
+
+            delete activity.data.actor.ip; // NEVER expose IP
+
             activity.actor = activity.data.actor;
             if (activity.data.actor.type === 'User') {
                 const actor = _.find(activity.users, function (o) {
@@ -223,6 +225,7 @@ module.exports = function (app) {
             }
 
             const extraFields = ['object', 'origin', 'target'];
+
             extraFields.forEach(function (field) {
                 let object = null;
                 let topic;
@@ -370,6 +373,7 @@ module.exports = function (app) {
             delete returnActivity.topics;
             delete returnActivity.users;
             delete returnActivity.groups;
+            delete returnActivity.data.context; // Remove "context" which is for debugging purposes but MAY expose unwanted data to the end User. - https://github.com/citizenos/citizenos-fe/issues/325
 
             returnList.push(returnActivity);
         });
