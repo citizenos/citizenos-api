@@ -15,7 +15,6 @@ module.exports = {
             return stringUtil.randomString(TOKEN_LENGTH);
         };
 
-
         return queryInterface.sequelize.transaction(async function (t) {
             await queryInterface.createTable(
                 'GroupJoins',
@@ -79,7 +78,7 @@ module.exports = {
                                     ),
                                     'base64'
                                 ),
-                                '\W',
+                                '\\W',
                                 '',
                                 'g'
                             ),
