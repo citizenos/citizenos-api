@@ -2,6 +2,8 @@
 
 * Update `POST /api/users/:userId/groups' to return Group join token info - https://github.com/citizenos/citizenos-fe/issues/325
 * Update `GET /activites` - do not return `context` property - https://github.com/citizenos/citizenos-fe/issues/325
+* Add API `PUT /api/users/:userId/groups/:groupId/join` - generation of join links with specific access level - https://github.com/citizenos/citizenos-fe/issues/325
+* Add API `PUT /api/users/:userId/groups/:groupId/join/:token` - assign access level for given join token - https://github.com/citizenos/citizenos-fe/issues/325
 
 ## 2021-10-08 - v. 4.0.1
 
