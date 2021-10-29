@@ -65,7 +65,7 @@ module.exports = {
             );
 
             // Create a GroupJoins entry for each Group
-            await queryInterface.sequelize.query(
+            const createGroupJoins = await queryInterface.sequelize.query(
                 `
                 INSERT INTO "GroupJoins"
                     SELECT 
@@ -96,6 +96,7 @@ module.exports = {
                 }
             );
 
+            console.info('GroupJoin migration updated row count:', createGroupJoins[1].rowCount);
         });
     },
     down: async (queryInterface) => {
