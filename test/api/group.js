@@ -172,7 +172,7 @@ const groupInviteUsersDelete = async function (agent, userId, groupId, inviteId)
     return _groupInviteUsersDelete(agent, userId, groupId, inviteId, 200);
 };
 
-const _groupInviteUsersAccept = function aync (agent, userId, groupId, inviteId, expectedHttpCode) {
+const _groupInviteUsersAccept = async function (agent, userId, groupId, inviteId, expectedHttpCode) {
     const path = '/api/users/:userId/groups/:groupId/invites/users/:inviteId/accept'
         .replace(':userId', userId)
         .replace(':groupId', groupId)
@@ -185,11 +185,11 @@ const _groupInviteUsersAccept = function aync (agent, userId, groupId, inviteId,
         .expect('Content-Type', /json/);
 };
 
-const groupInviteUsersAccept = function async (agent, userId, groupId, inviteId) {
+const groupInviteUsersAccept = async function (agent, userId, groupId, inviteId) {
     return _groupInviteUsersAccept(agent, userId, groupId, inviteId, 201);
 };
 
-const _groupMemberUsersList = function async (agent, userId, groupId, expectedHttpCode) {
+const _groupMemberUsersList = async function (agent, userId, groupId, expectedHttpCode) {
     const path = '/api/users/:userId/groups/:groupId/members/users'
         .replace(':userId', userId)
         .replace(':groupId', groupId);
@@ -201,7 +201,7 @@ const _groupMemberUsersList = function async (agent, userId, groupId, expectedHt
         .expect('Content-Type', /json/);
 };
 
-const groupMemberUsersList = function async (agent, userId, groupId) {
+const groupMemberUsersList = async function (agent, userId, groupId) {
     return _groupMemberUsersList(agent, userId, groupId, 200);
 };
 

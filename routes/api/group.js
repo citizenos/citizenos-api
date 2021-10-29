@@ -42,15 +42,17 @@ module.exports = function (app) {
                     AND gm."userId" = :userId
                     AND gm."deletedAt" IS NULL
                     AND g."deletedAt" IS NULL
-                GROUP BY id, uid, level;`, {
-                replacements: {
-                    groupId: groupId,
-                    userId: userId,
-                    level: level
-                },
-                type: db.QueryTypes.SELECT,
-                raw: true
-            });
+                GROUP BY id, uid, level;`,
+                {
+                    replacements: {
+                        groupId: groupId,
+                        userId: userId,
+                        level: level
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true
+                }
+            );
 
             if (result && result[0]) {
                 const isPublic = result[0].isPublic;
