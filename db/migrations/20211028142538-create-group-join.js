@@ -96,7 +96,7 @@ module.exports = {
                 }
             );
 
-            console.info('GroupJoin migration updated row count:', createGroupJoins[1].rowCount);
+            console.info('GroupJoin migration updated row count:', createGroupJoins[1]);
         });
     },
     down: async (queryInterface) => {
