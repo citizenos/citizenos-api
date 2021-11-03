@@ -74,7 +74,7 @@
     "twit": "2.2.11",
     "undersign": "git+https://github.com/citizenos/js-undersign.git#06e5690c8a5c19f290b6a73839f946b96acf911b",
     "uuid": "8.3.2",
-    "validator": "13.6.0"
+    "validator": "13.7.0"
   },
   "devDependencies": {
     "adm-zip": "0.5.5",
