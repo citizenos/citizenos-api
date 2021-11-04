@@ -406,14 +406,19 @@ module.exports = function (app) {
                     c.id as "creator.id", \
                     c.email as "creator.email", \
                     c.name as "creator.name", \
-                    gm.level as "permission.level", \
+                    CASE \
+                    WHEN gmu.level = \'admin\' THEN gj.token \
+                    ELSE NULL \
+                    END as "join.token", \
+                    gj.level as "join.level", \
+                    gmu.level as "permission.level", \
                     mc.count as "members.users.count", \
                     COALESCE(gtc.count, 0) as "members.topics.count", \
                     gt."topicId" as "members.topics.latest.id", \
                     ' + returnFields + ' \
                     gt.title as "members.topics.latest.title" \
                 FROM "Groups" g \
-                    JOIN "GroupMemberUsers" gm ON (gm."groupId" = g.id) \
+                    JOIN "GroupMemberUsers" gmu ON (gmu."groupId" = g.id) \
                     JOIN "Users" c ON (c.id = g."creatorId") \
                     JOIN ( \
                         SELECT "groupId", count("userId") AS "count" \
@@ -439,10 +444,11 @@ module.exports = function (app) {
                         WHERE tmg."deletedAt" IS NULL \
                         ORDER BY t."updatedAt" ASC \
                     ) AS gt ON (gt."groupId" = g.id) \
+                    LEFT JOIN "GroupJoins" gj ON (gj."groupId" = g.id) \
                     ' + joinText + ' \
                 WHERE g."deletedAt" IS NULL \
-                    AND gm."deletedAt" is NULL \
-                    AND gm."userId" = :userId \
+                    AND gmu."deletedAt" is NULL \
+                    AND gmu."userId" = :userId \
                 ORDER BY g."updatedAt" DESC, g.id; \
                 ',
                 {
@@ -872,7 +878,10 @@ module.exports = function (app) {
             }
         });
 
-        return res.ok();
+        const resObject = group.toJSON();
+        resObject.join = groupJoin;
+
+        return res.ok(resObject);
     }));
 
     /**
