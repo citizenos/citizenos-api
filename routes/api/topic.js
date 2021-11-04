@@ -3283,7 +3283,7 @@ module.exports = function (app) {
                         "TopicMemberUsers" tmu
                     JOIN "Topics" t
                         ON t.id = tmu."topicId"
-                    JOIN "TopicJoins" tj 
+                    JOIN "TopicJoins" tj
                         ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                     JOIN "Users" u
                         ON u.id = tmu."userId"
@@ -3414,7 +3414,7 @@ module.exports = function (app) {
                             "TopicMemberGroups" tmg
                         JOIN "Topics" t
                             ON t.id = tmg."topicId"
-                        JOIN "TopicJoins" tj 
+                        JOIN "TopicJoins" tj
                             ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                         JOIN "Groups" g
                             ON g.id = tmg."groupId"
@@ -3708,15 +3708,23 @@ module.exports = function (app) {
         }
     });
 
-    app.get('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), hasPermission(TopicMemberUser.LEVELS.read), async function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), async function (req, res, next) {
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
         const search = req.query.search;
 
+        const topicId = req.params.topicId;
+        const userId = req.user.id;
+        const hasAccess = await _hasPermission(topicId, userId, TopicMemberUser.LEVELS.read, true);
+
         let where = '';
         if (search) {
             where = ` AND u.name ILIKE :search `
+        }
+        // User is not member and can only get own result
+        if (!hasAccess) {
+            where = ` AND tiu."userId" = :userId `;
         }
 
         try {
@@ -3744,9 +3752,10 @@ module.exports = function (app) {
                 ;`,
                     {
                         replacements: {
-                            topicId: req.params.topicId,
+                            topicId,
                             limit,
                             offset,
+                            userId,
                             search: `%${search}%`
                         },
                         type: db.QueryTypes.SELECT,
@@ -3761,6 +3770,8 @@ module.exports = function (app) {
             let countTotal = 0;
             if (invites.length) {
                 countTotal = invites[0].countTotal;
+            } else if (!hasAccess) {
+                return res.forbidden('Insufficient permissions');
             }
 
             invites.forEach(function (invite) {

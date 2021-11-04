@@ -27,50 +27,46 @@ module.exports = function (app) {
     const User = models.User;
 
     const _hasPermission = async function (groupId, userId, level, allowPublic, allowSelf) {
-        try {
-            const result = await db.query(`
-                SELECT
-                    g.visibility = 'public' AS "isPublic",
-                    gm.level::"enum_GroupMemberUsers_level" >= :level AS "allowed",
-                    gm."userId" AS uid,
-                    gm."level" AS level,
-                    g.id
-                FROM "Groups" g
-                LEFT JOIN "GroupMemberUsers" gm
-                    ON(gm."groupId" = g.id)
-                WHERE g.id = :groupId
-                    AND gm."userId" = :userId
-                    AND gm."deletedAt" IS NULL
-                    AND g."deletedAt" IS NULL
-                GROUP BY id, uid, level;`,
-                {
-                    replacements: {
-                        groupId: groupId,
-                        userId: userId,
-                        level: level
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true
-                }
-            );
-
-            if (result && result[0]) {
-                const isPublic = result[0].isPublic;
-                const isAllowed = result[0].allowed;
-
-                if (isAllowed || (allowPublic && isPublic) || allowSelf) {
-                    return true;
-                }
+        const result = await db.query(`
+            SELECT
+                g.visibility = 'public' AS "isPublic",
+                gm.level::"enum_GroupMemberUsers_level" >= :level AS "allowed",
+                gm."userId" AS uid,
+                gm."level" AS level,
+                g.id
+            FROM "Groups" g
+            LEFT JOIN "GroupMemberUsers" gm
+                ON(gm."groupId" = g.id)
+            WHERE g.id = :groupId
+                AND gm."userId" = :userId
+                AND gm."deletedAt" IS NULL
+                AND g."deletedAt" IS NULL
+            GROUP BY id, uid, level;`,
+            {
+                replacements: {
+                    groupId: groupId,
+                    userId: userId,
+                    level: level
+                },
+                type: db.QueryTypes.SELECT,
+                raw: true
             }
+        );
 
-            return Promise.reject();
-        } catch (err) {
-            return Promise.reject(err);
+        if (result && result[0]) {
+            const isPublic = result[0].isPublic;
+            const isAllowed = result[0].allowed;
+
+            if (isAllowed || (allowPublic && isPublic) || allowSelf) {
+                return true;
+            }
         }
+
+        return false;
     };
 
     const hasPermission = function (level, allowPublic, allowSelf) {
-        return function (req, res, next) {
+        return async function (req, res, next) {
             const groupId = req.params.groupId;
             const userId = req.user.id;
             let allowDeleteSelf = allowSelf;
@@ -80,22 +76,18 @@ module.exports = function (app) {
                     allowDeleteSelf = false;
                 }
             }
+            try {
+                const authorizationResult = await _hasPermission(groupId, userId, level, allowPublic, allowDeleteSelf);
+                if (authorizationResult) {
+                    return next(null, req, res);
+                }
 
-            return _hasPermission(groupId, userId, level, allowPublic, allowDeleteSelf)
-                .then(
-                    function () {
-                        return new Promise(function (resolve) {
-                            return resolve(next(null, req, res));
-                        });
-                    },
-                    function (err) {
-                        if (err) {
-                            return next(err);
-                        }
-
-                        return res.forbidden('Insufficient permissions');
-                    })
-                .catch(next);
+                return res.forbidden('Insufficient permissions');
+            } catch (err) {
+                if (err) {
+                    return next(err);
+                }
+            }
         };
     };
 
@@ -1101,7 +1093,7 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/348
      */
-    app.get('/api/users/:userId/groups/:groupId/invites/users', loginCheck(), hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
+    app.get('/api/users/:userId/groups/:groupId/invites/users', loginCheck(), asyncMiddleware(async function (req, res, next) {
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
@@ -1110,6 +1102,16 @@ module.exports = function (app) {
         let where = '';
         if (search) {
             where = ` AND u.name ILIKE :search `
+        }
+
+        const groupId = req.params.groupId;
+        const userId = req.user.id;
+
+        const hasAccess = await _hasPermission(groupId, userId, GroupMemberUser.LEVELS.read, null, null);
+
+        // User is not member and can only get own result
+        if (!hasAccess) {
+            where = ` AND giu."userId" = :userId `;
         }
 
         const invites = await db
@@ -1136,9 +1138,10 @@ module.exports = function (app) {
                 ;`,
                 {
                     replacements: {
-                        groupId: req.params.groupId,
+                        groupId: groupId,
                         limit,
                         offset,
+                        userId,
                         search: `%${search}%`
                     },
                     type: db.QueryTypes.SELECT,
@@ -1153,6 +1156,8 @@ module.exports = function (app) {
         let countTotal = 0;
         if (invites.length) {
             countTotal = invites[0].countTotal;
+        } else if (!hasAccess) {
+            return res.forbidden('Insufficient permissions');
         }
 
         invites.forEach(function (invite) {

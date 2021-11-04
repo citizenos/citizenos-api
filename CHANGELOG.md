@@ -1,6 +1,12 @@
+## 2021-11-04 - v. 5.0.2
+
+* Update Groups permission check method to not have any "Promise was rejected with non error" warnings
+* Update `GET /api/users/:userId/groups/:groupId/invites/users` - returns invites for current user if he/she hasn't accepted yet - https://github.com/citizenos/citizenos-fe/issues/360
+* Update `GET /api/users/:userId/topics/:topicId/invites/users` - returns invites for current user if he/she hasn't accepted yet - https://github.com/citizenos/citizenos-fe/issues/360
+
 ## 2021-10-28 - v. 5.0.1
 
-* Update `POST /api/users/:userId/groups' to return Group join token info - https://github.com/citizenos/citizenos-fe/issues/325
+* Update `POST /api/users/:userId/groups` to return Group join token info - https://github.com/citizenos/citizenos-fe/issues/325
 * Update `GET /activites` - do not return `context` property - https://github.com/citizenos/citizenos-fe/issues/325
 * Add API `PUT /api/users/:userId/groups/:groupId/join` - generation of join links with specific access level - https://github.com/citizenos/citizenos-fe/issues/325
 * Add API `PUT /api/users/:userId/groups/:groupId/join/:token` - assign access level for given join token - https://github.com/citizenos/citizenos-fe/issues/325
