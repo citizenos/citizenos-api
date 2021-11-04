@@ -6059,6 +6059,240 @@
         }
       }
     },
+    "/api/users/:userId/groups/:groupId/join": {
+      "put": {
+        "tags": [
+          "topic"
+        ],
+        "summary": "Update group join token",
+        "description": "Create and update new group join token",
+        "operationId": "updateGroupTokenJoin",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "groupId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "requested group id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Groups join token updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        },
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "token": {
+                              "type": "string",
+                              "example": "as1AbCA1012"
+                            },
+                            "level": {
+                              "type": "string",
+                              "example": "edit"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/:userId/groups/:groupId/join/:token": {
+      "put": {
+        "tags": [
+          "topic"
+        ],
+        "summary": "Update level of a group join token",
+        "description": "Update level of a group join token",
+        "operationId": "updateGroupTokenJoinLevel",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "logged in users id"
+          },
+          {
+            "in": "path",
+            "name": "groupId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "requested group id"
+          },
+          {
+            "in": "path",
+            "name": "token",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "access token"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Groups join token updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        },
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "token": {
+                              "type": "string",
+                              "example": "as1AbCA1012"
+                            },
+                            "level": {
+                              "type": "string",
+                              "example": "admin"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/groups/join/:token": {
+      "post": {
+        "tags": [
+          "topic"
+        ],
+        "summary": "Join authenticated User to Group with a given token.",
+        "description": "Allows sharing of private join urls for example in forums, on conference screen...",
+        "operationId": "userJoinGroup",
+        "security": [
+          {
+            "oAuth2": [
+              "admin"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Join token of the group to join"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "returns group that user has joined",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 20000
+                        }
+                      }
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Group"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Matching token not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "example": 40001
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Matching token not found"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/groups": {
       "get": {
         "tags": [

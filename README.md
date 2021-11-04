@@ -10,12 +10,17 @@
 - [Running locally](#running-locally)
   * [Prerequisites](#prerequisites)
   * [Installing](#installing)
+  * [Configuration](#configuration)
   * [Running](#running)
   * [Updating](#updating)
   * [Testing](#testing)
   * [Debugging](#debugging)
+  * [Issues](#issues)
+    + [FATAL ERROR: Committing semi space failed. Allocation failed - process out of memory](#fatal-error-committing-semi-space-failed-allocation-failed---process-out-of-memory)
+    + [Endpoint GET "/api/auth/google/callback" failed miserably. Status: undefined Stack: InternalOAuthError: failed to fetch user profile](#endpoint-get-apiauthgooglecallback-failed-miserably-status-undefined-stack-internaloautherror-failed-to-fetch-user-profile)
 - [Contributing](#contributing)
   * [Pull requests](#pull-requests)
+  * [DB changes](#db-changes)
 - [Improvement ideas](#improvement-ideas)
 
 <!-- tocstop -->
