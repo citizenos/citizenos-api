@@ -1881,7 +1881,8 @@ suite('Users', function () {
                 const resExpected = {
                     status: {
                         code: 20000
-                    }
+                    },
+                    data: group
                 };
 
                 assert.deepEqual(resActual, resExpected);
@@ -1914,10 +1915,14 @@ suite('Users', function () {
 
                 assert.deepEqual(groupJoinActivityActual, groupJoinActivityExpected);
 
+                const groupExpected = Object.assign({}, group);
+                groupExpected.join = resGroupJoinRead;
+
                 const expectedResult = {
                     status: {
                         code: 20000
-                    }
+                    },
+                    data: groupExpected
                 };
 
                 assert.deepEqual(resJoinRead.body, expectedResult);
