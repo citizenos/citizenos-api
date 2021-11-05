@@ -2613,7 +2613,7 @@ module.exports = function (app) {
         }
     });
 
-    const _getAllTopicMembers = async (topicId, userId) => {
+    const _getAllTopicMembers = async (topicId, userId, showExtraUserInfo) => {
         const response = {
             groups: {
                 count: 0,
@@ -2664,6 +2664,15 @@ module.exports = function (app) {
                 }
             );
 
+        let extraUserInfo = '';
+        if (showExtraUserInfo) {
+            extraUserInfo = `
+            u.email,
+            uc."connectionData"::jsonb->>'pid' AS "pid",
+            uc."connectionData"::jsonb->>'phoneNumber' AS "phoneNumber",
+            `;
+        }
+
         const users = await db
             .query(
                 `
@@ -2676,6 +2685,7 @@ module.exports = function (app) {
                         tmu."level" as "levelUser",
                         u.name,
                         u.company,
+                        ${extraUserInfo}
                         u."imageUrl"
                     FROM "Topics" t
                     JOIN (
@@ -2702,6 +2712,7 @@ module.exports = function (app) {
                     ) AS tm ON (tm."topicId" = t.id)
                     JOIN "Users" u ON (u.id = tm."memberId")
                     LEFT JOIN "TopicMemberUsers" tmu ON (tmu."userId" = tm."memberId" AND tmu."topicId" = t.id)
+                    LEFT JOIN "UserConnections" uc ON (uc."userId" = tm."memberId" AND uc."connectionId" = 'esteid')
                     WHERE t.id = :topicId
                     ORDER BY id, tm.priority
                 ) tm
@@ -2736,7 +2747,8 @@ module.exports = function (app) {
      */
     app.get('/api/users/:userId/topics/:topicId/members', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), async function (req, res, next) {
         try {
-            const response = await _getAllTopicMembers(req.params.topicId, req.user.id);
+            const showExtraUserInfo = (req.user && req.user.moderator) || req.locals.topic.permissions.level === TopicMemberUser.LEVELS.admin;
+            const response = await _getAllTopicMembers(req.params.topicId, req.user.id, showExtraUserInfo);
 
             return res.ok(response);
         } catch (err) {
@@ -2758,9 +2770,9 @@ module.exports = function (app) {
             where = ` WHERE tm.name ILIKE :search `
         }
 
-        let dataForModerator = '';
-        if (req.user && req.user.moderator) {
-            dataForModerator = `
+        let dataForModeratorAndAdmin = '';
+        if ((req.user && req.user.moderator) || req.locals.topic.permissions.level === TopicMemberUser.LEVELS.admin) {
+            dataForModeratorAndAdmin = `
             tm.email,
             uc."connectionData"::jsonb->>'pid' AS "pid",
             uc."connectionData"::jsonb->>'phoneNumber' AS "phoneNumber",
@@ -2777,7 +2789,7 @@ module.exports = function (app) {
                     tm.name,
                     tm.company,
                     tm."imageUrl",
-                    ${dataForModerator}
+                    ${dataForModeratorAndAdmin}
                     json_agg(
                         json_build_object('id', tmg."groupId",
                         'name', tmg.name,
@@ -6116,7 +6128,7 @@ module.exports = function (app) {
         if (vote.autoClose) {
             const promises = vote.autoClose.map(async (condition) => {
                 if (condition.value === Vote.AUTO_CLOSE.allMembersVoted) {
-                    const topicMembers = await _getAllTopicMembers(topicId, userId);
+                    const topicMembers = await _getAllTopicMembers(topicId, userId, false);
                     const voteResults = await getVoteResults(voteId, userId);
                     if (topicMembers.users.count === voteResults[0].votersCount) {
                         vote.endsAt = moment().format();

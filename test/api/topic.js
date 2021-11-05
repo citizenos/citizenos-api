@@ -3148,6 +3148,7 @@ suite('Users', function () {
             suite('List', function () {
                 const agent = request.agent(app);
                 const agent2 = request.agent(app);
+                const agentTopicMemberUser = request.agent(app);
 
                 let user;
                 let user2;
@@ -3159,6 +3160,7 @@ suite('Users', function () {
 
                 let topic;
                 let topicMemberUser;
+
                 const topicMemberUserLevel = TopicMemberUser.LEVELS.edit;
                 const topicMemberGroupLevel = TopicMemberGroup.LEVELS.read;
 
@@ -3170,9 +3172,9 @@ suite('Users', function () {
                 setup(async function () {
                     topic = (await topicCreate(agent, user.id, null, null, null, null, null)).body.data;
                     group = (await groupLib.create(agent, user.id, 'Topic List Test Group', null, null)).body.data;
-                    topicMemberUser = await userLib.createUser(request.agent(app), null, null, null);
+                    topicMemberUser = await userLib.createUserAndLogin(agentTopicMemberUser, null, null, null);
                     user3 = (await userLib.createUser(request.agent(app), null, null, null));
-                    group2 = (await groupLib.create(agent2, user2.id, 'Topic List Test Group2', null, null)).body.data
+                    group2 = (await groupLib.create(agent2, user2.id, 'Topic List Test Group2', null, null)).body.data;
                     const members = [
                         {
                             userId: user.id,
@@ -3248,7 +3250,6 @@ suite('Users', function () {
                     }
                     assert.equal(adminUser.id, user.id);
                     assert.property(adminUser, 'name');
-                    assert.notProperty(adminUser, 'email');
                     assert.equal(adminUser.level, TopicMemberUser.LEVELS.admin);
 
                     let topicMemberUserReturned = 0;
@@ -3260,9 +3261,18 @@ suite('Users', function () {
                             assert.equal(memberUser.level, topicMemberGroupLevel);
                         }
                         assert.property(memberUser, 'name');
-                        assert.notProperty(memberUser, 'email');
                     });
                     assert.equal(topicMemberUserReturned, 1);
+                });
+
+                test('Success - non-admin User - should not show extended User data (email, phone etc) for NON admin member - https://github.com/citizenos/citizenos-fe/issues/670', async function () {
+                    const list = (await topicMembersList(agentTopicMemberUser, topicMemberUser.id, topic.id)).body.data;
+
+                    list.users.rows.forEach(function (user) {
+                        assert.notProperty(user, 'email');
+                        assert.notProperty(user, 'pid');
+                        assert.notProperty(user, 'phoneNumber');
+                    });
                 });
 
                 suite('Users', function () {

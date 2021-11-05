@@ -1102,7 +1102,7 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/348
      */
-    app.get('/api/users/:userId/groups/:groupId/invites/users', loginCheck(), asyncMiddleware(async function (req, res, next) {
+    app.get('/api/users/:userId/groups/:groupId/invites/users', loginCheck(), asyncMiddleware(async function (req, res) {
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
