@@ -58,7 +58,9 @@ module.exports = function (app) {
             const isAllowed = result[0].allowed;
 
             if (isAllowed || (allowPublic && isPublic) || allowSelf) {
-                return true;
+                return {
+                    group: result[0]
+                };
             }
         }
 
@@ -76,9 +78,11 @@ module.exports = function (app) {
                     allowDeleteSelf = false;
                 }
             }
+
             try {
                 const authorizationResult = await _hasPermission(groupId, userId, level, allowPublic, allowDeleteSelf);
                 if (authorizationResult) {
+                    req.locals = authorizationResult;
                     return next(null, req, res);
                 }
 
@@ -547,6 +551,15 @@ module.exports = function (app) {
             where = ` AND u.name ILIKE :search `
         }
 
+        let dataForAdmin = '';
+        if (req.locals && req.locals.group && req.locals.group.level === GroupMemberUser.LEVELS.admin) {
+            dataForAdmin = `
+            u.email,
+            uc."connectionData"::jsonb->>'pid' AS "pid",
+            uc."connectionData"::jsonb->>'phoneNumber' AS "phoneNumber",
+            `;
+        }
+
         const members = await db
             .query(
                 `SELECT
@@ -554,10 +567,12 @@ module.exports = function (app) {
                         u.name,
                         u.company,
                         u."imageUrl",
+                        ${dataForAdmin}
                         gm.level,
                         count(*) OVER()::integer AS "countTotal"
                     FROM "GroupMemberUsers" gm
                         JOIN "Users" u ON (u.id = gm."userId")
+                        LEFT JOIN "UserConnections" uc ON (uc."userId" = u.id AND uc."connectionId" = 'esteid')
                     WHERE gm."groupId" = :groupId
                     AND gm."deletedAt" IS NULL
                     ${where}

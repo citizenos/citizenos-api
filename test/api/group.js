@@ -1531,11 +1531,105 @@ suite('Users', function () {
         suite('Members', function () {
 
             suite('Users', function () {
-                suite('List', function () {
 
-                    test.skip('Success', function () {
-                        // TODO: Implement member list tests
-                        return;
+                suite('List', function () {
+                    let agentCreator = request.agent(app);
+                    let agentMemberUser = request.agent(app);
+
+                    let userCreator;
+                    let userMember;
+
+                    let group;
+
+                    suiteSetup(async function () {
+                        userCreator = await userLib.createUserAndLogin(agentCreator, null, null, null);
+                        userMember = await userLib.createUserAndLogin(agentMemberUser, null, null, null);
+                        group = (await groupCreate(agentCreator, userCreator.id, 'TEST GROUP USER MEMBERS LIST', null, null)).body.data;
+
+                        await memberLib.groupMemberUsersCreate(group.id, [
+                            {
+                                userId: userMember.id,
+                                level: GroupMemberUser.LEVELS.read
+                            }
+                        ]);
+                    });
+
+                    test('Success - 20000 - admin', async function () {
+                        const memberListRes = (await groupMemberUsersList(agentCreator, userCreator.id, group.id)).body.data;
+
+                        assert.equal(2, memberListRes.countTotal);
+                        assert.equal(2, memberListRes.count);
+                        assert.equal(2, memberListRes.rows.length);
+
+                        const userCreatorMember = memberListRes.rows.find(function (member) {
+                            return member.id === userCreator.id;
+                        });
+
+                        const userCreatorMemberExpected = {
+                            id: userCreator.id,
+                            name: userCreator.name,
+                            company: userCreator.company,
+                            imageUrl: userCreator.imageUrl,
+                            level: GroupMemberUser.LEVELS.admin,
+                            email: userCreator.email,
+                            phoneNumber: null,
+                            pid: null
+                        };
+
+                        assert.deepEqual(userCreatorMember, userCreatorMemberExpected);
+
+                        const userMemberMember = memberListRes.rows.find(function (member) {
+                            return member.id === userMember.id;
+                        });
+
+                        const userMemberMemberExpected = {
+                            id: userMember.id,
+                            name: userMember.name,
+                            company: userMember.company,
+                            imageUrl: userMember.imageUrl,
+                            level: GroupMemberUser.LEVELS.read,
+                            email: userMember.email,
+                            phoneNumber: null,
+                            pid: null
+                        };
+
+                        assert.deepEqual(userMemberMember, userMemberMemberExpected);
+                    });
+
+                    test('Success - 20000 - member (read) - MUST NOT see extra User info (email, phone etc) - https://github.com/citizenos/citizenos-fe/issues/670', async function () {
+                        const memberListRes = (await groupMemberUsersList(agentMemberUser, userMember.id, group.id)).body.data;
+
+                        assert.equal(2, memberListRes.countTotal);
+                        assert.equal(2, memberListRes.count);
+                        assert.equal(2, memberListRes.rows.length);
+
+                        const userCreatorMember = memberListRes.rows.find(function (member) {
+                            return member.id === userCreator.id;
+                        });
+
+                        const userCreatorMemberExpected = {
+                            id: userCreator.id,
+                            name: userCreator.name,
+                            company: userCreator.company,
+                            imageUrl: userCreator.imageUrl,
+                            level: GroupMemberUser.LEVELS.admin
+                        };
+
+                        assert.deepEqual(userCreatorMember, userCreatorMemberExpected);
+
+                        const userMemberMember = memberListRes.rows.find(function (member) {
+                            return member.id === userMember.id;
+                        });
+
+                        const userMemberMemberExpected = {
+                            id: userMember.id,
+                            name: userMember.name,
+                            company: userMember.company,
+                            imageUrl: userMember.imageUrl,
+                            level: GroupMemberUser.LEVELS.read
+                        };
+
+                        assert.deepEqual(userMemberMember, userMemberMemberExpected);
                     });
 
                 });
