@@ -3265,7 +3265,7 @@ suite('Users', function () {
                     assert.equal(topicMemberUserReturned, 1);
                 });
 
-                test('Success - non-admin User - should not show extended User data (email, phone etc) for NON admin member - https://github.com/citizenos/citizenos-fe/issues/670', async function () {
+                test('Success - non-admin User - MUST NOT show extended User data (email, phone etc) for NON admin member - https://github.com/citizenos/citizenos-fe/issues/670', async function () {
                     const list = (await topicMembersList(agentTopicMemberUser, topicMemberUser.id, topic.id)).body.data;
 
                     list.users.rows.forEach(function (user) {
