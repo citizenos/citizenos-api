@@ -4180,6 +4180,7 @@ suite('Users', function () {
 
                 suite('List', function () {
                     const agentCreator = request.agent(app);
+                    const userToInvite1Agent = request.agent(app);
 
                     let userCreator;
                     let userToInvite1;
@@ -4194,7 +4195,7 @@ suite('Users', function () {
 
                     suiteSetup(async function () {
                         userCreator = await userLib.createUserAndLogin(agentCreator, null, null, null);
-                        userToInvite1 = await userLib.createUser(request.agent(app), null, null, null);
+                        userToInvite1 = await userLib.createUserAndLogin(userToInvite1Agent, null, null, null);
                         userToInvite2 = await userLib.createUser(request.agent(app), null, null, null);
 
                         topic = (await topicCreate(agentCreator, userCreator.id, null, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>', null)).body.data;
@@ -4264,7 +4265,12 @@ suite('Users', function () {
                         assert.equal(inviteListInivteUser1.id, userToInvite1.id);
                         assert.equal(inviteListInivteUser1.name, userToInvite1.name);
                         assert.property(inviteListInivteUser1, 'imageUrl');
+                        // Exra User info for ADMIN -  https://github.com/citizenos/citizenos-fe/issues/670
+                        assert.property(inviteListInivteUser1, 'email');
+                        assert.property(inviteListInivteUser1, 'pid');
+                        assert.property(inviteListInivteUser1, 'phoneNumber');
                         delete inviteListInvite1.user;
+
                         assert.deepEqual(inviteListInvite1, topicInviteCreated1);
 
                         // The list result has User object, otherwise the objects should be equal
@@ -4275,8 +4281,24 @@ suite('Users', function () {
                         assert.equal(inviteListInivteUser2.id, userToInvite1.id);
                         assert.equal(inviteListInivteUser2.name, userToInvite1.name);
                         assert.property(inviteListInivteUser2, 'imageUrl');
+                        // Exra User info for ADMIN -  https://github.com/citizenos/citizenos-fe/issues/670
+                        assert.property(inviteListInivteUser1, 'email');
+                        assert.property(inviteListInivteUser1, 'pid');
+                        assert.property(inviteListInivteUser1, 'phoneNumber');
                         delete inviteListInvite2.user;
+
                         assert.deepEqual(inviteListInvite2, topicInviteCreated2);
+                    });
+
+                    test('Success - 20000 - NOT ADMIN member MUST NOT see extended User info (email, pid, phoneNumber) - https://github.com/citizenos/citizenos-fe/issues/670', async function () {
+                        await topicInviteUsersAccept(userToInvite1Agent, userToInvite1.id, topic.id, topicInviteCreated1.id);
+
+                        const invitesListResult = (await topicInviteUsersList(userToInvite1Agent, userToInvite1.id, topic.id)).body.data;
+                        invitesListResult.rows.forEach(function (invite) {
+                            assert.notProperty(invite.user, 'email');
+                            assert.notProperty(invite.user, 'pid');
+                            assert.notProperty(invite.user, 'phoneNumber');
+                        });
                     });
 
                     test('Fail - 40100 - Unauthorized', async function () {

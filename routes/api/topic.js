@@ -3515,6 +3515,7 @@ module.exports = function (app) {
             if (!Array.isArray(members)) {
                 members = [members];
             }
+
             const inviteMessage = members[0].inviteMessage;
             const validEmailMembers = [];
             let validUserIdMembers = [];
@@ -3720,7 +3721,7 @@ module.exports = function (app) {
         }
     });
 
-    app.get('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), async function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), asyncMiddleware(async function (req, res) {
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
@@ -3728,77 +3729,85 @@ module.exports = function (app) {
 
         const topicId = req.params.topicId;
         const userId = req.user.id;
-        const hasAccess = await _hasPermission(topicId, userId, TopicMemberUser.LEVELS.read, true);
+        const permissions = await _hasPermission(topicId, userId, TopicMemberUser.LEVELS.read, true);
 
         let where = '';
         if (search) {
             where = ` AND u.name ILIKE :search `
         }
+
+        let dataForTopicAdmin = '';
+        if (permissions && permissions.topic.permissions.level === TopicMemberUser.LEVELS.admin) {
+            dataForTopicAdmin = `
+            u.email as "user.email",
+            uc."connectionData"::jsonb->>'pid' AS "user.pid",
+            uc."connectionData"::jsonb->>'phoneNumber' AS "user.phoneNumber",
+            `;
+        }
+
         // User is not member and can only get own result
-        if (!hasAccess) {
+        if (!permissions) {
             where = ` AND tiu."userId" = :userId `;
         }
 
-        try {
-            const invites = await db
-                .query(
-                    `SELECT
-                    tiu.id,
-                    tiu."creatorId",
-                    tiu.level,
-                    tiu."topicId",
-                    tiu."userId",
-                    tiu."createdAt",
-                    tiu."updatedAt",
-                    u.id as "user.id",
-                    u.name as "user.name",
-                    u."imageUrl" as "user.imageUrl",
-                    count(*) OVER()::integer AS "countTotal"
-                FROM "TopicInviteUsers" tiu
-                JOIN "Users" u ON u.id = tiu."userId"
-                WHERE tiu."topicId" = :topicId AND tiu."deletedAt" IS NULL AND tiu."createdAt" > NOW() - INTERVAL '${TopicInviteUser.VALID_DAYS}d'
-                ${where}
-                ORDER BY u.name ASC
-                LIMIT :limit
-                OFFSET :offset
-                ;`,
-                    {
-                        replacements: {
-                            topicId,
-                            limit,
-                            offset,
-                            userId,
-                            search: `%${search}%`
-                        },
-                        type: db.QueryTypes.SELECT,
-                        raw: true,
-                        nest: true
-                    }
-                )
+        const invites = await db
+            .query(
+                `SELECT
+                        tiu.id,
+                        tiu."creatorId",
+                        tiu.level,
+                        tiu."topicId",
+                        tiu."userId",
+                        tiu."createdAt",
+                        tiu."updatedAt",
+                        u.id as "user.id",
+                        u.name as "user.name",
+                        u."imageUrl" as "user.imageUrl",
+                        ${dataForTopicAdmin}
+                        count(*) OVER()::integer AS "countTotal"
+                    FROM "TopicInviteUsers" tiu
+                    JOIN "Users" u ON u.id = tiu."userId"
+                    LEFT JOIN "UserConnections" uc ON (uc."userId" = tiu."userId" AND uc."connectionId" = 'esteid')
+                    WHERE tiu."topicId" = :topicId AND tiu."deletedAt" IS NULL AND tiu."createdAt" > NOW() - INTERVAL '${TopicInviteUser.VALID_DAYS}d'
+                    ${where}
+                    ORDER BY u.name ASC
+                    LIMIT :limit
+                    OFFSET :offset
+                    ;`,
+                {
+                    replacements: {
+                        topicId,
+                        limit,
+                        offset,
+                        userId,
+                        search: `%${search}%`
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
 
-            if (!invites) {
-                return res.notFound();
-            }
-            let countTotal = 0;
-            if (invites.length) {
-                countTotal = invites[0].countTotal;
-            } else if (!hasAccess) {
-                return res.forbidden('Insufficient permissions');
-            }
-
-            invites.forEach(function (invite) {
-                delete invite.countTotal;
-            });
-
-            return res.ok({
-                countTotal,
-                count: invites.length,
-                rows: invites
-            });
-        } catch (err) {
-            return next(err);
+        if (!invites) {
+            return res.notFound();
         }
-    });
+        let countTotal = 0;
+        if (invites.length) {
+            countTotal = invites[0].countTotal;
+        } else if (!permissions) {
+            return res.forbidden('Insufficient permissions');
+        }
+
+        invites.forEach(function (invite) {
+            delete invite.countTotal;
+        });
+
+        return res.ok({
+            countTotal,
+            count: invites.length,
+            rows: invites
+        });
+    }));
 
     app.get(['/api/topics/:topicId/invites/users/:inviteId', '/api/users/:userId/topics/:topicId/invites/users/:inviteId'], async function (req, res, next) {
         const topicId = req.params.topicId;
