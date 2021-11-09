@@ -29,7 +29,7 @@
     "SUBJECT": "A Citizen OS topic has been reported (#{{report.id}}), please moderate"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Your Citizen OS report #{{report.id}} has been reviewed"
+    "SUBJECT": "Vaše Citizen OS zpráva č.{{report.id}} byla zkontrolována"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
     "SUBJECT": "Report #{{report.id}}: Your Citizen OS topic has been reviewed by a moderator"
