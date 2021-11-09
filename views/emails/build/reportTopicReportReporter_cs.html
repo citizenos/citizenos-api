@@ -1,18 +1,18 @@
 <!-- E-mail sent to User who reports a Topic -->
 <p>
-    Hello <span class="blue">{{userReporter.name}}</span>,
+    Dobrý den <span class="blue">{{userReporter.name}}</span>
 </p>
 <p class="important">
-    <b>Your report <span class="blue">#{{report.id}}</span> regarding topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" has been sent to Citizen OS moderators</b>
+    <b>Vaše zpráva <span class="blue">#{{report.id}}</span> týkající se tématu "<a href="{{linkViewTopic}}">{{topic.title}}</a>" byla odeslána moderátorům Citizen OS</b>
 </p>
 
-<h1>Report summary</h1>
-<p>Topic: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
-<p>Report reference number: <b>{{report.id}}</b>
-<p>Type of violation: <b>"{{report.type}}"</b>
-<p>Your explanation: <b>"{{report.text}}"</b>
+<h1>Shrnutí zprávy</h1>
+<p>Téma: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
+<p>Referenční číslo zprávy: <b>{{report.id}}</b>
+<p>Typ porušení: <b>"{{report.type}}</b>
+<p>Vaše vysvětlení: <b>"{{report.text}}"</b>
 
-<h1>What happens next?</h1>
+<h1>Co se stane dál?</h1>
 <p>
 <ol>
     <li class="li">Moderators will review the report. If a violation is confirmed, access to the topic will be restricted and a warning of
