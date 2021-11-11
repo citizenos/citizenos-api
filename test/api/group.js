@@ -343,6 +343,7 @@ const Topic = models.Topic;
 const GroupMemberUser = models.GroupMemberUser;
 const TopicMemberGroup = models.TopicMemberGroup;
 const GroupInviteUser = models.GroupInviteUser;
+const Moderator = models.Moderator;
 
 suite('Users', function () {
 
@@ -1258,15 +1259,17 @@ suite('Users', function () {
                         const inviteListInvite1 = invitesList.find(invite => {
                             return invite.id === groupInviteCreated1.id
                         });
-
                         const inviteListInviteUser1 = inviteListInvite1.user;
+
                         assert.equal(inviteListInviteUser1.id, userToInvite1.id);
                         assert.equal(inviteListInviteUser1.name, userToInvite1.name);
                         assert.equal(inviteListInviteUser1.email, userToInvite1.email);
                         assert.property(inviteListInviteUser1, 'pid');
                         assert.property(inviteListInviteUser1, 'phoneNumber');
                         assert.property(inviteListInviteUser1, 'imageUrl');
+
                         delete inviteListInvite1.user;
+
                         assert.deepEqual(inviteListInvite1, groupInviteCreated1);
 
                         // The list result has User object, otherwise the objects should be equal
@@ -1279,7 +1282,9 @@ suite('Users', function () {
                         assert.property(inviteListInviteUser2, 'pid');
                         assert.property(inviteListInviteUser2, 'phoneNumber');
                         assert.property(inviteListInviteUser2, 'imageUrl');
+
                         delete inviteListInvite2.user;
+
                         assert.deepEqual(inviteListInvite2, groupInviteCreated2);
                     });
 
@@ -1298,8 +1303,8 @@ suite('Users', function () {
                         const inviteListInvite2 = invitesList.find(invite => {
                             return invite.id === groupInviteCreated2.id
                         });
-
                         const inviteListInviteUser2 = inviteListInvite2.user;
+
                         assert.equal(inviteListInviteUser2.id, userToInvite2.id);
                         assert.equal(inviteListInviteUser2.name, userToInvite2.name);
                         assert.notProperty(inviteListInviteUser2, 'pid');
@@ -1311,6 +1316,39 @@ suite('Users', function () {
                         assert.deepEqual(inviteListInvite2, groupInviteCreated2);
                     });
 
+                    test('Success - 20000 - list invites - Moderator', async function () {
+                        assert.equal(groupInviteCreated1.level, GroupMemberUser.LEVELS.read, 'This test is ONLY valid if the User is NOT admin member of the Group!');
+
+                        // Accept invite to test listing
+                        await groupInviteUsersAccept(agentUserToInvite1, userToInvite1.id, group.id, groupInviteCreated1.id);
+                        // Make the User a moderator
+                        await Moderator.create({
+                            userId: groupInviteCreated1.userId,
+                            partnerId: null
+                        });
+
+                        const invitesListResult = (await groupInviteUsersList(agentUserToInvite1, groupInviteCreated1.userId, group.id)).body.data;
+                        assert.equal(1, invitesListResult.count);
+
+                        const invitesList = invitesListResult.rows;
+                        assert.isArray(invitesList);
+                        assert.equal(1, invitesList.length); // 1 has been accepted by this user
+
+                        // The list result has User object, otherwise the objects should be equal
+                        const inviteListInvite2 = invitesList.find(invite => {
+                            return invite.id === groupInviteCreated2.id
+                        });
+                        const inviteListInviteUser2 = inviteListInvite2.user;
+                        assert.equal(inviteListInviteUser2.id, userToInvite2.id);
+                        assert.equal(inviteListInviteUser2.name, userToInvite2.name);
+                        assert.property(inviteListInviteUser2, 'pid');
+                        assert.property(inviteListInviteUser2, 'phoneNumber');
+                        assert.property(inviteListInviteUser2, 'imageUrl');
+
+                        delete inviteListInvite2.user;
+
+                        assert.deepEqual(inviteListInvite2, groupInviteCreated2);
+                    });
 
                     test('Success - 20000 - list duplicate invites', async function () {
                         // Second invite to User 1

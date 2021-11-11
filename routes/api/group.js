@@ -1145,10 +1145,10 @@ module.exports = function (app) {
             where = ` AND giu."userId" = :userId `;
         }
 
-        let dataForTopicAdmin = '';
-        let dataForGroupAdminAndModerator = '';
-        if (permissions && permissions.group.level === GroupMemberUser.LEVELS.admin) {
-            dataForTopicAdmin = `
+        let dataForTopicAdminAndModerator = '';
+
+        if (permissions && (permissions.group.level === GroupMemberUser.LEVELS.admin || permissions.group.isModerator)) {
+            dataForTopicAdminAndModerator = `
             u.email as "user.email",
             uc."connectionData"::jsonb->>'pid' AS "user.pid",
             uc."connectionData"::jsonb->>'phoneNumber' AS "user.phoneNumber",
@@ -1168,7 +1168,7 @@ module.exports = function (app) {
                     u.id as "user.id",
                     u.name as "user.name",
                     u."imageUrl" as "user.imageUrl",
-                    ${dataForTopicAdmin}
+                    ${dataForTopicAdminAndModerator}
                     count(*) OVER()::integer AS "countTotal"
                 FROM "GroupInviteUsers" giu
                 JOIN "Users" u ON u.id = giu."userId"
