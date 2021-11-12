@@ -1264,7 +1264,7 @@ suite('Users', function () {
                         assert.equal(inviteListInviteUser1.id, userToInvite1.id);
                         assert.equal(inviteListInviteUser1.name, userToInvite1.name);
                         assert.equal(inviteListInviteUser1.email, userToInvite1.email);
-                        assert.property(inviteListInviteUser1, 'pid');
+                        assert.notProperty(inviteListInviteUser1, 'pid');
                         assert.property(inviteListInviteUser1, 'phoneNumber');
                         assert.property(inviteListInviteUser1, 'imageUrl');
 
@@ -1279,7 +1279,7 @@ suite('Users', function () {
                         const inviteListInviteUser2 = inviteListInvite2.user;
                         assert.equal(inviteListInviteUser2.id, userToInvite2.id);
                         assert.equal(inviteListInviteUser2.name, userToInvite2.name);
-                        assert.property(inviteListInviteUser2, 'pid');
+                        assert.notProperty(inviteListInviteUser2, 'pid');
                         assert.property(inviteListInviteUser2, 'phoneNumber');
                         assert.property(inviteListInviteUser2, 'imageUrl');
 
@@ -1341,7 +1341,7 @@ suite('Users', function () {
                         const inviteListInviteUser2 = inviteListInvite2.user;
                         assert.equal(inviteListInviteUser2.id, userToInvite2.id);
                         assert.equal(inviteListInviteUser2.name, userToInvite2.name);
-                        assert.property(inviteListInviteUser2, 'pid');
+                        assert.notProperty(inviteListInviteUser2, 'pid');
                         assert.property(inviteListInviteUser2, 'phoneNumber');
                         assert.property(inviteListInviteUser2, 'imageUrl');
 
@@ -1645,8 +1645,7 @@ suite('Users', function () {
                             imageUrl: userCreator.imageUrl,
                             level: GroupMemberUser.LEVELS.admin,
                             email: userCreator.email,
-                            phoneNumber: null,
-                            pid: null
+                            phoneNumber: null
                         };
 
                         assert.deepEqual(userCreatorMember, userCreatorMemberExpected);
@@ -1662,8 +1661,7 @@ suite('Users', function () {
                             imageUrl: userMember.imageUrl,
                             level: GroupMemberUser.LEVELS.read,
                             email: userMember.email,
-                            phoneNumber: null,
-                            pid: null
+                            phoneNumber: null
                         };
 
                         assert.deepEqual(userMemberMember, userMemberMemberExpected);

@@ -562,7 +562,6 @@ module.exports = function (app) {
         if (req.locals && req.locals.group && req.locals.group.level === GroupMemberUser.LEVELS.admin) {
             dataForAdmin = `
             u.email,
-            uc."connectionData"::jsonb->>'pid' AS "pid",
             uc."connectionData"::jsonb->>'phoneNumber' AS "phoneNumber",
             `;
         }
@@ -1150,7 +1149,6 @@ module.exports = function (app) {
         if (permissions && (permissions.group.level === GroupMemberUser.LEVELS.admin || permissions.group.isModerator)) {
             dataForTopicAdminAndModerator = `
             u.email as "user.email",
-            uc."connectionData"::jsonb->>'pid' AS "user.pid",
             uc."connectionData"::jsonb->>'phoneNumber' AS "user.phoneNumber",
             `;
         }
