@@ -441,6 +441,24 @@ const topicInviteUsersRead = async function (agent, topicId, inviteId) {
     return _topicInviteUsersRead(agent, topicId, inviteId, 200);
 };
 
+const _topicInviteUsersUpdate = async function (agent, userId, topicId, inviteId, level, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/invites/users/:inviteId'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':inviteId', inviteId);
+
+    return agent
+        .put(path)
+        .send({level: level})
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const topicInviteUsersUpdate = async function (agent, userId, topicId, inviteId, level) {
+    return _topicInviteUsersUpdate(agent, userId, topicId, inviteId, level, 200);
+};
+
 const _topicInviteUsersList = function (agent, userId, topicId, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/invites/users'
         .replace(':userId', userId)
@@ -4176,6 +4194,96 @@ suite('Users', function () {
 
                     });
 
+                });
+
+                suite('Update', function () {
+                    const agentCreator = request.agent(app);
+                    const agentUserToInvite = request.agent(app);
+
+                    let userCreator;
+                    let userToInvite;
+
+                    let topic;
+                    let topicInviteCreated;
+
+                    suiteSetup(async function () {
+                        userToInvite = await userLib.createUserAndLogin(agentUserToInvite, null, null, null);
+                        userCreator = await userLib.createUserAndLogin(agentCreator, null, null, null);
+                    });
+
+                    setup(async function () {
+                        topic = (await topicCreate(agentCreator, userCreator.id, null, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>', null)).body.data;
+
+                        const invitation = {
+                            userId: userToInvite.id,
+                            level: TopicMemberUser.LEVELS.read
+                        };
+
+                        topicInviteCreated = (await topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation)).body.data.rows[0];
+                    });
+
+                    test('Success - 20000', async function () {
+                        const inviteUpdate = (await topicInviteUsersUpdate(agentCreator, userCreator.id, topic.id, topicInviteCreated.id, TopicMemberUser.LEVELS.admin)).body;
+
+                        const expectedBody = {
+                            status: {
+                                code: 20000
+                            }
+                        };
+                        assert.deepEqual(inviteUpdate, expectedBody);
+
+                        const inviteRead = (await topicInviteUsersRead(request.agent(app), topic.id, topicInviteCreated.id)).body.data;
+                        const expectedInvite = Object.assign({}, topicInviteCreated); // Clone
+
+                        expectedInvite.level = TopicMemberUser.LEVELS.admin;
+                        expectedInvite.updatedAt = inviteRead.updatedAt;
+                        expectedInvite.topic = {
+                            id: topic.id,
+                            title: topic.title,
+                            visibility: topic.visibility,
+                            creator: {
+                                id: userCreator.id
+                            }
+                        };
+
+                        expectedInvite.creator = {
+                            company: null,
+                            id: userCreator.id,
+                            imageUrl: null,
+                            name: userCreator.name
+                        };
+
+                        expectedInvite.user = {
+                            id: userToInvite.id,
+                            email: userToInvite.email
+                        };
+
+                        assert.deepEqual(inviteRead, expectedInvite);
+                    });
+
+                    test('Fail - 401000', async function () {
+                        const inviteUpdate = (await _topicInviteUsersUpdate(request.agent(app), userCreator.id, topic.id, topicInviteCreated.id, TopicMemberUser.LEVELS.admin, 401)).body;
+
+                        const expectedBody = {
+                            status: {
+                                code: 40100,
+                                message: "Unauthorized"
+                            }
+                        };
+                        assert.deepEqual(inviteUpdate, expectedBody);
+                    });
+
+                    test('Fail - 401000', async function () {
+                        const inviteUpdate = (await _topicInviteUsersUpdate(agentCreator, userCreator.id, topic.id, topicInviteCreated.id, 'nonvalid', 401)).body;
+
+                        const expectedBody = {
+                            status: {
+                                code: 40100,
+                                message: "Unauthorized"
+                            }
+                        };
+                        assert.deepEqual(inviteUpdate, expectedBody);
+                    });
                 });
 
                 suite('List', function () {

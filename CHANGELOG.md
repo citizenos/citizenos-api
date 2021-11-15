@@ -1,3 +1,8 @@
+## 2021-11-11 - v. 5.0.4
+
+* Add `PUT /api/topics/:topicId/invites/users/:inviteId`, `PUT /api/users/:userId/topics/:topicId/invites/users/:inviteId` - to update invited users permissions
+* Update topic members groups, users and invites enpoints to support ordering - https://github.com/citizenos/citizenos-fe/issues/239
+
 ## 2021-11-11 - v. 5.0.3
 
 * Update Topic and Group member and invite list API-s to return User contact info for Topic/Group admins and systems global Moderators - https://github.com/citizenos/citizenos-fe/issues/670
