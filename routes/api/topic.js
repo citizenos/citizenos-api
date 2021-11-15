@@ -2764,6 +2764,25 @@ module.exports = function (app) {
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
         const search = req.query.search;
+        const order = req.query.order;
+        const sortOrder = req.query.sortOrder || 'ASC';
+
+        let sortSql = ` ORDER BY `;
+
+        if (order) {
+            switch (order) {
+                case 'name':
+                    sortSql += ` tm.name ${sortOrder} `;
+                    break;
+                case 'level':
+                    sortSql += ` tm."level"::"enum_TopicMemberUsers_level" ${sortOrder} `;
+                    break;
+                default:
+                    sortSql += ` tm.name ASC `
+            }
+        } else {
+            sortSql += ` tm.name ASC`;
+        }
 
         let where = '';
         if (search) {
@@ -2842,7 +2861,7 @@ module.exports = function (app) {
                 LEFT JOIN "UserConnections" uc ON (uc."userId" = tm.id AND uc."connectionId" = 'esteid')
                 ${where}
                 GROUP BY tm.id, tm.level, tmu.level, tm.name, tm.company, tm."imageUrl", tm.email, uc."connectionData"::jsonb
-                ORDER BY tm.name ASC
+                ${sortSql}
                 LIMIT :limit
                 OFFSET :offset
                 ;`,
@@ -2894,6 +2913,28 @@ module.exports = function (app) {
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
         const search = req.query.search;
+        const order = req.query.order;
+        const sortOrder = req.query.sortOrder || 'ASC';
+
+        let sortSql = ` ORDER BY `;
+
+        if (order) {
+            switch (order) {
+                case 'name':
+                    sortSql += ` mg.name ${sortOrder} `;
+                    break;
+                case 'level':
+                    sortSql += ` mg."level"::"enum_TopicMemberGroups_level" ${sortOrder} `;
+                    break;
+                case 'members.users.count':
+                    sortSql += ` mg."members.users.count" ${sortOrder} `;
+                    break;
+                default:
+                    sortSql += ` mg.name ASC `
+            }
+        } else {
+            sortSql += ` mg.name ASC`;
+        }
 
         let where = '';
         if (search) {
@@ -2932,6 +2973,7 @@ module.exports = function (app) {
                         ORDER BY level DESC
                     ) mg
                     ${where}
+                    ${sortSql}
                     LIMIT :limit
                     OFFSET :offset;`,
                     {
@@ -3736,6 +3778,26 @@ module.exports = function (app) {
             where = ` AND u.name ILIKE :search `
         }
 
+        const order = req.query.order;
+        const sortOrder = req.query.sortOrder || 'ASC';
+
+        let sortSql = ` ORDER BY `;
+
+        if (order) {
+            switch (order) {
+                case 'name':
+                    sortSql += ` u.name ${sortOrder} `;
+                    break;
+                case 'level':
+                    sortSql += ` tiu."level"::"enum_TopicInviteUsers_level" ${sortOrder} `;
+                    break;
+                default:
+                    sortSql += ` u.name ASC `
+            }
+        } else {
+            sortSql += ` u.name ASC `;
+        }
+
         let dataForTopicAdmin = '';
         if (permissions && permissions.topic.permissions.level === TopicMemberUser.LEVELS.admin) {
             dataForTopicAdmin = `
@@ -3770,7 +3832,7 @@ module.exports = function (app) {
                     LEFT JOIN "UserConnections" uc ON (uc."userId" = tiu."userId" AND uc."connectionId" = 'esteid')
                     WHERE tiu."topicId" = :topicId AND tiu."deletedAt" IS NULL AND tiu."createdAt" > NOW() - INTERVAL '${TopicInviteUser.VALID_DAYS}d'
                     ${where}
-                    ORDER BY u.name ASC
+                    ${sortSql}
                     LIMIT :limit
                     OFFSET :offset
                     ;`,
@@ -3883,6 +3945,48 @@ module.exports = function (app) {
 
         } catch (err) {
             return next(err);
+        }
+    });
+
+    app.put(['/api/topics/:topicId/invites/users/:inviteId', '/api/users/:userId/topics/:topicId/invites/users/:inviteId'], loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin), async function (req, res, next) {
+        try {
+            const newLevel = req.body.level;
+            const topicId = req.params.topicId;
+            const inviteId = req.params.inviteId;
+
+            const topicMemberUser = await TopicInviteUser
+                .findOne(
+                    {
+                        where: {
+                            id: inviteId,
+                            topicId: topicId
+                        }
+                    }
+                );
+
+            if (topicMemberUser) {
+                await db.transaction(async function (t) {
+                    topicMemberUser.level = newLevel;
+
+                    await cosActivities.updateActivity(topicMemberUser, null, {
+                        type: 'User',
+                        id: req.user.id,
+                        ip: req.ip
+                    }, null, req.method + ' ' + req.path, t)
+                    await topicMemberUser.save({
+                        transaction: t
+                    });
+
+                    t.afterCommit(() => {
+                        return res.ok();
+                    });
+                });
+            } else {
+                return res.notFound();
+            }
+
+        } catch (err) {
+            return next(err)
         }
     });
 
