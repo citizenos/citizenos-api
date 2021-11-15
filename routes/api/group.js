@@ -33,15 +33,22 @@ module.exports = function (app) {
                 gm.level::"enum_GroupMemberUsers_level" >= :level AS "allowed",
                 gm."userId" AS uid,
                 gm."level" AS level,
+                CASE 
+                    WHEN m."userId" IS NOT NULL THEN TRUE
+                    ELSE FALSE
+                END as "isModerator", 
                 g.id
             FROM "Groups" g
             LEFT JOIN "GroupMemberUsers" gm
                 ON(gm."groupId" = g.id)
+            LEFT JOIN "Moderators" m
+                ON (m."partnerId" IS NULL AND m."deletedAt" IS NULL)
+                AND m."userId" = gm."userId"
             WHERE g.id = :groupId
                 AND gm."userId" = :userId
                 AND gm."deletedAt" IS NULL
                 AND g."deletedAt" IS NULL
-            GROUP BY id, uid, level;`,
+            GROUP BY g.id, uid, gm.level, m."userId";`,
             {
                 replacements: {
                     groupId: groupId,
@@ -555,7 +562,6 @@ module.exports = function (app) {
         if (req.locals && req.locals.group && req.locals.group.level === GroupMemberUser.LEVELS.admin) {
             dataForAdmin = `
             u.email,
-            uc."connectionData"::jsonb->>'pid' AS "pid",
             uc."connectionData"::jsonb->>'phoneNumber' AS "phoneNumber",
             `;
         }
@@ -1131,11 +1137,20 @@ module.exports = function (app) {
         const groupId = req.params.groupId;
         const userId = req.user.id;
 
-        const hasAccess = await _hasPermission(groupId, userId, GroupMemberUser.LEVELS.read, null, null);
+        const permissions = await _hasPermission(groupId, userId, GroupMemberUser.LEVELS.read, null, null);
 
         // User is not member and can only get own result
-        if (!hasAccess) {
+        if (!permissions) {
             where = ` AND giu."userId" = :userId `;
+        }
+
+        let dataForTopicAdminAndModerator = '';
+
+        if (permissions && (permissions.group.level === GroupMemberUser.LEVELS.admin || permissions.group.isModerator)) {
+            dataForTopicAdminAndModerator = `
+            u.email as "user.email",
+            uc."connectionData"::jsonb->>'phoneNumber' AS "user.phoneNumber",
+            `;
         }
 
         const invites = await db
@@ -1151,9 +1166,11 @@ module.exports = function (app) {
                     u.id as "user.id",
                     u.name as "user.name",
                     u."imageUrl" as "user.imageUrl",
+                    ${dataForTopicAdminAndModerator}
                     count(*) OVER()::integer AS "countTotal"
                 FROM "GroupInviteUsers" giu
                 JOIN "Users" u ON u.id = giu."userId"
+                LEFT JOIN "UserConnections" uc ON (uc."userId" = giu."userId" AND uc."connectionId" = 'esteid')
                 WHERE giu."groupId" = :groupId AND giu."deletedAt" IS NULL AND giu."createdAt" > NOW() - INTERVAL '${GroupInviteUser.VALID_DAYS}d'
                 ${where}
                 ORDER BY u.name ASC
@@ -1180,7 +1197,7 @@ module.exports = function (app) {
         let countTotal = 0;
         if (invites.length) {
             countTotal = invites[0].countTotal;
-        } else if (!hasAccess) {
+        } else if (!permissions) {
             return res.forbidden('Insufficient permissions');
         }
 

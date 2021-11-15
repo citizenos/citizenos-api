@@ -1,3 +1,7 @@
+## 2021-11-11 - v. 5.0.3
+
+* Update Topic and Group member and invite list API-s to return User contact info for Topic/Group admins and systems global Moderators - https://github.com/citizenos/citizenos-fe/issues/670
+
 ## 2021-11-04 - v. 5.0.2
 
 * Update Groups permission check method to not have any "Promise was rejected with non error" warnings

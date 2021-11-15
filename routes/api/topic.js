@@ -893,7 +893,6 @@ module.exports = function (app) {
         if (user.moderator) {
             returncolumns += `
             , c.email as "creator.email"
-            , uc."connectionData"::jsonb->>'pid' AS "creator.pid"
             , uc."connectionData"::jsonb->'phoneNumber' AS "creator.phoneNumber"
             `;
 
@@ -2668,7 +2667,6 @@ module.exports = function (app) {
         if (showExtraUserInfo) {
             extraUserInfo = `
             u.email,
-            uc."connectionData"::jsonb->>'pid' AS "pid",
             uc."connectionData"::jsonb->>'phoneNumber' AS "phoneNumber",
             `;
         }
@@ -2793,7 +2791,6 @@ module.exports = function (app) {
         if ((req.user && req.user.moderator) || req.locals.topic.permissions.level === TopicMemberUser.LEVELS.admin) {
             dataForModeratorAndAdmin = `
             tm.email,
-            uc."connectionData"::jsonb->>'pid' AS "pid",
             uc."connectionData"::jsonb->>'phoneNumber' AS "phoneNumber",
             `;
         }
@@ -3802,7 +3799,6 @@ module.exports = function (app) {
         if (permissions && permissions.topic.permissions.level === TopicMemberUser.LEVELS.admin) {
             dataForTopicAdmin = `
             u.email as "user.email",
-            uc."connectionData"::jsonb->>'pid' AS "user.pid",
             uc."connectionData"::jsonb->>'phoneNumber' AS "user.phoneNumber",
             `;
         }
@@ -4844,7 +4840,6 @@ module.exports = function (app) {
             if (req.user.moderator) {
                 dataForModerator = `
                 , 'email', u.email
-                , 'pid', uc."connectionData"::jsonb->>'pid'
                 , 'phoneNumber', uc."connectionData"::jsonb->>'phoneNumber'
                 `;
             }

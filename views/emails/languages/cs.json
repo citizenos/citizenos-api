@@ -1,73 +1,73 @@
 {
   "LAYOUT": {
-    "LINK_TO_PLATFORM": "Link to platform",
-    "LINK_PRIVACY_POLICY": "Privacy Policy",
-    "EMPOWERED_BY": "Empowered by"
+    "LINK_TO_PLATFORM": "Odkaz na platformu",
+    "LINK_PRIVACY_POLICY": "Zásady ochrany soukromých údajů",
+    "EMPOWERED_BY": "Běží na"
   },
   "ACCOUNT_VERIFICATION": {
-    "SUBJECT": "Activate your Citizen OS account"
+    "SUBJECT": "Aktivujte si účet Citizen OS"
   },
   "INVITE_GROUP": {
-    "SUBJECT": "{{fromUser.name}} is inviting you to join our group “{{group.name}}” on Citizen OS"
+    "SUBJECT": "{{fromUser.name}} vás zve, abyste se připojili k naší skupině „{{group.name}}“ na Citizen OS"
   },
   "INVITE_TOPIC": {
-    "SUBJECT": "{{fromUser.name}} is inviting you to make a collaborative decision",
+    "SUBJECT": "{{fromUser.name}} vás vyzývá ke spolupráci s rozhodnutím",
     "SUBJECT_rahvaalgatus_ee": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust",
     "SUBJECT_rahvaalgatus_test": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Reset your Citizen OS account password"
+    "SUBJECT": "Obnovit heslo k účtu Citizen OS"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Thank you, we received your report (#{{report.id}})"
+    "SUBJECT": "Děkujeme, obdrželi jsme vaši zprávu (#{{report.id}})"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: your Citizen OS topic may contain a violation of guidelines"
+    "SUBJECT": "Report #{{report.id}}: Téma vašeho Citizen OS může obsahovat porušení pokynů"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "A Citizen OS topic has been reported (#{{report.id}}), please moderate"
+    "SUBJECT": "Téma Citizen OS bylo nahlášeno (#{{report.id}}), prosím zakročte"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Your Citizen OS report #{{report.id}} has been reviewed"
+    "SUBJECT": "Vaše Citizen OS zpráva č.{{report.id}} byla zkontrolována"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: Your Citizen OS topic has been reviewed by a moderator"
+    "SUBJECT": "Hlášení #{{report.id}}: Téma vašeho Citizen OS bylo zkontrolováno moderátorem"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "A reported (#{{report.id}}) Citizen OS topic has been revised, please review"
+    "SUBJECT": "Hlášené (#{{report.id}}) Citizen OS téma bylo revidováno, prosím zkontrolujte"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: access to your Citizen OS topic has been restored."
+    "SUBJECT": "Hlášení #{{report.id}}: Přístup k tématu vašeho Citizen OS byl obnoven."
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
-    "SUBJECT": "Your report (#{{report.id}}) in Citizen OS has been resolved"
+    "SUBJECT": "Vaše hlášení (#{{report.id}}) v Citizen OS byla vyřešena"
   },
   "REPORT": {
     "REPORT_TYPE": {
-      "ABUSE": "Is abusive or insulting",
-      "OBSCENE": "Contains obscene language",
-      "SPAM": "Contains spam or is unrelated to topic",
-      "HATE": "Contains hate speech",
-      "NETIQUETTE": "Infringes (n)etiquette",
-      "DUPLICATE": "Is a duplicate"
+      "ABUSE": "Je hrubý nebo urážlivý",
+      "OBSCENE": "Obsahuje obscénní jazyk",
+      "SPAM": "Obsahuje spam nebo nesouvisí s tématem",
+      "HATE": "Obsahuje nenávistný projev",
+      "NETIQUETTE": "Porušuje (n)etiketu",
+      "DUPLICATE": "Je duplicitní"
     }
   },
   "REPORT_COMMENT": {
     "REPORT_TYPE": {
-      "ABUSE": "Is abusive or insulting",
-      "OBSCENE": "Contains obscene language",
-      "SPAM": "Contains spam or is unrelated to topic",
-      "HATE": "Contains hate speech",
-      "NETIQUETTE": "Infringes (n)etiquette",
-      "DUPLICATE": "Is a duplicate"
+      "ABUSE": "Je hrubý nebo urážlivý",
+      "OBSCENE": "Obsahuje obscénní jazyk",
+      "SPAM": "Obsahuje spam nebo nesouvisí s tématem",
+      "HATE": "Obsahuje nenávistný projev",
+      "NETIQUETTE": "Porušuje (n)etiketu",
+      "DUPLICATE": "Je duplicitní"
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Your comment has been reported as inappropriate by the community"
+    "SUBJECT": "Váš komentář byl komunitou nahlášen jako nevhodný"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "A comment has been reported as inappropriate by the community"
+    "SUBJECT": "Komentář byl nahlášen komunitou jako nevhodný"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""

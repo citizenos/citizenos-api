@@ -4267,7 +4267,7 @@ suite('Users', function () {
                         assert.property(inviteListInivteUser1, 'imageUrl');
                         // Exra User info for ADMIN -  https://github.com/citizenos/citizenos-fe/issues/670
                         assert.property(inviteListInivteUser1, 'email');
-                        assert.property(inviteListInivteUser1, 'pid');
+                        assert.notProperty(inviteListInivteUser1, 'pid');
                         assert.property(inviteListInivteUser1, 'phoneNumber');
                         delete inviteListInvite1.user;
 
@@ -4283,7 +4283,7 @@ suite('Users', function () {
                         assert.property(inviteListInivteUser2, 'imageUrl');
                         // Exra User info for ADMIN -  https://github.com/citizenos/citizenos-fe/issues/670
                         assert.property(inviteListInivteUser1, 'email');
-                        assert.property(inviteListInivteUser1, 'pid');
+                        assert.notProperty(inviteListInivteUser1, 'pid');
                         assert.property(inviteListInivteUser1, 'phoneNumber');
                         delete inviteListInvite2.user;
 
@@ -8206,7 +8206,6 @@ suite('Users', function () {
                     const comments = list.rows;
 
                     const creatorExpected = user.toJSON();
-                    creatorExpected.pid = null;
                     creatorExpected.phoneNumber = null;
                     delete creatorExpected.imageUrl; // Image url is not returned, as it's not needed for now
                     delete creatorExpected.language; // Language is not returned
