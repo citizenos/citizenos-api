@@ -33,10 +33,10 @@ module.exports = function (app) {
                 gm.level::"enum_GroupMemberUsers_level" >= :level AS "allowed",
                 gm."userId" AS uid,
                 gm."level" AS level,
-                CASE 
+                CASE
                     WHEN m."userId" IS NOT NULL THEN TRUE
                     ELSE FALSE
-                END as "isModerator", 
+                END as "isModerator",
                 g.id
             FROM "Groups" g
             LEFT JOIN "GroupMemberUsers" gm
@@ -1625,6 +1625,10 @@ module.exports = function (app) {
         const showModerated = req.query.showModerated || false;
         const order = req.query.order;
         const sortOrder = req.query.sortOrder || 'ASC';
+
+        if (sortOrder && ['asc', 'desc'].indexOf(sortOrder.toLowerCase()) === -1) {
+            sortOrder = 'ASC';
+        }
 
         let sortSql = ` ORDER BY `;
 

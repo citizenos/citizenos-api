@@ -2765,6 +2765,10 @@ module.exports = function (app) {
         const order = req.query.order;
         const sortOrder = req.query.sortOrder || 'ASC';
 
+        if (sortOrder && ['asc', 'desc'].indexOf(sortOrder.toLowerCase()) === -1) {
+            sortOrder = 'ASC';
+        }
+
         let sortSql = ` ORDER BY `;
 
         if (order) {
@@ -2912,6 +2916,10 @@ module.exports = function (app) {
         const search = req.query.search;
         const order = req.query.order;
         const sortOrder = req.query.sortOrder || 'ASC';
+
+        if (sortOrder && ['asc', 'desc'].indexOf(sortOrder.toLowerCase()) === -1) {
+            sortOrder = 'ASC';
+        }
 
         let sortSql = ` ORDER BY `;
 
@@ -3777,6 +3785,10 @@ module.exports = function (app) {
 
         const order = req.query.order;
         const sortOrder = req.query.sortOrder || 'ASC';
+
+        if (sortOrder && ['asc', 'desc'].indexOf(sortOrder.toLowerCase()) === -1) {
+            sortOrder = 'ASC';
+        }
 
         let sortSql = ` ORDER BY `;
 

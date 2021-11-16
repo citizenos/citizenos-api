@@ -3365,6 +3365,31 @@ suite('Users', function () {
                         assert.equal(groupExistsCount, 1);
                     });
 
+                    test('Success - use invalid sortOrder', async function () {
+                        const users = (await topicMembersUsersList(agent, user.id, topic.id, null, null, null, 'name', 'lol')).body.data;
+                        let groupExistsCount = 0;
+                        assert.equal(users.countTotal, users.count);
+                        delete users.countTotal;
+
+                        users.rows.forEach(function (memberUser) {
+                            assert.property(memberUser, 'groups');
+                            memberUser.groups.rows.forEach(function (userGroup) {
+                                if (userGroup.id === group.id) {
+                                    groupExistsCount++;
+                                    assert.include(groupMemberIds, memberUser.id);
+                                    assert.equal(userGroup.name, group.name);
+                                    assert.property(userGroup, 'level');
+                                }
+                            });
+                        });
+
+                        assert.equal(groupExistsCount, 2);
+                        const memberUsers = (await topicMembersList(agent, user.id, topic.id)).body.data.users;
+                        users.rows.forEach(function (user) {
+                            delete user.groups;
+                        });
+                        assert.deepEqual(users, memberUsers);
+                    });
                 });
 
                 suite('Groups', function () {
