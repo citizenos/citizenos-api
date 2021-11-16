@@ -3950,6 +3950,10 @@ module.exports = function (app) {
             const topicId = req.params.topicId;
             const inviteId = req.params.inviteId;
 
+            if (!(TopicMemberUser.LEVELS[newLevel])) {
+                return res.badRequest(`Invalid level "${newLevel}"`)
+            }
+
             const topicMemberUser = await TopicInviteUser
                 .findOne(
                     {

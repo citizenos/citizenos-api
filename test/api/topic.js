@@ -337,7 +337,7 @@ const topicMembersList = async function (agent, userId, topicId) {
     return _topicMembersList(agent, userId, topicId, 200);
 };
 
-const _topicMembersUsersList = async function (agent, userId, topicId, limit, offset, search, expectedHttpCode) {
+const _topicMembersUsersList = async function (agent, userId, topicId, limit, offset, search, order, sortOrder, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/members/users'
         .replace(':userId', userId)
         .replace(':topicId', topicId);
@@ -351,6 +351,12 @@ const _topicMembersUsersList = async function (agent, userId, topicId, limit, of
     if (search) {
         queryParams.search = search;
     }
+    if (order) {
+        queryParams.order = order;
+    }
+    if (sortOrder) {
+        queryParams.sortOrder = sortOrder;
+    }
 
     return agent
         .get(path)
@@ -360,11 +366,11 @@ const _topicMembersUsersList = async function (agent, userId, topicId, limit, of
         .expect('Content-Type', /json/);
 };
 
-const topicMembersUsersList = async function (agent, userId, topicId, limit, offset, search) {
-    return _topicMembersUsersList(agent, userId, topicId, limit, offset, search, 200);
+const topicMembersUsersList = async function (agent, userId, topicId, limit, offset, search, order, sortOrder) {
+    return _topicMembersUsersList(agent, userId, topicId, limit, offset, search, order, sortOrder, 200);
 };
 
-const _topicMembersGroupsList = async function (agent, userId, topicId, limit, offset, search, expectedHttpCode) {
+const _topicMembersGroupsList = async function (agent, userId, topicId, limit, offset, search, order, sortOrder, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/members/groups'
         .replace(':userId', userId)
         .replace(':topicId', topicId);
@@ -378,7 +384,12 @@ const _topicMembersGroupsList = async function (agent, userId, topicId, limit, o
     if (search) {
         queryParams.search = search;
     }
-
+    if (order) {
+        queryParams.order = order;
+    }
+    if (sortOrder) {
+        queryParams.sortOrder = sortOrder;
+    }
     return agent
         .get(path)
         .query(queryParams)
@@ -387,8 +398,8 @@ const _topicMembersGroupsList = async function (agent, userId, topicId, limit, o
         .expect('Content-Type', /json/);
 };
 
-const topicMembersGroupsList = async function (agent, userId, topicId, limit, offset, search) {
-    return _topicMembersGroupsList(agent, userId, topicId, limit, offset, search, 200);
+const topicMembersGroupsList = async function (agent, userId, topicId, limit, offset, search, order, sortOrder) {
+    return _topicMembersGroupsList(agent, userId, topicId, limit, offset, search, order, sortOrder, 200);
 };
 
 const _topicInviteUsersCreate = async function (agent, userId, topicId, invites, expectedHttpCode) {
@@ -459,20 +470,24 @@ const topicInviteUsersUpdate = async function (agent, userId, topicId, inviteId,
     return _topicInviteUsersUpdate(agent, userId, topicId, inviteId, level, 200);
 };
 
-const _topicInviteUsersList = function (agent, userId, topicId, expectedHttpCode) {
+const _topicInviteUsersList = function (agent, userId, topicId, order, sortOrder, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/invites/users'
         .replace(':userId', userId)
         .replace(':topicId', topicId);
 
     return agent
         .get(path)
+        .query({
+            order,
+            sortOrder
+        })
         .set('Content-Type', 'application/json')
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
 
-const topicInviteUsersList = async function (agent, userId, topicId) {
-    return _topicInviteUsersList(agent, userId, topicId, 200);
+const topicInviteUsersList = async function (agent, userId, topicId, order, sortOrder) {
+    return _topicInviteUsersList(agent, userId, topicId, order, sortOrder, 200);
 };
 
 const _topicInviteUsersAccept = async function (agent, userId, topicId, inviteId, expectedHttpCode) {
@@ -3296,7 +3311,7 @@ suite('Users', function () {
                 suite('Users', function () {
 
                     test('Success', async function () {
-                        const users = (await topicMembersUsersList(agent, user.id, topic.id)).body.data;
+                        const users = (await topicMembersUsersList(agent, user.id, topic.id, null, null, null, 'name', 'ASC')).body.data;
                         let groupExistsCount = 0;
                         assert.equal(users.countTotal, users.count);
                         delete users.countTotal;
@@ -3367,7 +3382,7 @@ suite('Users', function () {
                         assert.equal(groups.count, 2);
                         assert.equal(groups.countTotal, 2);
                         const searchString = group.name.split(' ')[1];
-                        const groups2 = (await topicMembersGroupsList(agent, user.id, topic.id, 2, null, searchString)).body.data;
+                        const groups2 = (await topicMembersGroupsList(agent, user.id, topic.id, 2, null, searchString, 'level', 'DESC')).body.data;
                         assert.equal(1, groups2.count);
                         assert.equal(1, groups2.countTotal);
                         assert.isAbove(groups2.rows[0].name.toLowerCase().indexOf(searchString.toLowerCase()), -1);
@@ -4273,13 +4288,13 @@ suite('Users', function () {
                         assert.deepEqual(inviteUpdate, expectedBody);
                     });
 
-                    test('Fail - 401000', async function () {
-                        const inviteUpdate = (await _topicInviteUsersUpdate(agentCreator, userCreator.id, topic.id, topicInviteCreated.id, 'nonvalid', 401)).body;
+                    test('Fail - 400000', async function () {
+                        const inviteUpdate = (await _topicInviteUsersUpdate(agentCreator, userCreator.id, topic.id, topicInviteCreated.id, 'nonvalid', 400)).body;
 
                         const expectedBody = {
                             status: {
-                                code: 40100,
-                                message: "Unauthorized"
+                                code: 40000,
+                                message: "Invalid level \"nonvalid\""
                             }
                         };
                         assert.deepEqual(inviteUpdate, expectedBody);
@@ -4351,10 +4366,10 @@ suite('Users', function () {
                     });
 
                     test('Success - 20000 - 3 invites - 2 to same person with different level, 1 to other but deleted later, 1 to other but expired', async function () {
-                        const invitesListResult = (await topicInviteUsersList(agentCreator, userCreator.id, topic.id)).body.data;
+                        const invitesListResult = (await topicInviteUsersList(agentCreator, userCreator.id, topic.id, 'level', 'DESC')).body.data;
                         assert.equal(2, invitesListResult.count);
-
                         const invitesList = invitesListResult.rows;
+                        assert.equal(invitesList[0].level, TopicMemberUser.LEVELS.admin);
                         assert.isArray(invitesList);
                         assert.equal(2, invitesList.length);
 
@@ -4410,12 +4425,12 @@ suite('Users', function () {
                     });
 
                     test('Fail - 40100 - Unauthorized', async function () {
-                        await _topicInviteUsersList(request.agent(app), '93857ed7-a81a-4187-85de-234f6d06b011', topic.id, 401);
+                        await _topicInviteUsersList(request.agent(app), '93857ed7-a81a-4187-85de-234f6d06b011', topic.id, null, null, 401);
                     });
 
                     test('Fail - 40300 - at least read permissions required', async function () {
                         await userLib.createUserAndLogin(agentCreator, null, null, null);
-                        await _topicInviteUsersList(agentCreator, userCreator.id, topic.id, 403);
+                        await _topicInviteUsersList(agentCreator, userCreator.id, topic.id, null, null, 403);
                     });
 
                 });
