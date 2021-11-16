@@ -202,6 +202,8 @@ Google+ API is not enabled. Enable Google+ API at https://console.developers.goo
 
 * All pull requests to `master` branch
 * Live site runs on `prod` branch
+* All the other ways to contribute - https://citizenos.com/get-involved/
+
 
 ### DB changes
 
