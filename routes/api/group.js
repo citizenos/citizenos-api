@@ -1624,7 +1624,7 @@ module.exports = function (app) {
         const hasVoted = req.query.hasVoted; // Filter out Topics where User has participated in the voting process.
         const showModerated = req.query.showModerated || false;
         const order = req.query.order;
-        const sortOrder = req.query.sortOrder || 'ASC';
+        let sortOrder = req.query.sortOrder || 'ASC';
 
         if (sortOrder && ['asc', 'desc'].indexOf(sortOrder.toLowerCase()) === -1) {
             sortOrder = 'ASC';

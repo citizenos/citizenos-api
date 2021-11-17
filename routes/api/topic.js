@@ -2763,13 +2763,14 @@ module.exports = function (app) {
         let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
         const search = req.query.search;
         const order = req.query.order;
-        const sortOrder = req.query.sortOrder || 'ASC';
+        let sortOrder = req.query.sortOrder || 'ASC';
 
         if (sortOrder && ['asc', 'desc'].indexOf(sortOrder.toLowerCase()) === -1) {
             sortOrder = 'ASC';
         }
 
         let sortSql = ` ORDER BY `;
+
 
         if (order) {
             switch (order) {
@@ -2783,7 +2784,7 @@ module.exports = function (app) {
                     sortSql += ` tm.name ASC `
             }
         } else {
-            sortSql += ` tm.name ASC`;
+            sortSql += ` tm.name ASC `;
         }
 
         let where = '';
@@ -2915,7 +2916,7 @@ module.exports = function (app) {
         let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
         const search = req.query.search;
         const order = req.query.order;
-        const sortOrder = req.query.sortOrder || 'ASC';
+        let sortOrder = req.query.sortOrder || 'ASC';
 
         if (sortOrder && ['asc', 'desc'].indexOf(sortOrder.toLowerCase()) === -1) {
             sortOrder = 'ASC';
@@ -2935,10 +2936,10 @@ module.exports = function (app) {
                     sortSql += ` mg."members.users.count" ${sortOrder} `;
                     break;
                 default:
-                    sortSql += ` mg.name ASC `
+                    sortSql = ` `
             }
         } else {
-            sortSql += ` mg.name ASC`;
+            sortSql = ` `;
         }
 
         let where = '';
@@ -3784,7 +3785,7 @@ module.exports = function (app) {
         }
 
         const order = req.query.order;
-        const sortOrder = req.query.sortOrder || 'ASC';
+        let sortOrder = req.query.sortOrder || 'ASC';
 
         if (sortOrder && ['asc', 'desc'].indexOf(sortOrder.toLowerCase()) === -1) {
             sortOrder = 'ASC';
