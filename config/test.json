@@ -169,7 +169,7 @@
   },
   "storage": {
     "type": "local",
-    "allowedFileTypes": ["txt", "pdf", "doc", "docx", "ddoc", "bdoc", "odf", "odt", "jpg", "jpeg", "img", "png", "rtf", "xls", "xlsx", "ppt", "pptx", "pps", "xlt"],
+    "allowedFileTypes": ["txt", "pdf", "doc", "docx", "ddoc", "bdoc", "odf", "odt", "jpg", "jpeg", "png", "rtf", "xls", "xlsx", "ppt", "pptx", "pps", "xlt"],
     "maxFileSize": 50000,
     "baseFolder": "",
     "baseURL": ""

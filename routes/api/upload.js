@@ -11,7 +11,6 @@ module.exports = function (app) {
     const Busboy = app.get('busboy');
     const StreamUpload = app.get('stream_upload');
     const path = require('path');
-    const url = require('url');
     const logger = app.get('logger');
 
     const credentials = {
@@ -140,7 +139,7 @@ module.exports = function (app) {
         stream.on('readable', stream.read.bind(stream));
     };
 
-    app.post('/api/users/:userId/upload', function (req, res, next) {
+    app.post('/api/users/:userId/upload', loginCheck(['partner']), function (req, res, next) {
         const appDir = __dirname.replace('/routes/api', '/public/uploads');
 
         const baseFolder = config.storage.baseFolder || appDir;
@@ -195,7 +194,7 @@ module.exports = function (app) {
             busboy.on('file', function (fieldname, file, filename, encoding, mimetype) {
                 let savedFilename = path.join(subFolder, newFileName + path.extname(filename));
                 if (!config.storage.type || config.storage.type === 'local') {
-                    accessPath = url.resolve(baseURL, savedFilename);
+                    accessPath = new URL(savedFilename, baseURL);
                     savedFilename = path.join(baseFolder, savedFilename);
                 }
                 file.on('limit', function () {
@@ -217,20 +216,18 @@ module.exports = function (app) {
             });
 
             busboy.on('error', done);
-            busboy.on('finish', function () {
+            busboy.on('finish', async function () {
                 if (uploadResult) {
-                    uploadResult
-                        .then(function (data) {
+                    try {
+                        let data = await uploadResult
+                        if (accessPath) {
+                            data = accessPath.href;
+                        }
 
-                            if (accessPath) {
-                                data = accessPath;
-                            }
-
-                            return res.status(201).json(data);
-                        })
-                        .catch(function (err) {
-                            return res.status(500).json(err);
-                        });
+                        return res.status(201).json(data);
+                    } catch (err) {
+                        return res.status(500).json(err);
+                    };
                 }
 
             });

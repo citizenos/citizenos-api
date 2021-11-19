@@ -275,7 +275,7 @@
     "limit": 10
   },
   "storage": {
-    "allowedFileTypes": ["txt", "pdf", "doc", "docx", "ddoc", "bdoc", "asice", "odf", "odt", "jpg", "jpeg", "img", "png", "rtf", "xls", "xlsx", "ppt", "pptx", "pps", "xlt"],
+    "allowedFileTypes": ["txt", "pdf", "doc", "docx", "ddoc", "bdoc", "asice", "odf", "odt", "jpg", "jpeg", "png", "rtf", "xls", "xlsx", "ppt", "pptx", "pps", "xlt"],
     "allowedMimeTypes": ["application\/vnd\\.etsi\\.asic-e\\+zip"]
   }
 }
