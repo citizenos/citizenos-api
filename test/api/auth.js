@@ -515,10 +515,10 @@ suite('Auth', function () {
                     .expect('Content-Type', /json/);
                 const status = res.body.status;
                 assert.equal(status.code, 40001);
-                assert.equal(status.message, 'The account does not exists.');
+                assert.equal(status.message, 'Invalid password');
             });
 
-            test('Fail - 40002 - account has not been verified', async function () {
+            test('Fail - 40001 - account has not been verified', async function () {
                 const agent = request.agent(app);
 
                 const email = 'test_notverif_' + new Date().getTime() + '@test.ee';
@@ -533,7 +533,7 @@ suite('Auth', function () {
                 assert.equal(status.message, 'The account verification has not been completed. Please check your e-mail.');
             });
 
-            test('Fail - 40003 - wrong password', async function () {
+            test('Fail - 40001 - wrong password', async function () {
                 const res = await agent
                     .post('/api/auth/login')
                     .set('Content-Type', 'application/json')
@@ -546,8 +546,8 @@ suite('Auth', function () {
 
                 const status = res.body.status;
 
-                assert.equal(status.code, 40003);
-                assert.equal(res.body.errors.password, 'Invalid password');
+                assert.equal(status.code, 40001);
+                assert.equal(status.message, 'Invalid password');
             });
         });
 
@@ -1222,14 +1222,13 @@ suite('Auth', function () {
                     assert.deepEqual(resetBody, expectedBody);
                 });
 
-                test('Fail - 40001 - non existent email', async function () {
-                    const resetBody = (await _passwordResetSend(agent, 'test_this_user_we_dont_have@test.com', 400)).body;
+                test('Success - 20000 - non existent email', async function () {
+                    // Return 20000 for no existent email to void User Enumeration attacks
+                    const resetBody = (await passwordResetSend(agent, 'test_this_user_we_dont_have@test.com')).body;
                     const expectedBody = {
                         status: {
-                            code: 40002
-                        },
-                        errors: {
-                            email: 'Account with this email does not exist.'
+                            code: 20000,
+                            message:'Success! Please check your email test_this_user_we_dont_have@test.com to complete your password recovery.'
                         }
                     };
 

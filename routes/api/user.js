@@ -13,6 +13,7 @@ module.exports = function (app) {
     const uuid = app.get('uuid');
     const moment = app.get('moment');
     const validator = app.get('validator');
+    const cryptoLib = app.get('cryptoLib');
 
     const User = models.User;
     const UserConsent = models.UserConsent;
@@ -24,6 +25,7 @@ module.exports = function (app) {
     app.put('/api/users/:userId', loginCheck(['partner']), async function (req, res, next) {
         try {
             const fields = ['name', 'company', 'email', 'language', 'imageUrl', 'termsVersion', 'preferences'];
+            const data = req.body;
             if (!req.user.partnerId) { // Allow only our own app change the password
                 fields.push('password');
             }
@@ -35,16 +37,25 @@ module.exports = function (app) {
                 }
             });
 
-            if (req.body.email && req.body.email !== user.email) {
+            if (data.email && data.email !== user.email) {
                 updateEmail = true;
                 fields.push('emailIsVerified');
                 fields.push('emailVerificationCode');
-                req.body.emailIsVerified = false;
-                req.body.emailVerificationCode = uuid.v4(); // Generate new emailVerificationCode
+                data.emailIsVerified = false;
+                data.emailVerificationCode = uuid.v4(); // Generate new emailVerificationCode
             }
-            if (req.body.termsVersion && req.body.termsVersion !== user.termsVersion) {
+            if (data.termsVersion && data.termsVersion !== user.termsVersion) {
                 fields.push('termsAcceptedAt');
-                req.body.termsAcceptedAt = moment().format();
+                data.termsAcceptedAt = moment().format();
+            }
+
+            if (updateEmail || data.newPassword) {
+                if (user && user.password !== cryptoLib.getHash(data.password, 'sha256')) {
+                    return res.badRequest('Invalid password')
+                }
+                if (data.newPassword) {
+                    data.password = data.newPassword;
+                }
             }
 
             const results = await User.update(

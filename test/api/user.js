@@ -1,6 +1,6 @@
 'use strict';
 
-const _userUpdate = async function (agent, userId, name, email, password, language, expectedHttpCode) {
+const _userUpdate = async function (agent, userId, name, email, password, newPassword, language, expectedHttpCode) {
     const path = '/api/users/:userId'
         .replace(':userId', userId);
 
@@ -20,6 +20,9 @@ const _userUpdate = async function (agent, userId, name, email, password, langua
 
     if (language) {
         data.language = language;
+    }
+    if (newPassword) {
+        data.newPassword = newPassword;
     }
 
     return agent
@@ -45,8 +48,8 @@ const userDelete = async function (agent, userId) {
     return _userDelete(agent, userId, 200);
 };
 
-const userUpdate = async function (agent, userId, name, email, password, language) {
-    return _userUpdate(agent, userId, name, email, password, language, 200);
+const userUpdate = async function (agent, userId, name, email, password, newPassword, language) {
+    return _userUpdate(agent, userId, name, email, password, newPassword, language, 200);
 };
 
 const _userConsentCreate = async function (agent, userId, partnerId, expectedHttpCode) {
@@ -154,7 +157,7 @@ suite('User', function () {
             const nameNew = 'New Name';
             const passwordNew = 'aaAA123';
 
-            await userUpdate(agent, user.id, nameNew, null, passwordNew, null);
+            await userUpdate(agent, user.id, nameNew, null, password, passwordNew, null);
             await auth.logout(agent);
             await auth.login(agent, email, passwordNew);
             const u = await User.findOne({
@@ -172,7 +175,7 @@ suite('User', function () {
             const emailNew = 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@test.com';
             const passwordNew = 'aaAA123';
 
-            await userUpdate(agent, user.id, nameNew, emailNew, passwordNew, null);
+            await userUpdate(agent, user.id, nameNew, emailNew, password, passwordNew, null);
             await auth.logout(agent);
             let u = await User.findOne({
                 where: {id: user.id}
@@ -205,7 +208,7 @@ suite('User', function () {
             const emailNew = 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@test.com';
             const passwordNew = null;
 
-            await userUpdate(agent, user.id, nameNew, emailNew, passwordNew, null);
+            await userUpdate(agent, user.id, nameNew, emailNew, password, passwordNew, null);
             const u = await User.findOne({
                 where: {id: user.id}
             });
@@ -217,13 +220,13 @@ suite('User', function () {
             const emailNew = 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@test.com';
             const passwordNew = 'aaAA123';
 
-            return userUpdate(agent, user.id, nameNew, emailNew, passwordNew, null);
+            return userUpdate(agent, user.id, nameNew, emailNew, password, passwordNew, null);
         });
 
         test('Success - update language', async function () {
             const newLanguage = 'ET';
 
-            await userUpdate(agent, user.id, null, null, null, newLanguage);
+            await userUpdate(agent, user.id, null, null, null, null, newLanguage);
             const u = await User.findOne({
                 where: {id: user.id}
             })
@@ -252,12 +255,20 @@ suite('User', function () {
             assert.notEqual(u.emailVerificationCode, newEmailVerificationCode);
         });
 
+        test('Fail - invalid new password', async function () {
+            const nameNew = 'New Name';
+            const emailNew = 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@test.com';
+            const passwordNew = 'aaAA';
+
+            return _userUpdate(agent, user.id, nameNew, emailNew, password, passwordNew, null, 400);
+        });
+
         test('Fail - invalid password', async function () {
             const nameNew = 'New Name';
             const emailNew = 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@test.com';
             const passwordNew = 'aaAA';
 
-            return _userUpdate(agent, user.id, nameNew, emailNew, passwordNew, null, 400);
+            return _userUpdate(agent, user.id, nameNew, emailNew, passwordNew, null, null, 400);
         });
 
     });

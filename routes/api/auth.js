@@ -344,7 +344,7 @@ module.exports = function (app) {
             });
 
             if (!user) {
-                return res.badRequest({email: 'Account with this email does not exist.'}, 2);
+                return res.ok('Success! Please check your email :email to complete your password recovery.'.replace(':email', email));
             }
 
             user.passwordResetCode = true; // Model will generate new code
@@ -353,7 +353,7 @@ module.exports = function (app) {
 
             await emailLib.sendPasswordReset(user.email, user.passwordResetCode);
 
-            return res.ok('Success! Please check your email :email to complete your password recovery.'.replace(':email', user.email));
+            return res.ok('Success! Please check your email :email to complete your password recovery.'.replace(':email', email));
         } catch (err) {
             return next(err);
         }

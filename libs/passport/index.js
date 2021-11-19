@@ -278,32 +278,25 @@ module.exports = function (app) {
                         where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email))
                     });
 
-                if (!user || !user.password) {
-                    return done({
-                        message: 'The account does not exists.',
-                        code: 1
-                    }, false);
-                }
-
-                if (!user.emailIsVerified) {
-                    await emailLib.sendAccountVerification(user.email, user.emailVerificationCode);
-
-                    return done({
-                        message: 'The account verification has not been completed. Please check your e-mail.',
-                        code: 2
-                    }, false);
-                }
-
-                if (user.password === cryptoLib.getHash(password, 'sha256')) {
+                if (user && user.password === cryptoLib.getHash(password, 'sha256')) {
                     const userData = user.toJSON();
                     userData.termsVersion = user.dataValues.termsVersion;
                     userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
 
+                    if (!user.emailIsVerified) {
+                        await emailLib.sendAccountVerification(user.email, user.emailVerificationCode);
+
+                        return done({
+                            message: 'The account verification has not been completed. Please check your e-mail.',
+                            code: 2
+                        }, false);
+                    }
+
                     return done(null, userData);
                 } else {
                     return done({
-                        message: {password: 'Invalid password'},
-                        code: 3
+                        message: 'Invalid password',
+                        code: 1
                     }, false);
                 }
 
