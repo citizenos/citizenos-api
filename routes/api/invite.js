@@ -69,7 +69,7 @@ module.exports = function (app) {
                 userByEmail.emailIsVerified = true;
                 await userByEmail.save({fields: ['emailIsVerified'], validate: false}); //By using the invite link we can confirm the user as owner to this e-mail
             }
-            const redirectUrl = urlLib.getFe('/account/signup', null, {email: email, redirectSuccess: objectUrl || ''});
+            const redirectUrl = urlLib.getFe('/account/login', null, {email: email, redirectSuccess: objectUrl || ''});
 
             return res.redirect(302, redirectUrl);
         }

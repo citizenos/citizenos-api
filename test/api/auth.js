@@ -1099,18 +1099,16 @@ suite('Auth', function () {
             assert.deepEqual(signupResult, expected);
         });
 
-        test('Fail - 40001 - email already in use', async function () {
+        test('Fail - email already in use - return 200 to void phishing', async function () {
             const email = 'test_emailinuse_' + new Date().getTime() + '@test.ee';
             const password = 'Test123';
 
             await signup(agent, email, password, null);
-            const signupResult = (await _signup(agent, email, password, null, null, 400)).body;
+            const signupResult = (await signup(agent, email, password)).body;
             const expected = {
                 status: {
-                    code: 40001
-                },
-                errors: {
-                    email: 'The email address is already in use.'
+                    code: 20000,
+                    message: `Check your email ${email} to verify your account.`
                 }
             };
             assert.deepEqual(signupResult, expected);

@@ -28,7 +28,7 @@ suite('Invite', function () {
             const path = '/api/invite/view?email=:email'
                 .replace(':email', 'nonexistent1234@foobar.com');
 
-                const expectedLocation = urlLib.getFe('/account/signup', null, {email: email});
+                const expectedLocation = urlLib.getFe('/account/login', null, {email: email});
 
             return agent
                 .get(path)
@@ -36,7 +36,7 @@ suite('Invite', function () {
                 .expect('Location', expectedLocation);
         });
 
-        test('Success - existing User with incomplete signup (null password, created on invite) - redirect to signup', async function () {
+        test('Success - existing User with incomplete signup (null password, created on invite) - redirect to login', async function () {
             const agent = request.agent(app);
 
             const email = 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@foo.com';
@@ -53,7 +53,7 @@ suite('Invite', function () {
                     source: User.SOURCES.citizenos
                 })
                 .then(function () {
-                    const expectedLocation = urlLib.getFe('/account/signup', null, {email: email});
+                    const expectedLocation = urlLib.getFe('/account/login', null, {email: email});
 
                     return agent
                         .get(path)
@@ -145,7 +145,7 @@ suite('Invite', function () {
                 .expect('Location', expectedLocation);
         });
 
-        test('Success - Invited non-existing User, a different User currently logged in - logout current User, redirect to signup', async function () {
+        test('Success - Invited non-existing User, a different User currently logged in - logout current User, redirect to login', async function () {
             const agent = request.agent(app);
 
             const email = 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@foo.com';
@@ -157,7 +157,7 @@ suite('Invite', function () {
 
             const redirectUri = urlLib.getFe('/topics/:topicId', {topicId: topicId});
             await userLib.createUserAndLogin(agent, null, null, null);
-            const expectedLocation = urlLib.getFe('/account/signup', null, {email: email, redirectSuccess: redirectUri});
+            const expectedLocation = urlLib.getFe('/account/login', null, {email: email, redirectSuccess: redirectUri});
 
             return agent
                 .get(path)

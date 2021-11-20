@@ -134,7 +134,7 @@ module.exports = function (app) {
                 // IF password is null, the User was created through an invite. We allow an User to claim the account.
                 if (user.password) {
                     // Email address is already in use.
-                    return res.badRequest({email: 'The email address is already in use.'}, 1);
+                    return res.ok('Check your email ' + email + ' to verify your account.');
                 }
                 user.password = password;
 
@@ -203,7 +203,7 @@ module.exports = function (app) {
                     return res.ok('Check your email ' + user.email + ' to verify your account.', user.toJSON());
                 }
             } else {
-                return res.badRequest({email: 'The email address is already in use.'}, 1);
+                return res.ok('Check your email ' + email + ' to verify your account.');
             }
         } catch (err) {
             return next(err);
