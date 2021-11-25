@@ -22,6 +22,8 @@ module.exports = function (app) {
     const superagent = app.get('superagent');
     const url = app.get('url');
     const mobileId = app.get('mobileId');
+    const speedLimiter = app.get('speedLimiter');
+    const rateLimiter = app.get('rateLimiter');
 
     const User = models.User;
     const UserConnection = models.UserConnection;
@@ -241,7 +243,7 @@ module.exports = function (app) {
     /**
      * Login
      */
-    app.post('/api/auth/login', function (req, res) {
+    app.post('/api/auth/login', rateLimiter(15), speedLimiter(10), function (req, res) {
         passport.authenticate('local', function (err, user) {
             if (err || !user) {
                 return res.badRequest(err.message, err.code);

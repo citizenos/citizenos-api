@@ -462,6 +462,7 @@ const urlLib = app.get('urlLib');
 const objectEncrypter = app.get('objectEncrypter');
 
 const shared = require('../utils/shared');
+const c = require('config');
 const userLib = require('./lib/user')(app);
 
 const User = models.User;
@@ -548,6 +549,50 @@ suite('Auth', function () {
 
                 assert.equal(status.code, 40001);
                 assert.equal(status.message, 'Invalid password');
+            });
+
+            test('Fail - 40001 - slow down and 429 - rate limit', async function () {
+                const dorequests = async function (ip) {
+                    const reqLimit = 15;
+                    const slowLimit = 10;
+                    let x = 0
+                    while ( x < reqLimit) {
+                        const start = Date.now();
+                        let expectedCode = 400;
+                        let contentType = /json/;
+                        if (x >= reqLimit) {
+                            expectedCode = 429;
+                            contentType = /text\/html/;
+                        }
+                        const res = await agent
+                            .post('/api/auth/login')
+                            .set('Content-Type', 'application/json')
+                            .set('X-Forwarded-For', ip)
+                            .send({
+                                email: email,
+                                password: 'thisinvalidpassword'
+                            })
+                            .expect(expectedCode)
+                            .expect('Content-Type', contentType);
+
+                        const status = res.body.status;
+                        const responseTime = Date.now() - start;
+                        if (x >= slowLimit) {
+                            assert.approximately(responseTime, ((x+1 - slowLimit)*1000), 500); // check increasing response time
+                        }
+
+                        if (x < reqLimit) {
+                            assert.equal(status.code, 40001);
+                            assert.equal(status.message, 'Invalid password');
+                        }
+
+                        x++;
+                    }
+                }
+                const randomnr = () => (Math.floor(Math.random() * 255) + 1);
+                const ip = `${randomnr()}.${randomnr()}.${randomnr()}.${randomnr()}`;
+
+                await dorequests(ip);
             });
         });
 

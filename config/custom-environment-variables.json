@@ -48,5 +48,9 @@
   },
   "encryption": {
     "salt": "CITIZENOS_ENCRYPTION_SALT"
+  },
+  "rateLimit": {
+    "__name": "CITIZENOS_RATE_LIMIT",
+    "__format": "json"
   }
 }

@@ -35,14 +35,52 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerDocument = require('./swagger.json');
 const Busboy = require('busboy');
 const StreamUpload = require('stream_upload');
+
+const SlowDown = require("express-slow-down");
+const RateLimit = require("express-rate-limit");
+let rateLimitStore, speedLimitStore;
+if (config.rateLimit && config.rateLimit.storageType === 'redis') {
+	const RedisStore = require("rate-limit-redis");
+	const Redis = require("ioredis");
+	const client = new Redis(config.rateLimit.storageOptions);
+	rateLimitStore = new RedisStore({
+        client,
+        prefix: 'rl'
+    });
+
+    speedLimitStore = new RedisStore({
+        client,
+        prefix: 'sl'
+    });
+}
+
 const app = express();
+const rateLimiter = function (allowedRequests, blockTime, skipSuccess ) {
+    return new RateLimit({
+        store: rateLimitStore,
+        windowMs: blockTime || (15 * 60 * 1000), // default 15 minutes
+        max: allowedRequests || 100,
+        skipSuccessfulRequests: skipSuccess || true
+    });
+};
+
+const speedLimiter = function (allowedRequests, delay, blockTime, skipSuccess) {
+    return new SlowDown({
+        store: speedLimitStore,
+        windowMs: blockTime || (15 * 60 * 1000), // default 15 minutes
+        delayAfter: allowedRequests || 15, // allow 15 requests per 15 minutes, then...
+        delayMs: delay || 1000, // response time increases by default 1s per request
+        skipSuccessfulRequests: skipSuccess || true
+    })
+};
 
 // Express settings
 // TODO: Would be nice if conf had express.settings.* and all from there would be set
 if (app.get('env') === 'production' || app.get('env') === 'test') {
     app.set('trust proxy', true); // http://expressjs.com/guide/behind-proxies.html
 }
-
+app.set('rateLimiter', rateLimiter);
+app.set('speedLimiter', speedLimiter);
 app.use('/documentation', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 const prerender = require('prerender-node');
 prerender.set('prerenderServiceUrl', config.services.prerender.serviceUrl).set('prerenderToken', config.services.prerender.apiKey);
