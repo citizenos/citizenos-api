@@ -42,7 +42,9 @@ let rateLimitStore, speedLimitStore;
 if (config.rateLimit && config.rateLimit.storageType === 'redis') {
 	const RedisStore = require("rate-limit-redis");
 	const Redis = require("ioredis");
-	const client = new Redis(config.rateLimit.storageOptions);
+    const redisUrl = config.rateLimit.client?.url;
+    const redisOptions = config.rateLimit.client?.options;
+	const client = new Redis(redisUrl, redisOptions);
 	rateLimitStore = new RedisStore({
         client,
         prefix: 'rl'
