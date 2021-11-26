@@ -1,5 +1,7 @@
 'use strict';
 
+const SlowDown = require('express-slow-down');
+
 /**
  * Topic API-s (/api/../topics/..)
  */
@@ -40,6 +42,8 @@ module.exports = function (app) {
     const asyncMiddleware = app.get('middleware.asyncMiddleware');
     const authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
     const partnerParser = app.get('middleware.partnerParser');
+    const speedLimiter = app.get('speedLimiter');
+    const rateLimiter = app.get('rateLimiter');
 
     const authUser = require('./auth')(app);
     const User = models.User;
@@ -3553,15 +3557,20 @@ module.exports = function (app) {
      *
      * @see /api/users/:userId/topics/:topicId/members/users "Auto accept" - Adds a Member to the Topic instantly and sends a notification to the User.
      */
-    app.post('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin, false, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin, false, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), rateLimiter(5, false), speedLimiter(1, false), async function (req, res, next) {
         try {
             //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
             const topicId = req.params.topicId;
             const userId = req.user.id;
             let members = req.body;
+            const MAX_LENGTH = 50;
 
             if (!Array.isArray(members)) {
                 members = [members];
+            }
+
+            if (members.length > MAX_LENGTH) {
+                return res.badRequest("Maximum user limit reached");
             }
 
             const inviteMessage = members[0].inviteMessage;

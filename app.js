@@ -57,7 +57,7 @@ if (config.rateLimit && config.rateLimit.storageType === 'redis') {
 }
 
 const app = express();
-const rateLimiter = function (allowedRequests, blockTime, skipSuccess ) {
+const rateLimiter = function (allowedRequests, skipSuccess, blockTime) {
     return new RateLimit({
         store: rateLimitStore,
         windowMs: blockTime || (15 * 60 * 1000), // default 15 minutes
@@ -66,7 +66,7 @@ const rateLimiter = function (allowedRequests, blockTime, skipSuccess ) {
     });
 };
 
-const speedLimiter = function (allowedRequests, delay, blockTime, skipSuccess) {
+const speedLimiter = function (allowedRequests, skipSuccess, blockTime, delay) {
     return new SlowDown({
         store: speedLimitStore,
         windowMs: blockTime || (15 * 60 * 1000), // default 15 minutes

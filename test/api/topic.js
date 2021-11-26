@@ -4048,6 +4048,29 @@ suite('Users', function () {
                         assert.deepEqual(inviteCreateResult2, expectedResponseBody);
                     });
 
+                    test('Fail - 400 - Maximum user limit reached', async function () {
+                        const invitation = [];
+                        let i = 0;
+                        while (i < 51) {
+                            invitation.push({
+                                userId: cosUtil.randomString() + '@test.com',
+                                level: TopicMemberUser.LEVELS.edit
+                            });
+                            i++;
+                        }
+
+
+                        const createResult = (await _topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation, 400)).body;
+
+                        assert.deepEqual(
+                            createResult.status,
+                            {
+                                code: 40000,
+                                message: "Maximum user limit reached"
+                            }
+                        );
+                    });
+
                     test('Fail - 40100 - Unauthorized', async function () {
                         await _topicInviteUsersCreate(request.agent(app), '4727aecc-56f7-4802-8f76-2cfaad5cd5f3', topic.id, [], 401);
                     });
