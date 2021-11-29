@@ -205,7 +205,7 @@ module.exports = function (app) {
      */
     const hasPermission = function (level, allowPublic, topicStatusesAllowed, allowSelf) {
         return async function (req, res, next) {
-            const userId = req.user.id;
+            const userId = req.user.userId;
             const partnerId = req.user.partnerId;
             const topicId = req.params.topicId;
 
@@ -217,7 +217,7 @@ module.exports = function (app) {
 
             topicStatusesAllowed = topicStatusesAllowed ? topicStatusesAllowed : null;
             let allowSelfDelete = allowSelf ? allowSelf : null;
-            if (allowSelfDelete && req.user.id !== req.params.memberId) {
+            if (allowSelfDelete && req.user.userId !== req.params.memberId) {
                 allowSelfDelete = false;
             }
 
@@ -313,7 +313,7 @@ module.exports = function (app) {
             let userId;
 
             if (req.user) {
-                userId = req.user.id;
+                userId = req.user.userId;
             }
 
             if (!topicId || !userId) {
@@ -340,7 +340,7 @@ module.exports = function (app) {
             let userId;
 
             if (req.user) {
-                userId = req.user.id;
+                userId = req.user.userId;
             }
 
             if (!topicId || !userId) {
@@ -363,7 +363,7 @@ module.exports = function (app) {
 
     const isCommentCreator = function () {
         return async function (req, res, next) {
-            const userId = req.user.id;
+            const userId = req.user.userId;
             const commentId = req.params.commentId;
 
             try {
@@ -1368,12 +1368,12 @@ module.exports = function (app) {
             // I wish Sequelize Model.build supported "fields". This solution requires you to add a field here once new are defined in model.
             let topic = Topic.build({
                 visibility: req.body.visibility || Topic.VISIBILITY.private,
-                creatorId: req.user.id,
+                creatorId: req.user.userId,
                 categories: req.body.categories,
                 hashtag: req.body.hashtag,
                 endsAt: req.body.endsAt,
                 sourcePartnerObjectId: req.body.sourcePartnerObjectId,
-                authorIds: [req.user.id]
+                authorIds: [req.user.userId]
             });
 
             topic.padUrl = cosEtherpad.getTopicPadUrl(topic.id);
@@ -1386,7 +1386,7 @@ module.exports = function (app) {
 
             const user = await User.findOne({
                 where: {
-                    id: req.user.id
+                    id: req.user.userId
                 },
                 attributes: ['id', 'name', 'language']
             });
@@ -1422,7 +1422,7 @@ module.exports = function (app) {
                     null,
                     {
                         type: 'User',
-                        id: req.user.id,
+                        id: req.user.userId,
                         ip: req.ip
                     }
                     , req.method + ' ' + req.path,
@@ -1437,7 +1437,7 @@ module.exports = function (app) {
                     req.method + ' ' + req.path,
                     {
                         type: 'User',
-                        id: req.user.id,
+                        id: req.user.userId,
                         ip: req.ip
                     }
                 );
@@ -1486,14 +1486,14 @@ module.exports = function (app) {
                 }
             });
 
-            if (sourceTopic.creatorId !== req.user.id) {
+            if (sourceTopic.creatorId !== req.user.userId) {
                 return res.forbidden();
             }
 
             let topic = Topic.build({
                 visibility: Topic.VISIBILITY.private,
-                creatorId: req.user.id,
-                authorIds: [req.user.id]
+                creatorId: req.user.userId,
+                authorIds: [req.user.userId]
             });
 
             topic.padUrl = cosEtherpad.getTopicPadUrl(topic.id);
@@ -1504,7 +1504,7 @@ module.exports = function (app) {
 
             const user = await User.findOne({
                 where: {
-                    id: req.user.id
+                    id: req.user.userId
                 },
                 attributes: ['id', 'name', 'language']
             });
@@ -1555,7 +1555,7 @@ module.exports = function (app) {
                     null,
                     {
                         type: 'User',
-                        id: req.user.id,
+                        id: req.user.userId,
                         ip: req.ip
                     }
                     , req.method + ' ' + req.path,
@@ -1568,7 +1568,7 @@ module.exports = function (app) {
                 req.method + ' ' + req.path,
                 {
                     type: 'User',
-                    id: req.user.id,
+                    id: req.user.userId,
                     ip: req.ip
                 }
             );
@@ -1746,7 +1746,7 @@ module.exports = function (app) {
                             null,
                             {
                                 type: 'User',
-                                id: req.user.id,
+                                id: req.user.userId,
                                 ip: req.ip
                             },
                             null,
@@ -1785,7 +1785,7 @@ module.exports = function (app) {
                         req.method + ' ' + req.path,
                         {
                             type: 'User',
-                            id: req.user.id,
+                            id: req.user.userId,
                             ip: req.ip
                         }
                     );
@@ -1872,7 +1872,7 @@ module.exports = function (app) {
                         null,
                         {
                             type: 'User',
-                            id: req.user.id,
+                            id: req.user.userId,
                             ip: req.ip
                         },
                         null,
@@ -1921,7 +1921,7 @@ module.exports = function (app) {
                         null,
                         {
                             type: 'User',
-                            id: req.user.id,
+                            id: req.user.userId,
                             ip: req.ip
                         },
                         null,
@@ -1978,7 +1978,7 @@ module.exports = function (app) {
 
                 await cosActivities.deleteActivity(topic, null, {
                     type: 'User',
-                    id: req.user.id,
+                    id: req.user.userId,
                     ip: req.ip
                 }, req.method + ' ' + req.path, t);
 
@@ -1996,7 +1996,7 @@ module.exports = function (app) {
      * Get all Topics User belongs to
      */
     app.get('/api/users/:userId/topics', loginCheck(['partner']), async function (req, res, next) {
-        const userId = req.user.id;
+        const userId = req.user.userId;
         const partnerId = req.user.partnerId;
 
         let include = req.query.include;
@@ -2750,7 +2750,7 @@ module.exports = function (app) {
     app.get('/api/users/:userId/topics/:topicId/members', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), async function (req, res, next) {
         try {
             const showExtraUserInfo = (req.user && req.user.moderator) || req.locals.topic.permissions.level === TopicMemberUser.LEVELS.admin;
-            const response = await _getAllTopicMembers(req.params.topicId, req.user.id, showExtraUserInfo);
+            const response = await _getAllTopicMembers(req.params.topicId, req.user.userId, showExtraUserInfo);
 
             return res.ok(response);
         } catch (err) {
@@ -2874,7 +2874,7 @@ module.exports = function (app) {
                     {
                         replacements: {
                             topicId: req.params.topicId,
-                            userId: req.user.id,
+                            userId: req.user.userId,
                             search: '%' + search + '%',
                             limit,
                             offset
@@ -2989,7 +2989,7 @@ module.exports = function (app) {
                     {
                         replacements: {
                             topicId: req.params.topicId,
-                            userId: req.user.id,
+                            userId: req.user.userId,
                             search: `%${search}%`,
                             limit,
                             offset
@@ -3097,7 +3097,7 @@ module.exports = function (app) {
             groupIds.push(member.groupId);
         });
         try {
-            const allowedGroups = await checkPermissionsForGroups(groupIds, req.user.id); // Checks if all groups are allowed
+            const allowedGroups = await checkPermissionsForGroups(groupIds, req.user.userId); // Checks if all groups are allowed
             if (allowedGroups && allowedGroups[0]) {
                 await db.transaction(async function (t) {
 
@@ -3143,7 +3143,7 @@ module.exports = function (app) {
                                     topic,
                                     {
                                         type: 'User',
-                                        id: req.user.id,
+                                        id: req.user.userId,
                                         ip: req.ip
                                     },
                                     null,
@@ -3158,7 +3158,7 @@ module.exports = function (app) {
                             }
                         });
                     await Promise.all(memberGroupActivities);
-                    const emailResult = await emailLib.sendTopicMemberGroupCreate(groupIdsToInvite, req.user.id, topicId);
+                    const emailResult = await emailLib.sendTopicMemberGroupCreate(groupIdsToInvite, req.user.userId, topicId);
                     if (emailResult && emailResult.errors) {
                         logger.error('ERRORS', emailResult.errors);
                     }
@@ -3219,7 +3219,7 @@ module.exports = function (app) {
 
                     await cosActivities.updateActivity(topicMemberUser, null, {
                         type: 'User',
-                        id: req.user.id,
+                        id: req.user.userId,
                         ip: req.ip
                     }, null, req.method + ' ' + req.path, t)
                     await topicMemberUser.save({
@@ -3255,7 +3255,7 @@ module.exports = function (app) {
         try {
             let results;
             try {
-                results = await checkPermissionsForGroups(memberId, req.user.id);
+                results = await checkPermissionsForGroups(memberId, req.user.userId);
             } catch (err) {
                 return res.forbidden();
             }
@@ -3276,7 +3276,7 @@ module.exports = function (app) {
                         null,
                         {
                             type: 'User',
-                            id: req.user.id,
+                            id: req.user.userId,
                             ip: req.ip
                         },
                         null,
@@ -3368,7 +3368,7 @@ module.exports = function (app) {
                 );
 
             const topic = Topic.build(topicMemberUser.Topic);
-            if (topic.status === Topic.STATUSES.closed && req.user.id !== memberId) {
+            if (topic.status === Topic.STATUSES.closed && req.user.userId !== memberId) {
                 return res.forbidden();
             }
             const user = User.build(topicMemberUser.User);
@@ -3377,7 +3377,7 @@ module.exports = function (app) {
 
             await db
                 .transaction(async function (t) {
-                    if (memberId === req.user.id) {
+                    if (memberId === req.user.userId) {
                         // User leaving a Topic
                         logger.debug('Member is leaving the Topic', {
                             memberId: memberId,
@@ -3386,14 +3386,14 @@ module.exports = function (app) {
                         await cosActivities
                             .leaveActivity(topic, {
                                 type: 'User',
-                                id: req.user.id,
+                                id: req.user.userId,
                                 ip: req.ip
                             }, req.method + ' ' + req.path, t);
                     } else {
                         await cosActivities
                             .deleteActivity(user, topic, {
                                 type: 'User',
-                                id: req.user.id,
+                                id: req.user.userId,
                                 ip: req.ip
                             }, req.method + ' ' + req.path, t);
                     }
@@ -3441,7 +3441,7 @@ module.exports = function (app) {
         try {
             let results;
             try {
-                results = await checkPermissionsForGroups(memberId, req.user.id);
+                results = await checkPermissionsForGroups(memberId, req.user.userId);
             } catch (err) {
                 logger.error(err);
 
@@ -3508,7 +3508,7 @@ module.exports = function (app) {
                         topic,
                         {
                             type: 'User',
-                            id: req.user.id,
+                            id: req.user.userId,
                             ip: req.ip
                         },
                         req.method + ' ' + req.path,
@@ -3561,7 +3561,7 @@ module.exports = function (app) {
         try {
             //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
             const topicId = req.params.topicId;
-            const userId = req.user.id;
+            const userId = req.user.userId;
             let members = req.body;
             const MAX_LENGTH = 50;
 
@@ -3680,7 +3680,7 @@ module.exports = function (app) {
                 });
 
                 validUserIdMembers = validUserIdMembers.filter(function (member) {
-                    return member.userId !== req.user.id; // Make sure user does not invite self
+                    return member.userId !== req.user.userId; // Make sure user does not invite self
                 });
                 const currentMembers = await TopicMemberUser.findAll({
                     where: {
@@ -3708,7 +3708,7 @@ module.exports = function (app) {
                                 cosActivities
                                     .updateActivity(addedMember, null, {
                                         type: 'User',
-                                        id: req.user.id,
+                                        id: req.user.userId,
                                         ip: req.ip
                                     }, null, req.method + ' ' + req.path, t);
 
@@ -3741,7 +3741,7 @@ module.exports = function (app) {
                             userInvited,
                             {
                                 type: 'User',
-                                id: req.user.id,
+                                id: req.user.userId,
                                 ip: req.ip
                             },
                             req.method + ' ' + req.path,
@@ -3785,7 +3785,7 @@ module.exports = function (app) {
         const search = req.query.search;
 
         const topicId = req.params.topicId;
-        const userId = req.user.id;
+        const userId = req.user.userId;
         const permissions = await _hasPermission(topicId, userId, TopicMemberUser.LEVELS.read, true);
 
         let where = '';
@@ -3992,7 +3992,7 @@ module.exports = function (app) {
 
                     await cosActivities.updateActivity(topicMemberUser, null, {
                         type: 'User',
-                        id: req.user.id,
+                        id: req.user.userId,
                         ip: req.ip
                     }, null, req.method + ' ' + req.path, t)
                     await topicMemberUser.save({
@@ -4039,7 +4039,7 @@ module.exports = function (app) {
 
     app.post(['/api/users/:userId/topics/:topicId/invites/users/:inviteId/accept', '/api/topics/:topicId/invites/users/:inviteId/accept'], loginCheck(), async function (req, res, next) {
         try {
-            const userId = req.user.id;
+            const userId = req.user.userId;
             const topicId = req.params.topicId;
             const inviteId = req.params.inviteId;
 
@@ -4120,7 +4120,7 @@ module.exports = function (app) {
                             invite,
                             {
                                 type: 'User',
-                                id: req.user.id,
+                                id: req.user.userId,
                                 ip: req.ip
                             },
                             {
@@ -4184,7 +4184,7 @@ module.exports = function (app) {
      */
     app.post('/api/topics/join/:token', loginCheck(['partner']), asyncMiddleware(async function (req, res) {
         const token = req.params.token;
-        const userId = req.user.id;
+        const userId = req.user.userId;
 
         const topicJoin = await TopicJoin.findOne({
             where: {
@@ -4285,7 +4285,7 @@ module.exports = function (app) {
                 type: type,
                 size: size,
                 source: source,
-                creatorId: req.user.id,
+                creatorId: req.user.userId,
                 link: link
             });
 
@@ -4304,7 +4304,7 @@ module.exports = function (app) {
                     attachment,
                     {
                         type: 'User',
-                        id: req.user.id,
+                        id: req.user.userId,
                         ip: req.ip
                     },
                     null,
@@ -4349,7 +4349,7 @@ module.exports = function (app) {
 
                     await cosActivities.updateActivity(attachment, topic, {
                         type: 'User',
-                        id: req.user.id,
+                        id: req.user.userId,
                         ip: req.ip
                     }, null, req.method + ' ' + req.path, t);
 
@@ -4382,7 +4382,7 @@ module.exports = function (app) {
                 .transaction(async function (t) {
                     await cosActivities.deleteActivity(attachment, attachment.Topics[0], {
                         type: 'User',
-                        id: req.user.id,
+                        id: req.user.userId,
                         ip: req.ip
                     }, req.method + ' ' + req.path, t);
 
@@ -4514,7 +4514,7 @@ module.exports = function (app) {
                             topicId: topicId,
                             type: req.body.type,
                             text: req.body.text,
-                            creatorId: req.user.id,
+                            creatorId: req.user.userId,
                             creatorIp: req.ip
                         },
                         {
@@ -4627,7 +4627,7 @@ module.exports = function (app) {
 
             await db
                 .transaction(async function (t) {
-                    topicReportRead.moderatedById = req.user.id;
+                    topicReportRead.moderatedById = req.user.userId;
                     topicReportRead.moderatedAt = db.fn('NOW');
                     topicReportRead.moderatedReasonType = moderatedReasonType || ''; // HACK: If Model has "allowNull: true", it will skip all validators when value is "null"
                     topicReportRead.moderatedReasonText = moderatedReasonText || ''; // HACK: If Model has "allowNull: true", it will skip all validators when value is "null"
@@ -4697,7 +4697,7 @@ module.exports = function (app) {
             const topicReport = await TopicReport
                 .update(
                     {
-                        resolvedById: req.user.id,
+                        resolvedById: req.user.userId,
                         resolvedAt: db.fn('NOW')
                     },
                     {
@@ -4746,7 +4746,7 @@ module.exports = function (app) {
             subject: subject,
             text: text,
             parentId: parentId,
-            creatorId: req.user.id,
+            creatorId: req.user.userId,
             edits: edits
         });
 
@@ -4782,7 +4782,7 @@ module.exports = function (app) {
                                     topic,
                                     {
                                         type: 'User',
-                                        id: req.user.id,
+                                        id: req.user.userId,
                                         ip: req.ip
                                     }
                                     , req.method + ' ' + req.path,
@@ -4798,7 +4798,7 @@ module.exports = function (app) {
                                 topic,
                                 {
                                     type: 'User',
-                                    id: req.user.id,
+                                    id: req.user.userId,
                                     ip: req.ip
                                 },
                                 req.method + ' ' + req.path,
@@ -4861,7 +4861,7 @@ module.exports = function (app) {
         let orderByReplies = '"createdAt" ASC';
         let dataForModerator = '';
         if (req.user) {
-            userId = req.user.id;
+            userId = req.user.userId;
 
             if (req.user.moderator) {
                 dataForModerator = `
@@ -5233,7 +5233,7 @@ module.exports = function (app) {
                         include: [Topic]
                     });
 
-                    comment.deletedById = req.user.id;
+                    comment.deletedById = req.user.userId;
 
                     await comment.save({
                         transaction: t
@@ -5245,7 +5245,7 @@ module.exports = function (app) {
                             comment.Topics[0],
                             {
                                 type: 'User',
-                                id: req.user.id,
+                                id: req.user.userId,
                                 ip: req.ip
                             },
                             req.method + ' ' + req.path,
@@ -5314,7 +5314,7 @@ module.exports = function (app) {
                     await cosActivities
                         .updateActivity(comment, topic, {
                             type: 'User',
-                            id: req.user.id,
+                            id: req.user.userId,
                             ip: req.ip
                         }, null, req.method + ' ' + req.path, t);
                     await comment.save({
@@ -5373,7 +5373,7 @@ module.exports = function (app) {
                             {
                                 type: req.body.type,
                                 text: req.body.text,
-                                creatorId: req.user.id,
+                                creatorId: req.user.userId,
                                 creatorIp: req.ip
                             },
                             {
@@ -5384,7 +5384,7 @@ module.exports = function (app) {
                         report,
                         {
                             type: 'User',
-                            id: req.user.id,
+                            id: req.user.userId,
                             ip: req.ip
                         },
                         null,
@@ -5747,7 +5747,7 @@ module.exports = function (app) {
                         .findOne({
                             where: {
                                 commentId: req.params.commentId,
-                                creatorId: req.user.id
+                                creatorId: req.user.userId
                             },
                             transaction: t
                         });
@@ -5763,7 +5763,7 @@ module.exports = function (app) {
                         await cosActivities
                             .updateActivity(vote, comment, {
                                 type: 'User',
-                                id: req.user.id,
+                                id: req.user.userId,
                                 ip: req.ip
                             }, null, req.method + ' ' + req.path, t);
 
@@ -5773,7 +5773,7 @@ module.exports = function (app) {
                         const cv = await CommentVote
                             .create({
                                 commentId: req.params.commentId,
-                                creatorId: req.user.id,
+                                creatorId: req.user.userId,
                                 value: req.body.value
                             }, {
                                 transaction: t
@@ -5784,7 +5784,7 @@ module.exports = function (app) {
                         await cosActivities
                             .createActivity(cv, c, {
                                 type: 'User',
-                                id: req.user.id,
+                                id: req.user.userId,
                                 ip: req.ip
                             }, req.method + ' ' + req.path, t);
                     }
@@ -5817,7 +5817,7 @@ module.exports = function (app) {
                         replacements: {
                             topicId: req.params.topicId,
                             commentId: req.params.commentId,
-                            userId: req.user.id
+                            userId: req.user.userId
                         },
                         type: db.QueryTypes.SELECT,
                         raw: true,
@@ -5903,7 +5903,7 @@ module.exports = function (app) {
                             null,
                             {
                                 type: 'User',
-                                id: req.user.id,
+                                id: req.user.userId,
                                 ip: req.ip
                             },
                             req.method + ' ' + req.path,
@@ -5934,7 +5934,7 @@ module.exports = function (app) {
                             null,
                             {
                                 type: 'User',
-                                id: req.user.id,
+                                id: req.user.userId,
                                 ip: req.ip
                             },
                             req.method + ' ' + req.path,
@@ -5954,7 +5954,7 @@ module.exports = function (app) {
                             topic,
                             {
                                 type: 'User',
-                                id: req.user.id,
+                                id: req.user.userId,
                                 ip: req.ip
                             },
                             req.method + ' ' + req.path,
@@ -5965,7 +5965,7 @@ module.exports = function (app) {
                     await cosActivities
                         .updateActivity(topic, null, {
                             type: 'User',
-                            id: req.user.id,
+                            id: req.user.userId,
                             ip: req.ip
                         }, null, req.method + ' ' + req.path, t);
 
@@ -5997,7 +5997,7 @@ module.exports = function (app) {
     app.get('/api/users/:userId/topics/:topicId/votes/:voteId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
         const topicId = req.params.topicId;
         const voteId = req.params.voteId;
-        const userId = req.user.id;
+        const userId = req.user.userId;
         try {
             const voteInfo = await Vote.findOne({
                 where: {id: voteId},
@@ -6123,7 +6123,7 @@ module.exports = function (app) {
                         topic,
                         {
                             type: 'User',
-                            id: req.user.id,
+                            id: req.user.userId,
                             ip: req.ip
                         },
                         null,
@@ -6335,7 +6335,7 @@ module.exports = function (app) {
 
     const handleTopicVoteSoft = async function (vote, req, res) {
         const voteId = vote.id;
-        const userId = req.user.id;
+        const userId = req.user.userId;
         const topicId = req.params.topicId;
 
         const voteOptions = req.body.options;
@@ -6404,7 +6404,7 @@ module.exports = function (app) {
     const handleTopicVoteHard = async function (vote, req, res) {
         try {
             const voteId = vote.id;
-            let userId = req.user ? req.user.id : null;
+            let userId = req.user ? req.user.userId : null;
 
             //idCard
             const certificate = req.body.certificate;
@@ -6665,7 +6665,7 @@ module.exports = function (app) {
             }
         }
 
-        const userId = req.user ? req.user.id : idSignFlowData.userId; // Auth has User in session, but un-authenticated in idSignFlowData
+        const userId = req.user ? req.user.userId : idSignFlowData.userId; // Auth has User in session, but un-authenticated in idSignFlowData
 
         // POST /votes/:voteId checks that Vote belongs to Topic using "handleTopicVotePreconditions". It sets it in the sign flow data so we would not have to call "handleTopicVotePreconditions" again.
         if (voteId !== idSignFlowData.voteId) {
@@ -6787,7 +6787,7 @@ module.exports = function (app) {
             }
         }
 
-        const userId = req.user ? req.user.id : idSignFlowData.userId;
+        const userId = req.user ? req.user.userId : idSignFlowData.userId;
         try {
             const getStatus = async () => {
                 let signedDocInfo;
@@ -7047,7 +7047,7 @@ module.exports = function (app) {
 
             let userId = '';
             if (req.user) {
-                userId = req.user.id
+                userId = req.user.userId
             }
 
             await cosActivities
@@ -7147,7 +7147,7 @@ module.exports = function (app) {
 
         const toUserId = req.body.userId;
 
-        if (req.user.id === toUserId) {
+        if (req.user.userId === toUserId) {
             return res.badRequest('Cannot delegate to self.', 1);
         }
 
@@ -7229,7 +7229,7 @@ module.exports = function (app) {
                             replacements: {
                                 voteId: voteId,
                                 toUserId: toUserId,
-                                byUserId: req.user.id
+                                byUserId: req.user.userId
                             },
                             raw: true,
                             transaction: t
@@ -7242,7 +7242,7 @@ module.exports = function (app) {
                             vote,
                             {
                                 type: 'User',
-                                id: req.user.id,
+                                id: req.user.userId,
                                 ip: req.ip
                             },
                             req.method + ' ' + req.path,
@@ -7276,7 +7276,7 @@ module.exports = function (app) {
         try {
             const topicId = req.params.topicId;
             const voteId = req.params.voteId;
-            const userId = req.user.id;
+            const userId = req.user.userId;
 
             const vote = await Vote
                 .findOne({
@@ -7317,7 +7317,7 @@ module.exports = function (app) {
                             vote,
                             {
                                 type: 'User',
-                                id: req.user.id,
+                                id: req.user.userId,
                                 ip: req.ip
                             },
                             req.method + ' ' + req.path,
@@ -7370,8 +7370,8 @@ module.exports = function (app) {
                         ip: req.ip
                     };
 
-                    if (req.user && req.user.id) {
-                        actor.id = req.user.id;
+                    if (req.user && req.user.userId) {
+                        actor.id = req.user.userId;
                     }
 
                     await cosActivities
@@ -7452,7 +7452,7 @@ module.exports = function (app) {
                     await cosActivities
                         .deleteActivity(event, event.Topic, {
                             type: 'User',
-                            id: req.user.id,
+                            id: req.user.userId,
                             ip: req.ip
                         }, req.method + ' ' + req.path, t);
 
@@ -7472,7 +7472,7 @@ module.exports = function (app) {
     });
 
     app.post('/api/users/:userId/topics/:topicId/pin', loginCheck(['partner']), async function (req, res, next) {
-        const userId = req.user.id;
+        const userId = req.user.userId;
         const topicId = req.params.topicId;
 
         try {
@@ -7496,7 +7496,7 @@ module.exports = function (app) {
     });
 
     app.delete('/api/users/:userId/topics/:topicId/pin', loginCheck(['partner']), async function (req, res, next) {
-        const userId = req.user.id;
+        const userId = req.user.userId;
         const topicId = req.params.topicId;
 
         try {

@@ -77,7 +77,7 @@ module.exports = function (app) {
     const hasPermission = function (level, allowPublic, allowSelf) {
         return async function (req, res, next) {
             const groupId = req.params.groupId;
-            const userId = req.user.id;
+            const userId = req.user.userId;
             let allowDeleteSelf = allowSelf;
 
             if (allowSelf) {
@@ -111,7 +111,7 @@ module.exports = function (app) {
                 const group = Group
                     .build({
                         name: req.body.name,
-                        creatorId: req.user.id,
+                        creatorId: req.user.userId,
                         parentId: req.body.parentId, //TODO: check that user actually has Permissions on the Parent and the Parent exists?
                         visibility: req.body.visibility || Group.VISIBILITY.private
                     });
@@ -133,7 +133,7 @@ module.exports = function (app) {
                         null,
                         {
                             type: 'User',
-                            id: req.user.id,
+                            id: req.user.userId,
                             ip: req.ip
                         },
                         req.method + ' ' + req.path, t
@@ -141,7 +141,7 @@ module.exports = function (app) {
 
                 // Add creator as admin member to the Group
                 await group.addMember( // Magic method by Sequelize - https://github.com/sequelize/sequelize/wiki/API-Reference-Associations#hasmanytarget-options
-                    req.user.id,
+                    req.user.userId,
                     {
                         through: {
                             level: GroupMemberUser.LEVELS.admin
@@ -163,7 +163,7 @@ module.exports = function (app) {
      * Read a Group
      */
     app.get('/api/users/:userId/groups/:groupId', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
-        const userId = req.user.id;
+        const userId = req.user.userId;
         const groupId = req.params.groupId;
 
         const [group] = await db
@@ -239,7 +239,7 @@ module.exports = function (app) {
                         null,
                         {
                             type: 'User',
-                            id: req.user.id,
+                            id: req.user.userId,
                             ip: req.ip
                         },
                         null,
@@ -316,7 +316,7 @@ module.exports = function (app) {
                 null,
                 {
                     type: 'User',
-                    id: req.user.id,
+                    id: req.user.userId,
                     ip: req.ip
                 },
                 req.method + ' ' + req.path, t
@@ -464,7 +464,7 @@ module.exports = function (app) {
                 ',
                 {
                     replacements: {
-                        userId: req.user.id
+                        userId: req.user.userId
                     },
                     type: db.QueryTypes.SELECT,
                     raw: true,
@@ -656,7 +656,7 @@ module.exports = function (app) {
                         null,
                         {
                             type: 'User',
-                            id: req.user.id,
+                            id: req.user.userId,
                             ip: req.ip
                         },
                         null,
@@ -710,7 +710,7 @@ module.exports = function (app) {
                         group,
                         {
                             type: 'User',
-                            id: req.user.id,
+                            id: req.user.userId,
                             ip: req.ip
                         },
                         req.method + ' ' + req.path,
@@ -778,7 +778,7 @@ module.exports = function (app) {
                         null,
                         {
                             type: 'User',
-                            id: req.user.id,
+                            id: req.user.userId,
                             ip: req.ip
                         },
                         null,
@@ -827,7 +827,7 @@ module.exports = function (app) {
                         null,
                         {
                             type: 'User',
-                            id: req.user.id,
+                            id: req.user.userId,
                             ip: req.ip
                         },
                         null,
@@ -848,7 +848,7 @@ module.exports = function (app) {
      */
     app.post('/api/groups/join/:token', loginCheck(), asyncMiddleware(async function (req, res) {
         const token = req.params.token;
-        const userId = req.user.id;
+        const userId = req.user.userId;
 
         const groupJoin = await GroupJoin.findOne({
             where: {
@@ -915,7 +915,7 @@ module.exports = function (app) {
     app.post('/api/users/:userId/groups/:groupId/invites/users', loginCheck(), hasPermission(GroupMemberUser.LEVELS.admin, null, null), asyncMiddleware(async function (req, res) {
         //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
         const groupId = req.params.groupId;
-        const userId = req.user.id;
+        const userId = req.user.userId;
         let members = req.body;
 
         if (!Array.isArray(members)) {
@@ -1028,7 +1028,7 @@ module.exports = function (app) {
             });
 
             validUserIdMembers = validUserIdMembers.filter(function (member) {
-                return member.userId !== req.user.id; // Make sure user does not invite self
+                return member.userId !== req.user.userId; // Make sure user does not invite self
             });
             const currentMembers = await GroupMemberUser.findAll({
                 where: {
@@ -1051,7 +1051,7 @@ module.exports = function (app) {
                             cosActivities
                                 .updateActivity(existingMember, null, {
                                     type: 'User',
-                                    id: req.user.id,
+                                    id: req.user.userId,
                                     ip: req.ip
                                 }, null, req.method + ' ' + req.path, t);
 
@@ -1084,7 +1084,7 @@ module.exports = function (app) {
                         userInvited,
                         {
                             type: 'User',
-                            id: req.user.id,
+                            id: req.user.userId,
                             ip: req.ip
                         },
                         req.method + ' ' + req.path,
@@ -1135,7 +1135,7 @@ module.exports = function (app) {
         }
 
         const groupId = req.params.groupId;
-        const userId = req.user.id;
+        const userId = req.user.userId;
 
         const permissions = await _hasPermission(groupId, userId, GroupMemberUser.LEVELS.read, null, null);
 
@@ -1324,7 +1324,7 @@ module.exports = function (app) {
      * Accept a group invite
      */
     app.post(['/api/users/:userId/groups/:groupId/invites/users/:inviteId/accept', '/api/groups/:groupId/invites/users/:inviteId/accept'], loginCheck(), asyncMiddleware(async function (req, res) {
-        const userId = req.user.id;
+        const userId = req.user.userId;
         const groupId = req.params.groupId;
         const inviteId = req.params.inviteId;
 
@@ -1406,7 +1406,7 @@ module.exports = function (app) {
                         invite,
                         {
                             type: 'User',
-                            id: req.user.id,
+                            id: req.user.userId,
                             ip: req.ip
                         },
                         {
@@ -1437,7 +1437,7 @@ module.exports = function (app) {
      * Get Group Topics
      */
     app.get('/api/users/:userId/groups/:groupId/topics', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
-        const userId = req.user.id;
+        const userId = req.user.userId;
         const visibility = req.query.visibility;
         const creatorId = req.query.creatorId;
         let statuses = req.query.statuses;
@@ -1588,7 +1588,7 @@ module.exports = function (app) {
                 {
                     replacements: {
                         groupId: req.params.groupId,
-                        userId: req.user.id,
+                        userId: req.user.userId,
                         statuses,
                         visibility
                     },
@@ -1616,7 +1616,7 @@ module.exports = function (app) {
         if (search) {
             where = ` AND t.title ILIKE :search `
         }
-        const userId = req.user.id;
+        const userId = req.user.userId;
         const visibility = req.query.visibility;
         const creatorId = req.query.creatorId;
         let statuses = req.query.statuses;

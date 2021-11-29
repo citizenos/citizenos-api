@@ -33,7 +33,7 @@ module.exports = function (app) {
 
             let user = await User.findOne({
                 where: {
-                    id: req.user.id
+                    id: req.user.userId
                 }
             });
 
@@ -62,7 +62,7 @@ module.exports = function (app) {
                 req.body,
                 {
                     where: {
-                        id: req.user.id
+                        id: req.user.userId
                     },
                     fields: fields,
                     limit: 1,
@@ -107,7 +107,7 @@ module.exports = function (app) {
         try {
             const user = await User.findOne({
                 where: {
-                    id: req.user.id
+                    id: req.user.userId
                 }
             });
 
@@ -129,7 +129,7 @@ module.exports = function (app) {
             const user = await User
             .findOne({
                 where: {
-                    id: req.user.id
+                    id: req.user.userId
                 }
             });
 
@@ -149,7 +149,7 @@ module.exports = function (app) {
                     },
                     {
                         where: {
-                            id: req.user.id
+                            id: req.user.userId
                         },
                         limit: 1,
                         returning: true,
@@ -159,14 +159,14 @@ module.exports = function (app) {
 
                 await User.destroy({
                     where: {
-                        id: req.user.id
+                        id: req.user.userId
                     },
                     transaction: t
                 });
 
                 await UserConnection.destroy({
                     where: {
-                        userId: req.user.id
+                        userId: req.user.userId
                     },
                     force: true,
                     transaction: t
@@ -185,7 +185,7 @@ module.exports = function (app) {
      * Create UserConsent
      */
     app.post('/api/users/:userId/consents', loginCheck(), async function (req, res, next) {
-        const userId = req.user.id;
+        const userId = req.user.userId;
         const partnerId = req.body.partnerId;
         try {
             await db
@@ -225,7 +225,7 @@ module.exports = function (app) {
      * Read User consents
      */
     app.get('/api/users/:userId/consents', loginCheck(), async function (req, res, next) {
-        const userId = req.user.id;
+        const userId = req.user.userId;
         try {
             const results = await db.query(
                 `
@@ -262,7 +262,7 @@ module.exports = function (app) {
      * Delete User consent
      */
     app.delete('/api/users/:userId/consents/:partnerId', loginCheck(), async function (req, res, next) {
-        const userId = req.user.id;
+        const userId = req.user.userId;
         const partnerId = req.params.partnerId;
 
         try {
@@ -291,7 +291,7 @@ module.exports = function (app) {
                     null,
                     {
                         type: 'User',
-                        id: req.user.id,
+                        id: req.user.userId,
                         ip: req.ip
                     },
                     req.method + ' ' + req.path,
