@@ -71,7 +71,7 @@
     "sequelize": "6.6.5",
     "sequelize-cli": "6.2.0",
     "smart-id-rest": "1.2.1",
-    "stream_upload": "0.0.8",
+    "stream_upload": "0.0.9",
     "striptags": "3.2.0",
     "superagent": "6.1.0",
     "swagger-ui-express": "4.1.6",

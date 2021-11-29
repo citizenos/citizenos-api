@@ -1,6 +1,6 @@
 'use strict';
 
-const _uploadFile = async function (agent, userId, file, filename, folderName, expectedHttpCode) {
+const _uploadFile = async function (agent, userId, file, folderName, expectedHttpCode) {
     const path = '/api/users/:userId/upload'.replace(':userId', userId);
 
     const request = agent
@@ -9,9 +9,6 @@ const _uploadFile = async function (agent, userId, file, filename, folderName, e
     if (folderName) {
         request.field('folder', folderName);
     }
-    if (filename) {
-        request.field('filename', filename);
-    }
 
     return request
         .attach('file', file)
@@ -19,8 +16,8 @@ const _uploadFile = async function (agent, userId, file, filename, folderName, e
         .expect(expectedHttpCode);
 };
 
-const uploadFile = async function (agent, userId, file, filename, folderName) {
-    return _uploadFile(agent, userId, file, filename, folderName, 201);
+const uploadFile = async function (agent, userId, file, folderName) {
+    return _uploadFile(agent, userId, file, folderName, 201);
 };
 
 module.exports.uploadFile = uploadFile;
@@ -62,7 +59,7 @@ suite('Users', function () {
 
             test('Success', async function () {
                 const file = path.join(__dirname, '/uploads/test.txt');
-                const fileUrl = (await uploadFile(agent, user.id, file, null, 'test')).body;
+                const fileUrl = (await uploadFile(agent, user.id, file, 'test')).body;
                 assert.include(fileUrl, config.url.api);
 
                 const file2 = fs.createWriteStream(path.join(__dirname, '/uploads/return.txt'));
@@ -80,13 +77,51 @@ suite('Users', function () {
             });
 
             test('Fail - invalid format', async function () {
-                const file = path.join(__dirname, '/uploads/test');
-                const fileUrl = (await _uploadFile(agent, user.id, file, 'test.exe', 'test', 403)).body;
+                const file = path.join(__dirname, '/uploads/test.exe');
+                const fileUrl = (await _uploadFile(agent, user.id, file, 'test', 403)).body;
             });
 
-            test('Fail - invalid format .exe', async function () {
+            test('Fail - invalid format .exe with text/plain header', async function () {
                 const file = path.join(__dirname, '/uploads/test.exe');
-                const fileUrl = (await _uploadFile(agent, user.id, file, 'test.exe', 'test', 403)).body;
+
+                const request = agent
+                    .post( '/api/users/:userId/upload'.replace(':userId', user.id));
+
+                request.field('folder', 'test');
+                request.field('filename', 'test.exe');
+
+                return request
+                    .attach("name",file,{ contentType: 'text/plain' })
+                    .set('Content-Type', 'multipart/form-data')
+                    .expect(403);
+            });
+
+            test('Fail - invalid format .exe with .txt filename', async function () {
+                const file = path.join(__dirname, '/uploads/test.exe');
+
+                const request = agent
+                    .post( '/api/users/:userId/upload'.replace(':userId', user.id));
+
+                request.field('folder', 'test');
+
+                return request
+                    .attach("name",file,{ contentType: 'text/plain' })
+                    .set('Content-Type', 'multipart/form-data')
+                    .expect(403);
+            });
+
+            test('Fail - invalid format file without extension', async function () {
+                const file = path.join(__dirname, '/uploads/test');
+
+                const request = agent
+                    .post( '/api/users/:userId/upload'.replace(':userId', user.id));
+
+                request.field('folder', 'test');
+
+                return request
+                    .attach("name",file,{ contentType: 'text/plain' })
+                    .set('Content-Type', 'multipart/form-data')
+                    .expect(403);
             });
         });
 

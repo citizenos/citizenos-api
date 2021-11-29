@@ -552,6 +552,7 @@ suite('Auth', function () {
             });
 
             test('Fail - 40001 - slow down and 429 - rate limit', async function () {
+                this.timeout(21000); //eslint-disable-line no-invalid-this
                 const dorequests = async function (ip) {
                     const reqLimit = 15;
                     const slowLimit = 10;
