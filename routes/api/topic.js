@@ -34,9 +34,9 @@ module.exports = function (app) {
     const hashtagCache = app.get('hashtagCache');
     const moment = app.get('moment');
     const decode = require('html-entities').decode;
-    const URL = require('url');
     const https = require('https');
     const crypto = require('crypto');
+    const path = require('path');
 
     const loginCheck = app.get('middleware.loginCheck');
     const asyncMiddleware = app.get('middleware.asyncMiddleware');
@@ -4454,10 +4454,10 @@ module.exports = function (app) {
                 });
 
             if (attachment && attachment.source === Attachment.SOURCES.upload && req.query.download) {
-                const fileUrl = URL.parse(attachment.link);
+                const fileUrl = new URL(attachment.link);
                 let filename = attachment.name;
 
-                if (filename.split('.').length <= 1) {
+                if (filename.split('.').length <= 1 || path.extname(filename) !== `.${attachment.type}`) {
                     filename += '.' + attachment.type;
                 }
 
