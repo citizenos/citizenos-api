@@ -402,21 +402,26 @@ const topicMembersGroupsList = async function (agent, userId, topicId, limit, of
     return _topicMembersGroupsList(agent, userId, topicId, limit, offset, search, order, sortOrder, 200);
 };
 
-const _topicInviteUsersCreate = async function (agent, userId, topicId, invites, expectedHttpCode) {
+const _topicInviteUsersCreate = async function (agent, userId, topicId, invites, ip, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/invites/users'
         .replace(':userId', userId)
         .replace(':topicId', topicId);
 
-    return agent
+    const request  = agent
         .post(path)
         .send(invites)
         .set('Content-Type', 'application/json')
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
+    if (ip) {
+        request.set('X-Forwarded-For', ip)
+    }
+
+    return request;
 };
 
-const topicInviteUsersCreate = async function (agent, userId, topicId, invites) {
-    return _topicInviteUsersCreate(agent, userId, topicId, invites, 201);
+const topicInviteUsersCreate = async function (agent, userId, topicId, invites, ip) {
+    return _topicInviteUsersCreate(agent, userId, topicId, invites, ip, 201);
 };
 
 const _topicInviteUsersDelete = async function (agent, userId, topicId, inviteId, expectedHttpCode) {
@@ -3766,7 +3771,7 @@ suite('Users', function () {
         suite('Invites', function () {
 
             suite('Users', function () {
-
+                this.timeout(15000);
                 suite('Create', function () {
                     let agentCreator = request.agent(app);
 
@@ -3775,7 +3780,6 @@ suite('Users', function () {
                     let topic;
 
                     setup(async function () {
-                        this.timeout(5000);
                         userToInvite = await userLib.createUser(request.agent(app), null, null, null);
                         userCreator = await userLib.createUserAndLogin(agentCreator, null, null, null);
                         topic = (await topicCreate(agentCreator, userCreator.id, null, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>', null)).body.data;
@@ -3999,7 +4003,7 @@ suite('Users', function () {
                             level: TopicMemberUser.LEVELS.read
                         };
 
-                        const inviteCreateResult = (await _topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation, 400)).body;
+                        const inviteCreateResult = (await _topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation, null, 400)).body;
 
                         const expectedBody = {
                             status: {
@@ -4019,7 +4023,7 @@ suite('Users', function () {
                             }
                         ];
 
-                        const inviteCreateResult = (await _topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation, 400)).body;
+                        const inviteCreateResult = (await _topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation, null, 400)).body;
 
                         const expectedResponseBody = {
                             status: {
@@ -4039,11 +4043,11 @@ suite('Users', function () {
                             }
                         };
 
-                        const inviteCreateResult1 = (await _topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, '{asdasdas', 400)).body;
+                        const inviteCreateResult1 = (await _topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, '{asdasdas', null, 400)).body;
 
                         assert.deepEqual(inviteCreateResult1, expectedResponseBody);
 
-                        const inviteCreateResult2 = (await _topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, 'PPPasdasdas', 400)).body;
+                        const inviteCreateResult2 = (await _topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, 'PPPasdasdas', null, 400)).body;
 
                         assert.deepEqual(inviteCreateResult2, expectedResponseBody);
                     });
@@ -4060,7 +4064,7 @@ suite('Users', function () {
                         }
 
 
-                        const createResult = (await _topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation, 400)).body;
+                        const createResult = (await _topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation, null, 400)).body;
 
                         assert.deepEqual(
                             createResult.status,
@@ -4072,14 +4076,14 @@ suite('Users', function () {
                     });
 
                     test('Fail - 40100 - Unauthorized', async function () {
-                        await _topicInviteUsersCreate(request.agent(app), '4727aecc-56f7-4802-8f76-2cfaad5cd5f3', topic.id, [], 401);
+                        await _topicInviteUsersCreate(request.agent(app), '4727aecc-56f7-4802-8f76-2cfaad5cd5f3', topic.id, [], null, 401);
                     });
 
                     test('Fail - 40300 - at least admin permissions required', async function () {
                         const agentInvalidUser = request.agent(app);
                         const invalidUser = await userLib.createUserAndLogin(agentInvalidUser, null, null, null);
 
-                        await _topicInviteUsersCreate(agentInvalidUser, invalidUser.id, topic.id, [], 403);
+                        await _topicInviteUsersCreate(agentInvalidUser, invalidUser.id, topic.id, [], null, 403);
                     });
 
                     test('Fail - 40300 - topic is closed', async function () {
@@ -4091,7 +4095,7 @@ suite('Users', function () {
                         ];
                         await topicUpdateStatus(agentCreator, userCreator.id, topic.id, Topic.STATUSES.closed);
 
-                        await _topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation, 403);
+                        await _topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation, null, 403);
                     });
                 });
 
@@ -8530,6 +8534,7 @@ suite('Users', function () {
             let creator;
             let topic;
             let topic2;
+            const baseURL = config.storage.baseURL || (config.url.api + '/uploads/');
 
             setup(async function () {
                 creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);
@@ -8541,7 +8546,7 @@ suite('Users', function () {
                 const expectedAttachment = {
                     name: 'testfilename.doc',
                     source: 'upload',
-                    link: 'http://example.com/testfilename.doc',
+                    link: `${baseURL}testfilename.doc`,
                     type: '.doc',
                     size: 1000,
                     creatorId: creator.id
@@ -8562,7 +8567,7 @@ suite('Users', function () {
                 const expectedAttachment = {
                     name: 'testfilename.doc',
                     source: 'upload',
-                    link: 'http://example.com/testfilename.doc',
+                    link: `${baseURL}testfilename.doc`,
                     type: '.doc',
                     size: 1000,
                     creatorId: creator.id
@@ -8595,7 +8600,7 @@ suite('Users', function () {
                 const expectedAttachment = {
                     name: 'testfilename.doc',
                     source: 'upload',
-                    link: 'http://example.com/testfilename.doc',
+                    link: `${baseURL}testfilename.doc`,
                     type: '.doc',
                     size: 1000,
                     creatorId: creator.id
@@ -8628,7 +8633,7 @@ suite('Users', function () {
                 const expectedAttachment = {
                     name: 'testfilename.doc',
                     source: 'upload',
-                    link: 'http://example.com/testfilename.doc',
+                    link: `${baseURL}testfilename.doc`,
                     type: '.doc',
                     size: 1000,
                     creatorId: creator.id
@@ -8668,11 +8673,9 @@ suite('Users', function () {
 
                 const resBody = (await _topicAttachmentAdd(creatorAgent, creator.id, topic.id, expectedAttachment.name, expectedAttachment.link, expectedAttachment.source, expectedAttachment.type, expectedAttachment.size, 400)).body;
                 const expectedBody = {
-                    status: {code: 40000},
-                    errors: {
-                        name: 'Attachment.name cannot be null',
-                        link: 'Attachment.link cannot be null'
-                    }
+                    status: {
+                        code: 40000,
+                        message: "Missing attachment link"}
                 };
                 assert.deepEqual(resBody, expectedBody);
             });
@@ -8680,21 +8683,21 @@ suite('Users', function () {
             test('Update attachment - Success', async function () {
                 const expectedAttachment = {
                     name: 'newTestFilename',
-                    source: 'dropbox',
-                    link: 'http://example.com/testfilename.doc',
+                    source: 'upload',
+                    link: `${baseURL}testfilename.doc`,
                     type: '.doc',
                     size: 1000,
                     creatorId: creator.id
                 };
 
-                const attachment = (await topicAttachmentAdd(creatorAgent, creator.id, topic.id, 'testfilename', 'http://example.com/testfilename.doc', 'dropbox', '.doc', 1000)).body.data;
+                const attachment = (await topicAttachmentAdd(creatorAgent, creator.id, topic.id, 'testfilename', expectedAttachment.link, 'upload', '.doc', 1000)).body.data;
 
                 assert.property(attachment, 'id');
                 assert.property(attachment, 'createdAt');
                 assert.equal(attachment.name, 'testfilename');
-                assert.equal(attachment.link, 'http://example.com/testfilename.doc');
+                assert.equal(attachment.link, `${baseURL}testfilename.doc`);
                 assert.equal(attachment.type, '.doc');
-                assert.equal(attachment.source, 'dropbox');
+                assert.equal(attachment.source, 'upload');
                 assert.equal(attachment.size, 1000);
                 assert.equal(attachment.creatorId, creator.id);
 
@@ -8709,11 +8712,32 @@ suite('Users', function () {
                 assert.equal(updateAttachment.creatorId, creator.id);
             });
 
+            test('Update attachment - Fail - Missing attachment name', async function () {
+                const expectedAttachment = {
+                    name: 'newTestFilename',
+                    source: 'upload',
+                    link: `${baseURL}testfilename.doc`,
+                    type: '.doc',
+                    size: 1000,
+                    creatorId: creator.id
+                };
+
+                const attachment = (await topicAttachmentAdd(creatorAgent, creator.id, topic.id, 'testfilename', expectedAttachment.link, 'upload', '.doc', 1000)).body.data;
+
+                const resBody = (await _topicAttachmentUpdate(creatorAgent, creator.id, topic.id, attachment.id, '', 400)).body;
+                const expectedBody = {
+                    status: {
+                        code: 40000,
+                        message: "Missing attachment name"}
+                };
+                assert.deepEqual(resBody, expectedBody);
+            });
+
             test('Delete attachment - Success', async function () {
                 const expectedAttachment = {
                     name: 'testfilename.pdf',
-                    link: 'http://example.com/testfilename.pdf',
-                    source: 'onedrive',
+                    link: `${baseURL}testfilename.pdf`,
+                    source: 'upload',
                     type: '.pdf',
                     size: 1000,
                     creatorId: creator.id
@@ -8751,8 +8775,8 @@ suite('Users', function () {
                 test('Read', async function () {
                     const expectedAttachment = {
                         name: 'testfilename.doc',
-                        link: 'http://example.com/testfilename.doc',
-                        source: 'googledrive',
+                        link: `${baseURL}testfilename.doc`,
+                        source: 'upload',
                         type: '.doc',
                         size: 1000,
                         creatorId: creator.id
@@ -8785,9 +8809,9 @@ suite('Users', function () {
                 test('Read unauth', async function () {
                     const expectedAttachment = {
                         name: 'testfilename.doc',
-                        link: 'http://example.com/testfilename.doc',
+                        link: `${baseURL}testfilename.doc`,
                         type: '.doc',
-                        source: 'onedrive',
+                        source: 'upload',
                         size: 1000,
                         creatorId: creator.id
                     };

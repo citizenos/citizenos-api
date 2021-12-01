@@ -4266,6 +4266,14 @@ module.exports = function (app) {
         const link = req.body.link;
 
         const attachmentLimit = config.attachments.limit || 5;
+
+        if (!link) {
+            return res.badRequest('Missing attachment link');
+        }
+        if (!name) {
+            return res.badRequest('Missing attachment name');
+        }
+
         try {
             const topic = await Topic.findOne({
                 where: {
@@ -4278,6 +4286,44 @@ module.exports = function (app) {
             }
             if (topic.Attachments && topic.Attachments.length >= attachmentLimit) {
                 return res.badRequest('Topic attachment limit reached', 2);
+            }
+
+            const urlObject = new URL(link);
+            let invalidLink = false;
+            switch (source) {
+                case Attachment.SOURCES.upload:
+                    if (config.storage.type.toLowerCase() === 'local') {
+                        const baseURL = new URL(config.storage.baseURL || (config.url.api + '/uploads/'));
+                        if (urlObject.href.indexOf(baseURL.href) !== 0) {
+                            invalidLink = true;
+                        }
+                    } else if (config.storage.type.toLowerCase() === 's3') {
+                        if (urlObject.href.indexOf(`https://${config.storage.bucket}.s3.${config.storage.region}.amazonaws.com/`) !== 0) {
+                            invalidLink = true;
+                        }
+                    }
+                    break;
+                case Attachment.SOURCES.dropbox:
+                    if (['www.dropbox.com', 'dropbox.com'].indexOf(urlObject.hostname) === -1 ) {
+                        invalidLink = true;
+                    }
+                    break;
+                case Attachment.SOURCES.googledrive:
+                    if (urlObject.hostname.split('.').splice(-2).join('.') !== 'google.com') {
+                        invalidLink = true;
+                    }
+                    break;
+                case Attachment.SOURCES.onedrive:
+                    if (urlObject.hostname !== '1drv.ms') {
+                        invalidLink = true;
+                    }
+                    break;
+                default:
+                    return res.badRequest('Invalid link source');
+            }
+
+            if (invalidLink) {
+                return res.badRequest('Invalid link source');
             }
 
             let attachment = Attachment.build({
@@ -4325,10 +4371,8 @@ module.exports = function (app) {
     app.put('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const newName = req.body.name;
 
-        const updateAttachment = {};
-
-        if (newName) {
-            updateAttachment.name = newName;
+        if (!newName) {
+            return res.badRequest('Missing attachment name');
         }
 
         try {

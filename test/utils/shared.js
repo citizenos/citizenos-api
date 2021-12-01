@@ -27,4 +27,10 @@ const syncDb = function () {
     }
 };
 
+const randomIP = function () {
+    const randomnr = () => (Math.floor(Math.random() * 255) + 1);
+    return ip = `${randomnr()}.${randomnr()}.${randomnr()}.${randomnr()}`;
+}
+
 module.exports.syncDb = syncDb;
+module.exports.randomIP = randomIP;
