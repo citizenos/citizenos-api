@@ -1,5 +1,8 @@
 'use strict';
 
+const { fstat } = require("fs-extra");
+const cosS3 = require("../../libs/cosS3");
+
 module.exports = function (app) {
     const models = app.get('models');
     const db = models.sequelize;
@@ -14,7 +17,9 @@ module.exports = function (app) {
     const moment = app.get('moment');
     const validator = app.get('validator');
     const cryptoLib = app.get('cryptoLib');
-
+    const cosS3 = app.get('cosS3');
+    const fs = require('fs');
+    const path = require('path');
     const User = models.User;
     const UserConsent = models.UserConsent;
     const UserConnection = models.UserConnection;
@@ -58,6 +63,23 @@ module.exports = function (app) {
                 }
             }
 
+            if (!data.imageUrl && user.imageUrl) {
+                const currentImageURL = new URL(user.imageUrl);
+                //FIXME: No delete from DB?
+                try {
+                    if(config.storage?.type.toLowerCase() === 's3' && currentImageURL.href.indexOf(`https://${config.storage.bucket}.s3.${config.storage.region}.amazonaws.com/`) === 0) {
+                        await cosS3.deleteFile(`${currentImageURL.pathname}`);
+                    }
+                    else if (config.storage?.type.toLowerCase() === 'local' && currentImageURL.hostname === (new URL(config.url.api)).hostname) {
+                        const appDir = __dirname.replace('/routes/api', '/public/uploads/users');
+                        const baseFolder = config.storage.baseFolder || appDir;
+
+                        fs.unlinkSync(`${baseFolder}/${path.parse(currentImageURL.pathname).base}`);
+                    }
+                } catch (e) {
+                    return next(e);
+                }
+            }
             const results = await User.update(
                 req.body,
                 {

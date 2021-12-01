@@ -151,6 +151,11 @@ etherpadClient.checkTokenAsync()
         logger.error('Failed to connect to Etherpad. Error was: ' + err.message + '. Etherpad configuration is ' + JSON.stringify(etherpadClient.options));
     });
 
+if (config.storage?.type.toLowerCase() === 's3') {
+    const cosS3 = require('./libs/cosS3')(app);
+    app.set('cosS3', cosS3);
+}
+
 app.set('url', require('url'));
 app.set('lodash', lodash);
 app.set('validator', require('validator'));

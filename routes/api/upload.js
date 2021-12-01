@@ -4,134 +4,72 @@ module.exports = function (app) {
 
     const config = app.get('config');
     const loginCheck = app.get('middleware.loginCheck');
-
-    const AWS = require('aws-sdk');
+    const cosS3 = app.get('cosS3');
     const uuid = app.get('uuid');
-    const Promise = app.get('Promise');
     const Busboy = app.get('busboy');
     const StreamUpload = app.get('stream_upload');
     const path = require('path');
     const logger = app.get('logger');
 
-    const credentials = {
-        accessKeyId: config.storage.accessKeyId,
-        secretAccessKey: config.storage.secretAccessKey
-    };
-
     /**
      * Sign upload
      */
 
-    app.get('/api/users/:userId/upload/sign', loginCheck(['partner']), function (req, res, next) {
-
-        let filename = uuid.v4();
-        const filetype = req.query.filetype;
-        const folder = req.query.folder;
-        const bucket = config.storage.bucket;
-
-        if (folder) {
-            filename = folder + '/' + filename;
-        }
-
-        const s3Params = {
-            Bucket: bucket,
-            Key: filename,
-            Expires: 900,
-            ContentType: filetype,
-            ACL: 'public-read'
-        };
-
-        const s3 = new AWS.S3(credentials);
-        s3.getSignedUrl('putObject', s3Params, function (err, data) {
-            if (err) {
-                return next(err);
-            }
-            const returnData = {
-                signedRequest: data,
-                url: 'https://' + bucket + '.s3.amazonaws.com/' + filename,
-                filename: filename
-            };
-
-            return res.ok(returnData);
-        });
-    });
-
-    /**
-     * Sign download
-     */
-    app.get('/api/upload/signdownload', function (req, res, next) {
-        let filename = req.query.filename;
-        const filetype = req.query.filetype;
-        let downloadName = req.query.downloadName;
-        const folder = req.query.folder;
-        const bucket = config.storage.bucket;
-
-        if (folder) {
-            filename = folder + '/' + filename;
-        }
-
-        let responseHeader = 'attachment;';
-
-        if (downloadName) {
-            const regEx = new RegExp('.' + filetype, 'gi');
-            downloadName = [encodeURIComponent(downloadName.replace(regEx, '')), filetype].join('.');
-            responseHeader += 'filename=' + downloadName;
-        }
-
-        const s3 = new AWS.S3(credentials);
-
-        const params = {
-            Bucket: bucket,
-            Key: filename,
-            Expires: 60,
-            ResponseContentDisposition: responseHeader
-        };
-
-        s3.getSignedUrl('getObject', params, function (err, url) {
-            if (err) {
-                return next(err, req, res);
-            }
-
-            return res.ok({url: url});
-        });
-    });
-
-
-    const _deleteFromS3 = function (filename, folder) {
-        return new Promise(function (resolve, reject) {
-            const s3 = new AWS.S3();
-            const bucket = config.storage.bucket;
+    app.get('/api/users/:userId/upload/sign', loginCheck(['partner']), async function (req, res, next) {
+        try {
+            let filename = uuid.v4();
+            const filetype = req.query.filetype;
+            const folder = req.query.folder;
 
             if (folder) {
                 filename = folder + '/' + filename;
             }
 
             const params = {
-                Bucket: bucket,
-                Key: filename
+                Expires: 900,
+                ContentType: filetype,
+                ACL: 'public-read'
+            }
+            const signedUrlData = await cosS3.getSignedUrl(filename, params);
+
+            return res.ok(signedUrlData);
+        } catch (err) {
+            return next(err);
+        }
+    });
+
+    /**
+     * Sign download
+     */
+    app.get('/api/upload/signdownload', async function (req, res, next) {
+        try {
+            let filename = req.query.filename;
+            const filetype = req.query.filetype;
+            let downloadName = req.query.downloadName;
+            const folder = req.query.folder;
+
+            if (folder) {
+                filename = folder + '/' + filename;
+            }
+
+            let responseHeader = 'attachment;';
+
+            if (downloadName) {
+                const regEx = new RegExp('.' + filetype, 'gi');
+                downloadName = [encodeURIComponent(downloadName.replace(regEx, '')), filetype].join('.');
+                responseHeader += 'filename=' + downloadName;
+            }
+
+            const params = {
+                Expires: 60,
+                ResponseContentDisposition: responseHeader
             };
 
-            s3.deleteObject(params, function (err) {
-                if (err) {
-                    return reject(err);
-                }
+            const url = await cosS3.getSignedUrl(filename, params);
 
-                return resolve();
-            });
-        });
-    };
-
-    app.delete('/api/users/:userId/upload', loginCheck(['partner']), async function (req, res, next) {
-        const filename = req.query.filename;
-        const folder = req.query.folder;
-
-        //FIXME: No delete from DB?
-        try {
-            await _deleteFromS3(filename, folder);
-
-            return res.ok();
-        } catch (e) {
-            return next(e);
+            return res.ok({url: url});
+        } catch (err) {
+            return next(err);
         }
     });
 
