@@ -305,6 +305,7 @@ const _passwordSet = async function (agent, currentPassword, newPassword, expect
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
+
 /**
  * Set password - call '/api/auth/password' API endpoint
  *
@@ -551,48 +552,22 @@ suite('Auth', function () {
                 assert.equal(status.message, 'Invalid password');
             });
 
-            test('Fail - 40001 - slow down and 429 - rate limit', async function () {
-                const dorequests = async function (ip) {
-                    const reqLimit = 15;
-                    const slowLimit = 10;
-                    let x = 0
-                    while ( x < reqLimit) {
-                        const start = Date.now();
-                        let expectedCode = 400;
-                        let contentType = /json/;
-                        if (x >= reqLimit) {
-                            expectedCode = 429;
-                            contentType = /text\/html/;
-                        }
-                        const res = await agent
-                            .post('/api/auth/login')
-                            .set('Content-Type', 'application/json')
-                            .set('X-Forwarded-For', ip)
-                            .send({
-                                email: email,
-                                password: 'thisinvalidpassword'
-                            })
-                            .expect(expectedCode)
-                            .expect('Content-Type', contentType);
+            test('Fail - Too Many Requests', async function () {
+                const emailRateLimit = 'test_expressRateLimitInput_' + new Date().getTime() + '@test.ee';
+                await userLib.createUser(agent, emailRateLimit, password, null);
 
-                        const status = res.body.status;
-                        const responseTime = Date.now() - start;
-                        if (x >= slowLimit) {
-                            assert.approximately(responseTime, ((x+1 - slowLimit)*1000), 500); // check increasing response time
-                        }
+                const maxRequests = 10;
 
-                        if (x < reqLimit) {
-                            assert.equal(status.code, 40001);
-                            assert.equal(status.message, 'Invalid password');
-                        }
-
-                        x++;
-                    }
+                for (let i = 1; i <= maxRequests; i++) {
+                    await login(agent, emailRateLimit, password);
                 }
-                const randomnr = () => (Math.floor(Math.random() * 255) + 1);
-                const ip = `${randomnr()}.${randomnr()}.${randomnr()}.${randomnr()}`;
 
-                await dorequests(ip);
+                await _login(agent, emailRateLimit, password, 429);
+                await _login(agent, emailRateLimit, password, 429);
+                await _login(agent, emailRateLimit, password, 429);
+
+                // Make sure the rate limit does not do funky things for other inputs
+                await login(agent, email, password);
             });
         });
 
@@ -811,12 +786,12 @@ suite('Auth', function () {
                             .findOrCreate({
                                 where: {
                                     connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId: 'PNOEE-'+pid
+                                    connectionUserId: 'PNOEE-' + pid
                                 },
                                 defaults: {
                                     userId: user.id,
                                     connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                    connectionUserId: 'PNOEE-'+pid
+                                    connectionUserId: 'PNOEE-' + pid
                                 }
                             });
                     });
@@ -972,12 +947,12 @@ suite('Auth', function () {
                             .findOrCreate({
                                 where: {
                                     connectionId: UserConnection.CONNECTION_IDS.smartid,
-                                    connectionUserId: 'PNOEE-'+pid
+                                    connectionUserId: 'PNOEE-' + pid
                                 },
                                 defaults: {
                                     userId: user.id,
                                     connectionId: UserConnection.CONNECTION_IDS.smartid,
-                                    connectionUserId: 'PNOEE-'+pid
+                                    connectionUserId: 'PNOEE-' + pid
                                 }
                             });
                         const initResponse = (await loginSmartIdInit(agent2, pid)).body.data;
@@ -1271,7 +1246,7 @@ suite('Auth', function () {
                     const expectedBody = {
                         status: {
                             code: 20000,
-                            message:'Success! Please check your email test_this_user_we_dont_have@test.com to complete your password recovery.'
+                            message: 'Success! Please check your email test_this_user_we_dont_have@test.com to complete your password recovery.'
                         }
                     };
 

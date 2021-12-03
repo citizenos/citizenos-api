@@ -36,8 +36,9 @@ const swaggerDocument = require('./swagger.json');
 const Busboy = require('busboy');
 const StreamUpload = require('stream_upload');
 
-const SlowDown = require("express-slow-down");
-const RateLimit = require("express-rate-limit");
+const SlowDown = require('express-slow-down');
+const RateLimit = require('express-rate-limit');
+
 let rateLimitStore, speedLimitStore;
 if (config.rateLimit && config.rateLimit.storageType === 'redis') {
 	const RedisStore = require("rate-limit-redis");
@@ -282,6 +283,7 @@ app.use(/^\/api\/.*/, function (req, res, next) {
 app.use(/^\/api\/.*/, require('./libs/middleware/authTokenParser'));
 app.use(/^\/api\/auth\/.*/, passport.initialize());
 app.set('middleware.loginCheck', require('./libs/middleware/loginCheck'));
+app.set('middleware.expressRateLimitInput', require('./libs/middleware/expressRateLimitInput'));
 app.set('middleware.authApiKey', require('./libs/middleware/authApiKey'));
 app.set('middleware.authTokenRestrictedUse', require('./libs/middleware/authTokenRestrictedUse'));
 app.set('middleware.partnerParser', require('./libs/middleware/partnerParser')(app));
