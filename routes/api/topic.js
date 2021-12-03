@@ -44,6 +44,7 @@ module.exports = function (app) {
     const partnerParser = app.get('middleware.partnerParser');
     const speedLimiter = app.get('speedLimiter');
     const rateLimiter = app.get('rateLimiter');
+    const cosUpload = app.get('cosUpload');
 
     const authUser = require('./auth')(app);
     const User = models.User;
@@ -4256,6 +4257,63 @@ module.exports = function (app) {
     /**
      * Add Topic Attachment
      */
+    app.post('/api/users/:userId/topics/:topicId/attachments/upload', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+        const attachmentLimit = config.attachments.limit || 5;
+        const topicId = req.params.topicId;
+        try {
+            const topic = await Topic.findOne({
+                where: {
+                    id: topicId
+                },
+                include: [Attachment]
+            });
+
+            if (!topic) {
+                return res.badRequest('Matching topic not found', 1);
+            }
+            if (topic.Attachments && topic.Attachments.length >= attachmentLimit) {
+                return res.badRequest('Topic attachment limit reached', 2);
+            }
+
+            let data = await cosUpload.upload(req, topicId);
+            data.creatorId = req.user.id;
+            let attachment = Attachment.build(data);
+
+            await db.transaction(async function (t) {
+                attachment = await attachment.save({transaction: t});
+                await TopicAttachment.create(
+                    {
+                        topicId: req.params.topicId,
+                        attachmentId: attachment.id
+                    },
+                    {
+                        transaction: t
+                    }
+                );
+                await cosActivities.addActivity(
+                    attachment,
+                    {
+                        type: 'User',
+                        id: req.user.id,
+                        ip: req.ip
+                    },
+                    null,
+                    topic,
+                    req.method + ' ' + req.path,
+                    t
+                );
+
+                t.afterCommit(() => {
+                    return res.created(attachment.toJSON());
+                });
+            });
+        } catch (err) {
+            if (err.type && (err.type === 'fileSize' || err.type === 'fileType')) {
+                return res.forbidden(err.message)
+            }
+            next(err);
+        }
+    });
 
     app.post('/api/users/:userId/topics/:topicId/attachments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const topicId = req.params.topicId;
@@ -4263,11 +4321,9 @@ module.exports = function (app) {
         const type = req.body.type;
         const source = req.body.source;
         const size = req.body.size;
-        const link = req.body.link;
-
+        let link = req.body.link;
         const attachmentLimit = config.attachments.limit || 5;
-
-        if (!link) {
+        if (source !== Attachment.SOURCES.upload && !link) {
             return res.badRequest('Missing attachment link');
         }
         if (!name) {
@@ -4287,22 +4343,13 @@ module.exports = function (app) {
             if (topic.Attachments && topic.Attachments.length >= attachmentLimit) {
                 return res.badRequest('Topic attachment limit reached', 2);
             }
+            let urlObject;
+            if (link) {
+                urlObject = new URL(link);
+            }
 
-            const urlObject = new URL(link);
             let invalidLink = false;
             switch (source) {
-                case Attachment.SOURCES.upload:
-                    if (config.storage.type.toLowerCase() === 'local') {
-                        const baseURL = new URL(config.storage.baseURL || (config.url.api + '/uploads/'));
-                        if (urlObject.href.indexOf(baseURL.href) !== 0) {
-                            invalidLink = true;
-                        }
-                    } else if (config.storage.type.toLowerCase() === 's3') {
-                        if (urlObject.href.indexOf(`https://${config.storage.bucket}.s3.${config.storage.region}.amazonaws.com/`) !== 0) {
-                            invalidLink = true;
-                        }
-                    }
-                    break;
                 case Attachment.SOURCES.dropbox:
                     if (['www.dropbox.com', 'dropbox.com'].indexOf(urlObject.hostname) === -1 ) {
                         invalidLink = true;
@@ -4507,7 +4554,7 @@ module.exports = function (app) {
 
                 const options = {
                     hostname: fileUrl.hostname,
-                    path: fileUrl.path,
+                    path: fileUrl.pathname,
                     port: fileUrl.port
                 };
 

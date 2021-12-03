@@ -35,7 +35,6 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerDocument = require('./swagger.json');
 const Busboy = require('busboy');
 const StreamUpload = require('stream_upload');
-
 const SlowDown = require("express-slow-down");
 const RateLimit = require("express-rate-limit");
 let rateLimitStore, speedLimitStore;
@@ -193,6 +192,7 @@ app.set('urlLib', require('./libs/url')(config));
 app.set('util', require('./libs/util'));
 app.set('cosEtherpad', require('./libs/cosEtherpad')(app));
 app.set('cosJwt', require('./libs/cosJwt')(app));
+app.set('cosUpload', require('./libs/cosUpload')(app));
 
 //Config smartId
 const smartId = require('smart-id-rest')();

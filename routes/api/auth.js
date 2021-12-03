@@ -401,6 +401,8 @@ module.exports = function (app) {
      */
     app.get('/api/auth/status', loginCheck(['partner']), async function (req, res, next) {
         try {
+            const path = require('path');
+
             const user = await User.findOne({
                 where: {
                     id: req.user.id

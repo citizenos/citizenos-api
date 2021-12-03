@@ -18,12 +18,51 @@ module.exports = function (app) {
     const validator = app.get('validator');
     const cryptoLib = app.get('cryptoLib');
     const cosS3 = app.get('cosS3');
+    const cosUpload = app.get('cosUpload');
+
     const fs = require('fs');
     const path = require('path');
     const User = models.User;
     const UserConsent = models.UserConsent;
     const UserConnection = models.UserConnection;
 
+    app.post('/api/users/:userId/upload', loginCheck(['partner']), async function (req, res, next) {
+        try {
+            let user = await User.findOne({
+                where: {
+                    id: req.user.id
+                }
+            });
+
+            if (user) {
+                const imageUrl = await cosUpload.upload(req, 'users');
+                await User.update(
+                    {
+                        imageUrl: imageUrl.filename
+                    },
+                    {
+                        where: {
+                            id: req.user.id
+                        },
+                        limit: 1,
+                        returning: true
+                    }
+                );
+
+                return res.created(imageUrl);
+            } else {
+                res.forbidden();
+            }
+
+        } catch (err) {
+            if (err.type && (err.type === 'fileSize' || err.type === 'fileType')) {
+                return res.forbidden(err.message)
+            }
+
+            return next(err);
+        }
+
+    });
     /**
      * Update User info
      */
@@ -67,7 +106,7 @@ module.exports = function (app) {
                 const currentImageURL = new URL(user.imageUrl);
                 //FIXME: No delete from DB?
                 try {
-                    if(config.storage?.type.toLowerCase() === 's3' && currentImageURL.href.indexOf(`https://${config.storage.bucket}.s3.${config.storage.region}.amazonaws.com/`) === 0) {
+                    if(config.storage?.type.toLowerCase() === 's3' && currentImageURL.href.indexOf(`https://${config.storage.bucket}.s3.${config.storage.region}.amazonaws.com/users/`) === 0) {
                         await cosS3.deleteFile(`${currentImageURL.pathname}`);
                     }
                     else if (config.storage?.type.toLowerCase() === 'local' && currentImageURL.hostname === (new URL(config.url.api)).hostname) {
