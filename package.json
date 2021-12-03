@@ -67,6 +67,7 @@
     "pg-query-stream": "4.2.1",
     "prerender-node": "3.2.5",
     "rate-limit-redis": "2.1.0",
+    "rate-limiter-flexible": "2.3.6",
     "sanitize-filename": "1.6.3",
     "sequelize": "6.6.5",
     "sequelize-cli": "6.2.0",
