@@ -54,7 +54,7 @@ function ExpressRateLimitInput (app) {
                 const propValue = _.get(req, prop);
                 // NOTE: We assume that ANY property in the "properties" array is REQUIRED. If the value does not exist, we consider it as a bad request!
                 if (!propValue) {
-                    logger.error('expressRateLimitInput', `No value for property "${prop}" found in Express request object (req)!`); // FIXME: LOGGER?
+                    logger.error('expressRateLimitInput', `No value for property "${prop}" found in Express request object (req)!`);
                     return res.status(400).end();
                 }
                 propsAndValues.push(`${prop}=${propValue}`);
@@ -68,7 +68,7 @@ function ExpressRateLimitInput (app) {
                     return (next());
                 })
                 .catch(() => {
-                    logger.warn(`expressRateLimitInput - Too Many Requests! - Key: ${key} - Conf: windowMs=${windowMs}, max=${max}.`); // FIXME: LOGGER?
+                    logger.warn('express-rate-limit-input', 'RATE LIMIT HIT!', `Key: ${key} - Conf: windowMs=${windowMs}, max=${max}.`);
                     res.status(429).json({
                         status: {
                             code: 42900,

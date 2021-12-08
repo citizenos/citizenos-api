@@ -60,7 +60,10 @@ const rateLimiter = function (allowedRequests, blockTime, skipSuccess) {
         store: rateLimitStore,
         windowMs: blockTime || (15 * 60 * 1000), // default 15 minutes
         max: allowedRequests || 100,
-        skipSuccessfulRequests: skipSuccess || true
+        skipSuccessfulRequests: skipSuccess || true,
+        onLimitReached: function(req) {
+            logger.warn('express-rate-limit', 'RATE LIMIT HIT!', `${req.method} ${req.path}`, req.ip, req.rateLimit);
+        }
     });
 };
 
@@ -70,7 +73,10 @@ const speedLimiter = function (allowedRequests, delay, blockTime, skipSuccess) {
         windowMs: blockTime || (15 * 60 * 1000), // default 15 minutes
         delayAfter: allowedRequests || 15, // allow 15 requests per 15 minutes, then...
         delayMs: delay || 1000, // response time increases by default 1s per request
-        skipSuccessfulRequests: skipSuccess || true
+        skipSuccessfulRequests: skipSuccess || true,
+        onLimitReached: function(req) {
+            logger.warn('express-slow-down', 'RATE LIMIT HIT!', `${req.method} ${req.path}`, req.ip, req.rateLimit);
+        }
     })
 };
 
