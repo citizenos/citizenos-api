@@ -1,6 +1,6 @@
 'use strict';
 
-const _uploadFile = async function (agent, userId, file, filename, folderName, expectedHttpCode) {
+const _uploadFile = async function (agent, userId, file, folderName, expectedHttpCode) {
     const path = '/api/users/:userId/upload'.replace(':userId', userId);
 
     const request = agent
@@ -9,9 +9,6 @@ const _uploadFile = async function (agent, userId, file, filename, folderName, e
     if (folderName) {
         request.field('folder', folderName);
     }
-    if (filename) {
-        request.field('filename', filename);
-    }
 
     return request
         .attach('file', file)
@@ -19,8 +16,8 @@ const _uploadFile = async function (agent, userId, file, filename, folderName, e
         .expect(expectedHttpCode);
 };
 
-const uploadFile = async function (agent, userId, file, filename, folderName) {
-    return _uploadFile(agent, userId, file, filename, folderName, 201);
+const uploadFile = async function (agent, userId, file, folderName) {
+    return _uploadFile(agent, userId, file, folderName, 201);
 };
 
 module.exports.uploadFile = uploadFile;
@@ -43,52 +40,4 @@ const userLib = require('./lib/user')(app);
 // API - /api/users*
 suite('Users', function () {
 
-    suiteSetup(async function () {
-        return shared
-            .syncDb();
-    });
-
-    // API - /api/users/:userId/activities*
-    suite('Upload', function () {
-
-        suite('File', function () {
-            const agent = request.agent(app);
-
-            let user;
-
-            suiteSetup(async function () {
-                user = await userLib.createUserAndLogin(agent, null, null, null);
-            });
-
-            test('Success', async function () {
-                const file = path.join(__dirname, '/uploads/test.txt');
-                const fileUrl = (await uploadFile(agent, user.id, file, null, 'test')).body;
-                assert.include(fileUrl, config.url.api);
-
-                const file2 = fs.createWriteStream(path.join(__dirname, '/uploads/return.txt'));
-
-                return https.get(fileUrl, function (response) {
-                    const stream = response.pipe(file2);
-
-                    stream.on('finish', async function () {
-                        const data = await fs.readFileSync(path.join(__dirname, '/uploads/return.txt'), 'utf8');
-                        assert.equal('Test file for upload test.', data);
-                        fs.remove(path.join(__dirname, '/uploads/return.txt'));
-                        fs.remove(path.join(__dirname.replace('/test/api', '/public/uploads/'), 'test/'));
-                    });
-                });
-            });
-
-            test('Fail - invalid format', async function () {
-                const file = path.join(__dirname, '/uploads/test');
-                const fileUrl = (await _uploadFile(agent, user.id, file, 'test.exe', 'test', 403)).body;
-            });
-
-            test('Fail - invalid format .exe', async function () {
-                const file = path.join(__dirname, '/uploads/test.exe');
-                const fileUrl = (await _uploadFile(agent, user.id, file, 'test.exe', 'test', 403)).body;
-            });
-        });
-
-    });
 });

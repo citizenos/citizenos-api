@@ -46,8 +46,14 @@ module.exports = function (app) {
      */
     const setStateCookie = function (req, res, cookieName, allowOverwrite) {
         if (!req.cookies[cookieName] || allowOverwrite) {
-            const stateCookieData = jwt.sign(req.query, config.session.privateKey, {algorithm: config.session.algorithm});
-            res.cookie(cookieName, stateCookieData, Object.assign({secure: req.secure}, config.session.cookie));
+            const allowedFields = ['response_type', 'client_id', 'redirect_uri', 'scope', 'nonce', 'state', 'ui_locales', 'redirectSuccess'];
+            const filtered = Object.entries(req.query).filter(([key, value]) => allowedFields.indexOf(key) > -1);
+
+            const params = Object.fromEntries(filtered);
+            if (Object.keys(params).length) {
+                const stateCookieData = jwt.sign(params, config.session.privateKey, {algorithm: config.session.algorithm});
+                res.cookie(cookieName, stateCookieData, Object.assign({secure: req.secure}, config.session.cookie));
+            }
         }
     };
 
@@ -253,7 +259,7 @@ module.exports = function (app) {
     app.post('/api/auth/login', rateLimiter(15), speedLimiter(10), function (req, res) {
         passport.authenticate('local', function (err, user) {
             if (err || !user) {
-                return res.badRequest(err.message, err.code);
+                return res.badRequest(err?.message, err?.code);
             }
 
             setAuthCookie(req, res, user.id);
@@ -412,6 +418,8 @@ module.exports = function (app) {
      */
     app.get('/api/auth/status', loginCheck(['partner']), async function (req, res, next) {
         try {
+            const path = require('path');
+
             const user = await User.findOne({
                 where: {
                     id: req.user.userId
