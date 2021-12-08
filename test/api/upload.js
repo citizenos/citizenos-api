@@ -81,12 +81,12 @@ suite('Users', function () {
 
             test('Fail - invalid format', async function () {
                 const file = path.join(__dirname, '/uploads/test');
-                const fileUrl = (await _uploadFile(agent, user.id, file, 'test.exe', 'test', 403)).body;
+                await _uploadFile(agent, user.id, file, 'test.exe', 'test', 403);
             });
 
             test('Fail - invalid format .exe', async function () {
                 const file = path.join(__dirname, '/uploads/test.exe');
-                const fileUrl = (await _uploadFile(agent, user.id, file, 'test.exe', 'test', 403)).body;
+                await _uploadFile(agent, user.id, file, 'test.exe', 'test', 403);
             });
         });
 

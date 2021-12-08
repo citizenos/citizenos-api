@@ -227,7 +227,7 @@ module.exports = function (app) {
                         return res.status(201).json(data);
                     } catch (err) {
                         return res.status(500).json(err);
-                    };
+                    }
                 }
 
             });
