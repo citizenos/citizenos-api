@@ -245,7 +245,7 @@ module.exports = function (app) {
     /**
      * Login
      */
-    app.post('/api/auth/login', rateLimiter(15), speedLimiter(10), expressRateLimitInput(['body.email'], 15 * 60, 10), function (req, res) {
+    app.post('/api/auth/login', rateLimiter(50), speedLimiter(15), expressRateLimitInput(['body.email'], 15 * 60 * 1000, 10), function (req, res) {
         passport.authenticate('local', function (err, user) {
             if (err || !user) {
                 return res.badRequest(err.message, err.code);
