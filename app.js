@@ -41,10 +41,10 @@ const RateLimit = require('express-rate-limit');
 
 let rateLimitStore, speedLimitStore;
 if (config.rateLimit && config.rateLimit.storageType === 'redis') {
-	const RedisStore = require("rate-limit-redis");
-	const Redis = require("ioredis");
-	const client = new Redis(config.rateLimit.storageOptions);
-	rateLimitStore = new RedisStore({
+    const RedisStore = require('rate-limit-redis');
+    const Redis = require('ioredis');
+    const client = new Redis(config.rateLimit.storageOptions);
+    rateLimitStore = new RedisStore({
         client,
         prefix: 'rl'
     });
@@ -55,8 +55,7 @@ if (config.rateLimit && config.rateLimit.storageType === 'redis') {
     });
 }
 
-const app = express();
-const rateLimiter = function (allowedRequests, blockTime, skipSuccess ) {
+const rateLimiter = function (allowedRequests, blockTime, skipSuccess) {
     return new RateLimit({
         store: rateLimitStore,
         windowMs: blockTime || (15 * 60 * 1000), // default 15 minutes
@@ -74,6 +73,8 @@ const speedLimiter = function (allowedRequests, delay, blockTime, skipSuccess) {
         skipSuccessfulRequests: skipSuccess || true
     })
 };
+
+const app = express();
 
 // Express settings
 // TODO: Would be nice if conf had express.settings.* and all from there would be set
@@ -283,7 +284,7 @@ app.use(/^\/api\/.*/, function (req, res, next) {
 app.use(/^\/api\/.*/, require('./libs/middleware/authTokenParser'));
 app.use(/^\/api\/auth\/.*/, passport.initialize());
 app.set('middleware.loginCheck', require('./libs/middleware/loginCheck'));
-app.set('middleware.expressRateLimitInput', require('./libs/middleware/expressRateLimitInput'));
+app.set('middleware.expressRateLimitInput', require('./libs/middleware/expressRateLimitInput')(app));
 app.set('middleware.authApiKey', require('./libs/middleware/authApiKey'));
 app.set('middleware.authTokenRestrictedUse', require('./libs/middleware/authTokenRestrictedUse'));
 app.set('middleware.partnerParser', require('./libs/middleware/partnerParser')(app));

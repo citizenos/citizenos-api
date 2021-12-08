@@ -564,7 +564,8 @@ suite('Auth', function () {
 
                 await _login(agent, emailRateLimit, password, 429);
                 await _login(agent, emailRateLimit, password, 429);
-                await _login(agent, emailRateLimit, password, 429);
+                await _login(agent, ' ' + emailRateLimit + ' ', password, 400);
+                await _login(agent, emailRateLimit + '\\n', password, 400);
 
                 // Make sure the rate limit does not do funky things for other inputs
                 await login(agent, email, password);
