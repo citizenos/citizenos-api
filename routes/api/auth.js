@@ -243,8 +243,29 @@ module.exports = function (app) {
     };
 
     const clearSessionCookies = async function (req, res) {
+        let token;
+
+        // App itself uses cookie which contains the JWT
+        const cookieAuthorization = req.cookies[config.session.name];
+        if (cookieAuthorization) {
+            token = cookieAuthorization;
+        }
+
+        // Partners use "Authorization: Bearer <JWT>. Partner JWT always overrides app cookie JWT
+        const headerAuthorization = req.headers.authorization;
+        if (headerAuthorization) {
+            const headerInfoArr = headerAuthorization.split(' ');
+            const tokenType = headerInfoArr[0];
+
+            if (tokenType === 'Bearer') {
+                token = headerInfoArr[1];
+            }
+        }
+        const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+
         await TokenRevocation.create({
-            tokenId: req.user.tokenId
+            tokenId: req.user.tokenId,
+            expiresAt: new Date(tokenData.exp * 1000)
         });
 
         res.clearCookie(config.session.name, {

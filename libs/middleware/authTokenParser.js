@@ -50,16 +50,22 @@ module.exports = function (req, res, next) {
 
                     return res.unauthorised('Invalid JWT token');
                 }
-            } else {
+            } else if (tokenData.tokenId) {
                 const revoked = await TokenRevocation.findOne({
                     where: {
                         tokenId: tokenData.tokenId
                     }
                 });
+
                 if (revoked) {
-                    return res.unauthorised('JWT token has expired');
+                    res.clearCookie(config.session.name, {
+                        path: config.session.cookie.path,
+                        domain: config.session.cookie.domain
+                    });
+                } else {
+                    req.user = tokenData;
+                    req.user.id = tokenData.userId;
                 }
-                req.user = tokenData;
             }
 
             return next();
