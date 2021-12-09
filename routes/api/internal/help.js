@@ -16,7 +16,7 @@ module.exports = function (app) {
             const helpData = req.body;
 
             if (req.user) {
-                helpData.userId = req.user.id;
+                helpData.userId = req.user.userId;
             }
 
             logger.info('Help request:', helpData);

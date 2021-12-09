@@ -80,7 +80,7 @@ module.exports = function (app) {
 
         const includedSql = [];
 
-        if (req.user && req.user.id && (!visibility || visibility !== 'public')) {
+        if (req.user && req.user.userId && (!visibility || visibility !== 'public')) {
             const viewActivity = `SELECT
                 va.id,
                 va.data,
@@ -392,7 +392,7 @@ module.exports = function (app) {
             const topicId = req.params.topicId;
             let userId = null;
             if (req.user && !visibility) {
-                userId = req.user.id;
+                userId = req.user.userId;
             }
             const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
             let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
@@ -479,7 +479,7 @@ module.exports = function (app) {
                             activity,
                             {
                                 type: 'User',
-                                id: req.user.id,
+                                id: req.user.userId,
                                 ip: req.ip
                             },
                             req.method + ' ' + req.path,
@@ -523,7 +523,7 @@ module.exports = function (app) {
     });
 
     app.get('/api/users/:userId/activities/unread', loginCheck(['partner']), async function (req, res, next) {
-        const userId = req.user.id;
+        const userId = req.user.userId;
         const sourcePartnerId = req.query.sourcePartnerId;
 
         // All partners should see only Topics created by their site, but our own app sees all.
@@ -784,7 +784,7 @@ module.exports = function (app) {
             let userId;
 
             if (req.user) {
-                userId = req.user.id;
+                userId = req.user.userId;
             }
             const sourcePartnerId = req.query.sourcePartnerId;
             const page = parseInt(req.query.page, 10);
@@ -1100,7 +1100,7 @@ module.exports = function (app) {
                                 activity,
                                 {
                                     type: 'User',
-                                    id: req.user.id,
+                                    id: req.user.userId,
                                     ip: req.ip
                                 },
                                 req.method + ' ' + req.path,
@@ -1137,7 +1137,7 @@ module.exports = function (app) {
             const groupId = req.params.groupId;
             let userId = null;
             if (req.user && !visibility) {
-                userId = req.user.id;
+                userId = req.user.userId;
             }
             const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
             let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
@@ -1203,7 +1203,7 @@ module.exports = function (app) {
                             activity,
                             {
                                 type: 'User',
-                                id: req.user.id,
+                                id: req.user.userId,
                                 ip: req.ip
                             },
                             req.method + ' ' + req.path,

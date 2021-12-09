@@ -1,3 +1,7 @@
+## 2021-12-09
+
+* Add TokenRevocation table to database, add token revocation logic to logout - https://github.com/citizenos/citizenos-api/issues/220
+
 ## 2021-11-11 - v. 5.0.4
 
 * Add `PUT /api/topics/:topicId/invites/users/:inviteId`, `PUT /api/users/:userId/topics/:topicId/invites/users/:inviteId` - to update invited users permissions

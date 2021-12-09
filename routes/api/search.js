@@ -25,7 +25,7 @@ module.exports = function (app) {
             let partnerId = null;
             const searchResults = [];
             if (req.user) {
-                userId = req.user.id;
+                userId = req.user.userId;
                 partnerId = req.user.partnerId;
             }
 
