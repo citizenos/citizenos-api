@@ -463,6 +463,7 @@ const urlLib = app.get('urlLib');
 const objectEncrypter = app.get('objectEncrypter');
 
 const shared = require('../utils/shared');
+const c = require('config');
 const userLib = require('./lib/user')(app);
 
 const User = models.User;

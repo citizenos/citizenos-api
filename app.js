@@ -35,16 +35,17 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerDocument = require('./swagger.json');
 const Busboy = require('busboy');
 const StreamUpload = require('stream_upload');
-
 const SlowDown = require('express-slow-down');
 const RateLimit = require('express-rate-limit');
 
 let rateLimitStore, speedLimitStore;
 if (config.rateLimit && config.rateLimit.storageType === 'redis') {
-    const RedisStore = require('rate-limit-redis');
-    const Redis = require('ioredis');
-    const client = new Redis(config.rateLimit.storageOptions);
-    rateLimitStore = new RedisStore({
+	const RedisStore = require('rate-limit-redis');
+	const Redis = require('ioredis');
+    const redisUrl = config.rateLimit.client?.url;
+    const redisOptions = config.rateLimit.client?.options;
+	const client = new Redis(redisUrl, redisOptions);
+	rateLimitStore = new RedisStore({
         client,
         prefix: 'rl'
     });
@@ -67,7 +68,7 @@ const rateLimiter = function (allowedRequests, blockTime, skipSuccess) {
     });
 };
 
-const speedLimiter = function (allowedRequests, delay, blockTime, skipSuccess) {
+const speedLimiter = function (allowedRequests, skipSuccess, blockTime, delay) {
     return new SlowDown({
         store: speedLimitStore,
         windowMs: blockTime || (15 * 60 * 1000), // default 15 minutes
@@ -157,6 +158,11 @@ etherpadClient.checkTokenAsync()
         logger.error('Failed to connect to Etherpad. Error was: ' + err.message + '. Etherpad configuration is ' + JSON.stringify(etherpadClient.options));
     });
 
+if (config.storage?.type.toLowerCase() === 's3') {
+    const cosS3 = require('./libs/cosS3')(app);
+    app.set('cosS3', cosS3);
+}
+
 app.set('url', require('url'));
 app.set('lodash', lodash);
 app.set('validator', require('validator'));
@@ -194,6 +200,7 @@ app.set('urlLib', require('./libs/url')(config));
 app.set('util', require('./libs/util'));
 app.set('cosEtherpad', require('./libs/cosEtherpad')(app));
 app.set('cosJwt', require('./libs/cosJwt')(app));
+app.set('cosUpload', require('./libs/cosUpload')(app));
 
 //Config smartId
 const smartId = require('smart-id-rest')();

@@ -248,7 +248,7 @@ module.exports = function (app) {
     app.post('/api/auth/login', rateLimiter(50), speedLimiter(15), expressRateLimitInput(['body.email'], 15 * 60 * 1000, 10), function (req, res) {
         passport.authenticate('local', function (err, user) {
             if (err || !user) {
-                return res.badRequest(err.message, err.code);
+                return res.badRequest(err?.message, err?.code);
             }
 
             setAuthCookie(req, res, user.id);
@@ -403,6 +403,8 @@ module.exports = function (app) {
      */
     app.get('/api/auth/status', loginCheck(['partner']), async function (req, res, next) {
         try {
+            const path = require('path');
+
             const user = await User.findOne({
                 where: {
                     id: req.user.id
