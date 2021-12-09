@@ -35,16 +35,18 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerDocument = require('./swagger.json');
 const Busboy = require('busboy');
 const StreamUpload = require('stream_upload');
-const SlowDown = require("express-slow-down");
-const RateLimit = require("express-rate-limit");
+const SlowDown = require('express-slow-down');
+const RateLimit = require('express-rate-limit');
+
 let rateLimitStore, speedLimitStore;
 if (config.rateLimit && config.rateLimit.storageType === 'redis') {
-	const RedisStore = require("rate-limit-redis");
-	const Redis = require("ioredis");
+    const RedisStore = require('rate-limit-redis');
+    const Redis = require('ioredis');
     const redisUrl = config.rateLimit.client?.url;
     const redisOptions = config.rateLimit.client?.options;
-	const client = new Redis(redisUrl, redisOptions);
-	rateLimitStore = new RedisStore({
+    const client = new Redis(redisUrl, redisOptions);
+
+    rateLimitStore = new RedisStore({
         client,
         prefix: 'rl'
     });
@@ -55,13 +57,15 @@ if (config.rateLimit && config.rateLimit.storageType === 'redis') {
     });
 }
 
-const app = express();
-const rateLimiter = function (allowedRequests, skipSuccess, blockTime) {
+const rateLimiter = function (allowedRequests, blockTime, skipSuccess) {
     return new RateLimit({
         store: rateLimitStore,
         windowMs: blockTime || (15 * 60 * 1000), // default 15 minutes
         max: allowedRequests || 100,
-        skipSuccessfulRequests: skipSuccess || true
+        skipSuccessfulRequests: skipSuccess || true,
+        onLimitReached: function (req) {
+            logger.warn('express-rate-limit', 'RATE LIMIT HIT!', `${req.method} ${req.path}`, req.ip, req.rateLimit);
+        }
     });
 };
 
@@ -71,9 +75,14 @@ const speedLimiter = function (allowedRequests, skipSuccess, blockTime, delay) {
         windowMs: blockTime || (15 * 60 * 1000), // default 15 minutes
         delayAfter: allowedRequests || 15, // allow 15 requests per 15 minutes, then...
         delayMs: delay || 1000, // response time increases by default 1s per request
-        skipSuccessfulRequests: skipSuccess || true
+        skipSuccessfulRequests: skipSuccess || true,
+        onLimitReached: function (req) {
+            logger.warn('express-slow-down', 'RATE LIMIT HIT!', `${req.method} ${req.path}`, req.ip, req.rateLimit);
+        }
     })
 };
+
+const app = express();
 
 // Express settings
 // TODO: Would be nice if conf had express.settings.* and all from there would be set
@@ -289,6 +298,7 @@ app.use(/^\/api\/.*/, function (req, res, next) {
 app.use(/^\/api\/.*/, require('./libs/middleware/authTokenParser'));
 app.use(/^\/api\/auth\/.*/, passport.initialize());
 app.set('middleware.loginCheck', require('./libs/middleware/loginCheck'));
+app.set('middleware.expressRateLimitInput', require('./libs/middleware/expressRateLimitInput')(app));
 app.set('middleware.authApiKey', require('./libs/middleware/authApiKey'));
 app.set('middleware.authTokenRestrictedUse', require('./libs/middleware/authTokenRestrictedUse'));
 app.set('middleware.partnerParser', require('./libs/middleware/partnerParser')(app));

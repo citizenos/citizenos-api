@@ -22,8 +22,10 @@ module.exports = function (app) {
     const superagent = app.get('superagent');
     const url = app.get('url');
     const mobileId = app.get('mobileId');
+
     const speedLimiter = app.get('speedLimiter');
     const rateLimiter = app.get('rateLimiter');
+    const expressRateLimitInput = app.get('middleware.expressRateLimitInput');
 
     const User = models.User;
     const UserConnection = models.UserConnection;
@@ -136,7 +138,7 @@ module.exports = function (app) {
         try {
             let user = await User
                 .findOne({
-                    where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email))
+                    where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
                 });
             if (user) {
                 // IF password is null, the User was created through an invite. We allow an User to claim the account.
@@ -152,7 +154,7 @@ module.exports = function (app) {
                     await db.transaction(async function (t) {
                         [user, created] = await User
                             .findOrCreate({
-                                where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email)), // Well, this will allow user to log in either using User and pass or just Google.. I think it's ok..
+                                where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email)), // Well, this will allow user to log in either using User and pass or just Google.. I think it's ok..
                                 defaults: {
                                     name,
                                     email,
@@ -189,7 +191,7 @@ module.exports = function (app) {
                             ip: req.ip
                         }, null, user, req.method + ' ' + req.path, t);
                     });
-                } catch(err) {
+                } catch (err) {
                     return next(err);
                 }
             }
@@ -249,7 +251,7 @@ module.exports = function (app) {
     /**
      * Login
      */
-    app.post('/api/auth/login', rateLimiter(15), speedLimiter(10), function (req, res) {
+    app.post('/api/auth/login', rateLimiter(50), speedLimiter(15), expressRateLimitInput(['body.email'], 15 * 60 * 1000, 10), function (req, res) {
         passport.authenticate('local', function (err, user) {
             if (err || !user) {
                 return res.badRequest(err?.message, err?.code);
@@ -348,7 +350,7 @@ module.exports = function (app) {
         }
         try {
             const user = await User.findOne({
-                where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email))
+                where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
             });
 
             if (!user) {
@@ -376,7 +378,7 @@ module.exports = function (app) {
             const user = await User.findOne({
                 where: {
                     [Op.and]: [
-                        db.where(db.fn('lower', db.col('email')), db.fn('lower',email)),
+                        db.where(db.fn('lower', db.col('email')), db.fn('lower', email)),
                         db.where(db.col('passwordResetCode'), passwordResetCode)
                     ]
                 }
@@ -451,7 +453,7 @@ module.exports = function (app) {
                 challengeID: sessionData.challengeID,
                 token: token
             }, 1);
-        } catch(e) {
+        } catch (e) {
             if (e.code === 404) {
                 return res.notFound();
             }
@@ -507,9 +509,9 @@ module.exports = function (app) {
                     });
 
                 await cosActivities.createActivity(user, null, {
-                        type: 'System',
-                        ip: req.ip
-                    }, req.method + ' ' + req.path, t);
+                    type: 'System',
+                    ip: req.ip
+                }, req.method + ' ' + req.path, t);
 
                 await UserConnection.create(
                     {
@@ -588,7 +590,7 @@ module.exports = function (app) {
             setAuthCookie(req, res, user.id);
 
             return res.ok(user, created);
-        } catch(error) {
+        } catch (error) {
             if (error && error.name === 'ValidationError') {
                 return res.badRequest(error.message);
             }
@@ -613,7 +615,7 @@ module.exports = function (app) {
             let personalInfo;
             if (cert) {
                 let clientCert = cert;
-                if(cert.indexOf('-----BEGIN') > -1) {
+                if (cert.indexOf('-----BEGIN') > -1) {
                     clientCert = cert.replace('-----BEGIN CERTIFICATE-----', '').replace('-----END CERTIFICATE-----', '')
                 }
                 await mobileId.validateCert(clientCert, 'base64');
@@ -632,7 +634,7 @@ module.exports = function (app) {
                         }
                     });
 
-                    personalInfo = idReq.body.data.user
+                personalInfo = idReq.body.data.user
             }
 
             const userData = await _getUserByPersonalId(personalInfo, UserConnection.CONNECTION_IDS.esteid, req);
@@ -642,7 +644,7 @@ module.exports = function (app) {
 
             return res.ok(user, created);
 
-        } catch(e) {
+        } catch (e) {
             if (e.name === 'ValidationError') {
                 return res.badRequest(e.message);
             }
