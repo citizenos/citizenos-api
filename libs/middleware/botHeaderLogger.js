@@ -10,15 +10,13 @@
  * @returns {void}
  */
 module.exports = function (req, res, next) {
-    var app = req.app;
-    var logger = app.get('logger');
+    const app = req.app;
+    const logger = app.get('logger');
 
     logger.info('User agent', req.method, req.path, req.headers['user-agent']);
 
     if (req.device.type === 'bot') {
         logger.info('BOT HEADER', req.method, req.path, req.headers);
-
-        return next();
     }
 
     return next();
