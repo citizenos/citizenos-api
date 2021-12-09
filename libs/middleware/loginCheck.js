@@ -14,7 +14,7 @@ module.exports = function (scopes) {
     scopes.push('all'); // Allow everything to User with 'all' scope.
 
     return function (req, res, next) {
-        if (!req.user || !req.user.id) {
+        if (!req.user || !req.user.userId) {
             return res.unauthorised();
         }
 

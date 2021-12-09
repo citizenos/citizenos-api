@@ -859,6 +859,7 @@ COMMENT ON COLUMN public."Signatures".data IS 'Signature xml';
 --
 
 CREATE TABLE public."TokenRevocations" (
+    id integer NOT NULL,
     "tokenId" uuid NOT NULL,
     "expiresAt" timestamp with time zone NOT NULL,
     "createdAt" timestamp with time zone NOT NULL,
@@ -879,6 +880,26 @@ COMMENT ON COLUMN public."TokenRevocations"."tokenId" IS 'Token Id that has been
 --
 
 COMMENT ON COLUMN public."TokenRevocations"."expiresAt" IS 'Token expiration time, after that this entry is not relevant anymore';
+
+
+--
+-- Name: TokenRevocations_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public."TokenRevocations_id_seq"
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: TokenRevocations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public."TokenRevocations_id_seq" OWNED BY public."TokenRevocations".id;
 
 
 --
@@ -1894,6 +1915,13 @@ CREATE TABLE public.store (
 
 
 --
+-- Name: TokenRevocations id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TokenRevocations" ALTER COLUMN id SET DEFAULT nextval('public."TokenRevocations_id_seq"'::regclass);
+
+
+--
 -- Name: VoteDelegations id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -2040,7 +2068,7 @@ ALTER TABLE ONLY public."Signatures"
 --
 
 ALTER TABLE ONLY public."TokenRevocations"
-    ADD CONSTRAINT "TokenRevocations_pkey" PRIMARY KEY ("tokenId");
+    ADD CONSTRAINT "TokenRevocations_pkey" PRIMARY KEY (id, "tokenId");
 
 
 --

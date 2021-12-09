@@ -31,6 +31,7 @@ module.exports = function (app) {
     const UserConnection = models.UserConnection;
     const UserConsent = models.UserConsent;
     const Partner = models.Partner;
+    const TokenRevocation = models.TokenRevocation;
 
     const COOKIE_NAME_OPENID_AUTH_STATE = 'cos.authStateOpenId';
     const COOKIE_NAME_COS_AUTH_STATE = 'cos.authState';
@@ -231,8 +232,10 @@ module.exports = function (app) {
      * @see http://expressjs.com/en/4x/api.html#res
      */
     const setAuthCookie = function (req, res, userId) {
+        const token = TokenRevocation.build();
         const authToken = jwt.sign({
-            id: userId,
+            userId,
+            tokenId: token.tokenId,
             scope: 'all'
         }, config.session.privateKey, {
             expiresIn: config.session.cookie.maxAge,
@@ -241,7 +244,32 @@ module.exports = function (app) {
         res.cookie(config.session.name, authToken, Object.assign({secure: req.secure}, config.session.cookie));
     };
 
-    const clearSessionCookies = function (req, res) {
+    const clearSessionCookies = async function (req, res) {
+        let token;
+
+        // App itself uses cookie which contains the JWT
+        const cookieAuthorization = req.cookies[config.session.name];
+        if (cookieAuthorization) {
+            token = cookieAuthorization;
+        }
+
+        // Partners use "Authorization: Bearer <JWT>. Partner JWT always overrides app cookie JWT
+        const headerAuthorization = req.headers.authorization;
+        if (headerAuthorization) {
+            const headerInfoArr = headerAuthorization.split(' ');
+            const tokenType = headerInfoArr[0];
+
+            if (tokenType === 'Bearer') {
+                token = headerInfoArr[1];
+            }
+        }
+        const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+
+        await TokenRevocation.create({
+            tokenId: req.user.tokenId,
+            expiresAt: new Date(tokenData.exp * 1000)
+        });
+
         res.clearCookie(config.session.name, {
             path: config.session.cookie.path,
             domain: config.session.cookie.domain
@@ -264,10 +292,14 @@ module.exports = function (app) {
     });
 
 
-    app.post('/api/auth/logout', function (req, res) {
-        clearSessionCookies(req, res);
+    app.post('/api/auth/logout', async function (req, res, next) {
+        try {
+            await clearSessionCookies(req, res);
 
-        return res.ok();
+            return res.ok();
+        } catch (err) {
+            return next(err);
+        }
     });
 
     app.get('/api/auth/verify/:code', async function (req, res) {
@@ -324,7 +356,7 @@ module.exports = function (app) {
             const user = await User
                 .findOne({
                     where: {
-                        id: req.user.id
+                        id: req.user.userId
                     }
                 });
 
@@ -413,12 +445,12 @@ module.exports = function (app) {
 
             const user = await User.findOne({
                 where: {
-                    id: req.user.id
+                    id: req.user.userId
                 }
             });
 
             if (!user) {
-                clearSessionCookies(req, res);
+                await clearSessionCookies(req, res);
 
                 return res.notFound();
             }
@@ -945,11 +977,11 @@ module.exports = function (app) {
                 }
 
                 // User logged in
-                if (req.user && req.user.id) {
+                if (req.user && req.user.userId) {
                     return UserConsent
                         .count({
                             where: {
-                                userId: req.user.id,
+                                userId: req.user.userId,
                                 partnerId: clientId
                             }
                         })
@@ -959,7 +991,7 @@ module.exports = function (app) {
                                 // IF User is logged in to CitizenOS AND has agreed before -> redirect_uri
                                 const accessToken = jwt.sign(
                                     {
-                                        id: req.user.id,
+                                        id: req.user.userId,
                                         partnerId: clientId,
                                         scope: 'partner'
                                     },
@@ -975,7 +1007,7 @@ module.exports = function (app) {
                                 const idToken = jwt.sign(
                                     {
                                         iss: urlLib.getApi(), // issuer
-                                        sub: req.user.id, // subject
+                                        sub: req.user.userId, // subject
                                         aud: clientId, // audience
                                         exp: parseInt(new Date().getTime() / 1000 + (5 * 60 * 1000), 10), // expires - 5 minutes from now
                                         nonce: nonce,
