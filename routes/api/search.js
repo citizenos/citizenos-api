@@ -11,14 +11,14 @@ module.exports = function (app) {
     const models = app.get('models');
     const db = models.sequelize;
     const Op = db.Sequelize.Op;
+    const loginCheck = app.get('middleware.loginCheck');
 
     const User = models.User;
     const Group = models.Group;
     const Topic = models.Topic;
 
-    app.get('/api/search', async function (req, res, next) {
-        try {
-            const str = req.query.str; // Search string
+    const doSearch = async (req, isLoggedIn) => {
+        const str = req.query.str; // Search string
             const limitMax = 100;
             const limitDefault = 10;
             let userId = null;
@@ -333,7 +333,7 @@ module.exports = function (app) {
                                 context: 'public',
                                 groups: publicGroupsResult
                             });
-                        } else if (model === 'user') {
+                        } else if (model === 'user' && isLoggedIn) {
                             const publicUserResult = await User
                                 .findAndCountAll({
                                     where: {
@@ -379,6 +379,12 @@ module.exports = function (app) {
                 results[row.context][keys[1]] = row[keys[1]];
             });
 
+            return results;
+    };
+    app.get('/api/search', async function (req, res, next) {
+        try {
+            const results = await doSearch(req, true);
+
             return res.ok({
                 results: results
             });
@@ -387,4 +393,15 @@ module.exports = function (app) {
         }
     });
 
+    app.get('/api/users/:userId/search', loginCheck(), async function (req, res, next) {
+        try {
+            const results = await doSearch(req);
+
+            return res.ok({
+                results: results
+            });
+        } catch (err) {
+            return next(err);
+        }
+    });
 };
