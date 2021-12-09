@@ -40,12 +40,13 @@ const RateLimit = require('express-rate-limit');
 
 let rateLimitStore, speedLimitStore;
 if (config.rateLimit && config.rateLimit.storageType === 'redis') {
-	const RedisStore = require('rate-limit-redis');
-	const Redis = require('ioredis');
+    const RedisStore = require('rate-limit-redis');
+    const Redis = require('ioredis');
     const redisUrl = config.rateLimit.client?.url;
     const redisOptions = config.rateLimit.client?.options;
-	const client = new Redis(redisUrl, redisOptions);
-	rateLimitStore = new RedisStore({
+    const client = new Redis(redisUrl, redisOptions);
+
+    rateLimitStore = new RedisStore({
         client,
         prefix: 'rl'
     });
@@ -62,7 +63,7 @@ const rateLimiter = function (allowedRequests, blockTime, skipSuccess) {
         windowMs: blockTime || (15 * 60 * 1000), // default 15 minutes
         max: allowedRequests || 100,
         skipSuccessfulRequests: skipSuccess || true,
-        onLimitReached: function(req) {
+        onLimitReached: function (req) {
             logger.warn('express-rate-limit', 'RATE LIMIT HIT!', `${req.method} ${req.path}`, req.ip, req.rateLimit);
         }
     });
@@ -75,7 +76,7 @@ const speedLimiter = function (allowedRequests, skipSuccess, blockTime, delay) {
         delayAfter: allowedRequests || 15, // allow 15 requests per 15 minutes, then...
         delayMs: delay || 1000, // response time increases by default 1s per request
         skipSuccessfulRequests: skipSuccess || true,
-        onLimitReached: function(req) {
+        onLimitReached: function (req) {
             logger.warn('express-slow-down', 'RATE LIMIT HIT!', `${req.method} ${req.path}`, req.ip, req.rateLimit);
         }
     })
