@@ -13,7 +13,7 @@
   "topic": {
     "titleLengthMax": "TITLE_LENGTH_MAX"
   },
-  "session":  {
+  "session": {
     "__name": "CITIZENOS_SESSION",
     "__format": "json"
   },
@@ -50,7 +50,13 @@
     "salt": "CITIZENOS_ENCRYPTION_SALT"
   },
   "rateLimit": {
-    "__name": "CITIZENOS_RATE_LIMIT",
-    "__format": "json"
+    "storageType": "CITIZENOS_RATE_LIMIT_STORAGE_TYPE",
+    "client": {
+      "url": "REDIS_TLS_URL",
+      "options": {
+        "__name": "CITIZENOS_RATE_LIMIT_CLIENT_OPTIONS",
+        "__format": "json"
+      }
+    }
   }
 }

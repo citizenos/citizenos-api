@@ -553,6 +553,8 @@ suite('Auth', function () {
             });
 
             test('Fail - Too Many Requests', async function () {
+                this.timeout(10000);
+
                 const emailRateLimit = 'test_expressRateLimitInput_' + new Date().getTime() + '@test.ee';
                 await userLib.createUser(agent, emailRateLimit, password, null);
 

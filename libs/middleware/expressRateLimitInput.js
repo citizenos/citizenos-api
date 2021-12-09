@@ -35,7 +35,7 @@ function ExpressRateLimitInput (app) {
         let rateLimiter;
         if (config.rateLimit && config.rateLimit.storageType === 'redis') {
             const Redis = require('ioredis');
-            const client = new Redis(config.rateLimit.storageOptions);
+            const client = new Redis(config.rateLimit.client.url, config.rateLimit.client.options);
             rateLimiter = new RateLimiterRedis({
                 storeClient: client,
                 duration: windowMs / 1000,
