@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 10.18 (Ubuntu 10.18-0ubuntu0.18.04.1)
--- Dumped by pg_dump version 10.18 (Ubuntu 10.18-0ubuntu0.18.04.1)
+-- Dumped from database version 10.19 (Ubuntu 10.19-0ubuntu0.18.04.1)
+-- Dumped by pg_dump version 10.19 (Ubuntu 10.19-0ubuntu0.18.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -28,20 +28,6 @@ CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
 --
 
 COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
-
-
---
--- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
---
-
-CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
-
-
---
--- Name: EXTENSION pgcrypto; Type: COMMENT; Schema: -; Owner: -
---
-
-COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
 
 
 --
@@ -92,10 +78,30 @@ CREATE TYPE public."enum_GroupInviteUsers_level" AS ENUM (
 
 
 --
+-- Name: enum_GroupJoins_level; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public."enum_GroupJoins_level" AS ENUM (
+    'read',
+    'admin'
+);
+
+
+--
 -- Name: enum_GroupMemberUsers_level; Type: TYPE; Schema: public; Owner: -
 --
 
 CREATE TYPE public."enum_GroupMemberUsers_level" AS ENUM (
+    'read',
+    'admin'
+);
+
+
+--
+-- Name: enum_GroupMembers_level; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public."enum_GroupMembers_level" AS ENUM (
     'read',
     'admin'
 );
@@ -548,6 +554,41 @@ COMMENT ON COLUMN public."GroupInviteUsers".level IS 'User membership level.';
 
 
 --
+-- Name: GroupJoins; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."GroupJoins" (
+    "groupId" uuid NOT NULL,
+    token character varying(12) NOT NULL,
+    level public."enum_GroupJoins_level" DEFAULT 'read'::public."enum_GroupJoins_level" NOT NULL,
+    "createdAt" timestamp with time zone NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL,
+    "deletedAt" timestamp with time zone
+);
+
+
+--
+-- Name: COLUMN "GroupJoins"."groupId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."GroupJoins"."groupId" IS 'Group to which the Join information belongs.';
+
+
+--
+-- Name: COLUMN "GroupJoins".token; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."GroupJoins".token IS 'Token for joining the Group. Used for sharing public urls for Users to join the Group.';
+
+
+--
+-- Name: COLUMN "GroupJoins".level; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."GroupJoins".level IS 'Join level, that is what level access will the join token provide';
+
+
+--
 -- Name: GroupMemberUsers; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -580,6 +621,41 @@ COMMENT ON COLUMN public."GroupMemberUsers"."groupId" IS 'Group to which member 
 --
 
 COMMENT ON COLUMN public."GroupMemberUsers".level IS 'User membership level.';
+
+
+--
+-- Name: GroupMembers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."GroupMembers" (
+    "groupId" uuid NOT NULL,
+    "userId" uuid NOT NULL,
+    level public."enum_GroupMembers_level" DEFAULT 'read'::public."enum_GroupMembers_level" NOT NULL,
+    "createdAt" timestamp with time zone NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL,
+    "deletedAt" timestamp with time zone
+);
+
+
+--
+-- Name: COLUMN "GroupMembers"."groupId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."GroupMembers"."groupId" IS 'Group id';
+
+
+--
+-- Name: COLUMN "GroupMembers"."userId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."GroupMembers"."userId" IS 'User id';
+
+
+--
+-- Name: COLUMN "GroupMembers".level; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."GroupMembers".level IS 'Levels - read, admin';
 
 
 --
@@ -779,6 +855,54 @@ COMMENT ON COLUMN public."Signatures".data IS 'Signature xml';
 
 
 --
+-- Name: TokenRevocations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."TokenRevocations" (
+    id integer NOT NULL,
+    "tokenId" uuid NOT NULL,
+    "expiresAt" timestamp with time zone NOT NULL,
+    "createdAt" timestamp with time zone NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL,
+    "deletedAt" timestamp with time zone
+);
+
+
+--
+-- Name: COLUMN "TokenRevocations"."tokenId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TokenRevocations"."tokenId" IS 'Token Id that has been revoked';
+
+
+--
+-- Name: COLUMN "TokenRevocations"."expiresAt"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TokenRevocations"."expiresAt" IS 'Token expiration time, after that this entry is not relevant anymore';
+
+
+--
+-- Name: TokenRevocations_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public."TokenRevocations_id_seq"
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: TokenRevocations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public."TokenRevocations_id_seq" OWNED BY public."TokenRevocations".id;
+
+
+--
 -- Name: TopicAttachments; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -867,6 +991,16 @@ COMMENT ON COLUMN public."TopicEvents".subject IS 'Subject of the Event.';
 --
 
 COMMENT ON COLUMN public."TopicEvents".text IS 'Text of the Event.';
+
+
+--
+-- Name: TopicFavourites; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."TopicFavourites" (
+    "topicId" uuid NOT NULL,
+    "userId" uuid NOT NULL
+);
 
 
 --
@@ -1353,10 +1487,10 @@ CREATE TABLE public."Users" (
     "termsVersion" character varying(255),
     "termsAcceptedAt" timestamp with time zone,
     "authorId" character varying(255),
+    preferences jsonb,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone,
-    preferences jsonb
+    "deletedAt" timestamp with time zone
 );
 
 
@@ -1781,6 +1915,13 @@ CREATE TABLE public.store (
 
 
 --
+-- Name: TokenRevocations id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TokenRevocations" ALTER COLUMN id SET DEFAULT nextval('public."TokenRevocations_id_seq"'::regclass);
+
+
+--
 -- Name: VoteDelegations id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1843,11 +1984,35 @@ ALTER TABLE ONLY public."GroupInviteUsers"
 
 
 --
+-- Name: GroupJoins GroupJoins_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."GroupJoins"
+    ADD CONSTRAINT "GroupJoins_pkey" PRIMARY KEY ("groupId");
+
+
+--
+-- Name: GroupJoins GroupJoins_token_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."GroupJoins"
+    ADD CONSTRAINT "GroupJoins_token_key" UNIQUE (token);
+
+
+--
 -- Name: GroupMemberUsers GroupMemberUsers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public."GroupMemberUsers"
     ADD CONSTRAINT "GroupMemberUsers_pkey" PRIMARY KEY ("userId", "groupId");
+
+
+--
+-- Name: GroupMembers GroupMembers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."GroupMembers"
+    ADD CONSTRAINT "GroupMembers_pkey" PRIMARY KEY ("groupId", "userId");
 
 
 --
@@ -1899,6 +2064,14 @@ ALTER TABLE ONLY public."Signatures"
 
 
 --
+-- Name: TokenRevocations TokenRevocations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TokenRevocations"
+    ADD CONSTRAINT "TokenRevocations_pkey" PRIMARY KEY (id, "tokenId");
+
+
+--
 -- Name: TopicAttachments TopicAttachments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1920,6 +2093,14 @@ ALTER TABLE ONLY public."TopicComments"
 
 ALTER TABLE ONLY public."TopicEvents"
     ADD CONSTRAINT "TopicEvents_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: TopicFavourites TopicFavourites_pkey1; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicFavourites"
+    ADD CONSTRAINT "TopicFavourites_pkey1" PRIMARY KEY ("topicId", "userId");
 
 
 --
@@ -2300,6 +2481,14 @@ ALTER TABLE ONLY public."GroupInviteUsers"
 
 
 --
+-- Name: GroupJoins GroupJoins_groupId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."GroupJoins"
+    ADD CONSTRAINT "GroupJoins_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES public."Groups"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: GroupMemberUsers GroupMemberUsers_groupId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2659,13 +2848,15 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 202002192021-alter-user-connection.js
 20200225152502-remove-vote-user-container-activity.js
 202010261616-alter-user-add-auhorID.js
-20211008104906-create-topic-join.js
-20211008193321-alter-user-add-preferences.js
 20210310104918-create-group-invite-user.js
 202103251231-alter-vote-lists-add-userhash.js
 20210329141948-alter-vote-user-containers.js
 20210510112610-groupmember_to_groupmemberusers.js
-202107151231-alter-vote-add-auto-close.js
 202106111127-alter-relations-add-on-cascade.js
 20210722084618-alter-vote-add-auto-close.js
+20211004193321-alter-user-add-preferences.js
+20211008104906-create-topic-join.js
+20211008193321-alter-user-add-preferences.js
+20211028142538-create-group-join.js
+20211209091354-create-token-revocation.js
 \.

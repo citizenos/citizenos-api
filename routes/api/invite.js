@@ -34,11 +34,11 @@ module.exports = function (app) {
             });
 
         // There is a User logged in?
-        if (req.user && req.user.id) { // TODO: Move the check to some library
+        if (req.user && req.user.userId) { // TODO: Move the check to some library
             userLoggedIn = await User
                 .findOne({
                     where: {
-                        id: req.user.id
+                        id: req.user.userId
                     }
                 });
         }

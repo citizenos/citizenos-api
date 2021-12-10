@@ -13,24 +13,25 @@
  * @returns {void}
  */
 module.exports = function (req, res, next) {
-    var app = req.app;
-    var config = app.get('config');
-    var logger = app.get('logger');
-    var jwt = app.get('jwt');
+    const app = req.app;
+    const config = app.get('config');
+    const logger = app.get('logger');
+    const jwt = app.get('jwt');
 
-    var token;
+    const TokenRevocation = app.get('models').TokenRevocation;
+    let token;
 
     // App itself uses cookie which contains the JWT
-    var cookieAuthorization = req.cookies[config.session.name];
+    const cookieAuthorization = req.cookies[config.session.name];
     if (cookieAuthorization) {
         token = cookieAuthorization;
     }
 
     // Partners use "Authorization: Bearer <JWT>. Partner JWT always overrides app cookie JWT
-    var headerAuthorization = req.headers.authorization;
+    const headerAuthorization = req.headers.authorization;
     if (headerAuthorization) {
-        var headerInfoArr = headerAuthorization.split(' ');
-        var tokenType = headerInfoArr[0];
+        const headerInfoArr = headerAuthorization.split(' ');
+        const tokenType = headerInfoArr[0];
 
         if (tokenType === 'Bearer') {
             token = headerInfoArr[1];
@@ -38,7 +39,7 @@ module.exports = function (req, res, next) {
     }
 
     if (token) {
-        jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]}, function (err, tokenData) {
+        jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]}, async function (err, tokenData) {
             if (err) {
                 if (err.name === 'TokenExpiredError') {
                     logger.info('loginCheck - JWT token has expired', req.method, req.path, err);
@@ -49,8 +50,22 @@ module.exports = function (req, res, next) {
 
                     return res.unauthorised('Invalid JWT token');
                 }
-            } else {
-                req.user = tokenData;
+            } else if (tokenData.tokenId) {
+                const revoked = await TokenRevocation.findOne({
+                    where: {
+                        tokenId: tokenData.tokenId
+                    }
+                });
+
+                if (revoked) {
+                    res.clearCookie(config.session.name, {
+                        path: config.session.cookie.path,
+                        domain: config.session.cookie.domain
+                    });
+                } else {
+                    req.user = tokenData;
+                    req.user.id = tokenData.userId;
+                }
             }
 
             return next();
