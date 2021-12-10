@@ -1,5 +1,7 @@
 'use strict';
 
+const { str } = require("underscore");
+
 /**
  * Search all objects (Users, Groups)
  *
@@ -9,16 +11,17 @@
  */
 module.exports = function (app) {
     const models = app.get('models');
+    const loginCheck = app.get('middleware.loginCheck');
     const db = models.sequelize;
     const Op = db.Sequelize.Op;
-    const loginCheck = app.get('middleware.loginCheck');
 
     const User = models.User;
     const Group = models.Group;
     const Topic = models.Topic;
 
-    const doSearch = async (req, isLoggedIn) => {
-        const str = req.query.str; // Search string
+    app.get('/api/search', async (req, res, next) => {
+        try {
+            const str = req.query.str; // Search string
             const limitMax = 100;
             const limitDefault = 10;
             let userId = null;
@@ -333,38 +336,6 @@ module.exports = function (app) {
                                 context: 'public',
                                 groups: publicGroupsResult
                             });
-                        } else if (model === 'user' && isLoggedIn) {
-                            const publicUserResult = await User
-                                .findAndCountAll({
-                                    where: {
-                                        [Op.or]: [
-                                            {
-                                                name: {
-                                                    [Op.iLike]: str + '%'
-                                                }
-                                            },
-                                            {
-                                                email: {
-                                                    [Op.iLike]: str + '%'
-                                                }
-                                            }
-                                        ],
-                                        [Op.and]: [
-                                            {
-                                                preferences: {
-                                                    showInSearch: true
-                                                }
-                                            }
-                                        ]
-                                    },
-                                    attributes: ['id', 'name', 'email', 'company', 'imageUrl'],
-                                    limit: limit,
-                                    offset: offset
-                                });
-                            searchResults.push({
-                                context: 'public',
-                                users: publicUserResult
-                            });
                         }
                     }
                 }
@@ -379,23 +350,66 @@ module.exports = function (app) {
                 results[row.context][keys[1]] = row[keys[1]];
             });
 
-            return results;
-    };
-    app.get('/api/search', async function (req, res, next) {
-        try {
-            const results = await doSearch(req, true);
-
             return res.ok({
                 results: results
             });
         } catch(err) {
-            next(err);
+            return next(err);
         }
     });
 
-    app.get('/api/users/:userId/search', loginCheck(), async function (req, res, next) {
+    app.get('/api/users/:userId/search/users', loginCheck(), (req, res, next) => {
+        const str = req.query.str; // Search string
+        const limitMax = 100;
+        const limitDefault = 10;
+        let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+        if (limit > limitMax) limit = limitDefault;
+        const page = parseInt(req.query.page, 10) ? parseInt(req.query.page, 10) : 1;
+        const offset = (page * limit) - limit;
+        const searchResults = [];
         try {
-            const results = await doSearch(req);
+            if (str.length >= 5) {
+                const publicUserResult = await User
+                    .findAndCountAll({
+                        where: {
+                            [Op.or]: [
+                                {
+                                    name: {
+                                        [Op.iLike]: str + '%'
+                                    }
+                                },
+                                {
+                                    email: {
+                                        [Op.iLike]: str + '%'
+                                    }
+                                }
+                            ],
+                            [Op.and]: [
+                                {
+                                    preferences: {
+                                        showInSearch: true
+                                    }
+                                }
+                            ]
+                        },
+                        attributes: ['id', 'name', 'email', 'company', 'imageUrl'],
+                        limit: limit,
+                        offset: offset
+                    });
+                searchResults.push({
+                    context: 'public',
+                    users: publicUserResult
+                });
+
+            }
+            const results = {};
+            searchResults.forEach(function (row) {
+                const keys = Object.keys(row);
+                if (!results[row.context]) {
+                    results[row.context] = {};
+                }
+                results[row.context][keys[1]] = row[keys[1]];
+            });
 
             return res.ok({
                 results: results
