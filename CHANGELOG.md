@@ -1,3 +1,8 @@
+## 2021-12.13
+
+* Create new API endpoint for user searching `GET /api/users/:userId/search/users` - https://github.com/citizenos/citizenos-api/issues/222
+* Remove users from general search results
+
 ## 2021-12-09
 
 * Add TokenRevocation table to database, add token revocation logic to logout - https://github.com/citizenos/citizenos-api/issues/220

@@ -358,18 +358,13 @@ module.exports = function (app) {
         }
     });
 
-    app.get('/api/users/:userId/search/users', loginCheck(), (req, res, next) => {
+    app.get('/api/users/:userId/search/users', loginCheck(), async (req, res, next) => {
         const str = req.query.str; // Search string
-        const limitMax = 100;
-        const limitDefault = 10;
-        let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
-        if (limit > limitMax) limit = limitDefault;
-        const page = parseInt(req.query.page, 10) ? parseInt(req.query.page, 10) : 1;
-        const offset = (page * limit) - limit;
-        const searchResults = [];
+        let publicUserResult;
+
         try {
             if (str.length >= 5) {
-                const publicUserResult = await User
+                publicUserResult = await User
                     .findAndCountAll({
                         where: {
                             [Op.or]: [
@@ -393,26 +388,23 @@ module.exports = function (app) {
                             ]
                         },
                         attributes: ['id', 'name', 'email', 'company', 'imageUrl'],
-                        limit: limit,
-                        offset: offset
+                        limit: 5
                     });
-                searchResults.push({
-                    context: 'public',
-                    users: publicUserResult
-                });
-
             }
-            const results = {};
-            searchResults.forEach(function (row) {
-                const keys = Object.keys(row);
-                if (!results[row.context]) {
-                    results[row.context] = {};
+
+            if (!publicUserResult) {
+                publicUserResult = {
+                    rows: [],
+                    count: 0
                 }
-                results[row.context][keys[1]] = row[keys[1]];
-            });
+            }
 
             return res.ok({
-                results: results
+                results: {
+                    public: {
+                        users: publicUserResult
+                    }
+                }
             });
         } catch (err) {
             return next(err);
