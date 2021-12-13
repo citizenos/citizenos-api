@@ -1,5 +1,7 @@
 'use strict';
 
+const { str } = require("underscore");
+
 /**
  * Search all objects (Users, Groups)
  *
@@ -9,6 +11,7 @@
  */
 module.exports = function (app) {
     const models = app.get('models');
+    const loginCheck = app.get('middleware.loginCheck');
     const db = models.sequelize;
     const Op = db.Sequelize.Op;
 
@@ -16,7 +19,7 @@ module.exports = function (app) {
     const Group = models.Group;
     const Topic = models.Topic;
 
-    app.get('/api/search', async function (req, res, next) {
+    app.get('/api/search', async (req, res, next) => {
         try {
             const str = req.query.str; // Search string
             const limitMax = 100;
@@ -333,38 +336,6 @@ module.exports = function (app) {
                                 context: 'public',
                                 groups: publicGroupsResult
                             });
-                        } else if (model === 'user') {
-                            const publicUserResult = await User
-                                .findAndCountAll({
-                                    where: {
-                                        [Op.or]: [
-                                            {
-                                                name: {
-                                                    [Op.iLike]: str + '%'
-                                                }
-                                            },
-                                            {
-                                                email: {
-                                                    [Op.iLike]: str + '%'
-                                                }
-                                            }
-                                        ],
-                                        [Op.and]: [
-                                            {
-                                                preferences: {
-                                                    showInSearch: true
-                                                }
-                                            }
-                                        ]
-                                    },
-                                    attributes: ['id', 'name', 'email', 'company', 'imageUrl'],
-                                    limit: limit,
-                                    offset: offset
-                                });
-                            searchResults.push({
-                                context: 'public',
-                                users: publicUserResult
-                            });
                         }
                     }
                 }
@@ -383,8 +354,60 @@ module.exports = function (app) {
                 results: results
             });
         } catch(err) {
-            next(err);
+            return next(err);
         }
     });
 
+    app.get('/api/users/:userId/search/users', loginCheck(), async (req, res, next) => {
+        const str = req.query.str; // Search string
+        let publicUserResult;
+
+        try {
+            if (str.length >= 5) {
+                publicUserResult = await User
+                    .findAndCountAll({
+                        where: {
+                            [Op.or]: [
+                                {
+                                    name: {
+                                        [Op.iLike]: str + '%'
+                                    }
+                                },
+                                {
+                                    email: {
+                                        [Op.iLike]: str + '%'
+                                    }
+                                }
+                            ],
+                            [Op.and]: [
+                                {
+                                    preferences: {
+                                        showInSearch: true
+                                    }
+                                }
+                            ]
+                        },
+                        attributes: ['id', 'name', 'email', 'company', 'imageUrl'],
+                        limit: 5
+                    });
+            }
+
+            if (!publicUserResult) {
+                publicUserResult = {
+                    rows: [],
+                    count: 0
+                }
+            }
+
+            return res.ok({
+                results: {
+                    public: {
+                        users: publicUserResult
+                    }
+                }
+            });
+        } catch (err) {
+            return next(err);
+        }
+    });
 };
