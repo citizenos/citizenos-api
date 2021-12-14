@@ -8221,7 +8221,7 @@ suite('Users', function () {
                     const subject = 'to be edited by user';
                     const text = 'Wohoo!';
 
-                    const comment = (await topicCommentCreate(agent3, user3.id, topic.id, null, null, Comment.TYPES.pro, subject, text)).body.data;
+                    const comment = (await topicCommentCreate(agent3, user3.id, topic.id, null, null, type, subject, text)).body.data;
                     assert.property(comment, 'id');
                     assert.equal(comment.type, type);
                     assert.equal(comment.subject, subject);
@@ -8261,18 +8261,23 @@ suite('Users', function () {
                 const commentType2 = Comment.TYPES.con;
                 const commentSubj2 = 'Test comment 2 text';
                 const commentText2 = 'Test comment 2 subj';
+                const commentType3 = Comment.TYPES.poi;
+                const commentSubj3 = 'Test comment 3 text';
+                const commentText3 = 'Test comment 3 subj';
 
                 let user;
                 let topic;
                 let partner;
                 let comment1;
                 let comment2;
+                let comment3;
 
                 setup(async function () {
                     user = await userLib.createUserAndLogin(agent, null, null, null);
                     topic = (await topicCreate(agent, user.id, null, null, null, null, null)).body.data;
                     comment1 = (await topicCommentCreate(agent, user.id, topic.id, null, null, commentType1, commentSubj1, commentText1)).body.data;
                     comment2 = (await topicCommentCreate(agent, user.id, topic.id, null, null, commentType2, commentSubj2, commentText2)).body.data;
+                    comment3 = (await topicCommentCreate(agent, user.id, topic.id, null, null, commentType3, commentSubj3, commentText3)).body.data;
                     partner = await Partner.create({
                         website: 'notimportant',
                         redirectUriRegexp: 'notimportant'
@@ -8288,8 +8293,8 @@ suite('Users', function () {
                     delete creatorExpected.imageUrl; // Image url is not returned as it's not needed for now
                     delete creatorExpected.language; // Language is not returned
 
-                    assert.equal(list.count.total, 2);
-                    assert.equal(comments.length, 2);
+                    assert.equal(list.count.total, 3);
+                    assert.equal(comments.length, 3);
 
                     // Comment 1
                     const c1 = _.find(comments, {id: comment1.id});
@@ -8314,6 +8319,18 @@ suite('Users', function () {
                     assert.equal(c2.parent.id, comment2.id);
 
                     assert.deepEqual(c2.creator, creatorExpected);
+
+                    // Comment 3
+                    const c3 = _.find(comments, {id: comment3.id});
+
+                    assert.equal(c3.id, comment3.id);
+                    assert.equal(c3.type, comment3.type);
+                    assert.equal(c3.subject, comment3.subject);
+                    assert.equal(c3.text, comment3.text);
+                    assert.property(c3, 'createdAt');
+                    assert.equal(c3.parent.id, comment3.id);
+
+                    assert.deepEqual(c3.creator, creatorExpected);
                 });
 
                 test('Success v2', async function () {
@@ -8325,8 +8342,8 @@ suite('Users', function () {
                     delete creatorExpected.imageUrl; // Image url is not returned as it's not needed for now
                     delete creatorExpected.language; // Language is not returned
 
-                    assert.equal(list.count.total, 2);
-                    assert.equal(comments.length, 2);
+                    assert.equal(list.count.total, 3);
+                    assert.equal(comments.length, 3);
 
                     // Comment 1
                     const c1 = _.find(comments, {id: comment1.id});
@@ -8341,13 +8358,15 @@ suite('Users', function () {
                     assert.deepEqual(c1.creator, creatorExpected);
                 });
 
-                test('Success - Comments with replies - c1->r1.1 c2->r2.1 c2->r2.2', async function () {
+                test('Success - Comments with replies - c1->r1.1 c2->r2.1 c2->r2.2 c3->r3.1', async function () {
                     const replyText11 = 'R1.1';
                     const replyText21 = 'R2.1';
                     const replyText22 = 'R2.2';
+                    const replyText31 = 'R3.1';
                     await topicCommentCreate(agent, user.id, topic.id, comment1.id, null, null, null, replyText11);
                     await topicCommentCreate(agent, user.id, topic.id, comment2.id, null, null, null, replyText21);
                     await topicCommentCreate(agent, user.id, topic.id, comment2.id, null, null, null, replyText22);
+                    await topicCommentCreate(agent, user.id, topic.id, comment3.id, null, null, null, replyText31);
 
                     const list = (await topicCommentList(agent, user.id, topic.id, null)).body.data;
                     const comments = list.rows;
@@ -8357,8 +8376,8 @@ suite('Users', function () {
                     delete creatorExpected.imageUrl; // Image url is not returned, as it's not needed for now
                     delete creatorExpected.language; // Language is not returned
 
-                    assert.equal(list.count.total, 2);
-                    assert.equal(comments.length, 2);
+                    assert.equal(list.count.total, 3);
+                    assert.equal(comments.length, 3);
 
                     // Comment 1
                     const c1 = _.find(comments, {id: comment1.id});
@@ -8421,6 +8440,32 @@ suite('Users', function () {
                     assert.property(c2r2, 'createdAt');
 
                     assert.deepEqual(c2r2.creator, creatorExpected);
+
+                    // Comment 3
+                    const c3 = _.find(comments, {id: comment3.id});
+
+                    assert.equal(c3.id, comment3.id);
+                    assert.equal(c3.type, comment3.type);
+                    assert.equal(c3.subject, comment3.subject);
+                    assert.equal(c3.text, commentText3);
+                    assert.property(c3, 'createdAt');
+                    assert.equal(c3.parent.id, comment3.id);
+
+                    assert.deepEqual(c3.creator, creatorExpected);
+
+                    // Comment 1 replies
+                    assert.equal(c3.replies.count, 1);
+                    assert.equal(c3.replies.rows.length, 1);
+
+                    const c3r1 = c3.replies.rows[0];
+
+                    assert.equal(c3r1.parent.id, comment3.id);
+                    assert.equal(c3r1.type, Comment.TYPES.reply);
+                    assert.isNull(c3r1.subject);
+                    assert.equal(c3r1.text, replyText31);
+                    assert.property(c3r1, 'createdAt');
+
+                    assert.deepEqual(c3r1.creator, creatorExpected);
                 });
 
                 test('Success - User has Moderator permissions', async function () {
@@ -8453,8 +8498,8 @@ suite('Users', function () {
                     delete creatorExpected.imageUrl; // Image url is not returned, as it's not needed for now
                     delete creatorExpected.language; // Language is not returned
 
-                    assert.equal(list.count.total, 2);
-                    assert.equal(comments.length, 2);
+                    assert.equal(list.count.total, 3);
+                    assert.equal(comments.length, 3);
 
                     // Comment 1
                     const c1 = _.find(comments, {id: comment1.id});

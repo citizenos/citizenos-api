@@ -5201,6 +5201,7 @@ module.exports = function (app) {
                     ct.id,
                     COALESCE (ctp.count, 0) AS "countPro",
                     COALESCE (ctc.count, 0) AS "countCon",
+                    COALESCE (cti.count, 0) AS "countPoi",
                     ct.type,
                     ct.parent,
                     ct.subject,
@@ -5242,6 +5243,17 @@ module.exports = function (app) {
                             AND c.type='con'
                             GROUP BY tc."topicId", c.type
                     ) ctc ON ctc."topicId" = tc."topicId"
+                    LEFT JOIN (
+                        SELECT
+                            tc."topicId",
+                            c.type,
+                            COUNT(c.type) AS count
+                            FROM "TopicComments" tc
+                            JOIN "Comments" c ON c.id = tc."commentId" AND c.id=c."parentId"
+                            WHERE tc."topicId" = :topicId
+                            AND c.type='poi'
+                            GROUP BY tc."topicId", c.type
+                    ) cti ON cti."topicId" = tc."topicId"
                 WHERE tc."topicId" = :topicId
                 ORDER BY ${orderByComments}
                 LIMIT :limit
@@ -5268,21 +5280,25 @@ module.exports = function (app) {
 
             let countPro = 0;
             let countCon = 0;
+            let countPoi = 0;
 
             if (comments.length) {
                 countPro = comments[0].countPro;
                 countCon = comments[0].countCon;
+                countPoi = comments[0].countPoi;
             }
             comments.forEach(function (comment) {
                 delete comment.countPro;
                 delete comment.countCon;
+                delete comment.countPoi;
             });
 
             return res.ok({
                 count: {
                     pro: countPro,
                     con: countCon,
-                    total: countCon + countPro
+                    poi: countPoi,
+                    total: countCon + countPro + countPoi
                 },
                 rows: comments
             });
