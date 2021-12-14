@@ -4351,7 +4351,7 @@ module.exports = function (app) {
             let invalidLink = false;
             switch (source) {
                 case Attachment.SOURCES.dropbox:
-                    if (['www.dropbox.com', 'dropbox.com'].indexOf(urlObject.hostname) === -1 ) {
+                    if (['www.dropbox.com', 'dropbox.com'].indexOf(urlObject.hostname) === -1) {
                         invalidLink = true;
                     }
                     break;
@@ -4811,7 +4811,7 @@ module.exports = function (app) {
     /**
      * Create Topic Comment
      */
-    app.post('/api/users/:userId/topics/:topicId/comments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/comments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), asyncMiddleware(async function (req, res, next) {
         let type = req.body.type;
         const parentId = req.body.parentId;
         const parentVersion = req.body.parentVersion;
@@ -4845,101 +4845,95 @@ module.exports = function (app) {
             comment.parentVersion = parentVersion;
         }
 
-        try {
-            await db
-                .transaction(async function (t) {
-                    await comment.save({transaction: t});
-                    //comment.edits.createdAt = JSON.stringify(comment.createdAt);
-                    const topic = await Topic.findOne({
+        const resComment = await db
+            .transaction(async function (t) {
+                await comment.save({transaction: t});
+                //comment.edits.createdAt = JSON.stringify(comment.createdAt);
+                const topic = await Topic.findOne({
+                    where: {
+                        id: req.params.topicId
+                    },
+                    transaction: t
+                });
+
+                if (parentId) {
+                    const parentComment = await Comment.findOne({
                         where: {
-                            id: req.params.topicId
+                            id: parentId
                         },
                         transaction: t
                     });
 
-                    if (parentId) {
-                        const parentComment = await Comment.findOne({
-                            where: {
-                                id: parentId
-                            },
-                            transaction: t
-                        });
-
-                        if (parentComment) {
-                            await cosActivities
-                                .replyActivity(
-                                    comment,
-                                    parentComment,
-                                    topic,
-                                    {
-                                        type: 'User',
-                                        id: req.user.userId,
-                                        ip: req.ip
-                                    }
-                                    , req.method + ' ' + req.path,
-                                    t
-                                );
-                        } else {
-                            return res.notFound();
-                        }
-                    } else {
+                    if (parentComment) {
                         await cosActivities
-                            .createActivity(
+                            .replyActivity(
                                 comment,
+                                parentComment,
                                 topic,
                                 {
                                     type: 'User',
                                     id: req.user.userId,
                                     ip: req.ip
-                                },
-                                req.method + ' ' + req.path,
+                                }
+                                , req.method + ' ' + req.path,
                                 t
                             );
+                    } else {
+                        return res.notFound();
                     }
-
-                    await TopicComment
-                        .create(
+                } else {
+                    await cosActivities
+                        .createActivity(
+                            comment,
+                            topic,
                             {
-                                topicId: req.params.topicId,
-                                commentId: comment.id
+                                type: 'User',
+                                id: req.user.userId,
+                                ip: req.ip
                             },
-                            {
-                                transaction: t
-                            }
+                            req.method + ' ' + req.path,
+                            t
                         );
+                }
 
-                    const c = await db.query(
-                        `
+                await TopicComment
+                    .create(
+                        {
+                            topicId: req.params.topicId,
+                            commentId: comment.id
+                        },
+                        {
+                            transaction: t
+                        }
+                    );
+
+                const c = await db.query(
+                    `
                             UPDATE "Comments"
                                 SET edits = jsonb_set(edits, '{0,createdAt}', to_jsonb("createdAt"))
                                 WHERE id = :commentId
                                 RETURNING *;
                         `,
-                        {
-                            replacements: {
-                                commentId: comment.id
-                            },
-                            type: db.QueryTypes.UPDATE,
-                            raw: true,
-                            nest: true,
-                            transaction: t
-                        }
-                    );
+                    {
+                        replacements: {
+                            commentId: comment.id
+                        },
+                        type: db.QueryTypes.UPDATE,
+                        raw: true,
+                        nest: true,
+                        transaction: t
+                    }
+                );
 
-                    c[0][0].edits.forEach(function (edit) {
-                        edit.createdAt = new Date(edit.createdAt).toJSON();
-                    });
-
-                    const rescomment = Comment.build(c[0][0]);
-
-                    t.afterCommit(() => {
-                        return res.created(rescomment.toJSON());
-                    });
+                c[0][0].edits.forEach(function (edit) {
+                    edit.createdAt = new Date(edit.createdAt).toJSON();
                 });
-        } catch (err) {
-            return next(err);
-        }
-    });
+
+                return Comment.build(c[0][0]);
+            });
+
+        return res.created(resComment.toJSON());
+    }));
 
     const topicCommentsList = async function (req, res, next) {
         const orderByValues = {

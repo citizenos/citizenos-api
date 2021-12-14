@@ -407,7 +407,7 @@ const _topicInviteUsersCreate = async function (agent, userId, topicId, invites,
         .replace(':userId', userId)
         .replace(':topicId', topicId);
 
-    const request  = agent
+    const request = agent
         .post(path)
         .send(invites)
         .set('Content-Type', 'application/json')
@@ -8112,19 +8112,19 @@ suite('Users', function () {
                     topic = (await topicCreate(agent, user.id, null, null, null, null, null)).body.data;
                 });
 
-                test('Success', async function () {
+                test('Success - type=pro with reply', async function () {
                     const type = Comment.TYPES.pro;
-                    const subject = 'My sub';
-                    const text = 'Wohoo!';
+                    const subject = `Test ${type} comment subject`;
+                    const text = `Test ${type} comment text`;
 
-                    const comment = (await topicCommentCreate(agent, user.id, topic.id, null, null, Comment.TYPES.pro, subject, text)).body.data;
+                    const comment = (await topicCommentCreate(agent, user.id, topic.id, null, null, type, subject, text)).body.data;
                     assert.property(comment, 'id');
                     assert.equal(comment.type, type);
                     assert.equal(comment.subject, subject);
                     assert.equal(comment.text, text);
                     assert.equal(comment.creator.id, user.id);
 
-                    const commentReplyText = 'Child comment';
+                    const commentReplyText = `Test Child comment for comment ${type}`;
                     const commentReply = (await topicCommentCreate(agent, user.id, topic.id, comment.id, comment.edits.length - 1, null, null, commentReplyText)).body.data;
 
                     assert.property(commentReply, 'id');
@@ -8133,6 +8133,54 @@ suite('Users', function () {
                     assert.equal(commentReply.text, commentReplyText);
                     assert.equal(commentReply.creator.id, user.id);
                     assert.equal(commentReply.parent.id, comment.id);
+                });
+
+                test('Success - type=con with reply', async function () {
+                    const type = Comment.TYPES.con;
+                    const subject = `Test ${type} comment subject`;
+                    const text = `Test ${type} comment text`;
+
+                    const comment = (await topicCommentCreate(agent, user.id, topic.id, null, null, type, subject, text)).body.data;
+                    assert.property(comment, 'id');
+                    assert.equal(comment.type, type);
+                    assert.equal(comment.subject, subject);
+                    assert.equal(comment.text, text);
+                    assert.equal(comment.creator.id, user.id);
+
+                    const commentReplyText = `Test Child comment for comment ${type}`;
+                    const commentReply = (await topicCommentCreate(agent, user.id, topic.id, comment.id, comment.edits.length - 1, null, null, commentReplyText)).body.data;
+
+                    assert.property(commentReply, 'id');
+                    assert.equal(commentReply.type, Comment.TYPES.reply);
+                    assert.notProperty(commentReply, 'subject');
+                    assert.equal(commentReply.text, commentReplyText);
+                    assert.equal(commentReply.creator.id, user.id);
+                    assert.equal(commentReply.parent.id, comment.id);
+                });
+
+                test('Success - type=poi with reply', async function () {
+                    test('Success - type=con with reply', async function () {
+                        const type = Comment.TYPES.poi;
+                        const subject = `Test ${type} comment subject`;
+                        const text = `Test ${type} comment text`;
+
+                        const comment = (await topicCommentCreate(agent, user.id, topic.id, null, null, type, subject, text)).body.data;
+                        assert.property(comment, 'id');
+                        assert.equal(comment.type, type);
+                        assert.equal(comment.subject, subject);
+                        assert.equal(comment.text, text);
+                        assert.equal(comment.creator.id, user.id);
+
+                        const commentReplyText = `Test Child comment for comment ${type}`;
+                        const commentReply = (await topicCommentCreate(agent, user.id, topic.id, comment.id, comment.edits.length - 1, null, null, commentReplyText)).body.data;
+
+                        assert.property(commentReply, 'id');
+                        assert.equal(commentReply.type, Comment.TYPES.reply);
+                        assert.notProperty(commentReply, 'subject');
+                        assert.equal(commentReply.text, commentReplyText);
+                        assert.equal(commentReply.creator.id, user.id);
+                        assert.equal(commentReply.parent.id, comment.id);
+                    });
                 });
 
                 test('Success - test quotes "">\'!<', async function () {
@@ -8147,9 +8195,6 @@ suite('Users', function () {
                     assert.equal(comment.subject, subject);
                     assert.equal(comment.text, text);
                     assert.equal(comment.creator.id, user.id);
-                });
-
-                test.skip('Success - public Topic', async function () {
                 });
 
                 test.skip('Fail - 403 - Forbidden - cannot comment on Topic you\'re not a member of or the Topic is not public', async function () {
@@ -8603,7 +8648,8 @@ suite('Users', function () {
                     const expectedBody = {
                         status: {
                             code: 40000,
-                            message: "Missing attachment link"}
+                            message: "Missing attachment link"
+                        }
                     };
                     assert.deepEqual(resBody, expectedBody);
                 });
@@ -8693,7 +8739,8 @@ suite('Users', function () {
                     const expectedBody = {
                         status: {
                             code: 40000,
-                            message: "Missing attachment name"}
+                            message: "Missing attachment name"
+                        }
                     };
                     assert.deepEqual(resBody, expectedBody);
                 });
@@ -8772,7 +8819,12 @@ suite('Users', function () {
                     };
 
                     const resBody = (await _uploadAttachmentFile(creatorAgent, creator.id, topic.id, expectedAttachment, 403)).body;
-                    assert.deepEqual(resBody, {"status":{"code":40300,"message":"File type application/x-msdos-program is invalid"}})
+                    assert.deepEqual(resBody, {
+                        "status": {
+                            "code": 40300,
+                            "message": "File type application/x-msdos-program is invalid"
+                        }
+                    })
                 });
 
                 test('Fail - invalid format .exe with text/plain header', async function () {
@@ -8786,52 +8838,62 @@ suite('Users', function () {
                     };
 
                     const request = creatorAgent
-                        .post( '/api/users/:userId/topics/:topicId/attachments/upload'
-                        .replace(':userId', creator.id)
-                        .replace(':topicId', topic.id));
+                        .post('/api/users/:userId/topics/:topicId/attachments/upload'
+                            .replace(':userId', creator.id)
+                            .replace(':topicId', topic.id));
 
-                        Object.keys(attachment).forEach(function (key) {
-                            request.field(key, attachment[key])
-                        });
+                    Object.keys(attachment).forEach(function (key) {
+                        request.field(key, attachment[key])
+                    });
 
                     const res = await request
-                        .attach("name", attachment.file,{ contentType: 'text/plain' })
+                        .attach("name", attachment.file, {contentType: 'text/plain'})
                         .set('Content-Type', 'multipart/form-data')
                         .expect(403);
 
-                    assert.deepEqual(res.body, {"status":{"code":40300,"message":"File type text/plain is invalid"}});
+                    assert.deepEqual(res.body, {
+                        "status": {
+                            "code": 40300,
+                            "message": "File type text/plain is invalid"
+                        }
+                    });
                 });
 
                 test('Fail - invalid format .exe with .txt filename', async function () {
                     const file = path.join(__dirname, '/uploads/test.exe');
 
                     const request = creatorAgent
-                        .post( '/api/users/:userId/topics/:topicId/attachments/upload'
-                        .replace(':userId', creator.id)
-                        .replace(':topicId', topic.id));
+                        .post('/api/users/:userId/topics/:topicId/attachments/upload'
+                            .replace(':userId', creator.id)
+                            .replace(':topicId', topic.id));
 
                     request.field('folder', 'test');
 
                     const res = await request
-                        .attach("name",file,{ contentType: 'text/plain' })
+                        .attach("name", file, {contentType: 'text/plain'})
                         .set('Content-Type', 'multipart/form-data')
                         .expect(403);
 
-                    assert.deepEqual(res.body, {"status":{"code":40300,"message":"File type text/plain is invalid"}});
+                    assert.deepEqual(res.body, {
+                        "status": {
+                            "code": 40300,
+                            "message": "File type text/plain is invalid"
+                        }
+                    });
                 });
 
                 test('Fail - invalid format file without extension', async function () {
                     const file = path.join(__dirname, '/uploads/test');
 
                     const request = creatorAgent
-                        .post( '/api/users/:userId/topics/:topicId/attachments/upload'
-                        .replace(':userId', creator.id)
-                        .replace(':topicId', topic.id));
+                        .post('/api/users/:userId/topics/:topicId/attachments/upload'
+                            .replace(':userId', creator.id)
+                            .replace(':topicId', topic.id));
 
                     request.field('folder', 'test');
 
                     return request
-                        .attach("name",file,{ contentType: 'text/plain' })
+                        .attach("name", file, {contentType: 'text/plain'})
                         .set('Content-Type', 'multipart/form-data')
                         .expect(403);
                 });
