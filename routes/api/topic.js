@@ -5321,136 +5321,124 @@ module.exports = function (app) {
      * Delete Topic Comment
      */
     app.delete('/api/users/:userId/topics/:topicId/comments/:commentId', loginCheck(['partner']), isCommentCreator(), hasPermission(TopicMemberUser.LEVELS.admin, false, null, true));
-//WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition
-//NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
-    app.delete('/api/users/:userId/topics/:topicId/comments/:commentId', async function (req, res, next) {
-        try {
-            await db
-                .transaction(async function (t) {
-                    const comment = await Comment.findOne({
+
+    //WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition
+    //NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
+    app.delete('/api/users/:userId/topics/:topicId/comments/:commentId', asyncMiddleware(async function (req, res, next) {
+        await db
+            .transaction(async function (t) {
+                const comment = await Comment.findOne({
+                    where: {
+                        id: req.params.commentId
+                    },
+                    include: [Topic]
+                });
+
+                comment.deletedById = req.user.userId;
+
+                await comment.save({
+                    transaction: t
+                });
+
+                await cosActivities
+                    .deleteActivity(
+                        comment,
+                        comment.Topics[0],
+                        {
+                            type: 'User',
+                            id: req.user.userId,
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
+                await Comment
+                    .destroy({
                         where: {
                             id: req.params.commentId
                         },
-                        include: [Topic]
-                    });
-
-                    comment.deletedById = req.user.userId;
-
-                    await comment.save({
                         transaction: t
                     });
+            });
 
-                    await cosActivities
-                        .deleteActivity(
-                            comment,
-                            comment.Topics[0],
-                            {
-                                type: 'User',
-                                id: req.user.userId,
-                                ip: req.ip
-                            },
-                            req.method + ' ' + req.path,
-                            t
-                        );
-                    await Comment
-                        .destroy({
-                            where: {
-                                id: req.params.commentId
-                            },
-                            transaction: t
-                        });
-
-                    t.afterCommit(function () {
-                        return res.ok();
-                    });
-                });
-
-        } catch (err) {
-            return next(err);
-        }
-    });
-
+        return res.ok();
+    }));
 
     app.put('/api/users/:userId/topics/:topicId/comments/:commentId', loginCheck(['partner']), isCommentCreator());
-//WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition.
-//NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
-    app.put('/api/users/:userId/topics/:topicId/comments/:commentId', async function (req, res, next) {
+
+    //WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition.
+    //NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
+    app.put('/api/users/:userId/topics/:topicId/comments/:commentId', asyncMiddleware(async function (req, res, next) {
         const subject = req.body.subject;
         const text = req.body.text;
         let type = req.body.type;
         const commentId = req.params.commentId;
-        try {
-            const comment = await Comment.findOne({
-                where: {
-                    id: commentId
-                },
-                include: [Topic]
-            });
-            const now = moment().format();
-            const edits = comment.edits;
 
-            if (text === comment.text && subject === comment.subject && type === comment.type) {
-                return res.ok();
-            }
-            if (!type || comment.type === Comment.TYPES.reply) {
-                type = comment.type;
-            }
-            edits.push({
-                text: text,
-                subject: subject,
-                createdAt: now,
-                type: type
-            });
-            comment.set('edits', null);
-            comment.set('edits', edits);
-            comment.subject = subject;
-            comment.text = text;
-            comment.type = type;
+        const comment = await Comment.findOne({
+            where: {
+                id: commentId
+            },
+            include: [Topic]
+        });
+        const now = moment().format();
+        const edits = comment.edits;
 
-            await db
-                .transaction(async function (t) {
-                    const topic = comment.Topics[0];
-                    delete comment.Topic;
+        if (text === comment.text && subject === comment.subject && type === comment.type) {
+            return res.ok();
+        }
+        if (!type || comment.type === Comment.TYPES.reply) {
+            type = comment.type;
+        }
+        edits.push({
+            text: text,
+            subject: subject,
+            createdAt: now,
+            type: type
+        });
+        comment.set('edits', null);
+        comment.set('edits', edits);
+        comment.subject = subject;
+        comment.text = text;
+        comment.type = type;
 
-                    await cosActivities
-                        .updateActivity(comment, topic, {
-                            type: 'User',
-                            id: req.user.userId,
-                            ip: req.ip
-                        }, null, req.method + ' ' + req.path, t);
-                    await comment.save({
-                        transaction: t
-                    });
+        await db
+            .transaction(async function (t) {
+                const topic = comment.Topics[0];
+                delete comment.Topic;
 
-                    await db
-                        .query(
-                            `
+                await cosActivities
+                    .updateActivity(comment, topic, {
+                        type: 'User',
+                        id: req.user.userId,
+                        ip: req.ip
+                    }, null, req.method + ' ' + req.path, t);
+                await comment.save({
+                    transaction: t
+                });
+
+                await db
+                    .query(
+                        `
                                 UPDATE "Comments"
                                     SET edits = jsonb_set(edits, '{:pos,createdAt}', to_jsonb("updatedAt"))
                                     WHERE id = :commentId
                                     RETURNING *;
                             `,
-                            {
-                                replacements: {
-                                    commentId: commentId,
-                                    pos: comment.edits.length - 1
-                                },
-                                type: db.QueryTypes.UPDATE,
-                                raw: true,
-                                nest: true,
-                                transaction: t
-                            }
-                        );
-                    t.afterCommit(() => {
-                        return res.ok();
-                    });
-                });
-        } catch (err) {
-            logger.error(err);
+                        {
+                            replacements: {
+                                commentId: commentId,
+                                pos: comment.edits.length - 1
+                            },
+                            type: db.QueryTypes.UPDATE,
+                            raw: true,
+                            nest: true,
+                            transaction: t
+                        }
+                    );
+            });
 
-            return next(err);
-        }
-    });
+        return res.ok();
+    }));
 
     const topicCommentsReportsCreate = async function (req, res, next) {
         const commentId = req.params.commentId;
@@ -5524,11 +5512,10 @@ module.exports = function (app) {
     /**
      * Read Report
      */
-    app.get(['/api/topics/:topicId/comments/:commentId/reports/:reportId', '/api/users/:userId/topics/:topicId/comments/:commentId/reports/:reportId'], authTokenRestrictedUse, async function (req, res, next) {
-        try {
-            const results = await db
-                .query(
-                    `
+    app.get(['/api/topics/:topicId/comments/:commentId/reports/:reportId', '/api/users/:userId/topics/:topicId/comments/:commentId/reports/:reportId'], authTokenRestrictedUse, asyncMiddleware(async function (req, res, next) {
+        const results = await db
+            .query(
+                `
                         SELECT
                             r."id",
                             r."type",
@@ -5544,40 +5531,37 @@ module.exports = function (app) {
                         AND c.id = :commentId
                         AND r."deletedAt" IS NULL
                     ;`,
-                    {
-                        replacements: {
-                            commentId: req.params.commentId,
-                            reportId: req.params.reportId
-                        },
-                        type: db.QueryTypes.SELECT,
-                        raw: true,
-                        nest: true
-                    }
-                );
+                {
+                    replacements: {
+                        commentId: req.params.commentId,
+                        reportId: req.params.reportId
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
 
-            if (!results || !results.length) {
-                return res.notFound();
-            }
-
-            const commentReport = results[0];
-
-            return res.ok(commentReport);
-        } catch (err) {
-            return next(err);
+        if (!results || !results.length) {
+            return res.notFound();
         }
-    });
 
-    app.post('/api/topics/:topicId/comments/:commentId/reports/:reportId/moderate', authTokenRestrictedUse, async function (req, res, next) {
+        const commentReport = results[0];
+
+        return res.ok(commentReport);
+    }));
+
+    app.post('/api/topics/:topicId/comments/:commentId/reports/:reportId/moderate', authTokenRestrictedUse, asyncMiddleware(async function (req, res, next) {
         const eventTokenData = req.locals.tokenDecoded;
         const type = req.body.type;
 
         if (!type) {
             return res.badRequest({type: 'Property type is required'});
         }
-        try {
-            const commentReport = (await db
-                .query(
-                    `
+
+        const commentReport = (await db
+            .query(
+                `
                         SELECT
                             c."id" as "comment.id",
                             c."updatedAt" as "comment.updatedAt",
@@ -5590,88 +5574,83 @@ module.exports = function (app) {
                         AND c."deletedAt" IS NULL
                         AND r."deletedAt" IS NULL
                     ;`,
+                {
+                    replacements: {
+                        commentId: req.params.commentId,
+                        reportId: req.params.reportId
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            ))[0];
+
+        if (!commentReport) {
+            return res.notFound();
+        }
+
+        let comment = commentReport.comment;
+        const report = commentReport.report;
+
+        // If Comment has been updated since the Report was made, deny moderation cause the text may have changed.
+        if (comment.updatedAt.getTime() > report.createdAt.getTime()) {
+            return res.badRequest('Report has become invalid cause comment has been updated after the report', 10);
+        }
+
+        comment = await Comment.findOne({
+            where: {
+                id: comment.id
+            },
+            include: [Topic]
+        });
+
+        const topic = comment.dataValues.Topics[0];
+        delete comment.dataValues.Topics;
+        comment.deletedById = eventTokenData.userId;
+        comment.deletedAt = db.fn('NOW');
+        comment.deletedReasonType = req.body.type;
+        comment.deletedReasonText = req.body.text;
+        comment.deletedByReportId = report.id;
+
+        await db
+            .transaction(async function (t) {
+                await cosActivities
+                    .updateActivity(comment, topic, {
+                        type: 'Moderator',
+                        id: eventTokenData.userId,
+                        ip: req.ip
+                    }, null, req.method + ' ' + req.path, t);
+                let c = (await Comment.update(
                     {
-                        replacements: {
-                            commentId: req.params.commentId,
-                            reportId: req.params.reportId
+                        deletedById: eventTokenData.userId,
+                        deletedAt: db.fn('NOW'),
+                        deletedReasonType: req.body.type,
+                        deletedReasonText: req.body.text,
+                        deletedByReportId: report.id
+                    },
+                    {
+                        where: {
+                            id: comment.id
                         },
-                        type: db.QueryTypes.SELECT,
-                        raw: true,
-                        nest: true
+                        returning: true
+                    },
+                    {
+                        transaction: t
                     }
-                ))[0];
+                ))[1];
 
-            if (!commentReport) {
-                return res.notFound();
-            }
+                c = Comment.build(c.dataValues);
 
-            let comment = commentReport.comment;
-            const report = commentReport.report;
-
-            // If Comment has been updated since the Report was made, deny moderation cause the text may have changed.
-            if (comment.updatedAt.getTime() > report.createdAt.getTime()) {
-                return res.badRequest('Report has become invalid cause comment has been updated after the report', 10);
-            }
-
-            comment = await Comment.findOne({
-                where: {
-                    id: comment.id
-                },
-                include: [Topic]
+                await cosActivities
+                    .deleteActivity(c, topic, {
+                        type: 'Moderator',
+                        id: eventTokenData.userId,
+                        ip: req.ip
+                    }, req.method + ' ' + req.path, t);
             });
 
-            const topic = comment.dataValues.Topics[0];
-            delete comment.dataValues.Topics;
-            comment.deletedById = eventTokenData.userId;
-            comment.deletedAt = db.fn('NOW');
-            comment.deletedReasonType = req.body.type;
-            comment.deletedReasonText = req.body.text;
-            comment.deletedByReportId = report.id;
-
-            await db
-                .transaction(async function (t) {
-                    await cosActivities
-                        .updateActivity(comment, topic, {
-                            type: 'Moderator',
-                            id: eventTokenData.userId,
-                            ip: req.ip
-                        }, null, req.method + ' ' + req.path, t);
-                    let c = (await Comment.update(
-                        {
-                            deletedById: eventTokenData.userId,
-                            deletedAt: db.fn('NOW'),
-                            deletedReasonType: req.body.type,
-                            deletedReasonText: req.body.text,
-                            deletedByReportId: report.id
-                        },
-                        {
-                            where: {
-                                id: comment.id
-                            },
-                            returning: true
-                        },
-                        {
-                            transaction: t
-                        }
-                    ))[1];
-
-                    c = Comment.build(c.dataValues);
-
-                    await cosActivities
-                        .deleteActivity(c, topic, {
-                            type: 'Moderator',
-                            id: eventTokenData.userId,
-                            ip: req.ip
-                        }, req.method + ' ' + req.path, t);
-
-                    t.afterCommit(() => {
-                        return res.ok();
-                    });
-                });
-        } catch (err) {
-            return next(err);
-        }
-    });
+        return res.ok();
+    }));
 
     const topicMentionsList = async function (req, res, next) {
         let hashtag = null;
