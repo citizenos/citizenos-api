@@ -2354,6 +2354,10 @@ suite('Users', function () {
                 await _topicUpdate(agent, u.id, topic.id, topicStatusNew, topicVisibilityNew, null, null, null, 403);
             });
 
+            test('Fail - Cannot update content when status is not inProgress', async function () {
+                await topicUpdate(agent, user.id, topic.id, Topic.STATUSES.followUp, Topic.VISIBILITY.private, null, null, null);
+                await _topicUpdateField(agent, user.id, topic.id, {description: '<html><body><h1>New content</h1></body></html>'}, 400);
+            });
         });
 
         suite('Delete', function () {
