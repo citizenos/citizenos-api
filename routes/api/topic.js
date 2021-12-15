@@ -1771,15 +1771,19 @@ module.exports = function (app) {
 
 
                     if (req.body.description) {
-                        await cosEtherpad
-                            .updateTopic(
-                                topicId,
-                                req.body.description
-                            );
+                        if (topic.status === Topic.STATUSES.inProgress) {
+                            await cosEtherpad
+                                .updateTopic(
+                                    topicId,
+                                    req.body.description
+                                );
+                        } else {
+                            return res.badRequest(`Cannot update Topic content when status ${topic.status}`);
+                        }
                     }
                 });
 
-            if (req.body.description) {
+            if (req.body.description && topic.status === Topic.STATUSES.inProgress) {
                 await cosEtherpad
                     .syncTopicWithPad(
                         topicId,
