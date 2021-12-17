@@ -13,12 +13,14 @@ module.exports = function (app) {
 
     const _getSignedUrl = async function (filename, params) {
         try {
+            const s3 = new AWS.S3(credentials);
+            const bucket = config.storage.bucket;
+
             const s3Params = {
                 Bucket: bucket,
                 Key: filename
             };
 
-            const s3 = new AWS.S3(credentials);
             const data = await s3.getSignedUrlPromise('putObject', Object.assign(s3Params, params));
 
             return {
@@ -34,21 +36,15 @@ module.exports = function (app) {
     };
 
     const _deleteFile = async function (filename) {
-        try {
-            const s3 = new AWS.S3();
-            const bucket = config.storage.bucket;
+        const s3 = new AWS.S3(credentials);
+        const bucket = config.storage.bucket;
 
-            const params = {
-                Bucket: bucket,
-                Key: filename
-            };
+        const params = {
+            Bucket: bucket,
+            Key: filename
+        };
 
-            return s3.deleteObjectPromise(params);
-        } catch (err) {
-            logger.error(err);
-            return err;
-        }
-
+        return s3.deleteObject(params).promise();
     };
 
 

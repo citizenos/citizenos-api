@@ -7,6 +7,8 @@ module.exports = function (app) {
     const path = require('path');
     const logger = app.get('logger');
     const uuid = app.get('uuid');
+    const cosS3 = app.get('cosS3');
+    const fs = require('fs');
 
     const _drainStream = function (stream) {
         stream.on('readable', stream.read.bind(stream));
@@ -117,7 +119,19 @@ module.exports = function (app) {
 
     };
 
+    const _delete = async function (pathname) {
+        if(config.storage?.type.toLowerCase() === 's3') {
+            return cosS3.deleteFile(pathname.substr(1));
+        } else if (config.storage?.type.toLowerCase() === 'local') {
+            const appDir = __dirname.replace('/libs', '/public');
+            const baseFolder = config.storage.baseFolder || appDir;
+
+            return fs.unlinkAsync(path.join(baseFolder, pathname));
+        }
+    }
+
     return {
-        upload: _upload
+        upload: _upload,
+        delete: _delete
     }
 };
