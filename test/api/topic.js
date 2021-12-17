@@ -919,26 +919,6 @@ const topicAttachmentListUnauth = async function (agent, topicId) {
     return _topicAttachmentListUnauth(agent, topicId, 200);
 };
 
-const _topicAttachmentSignDownload = async function (agent, userId, uploadfilename, uploadfolder, downloadfilename, expectedHttpCode) {
-    const path = '/api/users/:userId/upload/signdownload'
-        .replace(':userId', userId);
-
-    return agent
-        .get(path)
-        .query({
-            filename: uploadfilename,
-            folder: uploadfolder,
-            downloadName: downloadfilename
-        })
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/);
-};
-
-//TODO: Missing test to use it?
-const topicAttachmentSignDownload = async function (agent, userId, uploadfilename, uploadfolder, downloadfilename) { //eslint-disable-line no-unused-vars
-    return _topicAttachmentSignDownload(agent, userId, uploadfilename, uploadfolder, downloadfilename, 200);
-};
-
 const _topicMentionList = async function (agent, userId, topicId, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/mentions'
         .replace(':userId', userId)
