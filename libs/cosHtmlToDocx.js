@@ -13,7 +13,8 @@ const fs = require('fs');
 const fsExtra = require('fs-extra');
 const https = require('https');
 const path = require('path');
-const sizeOf = require('image-size')
+const sizeOf = require('image-size');
+const mime = require('mime-types');
 const { AlignmentType, Document, HeadingLevel, Packer, Paragraph, TextRun, ImageRun, LevelFormat} = docx;
 
 const _addStyles = function (params) {
@@ -135,16 +136,24 @@ const getFileNameFromPath = function (path) {
     if (!path) {
         return null;
     }
-    if (path.indexOf('data') === 0) {
-        const name = path.split(';base64,').pop().substr(0, 7).replace(/\//g, '_');
-        const extension = path.split(';base64,')[0].split('/')[1];
-
+    const pathSanitized = path.replace(/\\/g, '_');
+    if (pathSanitized.indexOf('data') === 0) {
+        const name = pathSanitized.split(';base64,').pop().substr(0, 7).replace(/\//g, '_');
+        const extension = pathSanitized.split(';base64,')[0].split('/')[1];
         return name + '.' + extension;
     }
 
-    return path.split('/').pop().split('#')[0].split('?')[0];
+    return pathSanitized.split('/').pop().split('#')[0].split('?')[0];
 };
 
+const validateFilename = (name) => {
+    const mimetype = mime.lookup(name);
+    if (mimetype && mimetype.indexOf('image/') === 0) {
+        return true;
+    }
+
+    return false;
+}
 const getImageFile = async function (url, dirpath) {
     const fileDirPath = getFilesPath(dirpath);
 
@@ -152,32 +161,40 @@ const getImageFile = async function (url, dirpath) {
         return fsExtra.ensureDir(fileDirPath, {mode: '0760'}, function () {
             const filename = getFileNameFromPath(url);
             const filepath = path.join(fileDirPath, filename);
+            try {
+                if (validateFilename(filename)) {
+                    if (url.indexOf('data') === 0) {
+                        const imageData = url.split(';base64,').pop();
+                        fs.writeFile(filepath, imageData, {encoding: 'base64'}, function (err) {
+                            if (err) {
+                                console.log(err);
+                                fs.unlink(filepath, function ()  {
+                                    return reject(err);
+                                });
+                            }
 
-            if (url.indexOf('data') === 0) {
-                const imageData = url.split(';base64,').pop();
+                            return resolve(filepath);
+                        });
+                    } else {
+                        const file = fs.createWriteStream(filepath);
+                        https.get(url, function (response) {
+                            response.pipe(file);
+                            file.on('finish', function () {
+                                file.close();
 
-                fs.writeFile(filepath, imageData, {encoding: 'base64'}, function (err) {
-                    if (err) {
-                        fs.unlink(filepath);
-
-                        return reject(err);
+                                return resolve(filepath);
+                            });
+                        }).on('error', function (err) { // Handle errors
+                            console.log(err);
+                            fs.unlink(filepath, function ()  {
+                                return reject(err);
+                            });
+                        });
                     }
-
-                    return resolve(filepath);
-                });
-            } else {
-                const file = fs.createWriteStream(filepath);
-                https.get(url, function (response) {
-                    response.pipe(file);
-                    file.on('finish', function () {
-                        file.close();
-
-                        return resolve(filepath);
-                    });
-                }).on('error', function (err) { // Handle errors
-                    console.error(err);
-                    return fs.unlink(filepath, reject(err));
-                });
+                } else return resolve(false);
+            }catch (err) {
+                console.log(err)
+                return reject(err);
             }
         });
     });
@@ -383,14 +400,21 @@ function CosHtmlToDocx (html, title, resPath) {
     }
 
     const scaleImage = (path) => {
-        var dimensions = sizeOf(path);
-        if (dimensions.width > 605) {
-            const scale = (605/dimensions.width)*100/100;
-            dimensions.width = Math.round(dimensions.width * scale);
-            dimensions.height = Math.round(dimensions.height * scale);
+        try {
+            let dimensions = sizeOf(path);
+            if (dimensions.width > 605) {
+                const scale = (605/dimensions.width)*100/100;
+                dimensions.width = Math.round(dimensions.width * scale);
+                dimensions.height = Math.round(dimensions.height * scale);
+            }
+
+            return dimensions;
+        } catch (err) {
+            console.log('ERROR', err);
+            console.log(path);
+            fs.unlink(path);
         }
 
-        return dimensions;
     };
 
     const _getParagraphStyle = async function (item, attributes) {
@@ -404,19 +428,21 @@ function CosHtmlToDocx (html, title, resPath) {
 
         if (_isElement(item, 'img')) {
             const path = await getImageFile(item.attribs.src, resPath);
-            const imagesize = scaleImage(path);
-            const image = {
-                children: [
-                    new ImageRun({
-                        data: fs.readFileSync(path),
-                        transformation: {
-                            width: imagesize.width,
-                            height: imagesize.height,
-                        },
-                    })
-            ]};
+            if (path) {
+                const imagesize = scaleImage(path);
+                const image = {
+                    children: [
+                        new ImageRun({
+                            data: fs.readFileSync(path),
+                            transformation: {
+                                width: imagesize.width,
+                                height: imagesize.height,
+                            },
+                        })
+                ]};
 
-            finalParagraphs.push(new Paragraph(image));
+                finalParagraphs.push(new Paragraph(image));
+            }
 
             return null;
         }
