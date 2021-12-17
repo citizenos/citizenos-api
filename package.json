@@ -14,9 +14,8 @@
     "dbstatus": "./node_modules/.bin/sequelize db:migrate:status",
     "dbmigrate": "./node_modules/.bin/sequelize db:migrate",
     "dbrollback": "./node_modules/.bin/sequelize db:migrate:undo",
-    "precommit": "./bin/hooks/no-unresolved-conflicts.sh",
-    "prepush": "./node_modules/.bin/grunt eslint",
-    "docs": "./node_modules/.bin/grunt docs"
+    "docs": "./node_modules/.bin/grunt docs",
+    "prepare": "husky install"
   },
   "dependencies": {
     "archiver": "5.3.0",
