@@ -56,7 +56,7 @@ if (config.rateLimit && config.rateLimit.storageType === 'redis') {
         prefix: 'sl'
     });
 }
->>>>>>>>>>>>>>>>
+
 const rateLimiter = function (allowedRequests, blockTime, skipSuccess) {
     return new RateLimit({
         store: rateLimitStore,
