@@ -8607,13 +8607,7 @@ suite('Users', function () {
             });
 
             suite('Reports', function () {
-
-                suite('Create', async function () {
-                    test.skip('Implement!', async function () {
-                        // FIXME: Implement all Comment report tests
-                    });
-                });
-
+                // See the tests for unauthenticated reports - Topics Comments Reports
             });
 
         });
