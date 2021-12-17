@@ -1,7 +1,7 @@
 'use strict';
 
-var _ = require('lodash');
-var hooks = require('../../libs/sequelize/hooks');
+const _ = require('lodash');
+const hooks = require('../../libs/sequelize/hooks');
 
 /**
  * Comment
@@ -14,13 +14,14 @@ var hooks = require('../../libs/sequelize/hooks');
  * @see http://sequelizejs.com/docs/latest/models
  */
 module.exports = function (sequelize, DataTypes) {
-    var TYPES = {
+    const TYPES = {
         pro: 'pro',
         con: 'con',
+        poi: 'poi', // Point of Information - https://github.com/citizenos/citizenos-fe/issues/329
         reply: 'reply'
     };
 
-    var DELETE_REASON_TYPES = { // Copy of Report reason types until Sequelize supports ENUM reuse - https://github.com/sequelize/sequelize/issues/2577
+    const DELETE_REASON_TYPES = { // Copy of Report reason types until Sequelize supports ENUM reuse - https://github.com/sequelize/sequelize/issues/2577
         abuse: 'abuse', // is abusive or insulting
         obscene: 'obscene', // contains obscene language
         spam: 'spam', // contains spam or is unrelated to topic
@@ -29,7 +30,7 @@ module.exports = function (sequelize, DataTypes) {
         duplicate: 'duplicate' // duplicate
     };
 
-    var Comment = sequelize.define(
+    const Comment = sequelize.define(
         'Comment',
         {
             id: {
@@ -158,7 +159,7 @@ module.exports = function (sequelize, DataTypes) {
     Comment.prototype.toJSON = function () {
         // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
 
-        var data = {
+        const data = {
             id: this.dataValues.id,
             type: this.dataValues.type,
             text: this.dataValues.text,

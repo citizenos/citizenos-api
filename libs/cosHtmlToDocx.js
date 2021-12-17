@@ -15,7 +15,7 @@ const https = require('https');
 const path = require('path');
 const sizeOf = require('image-size');
 const mime = require('mime-types');
-const { AlignmentType, Document, HeadingLevel, Packer, Paragraph, TextRun, ImageRun, LevelFormat} = docx;
+const {AlignmentType, Document, HeadingLevel, Packer, Paragraph, TextRun, ImageRun, LevelFormat} = docx;
 
 const _addStyles = function (params) {
     params.styles = {
@@ -64,7 +64,10 @@ const _addStyles = function (params) {
                         alignment: AlignmentType.LEFT,
                         style: {
                             paragraph: {
-                                indent: { left: 720, hanging: 260 },
+                                indent: {
+                                    left: 720,
+                                    hanging: 260
+                                },
                             },
                         },
                     },
@@ -74,7 +77,10 @@ const _addStyles = function (params) {
                         alignment: AlignmentType.LEFT,
                         style: {
                             paragraph: {
-                                indent: { left: 1440, hanging: 980 },
+                                indent: {
+                                    left: 1440,
+                                    hanging: 980
+                                },
                             },
                         },
                     },
@@ -84,7 +90,10 @@ const _addStyles = function (params) {
                         alignment: AlignmentType.LEFT,
                         style: {
                             paragraph: {
-                                indent: { left: 2160, hanging: 1700 },
+                                indent: {
+                                    left: 2160,
+                                    hanging: 1700
+                                },
                             },
                         },
                     },
@@ -168,7 +177,7 @@ const getImageFile = async function (url, dirpath) {
                         fs.writeFile(filepath, imageData, {encoding: 'base64'}, function (err) {
                             if (err) {
                                 console.log(err);
-                                fs.unlink(filepath, function ()  {
+                                fs.unlink(filepath, function () {
                                     return reject(err);
                                 });
                             }
@@ -186,13 +195,13 @@ const getImageFile = async function (url, dirpath) {
                             });
                         }).on('error', function (err) { // Handle errors
                             console.log(err);
-                            fs.unlink(filepath, function ()  {
+                            fs.unlink(filepath, function () {
                                 return reject(err);
                             });
                         });
                     }
                 } else return resolve(false);
-            }catch (err) {
+            } catch (err) {
                 console.log(err)
                 return reject(err);
             }
@@ -238,7 +247,10 @@ function CosHtmlToDocx (html, title, resPath) {
     this.html = html;
     this.path = resPath;
     const finalParagraphs = [];
-    let params = {creator: 'citizenos.com', sections: []};
+    let params = {
+        creator: 'citizenos.com',
+        sections: []
+    };
     if (title) {
         params.title = title;
     }
@@ -264,7 +276,7 @@ function CosHtmlToDocx (html, title, resPath) {
         let isAlign = false;
         if (element.attribs && element.attribs.class) {
             ['left', 'center', 'right'].forEach((align) => {
-                if (element.attribs.class.indexOf(align) > -1 ) {
+                if (element.attribs.class.indexOf(align) > -1) {
                     isAlign = true;
                 }
             })
@@ -331,7 +343,7 @@ function CosHtmlToDocx (html, title, resPath) {
 
     const _handleHeadingAttributes = (element, attribs) => {
         if (_isHeadingElement(element)) {
-            attribs.heading = HeadingLevel['HEADING_'+element.name.replace('h','')]
+            attribs.heading = HeadingLevel['HEADING_' + element.name.replace('h', '')]
         }
     };
 
@@ -387,15 +399,21 @@ function CosHtmlToDocx (html, title, resPath) {
         if (_isBulletListElement(element)) {
             depth = _getItemDepth(element, null, true);
             if (!attribs.bullet)
-            attribs.numbering = {reference: "bullet", level: depth};
+                attribs.numbering = {
+                    reference: "bullet",
+                    level: depth
+                };
         } else if (element.name && element.name === 'ol') {
             depth = _getItemDepth(element, null, true);
             if (!attribs.numbering)
-            attribs.numbering = {reference: "numberLi", level: depth};
+                attribs.numbering = {
+                    reference: "numberLi",
+                    level: depth
+                };
         } else if (_isIndentListElement(element)) {
             depth = _getItemDepth(element, null, true);
             if (!attribs.bullet)
-            attribs.indent = {level: depth};
+                attribs.indent = {level: depth};
         }
     }
 
@@ -403,7 +421,7 @@ function CosHtmlToDocx (html, title, resPath) {
         try {
             let dimensions = sizeOf(path);
             if (dimensions.width > 605) {
-                const scale = (605/dimensions.width)*100/100;
+                const scale = (605 / dimensions.width) * 100 / 100;
                 dimensions.width = Math.round(dimensions.width * scale);
                 dimensions.height = Math.round(dimensions.height * scale);
             }
@@ -439,7 +457,8 @@ function CosHtmlToDocx (html, title, resPath) {
                                 height: imagesize.height,
                             },
                         })
-                ]};
+                    ]
+                };
 
                 finalParagraphs.push(new Paragraph(image));
             }
@@ -482,12 +501,13 @@ function CosHtmlToDocx (html, title, resPath) {
             const textNode = attributes;
             textNode.text = decode(item.data);
 
-            if(attributes.superScript && item.parent.name !== 'sup') {
+            if (attributes.superScript && item.parent.name !== 'sup') {
                 delete attributes.superScript;
             }
 
-            children.push(new TextRun (textNode));
-        } if (item.children) {
+            children.push(new TextRun(textNode));
+        }
+        if (item.children) {
             for await (let gc of item.children) {
                 if (!_isListElement(gc))
                     await _getTextWithFormat(gc, children, attributes);
@@ -572,8 +592,7 @@ function CosHtmlToDocx (html, title, resPath) {
                     }
 
                     await _listElementHandler(tag);
-                }
-                else if (_isParagraphElement(tag)) {
+                } else if (_isParagraphElement(tag)) {
                     if (paragraphProperties) {
                         finalParagraphs.push(new Paragraph(paragraphProperties));
                         paragraphProperties = null;
@@ -583,8 +602,7 @@ function CosHtmlToDocx (html, title, resPath) {
                     });
                     if (properties)
                         finalParagraphs.push(new Paragraph(properties))
-                }
-                else if (_isTextElement(tag)) {
+                } else if (_isTextElement(tag)) {
                     if (!paragraphProperties) {
                         paragraphProperties = {
                             children: []
@@ -610,7 +628,7 @@ function CosHtmlToDocx (html, title, resPath) {
 
     this.processHTML = async function (html) {
         const processHtml = this.html || html;
-        return new Promise (function (resolve, reject) {
+        return new Promise(function (resolve, reject) {
             const handler = new htmlparser.DefaultHandler(async function (err, result) {
                 if (err) {
                     return reject(err);

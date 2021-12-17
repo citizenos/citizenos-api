@@ -1,8 +1,5 @@
 'use strict';
 
-const { fstat } = require("fs-extra");
-const cosS3 = require("../../libs/cosS3");
-
 module.exports = function (app) {
     const models = app.get('models');
     const db = models.sequelize;

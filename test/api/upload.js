@@ -39,5 +39,52 @@ const userLib = require('./lib/user')(app);
 
 // API - /api/users*
 suite('Users', function () {
+    suiteSetup(async function () {
+        return shared
+            .syncDb();
+    });
 
+    // API - /api/users/:userId/activities*
+    suite('Upload', function () {
+
+        suite('File', function () {
+            const agent = request.agent(app);
+
+            let user;
+
+            suiteSetup(async function () {
+                user = await userLib.createUserAndLogin(agent, null, null, null);
+            });
+
+            test('Success', async function () {
+                const file = path.join(__dirname, '/uploads/test.txt');
+                const fileUrl = (await uploadFile(agent, user.id, file, null, 'test')).body;
+                assert.include(fileUrl, config.url.api);
+
+                const file2 = fs.createWriteStream(path.join(__dirname, '/uploads/return.txt'));
+
+                return https.get(fileUrl, function (response) {
+                    const stream = response.pipe(file2);
+
+                    stream.on('finish', async function () {
+                        const data = await fs.readFileSync(path.join(__dirname, '/uploads/return.txt'), 'utf8');
+                        assert.equal('Test file for upload test.', data);
+                        fs.remove(path.join(__dirname, '/uploads/return.txt'));
+                        fs.remove(path.join(__dirname.replace('/test/api', '/public/uploads/'), 'test/'));
+                    });
+                });
+            });
+
+            test('Fail - invalid format', async function () {
+                const file = path.join(__dirname, '/uploads/test');
+                await _uploadFile(agent, user.id, file, 'test.exe', 'test', 403);
+            });
+
+            test('Fail - invalid format .exe', async function () {
+                const file = path.join(__dirname, '/uploads/test.exe');
+                await _uploadFile(agent, user.id, file, 'test.exe', 'test', 403);
+            });
+        });
+
+    });
 });

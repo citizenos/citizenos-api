@@ -7,7 +7,6 @@ module.exports = function (app) {
     const path = require('path');
     const logger = app.get('logger');
     const uuid = app.get('uuid');
-    const { finished } = require('stream');
 
     const _drainStream = function (stream) {
         stream.on('readable', stream.read.bind(stream));
@@ -31,7 +30,7 @@ module.exports = function (app) {
         const storageConfig = config.storage;
         let busboy;
         if (storageConfig) {
-            return new Promise (function (resolve, reject) {
+            return new Promise(function (resolve, reject) {
                 try {
                     busboy = new Busboy({
                         headers: req.headers,
@@ -62,14 +61,14 @@ module.exports = function (app) {
                     }
 
                     file.on('error', function (error) {
-                        if (!errors){
+                        if (!errors) {
                             busboy.emit('error', error);
                             errors = true;
                         }
                     });
 
-                    file.on('limit', function (err) {
-                        if (!errors){
+                    file.on('limit', function () {
+                        if (!errors) {
                             uploader.deletePartials();
                             const error = new Error('File too large');
                             error.type = 'fileSize';
@@ -109,9 +108,8 @@ module.exports = function (app) {
                             return resolve(formdata);
                         } catch (err) {
                             return reject(err);
-                        };
+                        }
                     }
-
                 });
                 req.pipe(busboy);
             });

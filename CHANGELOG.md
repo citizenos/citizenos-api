@@ -1,4 +1,9 @@
-## 2021-12.13
+## 2021-12-14
+
+* Add a new Comment type - poi (Point of Information) - https://github.com/citizenos/citizenos-fe/issues/329
+* `GET /api/users/:userId/topics/:topicId/comments` & `GET /api/topics/:topicId/comments` to return Comments with POI type - https://github.com/citizenos/citizenos-fe/issues/329
+
+## 2021-12-13
 
 * Create new API endpoint for user searching `GET /api/users/:userId/search/users` - https://github.com/citizenos/citizenos-api/issues/222
 * Remove users from general search results
