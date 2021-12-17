@@ -1,11 +1,8 @@
 'use strict';
 
-const SlowDown = require('express-slow-down');
-
 /**
  * Topic API-s (/api/../topics/..)
  */
-
 
 module.exports = function (app) {
     const config = app.get('config');
@@ -4815,7 +4812,7 @@ module.exports = function (app) {
     /**
      * Create Topic Comment
      */
-    app.post('/api/users/:userId/topics/:topicId/comments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), asyncMiddleware(async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/comments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), asyncMiddleware(async function (req, res) {
         let type = req.body.type;
         const parentId = req.body.parentId;
         const parentVersion = req.body.parentVersion;
@@ -5328,7 +5325,7 @@ module.exports = function (app) {
 
     //WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition
     //NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
-    app.delete('/api/users/:userId/topics/:topicId/comments/:commentId', asyncMiddleware(async function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/comments/:commentId', asyncMiddleware(async function (req, res) {
         await db
             .transaction(async function (t) {
                 const comment = await Comment.findOne({
@@ -5372,7 +5369,7 @@ module.exports = function (app) {
 
     //WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition.
     //NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
-    app.put('/api/users/:userId/topics/:topicId/comments/:commentId', asyncMiddleware(async function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/comments/:commentId', asyncMiddleware(async function (req, res) {
         const subject = req.body.subject;
         const text = req.body.text;
         let type = req.body.type;
@@ -5516,7 +5513,7 @@ module.exports = function (app) {
     /**
      * Read Report
      */
-    app.get(['/api/topics/:topicId/comments/:commentId/reports/:reportId', '/api/users/:userId/topics/:topicId/comments/:commentId/reports/:reportId'], authTokenRestrictedUse, asyncMiddleware(async function (req, res, next) {
+    app.get(['/api/topics/:topicId/comments/:commentId/reports/:reportId', '/api/users/:userId/topics/:topicId/comments/:commentId/reports/:reportId'], authTokenRestrictedUse, asyncMiddleware(async function (req, res) {
         const results = await db
             .query(
                 `
@@ -5555,7 +5552,7 @@ module.exports = function (app) {
         return res.ok(commentReport);
     }));
 
-    app.post('/api/topics/:topicId/comments/:commentId/reports/:reportId/moderate', authTokenRestrictedUse, asyncMiddleware(async function (req, res, next) {
+    app.post('/api/topics/:topicId/comments/:commentId/reports/:reportId/moderate', authTokenRestrictedUse, asyncMiddleware(async function (req, res) {
         const eventTokenData = req.locals.tokenDecoded;
         const type = req.body.type;
 

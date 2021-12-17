@@ -8656,7 +8656,6 @@ suite('Users', function () {
             let user;
             let topic;
             let topic2;
-            const baseURL = config.storage.baseURL || (config.url.api + '/uploads/');
 
             setup(async function () {
                 creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);

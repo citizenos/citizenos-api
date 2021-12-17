@@ -1,7 +1,5 @@
 'use strict';
 
-const { str } = require("underscore");
-
 /**
  * Search all objects (Users, Groups)
  *
