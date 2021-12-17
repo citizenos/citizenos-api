@@ -4472,6 +4472,10 @@ module.exports = function (app) {
 
             await db
                 .transaction(async function (t) {
+                    const link = new URL(attachment.link);
+                    if(attachment.source === Attachment.SOURCES.upload) {
+                        await cosUpload.delete(link.pathname);
+                    }
                     await cosActivities.deleteActivity(attachment, attachment.Topics[0], {
                         type: 'User',
                         id: req.user.userId,

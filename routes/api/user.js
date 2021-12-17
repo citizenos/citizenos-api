@@ -14,7 +14,6 @@ module.exports = function (app) {
     const moment = app.get('moment');
     const validator = app.get('validator');
     const cryptoLib = app.get('cryptoLib');
-    const cosS3 = app.get('cosS3');
     const cosUpload = app.get('cosUpload');
 
     const fs = require('fs');
@@ -33,9 +32,10 @@ module.exports = function (app) {
 
             if (user) {
                 const imageUrl = await cosUpload.upload(req, 'users');
+
                 await User.update(
                     {
-                        imageUrl: imageUrl.filename
+                        imageUrl: imageUrl.link
                     },
                     {
                         where: {
@@ -104,7 +104,7 @@ module.exports = function (app) {
                 //FIXME: No delete from DB?
                 try {
                     if(config.storage?.type.toLowerCase() === 's3' && currentImageURL.href.indexOf(`https://${config.storage.bucket}.s3.${config.storage.region}.amazonaws.com/users/`) === 0) {
-                        await cosS3.deleteFile(`${currentImageURL.pathname}`);
+                        await cosUpload.delete(currentImageURL.pathname)
                     }
                     else if (config.storage?.type.toLowerCase() === 'local' && currentImageURL.hostname === (new URL(config.url.api)).hostname) {
                         const appDir = __dirname.replace('/routes/api', '/public/uploads/users');
