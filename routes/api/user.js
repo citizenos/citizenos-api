@@ -32,9 +32,10 @@ module.exports = function (app) {
 
             if (user) {
                 const imageUrl = await cosUpload.upload(req, 'users');
+
                 await User.update(
                     {
-                        imageUrl: imageUrl.filename
+                        imageUrl: imageUrl.link
                     },
                     {
                         where: {
