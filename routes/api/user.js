@@ -31,7 +31,7 @@ module.exports = function (app) {
             });
 
             if (user) {
-                const imageUrl = await cosUpload.upload(req, 'users');
+                const imageUrl = await cosUpload.upload(req, 'users', req.user.id);
 
                 await User.update(
                     {
@@ -103,7 +103,7 @@ module.exports = function (app) {
                 const currentImageURL = new URL(user.imageUrl);
                 //FIXME: No delete from DB?
                 try {
-                    if(config.storage?.type.toLowerCase() === 's3' && currentImageURL.href.indexOf(`https://${config.storage.bucket}.s3.${config.storage.region}.amazonaws.com/users/`) === 0) {
+                    if(config.storage?.type.toLowerCase() === 's3' && currentImageURL.href.indexOf(`https://${config.storage.bucket}.s3.${config.storage.region}.amazonaws.com/users/${req.user.id}`) === 0) {
                         await cosUpload.delete(currentImageURL.pathname)
                     }
                     else if (config.storage?.type.toLowerCase() === 'local' && currentImageURL.hostname === (new URL(config.url.api)).hostname) {
