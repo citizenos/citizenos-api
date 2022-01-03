@@ -14,7 +14,7 @@ module.exports = function (app) {
         stream.on('readable', stream.read.bind(stream));
     };
 
-    const _upload = function (req, folderName) {
+    const _upload = function (req, folderName, filename) {
         const appDir = __dirname.replace('/libs', '/public/uploads');
 
         const baseFolder = config.storage.baseFolder || appDir;
@@ -48,7 +48,7 @@ module.exports = function (app) {
 
                 let isDone;
                 let uploadResult;
-                const newFileName = uuid.v4();
+                const newFileName = filename || uuid.v4();
                 let accessPath = '';
                 let formdata = {};
                 let errors = false;
