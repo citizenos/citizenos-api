@@ -90,8 +90,8 @@ module.exports = function (app) {
                 data.termsAcceptedAt = moment().format();
             }
 
-            if (updateEmail || data.newPassword) {
-                if (user && user.password !== cryptoLib.getHash(data.password, 'sha256')) {
+            if ((user.email && updateEmail) || data.newPassword) {
+                if (!data.password || user.password !== cryptoLib.getHash(data.password, 'sha256')) {
                     return res.badRequest('Invalid password')
                 }
                 if (data.newPassword) {
