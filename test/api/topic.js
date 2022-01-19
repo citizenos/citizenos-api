@@ -8143,28 +8143,26 @@ suite('Users', function () {
                 });
 
                 test('Success - type=poi with reply', async function () {
-                    test('Success - type=con with reply', async function () {
-                        const type = Comment.TYPES.poi;
-                        const subject = `Test ${type} comment subject`;
-                        const text = `Test ${type} comment text`;
+                    const type = Comment.TYPES.poi;
+                    const subject = `Test ${type} comment subject`;
+                    const text = `Test ${type} comment text`;
 
-                        const comment = (await topicCommentCreate(agent, user.id, topic.id, null, null, type, subject, text)).body.data;
-                        assert.property(comment, 'id');
-                        assert.equal(comment.type, type);
-                        assert.equal(comment.subject, subject);
-                        assert.equal(comment.text, text);
-                        assert.equal(comment.creator.id, user.id);
+                    const comment = (await topicCommentCreate(agent, user.id, topic.id, null, null, type, subject, text)).body.data;
+                    assert.property(comment, 'id');
+                    assert.equal(comment.type, type);
+                    assert.equal(comment.subject, subject);
+                    assert.equal(comment.text, text);
+                    assert.equal(comment.creator.id, user.id);
 
-                        const commentReplyText = `Test Child comment for comment ${type}`;
-                        const commentReply = (await topicCommentCreate(agent, user.id, topic.id, comment.id, comment.edits.length - 1, null, null, commentReplyText)).body.data;
+                    const commentReplyText = `Test Child comment for comment ${type}`;
+                    const commentReply = (await topicCommentCreate(agent, user.id, topic.id, comment.id, comment.edits.length - 1, null, null, commentReplyText)).body.data;
 
-                        assert.property(commentReply, 'id');
-                        assert.equal(commentReply.type, Comment.TYPES.reply);
-                        assert.notProperty(commentReply, 'subject');
-                        assert.equal(commentReply.text, commentReplyText);
-                        assert.equal(commentReply.creator.id, user.id);
-                        assert.equal(commentReply.parent.id, comment.id);
-                    });
+                    assert.property(commentReply, 'id');
+                    assert.equal(commentReply.type, Comment.TYPES.reply);
+                    assert.notProperty(commentReply, 'subject');
+                    assert.equal(commentReply.text, commentReplyText);
+                    assert.equal(commentReply.creator.id, user.id);
+                    assert.equal(commentReply.parent.id, comment.id);
                 });
 
                 test('Success - test quotes "">\'!<', async function () {
@@ -8172,7 +8170,7 @@ suite('Users', function () {
                     const subject = 'subject test quotes "">\'!<';
                     const text = 'text test quotes "">\'!<';
 
-                    const comment = (await topicCommentCreate(agent, user.id, topic.id, null, null, Comment.TYPES.pro, subject, text)).body.data;
+                    const comment = (await topicCommentCreate(agent, user.id, topic.id, null, null, type, subject, text)).body.data;
 
                     assert.property(comment, 'id');
                     assert.equal(comment.type, type);
@@ -8181,7 +8179,56 @@ suite('Users', function () {
                     assert.equal(comment.creator.id, user.id);
                 });
 
-                test.skip('Fail - 403 - Forbidden - cannot comment on Topic you\'re not a member of or the Topic is not public', async function () {
+                test('Fail - 40000 - text can be 1 - N characters longs - PRO', async function () {
+                    const type = Comment.TYPES.pro;
+                    const maxLength = Comment.TYPE_LENGTH_LIMIT[type];
+                    const subject = 'subject test quotes "">\'!<';
+                    const text = 'a'.repeat(maxLength + 1);
+
+                    const resBody = (await _topicCommentCreate(agent, user.id, topic.id, null, null, type, subject, text, 400)).body;
+
+                    const resBodyExpected = {
+                        status: {code: 40000},
+                        errors: {text: `Text can be 1 to ${maxLength} characters long.`}
+                    };
+
+                    assert.deepEqual(resBody, resBodyExpected);
+                });
+
+                test('Fail - 40000 - text can be 1 - N characters longs - POI', async function () {
+                    const type = Comment.TYPES.poi;
+                    const maxLength = Comment.TYPE_LENGTH_LIMIT[type];
+                    const subject = 'subject test quotes "">\'!<';
+                    const text = 'a'.repeat(maxLength + 1);
+
+                    const resBody = (await _topicCommentCreate(agent, user.id, topic.id, null, null, type, subject, text, 400)).body;
+
+                    const resBodyExpected = {
+                        status: {code: 40000},
+                        errors: {text: `Text can be 1 to ${maxLength} characters long.`}
+                    };
+
+                    assert.deepEqual(resBody, resBodyExpected);
+                });
+
+                test('Fail - 40300 - Forbidden - cannot comment on Topic you\'re not a member of or the Topic is not public', async function () {
+                    const type = Comment.TYPES.poi;
+                    const subject = 'subject test quotes "">\'!<';
+                    const text = 'should not pass!';
+
+                    const agentUser2 = request.agent(app);
+                    const user2 = await userLib.createUserAndLogin(agentUser2, null, null, null);
+
+                    const resBody = (await _topicCommentCreate(agentUser2, user2.id, topic.id, null, null, type, subject, text, 403)).body;
+
+                    const resBodyExpected = {
+                        status: {
+                            code: 40300,
+                            message: 'Insufficient permissions'
+                        }
+                    };
+
+                    assert.deepEqual(resBody, resBodyExpected);
                 });
 
             });
@@ -8233,6 +8280,23 @@ suite('Users', function () {
                     assert.equal(commentEdited.text, editText);
                     assert.equal(commentEdited.creator.id, user3.id);
                     assert.equal(commentEdited.parent.id, comment.id);
+                });
+
+                test('Fail - 40000 - text can be 1 - N characters longs - PRO', async function () {
+                    const type = Comment.TYPES.pro;
+                    const maxLength = Comment.TYPE_LENGTH_LIMIT[type];
+                    const subject = 'to be edited by user';
+                    const text = 'Wohoo!';
+
+                    const comment = (await topicCommentCreate(agent3, user3.id, topic.id, null, null, type, subject, text)).body.data;
+                    const resBodyEdit = (await _topicCommentEdit(agent3, user3.id, topic.id, comment.id, subject + 'a', 'a'.repeat(maxLength + 1), type, 400)).body;
+
+                    const resBodyEditExpected = {
+                        status: {code: 40000},
+                        errors: {text: `Text can be 1 to ${maxLength} characters long.`}
+                    };
+
+                    assert.deepEqual(resBodyEdit, resBodyEditExpected);
                 });
             });
 

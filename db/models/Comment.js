@@ -21,6 +21,13 @@ module.exports = function (sequelize, DataTypes) {
         reply: 'reply'
     };
 
+    const TYPE_LENGTH_LIMIT = {
+        pro: 2048,
+        con: 2048,
+        poi: 500,
+        reply: 2048
+    };
+
     const DELETE_REASON_TYPES = { // Copy of Report reason types until Sequelize supports ENUM reuse - https://github.com/sequelize/sequelize/issues/2577
         abuse: 'abuse', // is abusive or insulting
         obscene: 'obscene', // contains obscene language
@@ -75,9 +82,13 @@ module.exports = function (sequelize, DataTypes) {
                 type: DataTypes.STRING(2048),
                 allowNull: false,
                 validate: {
-                    len: {
-                        args: [1, 2048],
-                        msg: 'Text can be 1 to 2048 characters long.'
+                    len: function (value) {
+                        const maxLength = TYPE_LENGTH_LIMIT[this.type];
+                        const length = Buffer.byteLength(value);
+
+                        if (!value || length > maxLength) {
+                            throw new Error(`Text can be 1 to ${maxLength} characters long.`);
+                        }
                     }
                 }
             },
@@ -222,6 +233,7 @@ module.exports = function (sequelize, DataTypes) {
     Comment.beforeValidate(hooks.trim);
 
     Comment.TYPES = TYPES;
+    Comment.TYPE_LENGTH_LIMIT = TYPE_LENGTH_LIMIT;
     Comment.DELETE_REASON_TYPES = DELETE_REASON_TYPES;
 
     return Comment;
