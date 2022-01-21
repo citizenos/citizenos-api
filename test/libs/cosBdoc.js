@@ -65,7 +65,7 @@ suite('cosBdoc', function () {
             const expectedPersonalInfo = {
                 lastName: 'JÕEORG',
                 firstName: 'JAAK-KRISTJAN',
-                pid: '38001085718',
+                pid: 'PNOEE-38001085718',
                 country: 'EE'
             };
 

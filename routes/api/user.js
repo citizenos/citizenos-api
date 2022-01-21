@@ -15,12 +15,15 @@ module.exports = function (app) {
     const validator = app.get('validator');
     const cryptoLib = app.get('cryptoLib');
     const cosUpload = app.get('cosUpload');
+    const authUser = require('./auth')(app);
+    const passport = app.get('passport');
 
     const fs = require('fs');
     const path = require('path');
     const User = models.User;
     const UserConsent = models.UserConsent;
     const UserConnection = models.UserConnection;
+    const Op = db.Sequelize.Op;
 
     app.post('/api/users/:userId/upload', loginCheck(['partner']), async function (req, res, next) {
         try {
@@ -432,5 +435,101 @@ module.exports = function (app) {
             return next(err);
         }
     });
+    app.get('/api/users/:userId/userconnections/:connection', async function (req, res, next) {
+        const connection = req.params.connection;
+        if (connection === UserConnection.CONNECTION_IDS.google) {
+            return passport.authenticate('google', {
+                scope: ['https://www.googleapis.com/auth/userinfo.email']
+            })(req, res, next);
+        } else if (connection === UserConnection.CONNECTION_IDS.facebook) {
+            passport.authenticate('facebook', {
+                scope: ['email'],
+                display: req.query.display ? 'popup' : null
+            })(req, res, next);
+        }
+    });
 
+    app.post('/api/users/:userId/userconnections/:connection', async function (req, res, next) {
+        try {
+            const connection = req.params.connection;
+            const token = req.body.token;
+            const cert = req.body.cert;
+            const redirectSuccess = req.body.redirectSuccess;
+            const timeoutMs = req.query.timeoutMs || 5000;
+            let personalInfo
+
+            if (!UserConnection.CONNECTION_IDS[connection]) {
+                return res.badRequest('Invalid connection');
+            }
+            if ([UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid].indexOf(connection) > -1) {
+                if (config.services.idCard && cert) {
+                    logger.error('X-SSL-Client-Cert header is not allowed when ID-card service is enabled. IF you trust your proxy, sending the X-SSL-Client-Cert, delete the services.idCard from your configuration.');
+                    return res.badRequest('X-SSL-Client-Cert header is not allowed when ID-card proxy service is enabled.');
+                }
+                if (!token && !cert) {
+                    logger.warn('Missing required parameter "token" OR certificate in X-SSL-Client-Cert header. One must be provided!', req.path, req.headers);
+                    return res.badRequest('Missing required parameter "token" OR certificate in X-SSL-Client-Cert header. One must be provided!');
+                }
+                if (cert) {
+                    personalInfo = await getIdCardCertStatus(res, token, cert);
+                } else {
+                    personalInfo = await authUser.getAuthReqStatus(connection, token, timeoutMs);
+                }
+
+                if (personalInfo === 'RUNNING') {
+                    return res.ok('Log in progress', 1);
+                }
+
+                await db.transaction(async function (t) {
+                    const userConnectionInfo = await UserConnection.findOne({
+                        where: {
+                            connectionId: {
+                                [Op.in]: [
+                                    UserConnection.CONNECTION_IDS.esteid,
+                                    UserConnection.CONNECTION_IDS.smartid
+                                ]
+                            },
+                            userId: req.user.id
+                        },
+                        order: [['createdAt', 'ASC']],
+                        include: [User],
+                        transaction: t
+                    });
+
+                    if (!userConnectionInfo) {
+                        await UserConnection.create(
+                            {
+                                userId: req.user.id,
+                                connectionId: connection,
+                                connectionUserId: personalInfo.pid,
+                                connectionData: personalInfo
+                            },
+                            {
+                                transaction: t
+                            }
+                        );
+                    } else if (userConnectionInfo.connectionUserId !== personalInfo.pid){
+                        await authUser.clearSessionCookies(req, res);
+
+                        return res.badRequest();
+                    }
+                });
+            }
+
+            const userConnections = await UserConnection.findAll({
+                where: {
+                    userId: req.user.id
+                },
+                attributes: ['connectionId'],
+                order: [[db.cast(db.col('connectionId'), 'TEXT'), 'ASC']] // Cast as we want alphabetical order, not enum order.
+            });
+
+            return res.ok({
+                count: userConnections.length,
+                rows: userConnections
+            });
+        } catch (err) {
+            return next(err);
+        }
+    });
 };

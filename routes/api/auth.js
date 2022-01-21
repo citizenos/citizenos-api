@@ -16,7 +16,6 @@ module.exports = function (app) {
     const Op = db.Sequelize.Op;
     const cosActivities = app.get('cosActivities');
     const jwt = app.get('jwt');
-    const objectEncrypter = app.get('objectEncrypter');
     const querystring = app.get('querystring');
     const urlLib = app.get('urlLib');
     const superagent = app.get('superagent');
@@ -473,7 +472,7 @@ module.exports = function (app) {
         }
         try {
             const sessionData = await smartId.authenticate(pid, countryCode);
-            const sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
+            const sessionDataEncrypted = {sessionDataEncrypted: cryptoLib.encrypt(config.session.secret, sessionData)};
             const token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
                 expiresIn: '5m',
                 algorithm: config.session.algorithm
@@ -580,40 +579,50 @@ module.exports = function (app) {
         }
     };
 
+    // Handle Smart-ID and Mobiil-ID auth status, return personalInfo on success
+
+    const _getAuthReqStatus =  async (authType, token, timeoutMs) => {
+        const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+        const loginFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
+        let authLib, defaultErrorMessage;
+        switch (authType) {
+            case UserConnection.CONNECTION_IDS.smartid:
+                authLib = smartId;
+                defaultErrorMessage = 'USER_REFUSED';
+                break;
+            case UserConnection.CONNECTION_IDS.esteid:
+                authLib = mobileId;
+                defaultErrorMessage = 'USER_CANCELLED';
+                break;
+        }
+        const response = await authLib.statusAuth(loginFlowData.sessionId, loginFlowData.sessionHash, timeoutMs);
+        if (response.error) {
+            throw new Error(response.error, response.error.code);
+        } else if (response.state === 'RUNNING') {
+            return response.state;
+        } else if (response.state === 'COMPLETE') {
+            switch (response.result.endResult || response.result) {
+                case 'OK':
+                    return response.personalInfo;
+                default:
+                    throw new Error(response.result?.endResult || response.result || defaultErrorMessage);
+            }
+        }
+    };
+
     app.get('/api/auth/smartid/status', async function (req, res, next) {
         const token = req.query.token;
         const timeoutMs = req.query.timeoutMs || 5000;
 
         if (!token) {
-            return res.badRequest('Smart-ID signing has not been started. "token" is required.', 2);
+            return res.badRequest('Smart-ID login has not been started. "token" is required.', 2);
         }
 
-        const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
-        const loginSmartIdFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
-        let personalInfo;
         try {
-            const response = await smartId.statusAuth(loginSmartIdFlowData.sessionId, loginSmartIdFlowData.sessionHash, timeoutMs);
-
-            if (response.error) {
-                return res.badRequest(response.error.message, response.error.code);
-            } else if (response.state === 'RUNNING') {
+            const personalInfo = await _getAuthReqStatus(UserConnection.CONNECTION_IDS.smartid, token, timeoutMs);
+            if (personalInfo === 'RUNNING') {
                 return res.ok('Log in progress', 1);
-            } else if (response.state === 'COMPLETE') {
-                switch (response.result.endResult) {
-                    case 'OK':
-                        personalInfo = response.personalInfo;
-                        break;
-                    case 'USER_REFUSED':
-                        return res.badRequest('User refused', 10);
-                    case 'TIMEOUT':
-                        return res.badRequest('The transaction has expired', 11);
-                    default:
-                        return res.badRequest(response);
-                }
-            } else {
-                return res.badRequest(response);
             }
-
             const userData = await _getUserByPersonalId(personalInfo, UserConnection.CONNECTION_IDS.smartid, req);
             const user = userData[0];
             const created = userData[1];
@@ -621,12 +630,51 @@ module.exports = function (app) {
 
             return res.ok(user, created);
         } catch (error) {
-            if (error && error.name === 'ValidationError') {
-                return res.badRequest(error.message);
+            let errorCode;
+            let message;
+            switch(error.message) {
+                case 'USER_REFUSED':
+                    errorCode = 10;
+                    message = 'User refused';
+                    break;
+                case 'TIMEOUT':
+                    errorCode = 11;
+                    message = 'The transaction has expired';
+                    break;
+            }
+            if (error && error.name === 'ValidationError' || errorCode) {
+                return res.badRequest(message || error.message, errorCode);
             }
             return next(error);
         }
     });
+
+    const getIdCardCertStatus = async (res, token, cert) =>  {
+        if (cert) {
+            let clientCert = cert;
+            if (cert.indexOf('-----BEGIN') > -1) {
+                clientCert = cert.replace('-----BEGIN CERTIFICATE-----', '').replace('-----END CERTIFICATE-----', '')
+            }
+            await mobileId.validateCert(clientCert, 'base64');
+            const personalInfo = await mobileId.getCertUserData(clientCert, 'base64');
+            personalInfo.countryCode = personalInfo.country;
+            delete personalInfo.country;
+            return personalInfo;
+        } else {
+            const idReq = await superagent.get(config.services.idCard.serviceUrl)
+                .query({token})
+                .set('X-API-KEY', config.services.idCard.apiKey)
+                .catch(function (error) {
+                    if (error && error.response && error.response.body) {
+                        return res.badRequest(error.response.body.status.message);
+                    } else {
+                        throw new Error(error);
+                    }
+                });
+
+            return idReq.body.data.user
+        }
+    };
 
     const idCardAuth = async function (req, res, next) {
         const cert = req.headers['x-ssl-client-cert'];
@@ -642,30 +690,7 @@ module.exports = function (app) {
         }
 
         try {
-            let personalInfo;
-            if (cert) {
-                let clientCert = cert;
-                if (cert.indexOf('-----BEGIN') > -1) {
-                    clientCert = cert.replace('-----BEGIN CERTIFICATE-----', '').replace('-----END CERTIFICATE-----', '')
-                }
-                await mobileId.validateCert(clientCert, 'base64');
-                personalInfo = await mobileId.getCertUserData(clientCert, 'base64');
-                personalInfo.countryCode = personalInfo.country;
-                delete personalInfo.country;
-            } else {
-                const idReq = await superagent.get(config.services.idCard.serviceUrl)
-                    .query({token})
-                    .set('X-API-KEY', config.services.idCard.apiKey)
-                    .catch(function (error) {
-                        if (error && error.response && error.response.body) {
-                            return res.badRequest(error.response.body.status.message);
-                        } else {
-                            throw new Error(error);
-                        }
-                    });
-
-                personalInfo = idReq.body.data.user
-            }
+            let personalInfo = await getIdCardCertStatus(res, token, cert);
 
             const userData = await _getUserByPersonalId(personalInfo, UserConnection.CONNECTION_IDS.esteid, req);
             const user = userData[0];
@@ -710,7 +735,7 @@ module.exports = function (app) {
         mobileId
             .authenticate(pid, phoneNumber, null)
             .then(function (sessionData) {
-                const sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
+                const sessionDataEncrypted = {sessionDataEncrypted: cryptoLib.encrypt(config.session.secret, sessionData)};
                 const token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
                     expiresIn: '5m',
                     algorithm: config.session.algorithm
@@ -733,7 +758,6 @@ module.exports = function (app) {
             });
     });
 
-
     /**
      * Check Mobiil-ID authentication status
      *
@@ -746,54 +770,54 @@ module.exports = function (app) {
             return res.badRequest('Mobile ID signing has not been started. "token" is required.', 2);
         }
 
-        const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
-        const loginMobileFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
         try {
-            const authResult = await mobileId.statusAuth(loginMobileFlowData.sessionId, loginMobileFlowData.sessionHash, timeoutMs);
-            let statusCode;
-            if (authResult.result) {
-                statusCode = authResult.result;
-            } else {
-                statusCode = authResult.state;
+            const personalInfo = await _getAuthReqStatus(UserConnection.CONNECTION_IDS.esteid, token, timeoutMs);
+            if (personalInfo === 'RUNNING') {
+                return res.ok('Log in progress', 1);
             }
+            const userData = await _getUserByPersonalId(personalInfo, UserConnection.CONNECTION_IDS.esteid, req);
+            const user = userData[0];
+            const created = userData[1];
+            setAuthCookie(req, res, user.id);
 
-            switch (statusCode) {
-                case 'RUNNING':
-                    return res.ok('Log in progress', 1);
-                case 'OK':
+            return res.ok(user, created);
+
+        } catch (error) {
+            let errorCode;
+            let message;
+            switch(error.message) {
+                case 'USER_CANCELLED':
+                    errorCode = 10;
+                    message = 'User has cancelled the log in process';
                     break;
                 case 'TIMEOUT':
-                    logger.error('There was a timeout, i.e. end user did not confirm or refuse the operation within maximum time frame allowed (can change, around two minutes).', statusCode);
-                    return res.badRequest('There was a timeout, i.e. end user did not confirm or refuse the operation within maximum time frame allowed (can change, around two minutes).', 10);
-                case 'NOT_MID_CLIENT':
-                    return res.badRequest('Mobile-ID functionality of the phone is not yet ready', 13);
-                case 'USER_CANCELLED':
-                    return res.badRequest('User has cancelled the log in process', 10);
+                    errorCode = 11;
+                    message = 'There was a timeout, i.e. end user did not confirm or refuse the operation within maximum time frame allowed (can change, around two minutes).';
+                    break;
                 case 'SIGNATURE_HASH_MISMATCH':
-                    return res.badRequest('Signature is not valid', 12);
+                    errorCode = 12;
+                    message = 'Signature is not valid';
+                    break;
+                case 'NOT_MID_CLIENT':
+                    errorCode = 13;
+                    message = 'Mobile-ID functionality of the phone is not yet ready';
+                    break;
                 case 'PHONE_ABSENT':
-                    return res.badRequest('Delivery of the message was not successful, mobile phone is probably switched off or out of coverage;', 14);
+                    errorCode = 14;
+                    message = 'Delivery of the message was not successful, mobile phone is probably switched off or out of coverage.';
+                    break;
                 case 'DELIVERY_ERROR':
-                    return res.badRequest('Other error when sending message (phone is incapable of receiving the message, error in messaging server etc.)', 15);
+                    errorCode = 15;
+                    message = 'Other error when sending message (phone is incapable of receiving the message, error in messaging server etc.)';
+                    break;
                 case 'SIM_ERROR':
-                    return res.badRequest('SIM application error.', 16);
-                default:
-                    logger.error('Unknown status code when trying to log in with mobile', authResult.result);
-                    return res.internalServerError();
+                    errorCode = 16;
+                    message = 'SIM application error.';
+                    break;
             }
-            if (authResult.personalInfo) {
-                const userData = await _getUserByPersonalId(authResult.personalInfo, UserConnection.CONNECTION_IDS.esteid, req);
-                const user = userData[0];
-                const created = userData[1];
-                setAuthCookie(req, res, user.id);
-
-                return res.ok(user, created);
+            if (error && error.name === 'ValidationError' || errorCode) {
+                return res.badRequest(message || error.message, errorCode);
             }
-        } catch (error) {
-            if (error && error.name === 'ValidationError') {
-                return res.badRequest(error.message);
-            }
-
             return next(error);
         }
     });
@@ -1067,6 +1091,8 @@ module.exports = function (app) {
     });
 
     return {
-        getUserByPersonalId: _getUserByPersonalId
+        getUserByPersonalId: _getUserByPersonalId,
+        getAuthReqStatus: _getAuthReqStatus,
+        clearSessionCookies: clearSessionCookies
     }
 };

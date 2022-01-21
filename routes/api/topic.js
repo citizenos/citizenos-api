@@ -26,7 +26,6 @@ module.exports = function (app) {
     const jwt = app.get('jwt');
     const cosJwt = app.get('cosJwt');
     const querystring = app.get('querystring');
-    const objectEncrypter = app.get('objectEncrypter');
     const twitter = app.get('twitter');
     const hashtagCache = app.get('hashtagCache');
     const moment = app.get('moment');
@@ -6608,7 +6607,7 @@ module.exports = function (app) {
 
             // Send JWT with state and expect it back in /sign /status - https://trello.com/c/ZDN2WomW/287-bug-id-card-signing-does-not-work-for-some-users
             // Wrapping sessionDataEncrypted in object, otherwise jwt.sign "expiresIn" will not work - https://github.com/auth0/node-jsonwebtoken/issues/166
-            sessionDataEncrypted = {sessionDataEncrypted: objectEncrypter(config.session.secret).encrypt(sessionData)};
+            sessionDataEncrypted = {sessionDataEncrypted: cryptoLib.encrypt(config.session.secret, sessionData)};
             token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
                 expiresIn: '5m',
                 algorithm: config.session.algorithm
@@ -6737,7 +6736,7 @@ module.exports = function (app) {
 
         try {
             tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
-            idSignFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
+            idSignFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
         } catch (err) {
             if (err.name === 'TokenExpiredError') {
                 logger.info('loginCheck - JWT token has expired', req.method, req.path, err);
@@ -6858,8 +6857,7 @@ module.exports = function (app) {
 
         try {
             tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
-            idSignFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
-            idSignFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
+            idSignFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
         } catch (err) {
             if (err.name === 'TokenExpiredError') {
                 logger.info('loginCheck - JWT token has expired', req.method, req.path, err);
