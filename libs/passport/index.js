@@ -149,8 +149,6 @@ module.exports = function (app) {
                 passReqToCallback: true // http://passportjs.org/guide/authorize/#association_in_verify_callback
             },
             async function (req, accessToken, refreshToken, profile, done) {
-                console.log(req.user);
-                console.log(req.path);
                 logger.debug('Google responded with profile: ', profile);
 
                 try  {

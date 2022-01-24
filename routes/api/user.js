@@ -453,8 +453,7 @@ module.exports = function (app) {
         try {
             const connection = req.params.connection;
             const token = req.body.token;
-            const cert = req.body.cert;
-            const redirectSuccess = req.body.redirectSuccess;
+            const cert = req.headers['x-ssl-client-cert'] || req.body.cert;
             const timeoutMs = req.query.timeoutMs || 5000;
             let personalInfo
 
@@ -470,8 +469,8 @@ module.exports = function (app) {
                     logger.warn('Missing required parameter "token" OR certificate in X-SSL-Client-Cert header. One must be provided!', req.path, req.headers);
                     return res.badRequest('Missing required parameter "token" OR certificate in X-SSL-Client-Cert header. One must be provided!');
                 }
-                if (cert) {
-                    personalInfo = await getIdCardCertStatus(res, token, cert);
+                if (cert || token.indexOf('.') === -1) {
+                    personalInfo = await authUser.getIdCardCertStatus(res, token, cert);
                 } else {
                     personalInfo = await authUser.getAuthReqStatus(connection, token, timeoutMs);
                 }
@@ -480,6 +479,12 @@ module.exports = function (app) {
                     return res.ok('Log in progress', 1);
                 }
 
+                let personId = personalInfo.pid;
+                if (personalInfo.pid.indexOf('PNO') > -1) {
+                    personId = personId.split('-')[1];
+                }
+                const countryCode = personalInfo.country || personalInfo.countryCode;
+                const connectionUserId = `PNO${countryCode}-${personId}`;
                 await db.transaction(async function (t) {
                     const userConnectionInfo = await UserConnection.findOne({
                         where: {
@@ -501,34 +506,37 @@ module.exports = function (app) {
                             {
                                 userId: req.user.id,
                                 connectionId: connection,
-                                connectionUserId: personalInfo.pid,
+                                connectionUserId: connectionUserId,
                                 connectionData: personalInfo
                             },
                             {
                                 transaction: t
                             }
                         );
-                    } else if (userConnectionInfo.connectionUserId !== personalInfo.pid){
-                        await authUser.clearSessionCookies(req, res);
-
-                        return res.badRequest();
+                    } else if (userConnectionInfo.connectionUserId !== connectionUserId){
+                        throw new Error('Connection user id mismatch');
                     }
                 });
+
+                const userConnections = await UserConnection.findAll({
+                    where: {
+                        userId: req.user.id
+                    },
+                    attributes: ['connectionId'],
+                    order: [[db.cast(db.col('connectionId'), 'TEXT'), 'ASC']] // Cast as we want alphabetical order, not enum order.
+                });
+
+                return res.ok({
+                    count: userConnections.length,
+                    rows: userConnections
+                });
             }
-
-            const userConnections = await UserConnection.findAll({
-                where: {
-                    userId: req.user.id
-                },
-                attributes: ['connectionId'],
-                order: [[db.cast(db.col('connectionId'), 'TEXT'), 'ASC']] // Cast as we want alphabetical order, not enum order.
-            });
-
-            return res.ok({
-                count: userConnections.length,
-                rows: userConnections
-            });
         } catch (err) {
+            if (err.message === 'Connection user id mismatch') {
+                await authUser.clearSessionCookies(req, res);
+
+                return res.forbidden();
+            }
             return next(err);
         }
     });

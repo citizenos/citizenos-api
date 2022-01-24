@@ -649,6 +649,21 @@ module.exports = function (app) {
         }
     });
 
+    const getIdCardCert = async (res, token) => {
+        const idReq = await superagent.get(config.services.idCard.serviceUrl)
+                .query({token})
+                .set('X-API-KEY', config.services.idCard.apiKey)
+                .catch(function (error) {
+                    if (error && error.response && error.response.body) {
+                        return res.badRequest(error.response.body.status.message);
+                    } else {
+                        throw new Error(error);
+                    }
+                });
+
+            return idReq.body.data.user
+    }
+
     const getIdCardCertStatus = async (res, token, cert) =>  {
         if (cert) {
             let clientCert = cert;
@@ -661,18 +676,7 @@ module.exports = function (app) {
             delete personalInfo.country;
             return personalInfo;
         } else {
-            const idReq = await superagent.get(config.services.idCard.serviceUrl)
-                .query({token})
-                .set('X-API-KEY', config.services.idCard.apiKey)
-                .catch(function (error) {
-                    if (error && error.response && error.response.body) {
-                        return res.badRequest(error.response.body.status.message);
-                    } else {
-                        throw new Error(error);
-                    }
-                });
-
-            return idReq.body.data.user
+            return getIdCardCert(res, token);
         }
     };
 
@@ -1093,6 +1097,7 @@ module.exports = function (app) {
     return {
         getUserByPersonalId: _getUserByPersonalId,
         getAuthReqStatus: _getAuthReqStatus,
-        clearSessionCookies: clearSessionCookies
+        clearSessionCookies: clearSessionCookies,
+        getIdCardCertStatus: getIdCardCertStatus
     }
 };
