@@ -554,16 +554,14 @@ suite('User', function () {
             });
 
             test('Fail - Google', async() => {
-                const result = (await userConnectionsAdd(agent, user.id, 'google', null, null, 5000)).body.data;
-                const expectedList2 = {
-                    count: 1,
-                    rows: [
-                        {
-                            connectionId: 'citizenos'
-                        }
-                    ]
+                const result = (await userConnectionsAdd(agent, user.id, 'google', null, null, 5000)).body;
+                const expectedBody = {
+                    status: {
+                        code: 40000,
+                        message: 'Bad request'
+                    }
                 };
-                assert.deepEqual(result, expectedList2);
+                assert.deepEqual(result, expectedBody);
             });
 
             test('Fail - Smart-ID - User has connection with different pid - logout', async() => {

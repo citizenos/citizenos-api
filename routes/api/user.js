@@ -531,6 +531,8 @@ module.exports = function (app) {
                     rows: userConnections
                 });
             }
+
+            return res.badRequest();
         } catch (err) {
             if (err.message === 'Connection user id mismatch') {
                 await authUser.clearSessionCookies(req, res);
