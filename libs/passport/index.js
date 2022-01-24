@@ -151,7 +151,7 @@ module.exports = function (app) {
             async function (req, accessToken, refreshToken, profile, done) {
                 logger.debug('Google responded with profile: ', profile);
 
-                try  {
+                try {
                     const user = await _findOrCreateUser(UserConnection.CONNECTION_IDS.google, User.SOURCES.google, profile, req);
 
                     return done(null, user.toJSON());
@@ -174,7 +174,7 @@ module.exports = function (app) {
             },
             async function (req, accessToken, refreshToken, profile, done) {
                 logger.info('Facebook responded with profile: ', profile);
-                try  {
+                try {
                     const user = await _findOrCreateUser(UserConnection.CONNECTION_IDS.facebook, User.SOURCES.facebook, profile, req);
 
                     return done(null, user.toJSON());

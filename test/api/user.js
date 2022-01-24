@@ -125,7 +125,7 @@ const _userConnectionsAdd = async function (agent, userId, connection, token, ce
         .expect('Content-Type', /json/);
 };
 
-const userConnectionsAdd = async function (agent,  userId, connection, token, cert, interval) {
+const userConnectionsAdd = async function (agent, userId, connection, token, cert, interval) {
     return new Promise(function (resolve, reject) {
         const maxRetries = 20;
         const retryInterval = interval || 1000; // milliseconds;
@@ -595,6 +595,14 @@ suite('User', function () {
                 assert.deepEqual(res2, expectedList2);
                 const initResponse2 = (await auth.loginSmartIdInit(agent, pid2)).body.data;
                 const res3 = (await userConnectionsAdd(agent, user.id, 'smartid', initResponse2.token, null, 5000)).body;
+                const expectedBody = {
+                    status: {
+                        code: 40300,
+                        message: 'Forbidden'
+                    }
+                };
+                assert.deepEqual(res3, expectedBody);
+
                 await auth._status(agent, 401);
             });
         });

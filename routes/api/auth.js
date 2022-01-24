@@ -581,7 +581,7 @@ module.exports = function (app) {
 
     // Handle Smart-ID and Mobiil-ID auth status, return personalInfo on success
 
-    const _getAuthReqStatus =  async (authType, token, timeoutMs) => {
+    const _getAuthReqStatus = async (authType, token, timeoutMs) => {
         const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
         const loginFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
         let authLib, defaultErrorMessage;
@@ -664,7 +664,7 @@ module.exports = function (app) {
             return idReq.body.data.user
     }
 
-    const getIdCardCertStatus = async (res, token, cert) =>  {
+    const getIdCardCertStatus = async (res, token, cert) => {
         if (cert) {
             let clientCert = cert;
             if (cert.indexOf('-----BEGIN') > -1) {

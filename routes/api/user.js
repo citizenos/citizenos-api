@@ -4,6 +4,7 @@ module.exports = function (app) {
     const models = app.get('models');
     const db = models.sequelize;
 
+    const logger = app.get('logger');
     const loginCheck = app.get('middleware.loginCheck');
     const emailLib = app.get('email');
     const config = app.get('config');
