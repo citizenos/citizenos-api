@@ -44,7 +44,7 @@
     "privateKey": "TO BE OVERWRITTEN IN ENV SPECIFIC CONF",
     "publicKey": "TO BE OVERWRITTEN IN ENV SPECIFIC CONF",
     "algorithm": "RS256",
-    "secret": "",
+    "secret": "sdfsdfsdfsdfdsfdsf",
     "cookie": {
       "path": "/api",
       "httpOnly": true,

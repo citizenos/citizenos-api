@@ -29,6 +29,111 @@ module.exports = function (app) {
     const User = models.User;
     const UserConnection = models.UserConnection;
 
+    const _findOrCreateUser = async (connectionId, source, profile, req) => {
+        logger.info(`${source} responded with profile: `, profile);
+        const sourceId = profile.id;
+        const userConnectionInfo = await UserConnection.findOne({
+            where: {
+                connectionId: connectionId,
+                connectionUserId: sourceId
+            },
+            include: [User]
+        });
+        let user, created;
+        if (!userConnectionInfo) {
+            let email = profile.email;
+
+            if (!email && profile.emails.length) {
+                email = profile.emails[0].value;
+            }
+            const displayName = profile.displayName || util.emailToDisplayName(email);
+            let imageUrl = null;
+            if (source === User.SOURCES.facebook) {
+                imageUrl = 'https://graph.facebook.com/:id/picture?type=large'.replace(':id', sourceId);
+            } else {
+                imageUrl = profile.photos[0]?.value?.split('?')[0];
+            }
+
+            await db.transaction(async function (t) {
+                if (!req.user?.id) {
+                    [user, created] = await User.findOrCreate({
+                        where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email)),
+                        defaults: {
+                            name: displayName,
+                            email: email,
+                            password: null,
+                            emailIsVerified: true,
+                            imageUrl: imageUrl,
+                            source: source,
+                            sourceId: sourceId
+                        },
+                        transaction: t
+                    });
+                } else {
+                    user = await User.findOne({
+                        where: {
+                            id: req.user.id
+                        }
+                    });
+                }
+
+                if (created) {
+                    logger.info(`Created a new user with ${connectionId}`, user.id);
+
+                    await cosActivities.createActivity(user, null, {
+                        type: 'User',
+                        id: user.id,
+                        ip: req.ip
+                    }, req.method + ' ' + req.path, t);
+                }
+
+                const uc = await UserConnection.create(
+                    {
+                        userId: user.id,
+                        connectionId,
+                        connectionUserId: sourceId,
+                        connectionData: profile
+                    },
+                    {transaction: t}
+                );
+
+                await cosActivities.addActivity(uc, {
+                    type: 'User',
+                    id: user.id,
+                    ip: req.ip
+                }, null, user, req.method + ' ' + req.path, t);
+
+                await UserConnection.findOrCreate({
+                    where: {
+                        userId: user.id,
+                        connectionId: UserConnection.CONNECTION_IDS.citizenos,
+                        connectionUserId: user.id
+                    },
+                    defaults: {
+                        userId: user.id,
+                        connectionId: UserConnection.CONNECTION_IDS.citizenos,
+                        connectionUserId: user.id,
+                        connectionData: user
+                    },
+                    transaction: t
+                });
+
+                if (!user.imageUrl) {
+                    logger.info('Updating User profile image from social network');
+                    user.imageUrl = imageUrl; // Update existing Users image url in case there is none (for case where User is created via CitizenOS but logs in with social)
+
+                    await user.save();
+                }
+
+            });
+        } else if (req.user?.id && req.user.id !== userConnectionInfo.userId) {
+            throw new Error('User conection error');
+        } else {
+            user = userConnectionInfo.User;
+        }
+
+        return user;
+    }
     const _init = function () {
         passport.serializeUser(function (user, done) { // Serialize data into session (req.user)
             done(null, user.id);
@@ -46,105 +151,10 @@ module.exports = function (app) {
             async function (req, accessToken, refreshToken, profile, done) {
                 logger.debug('Google responded with profile: ', profile);
 
-                let email = profile.email;
-                let user, created;
-                if (!email && profile.emails.length) {
-                    if (profile.emails[0]) {
-                        email = profile.emails[0].value;
-                    }
-                }
-                let displayName = profile.displayName;
-                if (!displayName) {
-                    displayName = util.emailToDisplayName(email);
-                }
-                const sourceId = profile.id;
-                let imageUrl = null;
-                if (profile.photos && profile.photos.length) {
-                    imageUrl = profile.photos[0].value.split('?')[0];
-                }
                 try {
-                    const userConnectionInfo = await UserConnection.findOne({
-                        where: {
-                            connectionId: UserConnection.CONNECTION_IDS.google,
-                            connectionUserId: sourceId
-                        },
-                        include: [User]
-                    });
+                    const user = await _findOrCreateUser(UserConnection.CONNECTION_IDS.google, User.SOURCES.google, profile, req);
 
-                    if (!userConnectionInfo) {
-                        await db.transaction(async function (t) {
-                            [user, created] = await User.findOrCreate({
-                                where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email)),
-                                defaults: {
-                                    name: displayName,
-                                    email: email,
-                                    password: null,
-                                    emailIsVerified: true,
-                                    imageUrl: imageUrl,
-                                    source: User.SOURCES.google,
-                                    sourceId: sourceId
-                                },
-                                transaction: t
-                            });
-
-                            if (created) {
-                                logger.info('Created a new user with Google', user.id);
-
-                                await cosActivities.createActivity(user, null, {
-                                    type: 'User',
-                                    id: user.id,
-                                    ip: req.ip
-                                }, req.method + ' ' + req.path, t);
-                            }
-
-                            const uc = await UserConnection.create(
-                                {
-                                    userId: user.id,
-                                    connectionId: UserConnection.CONNECTION_IDS.google,
-                                    connectionUserId: sourceId,
-                                    connectionData: profile
-                                },
-                                {transaction: t}
-                            );
-
-                            await cosActivities.addActivity(uc, {
-                                type: 'User',
-                                id: user.id,
-                                ip: req.ip
-                            }, null, user, req.method + ' ' + req.path, t);
-
-                            await UserConnection.findOrCreate({
-                                where: {
-                                    userId: user.id,
-                                    connectionId: UserConnection.CONNECTION_IDS.citizenos,
-                                    connectionUserId: user.id
-                                },
-                                defaults: {
-                                    userId: user.id,
-                                    connectionId: UserConnection.CONNECTION_IDS.citizenos,
-                                    connectionUserId: user.id,
-                                    connectionData: user
-                                },
-                                transaction: t
-                            });
-
-                            if (!user.imageUrl) {
-                                logger.info('Updating User profile image from social network');
-                                user.imageUrl = imageUrl; // Update existing Users image url in case there is none (for case where User is created via CitizenOS but logs in with social)
-
-                                await user.save();
-                            }
-
-                        });
-                    } else {
-                        user = userConnectionInfo.User;
-                    }
-
-                    if (user) {
-                        done(null, user.toJSON());
-                    } else {
-                        done(null, null);
-                    }
+                    return done(null, user.toJSON());
                 } catch(err) {
                     console.log(err);
                     done(err);
@@ -164,99 +174,13 @@ module.exports = function (app) {
             },
             async function (req, accessToken, refreshToken, profile, done) {
                 logger.info('Facebook responded with profile: ', profile);
-
-                if (!profile.emails || !profile.emails.length) {
-                    logger.warn('Facebook did not return email for FB profile. User may have denied access to e-mail.', profile.profileUrl);
-
-                    return done(new Error('Facebook did not provide e-mail, cannot authenticate user', null));
-                }
-
-                const email = profile.emails[0].value;
-                const displayName = profile.displayName || util.emailToDisplayName(email);
-                const sourceId = profile.id;
-                const imageUrl = 'https://graph.facebook.com/:id/picture?type=large'.replace(':id', sourceId);
-                let user, created;
                 try {
-                    const userConnectionInfo = await UserConnection
-                        .findOne({
-                            where: {
-                                connectionId: UserConnection.CONNECTION_IDS.facebook,
-                                connectionUserId: sourceId
-                            },
-                            include: [User]
-                        });
-                    if (!userConnectionInfo) {
-                        await db.transaction(async function (t) {
-                            [user, created] = await User
-                                .findOrCreate({
-                                    where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email)), // Well, this will allow user to log in either using User and pass or just Google.. I think it's ok..
-                                    defaults: {
-                                        name: displayName,
-                                        email: email,
-                                        password: null,
-                                        emailIsVerified: true,
-                                        imageUrl: imageUrl,
-                                        source: User.SOURCES.facebook,
-                                        sourceId: sourceId
-                                    },
-                                    transaction: t
-                                });
-                            if (created) {
-                                logger.info('Created a new user with Google', user.id);
-
-                                await cosActivities.createActivity(user, null, {
-                                    type: 'User',
-                                    id: user.id,
-                                    ip: req.ip
-                                }, req.method + ' ' + req.path, t);
-                            }
-
-                            const uc = await UserConnection.create(
-                                {
-                                    userId: user.id,
-                                    connectionId: UserConnection.CONNECTION_IDS.facebook,
-                                    connectionUserId: sourceId,
-                                    connectionData: profile
-                                },
-                                {transaction: t}
-                            );
-
-                            await cosActivities.addActivity(uc, {
-                                type: 'User',
-                                id: user.id,
-                                ip: req.ip
-                            }, null, user, req.method + ' ' + req.path, t);
-
-                            await UserConnection.findOrCreate(
-                                {
-                                    where: {
-                                        userId: user.id,
-                                        connectionId: UserConnection.CONNECTION_IDS.citizenos,
-                                        connectionUserId: user.id
-                                    },
-                                    defaults: {
-                                        userId: user.id,
-                                        connectionId: UserConnection.CONNECTION_IDS.citizenos,
-                                        connectionUserId: user.id,
-                                        connectionData: user
-                                    },
-                                    transaction: t
-                                }
-                            );
-                            if (!user.imageUrl) {
-                                logger.info('Updating User profile image from social network');
-                                user.imageUrl = imageUrl; // Update existing Users image url in case there is none (for case where User is created via CitizenOS but logs in with social)
-
-                                await user.save();
-                            }
-                        });
-                    } else {
-                        user = userConnectionInfo.User;
-                    }
+                    const user = await _findOrCreateUser(UserConnection.CONNECTION_IDS.facebook, User.SOURCES.facebook, profile, req);
 
                     return done(null, user.toJSON());
                 } catch(err) {
-                    return done(err);
+                    console.log(err);
+                    done(err);
                 }
             }
         ));

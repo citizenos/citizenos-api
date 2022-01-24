@@ -113,6 +113,52 @@ const userConnectionsList = async function (agent, userId) {
     return _userConnectionsList(agent, userId, 200);
 };
 
+const _userConnectionsAdd = async function (agent, userId, connection, token, cert) {
+    const path = '/api/users/:userId/userconnections/:connection'
+        .replace(':userId', userId)
+        .replace(':connection', connection);
+
+    return agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .send({token: token, cert: cert})
+        .expect('Content-Type', /json/);
+};
+
+const userConnectionsAdd = async function (agent, userId, connection, token, cert, interval) {
+    return new Promise(function (resolve, reject) {
+        const maxRetries = 20;
+        const retryInterval = interval || 1000; // milliseconds;
+
+        let retries = 0;
+
+        const statusInterval = setInterval(async function () {
+            try {
+                if (retries < maxRetries) {
+                    retries++;
+
+                    const connectSmartIdStatusResponse = await _userConnectionsAdd(agent, userId, connection, token, cert, 200);
+                    if (connectSmartIdStatusResponse.body.status.code !== 20001) {
+                        clearInterval(statusInterval);
+                        return resolve(connectSmartIdStatusResponse);
+                    }
+
+                } else {
+                    clearInterval(statusInterval);
+
+                    return reject(new Error(`loginSmartIdStatus maximum retry limit ${maxRetries} reached!`));
+                }
+            } catch (err) {
+                // Whatever blows, stop polling
+                clearInterval(statusInterval);
+
+                return reject(err);
+            }
+
+        }, retryInterval);
+    });
+};
+
 exports.userDelete = userDelete;
 
 const request = require('supertest');
@@ -391,22 +437,20 @@ suite('User', function () {
     });
 
     suite('UserConnections', function () {
-        const agent = request.agent(app);
+        suite('Create', function () {
+            this.timeout(20000);
+            const agent = request.agent(app);
 
-        let user;
+            let user;
 
-        setup(async function () {
-            user = await userLib.createUser(agent); // Creates connection with e-mail
-        });
+            setup(async function () {
+                user = await userLib.createUserAndLogin(agent); // Creates connection with e-mail
+            });
 
-        test('Success - 20000 - 1 connection - emails only', async function () {
-            const res = await userConnectionsList(agent, user.email);
-
-            const bodyExpected = {
-                status: {
-                    code: 20000
-                },
-                data: {
+            test('Success - Smart-ID', async() => {
+                const pid = '30303039914';
+                const res = (await userConnectionsList(agent, user.email)).body.data;
+                const expectedList = {
                     count: 1,
                     rows: [
                         {
@@ -414,97 +458,271 @@ suite('User', function () {
                         }
                     ]
                 }
-            };
 
-            assert.deepEqual(res.body, bodyExpected);
-        });
+                assert.deepEqual(res, expectedList);
+                const initResponse = (await auth.loginSmartIdInit(agent, pid)).body.data;
+                const res2 = (await userConnectionsAdd(agent, user.id, 'smartid', initResponse.token, null, 5000)).body.data;
 
-        test('Success - 2000 - 4 connections - citizenos, google, esteid, smartid', async function () {
-            // UserConnection "citizenos" is created on signup
-            await UserConnection.create({
-                userId: user.id,
-                connectionId: UserConnection.CONNECTION_IDS.google,
-                connectionUserId: 'test_generated_google1234' + cosUtil.randomString()
+                const expectedList2 = {
+                    count: 2,
+                    rows: [
+                        {
+                            connectionId: 'citizenos'
+                        },
+                        {
+                            connectionId: 'smartid'
+                        }
+                    ]
+                };
+                assert.deepEqual(res2, expectedList2);
             });
 
-            await UserConnection.create({
-                userId: user.id,
-                connectionId: UserConnection.CONNECTION_IDS.esteid,
-                connectionUserId: 'test_generated_esteid_' + cosUtil.randomString()
-            });
-
-            await UserConnection.create({
-                userId: user.id,
-                connectionId: UserConnection.CONNECTION_IDS.smartid,
-                connectionUserId: 'test_generated_smartId_`' + cosUtil.randomString()
-            });
-
-            const res = await userConnectionsList(agent, user.email);
-
-            const bodyExpected = {
-                status: {
-                    code: 20000
-                },
-                data: {
-                    count: 4,
+            test('Success - Mobiil-ID', async() => {
+                const phoneNumber = '+37200000766';
+                const pid = '60001019906';
+                const res = (await userConnectionsList(agent, user.email)).body.data;
+                const expectedList = {
+                    count: 1,
                     rows: [
                         {
                             connectionId: UserConnection.CONNECTION_IDS.citizenos
-                        },
-                        {
-                            connectionId: UserConnection.CONNECTION_IDS.esteid
-                        },
-                        {
-                            connectionId: UserConnection.CONNECTION_IDS.google
-                        },
-                        {
-                            connectionId: UserConnection.CONNECTION_IDS.smartid
                         }
                     ]
                 }
-            };
 
-            assert.deepEqual(res.body, bodyExpected);
-        });
+                assert.deepEqual(res, expectedList);
+                const response = (await auth.loginMobileInit(request.agent(app), pid, phoneNumber)).body.data;
+                const res2 = (await userConnectionsAdd(agent, user.id, 'esteid', response.token, null, 5000)).body.data;
+                const expectedList2 = {
+                    count: 2,
+                    rows: [
+                        {
+                            connectionId: 'citizenos'
+                        },
+                        {
+                            connectionId: 'esteid'
+                        }
+                    ]
+                };
+                assert.deepEqual(res2, expectedList2);
+            });
 
-        test('Fail - 40400 - not found by valid UUID', async function () {
-            const res = await _userConnectionsList(agent, uuid.v4(), 404);
-
-            const bodyExpected = {
-                status: {
-                    code: 40400,
-                    message: 'Not Found'
+            test('Success - Smart-ID - User has connection with same pid', async() => {
+                const pid = '30303039914';
+                const res = (await userConnectionsList(agent, user.email)).body.data;
+                const expectedList = {
+                    count: 1,
+                    rows: [
+                        {
+                            connectionId: UserConnection.CONNECTION_IDS.citizenos
+                        }
+                    ]
                 }
-            };
 
-            assert.deepEqual(res.body, bodyExpected);
-        });
+                assert.deepEqual(res, expectedList);
+                const initResponse = (await auth.loginSmartIdInit(agent, pid)).body.data;
+                const res2 = (await userConnectionsAdd(agent, user.id, 'smartid', initResponse.token, null, 5000)).body.data;
 
-        test('Fail - 40400 - not found by valid e-mail', async function () {
-            const res = await _userConnectionsList(agent, 'citizenos_test_get_user_connections_404@test.com', 404);
+                const expectedList2 = {
+                    count: 2,
+                    rows: [
+                        {
+                            connectionId: 'citizenos'
+                        },
+                        {
+                            connectionId: 'smartid'
+                        }
+                    ]
+                };
+                assert.deepEqual(res2, expectedList2);
+                const initResponse2 = (await auth.loginSmartIdInit(agent, pid)).body.data;
+                const res3 = (await userConnectionsAdd(agent, user.id, 'smartid', initResponse2.token, null, 5000)).body.data;
+                assert.deepEqual(res3, expectedList2);
+            });
 
-            const bodyExpected = {
-                status: {
-                    code: 40400,
-                    message: 'Not Found'
+            test('Fail - invalid connection', async() => {
+                const pid = '30303039914';
+                const initResponse = (await auth.loginSmartIdInit(agent, pid)).body.data;
+                const result = (await userConnectionsAdd(agent, user.id, 'smart', initResponse.token, null, 5000)).body;
+                const expectedBody = {
+                    status: {
+                        code: 40000,
+                        message: 'Invalid connection'
+                    }
+                };
+                assert.deepEqual(expectedBody, result);
+            });
+
+            test('Fail - Google', async() => {
+                const result = (await userConnectionsAdd(agent, user.id, 'google', null, null, 5000)).body;
+                const expectedBody = {
+                    status: {
+                        code: 40000,
+                        message: 'Bad request'
+                    }
+                };
+                assert.deepEqual(result, expectedBody);
+            });
+
+            test('Fail - Smart-ID - User has connection with different pid - logout', async() => {
+                const pid = '30303039914';
+                const pid2 = '30303039903';
+                const res = (await userConnectionsList(agent, user.email)).body.data;
+                const expectedList = {
+                    count: 1,
+                    rows: [
+                        {
+                            connectionId: UserConnection.CONNECTION_IDS.citizenos
+                        }
+                    ]
                 }
-            };
 
-            assert.deepEqual(res.body, bodyExpected);
+                assert.deepEqual(res, expectedList);
+                const initResponse = (await auth.loginSmartIdInit(agent, pid)).body.data;
+                const res2 = (await userConnectionsAdd(agent, user.id, 'smartid', initResponse.token, null, 5000)).body.data;
+
+                const expectedList2 = {
+                    count: 2,
+                    rows: [
+                        {
+                            connectionId: 'citizenos'
+                        },
+                        {
+                            connectionId: 'smartid'
+                        }
+                    ]
+                };
+                assert.deepEqual(res2, expectedList2);
+                const initResponse2 = (await auth.loginSmartIdInit(agent, pid2)).body.data;
+                const res3 = (await userConnectionsAdd(agent, user.id, 'smartid', initResponse2.token, null, 5000)).body;
+                const expectedBody = {
+                    status: {
+                        code: 40300,
+                        message: 'Forbidden'
+                    }
+                };
+                assert.deepEqual(res3, expectedBody);
+
+                await auth._status(agent, 401);
+            });
         });
 
-        test('Fail - 40001 - invalid userId', async function () {
-            const res = await _userConnectionsList(agent, '123', 400);
+        suite('List', function () {
 
-            const bodyExpected = {
-                status: {
-                    code: 40001,
-                    message: 'Invalid userId'
-                }
-            };
+            const agent = request.agent(app);
 
-            assert.deepEqual(res.body, bodyExpected);
+            let user;
+
+            setup(async function () {
+                user = await userLib.createUser(agent); // Creates connection with e-mail
+            });
+
+            test('Success - 20000 - 1 connection - emails only', async function () {
+                const res = await userConnectionsList(agent, user.email);
+
+                const bodyExpected = {
+                    status: {
+                        code: 20000
+                    },
+                    data: {
+                        count: 1,
+                        rows: [
+                            {
+                                connectionId: UserConnection.CONNECTION_IDS.citizenos
+                            }
+                        ]
+                    }
+                };
+
+                assert.deepEqual(res.body, bodyExpected);
+            });
+
+            test('Success - 2000 - 4 connections - citizenos, google, esteid, smartid', async function () {
+                // UserConnection "citizenos" is created on signup
+                await UserConnection.create({
+                    userId: user.id,
+                    connectionId: UserConnection.CONNECTION_IDS.google,
+                    connectionUserId: 'test_generated_google1234' + cosUtil.randomString()
+                });
+
+                await UserConnection.create({
+                    userId: user.id,
+                    connectionId: UserConnection.CONNECTION_IDS.esteid,
+                    connectionUserId: 'test_generated_esteid_' + cosUtil.randomString()
+                });
+
+                await UserConnection.create({
+                    userId: user.id,
+                    connectionId: UserConnection.CONNECTION_IDS.smartid,
+                    connectionUserId: 'test_generated_smartId_`' + cosUtil.randomString()
+                });
+
+                const res = await userConnectionsList(agent, user.email);
+
+                const bodyExpected = {
+                    status: {
+                        code: 20000
+                    },
+                    data: {
+                        count: 4,
+                        rows: [
+                            {
+                                connectionId: UserConnection.CONNECTION_IDS.citizenos
+                            },
+                            {
+                                connectionId: UserConnection.CONNECTION_IDS.esteid
+                            },
+                            {
+                                connectionId: UserConnection.CONNECTION_IDS.google
+                            },
+                            {
+                                connectionId: UserConnection.CONNECTION_IDS.smartid
+                            }
+                        ]
+                    }
+                };
+
+                assert.deepEqual(res.body, bodyExpected);
+            });
+
+            test('Fail - 40400 - not found by valid UUID', async function () {
+                const res = await _userConnectionsList(agent, uuid.v4(), 404);
+
+                const bodyExpected = {
+                    status: {
+                        code: 40400,
+                        message: 'Not Found'
+                    }
+                };
+
+                assert.deepEqual(res.body, bodyExpected);
+            });
+
+            test('Fail - 40400 - not found by valid e-mail', async function () {
+                const res = await _userConnectionsList(agent, 'citizenos_test_get_user_connections_404@test.com', 404);
+
+                const bodyExpected = {
+                    status: {
+                        code: 40400,
+                        message: 'Not Found'
+                    }
+                };
+
+                assert.deepEqual(res.body, bodyExpected);
+            });
+
+            test('Fail - 40001 - invalid userId', async function () {
+                const res = await _userConnectionsList(agent, '123', 400);
+
+                const bodyExpected = {
+                    status: {
+                        code: 40001,
+                        message: 'Invalid userId'
+                    }
+                };
+
+                assert.deepEqual(res.body, bodyExpected);
+            });
         });
-
     });
 });

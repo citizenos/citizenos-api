@@ -439,16 +439,13 @@ const openIdAuthorize = async function (agent, responseType, clientId, redirectU
 
 //Export the above function call so that other tests could use it to prepare data.
 module.exports.login = login;
-module.exports.login = login;
 module.exports.logout = logout;
-module.exports.logout = logout;
-module.exports.signup = signup;
 module.exports.signup = signup;
 module.exports.verify = verify;
 module.exports.status = status;
 module.exports._status = _status;
-module.exports.status = status;
-module.exports._status = _status;
+module.exports.loginSmartIdInit = loginSmartIdInit;
+module.exports.loginMobileInit = loginMobileInit;
 
 const request = require('supertest');
 const app = require('../../app');
@@ -460,8 +457,7 @@ const assert = require('chai').assert;
 const config = app.get('config');
 const jwt = app.get('jwt');
 const urlLib = app.get('urlLib');
-const objectEncrypter = app.get('objectEncrypter');
-
+const cryptoLib = app.get('cryptoLib');
 const shared = require('../utils/shared');
 const userLib = require('./lib/user')(app);
 
@@ -623,7 +619,7 @@ suite('Auth', function () {
                     assert.equal(response.status.code, 20001);
                     assert.match(response.data.challengeID, /[0-9]{4}/);
                     const tokenData = jwt.verify(response.data.token, config.session.publicKey, {algorithms: [config.session.algorithm]});
-                    const loginMobileFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
+                    const loginMobileFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
                     assert.property(loginMobileFlowData, 'sessionHash');
 
                     const responseData = (await loginMobilestatus(request.agent(app), response.data.token)).body.data;
@@ -850,7 +846,7 @@ suite('Auth', function () {
                     assert.isNotNull(token);
 
                     const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
-                    const loginMobileFlowData = objectEncrypter(config.session.secret).decrypt(tokenData.sessionDataEncrypted);
+                    const loginMobileFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
 
                     assert.property(loginMobileFlowData, 'sessionId');
                     assert.property(loginMobileFlowData, 'sessionHash');

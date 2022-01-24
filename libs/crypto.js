@@ -1,6 +1,6 @@
 'use strict';
 
-var HASH_TYPES = {
+const HASH_TYPES = {
     sha1: {
         name: 'SHA-1',
         length: 40
@@ -23,8 +23,8 @@ var HASH_TYPES = {
     }
 };
 
-var crypto = require('crypto');
-var base64url = require('base64-url');
+const crypto = require('crypto');
+const base64url = require('base64-url');
 
 /**
  * Get a hash of string
@@ -34,12 +34,12 @@ var base64url = require('base64-url');
  *
  * @returns {string} Hash
  */
-var _getHash = function (data, algorithm) {
+const _getHash = function (data, algorithm) {
     if (data === null) {
         return null;
     }
 
-    var sum = crypto.createHash(algorithm);
+    const sum = crypto.createHash(algorithm);
     sum.update(data);
 
     return sum.digest('hex');
@@ -55,15 +55,15 @@ var _getHash = function (data, algorithm) {
  *
  * @see http://openid.net/specs/openid-connect-implicit-1_0.html#IDToken
  */
-var _getAtHash = function (data, algorithm) {
+const _getAtHash = function (data, algorithm) {
     if (data === null) {
         return null;
     }
 
-    var sum = crypto.createHash(algorithm);
+    const sum = crypto.createHash(algorithm);
     sum.update(data);
 
-    var hash = sum.digest();
+    const hash = sum.digest();
 
     return base64url.encode(hash.slice(0, 16).toString('hex'));
 };
@@ -77,8 +77,8 @@ var _getAtHash = function (data, algorithm) {
  *
  * @private
  */
-var _isHexString = function (string) {
-    var regexp = /^[0-9a-fA-F]+$/;
+const _isHexString = function (string) {
+    const regexp = /^[0-9a-fA-F]+$/;
 
     return regexp.test(string);
 };
@@ -96,14 +96,14 @@ var _isHexString = function (string) {
  *
  * @private
  */
-var _getHashType = function (hash) {
+const _getHashType = function (hash) {
     if (!_isHexString(hash)) {
         throw Error('Hash must be in HEX encoding!');
     }
 
-    for (var type in HASH_TYPES) {
+    for (let type in HASH_TYPES) {
         if (Object.prototype.hasOwnProperty.call(HASH_TYPES, type)) {
-            var typeO = HASH_TYPES[type];
+            const typeO = HASH_TYPES[type];
             if (hash.length === typeO.length) {
                 return typeO.name;
             }
@@ -113,8 +113,36 @@ var _getHashType = function (hash) {
     return null;
 };
 
+const algorithm = 'aes-256-ctr';
+const IV_LENGTH = 16;
+
+
+const _encrypt = (secret, data) => {
+    let key = crypto.createHash('sha256').update(String(secret)).digest('base64');
+    let iv = crypto.randomBytes(IV_LENGTH);
+    let cipher = crypto.createCipheriv(algorithm, Buffer.from(key, 'base64'), iv);
+    let encrypted = cipher.update(JSON.stringify(data));
+    encrypted = Buffer.concat([encrypted, cipher.final()]);
+
+    return iv.toString('hex') + ':' + encrypted.toString('hex');
+};
+
+const _decrypt = (secret, data) => {
+    let key = crypto.createHash('sha256').update(String(secret)).digest('base64');
+    let textParts = data.split(':');
+    let iv = Buffer.from(textParts.shift(), 'hex');
+    let encryptedText = Buffer.from(textParts.join(':'), 'hex');
+    let decipher = crypto.createDecipheriv(algorithm, Buffer.from(key, 'base64'), iv);
+    let decrypted = decipher.update(encryptedText);
+    decrypted = Buffer.concat([decrypted, decipher.final()]);
+
+    return JSON.parse(decrypted.toString());
+};
+
 module.exports = {
     getHash: _getHash,
     getAtHash: _getAtHash,
-    getHashType: _getHashType
+    getHashType: _getHashType,
+    encrypt: _encrypt,
+    decrypt: _decrypt
 };
