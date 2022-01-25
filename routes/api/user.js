@@ -219,7 +219,7 @@ module.exports = function (app) {
                     where: {
                         id: req.user.userId
                     },
-                    transaction: te
+                    transaction: t
                 });
 
                 await UserConnection.destroy({
