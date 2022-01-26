@@ -5923,286 +5923,116 @@ module.exports = function (app) {
     /**
      * Create a Vote
      */
-    app.post('/api/users/:userId/topics/:topicId/votes', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress]), async function (req, res, next) {
-        try {
-            const voteOptions = req.body.options;
+    app.post('/api/users/:userId/topics/:topicId/votes', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress]), asyncMiddleware(async function (req, res, next) {
+        const voteOptions = req.body.options;
 
-            if (!voteOptions || !Array.isArray(voteOptions) || voteOptions.length < 2) {
-                return res.badRequest('At least 2 vote options are required', 1);
-            }
+        if (!voteOptions || !Array.isArray(voteOptions) || voteOptions.length < 2) {
+            return res.badRequest('At least 2 vote options are required', 1);
+        }
 
-            const authType = req.body.authType || Vote.AUTH_TYPES.soft;
-            const delegationIsAllowed = req.body.delegationIsAllowed || false;
+        const authType = req.body.authType || Vote.AUTH_TYPES.soft;
+        const delegationIsAllowed = req.body.delegationIsAllowed || false;
 
-            // We cannot allow too similar options, otherwise the options are not distinguishable in the signed file
-            if (authType === Vote.AUTH_TYPES.hard) {
-                const voteOptionValues = _.map(voteOptions, 'value').map(function (value) {
-                    return sanitizeFilename(value).toLowerCase();
-                });
-
-                const uniqueValues = _.uniq(voteOptionValues);
-                if (uniqueValues.length !== voteOptions.length) {
-                    return res.badRequest('Vote options are too similar', 2);
-                }
-
-                const reservedPrefix = VoteOption.RESERVED_PREFIX;
-                uniqueValues.forEach(function (value) {
-                    if (value.substr(0, 2) === reservedPrefix) {
-                        return res.badRequest('Vote option not allowed due to usage of reserved prefix "' + reservedPrefix + '"', 4);
-                    }
-                });
-            }
-
-
-            if (authType === Vote.AUTH_TYPES.hard && delegationIsAllowed) {
-                return res.badRequest('Delegation is not allowed for authType "' + authType + '"', 3);
-            }
-
-            const vote = Vote.build({
-                minChoices: req.body.minChoices || 1,
-                maxChoices: req.body.maxChoices || 1,
-                delegationIsAllowed: req.body.delegationIsAllowed || false,
-                endsAt: req.body.endsAt,
-                description: req.body.description,
-                type: req.body.type || Vote.TYPES.regular,
-                authType: authType,
-                autoClose: req.body.autoClose
+        // We cannot allow too similar options, otherwise the options are not distinguishable in the signed file
+        if (authType === Vote.AUTH_TYPES.hard) {
+            const voteOptionValues = _.map(voteOptions, 'value').map(function (value) {
+                return sanitizeFilename(value).toLowerCase();
             });
 
+            const uniqueValues = _.uniq(voteOptionValues);
+            if (uniqueValues.length !== voteOptions.length) {
+                return res.badRequest('Vote options are too similar', 2);
+            }
 
-            // TODO: Some of these queries can be done in parallel
-            const topic = await Topic.findOne({
-                where: {
-                    id: req.params.topicId
+            const reservedPrefix = VoteOption.RESERVED_PREFIX;
+            uniqueValues.forEach(function (value) {
+                if (value.substr(0, 2) === reservedPrefix) {
+                    return res.badRequest('Vote option not allowed due to usage of reserved prefix "' + reservedPrefix + '"', 4);
                 }
             });
+        }
 
-            await db
-                .transaction(async function (t) {
-                    let voteOptionsCreated;
 
-                    await cosActivities
-                        .createActivity(
-                            vote,
-                            null,
-                            {
-                                type: 'User',
-                                id: req.user.userId,
-                                ip: req.ip
-                            },
-                            req.method + ' ' + req.path,
-                            t
-                        );
-                    await vote.save({transaction: t});
-                    const voteOptionPromises = [];
-                    _(voteOptions).forEach(function (o) {
-                        o.voteId = vote.id;
-                        const vopt = VoteOption.build(o);
-                        voteOptionPromises.push(vopt.validate());
-                    });
+        if (authType === Vote.AUTH_TYPES.hard && delegationIsAllowed) {
+            return res.badRequest('Delegation is not allowed for authType "' + authType + '"', 3);
+        }
 
-                    await Promise.all(voteOptionPromises);
-                    voteOptionsCreated = await VoteOption
-                        .bulkCreate(
-                            voteOptions,
-                            {
-                                fields: ['id', 'voteId', 'value'], // Deny updating other fields like "updatedAt", "createdAt"...
-                                returning: true,
-                                transaction: t
-                            }
-                        );
+        const vote = Vote.build({
+            minChoices: req.body.minChoices || 1,
+            maxChoices: req.body.maxChoices || 1,
+            delegationIsAllowed: req.body.delegationIsAllowed || false,
+            endsAt: req.body.endsAt,
+            description: req.body.description,
+            type: req.body.type || Vote.TYPES.regular,
+            authType: authType,
+            autoClose: req.body.autoClose
+        });
 
-                    await cosActivities
-                        .createActivity(
-                            voteOptionsCreated,
-                            null,
-                            {
-                                type: 'User',
-                                id: req.user.userId,
-                                ip: req.ip
-                            },
-                            req.method + ' ' + req.path,
-                            t
-                        );
-                    await TopicVote
-                        .create(
-                            {
-                                topicId: req.params.topicId,
-                                voteId: vote.id
-                            },
-                            {transaction: t}
-                        );
-                    await cosActivities
-                        .createActivity(
-                            vote,
-                            topic,
-                            {
-                                type: 'User',
-                                id: req.user.userId,
-                                ip: req.ip
-                            },
-                            req.method + ' ' + req.path,
-                            t
-                        );
-                    topic.status = Topic.STATUSES.voting;
 
-                    await cosActivities
-                        .updateActivity(topic, null, {
+        // TODO: Some of these queries can be done in parallel
+        const topic = await Topic.findOne({
+            where: {
+                id: req.params.topicId
+            }
+        });
+
+        await db
+            .transaction(async function (t) {
+                let voteOptionsCreated;
+
+                await cosActivities
+                    .createActivity(
+                        vote,
+                        null,
+                        {
                             type: 'User',
                             id: req.user.userId,
                             ip: req.ip
-                        }, null, req.method + ' ' + req.path, t);
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
+                await vote.save({transaction: t});
+                const voteOptionPromises = [];
+                _(voteOptions).forEach(function (o) {
+                    o.voteId = vote.id;
+                    const vopt = VoteOption.build(o);
+                    voteOptionPromises.push(vopt.validate());
+                });
 
-                    const restopic = await topic
-                        .save({
+                await Promise.all(voteOptionPromises);
+                voteOptionsCreated = await VoteOption
+                    .bulkCreate(
+                        voteOptions,
+                        {
+                            fields: ['id', 'voteId', 'value'], // Deny updating other fields like "updatedAt", "createdAt"...
                             returning: true,
                             transaction: t
-                        });
-
-                    vote.dataValues.VoteOptions = [];
-                    voteOptionsCreated.forEach(function (option) {
-                        vote.dataValues.VoteOptions.push(option.dataValues);
-                    });
-
-                    await cosSignature.createVoteFiles(restopic, vote, voteOptionsCreated, t);
-                    t.afterCommit(() => {
-                        return res.created(vote.toJSON());
-                    })
-                });
-        } catch (err) {
-            return next(err);
-        }
-    });
-
-
-    /**
-     * Read a Vote
-     */
-    app.get('/api/users/:userId/topics/:topicId/votes/:voteId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
-        const topicId = req.params.topicId;
-        const voteId = req.params.voteId;
-        const userId = req.user.userId;
-        try {
-            const voteInfo = await Vote.findOne({
-                where: {id: voteId},
-                include: [
-                    {
-                        model: Topic,
-                        where: {id: topicId}
-                    },
-                    VoteOption,
-                    {
-                        model: VoteDelegation,
-                        where: {
-                            voteId: voteId,
-                            byUserId: userId
-                        },
-                        attributes: ['id'],
-                        required: false,
-                        include: [
-                            {
-                                model: User
-                            }
-                        ]
-                    }
-                ]
-            });
-
-            if (!voteInfo) {
-                return res.notFound();
-            }
-
-            const voteResults = await getVoteResults(voteId, userId);
-            let hasVoted = false;
-            if (voteResults && voteResults.length) {
-                voteInfo.dataValues.VoteOptions.forEach(function (option) {
-                    const result = _.find(voteResults, {optionId: option.id});
-
-                    if (result) {
-                        const voteCount = parseInt(result.voteCount, 10);
-                        if (voteCount)
-                            option.dataValues.voteCount = voteCount;//TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
-                        if (result.selected) {
-                            option.dataValues.selected = result.selected; //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
-                            hasVoted = true;
                         }
-                    }
-                });
-
-                voteInfo.dataValues.votersCount = voteResults[0].votersCount;
-            }
-
-            // TODO: Contains duplicate code with GET /status AND /sign
-            if (hasVoted && voteInfo.authType === Vote.AUTH_TYPES.hard) {
-                voteInfo.dataValues.downloads = {
-                    bdocVote: getBdocURL({
-                        userId: userId,
-                        topicId: topicId,
-                        voteId: voteId,
-                        type: 'user'
-                    })
-                };
-            }
-
-            if (req.locals.topic.permissions.level === TopicMemberUser.LEVELS.admin && [Topic.STATUSES.followUp, Topic.STATUSES.closed].indexOf(req.locals.topic.status) > -1) {
-                if (!voteInfo.dataValues.downloads) {
-                    voteInfo.dataValues.downloads = {};
-                }
-                const voteFinalURLParams = {
-                    userId: userId,
-                    topicId: topicId,
-                    voteId: voteId,
-                    type: 'final'
-                };
-                if (voteInfo.authType === Vote.AUTH_TYPES.hard) {
-                    voteInfo.dataValues.downloads.bdocFinal = getBdocURL(voteFinalURLParams);
-                } else {
-                    voteInfo.dataValues.downloads.zipFinal = getZipURL(voteFinalURLParams);
-                }
-            }
-
-            return res.ok(voteInfo);
-        } catch (e) {
-            return next(e);
-        }
-    });
-
-    /**
-     * Update a Vote
-     */
-    app.put('/api/users/:userId/topics/:topicId/votes/:voteId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), async function (req, res, next) {
-        const topicId = req.params.topicId;
-        const voteId = req.params.voteId;
-        try {
-            // Make sure the Vote is actually related to the Topic through which the permission was granted.
-            const fields = ['endsAt'];
-
-            const topic = await Topic.findOne({
-                where: {
-                    id: topicId
-                },
-                include: [
-                    {
-                        model: Vote,
-                        where: {
-                            id: voteId
-                        }
-                    }
-                ]
-            });
-            if (!topic || !topic.Votes || !topic.Votes.length) {
-                return res.notFound();
-            }
-
-            const vote = topic.Votes[0];
-
-            await db.transaction(async function (t) {
-                fields.forEach(function (field) {
-                    vote[field] = req.body[field];
-                });
+                    );
 
                 await cosActivities
-                    .updateActivity(
+                    .createActivity(
+                        voteOptionsCreated,
+                        null,
+                        {
+                            type: 'User',
+                            id: req.user.userId,
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
+                await TopicVote
+                    .create(
+                        {
+                            topicId: req.params.topicId,
+                            voteId: vote.id
+                        },
+                        {transaction: t}
+                    );
+                await cosActivities
+                    .createActivity(
                         vote,
                         topic,
                         {
@@ -6210,68 +6040,222 @@ module.exports = function (app) {
                             id: req.user.userId,
                             ip: req.ip
                         },
-                        null,
                         req.method + ' ' + req.path,
                         t
                     );
-                await vote.save({
-                    transaction: t
+                topic.status = Topic.STATUSES.voting;
+
+                await cosActivities
+                    .updateActivity(topic, null, {
+                        type: 'User',
+                        id: req.user.userId,
+                        ip: req.ip
+                    }, null, req.method + ' ' + req.path, t);
+
+                const resTopic = await topic
+                    .save({
+                        returning: true,
+                        transaction: t
+                    });
+
+                vote.dataValues.VoteOptions = [];
+                voteOptionsCreated.forEach(function (option) {
+                    vote.dataValues.VoteOptions.push(option.dataValues);
                 });
 
-                t.afterCommit(() => {
-                    return res.ok(vote.toJSON());
-                });
-
+                await cosSignature.createVoteFiles(resTopic, vote, voteOptionsCreated, t);
             });
-        } catch (err) {
-            return next(err);
+
+        return res.created(vote.toJSON());
+    }));
+
+
+    /**
+     * Read a Vote
+     */
+    app.get('/api/users/:userId/topics/:topicId/votes/:voteId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), asyncMiddleware(async function (req, res) {
+        const topicId = req.params.topicId;
+        const voteId = req.params.voteId;
+        const userId = req.user.userId;
+
+        const voteInfo = await Vote.findOne({
+            where: {id: voteId},
+            include: [
+                {
+                    model: Topic,
+                    where: {id: topicId}
+                },
+                VoteOption,
+                {
+                    model: VoteDelegation,
+                    where: {
+                        voteId: voteId,
+                        byUserId: userId
+                    },
+                    attributes: ['id'],
+                    required: false,
+                    include: [
+                        {
+                            model: User
+                        }
+                    ]
+                }
+            ]
+        });
+
+        if (!voteInfo) {
+            return res.notFound();
         }
-    });
+
+        const voteResults = await getVoteResults(voteId, userId);
+        let hasVoted = false;
+        if (voteResults && voteResults.length) {
+            voteInfo.dataValues.VoteOptions.forEach(function (option) {
+                const result = _.find(voteResults, {optionId: option.id});
+
+                if (result) {
+                    const voteCount = parseInt(result.voteCount, 10);
+                    if (voteCount)
+                        option.dataValues.voteCount = voteCount;//TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
+                    if (result.selected) {
+                        option.dataValues.selected = result.selected; //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
+                        hasVoted = true;
+                    }
+                }
+            });
+
+            voteInfo.dataValues.votersCount = voteResults[0].votersCount;
+        }
+
+        // TODO: Contains duplicate code with GET /status AND /sign
+        if (hasVoted && voteInfo.authType === Vote.AUTH_TYPES.hard) {
+            voteInfo.dataValues.downloads = {
+                bdocVote: getBdocURL({
+                    userId: userId,
+                    topicId: topicId,
+                    voteId: voteId,
+                    type: 'user'
+                })
+            };
+        }
+
+        if (req.locals.topic.permissions.level === TopicMemberUser.LEVELS.admin && [Topic.STATUSES.followUp, Topic.STATUSES.closed].indexOf(req.locals.topic.status) > -1) {
+            if (!voteInfo.dataValues.downloads) {
+                voteInfo.dataValues.downloads = {};
+            }
+            const voteFinalURLParams = {
+                userId: userId,
+                topicId: topicId,
+                voteId: voteId,
+                type: 'final'
+            };
+            if (voteInfo.authType === Vote.AUTH_TYPES.hard) {
+                voteInfo.dataValues.downloads.bdocFinal = getBdocURL(voteFinalURLParams);
+            } else {
+                voteInfo.dataValues.downloads.zipFinal = getZipURL(voteFinalURLParams);
+            }
+        }
+
+        return res.ok(voteInfo);
+    }));
+
+    /**
+     * Update a Vote
+     */
+    app.put('/api/users/:userId/topics/:topicId/votes/:voteId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
+        const topicId = req.params.topicId;
+        const voteId = req.params.voteId;
+
+        // Make sure the Vote is actually related to the Topic through which the permission was granted.
+        const fields = ['endsAt'];
+
+        const topic = await Topic.findOne({
+            where: {
+                id: topicId
+            },
+            include: [
+                {
+                    model: Vote,
+                    where: {
+                        id: voteId
+                    }
+                }
+            ]
+        });
+
+        if (!topic || !topic.Votes || !topic.Votes.length) {
+            return res.notFound();
+        }
+
+        const vote = topic.Votes[0];
+
+        await db.transaction(async function (t) {
+            fields.forEach(function (field) {
+                vote[field] = req.body[field];
+            });
+
+            await cosActivities
+                .updateActivity(
+                    vote,
+                    topic,
+                    {
+                        type: 'User',
+                        id: req.user.userId,
+                        ip: req.ip
+                    },
+                    null,
+                    req.method + ' ' + req.path,
+                    t
+                );
+
+            await vote.save({
+                transaction: t
+            });
+        });
+
+        return res.ok(vote.toJSON());
+    }));
 
     /**
      * Read a public Topics Vote
      */
-    app.get('/api/topics/:topicId/votes/:voteId', hasVisibility(Topic.VISIBILITY.public), async function (req, res, next) {
+    app.get('/api/topics/:topicId/votes/:voteId', hasVisibility(Topic.VISIBILITY.public), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const voteId = req.params.voteId;
 
-        try {
-            // TODO: Can be done in 1 query.
-            const voteInfo = await Vote
-                .findOne({
-                    where: {id: voteId},
-                    include: [
-                        {
-                            model: Topic,
-                            where: {id: topicId}
-                        },
-                        VoteOption
-                    ]
-                });
+        // TODO: Can be done in 1 query.
+        const voteInfo = await Vote
+            .findOne({
+                where: {id: voteId},
+                include: [
+                    {
+                        model: Topic,
+                        where: {id: topicId}
+                    },
+                    VoteOption
+                ]
+            });
 
-            if (!voteInfo) {
-                return res.notFound();
-            }
-
-            const voteResults = await getVoteResults(voteId);
-            if (voteResults && voteResults.length) {
-                _(voteInfo.dataValues.VoteOptions).forEach(function (option) {
-                    const result = _.find(voteResults, {optionId: option.id});
-                    if (result) {
-                        option.dataValues.voteCount = parseInt(result.voteCount, 10); //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
-                        if (result.selected) {
-                            option.dataValues.selected = result.selected; //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
-                        }
-                    }
-                });
-                voteInfo.dataValues.votersCount = voteResults[0].votersCount;
-            }
-
-            return res.ok(voteInfo);
-        } catch (err) {
-            return next(err);
+        if (!voteInfo) {
+            return res.notFound();
         }
-    });
+
+        const voteResults = await getVoteResults(voteId);
+        if (voteResults && voteResults.length) {
+            _(voteInfo.dataValues.VoteOptions).forEach(function (option) {
+                const result = _.find(voteResults, {optionId: option.id});
+                if (result) {
+                    option.dataValues.voteCount = parseInt(result.voteCount, 10); //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
+                    if (result.selected) {
+                        option.dataValues.selected = result.selected; //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
+                    }
+                }
+            });
+            voteInfo.dataValues.votersCount = voteResults[0].votersCount;
+        }
+
+        return res.ok(voteInfo);
+    }));
 
     const handleTopicVotePreconditions = async function (req, res) {
         const topicId = req.params.topicId;
