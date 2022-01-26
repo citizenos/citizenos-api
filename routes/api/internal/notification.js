@@ -27,7 +27,6 @@ module.exports = function (app) {
             return res.ok();
         }
 
-        logger.error('/api/internal/notifications/pads/update', JSON.stringify(req.body, null, 2));
         padIds.forEach(function (topicId) {
             pads[padIds].forEach(function (pdata) {
                 promisesToResolve.push(cosEtherpad
