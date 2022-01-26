@@ -220,35 +220,42 @@ module.exports = function (app) {
         const title = _getTopicTitleFromPadContent(html);
 
         return db.transaction(async function (t) {
-            const topic = await Topic.findOne({
+            const topic = await Topic.findOne(
+                {
                     where: {
                         id: topicId
                     }
-                },{transaction: t});
+                },
+                {
+                    transaction: t
+                }
+            );
+
             topic.title = title;
             topic.description = html;
             if (!actor) {
                 actor = {type: 'System'};
             }
 
-                    // TODO: ADD CHECK HERE, IF another event not updated (description) has been added then create new else update last description edit updatedAt field
+            // TODO: ADD CHECK HERE, IF another event not updated (description) has been added then create new else update last description edit updatedAt field
             await cosActivities.updateTopicDescriptionActivity(topic, null, actor, ['id', 'title', 'status', 'visibility', 'sourcePartnerId'], context, t);
+
             return topic.update(
-                    {
-                        title: title,
-                        description: html
+                {
+                    title: title,
+                    description: html
+                },
+                {
+                    where: {
+                        id: topicId,
+                        status: Topic.STATUSES.inProgress // Only in progress Topics can be updated
                     },
-                    {
-                        where: {
-                            id: topicId,
-                            status: Topic.STATUSES.inProgress // Only in progress Topics can be updated
-                        },
-                        limit: 1
-                    },
-                    {
-                        transaction: t
-                    }
-                );
+                    limit: 1
+                },
+                {
+                    transaction: t
+                }
+            );
         });
     };
 
@@ -258,16 +265,20 @@ module.exports = function (app) {
         options.rootPath = '/p/:pad/0/'.replace(':pad', topicId);
         const etherpadClient = require('etherpad-lite-client').connect(options);
 
-        return new Promise ((resolve, reject) => {
-            etherpadClient.call('commentReplies', {
-                apiKey: options.apikey,
-                jwt: token
-            } ,(err, data) => {
-                if (err) {
-                    return reject(err);
+        return new Promise((resolve, reject) => {
+            etherpadClient.call(
+                'commentReplies',
+                {
+                    apiKey: options.apikey,
+                    jwt: token
+                },
+                (err, data) => {
+                    if (err) {
+                        return reject(err);
+                    }
+                    return resolve(data);
                 }
-                return resolve(data);
-            });
+            );
         });
     };
 
@@ -277,11 +288,11 @@ module.exports = function (app) {
         options.rootPath = '/p/:pad/1.2.15/'.replace(':pad', topicId);
         const etherpadClient = require('etherpad-lite-client').connect(options);
 
-        return new Promise ((resolve, reject) => {
+        return new Promise((resolve, reject) => {
             etherpadClient.call('comments', {
                 apiKey: options.apikey,
                 jwt: token
-            } ,(err, data) => {
+            }, (err, data) => {
                 if (err) {
                     return reject(err);
                 }
@@ -290,14 +301,15 @@ module.exports = function (app) {
         });
     };
 
-    const _createPadCopy = async(sourceTopicId, newtopicId) => {
+    const _createPadCopy = async (sourceTopicId, newtopicId) => {
         try {
-            const contents = await etherpadClient
-                .copyPadWithoutHistoryAsync({sourceID: sourceTopicId, destinationID: newtopicId});
-
-            return contents;
-        } catch(err) {
-            console.log('ERR', err);
+            return await etherpadClient
+                .copyPadWithoutHistoryAsync({
+                    sourceID: sourceTopicId,
+                    destinationID: newtopicId
+                });
+        } catch (err) {
+            console.log('_createPadCopy ERR', err);
         }
     };
 

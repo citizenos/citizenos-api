@@ -29,16 +29,18 @@ module.exports = function (app) {
 
         padIds.forEach(function (topicId) {
             pads[padIds].forEach(function (pdata) {
-                return cosEtherpad
+                promisesToResolve.push(cosEtherpad
                     .syncTopicWithPad(
                         topicId,
                         req.method + ' ' + req.path,
                         {
                             type: 'User',
                             id: pdata.userId,
-                            ip: req.ip
-                        }
-                    );
+                            ip: pdata.ip,
+                        },
+                        pdata.rev
+                    )
+                );
             });
         });
 

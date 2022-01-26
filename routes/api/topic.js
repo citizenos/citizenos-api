@@ -4472,7 +4472,7 @@ module.exports = function (app) {
             await db
                 .transaction(async function (t) {
                     const link = new URL(attachment.link);
-                    if(attachment.source === Attachment.SOURCES.upload) {
+                    if (attachment.source === Attachment.SOURCES.upload) {
                         await cosUpload.delete(link.pathname);
                     }
                     await cosActivities.deleteActivity(attachment, attachment.Topics[0], {
@@ -5512,7 +5512,6 @@ module.exports = function (app) {
 
     app.post(['/api/users/:userId/topics/:topicId/comments/:commentId/reports', '/api/topics/:topicId/comments/:commentId/reports'], loginCheck(['partner']), topicCommentsReportsCreate);
 
-
     /**
      * Read Report
      */
@@ -5624,6 +5623,7 @@ module.exports = function (app) {
                         id: eventTokenData.userId,
                         ip: req.ip
                     }, null, req.method + ' ' + req.path, t);
+
                 let c = (await Comment.update(
                     {
                         deletedById: eventTokenData.userId,
