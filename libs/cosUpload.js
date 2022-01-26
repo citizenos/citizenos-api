@@ -34,7 +34,7 @@ module.exports = function (app) {
         if (storageConfig) {
             return new Promise(function (resolve, reject) {
                 try {
-                    busboy = new Busboy({
+                    busboy = Busboy({
                         headers: req.headers,
                         limits: {
                             fileSize: config.storage.maxFileSize
@@ -55,7 +55,8 @@ module.exports = function (app) {
                 busboy.on('field', function (key, value) {
                     formdata[key] = value;
                 })
-                busboy.on('file', function (fieldname, file, filename, encoding, mimetype) {
+                busboy.on('file', function (name, file, info) {
+                    const { filename, mimeType } = info;
                     let savedFilename = path.join(subFolder, newFileName + path.extname(filename));
                     if (!config.storage.type || config.storage.type === 'local') {
                         accessPath = new URL(savedFilename, baseURL);
@@ -81,7 +82,7 @@ module.exports = function (app) {
                     });
 
                     uploadResult = uploader.upload(file, {
-                        type: mimetype,
+                        type: mimeType,
                         filename: savedFilename
                     });
 
