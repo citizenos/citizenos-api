@@ -366,7 +366,7 @@ module.exports = function (app) {
         const changeSet = _getInstanceChangeSet(instance);
 
         if (changeSet.length === 0) {
-            return Promise.reject('_updateActivity', 'NO UPDATES ON OBJECT!');
+            return Promise.reject('No changes detected for instance');
         }
 
         origin['@type'] = instance.constructor.name;

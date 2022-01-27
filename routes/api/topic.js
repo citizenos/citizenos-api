@@ -1685,6 +1685,7 @@ module.exports = function (app) {
 
             const statuses = _.values(Topic.STATUSES);
             const vote = topic.Votes[0];
+
             if (statusNew && statusNew !== topic.status) {
                 // The only flow that allows going back in status flow is reopening for voting
                 if (statusNew === Topic.STATUSES.voting && topic.status === Topic.STATUSES.followUp) {
@@ -1737,6 +1738,18 @@ module.exports = function (app) {
 
             await db
                 .transaction(async function (t) {
+                    if (req.body.description) {
+                        if (topic.status === Topic.STATUSES.inProgress) {
+                            await cosEtherpad
+                                .updateTopic(
+                                    topicId,
+                                    req.body.description
+                                );
+                        } else {
+                            return res.badRequest(`Cannot update Topic content when status ${topic.status}`);
+                        }
+                    }
+
                     await cosActivities
                         .updateActivity(
                             topic,
@@ -1748,8 +1761,15 @@ module.exports = function (app) {
                             },
                             req.method + ' ' + req.path,
                             t
+                        )
+                        .then(
+                            function () {
+                                return topic.save({transaction: t});
+                            },
+                            function (err) {
+                                logger.info('Update activity failed. Probably as there was no changeset for the instance', err);
+                            }
                         );
-                    await topic.save({transaction: t});
 
                     if (isBackToVoting) {
                         await cosSignature.deleteFinalBdoc(topicId, vote.id);
@@ -1762,19 +1782,6 @@ module.exports = function (app) {
                                 force: true,
                                 transaction: t
                             });
-                    }
-
-
-                    if (req.body.description) {
-                        if (topic.status === Topic.STATUSES.inProgress) {
-                            await cosEtherpad
-                                .updateTopic(
-                                    topicId,
-                                    req.body.description
-                                );
-                        } else {
-                            return res.badRequest(`Cannot update Topic content when status ${topic.status}`);
-                        }
                     }
                 });
 
@@ -1790,6 +1797,7 @@ module.exports = function (app) {
                         }
                     );
             }
+
             // TODO: This logic is specific to Rahvaalgatus.ee, with next Partner we have to make it more generic - https://trello.com/c/Sj3XRF5V/353-raa-ee-followup-email-to-riigikogu-and-token-access-to-events-api
             if (isSendToParliament) {
                 logger.info('Sending to Parliament', req.method, req.path);
