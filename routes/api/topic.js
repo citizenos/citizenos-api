@@ -1746,7 +1746,6 @@ module.exports = function (app) {
                                 id: req.user.userId,
                                 ip: req.ip
                             },
-                            null,
                             req.method + ' ' + req.path,
                             t
                         );
@@ -1876,7 +1875,6 @@ module.exports = function (app) {
                             id: req.user.userId,
                             ip: req.ip
                         },
-                        null,
                         req.method + ' ' + req.path,
                         t
                     );
@@ -1925,7 +1923,6 @@ module.exports = function (app) {
                             id: req.user.userId,
                             ip: req.ip
                         },
-                        null,
                         req.method + ' ' + req.path,
                         t
                     );
@@ -3218,11 +3215,18 @@ module.exports = function (app) {
                 await db.transaction(async function (t) {
                     topicMemberUser.level = newLevel;
 
-                    await cosActivities.updateActivity(topicMemberUser, null, {
-                        type: 'User',
-                        id: req.user.userId,
-                        ip: req.ip
-                    }, null, req.method + ' ' + req.path, t)
+                    await cosActivities.updateActivity(
+                        topicMemberUser,
+                        null,
+                        {
+                            type: 'User',
+                            id: req.user.userId,
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
                     await topicMemberUser.save({
                         transaction: t
                     });
@@ -3280,7 +3284,6 @@ module.exports = function (app) {
                             id: req.user.userId,
                             ip: req.ip
                         },
-                        null,
                         req.method + ' ' + req.path,
                         t
                     );
@@ -3706,12 +3709,17 @@ module.exports = function (app) {
                                     level: member.level
                                 });
 
-                                cosActivities
-                                    .updateActivity(addedMember, null, {
+                                cosActivities.updateActivity(
+                                    addedMember,
+                                    null,
+                                    {
                                         type: 'User',
                                         id: req.user.userId,
                                         ip: req.ip
-                                    }, null, req.method + ' ' + req.path, t);
+                                    },
+                                    req.method + ' ' + req.path,
+                                    t
+                                );
 
                                 return;
                             }
@@ -3991,11 +3999,18 @@ module.exports = function (app) {
                 await db.transaction(async function (t) {
                     topicMemberUser.level = newLevel;
 
-                    await cosActivities.updateActivity(topicMemberUser, null, {
-                        type: 'User',
-                        id: req.user.userId,
-                        ip: req.ip
-                    }, null, req.method + ' ' + req.path, t)
+                    await cosActivities.updateActivity(
+                        topicMemberUser,
+                        null,
+                        {
+                            type: 'User',
+                            id: req.user.userId,
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
                     await topicMemberUser.save({
                         transaction: t
                     });
@@ -4438,11 +4453,17 @@ module.exports = function (app) {
                     const topic = attachment.Topics[0];
                     delete attachment.Topics;
 
-                    await cosActivities.updateActivity(attachment, topic, {
-                        type: 'User',
-                        id: req.user.userId,
-                        ip: req.ip
-                    }, null, req.method + ' ' + req.path, t);
+                    await cosActivities.updateActivity(
+                        attachment,
+                        topic,
+                        {
+                            type: 'User',
+                            id: req.user.userId,
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
 
                     await attachment.save({
                         transaction: t
@@ -5411,11 +5432,18 @@ module.exports = function (app) {
                 delete comment.Topic;
 
                 await cosActivities
-                    .updateActivity(comment, topic, {
-                        type: 'User',
-                        id: req.user.userId,
-                        ip: req.ip
-                    }, null, req.method + ' ' + req.path, t);
+                    .updateActivity(
+                        comment,
+                        topic,
+                        {
+                            type: 'User',
+                            id: req.user.userId,
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
                 await comment.save({
                     transaction: t
                 });
@@ -5617,12 +5645,17 @@ module.exports = function (app) {
 
         await db
             .transaction(async function (t) {
-                await cosActivities
-                    .updateActivity(comment, topic, {
+                await cosActivities.updateActivity(
+                    comment,
+                    topic,
+                    {
                         type: 'Moderator',
                         id: eventTokenData.userId,
                         ip: req.ip
-                    }, null, req.method + ' ' + req.path, t);
+                    },
+                    req.method + ' ' + req.path,
+                    t
+                );
 
                 let c = (await Comment.update(
                     {
@@ -5845,11 +5878,17 @@ module.exports = function (app) {
                         vote.topicId = req.params.topicId;
 
                         await cosActivities
-                            .updateActivity(vote, comment, {
-                                type: 'User',
-                                id: req.user.userId,
-                                ip: req.ip
-                            }, null, req.method + ' ' + req.path, t);
+                            .updateActivity(
+                                vote,
+                                comment,
+                                {
+                                    type: 'User',
+                                    id: req.user.userId,
+                                    ip: req.ip
+                                },
+                                req.method + ' ' + req.path,
+                                t
+                            );
 
                         await vote.save({transaction: t});
                     } else {
@@ -6046,11 +6085,17 @@ module.exports = function (app) {
                 topic.status = Topic.STATUSES.voting;
 
                 await cosActivities
-                    .updateActivity(topic, null, {
-                        type: 'User',
-                        id: req.user.userId,
-                        ip: req.ip
-                    }, null, req.method + ' ' + req.path, t);
+                    .updateActivity(
+                        topic,
+                        null,
+                        {
+                            type: 'User',
+                            id: req.user.userId,
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
 
                 const resTopic = await topic
                     .save({
@@ -6203,7 +6248,6 @@ module.exports = function (app) {
                         id: req.user.userId,
                         ip: req.ip
                     },
-                    null,
                     req.method + ' ' + req.path,
                     t
                 );

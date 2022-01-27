@@ -135,7 +135,12 @@ module.exports = function (app) {
             currentValues[field] = instance.dataValues[field];
         });
 
-        return diff(previousValues, currentValues); // This shows what changes to apply to get previous object
+        // Diff is only performed for JSON objects, thus if we put regular JS objects to it, it MAY result in invalid results
+        // For example Date comparisons will fail if both sides have a Date object.
+        const previousValuesJson = JSON.parse(JSON.stringify(previousValues));
+        const currentValuesJson = JSON.parse(JSON.stringify(currentValues));
+
+        return diff(previousValuesJson, currentValuesJson);
     };
 
     const _createActivity = function (instance, target, actor, context, transaction) {
@@ -212,6 +217,7 @@ module.exports = function (app) {
         if (changeSet.length === 0) {
             return Promise.resolve();
         }
+
         changeSet.forEach(function (change, key) {
             if (change.path === '/description') {
                 change.value = null;
@@ -339,7 +345,7 @@ module.exports = function (app) {
             );
     };
 
-    const _updateActivity = function (instance, target, actor, fields, context, transaction) {
+    const _updateActivity = function (instance, target, actor, context, transaction) {
         // {
         // "@context": "https://www.w3.org/ns/activitystreams",
         // "summary": "Sally updated her note",
@@ -351,24 +357,16 @@ module.exports = function (app) {
         // "object": "http://example.org/notes/1"
 
         const originPrevious = instance.previous();
-        const origin = _.clone(instance.toJSON());
+        const origin = instance.toJSON();
 
         _.mapValues(originPrevious, function (val, key) {
             origin[key] = val;
         });
 
-        if (fields && Array.isArray(fields)) {
-            Object.keys(origin).forEach(function (field) {
-                if (fields.indexOf(field) === -1) {
-                    delete origin[field];
-                }
-            });
-        }
-
         const changeSet = _getInstanceChangeSet(instance);
 
         if (changeSet.length === 0) {
-            return Promise.resolve();
+            return Promise.reject('_updateActivity', 'NO UPDATES ON OBJECT!');
         }
 
         origin['@type'] = instance.constructor.name;
@@ -898,6 +896,6 @@ module.exports = function (app) {
         viewActivityFeedActivity: _viewActivityFeedActivity,
         joinActivity: _joinActivity,
         replyActivity: _replyActivity,
-        downloadFinalContainerActivity: _downloadFinalContainerActivity
+        downloadFinalContainerActivity: _downloadFinalContainerActivity,
     };
 };
