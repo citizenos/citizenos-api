@@ -2,7 +2,6 @@
 
 const campaign = require('campaign');
 const nodemailer = require('nodemailer');
-const util = require('util');
 
 /**
  * E-mail client
@@ -29,6 +28,13 @@ const emailClient = function (config) {
     switch (config.provider.name) {
         case 'mailgun':
             provider = require('campaign-mailgun')(config.provider.options);
+            break;
+        case 'mailgun-smtp':
+            smtp = nodemailer.createTransport(config.provider.options);
+
+            provider = require('campaign-nodemailer')({
+                transport: smtp
+            });
             break;
         case 'nodemailer':
             smtp = nodemailer.createTransport(config.provider.options);
@@ -66,9 +72,6 @@ const emailClient = function (config) {
         headerImage: config.headerImage || null, // Absolute path to header image
         layout: config.layout || null // Layout template. Absolute path to Mustache template. Null comes down to "layout.mu" bundled with Campaign.
     });
-
-
-    client.sendStringAsync = util.promisify(client.sendString);
 
     return client;
 };
