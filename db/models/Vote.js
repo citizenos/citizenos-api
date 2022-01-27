@@ -32,7 +32,7 @@ module.exports = function (sequelize, DataTypes) {
 
     const AUTO_CLOSE = {
         allMembersVoted: 'allMembersVoted'
-    }
+    };
 
     const Vote = sequelize.define(
         'Vote',
@@ -103,7 +103,7 @@ module.exports = function (sequelize, DataTypes) {
                 type: DataTypes.ARRAY(DataTypes.JSON), // While Sequelize does not support ARRAY of ENUM I'll use ARRAY of Strings - https://github.com/sequelize/sequelize/issues/1498
                 defaultValue: [],
                 validate: {
-                    isArrayOfautoCloseConditions: function (value) {
+                    isArrayOfAutoCloseConditions: function (value) {
                         if (!value) return; // Since Sequelize 5.x custom validators are run when allowNull is true.
 
                         if (!Array.isArray(value)) {

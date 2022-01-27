@@ -2209,7 +2209,7 @@ suite('Users', function () {
                 await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.closed);
                 await _topicUpdate(agent, user.id, topic.id, Topic.STATUSES.inProgress, Topic.VISIBILITY.private, [], new Date(), contact, 403);
             });
-            test('Fail - Page Not Found - topicId is null', async function () {
+            test('Fail - Not Found - topicId is null', async function () {
                 await _topicUpdate(agent, user.id, null, topicStatusNew, topicVisibilityNew, null, null, null, 404);
             });
 

@@ -242,7 +242,6 @@ module.exports = function (app) {
                             id: req.user.userId,
                             ip: req.ip
                         },
-                        null,
                         req.method + ' ' + req.path,
                         t
                     );
@@ -659,7 +658,6 @@ module.exports = function (app) {
                             id: req.user.userId,
                             ip: req.ip
                         },
-                        null,
                         req.method + ' ' + req.path,
                         t
                     );
@@ -781,7 +779,6 @@ module.exports = function (app) {
                             id: req.user.userId,
                             ip: req.ip
                         },
-                        null,
                         req.method + ' ' + req.path,
                         t
                     );
@@ -830,7 +827,6 @@ module.exports = function (app) {
                             id: req.user.userId,
                             ip: req.ip
                         },
-                        null,
                         req.method + ' ' + req.path,
                         t
                     );
@@ -1049,11 +1045,17 @@ module.exports = function (app) {
                             });
 
                             cosActivities
-                                .updateActivity(existingMember, null, {
-                                    type: 'User',
-                                    id: req.user.userId,
-                                    ip: req.ip
-                                }, null, req.method + ' ' + req.path, t);
+                                .updateActivity(
+                                    existingMember,
+                                    null,
+                                    {
+                                        type: 'User',
+                                        id: req.user.userId,
+                                        ip: req.ip
+                                    },
+                                    req.method + ' ' + req.path,
+                                    t
+                                );
 
                             return;
                         }
