@@ -35,7 +35,17 @@ module.exports = function (app) {
         });
 
         if (user) {
-            const imageUrl = await cosUpload.upload(req, 'users', req.user.id);
+            let imageUrl;
+
+            try {
+                imageUrl = await cosUpload.upload(req, 'users', req.user.id);
+            } catch (err) {
+                if (err.type && (err.type === 'fileSize' || err.type === 'fileType')) {
+                    return res.forbidden(err.message);
+                } else {
+                    throw err;
+                }
+            }
 
             await User.update(
                 {
