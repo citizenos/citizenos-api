@@ -250,10 +250,22 @@ module.exports = function (app) {
                         value: inspection.reason()
                     });
                 } else {
-                    done.push({
-                        state: "success",
-                        value: inspection.value()
-                    });
+                    if (Array.isArray(inspection.value())) {
+                        inspection.value().forEach((result) => {
+                            if (result.status === 'ERROR') {
+                                logger.error('FAILED:', result.message);
+                                errors.push({
+                                    state: "rejected",
+                                    value: result.message
+                                });
+                            }
+                        })
+                    } else {
+                        done.push({
+                            state: "success",
+                            value: inspection.value()
+                        });
+                    }
                 }
             })
             .then(function () {
