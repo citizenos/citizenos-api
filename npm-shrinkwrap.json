@@ -911,8 +911,8 @@
       "integrity": "sha1-cfHRlDGoOXI3FO6GXtHg6A3I++U="
     },
     "campaign-terminal": {
-      "version": "git+https://github.com/citizenos/campaign-terminal.git#08917254707900cc21486e41bab8780c30e93a24",
-      "from": "git+https://github.com/citizenos/campaign-terminal.git#08917254707900cc21486e41bab8780c30e93a24",
+      "version": "git+https://github.com/citizenos/campaign-terminal.git#83bca04d61f8730b23c5439601d513ceae7c4012",
+      "from": "git+https://github.com/citizenos/campaign-terminal.git#83bca04d61f8730b23c5439601d513ceae7c4012",
       "requires": {
         "html-md-2": "3.0.0",
         "marked": "4.0.10",
