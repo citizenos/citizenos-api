@@ -65,6 +65,7 @@ module.exports = function (app) {
             res.forbidden();
         }
     }));
+
     /**
      * Update User info
      */
@@ -128,7 +129,9 @@ module.exports = function (app) {
             }
         );
 
-        if (!results[1]) return res.ok();
+        if (!results[1]) {
+            return res.ok();
+        }
 
         user = results[1][0];
 
