@@ -299,15 +299,11 @@ module.exports = function (app) {
     });
 
 
-    app.post('/api/auth/logout', async function (req, res, next) {
-        try {
-            await clearSessionCookies(req, res);
+    app.post('/api/auth/logout', asyncMiddleware(async function (req, res) {
+        await clearSessionCookies(req, res);
 
-            return res.ok();
-        } catch (err) {
-            return next(err);
-        }
-    });
+        return res.ok();
+    }));
 
     app.get('/api/auth/verify/:code', async function (req, res) {
         const code = req.params.code;
