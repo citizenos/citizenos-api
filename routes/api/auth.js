@@ -377,63 +377,56 @@ module.exports = function (app) {
     }));
 
 
-    app.post('/api/auth/password/reset/send', async function (req, res, next) {
+    app.post('/api/auth/password/reset/send', asyncMiddleware(async function (req, res) {
         const email = req.body.email;
         if (!email || !validator.isEmail(email)) {
             return res.badRequest({email: 'Invalid email'});
         }
-        try {
-            const user = await User.findOne({
-                where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
-            });
 
-            if (!user) {
-                return res.ok('Success! Please check your email :email to complete your password recovery.'.replace(':email', email));
-            }
+        const user = await User.findOne({
+            where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
+        });
 
-            user.passwordResetCode = true; // Model will generate new code
-
-            await user.save({fields: ['passwordResetCode']});
-
-            await emailLib.sendPasswordReset(user.email, user.passwordResetCode);
-
+        if (!user) {
             return res.ok('Success! Please check your email :email to complete your password recovery.'.replace(':email', email));
-        } catch (err) {
-            return next(err);
         }
-    });
+
+        user.passwordResetCode = true; // Model will generate new code
+
+        await user.save({fields: ['passwordResetCode']});
+
+        await emailLib.sendPasswordReset(user.email, user.passwordResetCode);
+
+        return res.ok('Success! Please check your email :email to complete your password recovery.'.replace(':email', email));
+    }));
 
 
-    app.post('/api/auth/password/reset', async function (req, res, next) {
+    app.post('/api/auth/password/reset', asyncMiddleware(async function (req, res) {
         const email = req.body.email;
         const password = req.body.password;
         const passwordResetCode = req.body.passwordResetCode;
-        try {
-            const user = await User.findOne({
-                where: {
-                    [Op.and]: [
-                        db.where(db.fn('lower', db.col('email')), db.fn('lower', email)),
-                        db.where(db.col('passwordResetCode'), passwordResetCode)
-                    ]
-                }
-            });
 
-            // !user.passwordResetCode avoids the situation where passwordResetCode has not been sent (null), but user posts null to API
-            if (!user || !user.passwordResetCode) {
-                return res.badRequest('Invalid email, password or password reset code.');
+        const user = await User.findOne({
+            where: {
+                [Op.and]: [
+                    db.where(db.fn('lower', db.col('email')), db.fn('lower', email)),
+                    db.where(db.col('passwordResetCode'), passwordResetCode)
+                ]
             }
+        });
 
-            user.password = password; // Hash is created by the model hooks
-            user.passwordResetCode = true; // Model will generate new code so that old code cannot be used again - https://github.com/citizenos/citizenos-api/issues/68
-
-            await user.save({fields: ['password', 'passwordResetCode']});
-            //TODO: Logout all existing sessions for the User!
-            return res.ok();
-        } catch (err) {
-            return next(err);
+        // !user.passwordResetCode avoids the situation where passwordResetCode has not been sent (null), but user posts null to API
+        if (!user || !user.passwordResetCode) {
+            return res.badRequest('Invalid email, password or password reset code.');
         }
 
-    });
+        user.password = password; // Hash is created by the model hooks
+        user.passwordResetCode = true; // Model will generate new code so that old code cannot be used again - https://github.com/citizenos/citizenos-api/issues/68
+
+        await user.save({fields: ['password', 'passwordResetCode']});
+        //TODO: Logout all existing sessions for the User!
+        return res.ok();
+    }));
 
 
     /**
