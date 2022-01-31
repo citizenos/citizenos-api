@@ -250,10 +250,22 @@ module.exports = function (app) {
                         value: inspection.reason()
                     });
                 } else {
-                    done.push({
-                        state: "success",
-                        value: inspection.value()
-                    });
+                    if (Array.isArray(inspection.value())) {
+                        inspection.value().forEach((result) => {
+                            if (result.status === 'ERROR') {
+                                logger.error('FAILED:', result.message);
+                                errors.push({
+                                    state: "rejected",
+                                    value: result.message
+                                });
+                            }
+                        })
+                    } else {
+                        done.push({
+                            state: "success",
+                            value: inspection.value()
+                        });
+                    }
                 }
             })
             .then(function () {
@@ -289,7 +301,7 @@ module.exports = function (app) {
         });
 
         // https://github.com/bevacqua/campaign#email-sending-option
-        return emailClient.sendStringAsync(template.body, emailOptions);
+        return emailClient.sendString(template.body, emailOptions);
     }
 
     /**
@@ -328,7 +340,7 @@ module.exports = function (app) {
 
                     emailOptions.linkedData.translations = template.translations;
                     // https://github.com/bevacqua/campaign#email-sending-option
-                    const userEmailPromise = emailClient.sendStringAsync(template.body, emailOptions);
+                    const userEmailPromise = emailClient.sendString(template.body, emailOptions);
 
                     promisesToResolve.push(userEmailPromise);
                 });
@@ -370,7 +382,7 @@ module.exports = function (app) {
                     );
 
                     emailOptions.linkedData.translations = template.translations;
-                    const userEmailPromise = emailClient.sendStringAsync(template.body, emailOptions);
+                    const userEmailPromise = emailClient.sendString(template.body, emailOptions);
 
                     promisesToResolve.push(userEmailPromise);
                 });
@@ -479,7 +491,7 @@ module.exports = function (app) {
                 linkedData
             };
 
-            return emailClient.sendStringAsync(template.body, emailOptions);
+            return emailClient.sendString(template.body, emailOptions);
         });
 
         return handleAllPromises(emailsSendPromises);
@@ -584,7 +596,7 @@ module.exports = function (app) {
                                 }
                             );
                             emailOptions.linkedData.translations = template.translations;
-                            const sendEmailPromise = emailClient.sendStringAsync(template.body, emailOptions);
+                            const sendEmailPromise = emailClient.sendString(template.body, emailOptions);
 
                             promisesToResolve.push(sendEmailPromise);
                         }
@@ -699,7 +711,7 @@ module.exports = function (app) {
                 linkedData
             };
 
-            return emailClient.sendStringAsync(template.body, emailOptions);
+            return emailClient.sendString(template.body, emailOptions);
         });
 
         return handleAllPromises(emailsSendPromises);
@@ -790,7 +802,7 @@ module.exports = function (app) {
                                 }
                             );
                             emailOptions.linkedData.translations = template.translations;
-                            const userEmailPromise = emailClient.sendStringAsync(template.body, emailOptions);
+                            const userEmailPromise = emailClient.sendString(template.body, emailOptions);
 
                             promisesToResolve.push(userEmailPromise);
                         }
@@ -888,7 +900,7 @@ module.exports = function (app) {
                     );
 
                     emailOptions.linkedData.translations = template.translations;
-                    const promiseCreatorEmail = emailClient.sendStringAsync(template.body, emailOptions);
+                    const promiseCreatorEmail = emailClient.sendString(template.body, emailOptions);
 
                     promisesToResolve.push(promiseCreatorEmail);
                 } else {
@@ -942,7 +954,7 @@ module.exports = function (app) {
                                 }
                             );
                             emailOptions.linkedData.translations = template.translations;
-                            const promiseModeratorEmail = emailClient.sendStringAsync(template.body, emailOptions);
+                            const promiseModeratorEmail = emailClient.sendString(template.body, emailOptions);
 
                             promisesToResolve.push(promiseModeratorEmail);
                         }
@@ -1018,7 +1030,7 @@ module.exports = function (app) {
                 );
                 emailOptions.linkedData.translations = template.translations;
 
-                return await emailClient.sendStringAsync(template.body, emailOptions);
+                return await emailClient.sendString(template.body, emailOptions);
             };
             sendEmailPromises.push(sendReporterEmail());
         } else {
@@ -1052,7 +1064,7 @@ module.exports = function (app) {
                     );
                     emailOptions.linkedData.translations = template.translations;
 
-                    return await emailClient.sendStringAsync(template.body, emailOptions);
+                    return await emailClient.sendString(template.body, emailOptions);
                 };
                 sendEmailPromises.push(sendTopicMemberEmail());
             } else {
@@ -1087,7 +1099,7 @@ module.exports = function (app) {
                     );
                     emailOptions.linkedData.translations = template.translations;
 
-                    return await emailClient.sendStringAsync(template.body, emailOptions);
+                    return await emailClient.sendString(template.body, emailOptions);
                 };
                 sendEmailPromises.push(sendTopicModeratorEmail());
             } else {
@@ -1157,7 +1169,7 @@ module.exports = function (app) {
                 );
                 emailOptions.linkedData.translations = template.translations;
 
-                return await emailClient.sendStringAsync(template.body, emailOptions);
+                return await emailClient.sendString(template.body, emailOptions);
             };
             sendEmailPromiseses.push(sendReporterEmail());
         } else {
@@ -1192,7 +1204,7 @@ module.exports = function (app) {
                     );
                     emailOptions.linkedData.translations = template.translations;
 
-                    return await emailClient.sendStringAsync(template.body, emailOptions);
+                    return await emailClient.sendString(template.body, emailOptions);
                 };
                 sendEmailPromiseses.push(sendTopicMemberEmail());
             } else {
@@ -1254,7 +1266,7 @@ module.exports = function (app) {
                     );
                     emailOptions.linkedData.translations = template.translations;
 
-                    return emailClient.sendStringAsync(template.body, emailOptions);
+                    return emailClient.sendString(template.body, emailOptions);
                 };
                 sendEmailPromises.push(sendTopicModeratorEmail());
             } else {
@@ -1327,7 +1339,7 @@ module.exports = function (app) {
                 );
                 emailOptions.linkedData.translations = template.translations;
 
-                return await emailClient.sendStringAsync(template.body, emailOptions);
+                return await emailClient.sendString(template.body, emailOptions);
             };
             sendEmailPromises.push(sendReporterEmail());
         } else {
@@ -1357,7 +1369,7 @@ module.exports = function (app) {
                     );
                     emailOptions.linkedData.translations = template.translations;
 
-                    return await emailClient.sendStringAsync(template.body, emailOptions);
+                    return await emailClient.sendString(template.body, emailOptions);
                 };
                 sendEmailPromises.push(sendTopicMemberEmail());
             } else {
@@ -1409,7 +1421,7 @@ module.exports = function (app) {
         linkedData.translations = template.translations;
 
         const emailToParliamentPromise = emailClient
-            .sendStringAsync(
+            .sendString(
                 template.body,
                 {
                     from: from,
@@ -1451,7 +1463,7 @@ module.exports = function (app) {
 
         // Email to Topic creator
         const emailToTopicCreatorPromise = emailClient
-            .sendStringAsync(
+            .sendString(
                 template.body,
                 {
                     from: from,
