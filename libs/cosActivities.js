@@ -8,6 +8,7 @@ module.exports = function (app) {
     const db = models.sequelize;
     const uuid = app.get('uuid');
     const moment = app.get('moment');
+    const logger = app.get('logger');
 
     const Activity = models.Activity;
 
