@@ -434,29 +434,25 @@ module.exports = function (app) {
      *
      * @deprecated Use GET /api/users/self instead.
      */
-    app.get('/api/auth/status', loginCheck(['partner']), async function (req, res, next) {
-        try {
-            const user = await User.findOne({
-                where: {
-                    id: req.user.userId
-                }
-            });
-
-            if (!user) {
-                await clearSessionCookies(req, res);
-
-                return res.notFound();
+    app.get('/api/auth/status', loginCheck(['partner']), asyncMiddleware(async function (req, res) {
+        const user = await User.findOne({
+            where: {
+                id: req.user.userId
             }
-            const userData = user.toJSON();
-            userData.termsVersion = user.dataValues.termsVersion;
-            userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
-            userData.preferences = user.dataValues.preferences;
+        });
 
-            return res.ok(userData);
-        } catch (err) {
-            return next(err);
+        if (!user) {
+            await clearSessionCookies(req, res);
+
+            return res.notFound();
         }
-    });
+        const userData = user.toJSON();
+        userData.termsVersion = user.dataValues.termsVersion;
+        userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
+        userData.preferences = user.dataValues.preferences;
+
+        return res.ok(userData);
+    }));
 
 
     app.post('/api/auth/smartid/init', async function (req, res, next) {
