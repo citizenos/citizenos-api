@@ -30,7 +30,7 @@
     "campaign-mailgun": "git+https://github.com/citizenos/campaign-mailgun.git#14866eace9c2a6af846bacbc13847543a133ba66",
     "campaign-mustache": "git+https://github.com/citizenos/campaign-mustache#0e6021098a3104011ced756e6409501cd0651f90",
     "campaign-nodemailer": "1.1.0",
-    "campaign-terminal": "git+https://github.com/citizenos/campaign-terminal#08917254707900cc21486e41bab8780c30e93a24",
+    "campaign-terminal": "git+https://github.com/citizenos/campaign-terminal#83bca04d61f8730b23c5439601d513ceae7c4012",
     "config": "3.3.7",
     "cookie-parser": "1.4.6",
     "cors": "2.8.5",

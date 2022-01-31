@@ -49,9 +49,9 @@ const emailClient = function (config) {
         case 'noop':
             provider = {
                 name: 'noop',
-                send: async function () {
+                send: async function (model) {
                     // NOOP
-                    return;
+                    return {to: model.to, html: model.html};
                 },
                 tweakPlaceholder: function () {
                     // NOOP

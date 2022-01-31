@@ -55,8 +55,11 @@ suite('Users', function () {
             test('Success', async function () {
                 const file = path.join(__dirname, '/uploads/test.txt');
                 const fileUrl = (await uploadFile(agent, user.id, file)).body.data.link;
-                assert.include(fileUrl, config.url.api);
-
+                if (config.storage?.type.toLowerCase() === 'local') {
+                    assert.include(fileUrl, config.url.api);
+                } else if (config.storage?.type.toLowerCase() === 's3') {
+                    assert.include(fileUrl, `${config.storage.bucket}.s3.amazonaws.com`);
+                }
                 const file2 = fs.createWriteStream(path.join(__dirname, '/uploads/return.txt'));
 
                 return https.get(fileUrl, function (response) {
