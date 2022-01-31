@@ -6,6 +6,7 @@ module.exports = function (app) {
 
     const logger = app.get('logger');
     const loginCheck = app.get('middleware.loginCheck');
+    const asyncMiddleware = app.get('middleware.asyncMiddleware');
     const emailLib = app.get('email');
     const config = app.get('config');
     const cosActivities = app.get('cosActivities');
@@ -26,169 +27,159 @@ module.exports = function (app) {
     const UserConnection = models.UserConnection;
     const Op = db.Sequelize.Op;
 
-    app.post('/api/users/:userId/upload', loginCheck(['partner']), async function (req, res, next) {
-        try {
-            let user = await User.findOne({
-                where: {
-                    id: req.user.id
-                }
-            });
-
-            if (user) {
-                const imageUrl = await cosUpload.upload(req, 'users', req.user.id);
-
-                await User.update(
-                    {
-                        imageUrl: imageUrl.link
-                    },
-                    {
-                        where: {
-                            id: req.user.id
-                        },
-                        limit: 1,
-                        returning: true
-                    }
-                );
-
-                return res.created(imageUrl);
-            } else {
-                res.forbidden();
+    app.post('/api/users/:userId/upload', loginCheck(['partner']), asyncMiddleware(async function (req, res) {
+        let user = await User.findOne({
+            where: {
+                id: req.user.id
             }
+        });
 
-        } catch (err) {
-            if (err.type && (err.type === 'fileSize' || err.type === 'fileType')) {
-                return res.forbidden(err.message)
-            }
+        if (user) {
+            let imageUrl;
 
-            return next(err);
-        }
-
-    });
-    /**
-     * Update User info
-     */
-    app.put('/api/users/:userId', loginCheck(['partner']), async function (req, res, next) {
-        try {
-            const fields = ['name', 'company', 'email', 'language', 'imageUrl', 'termsVersion', 'preferences'];
-            const data = req.body;
-            if (!req.user.partnerId) { // Allow only our own app change the password
-                fields.push('password');
-            }
-            let updateEmail = false;
-
-            let user = await User.findOne({
-                where: {
-                    id: req.user.userId
-                }
-            });
-
-            if (data.email && data.email !== user.email) {
-                updateEmail = true;
-                fields.push('emailIsVerified');
-                fields.push('emailVerificationCode');
-                data.emailIsVerified = false;
-                data.emailVerificationCode = uuid.v4(); // Generate new emailVerificationCode
-            }
-            if (data.termsVersion && data.termsVersion !== user.termsVersion) {
-                fields.push('termsAcceptedAt');
-                data.termsAcceptedAt = moment().format();
-            }
-
-            if ((user.email && updateEmail) || data.newPassword) {
-                if (!data.password || user.password !== cryptoLib.getHash(data.password, 'sha256')) {
-                    return res.badRequest('Invalid password')
-                }
-                if (data.newPassword) {
-                    data.password = data.newPassword;
+            try {
+                imageUrl = await cosUpload.upload(req, 'users', req.user.id);
+            } catch (err) {
+                if (err.type && (err.type === 'fileSize' || err.type === 'fileType')) {
+                    return res.forbidden(err.message);
+                } else {
+                    throw err;
                 }
             }
 
-            if (!data.imageUrl && user.imageUrl) {
-                const currentImageURL = new URL(user.imageUrl);
-                //FIXME: No delete from DB?
-                try {
-                    if(config.storage?.type.toLowerCase() === 's3' && currentImageURL.href.indexOf(`https://${config.storage.bucket}.s3.${config.storage.region}.amazonaws.com/users/${req.user.id}`) === 0) {
-                        await cosUpload.delete(currentImageURL.pathname)
-                    }
-                    else if (config.storage?.type.toLowerCase() === 'local' && currentImageURL.hostname === (new URL(config.url.api)).hostname) {
-                        const appDir = __dirname.replace('/routes/api', '/public/uploads/users');
-                        const baseFolder = config.storage.baseFolder || appDir;
-
-                        fs.unlinkSync(`${baseFolder}/${path.parse(currentImageURL.pathname).base}`);
-                    }
-                } catch (e) {
-                    return next(e);
-                }
-            }
-            const results = await User.update(
-                req.body,
+            await User.update(
+                {
+                    imageUrl: imageUrl.link
+                },
                 {
                     where: {
-                        id: req.user.userId
+                        id: req.user.id
                     },
-                    fields: fields,
                     limit: 1,
                     returning: true
                 }
             );
 
-            if (!results[1]) return res.ok();
-
-            user = results[1][0];
-
-            if (updateEmail) {
-                await UserConnection.update({
-                    connectionData: user
-                }, {
-                    where: {
-                        connectionId: UserConnection.CONNECTION_IDS.citizenos,
-                        userId: user.id
-                    }
-                });
-                const tokenData = {
-                    redirectSuccess: urlLib.getFe() // TODO: Misleading naming, would like to use "redirectUri" (OpenID convention) instead, but needs RAA.ee to update codebase.
-                };
-
-                const token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
-
-                await emailLib.sendAccountVerification(user.email, user.emailVerificationCode, token);
-            }
-
-            return res.ok(user.toJSON());
-        } catch (err) {
-            return next(err);
+            return res.created(imageUrl);
+        } else {
+            res.forbidden();
         }
-    });
+    }));
+
+    /**
+     * Update User info
+     */
+    app.put('/api/users/:userId', loginCheck(['partner']), asyncMiddleware(async function (req, res) {
+        const fields = ['name', 'company', 'email', 'language', 'imageUrl', 'termsVersion', 'preferences'];
+        const data = req.body;
+        if (!req.user.partnerId) { // Allow only our own app change the password
+            fields.push('password');
+        }
+        let updateEmail = false;
+
+        let user = await User.findOne({
+            where: {
+                id: req.user.userId
+            }
+        });
+
+        if (data.email && data.email !== user.email) {
+            updateEmail = true;
+            fields.push('emailIsVerified');
+            fields.push('emailVerificationCode');
+            data.emailIsVerified = false;
+            data.emailVerificationCode = uuid.v4(); // Generate new emailVerificationCode
+        }
+        if (data.termsVersion && data.termsVersion !== user.termsVersion) {
+            fields.push('termsAcceptedAt');
+            data.termsAcceptedAt = moment().format();
+        }
+
+        if ((user.email && updateEmail) || data.newPassword) {
+            if (!data.password || user.password !== cryptoLib.getHash(data.password, 'sha256')) {
+                return res.badRequest('Invalid password')
+            }
+            if (data.newPassword) {
+                data.password = data.newPassword;
+            }
+        }
+
+        if (!data.imageUrl && user.imageUrl) {
+            const currentImageURL = new URL(user.imageUrl);
+            //FIXME: No delete from DB?
+            if (config.storage?.type.toLowerCase() === 's3' && currentImageURL.href.indexOf(`https://${config.storage.bucket}.s3.${config.storage.region}.amazonaws.com/users/${req.user.id}`) === 0) {
+                await cosUpload.delete(currentImageURL.pathname)
+            } else if (config.storage?.type.toLowerCase() === 'local' && currentImageURL.hostname === (new URL(config.url.api)).hostname) {
+                const appDir = __dirname.replace('/routes/api', '/public/uploads/users');
+                const baseFolder = config.storage.baseFolder || appDir;
+
+                fs.unlinkSync(`${baseFolder}/${path.parse(currentImageURL.pathname).base}`);
+            }
+        }
+
+        const results = await User.update(
+            req.body,
+            {
+                where: {
+                    id: req.user.userId
+                },
+                fields: fields,
+                limit: 1,
+                returning: true
+            }
+        );
+
+        if (!results[1]) {
+            return res.ok();
+        }
+
+        user = results[1][0];
+
+        if (updateEmail) {
+            await UserConnection.update({
+                connectionData: user
+            }, {
+                where: {
+                    connectionId: UserConnection.CONNECTION_IDS.citizenos,
+                    userId: user.id
+                }
+            });
+            const tokenData = {
+                redirectSuccess: urlLib.getFe() // TODO: Misleading naming, would like to use "redirectUri" (OpenID convention) instead, but needs RAA.ee to update codebase.
+            };
+
+            const token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
+
+            await emailLib.sendAccountVerification(user.email, user.emailVerificationCode, token);
+        }
+
+        return res.ok(user.toJSON());
+    }));
 
     /**
      * Get User info
      *
      * Right now only supports getting info for logged in User
      */
-    app.get('/api/users/:userId', loginCheck(['partner']), async function (req, res, next) {
-        try {
-            const user = await User.findOne({
-                where: {
-                    id: req.user.userId
-                }
-            });
-
-            if (!user) {
-                return res.notFound();
+    app.get('/api/users/:userId', loginCheck(['partner']), asyncMiddleware(async function (req, res) {
+        const user = await User.findOne({
+            where: {
+                id: req.user.userId
             }
+        });
 
-            return res.ok(user.toJSON());
-        } catch (err) {
-            return next(err);
+        if (!user) {
+            return res.notFound();
         }
-    });
+
+        return res.ok(user.toJSON());
+    }));
 
     /**
      * Delete User
      */
-    app.delete('/api/users/:userId', loginCheck(), async function (req, res, next) {
-        try {
-            const user = await User
+    app.delete('/api/users/:userId', loginCheck(), asyncMiddleware(async function (req, res) {
+        const user = await User
             .findOne({
                 where: {
                     id: req.user.userId
@@ -198,6 +189,7 @@ module.exports = function (app) {
         if (!user) {
             return res.notFound();
         }
+
         await db
             .transaction(async function (t) {
                 await User.update(
@@ -233,64 +225,61 @@ module.exports = function (app) {
                     force: true,
                     transaction: t
                 });
-
-                t.afterCommit(() => {
-                    return res.ok();
-                });
             });
-        } catch (err) {
-            return next(err);
-        }
 
-    });
+        return res.ok();
+    }));
     /**
      * Create UserConsent
      */
-    app.post('/api/users/:userId/consents', loginCheck(), async function (req, res, next) {
+    app.post('/api/users/:userId/consents', loginCheck(), asyncMiddleware(async function (req, res) {
         const userId = req.user.userId;
         const partnerId = req.body.partnerId;
-        try {
-            await db
-                .transaction(async function (t) {
-                    const created = await UserConsent.upsert({
+
+        await db
+            .transaction(async function (t) {
+                const created = await UserConsent.upsert(
+                    {
                         userId: userId,
                         partnerId: partnerId
-                    }, {
+                    },
+                    {
                         transaction: t
+                    }
+                );
+
+                if (created) {
+                    const userConsent = UserConsent.build({
+                        userId: userId,
+                        partnerId: partnerId
                     });
 
-                    if (created) {
-                        const userConsent = UserConsent.build({
-                            userId: userId,
-                            partnerId: partnerId
-                        });
-
-                        await cosActivities
-                            .createActivity(userConsent, null, {
+                    await cosActivities
+                        .createActivity(
+                            userConsent,
+                            null,
+                            {
                                 type: 'User',
                                 id: userId,
                                 ip: req.ip
-                            }, req.method + ' ' + req.path, t);
-                    }
+                            },
+                            req.method + ' ' + req.path,
+                            t
+                        );
+                }
+            });
 
-                    t.afterCommit(() => {
-                        return res.ok();
-                    });
-                });
-
-        } catch (err) {
-            return next(err);
-        }
-    });
+        return res.ok();
+    }));
 
     /**
      * Read User consents
      */
-    app.get('/api/users/:userId/consents', loginCheck(), async function (req, res, next) {
+    app.get('/api/users/:userId/consents', loginCheck(), asyncMiddleware(async function (req, res) {
         const userId = req.user.userId;
-        try {
-            const results = await db.query(
-                `
+
+        const results = await db.query(
+            `
                 SELECT
                     p.id,
                     p.website,
@@ -301,74 +290,64 @@ module.exports = function (app) {
                 WHERE uc."userId" = :userId
                     AND uc."deletedAt" IS NULL
                 ;`,
-                {
-                    replacements: {
-                        userId: userId
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true,
-                    nest: true
-                }
-            );
+            {
+                replacements: {
+                    userId: userId
+                },
+                type: db.QueryTypes.SELECT,
+                raw: true,
+                nest: true
+            }
+        );
 
-            return res.ok({
-                count: results.length,
-                rows: results
-            });
-        } catch(err) {
-            return next(err);
-        }
-    });
+        return res.ok({
+            count: results.length,
+            rows: results
+        });
+    }));
 
     /**
      * Delete User consent
      */
-    app.delete('/api/users/:userId/consents/:partnerId', loginCheck(), async function (req, res, next) {
+    app.delete('/api/users/:userId/consents/:partnerId', loginCheck(), asyncMiddleware(async function (req, res) {
         const userId = req.user.userId;
         const partnerId = req.params.partnerId;
 
-        try {
-            await db.transaction(async function (t) {
-                await UserConsent.destroy(
-                    {
-                        where: {
-                            userId: userId,
-                            partnerId: partnerId
-                        },
-                        limit: 1,
-                        force: true
+        await db.transaction(async function (t) {
+            await UserConsent.destroy(
+                {
+                    where: {
+                        userId: userId,
+                        partnerId: partnerId
                     },
-                    {
-                        transaction: t
-                    }
-                );
+                    limit: 1,
+                    force: true
+                },
+                {
+                    transaction: t
+                }
+            );
 
-                const consent = UserConsent.build({
-                    userId: userId,
-                    partnerId: partnerId
-                });
-
-                await cosActivities.deleteActivity(
-                    consent,
-                    null,
-                    {
-                        type: 'User',
-                        id: req.user.userId,
-                        ip: req.ip
-                    },
-                    req.method + ' ' + req.path,
-                    t
-                );
-
-                t.afterCommit(() => {
-                    return res.ok();
-                });
+            const consent = UserConsent.build({
+                userId: userId,
+                partnerId: partnerId
             });
 
-        } catch (err) {
-            return next(err);
-        }
-    });
+            await cosActivities.deleteActivity(
+                consent,
+                null,
+                {
+                    type: 'User',
+                    id: req.user.userId,
+                    ip: req.ip
+                },
+                req.method + ' ' + req.path,
+                t
+            );
+        });
+
+        return res.ok();
+    }));
 
 
     /**
@@ -376,68 +355,66 @@ module.exports = function (app) {
      *
      * Get UserConnections, that is list of methods User can use to authenticate.
      */
-    app.get('/api/users/:userId/userconnections', async function (req, res, next) {
-        try {
-            const userId = req.params.userId;
-            let where;
+    app.get('/api/users/:userId/userconnections', asyncMiddleware(async function (req, res) {
+        const userId = req.params.userId;
+        let where;
 
-            if (validator.isUUID(userId)) {
-                const user = await User.findOne({
-                    where: {
-                        id: userId
-                    },
-                    attributes: ['id']
-                });
-
-                if (!user) {
-                    return res.notFound();
-                }
-
-                where = {
-                    userId: userId
-                }
-            } else if (validator.isEmail(userId)) {
-                const user = await User.findOne({
-                    where: {
-                        email: userId
-                    },
-                    attributes: ['id']
-                });
-
-                if (!user) {
-                    return res.notFound();
-                }
-
-                where = {
-                    userId: user.id
-                }
-            } else {
-                return res.badRequest('Invalid userId', 1);
-            }
-
-            const userConnections = await UserConnection.findAll({
-                where: where,
-                attributes: ['connectionId'],
-                order: [[db.cast(db.col('connectionId'), 'TEXT'), 'ASC']] // Cast as we want alphabetical order, not enum order.
+        if (validator.isUUID(userId)) {
+            const user = await User.findOne({
+                where: {
+                    id: userId
+                },
+                attributes: ['id']
             });
 
-            if (!userConnections || !userConnections.length) {
-                return res.ok({
-                    count: 0,
-                    rows: []
-                });
+            if (!user) {
+                return res.notFound();
             }
 
-            return res.ok({
-                count: userConnections.length,
-                rows: userConnections
+            where = {
+                userId: userId
+            }
+        } else if (validator.isEmail(userId)) {
+            const user = await User.findOne({
+                where: {
+                    email: userId
+                },
+                attributes: ['id']
             });
-        } catch (err) {
-            return next(err);
+
+            if (!user) {
+                return res.notFound();
+            }
+
+            where = {
+                userId: user.id
+            }
+        } else {
+            return res.badRequest('Invalid userId', 1);
         }
-    });
-    app.get('/api/users/:userId/userconnections/:connection', async function (req, res, next) {
+
+        const userConnections = await UserConnection.findAll({
+            where: where,
+            attributes: ['connectionId'],
+            order: [[db.cast(db.col('connectionId'), 'TEXT'), 'ASC']] // Cast as we want alphabetical order, not enum order.
+        });
+
+        if (!userConnections || !userConnections.length) {
+            return res.ok({
+                count: 0,
+                rows: []
+            });
+        }
+
+        return res.ok({
+            count: userConnections.length,
+            rows: userConnections
+        });
+    }));
+
+    app.get('/api/users/:userId/userconnections/:connection', function (req, res, next) {
         const connection = req.params.connection;
+
         if (connection === UserConnection.CONNECTION_IDS.google) {
             return passport.authenticate('google', {
                 scope: ['https://www.googleapis.com/auth/userinfo.email']
@@ -450,97 +427,90 @@ module.exports = function (app) {
         }
     });
 
-    app.post('/api/users/:userId/userconnections/:connection', async function (req, res, next) {
-        try {
-            const connection = req.params.connection;
-            const token = req.body.token;
-            const cert = req.headers['x-ssl-client-cert'] || req.body.cert;
-            const timeoutMs = req.query.timeoutMs || 5000;
-            let personalInfo
+    app.post('/api/users/:userId/userconnections/:connection', asyncMiddleware(async function (req, res) {
+        const connection = req.params.connection;
+        const token = req.body.token;
+        const cert = req.headers['x-ssl-client-cert'] || req.body.cert;
+        const timeoutMs = req.query.timeoutMs || 5000;
+        let personalInfo;
 
-            if (!UserConnection.CONNECTION_IDS[connection]) {
-                return res.badRequest('Invalid connection');
+        if (!UserConnection.CONNECTION_IDS[connection]) {
+            return res.badRequest('Invalid connection');
+        }
+        if ([UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid].indexOf(connection) > -1) {
+            if (config.services.idCard && cert) {
+                logger.error('X-SSL-Client-Cert header is not allowed when ID-card service is enabled. IF you trust your proxy, sending the X-SSL-Client-Cert, delete the services.idCard from your configuration.');
+                return res.badRequest('X-SSL-Client-Cert header is not allowed when ID-card proxy service is enabled.');
             }
-            if ([UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid].indexOf(connection) > -1) {
-                if (config.services.idCard && cert) {
-                    logger.error('X-SSL-Client-Cert header is not allowed when ID-card service is enabled. IF you trust your proxy, sending the X-SSL-Client-Cert, delete the services.idCard from your configuration.');
-                    return res.badRequest('X-SSL-Client-Cert header is not allowed when ID-card proxy service is enabled.');
-                }
-                if (!token && !cert) {
-                    logger.warn('Missing required parameter "token" OR certificate in X-SSL-Client-Cert header. One must be provided!', req.path, req.headers);
-                    return res.badRequest('Missing required parameter "token" OR certificate in X-SSL-Client-Cert header. One must be provided!');
-                }
-                if (cert || token.indexOf('.') === -1) {
-                    personalInfo = await authUser.getIdCardCertStatus(res, token, cert);
-                } else {
-                    personalInfo = await authUser.getAuthReqStatus(connection, token, timeoutMs);
-                }
+            if (!token && !cert) {
+                logger.warn('Missing required parameter "token" OR certificate in X-SSL-Client-Cert header. One must be provided!', req.path, req.headers);
+                return res.badRequest('Missing required parameter "token" OR certificate in X-SSL-Client-Cert header. One must be provided!');
+            }
+            if (cert || token.indexOf('.') === -1) {
+                personalInfo = await authUser.getIdCardCertStatus(res, token, cert);
+            } else {
+                personalInfo = await authUser.getAuthReqStatus(connection, token, timeoutMs);
+            }
 
-                if (personalInfo === 'RUNNING') {
-                    return res.ok('Log in progress', 1);
-                }
+            if (personalInfo === 'RUNNING') {
+                return res.ok('Log in progress', 1);
+            }
 
-                let personId = personalInfo.pid;
-                if (personalInfo.pid.indexOf('PNO') > -1) {
-                    personId = personId.split('-')[1];
-                }
-                const countryCode = personalInfo.country || personalInfo.countryCode;
-                const connectionUserId = `PNO${countryCode}-${personId}`;
-                await db.transaction(async function (t) {
-                    const userConnectionInfo = await UserConnection.findOne({
-                        where: {
-                            connectionId: {
-                                [Op.in]: [
-                                    UserConnection.CONNECTION_IDS.esteid,
-                                    UserConnection.CONNECTION_IDS.smartid
-                                ]
-                            },
-                            userId: req.user.id
-                        },
-                        order: [['createdAt', 'ASC']],
-                        include: [User],
-                        transaction: t
-                    });
-
-                    if (!userConnectionInfo) {
-                        await UserConnection.create(
-                            {
-                                userId: req.user.id,
-                                connectionId: connection,
-                                connectionUserId: connectionUserId,
-                                connectionData: personalInfo
-                            },
-                            {
-                                transaction: t
-                            }
-                        );
-                    } else if (userConnectionInfo.connectionUserId !== connectionUserId){
-                        throw new Error('Connection user id mismatch');
-                    }
-                });
-
-                const userConnections = await UserConnection.findAll({
+            let personId = personalInfo.pid;
+            if (personalInfo.pid.indexOf('PNO') > -1) {
+                personId = personId.split('-')[1];
+            }
+            const countryCode = personalInfo.country || personalInfo.countryCode;
+            const connectionUserId = `PNO${countryCode}-${personId}`;
+            await db.transaction(async function (t) {
+                const userConnectionInfo = await UserConnection.findOne({
                     where: {
+                        connectionId: {
+                            [Op.in]: [
+                                UserConnection.CONNECTION_IDS.esteid,
+                                UserConnection.CONNECTION_IDS.smartid
+                            ]
+                        },
                         userId: req.user.id
                     },
-                    attributes: ['connectionId'],
-                    order: [[db.cast(db.col('connectionId'), 'TEXT'), 'ASC']] // Cast as we want alphabetical order, not enum order.
+                    order: [['createdAt', 'ASC']],
+                    include: [User],
+                    transaction: t
                 });
 
-                return res.ok({
-                    count: userConnections.length,
-                    rows: userConnections
-                });
-            }
+                if (!userConnectionInfo) {
+                    await UserConnection.create(
+                        {
+                            userId: req.user.id,
+                            connectionId: connection,
+                            connectionUserId: connectionUserId,
+                            connectionData: personalInfo
+                        },
+                        {
+                            transaction: t
+                        }
+                    );
+                } else if (userConnectionInfo.connectionUserId !== connectionUserId) {
+                    await authUser.clearSessionCookies(req, res);
 
-            return res.badRequest();
-        } catch (err) {
-            if (err.message === 'Connection user id mismatch') {
-                await authUser.clearSessionCookies(req, res);
+                    return res.forbidden();
+                }
+            });
 
-                return res.forbidden();
-            }
-            return next(err);
+            const userConnections = await UserConnection.findAll({
+                where: {
+                    userId: req.user.id
+                },
+                attributes: ['connectionId'],
+                order: [[db.cast(db.col('connectionId'), 'TEXT'), 'ASC']] // Cast as we want alphabetical order, not enum order.
+            });
+
+            return res.ok({
+                count: userConnections.length,
+                rows: userConnections
+            });
         }
-    });
+
+        return res.badRequest();
+    }));
 };
