@@ -354,30 +354,27 @@ module.exports = function (app) {
     }));
 
 
-    app.post('/api/auth/password', loginCheck(), async function (req, res, next) {
+    app.post('/api/auth/password', loginCheck(), asyncMiddleware(async function (req, res) {
         const currentPassword = req.body.currentPassword;
         const newPassword = req.body.newPassword;
-        try {
-            const user = await User
-                .findOne({
-                    where: {
-                        id: req.user.userId
-                    }
-                });
 
-            if (!user || user.password !== cryptoLib.getHash(currentPassword, 'sha256')) {
-                return res.badRequest('Invalid email or new password.');
-            }
+        const user = await User
+            .findOne({
+                where: {
+                    id: req.user.userId
+                }
+            });
 
-            user.password = newPassword;
-
-            await user.save({fields: ['password']});
-
-            return res.ok();
-        } catch (err) {
-            return next(err);
+        if (!user || user.password !== cryptoLib.getHash(currentPassword, 'sha256')) {
+            return res.badRequest('Invalid email or new password.');
         }
-    });
+
+        user.password = newPassword;
+
+        await user.save({fields: ['password']});
+
+        return res.ok();
+    }));
 
 
     app.post('/api/auth/password/reset/send', async function (req, res, next) {
