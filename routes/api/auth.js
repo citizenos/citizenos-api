@@ -146,7 +146,7 @@ module.exports = function (app) {
             // IF password is null, the User was created through an invite. We allow an User to claim the account.
             if (user.password) {
                 // Email address is already in use.
-                return res.ok('Check your email ' + email + ' to verify your account.');
+                return res.ok(`Check your email ${email} to verify your account.`);
             }
             user.password = password;
 
@@ -169,11 +169,17 @@ module.exports = function (app) {
                     });
                 if (created) {
                     logger.info('Created a new user', user.id);
-                    await cosActivities.createActivity(user, null, {
-                        type: 'User',
-                        id: user.id,
-                        ip: req.ip
-                    }, req.method + ' ' + req.path, t);
+                    await cosActivities.createActivity(
+                        user,
+                        null,
+                        {
+                            type: 'User',
+                            id: user.id,
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
                 }
 
                 const uc = await UserConnection
@@ -186,11 +192,18 @@ module.exports = function (app) {
                         transaction: t
                     });
 
-                return cosActivities.addActivity(uc, {
-                    type: 'User',
-                    id: user.id,
-                    ip: req.ip
-                }, null, user, req.method + ' ' + req.path, t);
+                return cosActivities.addActivity(
+                    uc,
+                    {
+                        type: 'User',
+                        id: user.id,
+                        ip: req.ip
+                    },
+                    null,
+                    user,
+                    req.method + ' ' + req.path,
+                    t
+                );
             });
         }
 
