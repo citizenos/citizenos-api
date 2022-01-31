@@ -4059,7 +4059,7 @@ suite('Users', function () {
                         assert.deepEqual(inviteCreateResult2, expectedResponseBody);
                     });
 
-                    test('Fail - 400 - Maximum user limit reached', async function () {
+                    test('Fail - 40000 - Maximum user limit reached', async function () {
                         const invitation = [];
                         let i = 0;
                         while (i < 51) {
@@ -4335,7 +4335,7 @@ suite('Users', function () {
                         assert.deepEqual(inviteRead, expectedInvite);
                     });
 
-                    test('Fail - 401000', async function () {
+                    test('Fail - 40100', async function () {
                         const inviteUpdate = (await _topicInviteUsersUpdate(request.agent(app), userCreator.id, topic.id, topicInviteCreated.id, TopicMemberUser.LEVELS.admin, 401)).body;
 
                         const expectedBody = {
@@ -4347,7 +4347,7 @@ suite('Users', function () {
                         assert.deepEqual(inviteUpdate, expectedBody);
                     });
 
-                    test('Fail - 400000', async function () {
+                    test('Fail - 40000', async function () {
                         const inviteUpdate = (await _topicInviteUsersUpdate(agentCreator, userCreator.id, topic.id, topicInviteCreated.id, 'nonvalid', 400)).body;
 
                         const expectedBody = {

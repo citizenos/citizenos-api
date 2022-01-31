@@ -654,7 +654,7 @@ module.exports = function (app) {
             });
 
         return idReq.body.data.user
-    }
+    };
 
     const getIdCardCertStatus = async (res, token, cert) => {
         if (cert) {

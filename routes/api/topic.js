@@ -3906,273 +3906,253 @@ module.exports = function (app) {
         });
     }));
 
-    app.get(['/api/topics/:topicId/invites/users/:inviteId', '/api/users/:userId/topics/:topicId/invites/users/:inviteId'], async function (req, res, next) {
+    app.get(['/api/topics/:topicId/invites/users/:inviteId', '/api/users/:userId/topics/:topicId/invites/users/:inviteId'], asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const inviteId = req.params.inviteId;
-        try {
 
-            const invite = await TopicInviteUser
-                .findOne(
-                    {
-                        where: {
-                            id: inviteId,
-                            topicId: topicId
+        const invite = await TopicInviteUser
+            .findOne(
+                {
+                    where: {
+                        id: inviteId,
+                        topicId: topicId
+                    },
+                    paranoid: false, // return deleted!
+                    include: [
+                        {
+                            model: Topic,
+                            attributes: ['id', 'title', 'visibility', 'creatorId'],
+                            as: 'topic',
+                            required: true
                         },
-                        paranoid: false, // return deleted!
-                        include: [
-                            {
-                                model: Topic,
-                                attributes: ['id', 'title', 'visibility', 'creatorId'],
-                                as: 'topic',
-                                required: true
-                            },
-                            {
-                                model: User,
-                                attributes: ['id', 'name', 'company', 'imageUrl'],
-                                as: 'creator',
-                                required: true
-                            },
-                            {
-                                model: User,
-                                attributes: ['id', 'email'],
-                                as: 'user',
-                                required: true
-                            }
-                        ],
-                        attributes: {
-                            include: [
-                                [
-                                    db.literal(`EXTRACT(DAY FROM (NOW() - "TopicInviteUser"."createdAt"))`),
-                                    'createdDaysAgo'
-                                ]
-                            ]
+                        {
+                            model: User,
+                            attributes: ['id', 'name', 'company', 'imageUrl'],
+                            as: 'creator',
+                            required: true
+                        },
+                        {
+                            model: User,
+                            attributes: ['id', 'email'],
+                            as: 'user',
+                            required: true
                         }
+                    ],
+                    attributes: {
+                        include: [
+                            [
+                                db.literal(`EXTRACT(DAY FROM (NOW() - "TopicInviteUser"."createdAt"))`),
+                                'createdDaysAgo'
+                            ]
+                        ]
                     }
+                }
+            );
+
+        if (!invite) {
+            return res.notFound();
+        }
+
+        if (invite.deletedAt) {
+
+            const hasAccess = await _hasPermission(topicId, invite.userId, TopicMemberUser.LEVELS.read, true);
+
+            if (hasAccess) {
+                return res.ok(invite, 1); // Invite has already been accepted OR deleted and the person has access
+            }
+
+            return res.gone('The invite has been deleted', 1);
+        }
+
+        if (invite.dataValues.createdDaysAgo > TopicInviteUser.VALID_DAYS) {
+            return res.gone(`The invite has expired. Invites are valid for ${TopicInviteUser.VALID_DAYS} days`, 2);
+        }
+
+        // At this point we can already confirm users e-mail
+        await User.update({emailIsVerified: true}, {
+            where: {id: invite.userId},
+            fields: ['emailIsVerified'],
+            limit: 1
+        });
+
+        return res.ok(invite);
+    }));
+
+    app.put(['/api/topics/:topicId/invites/users/:inviteId', '/api/users/:userId/topics/:topicId/invites/users/:inviteId'], loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
+        const newLevel = req.body.level;
+        const topicId = req.params.topicId;
+        const inviteId = req.params.inviteId;
+
+        if (!(TopicMemberUser.LEVELS[newLevel])) {
+            return res.badRequest(`Invalid level "${newLevel}"`)
+        }
+
+        const topicMemberUser = await TopicInviteUser
+            .findOne(
+                {
+                    where: {
+                        id: inviteId,
+                        topicId: topicId
+                    }
+                }
+            );
+
+        if (topicMemberUser) {
+            await db.transaction(async function (t) {
+                topicMemberUser.level = newLevel;
+
+                await cosActivities.updateActivity(
+                    topicMemberUser,
+                    null,
+                    {
+                        type: 'User',
+                        id: req.user.userId,
+                        ip: req.ip
+                    },
+                    req.method + ' ' + req.path,
+                    t
                 );
 
-            if (!invite) {
-                return res.notFound();
-            }
-
-            if (invite.deletedAt) {
-
-                const hasAccess = await _hasPermission(topicId, invite.userId, TopicMemberUser.LEVELS.read, true);
-
-                if (hasAccess) {
-                    return res.ok(invite, 1); // Invite has already been accepted OR deleted and the person has access
-                }
-
-                return res.gone('The invite has been deleted', 1);
-            }
-
-            if (invite.dataValues.createdDaysAgo > TopicInviteUser.VALID_DAYS) {
-                return res.gone(`The invite has expired. Invites are valid for ${TopicInviteUser.VALID_DAYS} days`, 2);
-            }
-
-            // At this point we can already confirm users e-mail
-            await User.update({emailIsVerified: true}, {
-                where: {id: invite.userId},
-                fields: ['emailIsVerified'],
-                limit: 1
+                await topicMemberUser.save({
+                    transaction: t
+                });
             });
 
-            return res.ok(invite);
-
-        } catch (err) {
-            return next(err);
+            return res.ok();
+        } else {
+            return res.notFound();
         }
-    });
+    }));
 
-    app.put(['/api/topics/:topicId/invites/users/:inviteId', '/api/users/:userId/topics/:topicId/invites/users/:inviteId'], loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin), async function (req, res, next) {
-        try {
-            const newLevel = req.body.level;
-            const topicId = req.params.topicId;
-            const inviteId = req.params.inviteId;
+    app.delete(['/api/topics/:topicId/invites/users/:inviteId', '/api/users/:userId/topics/:topicId/invites/users/:inviteId'], loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
+        const topicId = req.params.topicId;
+        const inviteId = req.params.inviteId;
 
-            if (!(TopicMemberUser.LEVELS[newLevel])) {
-                return res.badRequest(`Invalid level "${newLevel}"`)
+        const deletedCount = await TopicInviteUser
+            .destroy(
+                {
+                    where: {
+                        id: inviteId,
+                        topicId: topicId
+                    }
+                }
+            );
+
+        if (!deletedCount) {
+            return res.notFound('Invite not found', 1);
+        }
+
+        return res.ok();
+    }));
+
+    app.post(['/api/users/:userId/topics/:topicId/invites/users/:inviteId/accept', '/api/topics/:topicId/invites/users/:inviteId/accept'], loginCheck(), asyncMiddleware(async function (req, res) {
+        const userId = req.user.userId;
+        const topicId = req.params.topicId;
+        const inviteId = req.params.inviteId;
+
+        const invite = await TopicInviteUser
+            .findOne(
+                {
+                    where: {
+                        id: inviteId,
+                        topicId: topicId
+                    },
+                    attributes: {
+                        include: [
+                            [
+                                db.literal(`EXTRACT(DAY FROM (NOW() - "TopicInviteUser"."createdAt"))`),
+                                'createdDaysAgo'
+                            ]
+                        ]
+                    }
+                }
+            );
+
+        // Find out if the User is already a member of the Topic
+        const memberUserExisting = await TopicMemberUser
+            .findOne({
+                where: {
+                    topicId: topicId,
+                    userId: userId
+                }
+            });
+
+        if (invite) {
+            if (invite.userId !== userId) {
+                return res.forbidden();
             }
 
-            const topicMemberUser = await TopicInviteUser
-                .findOne(
-                    {
-                        where: {
-                            id: inviteId,
-                            topicId: topicId
-                        }
+            if (memberUserExisting) {
+                // User already a member, see if we need to update the level
+                if (TopicMemberUser.LEVELS.indexOf(memberUserExisting.level) < TopicMemberUser.LEVELS.indexOf(invite.level)) {
+                    const memberUserUpdated = await memberUserExisting.update({
+                        level: invite.level
+                    });
+                    return res.ok(memberUserUpdated);
+                } else {
+                    // No level update, respond with existing member info
+                    return res.ok(memberUserExisting);
+                }
+            } else {
+                // Has the invite expired?
+                if (invite.dataValues.createdDaysAgo > TopicInviteUser.VALID_DAYS) {
+                    return res.gone(`The invite has expired. Invites are valid for ${TopicInviteUser.VALID_DAYS} days`, 2);
+                }
+
+                // Topic needed just for the activity
+                const topic = await Topic.findOne({
+                    where: {
+                        id: invite.topicId
                     }
-                );
+                });
 
-            if (topicMemberUser) {
-                await db.transaction(async function (t) {
-                    topicMemberUser.level = newLevel;
+                const memberUserCreated = await db.transaction(async function (t) {
+                    const member = await TopicMemberUser.create(
+                        {
+                            topicId: invite.topicId,
+                            userId: invite.userId,
+                            level: TopicMemberUser.LEVELS[invite.level]
+                        },
+                        {
+                            transaction: t
+                        }
+                    );
 
-                    await cosActivities.updateActivity(
-                        topicMemberUser,
-                        null,
+                    await invite.destroy({transaction: t});
+
+                    const user = User.build({id: member.userId});
+                    user.dataValues.id = member.userId;
+
+                    await cosActivities.acceptActivity(
+                        invite,
                         {
                             type: 'User',
                             id: req.user.userId,
                             ip: req.ip
                         },
+                        {
+                            type: 'User',
+                            id: invite.creatorId
+                        },
+                        topic,
                         req.method + ' ' + req.path,
                         t
                     );
 
-                    await topicMemberUser.save({
-                        transaction: t
-                    });
-
-                    t.afterCommit(() => {
-                        return res.ok();
-                    });
+                    return member;
                 });
-            } else {
+
+                return res.created(memberUserCreated);
+            }
+        } else {
+            // Already a member, return that membership information
+            if (memberUserExisting) {
+                return res.ok(memberUserExisting);
+            } else { // No invite, not a member - the User is not invited
                 return res.notFound();
             }
-
-        } catch (err) {
-            return next(err)
         }
-    });
-
-    app.delete(['/api/topics/:topicId/invites/users/:inviteId', '/api/users/:userId/topics/:topicId/invites/users/:inviteId'], loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin), async function (req, res, next) {
-        try {
-            const topicId = req.params.topicId;
-            const inviteId = req.params.inviteId;
-
-            const deletedCount = await TopicInviteUser
-                .destroy(
-                    {
-                        where: {
-                            id: inviteId,
-                            topicId: topicId
-                        }
-                    }
-                );
-
-            if (!deletedCount) {
-                return res.notFound('Invite not found', 1);
-            }
-
-            return res.ok();
-        } catch (err) {
-            return next(err);
-        }
-    });
-
-    app.post(['/api/users/:userId/topics/:topicId/invites/users/:inviteId/accept', '/api/topics/:topicId/invites/users/:inviteId/accept'], loginCheck(), async function (req, res, next) {
-        try {
-            const userId = req.user.userId;
-            const topicId = req.params.topicId;
-            const inviteId = req.params.inviteId;
-
-            const invite = await TopicInviteUser
-                .findOne(
-                    {
-                        where: {
-                            id: inviteId,
-                            topicId: topicId
-                        },
-                        attributes: {
-                            include: [
-                                [
-                                    db.literal(`EXTRACT(DAY FROM (NOW() - "TopicInviteUser"."createdAt"))`),
-                                    'createdDaysAgo'
-                                ]
-                            ]
-                        }
-                    }
-                );
-
-            // Find out if the User is already a member of the Topic
-            const memberUserExisting = await TopicMemberUser
-                .findOne({
-                    where: {
-                        topicId: topicId,
-                        userId: userId
-                    }
-                });
-
-            if (invite) {
-                if (invite.userId !== userId) {
-                    return res.forbidden();
-                }
-
-                if (memberUserExisting) {
-                    // User already a member, see if we need to update the level
-                    if (TopicMemberUser.LEVELS.indexOf(memberUserExisting.level) < TopicMemberUser.LEVELS.indexOf(invite.level)) {
-                        const memberUserUpdated = await memberUserExisting.update({
-                            level: invite.level
-                        });
-                        return res.ok(memberUserUpdated);
-                    } else {
-                        // No level update, respond with existing member info
-                        return res.ok(memberUserExisting);
-                    }
-                } else {
-                    // Has the invite expired?
-                    if (invite.dataValues.createdDaysAgo > TopicInviteUser.VALID_DAYS) {
-                        return res.gone(`The invite has expired. Invites are valid for ${TopicInviteUser.VALID_DAYS} days`, 2);
-                    }
-
-                    // Topic needed just for the activity
-                    const topic = await Topic.findOne({
-                        where: {
-                            id: invite.topicId
-                        }
-                    });
-
-                    const memberUserCreated = await db.transaction(async function (t) {
-                        const member = await TopicMemberUser.create(
-                            {
-                                topicId: invite.topicId,
-                                userId: invite.userId,
-                                level: TopicMemberUser.LEVELS[invite.level]
-                            },
-                            {
-                                transaction: t
-                            }
-                        );
-
-                        await invite.destroy({transaction: t});
-
-                        const user = User.build({id: member.userId});
-                        user.dataValues.id = member.userId;
-
-                        await cosActivities.acceptActivity(
-                            invite,
-                            {
-                                type: 'User',
-                                id: req.user.userId,
-                                ip: req.ip
-                            },
-                            {
-                                type: 'User',
-                                id: invite.creatorId
-                            },
-                            topic,
-                            req.method + ' ' + req.path,
-                            t
-                        );
-
-                        return member;
-                    });
-
-                    return res.created(memberUserCreated);
-                }
-            } else {
-                // Already a member, return that membership information
-                if (memberUserExisting) {
-                    return res.ok(memberUserExisting);
-                } else { // No invite, not a member - the User is not invited
-                    return res.notFound();
-                }
-            }
-        } catch (err) {
-            return next(err);
-        }
-    });
+    }));
 
     /**
      * Get PUBLIC Topic information for given token.
