@@ -133,7 +133,8 @@ module.exports = function (app) {
         }
 
         return user;
-    }
+    };
+
     const _init = function () {
         passport.serializeUser(function (user, done) { // Serialize data into session (req.user)
             done(null, user.id);

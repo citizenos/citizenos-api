@@ -6,6 +6,7 @@ module.exports = function (app) {
     const cryptoLib = app.get('cryptoLib');
     const smartId = app.get('smartId');
     const loginCheck = app.get('middleware.loginCheck');
+    const asyncMiddleware = app.get('middleware.asyncMiddleware');
     const emailLib = app.get('email');
     const validator = app.get('validator');
     const util = app.get('util');
@@ -125,7 +126,7 @@ module.exports = function (app) {
         return res.redirect(redirectUri + querystring.stringify(errorObj));
     };
 
-    app.post('/api/auth/signup', async function (req, res, next) {
+    app.post('/api/auth/signup', asyncMiddleware(async function (req, res) {
         const email = req.body.email || ''; // HACK: Sequelize validate() is not run if value is "null". Also cannot use allowNull: false as I don' want constraint in DB. https://github.com/sequelize/sequelize/issues/2643
         const password = req.body.password || ''; // HACK: Sequelize validate() is not run if value is "null". Also cannot use allowNull: false as I don' want constraint in DB. https://github.com/sequelize/sequelize/issues/2643
         const name = req.body.name || util.emailToDisplayName(req.body.email);
@@ -135,90 +136,84 @@ module.exports = function (app) {
         const preferences = req.body.preferences;
 
         let created = false;
-        try {
-            let user = await User
-                .findOne({
-                    where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
-                });
-            if (user) {
-                // IF password is null, the User was created through an invite. We allow an User to claim the account.
-                if (user.password) {
-                    // Email address is already in use.
-                    return res.ok('Check your email ' + email + ' to verify your account.');
-                }
-                user.password = password;
 
-                await user.save({fields: ['password']});
-            } else {
-                try {
-                    await db.transaction(async function (t) {
-                        [user, created] = await User
-                            .findOrCreate({
-                                where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email)), // Well, this will allow user to log in either using User and pass or just Google.. I think it's ok..
-                                defaults: {
-                                    name,
-                                    email,
-                                    password,
-                                    company,
-                                    source: User.SOURCES.citizenos,
-                                    language,
-                                    preferences
-                                },
-                                transaction: t
-                            });
-                        if (created) {
-                            logger.info('Created a new user', user.id);
-                            await cosActivities.createActivity(user, null, {
-                                type: 'User',
-                                id: user.id,
-                                ip: req.ip
-                            }, req.method + ' ' + req.path, t);
-                        }
+        let user = await User
+            .findOne({
+                where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
+            });
 
-                        const uc = await UserConnection
-                            .create({
-                                userId: user.id,
-                                connectionId: UserConnection.CONNECTION_IDS.citizenos,
-                                connectionUserId: user.id,
-                                connectionData: user
-                            }, {
-                                transaction: t
-                            });
-
-                        return cosActivities.addActivity(uc, {
-                            type: 'User',
-                            id: user.id,
-                            ip: req.ip
-                        }, null, user, req.method + ' ' + req.path, t);
-                    });
-                } catch (err) {
-                    return next(err);
-                }
-            }
-
-            if (user) {
-                if (user.emailIsVerified) {
-                    setAuthCookie(req, res, user.id);
-
-                    return res.ok({redirectSuccess});
-                } else {
-                    // Store redirect url in the token so that /api/auth/verify/:code could redirect to the url late
-                    const tokenData = {
-                        redirectSuccess // TODO: Misleading naming, would like to use "redirectUri" (OpenID convention) instead, but needs RAA.ee to update codebase.
-                    };
-
-                    const token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
-                    await emailLib.sendAccountVerification(user.email, user.emailVerificationCode, token);
-
-                    return res.ok('Check your email ' + user.email + ' to verify your account.', user.toJSON());
-                }
-            } else {
+        if (user) {
+            // IF password is null, the User was created through an invite. We allow an User to claim the account.
+            if (user.password) {
+                // Email address is already in use.
                 return res.ok('Check your email ' + email + ' to verify your account.');
             }
-        } catch (err) {
-            return next(err);
+            user.password = password;
+
+            await user.save({fields: ['password']});
+        } else {
+            await db.transaction(async function (t) {
+                [user, created] = await User
+                    .findOrCreate({
+                        where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email)), // Well, this will allow user to log in either using User and pass or just Google.. I think it's ok..
+                        defaults: {
+                            name,
+                            email,
+                            password,
+                            company,
+                            source: User.SOURCES.citizenos,
+                            language,
+                            preferences
+                        },
+                        transaction: t
+                    });
+                if (created) {
+                    logger.info('Created a new user', user.id);
+                    await cosActivities.createActivity(user, null, {
+                        type: 'User',
+                        id: user.id,
+                        ip: req.ip
+                    }, req.method + ' ' + req.path, t);
+                }
+
+                const uc = await UserConnection
+                    .create({
+                        userId: user.id,
+                        connectionId: UserConnection.CONNECTION_IDS.citizenos,
+                        connectionUserId: user.id,
+                        connectionData: user
+                    }, {
+                        transaction: t
+                    });
+
+                return cosActivities.addActivity(uc, {
+                    type: 'User',
+                    id: user.id,
+                    ip: req.ip
+                }, null, user, req.method + ' ' + req.path, t);
+            });
         }
-    });
+
+        if (user) {
+            if (user.emailIsVerified) {
+                setAuthCookie(req, res, user.id);
+
+                return res.ok({redirectSuccess});
+            } else {
+                // Store redirect url in the token so that /api/auth/verify/:code could redirect to the url late
+                const tokenData = {
+                    redirectSuccess // TODO: Misleading naming, would like to use "redirectUri" (OpenID convention) instead, but needs RAA.ee to update codebase.
+                };
+
+                const token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
+                await emailLib.sendAccountVerification(user.email, user.emailVerificationCode, token);
+
+                return res.ok(`Check your email ${user.email} to verify your account.`, user.toJSON());
+            }
+        } else {
+            return res.ok(`Check your email ${user.email} to verify your account.`);
+        }
+    }));
 
     /**
      * Set the authorization cookie, can also be viewed as starting a session
@@ -632,7 +627,7 @@ module.exports = function (app) {
         } catch (error) {
             let errorCode;
             let message;
-            switch(error.message) {
+            switch (error.message) {
                 case 'USER_REFUSED':
                     errorCode = 10;
                     message = 'User refused';
@@ -651,17 +646,17 @@ module.exports = function (app) {
 
     const getIdCardCert = async (res, token) => {
         const idReq = await superagent.get(config.services.idCard.serviceUrl)
-                .query({token})
-                .set('X-API-KEY', config.services.idCard.apiKey)
-                .catch(function (error) {
-                    if (error && error.response && error.response.body) {
-                        return res.badRequest(error.response.body.status.message);
-                    } else {
-                        throw new Error(error);
-                    }
-                });
+            .query({token})
+            .set('X-API-KEY', config.services.idCard.apiKey)
+            .catch(function (error) {
+                if (error && error.response && error.response.body) {
+                    return res.badRequest(error.response.body.status.message);
+                } else {
+                    throw new Error(error);
+                }
+            });
 
-            return idReq.body.data.user
+        return idReq.body.data.user
     }
 
     const getIdCardCertStatus = async (res, token, cert) => {
@@ -789,7 +784,7 @@ module.exports = function (app) {
         } catch (error) {
             let errorCode;
             let message;
-            switch(error.message) {
+            switch (error.message) {
                 case 'USER_CANCELLED':
                     errorCode = 10;
                     message = 'User has cancelled the log in process';

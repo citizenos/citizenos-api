@@ -1117,7 +1117,7 @@ suite('Auth', function () {
             assert.deepEqual(signupResult, expected);
         });
 
-        test('Fail - email already in use - return 200 to void phishing', async function () {
+        test('Fail - 20000 - email already in use - return 200 to void phishing', async function () {
             const email = 'test_emailinuse_' + new Date().getTime() + '@test.ee';
             const password = 'Test123';
 
