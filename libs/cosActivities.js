@@ -8,6 +8,7 @@ module.exports = function (app) {
     const db = models.sequelize;
     const uuid = app.get('uuid');
     const moment = app.get('moment');
+    const logger = app.get('logger');
 
     const Activity = models.Activity;
 
@@ -366,7 +367,8 @@ module.exports = function (app) {
         const changeSet = _getInstanceChangeSet(instance);
 
         if (changeSet.length === 0) {
-            return Promise.reject('No changes detected for instance');
+            logger.warn('No changes detected for instance', context);
+            return Promise.resolve();
         }
 
         origin['@type'] = instance.constructor.name;
