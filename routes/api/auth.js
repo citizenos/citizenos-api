@@ -305,17 +305,19 @@ module.exports = function (app) {
         return res.ok();
     }));
 
-    app.get('/api/auth/verify/:code', async function (req, res) {
+    app.get('/api/auth/verify/:code', asyncMiddleware(async function (req, res) {
         const code = req.params.code;
         const token = req.query.token;
 
         let redirectSuccess = urlLib.getFe('/');
+
         if (token) {
             const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
             if (tokenData.redirectSuccess) {
                 redirectSuccess = tokenData.redirectSuccess;
             }
         }
+
         try {
             const result = await User
                 .update(
@@ -349,7 +351,7 @@ module.exports = function (app) {
 
             return res.redirect(302, redirectSuccess + '?error=emailVerificationFailed');
         }
-    });
+    }));
 
 
     app.post('/api/auth/password', loginCheck(), async function (req, res, next) {
