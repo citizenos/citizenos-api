@@ -1,3 +1,7 @@
+## 2022-01-31
+
+* `GET /api/topics/:topicId/invites/users/:inviteId` & `GET /api/users/:userId/topics/:topicId/invites/users/:inviteId` to return status code 20002 when invited User has not been registered - https://github.com/citizenos/citizenos-fe/issues/773
+
 ## 2021-12-14
 
 * Add a new Comment type - poi (Point of Information) - https://github.com/citizenos/citizenos-fe/issues/329
