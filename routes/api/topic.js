@@ -25,7 +25,6 @@ module.exports = function (app) {
     const mobileId = app.get('mobileId');
     const jwt = app.get('jwt');
     const cosJwt = app.get('cosJwt');
-    const querystring = app.get('querystring');
     const twitter = app.get('twitter');
     const hashtagCache = app.get('hashtagCache');
     const moment = app.get('moment');
@@ -1667,11 +1666,9 @@ module.exports = function (app) {
     const _topicUpdate = async function (req, res, next) {
         try {
             const topicId = req.params.topicId;
-            const contact = req.body.contact; // TODO: This logic is specific to Rahvaalgatus.ee, with next Partner we have to make it more generic - https://trello.com/c/Sj3XRF5V/353-raa-ee-followup-email-to-riigikogu-and-token-access-to-events-api
             const statusNew = req.body.status;
 
             let isBackToVoting = false;
-            let isSendToParliament = false;
 
             const topic = await Topic
                 .findOne({
@@ -1692,36 +1689,7 @@ module.exports = function (app) {
                     if (!vote) {
                         return res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew + ' when the Topic has no Vote created');
                     }
-
-                    // TODO: This logic is specific to Rahvaalgatus.ee, with next Partner we have to make it more generic - https://trello.com/c/Sj3XRF5V/353-raa-ee-followup-email-to-riigikogu-and-token-access-to-events-api
-                    // Do not allow going back to voting once the Topic has been sent to Parliament
-                    if (vote.authType === Vote.AUTH_TYPES.hard) {
-                        const voteResults = await getVoteResults(vote.id);
-                        const optionMax = _.maxBy(voteResults, 'voteCount');
-                        if (optionMax && parseInt(optionMax.voteCount) >= parseInt(config.features.sendToParliament.voteCountMin)) {
-                            return res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew + ' when the Topic has been sent to Parliament');
-                        } else {
-                            isBackToVoting = true;
-                        }
-                    }
-
                     isBackToVoting = true;
-                } else if (statusNew === Topic.STATUSES.followUp && vote) { // User closes the Vote
-                    // TODO: This logic is specific to Rahvaalgatus.ee, with next Partner we have to make it more generic - https://trello.com/c/Sj3XRF5V/353-raa-ee-followup-email-to-riigikogu-and-token-access-to-events-api
-                    if (vote.authType === Vote.AUTH_TYPES.hard && contact) {
-                        // TODO: Return proper field errors as for Sequelize errors
-                        if (!contact.name || !contact.email || !contact.phone || !validator.isEmail(contact.email)) {
-                            return res.badRequest('Invalid contact info. Missing or invalid name, email or phone');
-                        }
-
-                        const voteResults = await getVoteResults(vote.id);
-                        const optionMax = _.maxBy(voteResults, 'voteCount');
-                        if (optionMax && optionMax.voteCount >= config.features.sendToParliament.voteCountMin) {
-                            isSendToParliament = true;
-                        } else {
-                            return res.badRequest('Not enough votes to send to Parliament. Votes required - ' + config.features.sendToParliament.voteCountMin, 10);
-                        }
-                    }
                 } else if (statuses.indexOf(topic.status) > statuses.indexOf(statusNew) || [Topic.STATUSES.voting].indexOf(statusNew) > -1) { // You are not allowed to go "back" in the status flow nor you are allowed to set "voting" directly, it can only be done creating a Vote.
                     return res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew);
                 }
@@ -1796,29 +1764,6 @@ module.exports = function (app) {
                             ip: req.ip
                         }
                     );
-            }
-
-            // TODO: This logic is specific to Rahvaalgatus.ee, with next Partner we have to make it more generic - https://trello.com/c/Sj3XRF5V/353-raa-ee-followup-email-to-riigikogu-and-token-access-to-events-api
-            if (isSendToParliament) {
-                logger.info('Sending to Parliament', req.method, req.path);
-
-                // TODO: This should be and stay in sync with the expiry set by getBdocURL
-                const downloadTokenExpiryDays = 30;
-                const linkDownloadBdocFinalExpiryDate = new Date(new Date().getTime() + downloadTokenExpiryDays * 24 * 60 * 60 * 1000);
-
-                const pathAddEvent = '/api/topics/:topicId/events' // COS API url for adding events with token
-                    .replace(':topicId', topicId);
-
-                let linkAddEvent = config.features.sendToParliament.urlPrefix + '/initiatives/:topicId/events/new'.replace(':topicId', topicId);
-                linkAddEvent += '?' + querystring.stringify({token: cosJwt.getTokenRestrictedUse({}, 'POST ' + pathAddEvent)});
-
-                const downloadUriBdocFinal = getBdocURL({
-                    topicId: topicId,
-                    voteId: vote.id,
-                    type: 'goverment'
-                });
-
-                return emailLib.sendToParliament(topic, contact, downloadUriBdocFinal, linkDownloadBdocFinalExpiryDate, linkAddEvent);
             }
         } catch (err) {
             return next(err);
@@ -5302,8 +5247,8 @@ module.exports = function (app) {
                             topicId: req.params.topicId,
                             userId: userId,
                             dateFormat: 'YYYY-MM-DDThh24:mi:ss.msZ',
-                            limit: req.query.limit || 15,
-                            offset: req.query.offset || 0
+                            limit: parseInt(req.query.limit, 10) || 15,
+                            offset: parseInt(req.query.offset, 10) || 0
                         },
                         type: db.QueryTypes.SELECT,
                         raw: true,
