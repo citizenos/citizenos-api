@@ -4006,118 +4006,115 @@ module.exports = function (app) {
         }
     });
 
-    app.post(['/api/users/:userId/topics/:topicId/invites/users/:inviteId/accept', '/api/topics/:topicId/invites/users/:inviteId/accept'], loginCheck(), async function (req, res, next) {
-        try {
-            const userId = req.user.userId;
-            const topicId = req.params.topicId;
-            const inviteId = req.params.inviteId;
+    app.post(['/api/users/:userId/topics/:topicId/invites/users/:inviteId/accept', '/api/topics/:topicId/invites/users/:inviteId/accept'], loginCheck(), asyncMiddleware(async function (req, res) {
+        const userId = req.user.userId;
+        const topicId = req.params.topicId;
+        const inviteId = req.params.inviteId;
 
-            const invite = await TopicInviteUser
-                .findOne(
-                    {
-                        where: {
-                            id: inviteId,
-                            topicId: topicId
-                        },
-                        attributes: {
-                            include: [
-                                [
-                                    db.literal(`EXTRACT(DAY FROM (NOW() - "TopicInviteUser"."createdAt"))`),
-                                    'createdDaysAgo'
-                                ]
-                            ]
-                        }
-                    }
-                );
-
-            // Find out if the User is already a member of the Topic
-            const memberUserExisting = await TopicMemberUser
-                .findOne({
+        const invite = await TopicInviteUser
+            .findOne(
+                {
                     where: {
-                        topicId: topicId,
-                        userId: userId
+                        id: inviteId,
+                        topicId: topicId
+                    },
+                    attributes: {
+                        include: [
+                            [
+                                db.literal(`EXTRACT(DAY FROM (NOW() - "TopicInviteUser"."createdAt"))`),
+                                'createdDaysAgo'
+                            ]
+                        ]
+                    }
+                }
+            );
+
+        // Find out if the User is already a member of the Topic
+        const memberUserExisting = await TopicMemberUser
+            .findOne({
+                where: {
+                    topicId: topicId,
+                    userId: userId
+                }
+            });
+
+        if (invite) {
+            if (invite.userId !== userId) {
+                return res.forbidden();
+            }
+
+            if (memberUserExisting) {
+                // User already a member, see if we need to update the level
+                const levelsArray = Object.values(TopicMemberUser.LEVELS);
+                if (levelsArray.indexOf(memberUserExisting.level) < levelsArray.indexOf(invite.level)) {
+                    const memberUserUpdated = await memberUserExisting.update({
+                        level: invite.level
+                    });
+                    return res.ok(memberUserUpdated);
+                } else {
+                    // No level update, respond with existing member info
+                    return res.ok(memberUserExisting);
+                }
+            } else {
+                // Has the invite expired?
+                if (invite.dataValues.createdDaysAgo > TopicInviteUser.VALID_DAYS) {
+                    return res.gone(`The invite has expired. Invites are valid for ${TopicInviteUser.VALID_DAYS} days`, 2);
+                }
+
+                // Topic needed just for the activity
+                const topic = await Topic.findOne({
+                    where: {
+                        id: invite.topicId
                     }
                 });
 
-            if (invite) {
-                if (invite.userId !== userId) {
-                    return res.forbidden();
-                }
-
-                if (memberUserExisting) {
-                    // User already a member, see if we need to update the level
-                    if (TopicMemberUser.LEVELS.indexOf(memberUserExisting.level) < TopicMemberUser.LEVELS.indexOf(invite.level)) {
-                        const memberUserUpdated = await memberUserExisting.update({
-                            level: invite.level
-                        });
-                        return res.ok(memberUserUpdated);
-                    } else {
-                        // No level update, respond with existing member info
-                        return res.ok(memberUserExisting);
-                    }
-                } else {
-                    // Has the invite expired?
-                    if (invite.dataValues.createdDaysAgo > TopicInviteUser.VALID_DAYS) {
-                        return res.gone(`The invite has expired. Invites are valid for ${TopicInviteUser.VALID_DAYS} days`, 2);
-                    }
-
-                    // Topic needed just for the activity
-                    const topic = await Topic.findOne({
-                        where: {
-                            id: invite.topicId
+                const memberUserCreated = await db.transaction(async function (t) {
+                    const member = await TopicMemberUser.create(
+                        {
+                            topicId: invite.topicId,
+                            userId: invite.userId,
+                            level: TopicMemberUser.LEVELS[invite.level]
+                        },
+                        {
+                            transaction: t
                         }
-                    });
+                    );
 
-                    const memberUserCreated = await db.transaction(async function (t) {
-                        const member = await TopicMemberUser.create(
-                            {
-                                topicId: invite.topicId,
-                                userId: invite.userId,
-                                level: TopicMemberUser.LEVELS[invite.level]
-                            },
-                            {
-                                transaction: t
-                            }
-                        );
+                    await invite.destroy({transaction: t});
 
-                        await invite.destroy({transaction: t});
+                    const user = User.build({id: member.userId});
+                    user.dataValues.id = member.userId;
 
-                        const user = User.build({id: member.userId});
-                        user.dataValues.id = member.userId;
+                    await cosActivities.acceptActivity(
+                        invite,
+                        {
+                            type: 'User',
+                            id: req.user.userId,
+                            ip: req.ip
+                        },
+                        {
+                            type: 'User',
+                            id: invite.creatorId
+                        },
+                        topic,
+                        req.method + ' ' + req.path,
+                        t
+                    );
 
-                        await cosActivities.acceptActivity(
-                            invite,
-                            {
-                                type: 'User',
-                                id: req.user.userId,
-                                ip: req.ip
-                            },
-                            {
-                                type: 'User',
-                                id: invite.creatorId
-                            },
-                            topic,
-                            req.method + ' ' + req.path,
-                            t
-                        );
+                    return member;
+                });
 
-                        return member;
-                    });
-
-                    return res.created(memberUserCreated);
-                }
-            } else {
-                // Already a member, return that membership information
-                if (memberUserExisting) {
-                    return res.ok(memberUserExisting);
-                } else { // No invite, not a member - the User is not invited
-                    return res.notFound();
-                }
+                return res.created(memberUserCreated);
             }
-        } catch (err) {
-            return next(err);
+        } else {
+            // Already a member, return that membership information
+            if (memberUserExisting) {
+                return res.ok(memberUserExisting);
+            } else { // No invite, not a member - the User is not invited
+                return res.notFound();
+            }
         }
-    });
+    }));
 
     /**
      * Get PUBLIC Topic information for given token.
