@@ -147,8 +147,10 @@ module.exports = function (app) {
             // Check the source so that User cannot claim accounts created with Google/FB etc - https://github.com/citizenos/citizenos-fe/issues/773
             if (!user.password && user.source === User.SOURCES.citizenos) {
                 user.password = password;
-
-                await user.save({fields: ['password']});
+                user.name = name || user.name;
+                user.company = company || user.company;
+                user.language = language || user.language;
+                await user.save({fields: ['password', 'name', 'company', 'language']});
             } else {
                 // Email address is already in use.
                 return res.ok(`Check your email ${email} to verify your account.`);

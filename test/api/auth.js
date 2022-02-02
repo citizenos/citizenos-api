@@ -255,11 +255,14 @@ const logout = async function (agent) {
  * @param {string} email E-mail
  * @param {string} password Password
  * @param {string} language Users preferred language ISO 2 char language code
+ * @param {object} preferences ?
+ * @param {string} name
+ * @param {string} company
  *
  * @return {void}
  */
 
-const _signup = async function (agent, email, password, language, preferences, expectedHttpCode) {
+const _signup = async function (agent, email, password, language, preferences, name, company, expectedHttpCode) {
     const path = '/api/auth/signup';
 
     return agent
@@ -269,14 +272,16 @@ const _signup = async function (agent, email, password, language, preferences, e
             email,
             password,
             language,
-            preferences
+            preferences,
+            name,
+            company
         })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
 
-const signup = async function (agent, email, password, language, preferences) {
-    return _signup(agent, email, password, language, preferences, 200);
+const signup = async function (agent, email, password, language, preferences, name, company) {
+    return _signup(agent, email, password, language, preferences, name, company, 200);
 };
 
 /**
@@ -1019,6 +1024,8 @@ suite('Auth', function () {
 
             const email = 'test_' + new Date().getTime() + '_invited@test.ee';
             const password = 'Test123';
+            const name = 'Test name';
+            const company = 'Test company';
             const language = 'et';
 
             const user = await User.create({
@@ -1027,9 +1034,13 @@ suite('Auth', function () {
                 name: email,
                 source: User.SOURCES.citizenos
             });
-            const userSignedup = (await signup(agent, user.email, password, language)).body.data;
+
+            const userSignedup = (await signup(agent, user.email, password, language, null, name, company)).body.data;
+
             assert.equal(userSignedup.email, email);
-            assert.equal(userSignedup.language, user.language);
+            assert.equal(userSignedup.language, language);
+            assert.equal(userSignedup.name, name);
+            assert.equal(userSignedup.company, company);
         });
 
         test('Success - invited user - User with NULL password and source != citizenos should NOT be able to change password', async function () {
@@ -1072,7 +1083,7 @@ suite('Auth', function () {
             const email = null;
             const password = 'Test123';
 
-            const signupResult = (await _signup(agent, email, password, null, null, 400)).body;
+            const signupResult = (await _signup(agent, email, password, null, null, null, null, 400)).body;
             const expected = {
                 status: {
                     code: 40000
@@ -1089,7 +1100,7 @@ suite('Auth', function () {
             const email = 'this is an invalid email';
             const password = 'Test123';
 
-            const signupResult = (await _signup(agent, email, password, null, null, 400)).body;
+            const signupResult = (await _signup(agent, email, password, null, null, null, null, 400)).body;
             const expected = {
                 status: {
                     code: 40000
@@ -1106,7 +1117,7 @@ suite('Auth', function () {
             const email = 'test_' + new Date().getTime() + '@test.ee';
             const password = null;
 
-            const signupResult = (await _signup(agent, email, password, null, null, 400)).body;
+            const signupResult = (await _signup(agent, email, password, null, null, null, null, 400)).body;
             const expected = {
                 status: {
                     code: 40000
@@ -1123,7 +1134,7 @@ suite('Auth', function () {
             const email = 'test_' + new Date().getTime() + '@test.ee';
             const password = 'nonumbersoruppercase';
 
-            const signupResult = (await _signup(agent, email, password, null, null, 400)).body;
+            const signupResult = (await _signup(agent, email, password, null, null, null, null, 400)).body;
             const expected = {
                 status: {
                     code: 40000
@@ -1139,7 +1150,7 @@ suite('Auth', function () {
             const email = 'notvalidatall';
             const password = 'nonumbersoruppercase';
 
-            const signupResult = (await _signup(agent, email, password, null, null, 400)).body;
+            const signupResult = (await _signup(agent, email, password, null, null, null, null, 400)).body;
             const expected = {
                 status: {
                     code: 40000
