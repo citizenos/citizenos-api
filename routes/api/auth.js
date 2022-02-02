@@ -139,13 +139,14 @@ module.exports = function (app) {
 
         let user = await User
             .findOne({
-                where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
+                where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email)),
+                include: [UserConnection]
             });
 
         if (user) {
             // IF password is null, the User was created through an invite. We allow an User to claim the account.
             // Check the source so that User cannot claim accounts created with Google/FB etc - https://github.com/citizenos/citizenos-fe/issues/773
-            if (!user.password && user.source === User.SOURCES.citizenos) {
+            if (!user.password && user.source === User.SOURCES.citizenos && !user.UserConnections.length) {
                 user.password = password;
                 user.name = name || user.name;
                 user.company = company || user.company;
