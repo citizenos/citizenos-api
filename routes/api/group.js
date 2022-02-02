@@ -25,6 +25,7 @@ module.exports = function (app) {
     const GroupMemberUser = models.GroupMemberUser;
     const GroupJoin = models.GroupJoin;
     const User = models.User;
+    const UserConnection = models.UserConnection;
 
     const _hasPermission = async function (groupId, userId, level, allowPublic, allowSelf) {
         const result = await db.query(`
@@ -1246,9 +1247,10 @@ module.exports = function (app) {
                         },
                         {
                             model: User,
-                            attributes: ['id', 'email'],
+                            attributes: ['id', 'email', 'password', 'source'],
                             as: 'user',
-                            required: true
+                            required: true,
+                            include: [UserConnection]
                         }
                     ],
                     attributes: {
@@ -1287,11 +1289,23 @@ module.exports = function (app) {
         }
 
         // At this point we can already confirm users e-mail
-        await User.update({emailIsVerified: true}, {
-            where: {id: invite.userId},
-            fields: ['emailIsVerified'],
-            limit: 1
-        });
+        await User
+            .update(
+                {
+                    emailIsVerified: true
+                }, {
+                    where: {
+                        id: invite.userId
+                    },
+                    fields: ['emailIsVerified'],
+                    limit: 1
+                }
+        );
+
+        // User has not been registered by a person but was created by the system on invite - https://github.com/citizenos/citizenos-fe/issues/773
+        if (!invite.user.password && invite.user.source === User.SOURCES.citizenos && !invite.user.UserConnections.length) {
+            return res.ok(invite, 2);
+        }
 
         return res.ok(invite);
     }));
