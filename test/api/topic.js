@@ -2146,7 +2146,7 @@ suite('Users', function () {
                 assert.equal(topicRes.status, Topic.STATUSES.voting);
             });
 
-            test('Success - send to Parliament', async function () {
+            test.skip('Success - send to Parliament', async function () {
                 this.timeout(20000);
 
                 const voteOptions = [
@@ -2273,7 +2273,7 @@ suite('Users', function () {
                 assert.equal(errors.endsAt, 'Topic deadline must be in the future.');
             });
 
-            test('Fail - Bad Request - send to Parliament - invalid contact info. Missing or invalid name, email or phone', async function () {
+            test.skip('Fail - Bad Request - send to Parliament - invalid contact info. Missing or invalid name, email or phone', async function () {
                 const voteOptions = [
                     {
                         value: 'Option 1'
@@ -2299,7 +2299,7 @@ suite('Users', function () {
                 assert.deepEqual(resBody, expectedBody);
             });
 
-            test('Fail - Bad Request - send to Parliament - not enough votes to send to Parliament', async function () {
+            test.skip('Fail - Bad Request - send to Parliament - not enough votes to send to Parliament', async function () {
                 const voteOptions = [
                     {
                         value: 'Option 1'
