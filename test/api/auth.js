@@ -1013,7 +1013,7 @@ suite('Auth', function () {
             assert.notProperty(user, 'deletedAt');
         });
 
-        test('Success - invited user - User with NULL password in DB should be able to sign up', async function () {
+        test('Success - invited user - User with NULL password in DB should be able to sign up if the User source is citizenos', async function () {
             // Users with NULL password are created on User invite
             const agent = request.agent(app);
 
@@ -1030,7 +1030,42 @@ suite('Auth', function () {
             const userSignedup = (await signup(agent, user.email, password, language)).body.data;
             assert.equal(userSignedup.email, email);
             assert.equal(userSignedup.language, user.language);
+        });
 
+        test('Success - invited user - User with NULL password and source != citizenos should NOT be able to change password', async function () {
+            // Users with NULL password are created on User invite
+            const agent = request.agent(app);
+
+            const email = 'test_' + new Date().getTime() + '_invited@test.ee';
+            const password = 'Test123';
+            const language = 'et';
+
+            const user = await User.create({
+                email: email,
+                password: null,
+                name: email,
+                source: User.SOURCES.google
+            });
+
+            const bodySignup = (await signup(agent, user.email, password, language)).body;
+
+            const bodyExpected = {
+                status: {
+                    code: 20000,
+                    message: `Check your email ${email} to verify your account.`
+                }
+            };
+
+            assert.deepEqual(bodySignup, bodyExpected);
+
+            const userInDb = await User.findOne({
+                where: {
+                    id: user.id
+                }
+            });
+
+            assert.isNull(userInDb.password);
+            assert.equal(userInDb.source, user.source);
         });
 
         test('Fail - 40000 - email cannot be null', async function () {

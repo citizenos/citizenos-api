@@ -144,13 +144,15 @@ module.exports = function (app) {
 
         if (user) {
             // IF password is null, the User was created through an invite. We allow an User to claim the account.
-            if (user.password) {
+            // Check the source so that User cannot claim accounts created with Google/FB etc - https://github.com/citizenos/citizenos-fe/issues/773
+            if (!user.password && user.source === User.SOURCES.citizenos) {
+                user.password = password;
+
+                await user.save({fields: ['password']});
+            } else {
                 // Email address is already in use.
                 return res.ok(`Check your email ${email} to verify your account.`);
             }
-            user.password = password;
-
-            await user.save({fields: ['password']});
         } else {
             await db.transaction(async function (t) {
                 [user, created] = await User
@@ -167,6 +169,7 @@ module.exports = function (app) {
                         },
                         transaction: t
                     });
+
                 if (created) {
                     logger.info('Created a new user', user.id);
                     await cosActivities.createActivity(
