@@ -4006,7 +4006,7 @@ module.exports = function (app) {
         }
     });
 
-    app.post(['/api/users/:userId/topics/:topicId/invites/users/:inviteId/accept', '/api/topics/:topicId/invites/users/:inviteId/accept'], loginCheck(), asyncMiddleware(async function (req, res, next) {
+    app.post(['/api/users/:userId/topics/:topicId/invites/users/:inviteId/accept', '/api/topics/:topicId/invites/users/:inviteId/accept'], loginCheck(), asyncMiddleware(async function (req, res) {
         const userId = req.user.userId;
         const topicId = req.params.topicId;
         const inviteId = req.params.inviteId;
