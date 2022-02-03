@@ -6,6 +6,7 @@ module.exports = function (app) {
     const cryptoLib = app.get('cryptoLib');
     const smartId = app.get('smartId');
     const loginCheck = app.get('middleware.loginCheck');
+    const asyncMiddleware = app.get('middleware.asyncMiddleware');
     const emailLib = app.get('email');
     const validator = app.get('validator');
     const util = app.get('util');
@@ -125,7 +126,7 @@ module.exports = function (app) {
         return res.redirect(redirectUri + querystring.stringify(errorObj));
     };
 
-    app.post('/api/auth/signup', async function (req, res, next) {
+    app.post('/api/auth/signup', asyncMiddleware(async function (req, res) {
         const email = req.body.email || ''; // HACK: Sequelize validate() is not run if value is "null". Also cannot use allowNull: false as I don' want constraint in DB. https://github.com/sequelize/sequelize/issues/2643
         const password = req.body.password || ''; // HACK: Sequelize validate() is not run if value is "null". Also cannot use allowNull: false as I don' want constraint in DB. https://github.com/sequelize/sequelize/issues/2643
         const name = req.body.name || util.emailToDisplayName(req.body.email);
@@ -135,90 +136,103 @@ module.exports = function (app) {
         const preferences = req.body.preferences;
 
         let created = false;
-        try {
-            let user = await User
-                .findOne({
-                    where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
-                });
-            if (user) {
-                // IF password is null, the User was created through an invite. We allow an User to claim the account.
-                if (user.password) {
-                    // Email address is already in use.
-                    return res.ok('Check your email ' + email + ' to verify your account.');
-                }
+
+        let user = await User
+            .findOne({
+                where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email)),
+                include: [UserConnection]
+            });
+
+        if (user) {
+            // IF password is null, the User was created through an invite. We allow an User to claim the account.
+            // Check the source so that User cannot claim accounts created with Google/FB etc - https://github.com/citizenos/citizenos-fe/issues/773
+            if (!user.password && user.source === User.SOURCES.citizenos && !user.UserConnections.length) {
                 user.password = password;
-
-                await user.save({fields: ['password']});
+                user.name = name || user.name;
+                user.company = company || user.company;
+                user.language = language || user.language;
+                await user.save({fields: ['password', 'name', 'company', 'language']});
             } else {
-                try {
-                    await db.transaction(async function (t) {
-                        [user, created] = await User
-                            .findOrCreate({
-                                where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email)), // Well, this will allow user to log in either using User and pass or just Google.. I think it's ok..
-                                defaults: {
-                                    name,
-                                    email,
-                                    password,
-                                    company,
-                                    source: User.SOURCES.citizenos,
-                                    language,
-                                    preferences
-                                },
-                                transaction: t
-                            });
-                        if (created) {
-                            logger.info('Created a new user', user.id);
-                            await cosActivities.createActivity(user, null, {
-                                type: 'User',
-                                id: user.id,
-                                ip: req.ip
-                            }, req.method + ' ' + req.path, t);
-                        }
+                // Email address is already in use.
+                return res.ok(`Check your email ${email} to verify your account.`);
+            }
+        } else {
+            await db.transaction(async function (t) {
+                [user, created] = await User
+                    .findOrCreate({
+                        where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email)), // Well, this will allow user to log in either using User and pass or just Google.. I think it's ok..
+                        defaults: {
+                            name,
+                            email,
+                            password,
+                            company,
+                            source: User.SOURCES.citizenos,
+                            language,
+                            preferences
+                        },
+                        transaction: t
+                    });
 
-                        const uc = await UserConnection
-                            .create({
-                                userId: user.id,
-                                connectionId: UserConnection.CONNECTION_IDS.citizenos,
-                                connectionUserId: user.id,
-                                connectionData: user
-                            }, {
-                                transaction: t
-                            });
-
-                        return cosActivities.addActivity(uc, {
+                if (created) {
+                    logger.info('Created a new user', user.id);
+                    await cosActivities.createActivity(
+                        user,
+                        null,
+                        {
                             type: 'User',
                             id: user.id,
                             ip: req.ip
-                        }, null, user, req.method + ' ' + req.path, t);
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
+                }
+
+                const uc = await UserConnection
+                    .create({
+                        userId: user.id,
+                        connectionId: UserConnection.CONNECTION_IDS.citizenos,
+                        connectionUserId: user.id,
+                        connectionData: user
+                    }, {
+                        transaction: t
                     });
-                } catch (err) {
-                    return next(err);
-                }
-            }
 
-            if (user) {
-                if (user.emailIsVerified) {
-                    setAuthCookie(req, res, user.id);
-
-                    return res.ok({redirectSuccess});
-                } else {
-                    // Store redirect url in the token so that /api/auth/verify/:code could redirect to the url late
-                    const tokenData = {
-                        redirectSuccess // TODO: Misleading naming, would like to use "redirectUri" (OpenID convention) instead, but needs RAA.ee to update codebase.
-                    };
-
-                    const token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
-                    await emailLib.sendAccountVerification(user.email, user.emailVerificationCode, token);
-
-                    return res.ok('Check your email ' + user.email + ' to verify your account.', user.toJSON());
-                }
-            } else {
-                return res.ok('Check your email ' + email + ' to verify your account.');
-            }
-        } catch (err) {
-            return next(err);
+                return cosActivities.addActivity(
+                    uc,
+                    {
+                        type: 'User',
+                        id: user.id,
+                        ip: req.ip
+                    },
+                    null,
+                    user,
+                    req.method + ' ' + req.path,
+                    t
+                );
+            });
         }
-    });
+
+        if (user) {
+            if (user.emailIsVerified) {
+                setAuthCookie(req, res, user.id);
+
+                return res.ok({redirectSuccess});
+            } else {
+                // Store redirect url in the token so that /api/auth/verify/:code could redirect to the url late
+                const tokenData = {
+                    redirectSuccess // TODO: Misleading naming, would like to use "redirectUri" (OpenID convention) instead, but needs RAA.ee to update codebase.
+                };
+
+                const token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
+                await emailLib.sendAccountVerification(user.email, user.emailVerificationCode, token);
+
+                return res.ok(`Check your email ${user.email} to verify your account.`, user.toJSON());
+            }
+        } else {
+            return res.ok(`Check your email ${user.email} to verify your account.`);
+        }
+    }));
 
     /**
      * Set the authorization cookie, can also be viewed as starting a session
@@ -291,27 +305,25 @@ module.exports = function (app) {
     });
 
 
-    app.post('/api/auth/logout', async function (req, res, next) {
-        try {
-            await clearSessionCookies(req, res);
+    app.post('/api/auth/logout', asyncMiddleware(async function (req, res) {
+        await clearSessionCookies(req, res);
 
-            return res.ok();
-        } catch (err) {
-            return next(err);
-        }
-    });
+        return res.ok();
+    }));
 
-    app.get('/api/auth/verify/:code', async function (req, res) {
+    app.get('/api/auth/verify/:code', asyncMiddleware(async function (req, res) {
         const code = req.params.code;
         const token = req.query.token;
 
         let redirectSuccess = urlLib.getFe('/');
+
         if (token) {
             const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
             if (tokenData.redirectSuccess) {
                 redirectSuccess = tokenData.redirectSuccess;
             }
         }
+
         try {
             const result = await User
                 .update(
@@ -345,92 +357,82 @@ module.exports = function (app) {
 
             return res.redirect(302, redirectSuccess + '?error=emailVerificationFailed');
         }
-    });
+    }));
 
 
-    app.post('/api/auth/password', loginCheck(), async function (req, res, next) {
+    app.post('/api/auth/password', loginCheck(), asyncMiddleware(async function (req, res) {
         const currentPassword = req.body.currentPassword;
         const newPassword = req.body.newPassword;
-        try {
-            const user = await User
-                .findOne({
-                    where: {
-                        id: req.user.userId
-                    }
-                });
 
-            if (!user || user.password !== cryptoLib.getHash(currentPassword, 'sha256')) {
-                return res.badRequest('Invalid email or new password.');
-            }
+        const user = await User
+            .findOne({
+                where: {
+                    id: req.user.userId
+                }
+            });
 
-            user.password = newPassword;
-
-            await user.save({fields: ['password']});
-
-            return res.ok();
-        } catch (err) {
-            return next(err);
+        if (!user || user.password !== cryptoLib.getHash(currentPassword, 'sha256')) {
+            return res.badRequest('Invalid email or new password.');
         }
-    });
+
+        user.password = newPassword;
+
+        await user.save({fields: ['password']});
+
+        return res.ok();
+    }));
 
 
-    app.post('/api/auth/password/reset/send', async function (req, res, next) {
+    app.post('/api/auth/password/reset/send', asyncMiddleware(async function (req, res) {
         const email = req.body.email;
         if (!email || !validator.isEmail(email)) {
             return res.badRequest({email: 'Invalid email'});
         }
-        try {
-            const user = await User.findOne({
-                where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
-            });
 
-            if (!user) {
-                return res.ok('Success! Please check your email :email to complete your password recovery.'.replace(':email', email));
-            }
+        const user = await User.findOne({
+            where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
+        });
 
-            user.passwordResetCode = true; // Model will generate new code
-
-            await user.save({fields: ['passwordResetCode']});
-
-            await emailLib.sendPasswordReset(user.email, user.passwordResetCode);
-
+        if (!user) {
             return res.ok('Success! Please check your email :email to complete your password recovery.'.replace(':email', email));
-        } catch (err) {
-            return next(err);
         }
-    });
+
+        user.passwordResetCode = true; // Model will generate new code
+
+        await user.save({fields: ['passwordResetCode']});
+
+        await emailLib.sendPasswordReset(user.email, user.passwordResetCode);
+
+        return res.ok('Success! Please check your email :email to complete your password recovery.'.replace(':email', email));
+    }));
 
 
-    app.post('/api/auth/password/reset', async function (req, res, next) {
+    app.post('/api/auth/password/reset', asyncMiddleware(async function (req, res) {
         const email = req.body.email;
         const password = req.body.password;
         const passwordResetCode = req.body.passwordResetCode;
-        try {
-            const user = await User.findOne({
-                where: {
-                    [Op.and]: [
-                        db.where(db.fn('lower', db.col('email')), db.fn('lower', email)),
-                        db.where(db.col('passwordResetCode'), passwordResetCode)
-                    ]
-                }
-            });
 
-            // !user.passwordResetCode avoids the situation where passwordResetCode has not been sent (null), but user posts null to API
-            if (!user || !user.passwordResetCode) {
-                return res.badRequest('Invalid email, password or password reset code.');
+        const user = await User.findOne({
+            where: {
+                [Op.and]: [
+                    db.where(db.fn('lower', db.col('email')), db.fn('lower', email)),
+                    db.where(db.col('passwordResetCode'), passwordResetCode)
+                ]
             }
+        });
 
-            user.password = password; // Hash is created by the model hooks
-            user.passwordResetCode = true; // Model will generate new code so that old code cannot be used again - https://github.com/citizenos/citizenos-api/issues/68
-
-            await user.save({fields: ['password', 'passwordResetCode']});
-            //TODO: Logout all existing sessions for the User!
-            return res.ok();
-        } catch (err) {
-            return next(err);
+        // !user.passwordResetCode avoids the situation where passwordResetCode has not been sent (null), but user posts null to API
+        if (!user || !user.passwordResetCode) {
+            return res.badRequest('Invalid email, password or password reset code.');
         }
 
-    });
+        user.password = password; // Hash is created by the model hooks
+        user.passwordResetCode = true; // Model will generate new code so that old code cannot be used again - https://github.com/citizenos/citizenos-api/issues/68
+
+        await user.save({fields: ['password', 'passwordResetCode']});
+        //TODO: Logout all existing sessions for the User!
+        return res.ok();
+    }));
 
 
     /**
@@ -438,29 +440,25 @@ module.exports = function (app) {
      *
      * @deprecated Use GET /api/users/self instead.
      */
-    app.get('/api/auth/status', loginCheck(['partner']), async function (req, res, next) {
-        try {
-            const user = await User.findOne({
-                where: {
-                    id: req.user.userId
-                }
-            });
-
-            if (!user) {
-                await clearSessionCookies(req, res);
-
-                return res.notFound();
+    app.get('/api/auth/status', loginCheck(['partner']), asyncMiddleware(async function (req, res) {
+        const user = await User.findOne({
+            where: {
+                id: req.user.userId
             }
-            const userData = user.toJSON();
-            userData.termsVersion = user.dataValues.termsVersion;
-            userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
-            userData.preferences = user.dataValues.preferences;
+        });
 
-            return res.ok(userData);
-        } catch (err) {
-            return next(err);
+        if (!user) {
+            await clearSessionCookies(req, res);
+
+            return res.notFound();
         }
-    });
+        const userData = user.toJSON();
+        userData.termsVersion = user.dataValues.termsVersion;
+        userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
+        userData.preferences = user.dataValues.preferences;
+
+        return res.ok(userData);
+    }));
 
 
     app.post('/api/auth/smartid/init', async function (req, res, next) {
@@ -632,7 +630,7 @@ module.exports = function (app) {
         } catch (error) {
             let errorCode;
             let message;
-            switch(error.message) {
+            switch (error.message) {
                 case 'USER_REFUSED':
                     errorCode = 10;
                     message = 'User refused';
@@ -651,18 +649,18 @@ module.exports = function (app) {
 
     const getIdCardCert = async (res, token) => {
         const idReq = await superagent.get(config.services.idCard.serviceUrl)
-                .query({token})
-                .set('X-API-KEY', config.services.idCard.apiKey)
-                .catch(function (error) {
-                    if (error && error.response && error.response.body) {
-                        return res.badRequest(error.response.body.status.message);
-                    } else {
-                        throw new Error(error);
-                    }
-                });
+            .query({token})
+            .set('X-API-KEY', config.services.idCard.apiKey)
+            .catch(function (error) {
+                if (error && error.response && error.response.body) {
+                    return res.badRequest(error.response.body.status.message);
+                } else {
+                    throw new Error(error);
+                }
+            });
 
-            return idReq.body.data.user
-    }
+        return idReq.body.data.user
+    };
 
     const getIdCardCertStatus = async (res, token, cert) => {
         if (cert) {
@@ -789,7 +787,7 @@ module.exports = function (app) {
         } catch (error) {
             let errorCode;
             let message;
-            switch(error.message) {
+            switch (error.message) {
                 case 'USER_CANCELLED':
                     errorCode = 10;
                     message = 'User has cancelled the log in process';

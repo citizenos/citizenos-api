@@ -413,6 +413,7 @@ const _topicInviteUsersCreate = async function (agent, userId, topicId, invites,
         .set('Content-Type', 'application/json')
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
+
     if (ip) {
         request.set('X-Forwarded-For', ip)
     }
@@ -4060,7 +4061,7 @@ suite('Users', function () {
                         assert.deepEqual(inviteCreateResult2, expectedResponseBody);
                     });
 
-                    test('Fail - 400 - Maximum user limit reached', async function () {
+                    test('Fail - 40000 - Maximum user limit reached', async function () {
                         const invitation = [];
                         let i = 0;
                         while (i < 51) {
@@ -4115,7 +4116,6 @@ suite('Users', function () {
                     let userToInvite;
 
                     let topic;
-                    let topicInviteCreated;
 
                     suiteSetup(async function () {
                         userToInvite = await userLib.createUserAndLogin(agentUserToInvite, null, null, null);
@@ -4124,16 +4124,16 @@ suite('Users', function () {
 
                     setup(async function () {
                         topic = (await topicCreate(agentCreator, userCreator.id, null, null, null, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>', null)).body.data;
+                    });
 
+                    test('Success - 20000 - existing User by user ID', async function () {
                         const invitation = {
                             userId: userToInvite.id,
                             level: TopicMemberUser.LEVELS.read
                         };
 
-                        topicInviteCreated = (await topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation)).body.data.rows[0];
-                    });
+                        const topicInviteCreated = (await topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation)).body.data.rows[0];
 
-                    test('Success - 20000', async function () {
                         const inviteRead = (await topicInviteUsersRead(request.agent(app), topic.id, topicInviteCreated.id)).body.data;
 
                         const expectedInvite = Object.assign({}, topicInviteCreated); // Clone
@@ -4162,8 +4162,14 @@ suite('Users', function () {
                         assert.deepEqual(inviteRead, expectedInvite);
                     });
 
-                    // I invite has been accepted (deleted, but User has access)
-                    test('Success - 20001', async function () {
+                    test('Success - 20001 - Invite has been deleted (accepted), but User has access', async function () {
+                        const invitation = {
+                            userId: userToInvite.id,
+                            level: TopicMemberUser.LEVELS.read
+                        };
+
+                        const topicInviteCreated = (await topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation)).body.data.rows[0];
+
                         const topicMemberUser = (await topicInviteUsersAccept(agentUserToInvite, userToInvite.id, topic.id, topicInviteCreated.id)).body.data;
 
                         assert.equal(topicMemberUser.topicId, topic.id);
@@ -4212,6 +4218,49 @@ suite('Users', function () {
                         assert.deepEqual(inviteReadResult, expectedInviteResult);
                     });
 
+                    test('Success - 20002 - NOT existing User by e-mail', async function () {
+                        const invitation = {
+                            userId: `topics_invites_users_test_20002_${new Date().getTime()}@citizenostest.com`,
+                            level: TopicMemberUser.LEVELS.read
+                        };
+
+                        const topicInviteCreated = (await topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation)).body.data.rows[0];
+
+                        const inviteRead = (await topicInviteUsersRead(request.agent(app), topic.id, topicInviteCreated.id)).body;
+
+                        const expectedInvite = Object.assign({}, topicInviteCreated); // Clone
+
+                        expectedInvite.topic = {
+                            id: topic.id,
+                            title: topic.title,
+                            visibility: topic.visibility,
+                            creator: {
+                                id: userCreator.id
+                            }
+                        };
+
+                        expectedInvite.creator = {
+                            company: null,
+                            id: userCreator.id,
+                            imageUrl: null,
+                            name: userCreator.name
+                        };
+
+                        expectedInvite.user = {
+                            id: topicInviteCreated.userId,
+                            email: invitation.userId // in the invite userId is e-mail
+                        };
+
+                        const bodyExpected = {
+                            status: {
+                                code: 20002
+                            },
+                            data: expectedInvite
+                        };
+
+                        assert.deepEqual(inviteRead, bodyExpected);
+                    });
+
                     test('Fail - 40400 - Not found', async function () {
                         await _topicInviteUsersRead(request.agent(app), topic.id, 'f4bb46b9-87a1-4ae4-b6df-c2605ab8c471', 404);
                     });
@@ -4222,7 +4271,7 @@ suite('Users', function () {
                             level: TopicMemberUser.LEVELS.read
                         };
 
-                        topicInviteCreated = (await topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation)).body.data.rows[0];
+                        const topicInviteCreated = (await topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation)).body.data.rows[0];
 
                         await TopicInviteUser
                             .destroy({
@@ -4244,6 +4293,13 @@ suite('Users', function () {
                     });
 
                     test('Fail - 41002 - Expired', async function () {
+                        const invitation = {
+                            userId: userToInvite.id,
+                            level: TopicMemberUser.LEVELS.read
+                        };
+
+                        const topicInviteCreated = (await topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation)).body.data.rows[0];
+
                         await TopicInviteUser
                             .update(
                                 {
@@ -4336,7 +4392,7 @@ suite('Users', function () {
                         assert.deepEqual(inviteRead, expectedInvite);
                     });
 
-                    test('Fail - 401000', async function () {
+                    test('Fail - 40100', async function () {
                         const inviteUpdate = (await _topicInviteUsersUpdate(request.agent(app), userCreator.id, topic.id, topicInviteCreated.id, TopicMemberUser.LEVELS.admin, 401)).body;
 
                         const expectedBody = {
@@ -4348,7 +4404,7 @@ suite('Users', function () {
                         assert.deepEqual(inviteUpdate, expectedBody);
                     });
 
-                    test('Fail - 400000', async function () {
+                    test('Fail - 40000', async function () {
                         const inviteUpdate = (await _topicInviteUsersUpdate(agentCreator, userCreator.id, topic.id, topicInviteCreated.id, 'nonvalid', 400)).body;
 
                         const expectedBody = {

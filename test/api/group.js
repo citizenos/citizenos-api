@@ -1058,7 +1058,6 @@ suite('Users', function () {
                     let userToInvite;
 
                     let group;
-                    let groupInviteCreated;
 
                     suiteSetup(async function () {
                         userToInvite = await userLib.createUserAndLogin(agentUserToInvite, null, null, null);
@@ -1067,16 +1066,16 @@ suite('Users', function () {
 
                     setup(async function () {
                         group = (await groupCreate(agentCreator, userCreator.id, groupName, null, null)).body.data;
+                    });
 
+                    test('Success - 20000', async function () {
                         const invitation = {
                             userId: userToInvite.id,
                             level: GroupMemberUser.LEVELS.read
                         };
 
-                        groupInviteCreated = (await groupInviteUsersCreate(agentCreator, userCreator.id, group.id, invitation)).body.data.rows[0];
-                    });
+                        const groupInviteCreated = (await groupInviteUsersCreate(agentCreator, userCreator.id, group.id, invitation)).body.data.rows[0];
 
-                    test('Success - 20000', async function () {
                         const inviteRead = (await groupInviteUsersRead(request.agent(app), group.id, groupInviteCreated.id)).body.data;
 
                         const expectedInvite = Object.assign({}, groupInviteCreated); // Clone
@@ -1106,6 +1105,13 @@ suite('Users', function () {
 
                     // I invite has been accepted (deleted, but User has access)
                     test('Success - 20001', async function () {
+                        const invitation = {
+                            userId: userToInvite.id,
+                            level: GroupMemberUser.LEVELS.read
+                        };
+
+                        const groupInviteCreated = (await groupInviteUsersCreate(agentCreator, userCreator.id, group.id, invitation)).body.data.rows[0];
+
                         const groupMemberUser = (await groupInviteUsersAccept(agentUserToInvite, userToInvite.id, group.id, groupInviteCreated.id)).body.data;
 
                         assert.equal(groupMemberUser.groupId, group.id);
@@ -1153,6 +1159,52 @@ suite('Users', function () {
                         assert.deepEqual(inviteReadResult, expectedInviteResult);
                     });
 
+                    test('Success - 20002 - NOT existing User by e-mail', async function () {
+                        const invitation = {
+                            userId: `test_new_user_group_invite_read_${new Date().getTime()}_@citizenostest.com`,
+                            level: GroupMemberUser.LEVELS.read
+                        };
+
+                        const groupInviteCreated = (await groupInviteUsersCreate(agentCreator, userCreator.id, group.id, invitation)).body.data.rows[0];
+
+                        const inviteReadResult = (await groupInviteUsersRead(request.agent(app), group.id, groupInviteCreated.id)).body;
+                        const expectedInvite = Object.assign({}, groupInviteCreated);
+
+                        // Accepting the invite changes "updatedAt", thus these are not the same. Verify that the "updatedAt" exists and remove from expected and actual
+                        assert.property(inviteReadResult.data, 'updatedAt');
+                        delete inviteReadResult.data.updatedAt;
+                        delete expectedInvite.updatedAt;
+
+                        expectedInvite.group = {
+                            id: group.id,
+                            name: group.name,
+                            creator: {
+                                id: userCreator.id
+                            }
+                        };
+
+                        expectedInvite.creator = {
+                            company: null,
+                            id: userCreator.id,
+                            imageUrl: null,
+                            name: userCreator.name
+                        };
+
+                        expectedInvite.user = {
+                            id: groupInviteCreated.userId,
+                            email: invitation.userId
+                        };
+
+                        const expectedInviteResult = {
+                            status: {
+                                code: 20002
+                            },
+                            data: expectedInvite
+                        };
+
+                        assert.deepEqual(inviteReadResult, expectedInviteResult);
+                    });
+
 
                     test('Fail - 40400 - Not found', async function () {
                         await _groupInviteUsersRead(request.agent(app), group.id, 'f4bb46b9-87a1-4ae4-b6df-c2605ab8c471', 404);
@@ -1186,6 +1238,13 @@ suite('Users', function () {
                     });
 
                     test('Fail - 41002 - Expired', async function () {
+                        const invitation = {
+                            userId: userToInvite.id,
+                            level: GroupMemberUser.LEVELS.read
+                        };
+
+                        let groupInviteCreated = (await groupInviteUsersCreate(agentCreator, userCreator.id, group.id, invitation)).body.data.rows[0];
+
                         await GroupInviteUser
                             .update(
                                 {

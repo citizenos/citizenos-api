@@ -80,7 +80,7 @@ module.exports = function (sequelize, DataTypes) {
             },
             password: {
                 type: DataTypes.STRING(64),
-                comment: 'Password hash. NULL if User was created on invitation and has not registered.',
+                comment: 'Password hash. NULL if User was created on invitation OR with another method like ESTEID, FB, Google.',
                 validate: {
                     isValidPassword: function (v) {
                         const passwordRegexp = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{6,}$/;
