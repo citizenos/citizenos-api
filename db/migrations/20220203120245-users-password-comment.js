@@ -7,7 +7,7 @@ module.exports = {
         );
     },
 
-    async down (queryInterface, Sequelize) {
+    async down () {
         console.log('NO ROLLBACK FOR THIS MIGRATION. Only updates a comment on a field.');
     }
 };
