@@ -5091,45 +5091,49 @@ module.exports = function (app) {
                             SELECT
                                 (commentRelations).*,
                                 jsonb_build_object('rows', pg_temp.orderReplies(array_to_json(
-                                    array_agg(commentTree)
-                                    ||
-                                    array(
-                                        SELECT t
-                                            FROM (
-                                                SELECT
-                                                    l.*,
-                                                    jsonb_build_object('count',0, 'rows', json_build_array()) replies
-                                                FROM commentRelations l, maxdepth
-                                                    WHERE (l.parent->>'id')::uuid = (commentRelations).id
-                                                    AND l.depth < maxdepth
-                                                    AND l.id  NOT IN (
-                                                        SELECT id FROM rootTree
-                                                    )
-                                                    ORDER BY l."createdAt" ASC
-                                            ) r
-                                           JOIN pg_temp.getCommentTree(r.id) t
-                                            ON r.id = t.id
-                                        ))
+                                    array_cat(
+                                        array_agg(commentTree)
+                                        ,
+                                        array(
+                                            SELECT t
+                                                FROM (
+                                                    SELECT
+                                                        l.*,
+                                                        jsonb_build_object('count',0, 'rows', json_build_array()) replies
+                                                    FROM commentRelations l, maxdepth
+                                                        WHERE (l.parent->>'id')::uuid = (commentRelations).id
+                                                        AND l.depth < maxdepth
+                                                        AND l.id  NOT IN (
+                                                            SELECT id FROM rootTree
+                                                        )
+                                                        ORDER BY l."createdAt" ASC
+                                                ) r
+                                            JOIN pg_temp.getCommentTree(r.id) t
+                                                ON r.id = t.id
+                                            ))
+                                    )
                                 ), 'count',
                                 array_length((
-                                    array_agg(commentTree)
-                                    ||
-                                    array(
-                                        SELECT t
-                                            FROM (
-                                                SELECT
-                                                    l.*
-                                                FROM commentRelations l, maxdepth
-                                                    WHERE (l.parent->>'id')::uuid = (commentRelations).id
-                                                    AND l.depth < maxdepth
-                                                    AND l.id  NOT IN (
-                                                        SELECT id FROM rootTree
-                                                    )
-                                                ORDER BY l."createdAt" ASC
-                                            ) r
-                                           JOIN pg_temp.getCommentTree(r.id) t
-                                            ON r.id = t.id
-                                        )), 1)) replies
+                                    array_cat(
+                                        array_agg(commentTree)
+                                        ,
+                                        array(
+                                            SELECT t
+                                                FROM (
+                                                    SELECT
+                                                        l.*
+                                                    FROM commentRelations l, maxdepth
+                                                        WHERE (l.parent->>'id')::uuid = (commentRelations).id
+                                                        AND l.depth < maxdepth
+                                                        AND l.id  NOT IN (
+                                                            SELECT id FROM rootTree
+                                                        )
+                                                    ORDER BY l."createdAt" ASC
+                                                ) r
+                                            JOIN pg_temp.getCommentTree(r.id) t
+                                                ON r.id = t.id
+                                            ))
+                                        ), 1)) replies
                     FROM (
                         SELECT commentRelations, commentTree
                             FROM commentRelations
