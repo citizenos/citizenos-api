@@ -69,15 +69,15 @@ module.exports = function (sequelize, DataTypes) {
             email: {
                 type: DataTypes.STRING(254),
                 comment: 'User registration email.',
+                set: function (v) {
+                    if (typeof v.toLowerCase === 'function') {
+                        this.setDataValue('email', v.toLowerCase());
+                    } else {
+                        this.setDataValue('email', v);
+                    }
+                },
                 unique: {
                     msg: 'The email address is already in use.'
-                },
-                set: function (v) {
-                    if (!v) {
-                        return;
-                    }
-
-                    this.setDataValue('email', v.toLowerCase());
                 },
                 validate: {
                     isEmail: {
