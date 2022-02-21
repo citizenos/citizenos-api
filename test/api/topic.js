@@ -3972,9 +3972,10 @@ suite('Users', function () {
                     });
 
                     test('Success - 20100 - invite multiple users, 1 existing User and one not existing User - email & email', async function () {
+                        const userToInvite = await userLib.createUser(request.agent(app), 'multipleInviteTest1_' + cosUtil.randomString() + '@invitetest.com', null, null);
                         const invitation = [
                             {
-                                userId: 'multipleInviteTest1_' + cosUtil.randomString() + '@invitetest.com',
+                                userId: userToInvite.email,
                                 level: TopicMemberUser.LEVELS.read
                             },
                             {
