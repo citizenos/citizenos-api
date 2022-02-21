@@ -4028,7 +4028,7 @@ suite('Users', function () {
                         // Make sure the e-mail is converted to lower-case making e-mails case-insensitive - https://github.com/citizenos/citizenos-api/issues/234
                         const userInvited2 = await User.findOne({
                             where: {
-                                id: createdInviteUser1.userId
+                                id: createdInviteUser2.userId
                             }
                         });
 
