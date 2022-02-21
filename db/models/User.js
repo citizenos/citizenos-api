@@ -70,7 +70,7 @@ module.exports = function (sequelize, DataTypes) {
                 type: DataTypes.STRING(254),
                 comment: 'User registration email.',
                 set: function (v) {
-                    if (typeof v.toLowerCase === 'function') {
+                    if (v && typeof v.toLowerCase === 'function') {
                         this.setDataValue('email', v.toLowerCase());
                     } else {
                         this.setDataValue('email', v);

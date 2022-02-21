@@ -1961,14 +1961,14 @@ suite('Users', function () {
                     const agent = request.agent(app);
                     const userAgent = request.agent(app);
 
-                    const creatorEmail = 'test_gmemberstopicsgd_c_' + new Date().getTime() + '@test.ee';
+                    const creatorEmail = 'test_gmemberstopicsgd_c_' + cosUtil.randomString() + '@test.ee';
                     const creatorPassword = 'testPassword123';
 
                     let creator, user, group, topicCreated, topicCreated2;
 
                     suiteSetup(async function () {
                         creator = await userLib.createUserAndLogin(agent, creatorEmail, creatorPassword, null);
-                        user = await userLib.createUserAndLogin(userAgent, 'test_gmemberstopicsgd_u_' + new Date().getTime() + '@test.ee', creatorPassword, null);
+                        user = await userLib.createUserAndLogin(userAgent, 'test_gmemberstopicsgd_u_' + cosUtil.randomString() + '@test.ee', creatorPassword, null);
 
                         group = (await groupCreate(agent, creator.id, 'Test Group list member topics', null, null)).body.data;
                         const members = [
