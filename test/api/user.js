@@ -211,7 +211,7 @@ suite('User', function () {
             });
 
             assert.property(u, 'id');
-            assert.equal(u.email, email);
+            assert.equal(u.email, email.toLowerCase());
             assert.equal(u.password, cryptoLib.getHash(passwordNew, 'sha256'));
             assert.equal(u.name, nameNew);
         });
@@ -244,7 +244,7 @@ suite('User', function () {
             });
 
             assert.property(u, 'id');
-            assert.equal(u.email, emailNew);
+            assert.equal(u.email, emailNew.toLowerCase());
             assert.equal(u.password, cryptoLib.getHash(passwordNew, 'sha256'));
             assert.equal(u.name, nameNew);
         });

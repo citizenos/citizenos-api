@@ -258,6 +258,7 @@ const logout = async function (agent) {
  * @param {object} preferences ?
  * @param {string} name
  * @param {string} company
+ * @param {number} expectedHttpCode Expected HTTP status code
  *
  * @return {void}
  */

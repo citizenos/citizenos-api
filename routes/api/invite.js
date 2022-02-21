@@ -43,7 +43,7 @@ module.exports = function (app) {
                 });
         }
 
-        if (userLoggedIn && userLoggedIn.email !== req.query.email) {
+        if (userLoggedIn && email && userLoggedIn.email !== email.toLowerCase()) {
             // TODO: Duplicate code with POST /api/auth/logout
             // Log out the currently logged in User
             res.clearCookie(config.session.name, {

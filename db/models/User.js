@@ -69,6 +69,13 @@ module.exports = function (sequelize, DataTypes) {
             email: {
                 type: DataTypes.STRING(254),
                 comment: 'User registration email.',
+                set: function (v) {
+                    if (v && typeof v.toLowerCase === 'function') {
+                        this.setDataValue('email', v.toLowerCase());
+                    } else {
+                        this.setDataValue('email', v);
+                    }
+                },
                 unique: {
                     msg: 'The email address is already in use.'
                 },
@@ -154,7 +161,6 @@ module.exports = function (sequelize, DataTypes) {
                 allowNull: true,
                 comment: 'User preferences JSON object',
                 set (value) {
-
                     let final = {};
                     const allowedFields = ['showInSearch'];
                     if (value) {
