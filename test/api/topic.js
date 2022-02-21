@@ -3974,11 +3974,11 @@ suite('Users', function () {
                     test('Success - 20100 - invite multiple users, 1 existing User and one not existing User - email & email', async function () {
                         const invitation = [
                             {
-                                userId: userToInvite.email,
+                                userId: 'multipleInviteTest1_' + cosUtil.randomString() + '@invitetest.com',
                                 level: TopicMemberUser.LEVELS.read
                             },
                             {
-                                userId: cosUtil.randomString() + '@invitetest.com',
+                                userId: 'multipleInviteTest2_' + cosUtil.randomString() + '@invitetest.com',
                                 level: TopicMemberUser.LEVELS.edit
                             }
                         ];
@@ -4007,6 +4007,15 @@ suite('Users', function () {
                         assert.isNotNull(createdInviteUser1.createdAt);
                         assert.isNotNull(createdInviteUser1.updatedAt);
 
+                        // Make sure the e-mail is converted to lower-case making e-mails case-insensitive - https://github.com/citizenos/citizenos-api/issues/234
+                        const userInvited1 = await User.findOne({
+                            where: {
+                                id: createdInviteUser1.userId
+                            }
+                        });
+
+                        assert.equal(userInvited1.email, invitation[0].userId.toLowerCase());
+
                         const createdInviteUser2 = _.find(createdInvites, {level: invitation[1].level}); // find by level, not by id to keep the code simpler
                         assert.uuid(createdInviteUser2.id, 'v4');
                         assert.equal(createdInviteUser2.topicId, topic.id);
@@ -4015,6 +4024,15 @@ suite('Users', function () {
                         assert.equal(createdInviteUser2.level, invitation[1].level);
                         assert.isNotNull(createdInviteUser2.createdAt);
                         assert.isNotNull(createdInviteUser2.updatedAt);
+
+                        // Make sure the e-mail is converted to lower-case making e-mails case-insensitive - https://github.com/citizenos/citizenos-api/issues/234
+                        const userInvited2 = await User.findOne({
+                            where: {
+                                id: createdInviteUser1.userId
+                            }
+                        });
+
+                        assert.equal(userInvited2.email, invitation[1].userId.toLowerCase());
                     });
 
                     test('Fail - 40001 - Invite yourself', async function () {
