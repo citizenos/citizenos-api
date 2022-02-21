@@ -344,6 +344,7 @@ const GroupMemberUser = models.GroupMemberUser;
 const TopicMemberGroup = models.TopicMemberGroup;
 const GroupInviteUser = models.GroupInviteUser;
 const Moderator = models.Moderator;
+const User = models.User;
 
 suite('Users', function () {
 
@@ -805,6 +806,15 @@ suite('Users', function () {
                         assert.isNotNull(createdInvite.userId);
                         assert.isNotNull(createdInvite.createdAt);
                         assert.isNotNull(createdInvite.updatedAt);
+
+                        // Make sure the e-mail is converted to lower-case making e-mails case-insensitive - https://github.com/citizenos/citizenos-api/issues/234
+                        const userCreated = await User.findOne({
+                            where: {
+                                id: createdInvite.userId
+                            }
+                        });
+
+                        assert.equal(userCreated.email, invitation.userId.toLowerCase());
                     });
 
                     test('Success - 20100 - invite multiple Users - userId (uuidv4) WITHOUT invite message', async function () {
