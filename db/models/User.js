@@ -72,6 +72,13 @@ module.exports = function (sequelize, DataTypes) {
                 unique: {
                     msg: 'The email address is already in use.'
                 },
+                set: function (v) {
+                    if (!v) {
+                        return;
+                    }
+
+                    this.setDataValue('email', v.toLowerCase());
+                },
                 validate: {
                     isEmail: {
                         msg: 'Invalid email.'
@@ -154,7 +161,6 @@ module.exports = function (sequelize, DataTypes) {
                 allowNull: true,
                 comment: 'User preferences JSON object',
                 set (value) {
-
                     let final = {};
                     const allowedFields = ['showInSearch'];
                     if (value) {
