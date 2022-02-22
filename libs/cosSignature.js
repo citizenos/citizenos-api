@@ -176,11 +176,9 @@ module.exports = function (app) {
     const _createTopicFile = async function (topic, vote, transaction) {
         const destinationDir = _getVoteFileSourceDir(topic.id, vote.id);
 
-        let filePath;
-
         await fsExtra
             .mkdirsAsync(destinationDir, FILE_CREATE_MODE);
-        filePath = destinationDir + '/' + TOPIC_FILE.name;
+        const filePath = destinationDir + '/' + TOPIC_FILE.name;
         const doc = new CosHtmlToDocx(topic.description, topic.title, filePath);
 
         const docxBuffer = await doc.processHTML();

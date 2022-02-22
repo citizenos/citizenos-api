@@ -139,14 +139,6 @@
         "@types/ms": "*"
       }
     },
-    "@types/jszip": {
-      "version": "3.4.1",
-      "resolved": "https://registry.npmjs.org/@types/jszip/-/jszip-3.4.1.tgz",
-      "integrity": "sha512-TezXjmf3lj+zQ651r6hPqvSScqBLvyPI9FxdXBqpEwBijNGQ2NXpaFW/7joGzveYkKQUil7iiDHLo6LV71Pc0A==",
-      "requires": {
-        "jszip": "*"
-      }
-    },
     "@types/ms": {
       "version": "0.7.31",
       "resolved": "https://registry.npmjs.org/@types/ms/-/ms-0.7.31.tgz",
@@ -1724,16 +1716,22 @@
       }
     },
     "docx": {
-      "version": "6.0.3",
-      "resolved": "https://registry.npmjs.org/docx/-/docx-6.0.3.tgz",
-      "integrity": "sha512-e9bLznPAnZVNZS+Vddt/atphFy1GZ/ln/Xw1lGn19MIv8HHzP2ivTUUTjGPfpZpHinHdU+zsi8y32q8V8/guow==",
+      "version": "7.3.0",
+      "resolved": "https://registry.npmjs.org/docx/-/docx-7.3.0.tgz",
+      "integrity": "sha512-OkSGlDNWMRFY07OEhUTx1ouuzYi8s1b67JDI6m5/5ek4xoshtP+/Rx8eRdY8LbhvpFkngvUantvTsxY4XW8Heg==",
       "requires": {
-        "@types/jszip": "^3.1.4",
-        "@types/node": "^14.0.5",
+        "@types/node": "^17.0.0",
         "jszip": "^3.1.5",
         "nanoid": "^3.1.20",
         "xml": "^1.0.1",
         "xml-js": "^1.6.8"
+      },
+      "dependencies": {
+        "@types/node": {
+          "version": "17.0.19",
+          "resolved": "https://registry.npmjs.org/@types/node/-/node-17.0.19.tgz",
+          "integrity": "sha512-PfeQhvcMR4cPFVuYfBN4ifG7p9c+Dlh3yUZR6k+5yQK7wX3gDgVxBly4/WkBRs9x4dmcy1TVl08SY67wwtEvmA=="
+        }
       }
     },
     "dom-serializer": {
@@ -4871,9 +4869,9 @@
       "integrity": "sha512-71ippSywq5Yb7/tVYyGbkBggbU8H3u5Rz56fH60jGFgr8uHwxs+aSKeqmluIVzM0m0kB7xQjKS6qPfd0b2ZoqQ=="
     },
     "nanoid": {
-      "version": "3.2.0",
-      "resolved": "https://registry.npmjs.org/nanoid/-/nanoid-3.2.0.tgz",
-      "integrity": "sha512-fmsZYa9lpn69Ad5eDn7FMcnnSR+8R34W9qJEijxYhTbfOWzr22n1QxCMzXLK+ODyW2973V3Fux959iQoUxzUIA=="
+      "version": "3.3.1",
+      "resolved": "https://registry.npmjs.org/nanoid/-/nanoid-3.3.1.tgz",
+      "integrity": "sha512-n6Vs/3KGyxPQd6uO0eH4Bv0ojGSUvuLlIHtC3Y0kEO23YRge8H9x1GCzLn28YX0H66pMkxuaeESFq4tKISKwdw=="
     },
     "natural-compare": {
       "version": "1.4.0",

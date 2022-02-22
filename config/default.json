@@ -48,7 +48,7 @@
     "cookie": {
       "path": "/api",
       "httpOnly": true,
-      "maxAge": 1209600,
+      "maxAge": 12096000,
       "domain": false,
       "sameSite": "None"
     }
