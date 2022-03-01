@@ -3540,6 +3540,7 @@ module.exports = function (app) {
 
                 // Is it an e-mail?
                 if (validator.isEmail(m.userId)) {
+                    m.userId = m.userId.toLowerCase(); // https://github.com/citizenos/citizenos-api/issues/234
                     validEmailMembers.push(m); // The whole member object with level
                 } else if (validator.isUUID(m.userId, 4)) {
                     validUserIdMembers.push(m);

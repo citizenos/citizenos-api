@@ -29,14 +29,16 @@ module.exports = function (app) {
      */
     const _createUser = async function (agent, email, password, language) {
         if (!email) {
-            const prefix = 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1';
+            const prefix = 'test_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '');
 
             email = prefix + '@test.com';
-            password = prefix;
+            // Need to add num and letter to the end for it to be a valid pass - https://github.com/citizenos/citizenos-api/issues/234
+            password = prefix.toLowerCase() + '1A';
         }
 
         if (!password) {
-            password = email.split('@')[0];
+            // Need to add num and letter to the end for it to be a valid pass - https://github.com/citizenos/citizenos-api/issues/234
+            password = email.toLowerCase().split('@')[0] + '1A';
         }
 
         await auth.signup(agent, email, password, language);
@@ -46,7 +48,7 @@ module.exports = function (app) {
                 emailIsVerified: true
             },
             {
-                where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email)),
+                where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email)),
                 returning: true
             }
         );
@@ -79,7 +81,7 @@ module.exports = function (app) {
         }
 
         if (!password) {
-            password = user.email.split('@')[0];
+            password = user.email.split('@')[0] + '1A';
         }
 
         // Logs in the Agent

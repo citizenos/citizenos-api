@@ -344,6 +344,7 @@ const GroupMemberUser = models.GroupMemberUser;
 const TopicMemberGroup = models.TopicMemberGroup;
 const GroupInviteUser = models.GroupInviteUser;
 const Moderator = models.Moderator;
+const User = models.User;
 
 suite('Users', function () {
 
@@ -805,6 +806,15 @@ suite('Users', function () {
                         assert.isNotNull(createdInvite.userId);
                         assert.isNotNull(createdInvite.createdAt);
                         assert.isNotNull(createdInvite.updatedAt);
+
+                        // Make sure the e-mail is converted to lower-case making e-mails case-insensitive - https://github.com/citizenos/citizenos-api/issues/234
+                        const userCreated = await User.findOne({
+                            where: {
+                                id: createdInvite.userId
+                            }
+                        });
+
+                        assert.equal(userCreated.email, invitation.userId.toLowerCase());
                     });
 
                     test('Success - 20100 - invite multiple Users - userId (uuidv4) WITHOUT invite message', async function () {
@@ -919,14 +929,14 @@ suite('Users', function () {
                     });
 
                     test('Success - 20100 - invite multiple users, 1 existing User and one not existing User - email & email', async function () {
-                        const userToInvite = await userLib.createUser(request.agent(app), null, null, null);
+                        const userToInvite = await userLib.createUser(request.agent(app), 'TestGroupInviteEmail1_' + cosUtil.randomString() + '@invitetest.com', null, null);
                         const invitation = [
                             {
                                 userId: userToInvite.email,
                                 level: GroupMemberUser.LEVELS.read
                             },
                             {
-                                userId: cosUtil.randomString() + '@invitetest.com',
+                                userId: 'TestGroupInviteEmail2_' + cosUtil.randomString() + '@invitetest.com',
                                 level: GroupMemberUser.LEVELS.admin
                             }
                         ];
@@ -957,6 +967,15 @@ suite('Users', function () {
                         assert.isNotNull(createdInviteUser1.createdAt);
                         assert.isNotNull(createdInviteUser1.updatedAt);
 
+                        // Make sure the e-mail is converted to lower-case making e-mails case-insensitive - https://github.com/citizenos/citizenos-api/issues/234
+                        const userInvited1 = await User.findOne({
+                            where: {
+                                id: createdInviteUser1.userId
+                            }
+                        });
+
+                        assert.equal(userInvited1.email, invitation[0].userId.toLowerCase());
+
                         const createdInviteUser2 = createdInvites.find(function (invite) { // find by level, not by id to keep the code simpler
                             return invite.level === invitation[1].level;
                         });
@@ -967,6 +986,15 @@ suite('Users', function () {
                         assert.equal(createdInviteUser2.level, invitation[1].level);
                         assert.isNotNull(createdInviteUser2.createdAt);
                         assert.isNotNull(createdInviteUser2.updatedAt);
+
+                        // Make sure the e-mail is converted to lower-case making e-mails case-insensitive - https://github.com/citizenos/citizenos-api/issues/234
+                        const userInvited2 = await User.findOne({
+                            where: {
+                                id: createdInviteUser2.userId
+                            }
+                        });
+
+                        assert.equal(userInvited2.email, invitation[1].userId.toLowerCase());
                     });
 
                     test('Fail - 40001 - Invite yourself', async function () {
@@ -1933,14 +1961,14 @@ suite('Users', function () {
                     const agent = request.agent(app);
                     const userAgent = request.agent(app);
 
-                    const creatorEmail = 'test_gmemberstopicsgd_c_' + new Date().getTime() + '@test.ee';
+                    const creatorEmail = 'test_gmemberstopicsgd_c_' + cosUtil.randomString() + '@test.ee';
                     const creatorPassword = 'testPassword123';
 
                     let creator, user, group, topicCreated, topicCreated2;
 
                     suiteSetup(async function () {
                         creator = await userLib.createUserAndLogin(agent, creatorEmail, creatorPassword, null);
-                        user = await userLib.createUserAndLogin(userAgent, 'test_gmemberstopicsgd_u_' + new Date().getTime() + '@test.ee', creatorPassword, null);
+                        user = await userLib.createUserAndLogin(userAgent, 'test_gmemberstopicsgd_u_' + cosUtil.randomString() + '@test.ee', creatorPassword, null);
 
                         group = (await groupCreate(agent, creator.id, 'Test Group list member topics', null, null)).body.data;
                         const members = [
