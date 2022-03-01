@@ -497,6 +497,7 @@ function CosHtmlToDocx (html, title, resPath) {
             attributes.size = 17;
         } else if (_isElement(item, 'a')) {
             attributes.link = item.attribs.href;
+            attributes.style = "Hyperlink";
         }
 
         if (item.type === 'text') {
@@ -505,22 +506,26 @@ function CosHtmlToDocx (html, title, resPath) {
 
             if (attributes.superScript && item.parent.name !== 'sup') {
                 delete attributes.superScript;
-            }
-            if (attributes.link) {
-                children.push(new ExternalHyperlink({
-                    children: [
-                        new TextRun(textNode)
-                    ],
-                    link: attributes.link,
-                }));
             } else {
                 children.push(new TextRun(textNode));
             }
         }
         if (item.children) {
+            const linkChildren = [];
             for await (let gc of item.children) {
-                if (!_isListElement(gc))
+                if (_isElement(item, 'a')) {
+                    await _getTextWithFormat(gc, linkChildren, attributes);
+                }
+                else if (!_isListElement(gc)) {
                     await _getTextWithFormat(gc, children, attributes);
+                }
+            }
+
+            if (_isElement(item, 'a')) {
+                children.push(new ExternalHyperlink({
+                    children: linkChildren,
+                    link: attributes.link,
+                }));
             }
         } else {
             return attributes;

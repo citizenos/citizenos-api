@@ -7177,28 +7177,7 @@ module.exports = function (app) {
             return next(err);
         }
     };
-    app.get('/api/download/docx/:topicId', async (req, res) => {
-        const fsExtra = app.get('fsExtra');
-        const CosHtmlToDocx = app.get('cosHtmlToDocx');
 
-        const destinationDir = app.get('FILE_ROOT') + '/' + req.params.topicId
-        const topic = await Topic.findOne({
-            where: {
-                id: req.params.topicId
-            }
-        });
-        await fsExtra
-            .mkdirsAsync(destinationDir, '0760');
-        const filePath = destinationDir + '/' + req.params.topicId;
-        const doc = new CosHtmlToDocx(topic.description, topic.title, filePath);
-
-        const docxBuffer = await doc.processHTML();
-
-        res.set('Content-disposition', `attachment; filename=${req.params.topicId}.docx`);
-        res.set('Content-type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-
-        return res.send(docxBuffer);
-    });
     /**
      * Download final vote BDOC container
      *
