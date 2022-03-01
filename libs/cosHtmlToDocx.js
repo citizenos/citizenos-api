@@ -15,7 +15,7 @@ const https = require('https');
 const path = require('path');
 const sizeOf = require('image-size');
 const mime = require('mime-types');
-const {AlignmentType, Document, HeadingLevel, Packer, Paragraph, TextRun, ImageRun, LevelFormat} = docx;
+const {AlignmentType, Document, HeadingLevel, Packer, Paragraph, TextRun, ImageRun, ExternalHyperlink, LevelFormat} = docx;
 
 const _addStyles = function (params) {
     params.styles = {
@@ -304,7 +304,7 @@ function CosHtmlToDocx (html, title, resPath) {
         if (element.type === 'text') {
             return true;
         } else {
-            const textelem = ['s', 'u', 'sup', 'em', 'strong', 'span'].filter((v) => {
+            const textelem = ['s', 'u', 'sup', 'em', 'strong', 'span', 'a'].filter((v) => {
                 return _isElement(element, v) === true;
             });
 
@@ -495,6 +495,9 @@ function CosHtmlToDocx (html, title, resPath) {
             attributes.size = _getElementFontSizeFromStyle(item);
         } else if (_isFootNoteElement(item)) {
             attributes.size = 17;
+        } else if (_isElement(item, 'a')) {
+            attributes.link = item.attribs.href;
+            attributes.style = "Hyperlink";
         }
 
         if (item.type === 'text') {
@@ -503,14 +506,26 @@ function CosHtmlToDocx (html, title, resPath) {
 
             if (attributes.superScript && item.parent.name !== 'sup') {
                 delete attributes.superScript;
+            } else {
+                children.push(new TextRun(textNode));
             }
-
-            children.push(new TextRun(textNode));
         }
         if (item.children) {
+            const linkChildren = [];
             for await (let gc of item.children) {
-                if (!_isListElement(gc))
+                if (_isElement(item, 'a')) {
+                    await _getTextWithFormat(gc, linkChildren, attributes);
+                }
+                else if (!_isListElement(gc)) {
                     await _getTextWithFormat(gc, children, attributes);
+                }
+            }
+
+            if (_isElement(item, 'a')) {
+                children.push(new ExternalHyperlink({
+                    children: linkChildren,
+                    link: attributes.link,
+                }));
             }
         } else {
             return attributes;

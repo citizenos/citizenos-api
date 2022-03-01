@@ -34,7 +34,7 @@
     "config": "3.3.7",
     "cookie-parser": "1.4.6",
     "cors": "2.8.5",
-    "docx": "6.0.3",
+    "docx": "7.3.0",
     "etherpad-lite-client": "git+https://github.com/citizenos/etherpad-lite-client-js#86e06b78f159f1abc7916ee5c817adb096a951f5",
     "express": "4.17.2",
     "express-device": "0.4.2",
