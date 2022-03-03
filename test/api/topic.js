@@ -2090,6 +2090,7 @@ suite('Users', function () {
         suite('Update', function () {
 
             const agent = request.agent(app);
+            const agent2 = request.agent(app);
             const email = 'test_topicu_' + new Date().getTime() + '@test.ee';
             const password = 'testPassword123';
 
@@ -2098,14 +2099,21 @@ suite('Users', function () {
             const topicEndsAtNew = new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000);
 
             let user;
+            let user2;
             let topic;
 
             suiteSetup(async function () {
                 user = await userLib.createUserAndLogin(agent, email, password, null);
+                user2 = await userLib.createUserAndLogin(agent2);
             });
 
             setup(async function () {
                 topic = (await topicCreate(agent, user.id, null, null, null, null, 'testtag')).body.data;
+                const topicMemberUser = {
+                    userId: user2.id,
+                    level: TopicMemberUser.LEVELS.edit
+                };
+                await memberLib.topicMemberUsersCreate(topic.id, [topicMemberUser]);
             });
 
             test('Success', async function () {
@@ -2202,6 +2210,18 @@ suite('Users', function () {
 
                 await topicUpdate(agent, user.id, topic.id, Topic.STATUSES.followUp, Topic.VISIBILITY.public, null, null, contact);
                 await _topicUpdate(agent, user.id, topic.id, Topic.STATUSES.voting, Topic.VISIBILITY.public, null, null, contact, 400);
+            });
+
+            test('Fail - update - user with edit permissions - update visibility', async () => {
+                await topicUpdate(agent2, user2.id, topic.id, null, Topic.VISIBILITY.public, null, null, null);
+                const topicRes = (await topicRead(agent, user.id, topic.id, null)).body.data
+                assert.equal(topicRes.visibility, Topic.VISIBILITY.private);
+            });
+
+            test('Fail - update - user with edit permissions - update status', async () => {
+                await topicUpdate(agent2, user2.id, topic.id, Topic.STATUSES.followUp, null, null, null, null);
+                const topicRes = (await topicRead(agent, user.id, topic.id, null)).body.data;
+                assert.equal(topicRes.status, Topic.STATUSES.inProgress);
             });
 
             test('Fail - update - status closed', async function () {

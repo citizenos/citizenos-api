@@ -1394,7 +1394,7 @@ module.exports = function (app) {
 
             await db.transaction(async function (t) {
                 await topic.save({transaction: t});
-                topicJoin = await TopicJoin.create(
+                const topicJoinPromise = TopicJoin.create(
                     {
                         topicId: topic.id
                     },
@@ -1403,7 +1403,7 @@ module.exports = function (app) {
                     }
                 );
 
-                await topic.addMemberUser(// Magic method by Sequelize - https://github.com/sequelize/sequelize/wiki/API-Reference-Associations#hasmanytarget-options
+                const memberUserPromise = topic.addMemberUser(// Magic method by Sequelize - https://github.com/sequelize/sequelize/wiki/API-Reference-Associations#hasmanytarget-options
                     user.id,
                     {
                         through: {
@@ -1413,7 +1413,7 @@ module.exports = function (app) {
                     }
                 );
 
-                await cosActivities.createActivity(
+                const activityPromise = cosActivities.createActivity(
                     topic,
                     null,
                     {
@@ -1424,6 +1424,7 @@ module.exports = function (app) {
                     , req.method + ' ' + req.path,
                     t
                 );
+                [topicJoin] = await Promise.all([topicJoinPromise, memberUserPromise, activityPromise]);
             });
 
             // Topic was created with description, force EP to sync with app database for updated title and description
@@ -1439,10 +1440,9 @@ module.exports = function (app) {
                 );
             }
 
-            const authorIds = topic.authorIds;
             const authors = await User.findAll({
                 where: {
-                    id: authorIds
+                    id: topic.authorIds
                 },
                 attributes: ['id', 'name'],
                 raw: true
@@ -1696,29 +1696,33 @@ module.exports = function (app) {
             }
 
             // NOTE: Description is handled separately below
-            const fieldsAllowedToUpdate = ['visibility', 'status', 'categories', 'endsAt', 'hashtag', 'sourcePartnerObjectId'];
+            const fieldsAllowedToUpdate = ['categories', 'endsAt', 'hashtag', 'sourcePartnerObjectId'];
+            if (req.locals.topic.permissions.level === TopicMemberUser.LEVELS.admin) {
+                fieldsAllowedToUpdate.push('visibility');
+                fieldsAllowedToUpdate.push('status');
+            }
 
             Object.keys(req.body).forEach(function (key) {
                 if (fieldsAllowedToUpdate.indexOf(key) >= 0) {
                     topic.set(key, req.body[key]);
                 }
             });
-
+            const promisesList = [];
             await db
                 .transaction(async function (t) {
                     if (req.body.description) {
                         if (topic.status === Topic.STATUSES.inProgress) {
-                            await cosEtherpad
+                            promisesList.push(cosEtherpad
                                 .updateTopic(
                                     topicId,
                                     req.body.description
-                                );
+                                ));
                         } else {
                             return res.badRequest(`Cannot update Topic content when status ${topic.status}`);
                         }
                     }
 
-                    await cosActivities
+                    promisesList.push(cosActivities
                         .updateActivity(
                             topic,
                             null,
@@ -1729,28 +1733,22 @@ module.exports = function (app) {
                             },
                             req.method + ' ' + req.path,
                             t
-                        )
-                        .then(
-                            function () {
-                                return topic.save({transaction: t});
-                            },
-                            function (err) {
-                                logger.info('Update activity failed. Probably as there was no changeset for the instance', err);
-                            }
-                        );
+                        ));
+                    promisesList.push(topic.save({transaction: t}));
 
                     if (isBackToVoting) {
-                        await cosSignature.deleteFinalBdoc(topicId, vote.id);
+                        promisesList.push(cosSignature.deleteFinalBdoc(topicId, vote.id));
 
-                        await TopicEvent
+                        promisesList.push(TopicEvent
                             .destroy({
                                 where: {
                                     topicId: topicId
                                 },
                                 force: true,
                                 transaction: t
-                            });
+                            }));
                     }
+                    await Promise.all(promisesList);
                 });
 
             if (req.body.description && topic.status === Topic.STATUSES.inProgress) {
@@ -6353,18 +6351,19 @@ module.exports = function (app) {
             force: true,
             transaction: transaction
         });
-        const voteList = await VoteList.bulkCreate(
+        const voteListPromise = VoteList.bulkCreate(
             voteOptions,
             {
                 fields: ['optionId', 'voteId', 'userId', 'optionGroupId', 'userHash'],
                 transaction: transaction
             });
-        const topic = await Topic.findOne({
+        const topicPromise = Topic.findOne({
             where: {
                 id: topicId
             },
             transaction: transaction
         });
+        const [voteList, topic] = await Promise.all([voteListPromise, topicPromise]);
         const vl = [];
         let tc = _.cloneDeep(topic.dataValues);
         tc.description = null;
@@ -6383,10 +6382,10 @@ module.exports = function (app) {
         if (userId) {
             actor.id = userId;
         }
-        await cosActivities.createActivity(vl, tc, actor, context, transaction);
+        const activityPromise = cosActivities.createActivity(vl, tc, actor, context, transaction);
 
         // Delete delegation if you are voting - TODO: why is this here? You cannot delegate when authType === 'hard'
-        await VoteDelegation
+        const destroyDelegation = VoteDelegation
             .destroy({
                 where: {
                     voteId: voteId,
@@ -6395,6 +6394,7 @@ module.exports = function (app) {
                 force: true,
                 transaction: transaction
             });
+        await Promise.all([activityPromise, destroyDelegation]);
     };
 
     const handleTopicVoteSoft = async function (vote, req, res) {
