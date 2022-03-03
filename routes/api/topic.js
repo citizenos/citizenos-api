@@ -1993,7 +1993,7 @@ module.exports = function (app) {
             , tv."type" as "vote.type"
             , tv."autoClose" as "vote.autoClose"
             `;
-            voteResults = await getAllVotesResults(userId);
+            voteResults = getAllVotesResults(userId);
         }
 
         if (include.indexOf('event') > -1) {
@@ -2202,7 +2202,8 @@ module.exports = function (app) {
             ;`;
 
         try {
-            const rows = await db
+            let rows;
+            const rowsquery = db
                 .query(
                     query,
                     {
@@ -2218,6 +2219,7 @@ module.exports = function (app) {
                         nest: true
                     }
                 );
+            [rows, voteResults] = await Promise.all([rowsquery, voteResults]);
             const rowCount = rows.length;
 
             // Sequelize returns empty array for no results.
@@ -2281,6 +2283,7 @@ module.exports = function (app) {
             const limitMax = 500;
             const limitDefault = 26;
             let join = '';
+            let groupBy = '';
             let returncolumns = '';
             let voteResults = false;
             let showModerated = req.query.showModerated || false;
@@ -2323,7 +2326,8 @@ module.exports = function (app) {
                     , tv."minChoices" as "vote.minChoices"
                     , tv."type" as "vote.type"
                     `;
-                    voteResults = await getAllVotesResults();
+                    groupBy += `,tv."authType", tv."createdAt", tv."delegationIsAllowed", tv."description", tv."endsAt", tv."maxChoices", tv."minChoices", tv."type" `;
+                    voteResults = getAllVotesResults();
                 }
                 if (include.indexOf('event') > -1) {
                     join += `LEFT JOIN (
@@ -2338,6 +2342,7 @@ module.exports = function (app) {
                     returncolumns += `
                     , COALESCE(te.count, 0) AS "events.count"
                     `;
+                    groupBy += `,te."count" `;
                 }
             }
 
@@ -2394,7 +2399,7 @@ module.exports = function (app) {
                         t."sourcePartnerObjectId",
                         c.id as "creator.id",
                         c.name as "creator.name",
-                        COALESCE(ta."lastActivity", t."updatedAt") as "lastActivity",
+                        COALESCE(MAX(a."updatedAt"), t."updatedAt") as "lastActivity",
                         c.company as "creator.company",
                         muc.count as "members.users.count",
                         COALESCE(mgc.count, 0) as "members.groups.count",
@@ -2485,18 +2490,17 @@ module.exports = function (app) {
                             LEFT JOIN "Votes" v
                                     ON v.id = tv."voteId"
                         ) AS tv ON (tv."topicId" = t.id)
-                        LEFT JOIN (
-                            SELECT t.id, MAX(a."updatedAt") as "lastActivity"
-                            FROM "Topics" t JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds" GROUP BY t.id
-                        ) ta ON (ta.id = t.id)
+                        LEFT JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds"
                         LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                         ${join}
                     WHERE ${where}
+                    GROUP BY t.id, tj."token", tj.level, c.id, muc.count, mgc.count, tv."voteId", tc.count, com."createdAt"
+                    ${groupBy}
                     ORDER BY "lastActivity" DESC
                     LIMIT :limit OFFSET :offset
                 ;`;
-
-            const topics = await db
+            let topics;
+            const topicsquery = db
                 .query(
                     query,
                     {
@@ -2512,7 +2516,7 @@ module.exports = function (app) {
                         nest: true
                     }
                 );
-
+            [topics, voteResults] = await Promise.all([topicsquery, voteResults]);
             if (!topics) {
                 return res.notFound();
             }
