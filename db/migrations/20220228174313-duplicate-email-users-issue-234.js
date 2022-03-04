@@ -1,8 +1,13 @@
 'use strict';
 
+const assert = require('assert').strict;
+const path = require('path');
+
 module.exports = {
     async up (queryInterface) {
         let runMigration = true;
+        let uniqueUsersMigrated = 0;
+        let totalUsersMarkedAsDeleted = 0;
 
         while (runMigration) {
             await queryInterface.sequelize.transaction(async function (t) {
@@ -26,21 +31,22 @@ module.exports = {
                 );
 
                 if (!userToMigrate) {
-                    console.log('NO more users to migrate!');
                     runMigration = false;
+
+                    console.log('MIGRATION COMPLETE!');
+                    console.log('Unique Users migrated', uniqueUsersMigrated);
+                    console.log('Total Users marked as deleted', totalUsersMarkedAsDeleted);
+
                     throw new Error('ROLLBACK! DONE!');
                 }
 
-                console.log('userToMigrate', userToMigrate);
-
                 // Find Users alternative accounts, order by the activity, so that we keep the account with highest activity
-                const [[userAccountToKeep, ...userAccountsToBeDeleted]] = await queryInterface.sequelize.query(
+                const [[userToKeep, ...usersToBeDeleted]] = await queryInterface.sequelize.query(
                     `
                         SELECT
                             u.id,
                             u.email,
                             u.name,
-                            u.company,
                             (
                                 SELECT
                                     COUNT(1)
@@ -60,39 +66,111 @@ module.exports = {
                     }
                 );
 
-                console.log('userAccounts', userAccountToKeep, userAccountsToBeDeleted);
+                assert.equal(usersToBeDeleted.length, userToMigrate.countUsers - 1, 'MUST NOT delete all User accounts. MUST keep 1 account. ROLLBACK!');
 
-                throw new Error('ROLLBACK!');
+                for (let i = 0; i < usersToBeDeleted.length; i++) {
+                    const userToBeMarkedAsDeleted = usersToBeDeleted[i];
+
+                    const userMarkAsDeleteResult = await queryInterface.sequelize.query(
+                        `
+                        UPDATE "Users" SET
+                            email = (email || '__migrated_${i}'),
+                            "updatedAt" = NOW(),
+                            "deletedAt" = NOW()
+                        WHERE id = :userToBeDeletedId
+                        RETURNING id
+                        `,
+                        {
+                            replacements: {
+                                userToBeDeletedId: userToBeMarkedAsDeleted.id
+                            },
+                            transaction: t
+                        }
+                    );
+
+                    assert.equal(userMarkAsDeleteResult[0].length, 1, `Must update only one row in Users table for User ${userToBeMarkedAsDeleted.id} BUT updated ${userMarkAsDeleteResult[0].length}. ROLLBACK!`);
+
+                    const activityData = `
+                        {
+                            "type": "Delete",
+                            "actor": {
+                                "type": "System"
+                            },
+                            "object": {
+                                "@type": "User",
+                                "id": "${userToBeMarkedAsDeleted.id}",
+                                "name": "${userToBeMarkedAsDeleted.name}",
+                                "email": "${userToBeMarkedAsDeleted.email}"
+                            },
+                            "context": "Migration ${path.basename(__filename)}",
+                            "__migratedAt": "___MIGRATION_TIMESTAMP",
+                            "__migrationId": "${path.basename(__filename)}"
+                        }
+                    `;
+
+                    const [, insertActivityCount] = await queryInterface.sequelize.query(
+                        `
+                        INSERT INTO "Activities" (
+                            id, 
+                            data,
+                            "userIds",
+                            "actorType", 
+                            "createdAt",
+                            "updatedAt"
+                        ) VALUES (
+                            gen_random_uuid(),
+                            replace(
+                                :activityData, 
+                                '___MIGRATION_TIMESTAMP'
+                                , NOW()::text
+                            )::jsonb,
+                            ARRAY[:userToBeDeletedId],
+                            'System',
+                            NOW(),
+                            NOW()
+                        )
+                        RETURNING *
+                        `,
+                        {
+                            replacements: {
+                                activityData: activityData,
+                                userToBeDeletedId: userToBeMarkedAsDeleted.id
+                            },
+                            transaction: t
+                        }
+                    );
+
+                    assert.equal(insertActivityCount, 1, `Must add only one row in Activity table for User ${userToBeMarkedAsDeleted.id} BUT inserted  ${insertActivityCount}. ROLLBACK!`);
+
+                    totalUsersMarkedAsDeleted++;
+                }
+
+                // In case most active account had cApS in it, update it to lowercase
+                const [userToKeepEmailUpdateResult] = await queryInterface.sequelize.query(
+                    `
+                        UPDATE "Users" SET
+                            email = LOWER(email),
+                            "updatedAt" = NOW()
+                        WHERE id = :userToMigrate
+                        RETURNING id, email
+                    `,
+                    {
+                        replacements: {
+                            userToMigrate: userToKeep.id
+                        },
+                        transaction: t
+                    }
+                );
+
+                assert.equal(userToKeepEmailUpdateResult.length, 1);
+                assert.equal(userToKeepEmailUpdateResult[0].id, userToKeep.id);
+
+                console.log('User migrated', userToKeepEmailUpdateResult[0].id, userToKeepEmailUpdateResult[0].email);
+
+                uniqueUsersMigrated++;
+
+                throw new Error('ROLLBACK!'); // FIXME: Remove
             });
-
-            //
-            //     // Mark Users to be deleted by setting the "deletedAt"
-            //     // FIXME
-            //
-            //     // Create delete activity
-            //     // FIXME - Activity
-            //     // FIXME - migration timestamp
-            //     const activityData = `
-            //         {
-            //             "type": "Delete",
-            //             "actor": {
-            //                 "type": "System"
-            //             },
-            //             "object": {
-            //                 "@type": "User",
-            //                 "id": "a6ca7802-2eae-4950-a8d6-a6f4e665ca57",
-            //                 "name": "XName",
-            //                 "email": null,
-            //                 "company": null,
-            //                 "imageUrl": null,
-            //                 "language": "en"
-            //             },
-            //             "context": "Migration ${path.basename(__filename)}",
-            //             "__migratedAt": ":MIGRATION_TIMESTAMP",
-            //             "__migrationId": "${path.basename(__filename)}"
-            //         }
-            //     `;
-            // }
         }
     },
 
