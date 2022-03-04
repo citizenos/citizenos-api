@@ -3,6 +3,10 @@
 const assert = require('assert').strict;
 const path = require('path');
 
+/**
+ * @see https://github.com/citizenos/citizenos-api/issues/234#issuecomment-1054482521
+ */
+
 module.exports = {
     async up (queryInterface) {
         let runMigration = true;
@@ -37,7 +41,7 @@ module.exports = {
                     console.log('Unique Users migrated', uniqueUsersMigrated);
                     console.log('Total Users marked as deleted', totalUsersMarkedAsDeleted);
 
-                    throw new Error('ROLLBACK! DONE!');
+                    return;
                 }
 
                 // Find Users alternative accounts, order by the activity, so that we keep the account with highest activity
@@ -168,8 +172,6 @@ module.exports = {
                 console.log('User migrated', userToKeepEmailUpdateResult[0].id, userToKeepEmailUpdateResult[0].email);
 
                 uniqueUsersMigrated++;
-
-                throw new Error('ROLLBACK!'); // FIXME: Remove
             });
         }
     },
