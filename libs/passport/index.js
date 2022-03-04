@@ -57,7 +57,7 @@ module.exports = function (app) {
             await db.transaction(async function (t) {
                 if (!req.user?.id) {
                     [user, created] = await User.findOrCreate({
-                        where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email)),
+                        where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email)),
                         defaults: {
                             name: displayName,
                             email: email,
@@ -156,7 +156,7 @@ module.exports = function (app) {
                     const user = await _findOrCreateUser(UserConnection.CONNECTION_IDS.google, User.SOURCES.google, profile, req);
 
                     return done(null, user.toJSON());
-                } catch(err) {
+                } catch (err) {
                     console.log(err);
                     done(err);
                 }
@@ -179,7 +179,7 @@ module.exports = function (app) {
                     const user = await _findOrCreateUser(UserConnection.CONNECTION_IDS.facebook, User.SOURCES.facebook, profile, req);
 
                     return done(null, user.toJSON());
-                } catch(err) {
+                } catch (err) {
                     console.log(err);
                     done(err);
                 }
@@ -200,7 +200,7 @@ module.exports = function (app) {
 
                 const user = await User
                     .findOne({
-                        where: db.where(db.fn('lower', db.col('email')), db.fn('lower',email))
+                        where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email))
                     });
 
                 if (user && user.password === cryptoLib.getHash(password, 'sha256')) {
