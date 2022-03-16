@@ -8559,7 +8559,7 @@ suite('Users', function () {
                     delete creatorExpected.imageUrl; // Image url is not returned, as it's not needed for now
                     delete creatorExpected.language; // Language is not returned
 
-                    assert.equal(list.count.total, 3);
+                    assert.equal(list.count.total, 7);
                     assert.equal(comments.length, 3);
 
                     // Comment 1
@@ -8681,7 +8681,7 @@ suite('Users', function () {
                     delete creatorExpected.imageUrl; // Image url is not returned, as it's not needed for now
                     delete creatorExpected.language; // Language is not returned
 
-                    assert.equal(list.count.total, 3);
+                    assert.equal(list.count.total, 6);
                     assert.equal(comments.length, 3);
 
                     // Comment 1
@@ -10257,9 +10257,11 @@ suite('Topics', function () {
                 const expectedResult = {
                     rows: [comment3, comment2, comment1],
                     count: {
-                        total: 3,
+                        total: 14,
                         pro: 2,
-                        con: 1
+                        con: 1,
+                        poi: 0,
+                        reply: 11
                     }
                 };
                 assert.shallowDeepEqual(data, expectedResult);
@@ -10318,9 +10320,11 @@ suite('Topics', function () {
                 const expectedResult = {
                     rows: [comment2, comment3, comment1],
                     count: {
-                        total: 3,
+                        total: 14,
                         pro: 2,
-                        con: 1
+                        con: 1,
+                        poi: 0,
+                        reply: 11
                     }
                 };
                 assert.shallowDeepEqual(data, expectedResult);
@@ -10379,9 +10383,11 @@ suite('Topics', function () {
                 const expectedResult = {
                     rows: [comment2, comment1, comment3],
                     count: {
-                        total: 3,
+                        total: 14,
                         pro: 2,
-                        con: 1
+                        con: 1,
+                        poi: 0,
+                        reply:  11
                     }
                 };
                 assert.shallowDeepEqual(data, expectedResult);
@@ -10454,9 +10460,11 @@ suite('Topics', function () {
                 const expectedResult = {
                     rows: [comment3, comment2, comment1],
                     count: {
-                        total: 3,
+                        total: 14,
                         pro: 2,
-                        con: 1
+                        con: 1,
+                        poi: 0,
+                        reply: 11
                     }
                 };
 

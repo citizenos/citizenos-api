@@ -5174,9 +5174,6 @@ module.exports = function (app) {
 
                 SELECT
                     ct.id,
-                    COALESCE (ctp.count, 0) AS "countPro",
-                    COALESCE (ctc.count, 0) AS "countCon",
-                    COALESCE (cti.count, 0) AS "countPoi",
                     ct.type,
                     ct.parent,
                     ct.subject,
@@ -5194,41 +5191,8 @@ module.exports = function (app) {
                     ct.replies::jsonb
                 FROM
                     "TopicComments" tc
-                    JOIN "Comments" c ON c.id = tc."commentId" AND c.id = c."parentId"
-                    JOIN pg_temp.getCommentTree(tc."commentId") ct ON ct.id = ct.id
-                    LEFT JOIN (
-                        SELECT
-                            tc."topicId",
-                            c.type,
-                            COUNT(c.type) AS count
-                            FROM "TopicComments" tc
-                            JOIN "Comments" c ON c.id = tc."commentId" AND c.id=c."parentId"
-                            WHERE tc."topicId" = :topicId
-                            AND c.type='pro'
-                            GROUP BY tc."topicId", c.type
-                    ) ctp ON ctp."topicId" = tc."topicId"
-                    LEFT JOIN (
-                        SELECT
-                            tc."topicId",
-                            c.type,
-                            COUNT(c.type) AS count
-                            FROM "TopicComments" tc
-                            JOIN "Comments" c ON c.id = tc."commentId" AND c.id=c."parentId"
-                            WHERE tc."topicId" = :topicId
-                            AND c.type='con'
-                            GROUP BY tc."topicId", c.type
-                    ) ctc ON ctc."topicId" = tc."topicId"
-                    LEFT JOIN (
-                        SELECT
-                            tc."topicId",
-                            c.type,
-                            COUNT(c.type) AS count
-                            FROM "TopicComments" tc
-                            JOIN "Comments" c ON c.id = tc."commentId" AND c.id=c."parentId"
-                            WHERE tc."topicId" = :topicId
-                            AND c.type='poi'
-                            GROUP BY tc."topicId", c.type
-                    ) cti ON cti."topicId" = tc."topicId"
+                JOIN "Comments" c ON c.id = tc."commentId" AND c.id = c."parentId"
+                JOIN pg_temp.getCommentTree(tc."commentId") ct ON ct.id = ct.id
                 WHERE tc."topicId" = :topicId
                 ORDER BY ${orderByComments}
                 LIMIT :limit
@@ -5236,7 +5200,7 @@ module.exports = function (app) {
                 ;
         `;
         try {
-            const comments = await db
+            const commentsQuery = db
                 .query(
                     query,
                     {
@@ -5252,29 +5216,37 @@ module.exports = function (app) {
                         nest: true
                     }
                 );
-
-            let countPro = 0;
-            let countCon = 0;
-            let countPoi = 0;
-
-            if (comments.length) {
-                countPro = comments[0].countPro;
-                countCon = comments[0].countCon;
-                countPoi = comments[0].countPoi;
+            const commentCountQuery = db
+                    .query(`
+                        SELECT
+                            c.type,
+                            COUNT(c.type)
+                        FROM "TopicComments" tc
+                        JOIN "Comments" c ON tc."commentId" = c.id
+                        WHERE tc."topicId" = :topicId
+                        GROUP BY c.type;
+                    `, {
+                        replacements: {
+                            topicId: req.params.topicId
+                        }
+                    });
+            const [comments, commentsCount] = await Promise.all([commentsQuery, commentCountQuery]);
+            let countRes = {
+                pro: 0,
+                con: 0,
+                poi: 0,
+                reply: 0,
+                total: 0
             }
-            comments.forEach(function (comment) {
-                delete comment.countPro;
-                delete comment.countCon;
-                delete comment.countPoi;
-            });
 
+            if (commentsCount.length) {
+                commentsCount[0].forEach((item) => {
+                    countRes[item.type] = item.count;
+                });
+            }
+            countRes.total = countRes.pro + countRes.con + countRes.poi + countRes.reply;
             return res.ok({
-                count: {
-                    pro: countPro,
-                    con: countCon,
-                    poi: countPoi,
-                    total: countCon + countPro + countPoi
-                },
+                count: countRes,
                 rows: comments
             });
         } catch (err) {
