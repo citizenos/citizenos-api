@@ -64,10 +64,10 @@
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Váš komentář byl komunitou nahlášen jako nevhodný"
+    "SUBJECT": "Vaše argumentace byla komunitou nahlášena jako nevhodná"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "Komentář byl nahlášen komunitou jako nevhodný"
+    "SUBJECT": "Komunita nahlásila argument jako nevhodný"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
