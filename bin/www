@@ -2,29 +2,29 @@
 
 'use strict';
 
-var https = require('https');
-var http = require('http');
-var fs = require('fs');
-var app = require('../app');
-var logger = app.get('logger');
+const https = require('https');
+const http = require('http');
+const fs = require('fs');
+const app = require('../app');
+const logger = app.get('logger');
 
-var host = process.env.HOST || 'localhost'; // Bind to localhost by default, so the port is not open to the whole world.
+let host = process.env.HOST || 'localhost'; // Bind to localhost by default, so the port is not open to the whole world.
 if (app.get('env') === 'development') {
     host = null; // Binds 0.0.0.0, thus open on all interfaces. In dev useful so that app running in Vbox is visible to the host machine.
 }
 
 app.set('port', process.env.PORT || 3002);
-var serverHttp = http.createServer(app).listen(process.env.PORT || 3002, host, function () {
+const serverHttp = http.createServer(app).listen(process.env.PORT || 3002, host, function () {
     logger.debug('Express HTTP server listening on port ' + serverHttp.address().port);
 });
 
 // Run SSL for dev env to enable digital signing
 if (app.get('env') === 'development') {
-    var options = {
+    const options = {
         key: fs.readFileSync('./config/certs/dev.api.citizenos.com.key'),
         cert: fs.readFileSync('./config/certs/dev.api.citizenos.com.crt')
     };
-    var serverHttps = https.createServer(options, app).listen(process.env.PORT_SSL || 3003, host, function () {
+    const serverHttps = https.createServer(options, app).listen(process.env.PORT_SSL || 3003, host, function () {
         logger.debug('Express HTTPS server listening on port ' + serverHttps.address().port);
     });
 }

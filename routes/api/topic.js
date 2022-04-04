@@ -1651,6 +1651,7 @@ module.exports = function (app) {
             const replies = Object.values(replyRequest.replies);
             const result = commentRequest.comments;
             replies.forEach(function (reply) {
+                if (!result[reply.commentId]) return;
                 if (!result[reply.commentId].replies) {
                     result[reply.commentId].replies = [];
                 }
