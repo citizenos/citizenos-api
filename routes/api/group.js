@@ -1451,177 +1451,6 @@ module.exports = function (app) {
     }));
 
     /**
-     * Get Group Topics
-     */
-    app.get('/api/users/:userId/groups/:groupId/topics', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
-        const userId = req.user.userId;
-        const visibility = req.query.visibility;
-        const creatorId = req.query.creatorId;
-        let statuses = req.query.statuses;
-        const pinned = req.query.pinned;
-        const hasVoted = req.query.hasVoted; // Filter out Topics where User has participated in the voting process.
-        const showModerated = req.query.showModerated || false;
-        if (statuses && !Array.isArray(statuses)) {
-            statuses = [statuses];
-        }
-
-        let where = ` gt."groupId" = :groupId
-            AND gt."deletedAt" IS NULL
-            AND t."deletedAt" IS NULL
-            AND t.title IS NOT NULL `;
-
-        if (visibility) {
-            where += ` AND t.visibility=:visibility `;
-        }
-
-        if (statuses && statuses.length) {
-            where += ` AND t.status IN (:statuses) `;
-        }
-
-        if (pinned) {
-            where += ` AND tp."topicId" = t.id AND tp."userId" = :userId`;
-        }
-
-        if (['true', '1'].includes(hasVoted)) {
-            where += ` AND EXISTS (SELECT TRUE FROM "VoteLists" vl WHERE vl."voteId" = tv."voteId" AND vl."userId" = :userId LIMIT 1)`;
-        } else if (['false', '0'].includes(hasVoted)) {
-            where += ` AND tv."voteId" IS NOT NULL AND t.status = 'voting'::"enum_Topics_status" AND NOT EXISTS (SELECT TRUE FROM "VoteLists" vl WHERE vl."voteId" = tv."voteId" AND vl."userId" = :userId LIMIT 1)`;
-        } else {
-            logger.warn(`Ignored parameter "voted" as invalid value "${hasVoted}" was provided`);
-        }
-
-        if (!showModerated || showModerated == "false") {
-            where += ` AND (tr."moderatedAt" IS NULL OR tr."resolvedAt" IS NOT NULL) `;
-        } else {
-            where += ` AND (tr."moderatedAt" IS NOT NULL AND tr."resolvedAt" IS NULL) `;
-        }
-
-        if (creatorId) {
-            if (creatorId === userId) {
-                where += ` AND u.id =:creatorId `;
-            } else {
-                return res.badRequest('No rights!');
-            }
-        }
-
-        const topics = await db
-            .query(
-                `SELECT
-                        t.id,
-                        t.title,
-                        t.visibility,
-                        t.status,
-                        t.categories,
-                        t."endsAt",
-                        CASE
-                            WHEN tp."topicId" = t.id THEN true
-                            ELSE false
-                        END as "pinned",
-                        t.hashtag,
-                        t."updatedAt",
-                        t."createdAt",
-                        COALESCE(ta."lastActivity", t."updatedAt") as "lastActivity",
-                        COALESCE(tmup.level, tmgp.level, 'none') as "permission.level",
-                        muc.count as "members.users.count",
-                        COALESCE(mgc.count, 0) as "members.groups.count"
-                    FROM "TopicMemberGroups" gt
-                        JOIN "Topics" t ON (t.id = gt."topicId")
-                        LEFT JOIN "TopicReports" tr ON  tr."topicId" = t.id
-                        LEFT JOIN (
-                            SELECT
-                                tmu."topicId",
-                                tmu."userId",
-                                tmu.level::text AS level
-                            FROM "TopicMemberUsers" tmu
-                            WHERE tmu."deletedAt" IS NULL
-                        ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId)
-                        LEFT JOIN (
-                            SELECT
-                                tmg."topicId",
-                                gm."userId",
-                                MAX(tmg.level)::text AS level
-                            FROM "TopicMemberGroups" tmg
-                                LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
-                            WHERE tmg."deletedAt" IS NULL
-                            AND gm."deletedAt" IS NULL
-                            GROUP BY "topicId", "userId"
-                        ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
-                        LEFT JOIN (
-                            SELECT tmu."topicId", COUNT(tmu."memberId") AS "count" FROM (
-                                SELECT
-                                    tmuu."topicId",
-                                    tmuu."userId" AS "memberId"
-                                FROM "TopicMemberUsers" tmuu
-                                WHERE tmuu."deletedAt" IS NULL
-                                UNION
-                                SELECT
-                                    tmg."topicId",
-                                    gm."userId" AS "memberId"
-                                FROM "TopicMemberGroups" tmg
-                                    JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
-                                WHERE tmg."deletedAt" IS NULL
-                                AND gm."deletedAt" IS NULL
-                            ) AS tmu GROUP BY "topicId"
-                        ) AS muc ON (muc."topicId" = t.id)
-                        LEFT JOIN (
-                            SELECT "topicId", count("groupId")::integer AS "count"
-                            FROM "TopicMemberGroups"
-                            WHERE "deletedAt" IS NULL
-                            GROUP BY "topicId"
-                        ) AS mgc ON (mgc."topicId" = t.id)
-                        LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId
-                        LEFT JOIN (
-                            SELECT
-                                tv."topicId",
-                                tv."voteId",
-                                v."authType",
-                                v."createdAt",
-                                v."delegationIsAllowed",
-                                v."description",
-                                v."endsAt",
-                                v."maxChoices",
-                                v."minChoices",
-                                v."type",
-                                v."autoClose"
-                            FROM "TopicVotes" tv INNER JOIN
-                                (
-                                    SELECT
-                                        MAX("createdAt") as "createdAt",
-                                        "topicId"
-                                    FROM "TopicVotes"
-                                    GROUP BY "topicId"
-                                ) AS _tv ON (_tv."topicId" = tv."topicId" AND _tv."createdAt" = tv."createdAt")
-                            LEFT JOIN "Votes" v
-                                    ON v.id = tv."voteId"
-                        ) AS tv ON (tv."topicId" = t.id)
-                        LEFT JOIN (
-                            SELECT t.id, MAX(a."updatedAt") as "lastActivity"
-                            FROM "Topics" t JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds" GROUP BY t.id
-                        ) ta ON (ta.id = t.id)
-                    WHERE ${where}
-                    ORDER BY "pinned" DESC, t."updatedAt" DESC
-                        ;`
-                ,
-                {
-                    replacements: {
-                        groupId: req.params.groupId,
-                        userId: req.user.userId,
-                        statuses,
-                        visibility
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true,
-                    nest: true
-                }
-            );
-
-        return res.ok({
-            count: topics.length,
-            rows: topics
-        });
-    }));
-
-    /**
      * Get Group member Topics
      */
     app.get('/api/users/:userId/groups/:groupId/members/topics', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
@@ -1716,7 +1545,7 @@ module.exports = function (app) {
                         t.hashtag,
                         t."updatedAt",
                         t."createdAt",
-                        COALESCE(ta."lastActivity", t."updatedAt") as "lastActivity",
+                        COALESCE(MAX(a."updatedAt"), t."updatedAt") as "lastActivity",
                         u.id as "creator.id",
                         u.name as "creator.name",
                         u.company as "creator.company",
@@ -1797,15 +1626,13 @@ module.exports = function (app) {
                             LEFT JOIN "Votes" v
                                     ON v.id = tv."voteId"
                         ) AS tv ON (tv."topicId" = t.id)
-                        LEFT JOIN (
-                            SELECT t.id, MAX(a."updatedAt") as "lastActivity"
-                            FROM "Topics" t JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds" GROUP BY t.id
-                        ) ta ON (ta.id = t.id)
+                        LEFT JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds"
                     WHERE gt."groupId" = :groupId
                         AND gt."deletedAt" IS NULL
                         AND t."deletedAt" IS NULL
                         AND COALESCE(tmup.level, tmgp.level, 'none')::"enum_TopicMemberUsers_level" > 'none'
                         ${where}
+                    GROUP BY t.id, tp."topicId", u.id, tmup.level, tmgp.level, muc.count, mgc.count
                     ${sortSql}
                     LIMIT :limit
                     OFFSET :offset
