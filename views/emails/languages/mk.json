@@ -64,7 +64,7 @@
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Your argument has been reported as inappropriate by the community"
+    "SUBJECT": "Вашиот аргумент е пријавен како несоодветен од страна на заедницата"
   },
   "REPORT_COMMENT_MODERATOR": {
     "SUBJECT": "An argument has been reported as inappropriate by the community"
