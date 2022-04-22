@@ -7572,6 +7572,47 @@ module.exports = function (app) {
         }
     });
 
+    app.put('/api/users/:userId/topics/:topicId/notifications', loginCheck(['partner']), async function (req, res, next) {
+        const userId = req.user.userId;
+        const topicId = req.params.topicId;
+
+        try {
+            const topicPin = await TopicPin.findOne({
+                where: {
+                    userId: userId,
+                    topicId: topicId
+                }
+            });
+
+            if (topicPin) {
+                await db
+                    .transaction(async function (t) {
+                        const topic = await Topic.findOne({
+                            where: {
+                                id: topicId
+                            }
+                        });
+
+                        topic.description = null;
+
+                        await TopicPin.destroy({
+                            where: {
+                                userId: userId,
+                                topicId: topicId
+                            },
+                            transaction: t
+                        });
+
+                        t.afterCommit(() => {
+                            return res.ok();
+                        });
+                    });
+            }
+        } catch (err) {
+            return next(err);
+        }
+    });
+
     return {
         hasPermission: hasPermission
     };

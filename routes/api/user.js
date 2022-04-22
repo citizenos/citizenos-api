@@ -25,6 +25,7 @@ module.exports = function (app) {
     const User = models.User;
     const UserConsent = models.UserConsent;
     const UserConnection = models.UserConnection;
+    const UserNotificationSettings = models.UserNotificationSettings;
     const Op = db.Sequelize.Op;
 
     app.post('/api/users/:userId/upload', loginCheck(['partner']), asyncMiddleware(async function (req, res) {
@@ -512,5 +513,45 @@ module.exports = function (app) {
         }
 
         return res.badRequest();
+    }));
+
+
+    /**
+     * Read User preferences
+    */
+    app.get('/api/users/:userId/notifications', loginCheck(), asyncMiddleware(async function (req, res) {
+        const userId = req.user.userId;
+        const type = req.params.type || null;
+
+        const preferences = await UserNotificationSettings
+            .findAll({
+                where: {
+                    userId,
+                    type
+                }
+            });
+
+        return res.ok({
+            preferences
+        });
+    }));
+
+    /**
+     * Update User preferences
+    */
+     app.put('/api/users/:userId/notifications', loginCheck(), asyncMiddleware(async function (req, res) {
+        const settings = req.body;
+        const allowedFields = ['topicId', 'groupId', 'allowNotifications', 'preferences'];
+        const finalSettings = {};
+        Object.keys(settings).forEach((key) => {
+            if (allowedFields.indexOf(key) > -1) finalSettings[key] = settings[key];
+        });
+        finalSettings.userId = req.user.id;
+
+        const created = await UserNotificationSettings.upsert(finalSettings);
+
+        return res.ok({
+            created
+        });
     }));
 };

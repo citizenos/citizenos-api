@@ -12,6 +12,7 @@ module.exports = function (app) {
     const loginCheck = app.get('middleware.loginCheck');
     const topicLib = require('./topic')(app);
     const groupLib = require('./group')(app);
+    const notifications = app.get('notifications');
 
     const Activity = models.Activity;
     const Group = models.Group;
@@ -1234,4 +1235,52 @@ module.exports = function (app) {
     app.get('/api/users/:userId/groups/:groupId/activities', loginCheck(['partner']), groupLib.hasPermission(GroupMemberUser.LEVELS.read, true), function (req, res, next) {
         return groupActivitiesList(req, res, next);
     });
+
+    app.get('/api/acitivites/strings', async (req, res, next) => {
+        const strings = [];
+
+        try {
+            const activities = await db
+            .query(`
+                ${activitiesDataFunction}
+                SELECT DISTINCT
+                    a.id,
+                    a.data,
+                    a."createdAt",
+                    a."updatedAt",
+                    a."deletedAt",
+                    a."topicIds",
+                    a."userIds",
+                    a."groupIds",
+                    jsonb_agg(t.*) AS topics,
+                    jsonb_agg(g.*) AS groups,
+                    jsonb_agg(u.*) AS users
+                FROM
+                "Activities" a
+                LEFT JOIN
+                    "Topics" t ON ARRAY[t.id::text] <@ string_to_array(array_to_string(a."topicIds", ','), ',')
+                LEFT JOIN
+                    "Groups" g ON ARRAY[g.id::text] <@ string_to_array(array_to_string(a."groupIds", ','), ',')
+                LEFT JOIN
+                    "Users" u ON ARRAY[u.id::text] <@ string_to_array(array_to_string(a."userIds", ','), ',')
+                GROUP BY a.id
+                ORDER BY a."updatedAt" DESC
+            ;`, {
+                type: db.QueryTypes.SELECT,
+                nest: true,
+                raw: true
+            });
+            activities.forEach(async (activity) => {
+                /*notifications.buildActivityString(activity);
+                notifications.getActivityValues(activity);
+                strings.push(activity.data.type + ' ' + (activity.data.object['@type'] || activity.data.object.type));*/
+                const users = await notifications.getRelatedUsers(activity);
+                console.log(users);
+            });
+            return res.ok(Array.from(new Set(strings)));
+        } catch (err) {
+            console.log(err);
+            next(err)
+        }
+    })
 };

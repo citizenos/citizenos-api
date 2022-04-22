@@ -9,6 +9,7 @@ module.exports = function (app) {
     const uuid = app.get('uuid');
     const moment = app.get('moment');
     const logger = app.get('logger');
+    const notifications = app.get('notifications');
 
     const Activity = models.Activity;
 
@@ -26,7 +27,7 @@ module.exports = function (app) {
         return targetObject;
     };
 
-    const _saveActivity = function (activity, transaction) { //eslint-disable-line complexity
+    const _saveActivity = async function (activity, transaction) { //eslint-disable-line complexity
         const activityObject = {
             data: activity
         };
@@ -115,13 +116,15 @@ module.exports = function (app) {
         activityObject.createdAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS ZZ');
         activityObject.updatedAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS ZZ');
 
-        return Activity
+        const finalactivity = await Activity
             .create(
                 activityObject,
                 {
                     transaction: transaction
                 }
             );
+        await notifications.sendActivityNotifications(finalactivity);
+        return finalactivity;
     };
 
     const _getInstanceChangeSet = function (instance) {
@@ -196,7 +199,7 @@ module.exports = function (app) {
         return _saveActivity(activity, transaction);
     };
 
-    const _updateTopicDescriptionActivity = function (instance, target, actor, fields, context, transaction) {
+    const _updateTopicDescriptionActivity = async function (instance, target, actor, fields, context, transaction) {
 
         const originPrevious = instance.previous();
         const origin = _.clone(instance.toJSON());
@@ -251,8 +254,8 @@ module.exports = function (app) {
             activity.context = context;
         }
         const dataString = JSON.stringify(activity);
-
-        return db
+        const activityId = uuid.v4();
+        const a = await db
             .query(
                 `
                 DO $$ BEGIN
@@ -334,7 +337,7 @@ module.exports = function (app) {
                 ;`,
                 {
                     replacements: {
-                        id: uuid.v4(),
+                        id: activityId,
                         data: dataString,
                         topicId: instance.id,
                         userId: actor.id
@@ -344,6 +347,13 @@ module.exports = function (app) {
                     transaction: transaction
                 }
             );
+        const activityData = await Activity.findOne({
+            where: {
+                id: activityId
+            }
+        });
+        console.log(activityData, a);
+        return await notifications.sendActivityNotifications(activityData);
     };
 
     const _updateActivity = function (instance, target, actor, context, transaction) {
