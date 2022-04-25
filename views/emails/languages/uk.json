@@ -64,10 +64,10 @@
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Your argument has been reported as inappropriate by the community"
+    "SUBJECT": "Хтось у спільноті поскаржився на ваш аргумент як на недоречний"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "An argument has been reported as inappropriate by the community"
+    "SUBJECT": "Хтось у спільноті поскаржився на аргумент як на недоречний"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
