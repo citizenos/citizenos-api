@@ -57,6 +57,7 @@
     "moment": "2.29.1",
     "morgan": "1.10.0",
     "mu2": "0.5.21",
+    "mustache": "^4.2.0",
     "node-7z": "3.0.0",
     "nodemailer": "6.7.2",
     "passport": "0.5.2",

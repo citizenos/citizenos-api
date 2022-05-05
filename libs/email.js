@@ -18,6 +18,7 @@ module.exports = function (app) {
     const path = require('path');
     const moment = app.get('moment');
     const cosJwt = app.get('cosJwt');
+    const Mustache = require('mustache');
 
     const User = models.User;
     const Topic = models.Topic;
@@ -1506,6 +1507,46 @@ module.exports = function (app) {
         return handleAllPromises(promisesToResolve);
     };
 
+    const _sendTopicNotification = async (notification, users) => {
+        const promisesToResolve = [];
+        const linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: notification.topicIds[0]});
+        const translateGroup = function (template, items, translateValues) {
+            translateValues.groupCount = 0;
+            for (const key of Object.keys(items)) {
+                translateValues.groupCount++;
+                translateValues.fieldName = template.translations.NOTIFICATIONS[key] || key;
+            }
+        };
+
+        _.forEach(users, function (user) {
+            const template = resolveTemplate('topicNotificationEmail', user.language);
+            const translateValues = notification.values;
+            for (const [key, value] of Object.entries(notification.values)) {
+                translateValues[key] = template.translations.NOTIFICATIONS[value] || value;
+            }
+            translateGroup(template, notification.values.groupItems, translateValues);
+            const notificationText = Mustache.render(template.translations.NOTIFICATIONS[notification.string], translateValues);
+            console.log(notificationText)
+            const emailOptions = Object.assign(
+                _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
+                {
+                    subject: template.translations.NOTIFICATIONS.SUBJECT,
+                    to: user.email,
+                    toUser: user,
+                    userName: user.name,
+                    linkViewTopic: linkViewTopic,
+                    notificationText
+                }
+            );
+
+            emailOptions.linkedData.translations = template.translations;
+            const userEmailPromise = emailClient.sendString(template.body, emailOptions);
+
+            promisesToResolve.push(userEmailPromise);
+        });
+        return handleAllPromises(promisesToResolve);
+    };
+
     return {
         sendAccountVerification: _sendAccountVerification,
         sendPasswordReset: _sendPasswordReset,
@@ -1519,6 +1560,7 @@ module.exports = function (app) {
         sendGroupMemberUserCreate: _sendGroupMemberUserCreate,
         sendCommentReport: _sendCommentReport,
         sendToParliament: _sendToParliament,
-        sendHelpRequest: _sendHelpRequest
+        sendHelpRequest: _sendHelpRequest,
+        sendTopicNotification: _sendTopicNotification
     };
 };

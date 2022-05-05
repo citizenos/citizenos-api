@@ -547,7 +547,6 @@ module.exports = function (app) {
             if (allowedFields.indexOf(key) > -1) finalSettings[key] = settings[key];
         });
         finalSettings.userId = req.user.id;
-
         const created = await UserNotificationSettings.upsert(finalSettings);
 
         return res.ok({

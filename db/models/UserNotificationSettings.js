@@ -24,7 +24,7 @@ module.exports = (sequelize, DataTypes) => {
                 model: 'Topics',
                 key: 'id'
             },
-            primaryKey: true
+            unique: false
           },
           groupId: {
             type: DataTypes.UUID,
@@ -33,7 +33,7 @@ module.exports = (sequelize, DataTypes) => {
                 model: 'Groups',
                 key: 'id'
             },
-            primaryKey: true
+            unique: false
           },
           allowNotifications: {
               type: DataTypes.BOOLEAN,

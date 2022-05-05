@@ -195,7 +195,6 @@ app.set('mu', mu);
 app.set('models', models);
 app.set('QueryStream', QueryStream);
 
-app.set('notifications', notifications(app));
 app.set('cosActivities', require('./libs/cosActivities')(app));
 app.set('urlLib', require('./libs/url')(config));
 app.set('util', require('./libs/util'));
@@ -235,7 +234,7 @@ app.set('emailClient', require('./libs/campaign/emailClient')(config.email));
 app.set('email', require('./libs/email')(app));
 
 app.set('cryptoLib', require('./libs/crypto'));
-
+app.set('notifications', notifications(app));
 // Authentication with Passport - http://passportjs.org/guide/
 const passport = require('passport');
 app.set('passport', passport);

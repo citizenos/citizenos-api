@@ -32,6 +32,7 @@ module.exports = function (app) {
     const https = require('https');
     const crypto = require('crypto');
     const path = require('path');
+    const notifications = app.get('notifications');
 
     const loginCheck = app.get('middleware.loginCheck');
     const asyncMiddleware = app.get('middleware.asyncMiddleware');
@@ -45,7 +46,7 @@ module.exports = function (app) {
     const User = models.User;
     const UserConnection = models.UserConnection;
     const Group = models.Group;
-
+    const Activity = models.Activity;
     const Topic = models.Topic;
     const TopicMemberUser = models.TopicMemberUser;
     const TopicMemberGroup = models.TopicMemberGroup;
@@ -1723,7 +1724,7 @@ module.exports = function (app) {
                         }
                     }
 
-                    promisesList.push(cosActivities
+                    const activityData = await cosActivities
                         .updateActivity(
                             topic,
                             null,
@@ -1734,7 +1735,9 @@ module.exports = function (app) {
                             },
                             req.method + ' ' + req.path,
                             t
-                        ));
+                        );
+
+                    promisesList.push(notifications.sendActivityNotifications(activityData));
                     promisesList.push(topic.save({transaction: t}));
 
                     if (isBackToVoting) {
@@ -7610,6 +7613,23 @@ module.exports = function (app) {
             }
         } catch (err) {
             return next(err);
+        }
+    });
+
+    app.get('/api/test', async (req, res, next) => {
+        try {
+            const activity = await Activity.findOne({
+                order: [
+                    ['createdAt', 'DESC']
+                ],
+                limit: 1
+            });
+            console.log(activity);
+            notifications.sendActivityNotifications(activity);
+
+            return res.ok(activity);
+        } catch (err) {
+            next(err);
         }
     });
 
