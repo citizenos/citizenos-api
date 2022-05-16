@@ -32,7 +32,6 @@ module.exports = function (app) {
     const https = require('https');
     const crypto = require('crypto');
     const path = require('path');
-    const notifications = app.get('notifications');
 
     const loginCheck = app.get('middleware.loginCheck');
     const asyncMiddleware = app.get('middleware.asyncMiddleware');
@@ -46,7 +45,6 @@ module.exports = function (app) {
     const User = models.User;
     const UserConnection = models.UserConnection;
     const Group = models.Group;
-    const Activity = models.Activity;
     const Topic = models.Topic;
     const TopicMemberUser = models.TopicMemberUser;
     const TopicMemberGroup = models.TopicMemberGroup;
@@ -72,6 +70,7 @@ module.exports = function (app) {
     const TopicAttachment = models.TopicAttachment;
     const Attachment = models.Attachment;
     const TopicPin = models.TopicPin;
+    const UserNotificationSettings = models.UserNotificationSettings;
 
     const createDataHash = (dataToHash) => {
         const hmac = crypto.createHmac('sha256', config.encryption.salt);
@@ -1724,7 +1723,7 @@ module.exports = function (app) {
                         }
                     }
 
-                    const activityData = await cosActivities
+                    promisesList.push(cosActivities
                         .updateActivity(
                             topic,
                             null,
@@ -1735,9 +1734,8 @@ module.exports = function (app) {
                             },
                             req.method + ' ' + req.path,
                             t
-                        );
+                        ));
 
-                    promisesList.push(notifications.sendActivityNotifications(activityData));
                     promisesList.push(topic.save({transaction: t}));
 
                     if (isBackToVoting) {
@@ -7575,63 +7573,37 @@ module.exports = function (app) {
         }
     });
 
-    app.put('/api/users/:userId/topics/:topicId/notifications', loginCheck(['partner']), async function (req, res, next) {
-        const userId = req.user.userId;
-        const topicId = req.params.topicId;
-
-        try {
-            const topicPin = await TopicPin.findOne({
-                where: {
-                    userId: userId,
-                    topicId: topicId
-                }
-            });
-
-            if (topicPin) {
-                await db
-                    .transaction(async function (t) {
-                        const topic = await Topic.findOne({
-                            where: {
-                                id: topicId
-                            }
-                        });
-
-                        topic.description = null;
-
-                        await TopicPin.destroy({
-                            where: {
-                                userId: userId,
-                                topicId: topicId
-                            },
-                            transaction: t
-                        });
-
-                        t.afterCommit(() => {
-                            return res.ok();
-                        });
-                    });
+     /**
+     * Get User preferences
+    */
+      app.get('/api/users/:userId/topics/:topicId/notificationsettings', loginCheck(), asyncMiddleware(async function (req, res) {
+        const userSettings = await UserNotificationSettings.findOne({
+            where: {
+                userId: req.user.id,
+                topicId: req.params.topicId
             }
-        } catch (err) {
-            return next(err);
-        }
-    });
+        });
 
-    app.get('/api/test', async (req, res, next) => {
-        try {
-            const activity = await Activity.findOne({
-                order: [
-                    ['createdAt', 'DESC']
-                ],
-                limit: 1
-            });
-            console.log(activity);
-            notifications.sendActivityNotifications(activity);
+        return res.ok(userSettings || {});
+    }));
 
-            return res.ok(activity);
-        } catch (err) {
-            next(err);
-        }
-    });
+    /**
+     * Set User preferences
+    */
+     app.put('/api/users/:userId/topics/:topicId/notificationsettings', loginCheck(), asyncMiddleware(async function (req, res) {
+        const settings = req.body;
+        const allowedFields = ['topicId', 'allowNotifications', 'preferences'];
+        const finalSettings = {};
+
+        Object.keys(settings).forEach((key) => {
+            if (allowedFields.indexOf(key) > -1) finalSettings[key] = settings[key];
+        });
+        finalSettings.userId = req.user.id;
+        finalSettings.topicId = req.params.topicId;
+        const [userSettings] = await UserNotificationSettings.upsert(finalSettings);
+
+        return res.ok(userSettings);
+    }));
 
     return {
         hasPermission: hasPermission

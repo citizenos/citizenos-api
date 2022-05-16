@@ -1503,6 +1503,9 @@ module.exports.topicFavouriteCreate = topicFavouriteCreate;
 module.exports.topicDelete = topicDelete;
 module.exports.topicMemberGroupsCreate = topicMemberGroupsCreate;
 module.exports.topicCommentCreate = topicCommentCreate;
+module.exports.topicReportCreate = topicReportCreate;
+module.exports.topicVoteCreate = topicVoteCreate;
+module.exports.topicVoteVote = topicVoteVote;
 
 const chai = require('chai');
 chai.use(require('chai-datetime'));
@@ -11542,5 +11545,9 @@ suite('Topics', function () {
                 assert.deepEqual(resultMessage, expectedResult);
             });
         });
+    });
+
+    suite('Notifications', function () {
+
     });
 });

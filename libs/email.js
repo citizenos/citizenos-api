@@ -1510,23 +1510,16 @@ module.exports = function (app) {
     const _sendTopicNotification = async (notification, users) => {
         const promisesToResolve = [];
         const linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: notification.topicIds[0]});
-        const translateGroup = function (template, items, translateValues) {
-            translateValues.groupCount = 0;
-            for (const key of Object.keys(items)) {
-                translateValues.groupCount++;
-                translateValues.fieldName = template.translations.NOTIFICATIONS[key] || key;
-            }
-        };
+        const linkTopicNotificationSettings = `${linkViewTopic}?notificationSettings`;
 
         _.forEach(users, function (user) {
-            const template = resolveTemplate('topicNotificationEmail', user.language);
+            const template = resolveTemplate('topicNotification', user.language);
             const translateValues = notification.values;
             for (const [key, value] of Object.entries(notification.values)) {
-                translateValues[key] = template.translations.NOTIFICATIONS[value] || value;
+                translateValues[key] = (template.translations?.NOTIFICATIONS && template.translations?.NOTIFICATIONS[value]) || value;
             }
-            translateGroup(template, notification.values.groupItems, translateValues);
-            const notificationText = Mustache.render(template.translations.NOTIFICATIONS[notification.string], translateValues);
-            console.log(notificationText)
+            const notificationText = Mustache.render((template.translations?.NOTIFICATIONS && template.translations?.NOTIFICATIONS[notification.string]), translateValues);
+
             const emailOptions = Object.assign(
                 _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
                 {
@@ -1534,7 +1527,8 @@ module.exports = function (app) {
                     to: user.email,
                     toUser: user,
                     userName: user.name,
-                    linkViewTopic: linkViewTopic,
+                    linkViewTopic,
+                    linkTopicNotificationSettings,
                     notificationText
                 }
             );

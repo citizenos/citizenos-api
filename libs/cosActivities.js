@@ -9,6 +9,7 @@ module.exports = function (app) {
     const uuid = app.get('uuid');
     const moment = app.get('moment');
     const logger = app.get('logger');
+    const notifications = app.get('notifications');
 
     const Activity = models.Activity;
 
@@ -26,7 +27,7 @@ module.exports = function (app) {
         return targetObject;
     };
 
-    const _saveActivity = function (activity, transaction) { //eslint-disable-line complexity
+    const _saveActivity = async function (activity, transaction) { //eslint-disable-line complexity
         const activityObject = {
             data: activity
         };
@@ -115,13 +116,15 @@ module.exports = function (app) {
         activityObject.createdAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS ZZ');
         activityObject.updatedAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS ZZ');
 
-        return Activity
+        const activitySaved = await Activity
             .create(
                 activityObject,
                 {
                     transaction: transaction
                 }
             );
+
+        return notifications.sendActivityNotifications(activitySaved);
     };
 
     const _getInstanceChangeSet = function (instance) {

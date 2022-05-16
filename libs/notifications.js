@@ -1,12 +1,13 @@
 'use strinct'
-const jsonpatch = require('fast-json-patch');
-const _ = require('lodash');
+
 
 module.exports = function (app) {
+    const jsonpatch = require('fast-json-patch');
+    const _ = require('lodash');
     const models = app.get('models');
     const db = models.sequelize;
     const User = models.User;
-    const emailLib = app.get('email');
+    const logger = app.get('logger');
 
     const parseActivity = async function (activity) {
         if (activity.data.type === 'Update' && Array.isArray(activity.data.result)) {
@@ -203,6 +204,7 @@ module.exports = function (app) {
             }
         });
 
+        activity.values.groupCount = Object.keys(activity.values.groupItems).length;
     };
 
     const getActivityValues = async function (activity) {
@@ -305,13 +307,13 @@ module.exports = function (app) {
     return activity.string;
   };
 
-  const getGroupMemberUsers = async (groupIds) => {
+  const getGroupMemberUsers = async (groupIds, activityType) => {
       try {
         const members = await db
             .query(
                 `
                     SELECT
-                        u.id
+                        array_agg(u.id) as users
                     FROM "GroupMemberUsers" gm
                         JOIN "Users" u ON (u.id = gm."userId")
                     JOIN "UserNotificationSettings" usn ON usn."userId" = u.id AND usn."groupId" = gm."groupId" AND usn.preferences->>:activityType = 'true' AND usn."allowNotifications" = true
@@ -320,14 +322,15 @@ module.exports = function (app) {
                     ;`,
                 {
                     replacements: {
-                        groupIds: groupIds.join(',')
+                        groupIds: groupIds,
+                        activityType
                     },
                     type: db.QueryTypes.SELECT,
                     raw: true
                 }
             );
 
-        return members[0].users;
+        return members[0].users || [];
       } catch (err) {
           console.log(err);
       }
@@ -339,7 +342,7 @@ module.exports = function (app) {
           .query(
               `
               SELECT
-                array_agg(tmu.id)
+                array_agg(tmu.id) as users
               FROM (
                 SELECT
                 tm.id,
@@ -392,7 +395,7 @@ module.exports = function (app) {
              ;`,
               {
                   replacements: {
-                      topicIds: topicIds.join(','),
+                      topicIds: topicIds,
                       activityType
                   },
                   type: db.QueryTypes.SELECT,
@@ -400,16 +403,21 @@ module.exports = function (app) {
                   nest: true
               }
           );
-        console.log('Users', users);
 
-      return users[0].users;
+      return users[0].users || [];
     } catch (err) {
         console.log(err);
     }
   }
 
-  const filterUsersBySettings = async (users, activityType) => {
+  const filterUsersBySettings = async (userIds, topicIds, groupIds, activityType) => {
+    userIds = userIds.filter((item) => {return item.length > 0});
     try {
+        if (!userIds.length || (!topicIds?.length && !groupIds?.length)) return [];
+        let where = `usn."topicId" IN (:topicIds) `;
+        if (groupIds.length) {
+            where = `usn."groupId" IN (:groupIds) `
+        }
         const users = await db
             .query(`
                 SELECT
@@ -419,28 +427,34 @@ module.exports = function (app) {
                     u.email
                 FROM "Users" u
                 JOIN
-                    "UserNotificationSettings" usn ON
-                        usn."userId" = tmu.id
-                        AND usn."topicId" = tmu."topicId"
-                        AND usn.preferences->>:activityType = 'true' AND usn."allowNotifications" = true
-            `,
+                    "UserNotificationSettings" usn
+                    ON usn."userId" = u.id
+                AND ${where}
+                AND usn.preferences->>:activityType = 'true' AND usn."allowNotifications" = true
+                AND u.id IN (:userIds)
+            ;`,
             {
                 replacements: {
-                    topicIds: topicIds.join(','),
+                    userIds,
+                    topicIds,
+                    groupIds,
                     activityType
                 },
                 type: db.QueryTypes.SELECT,
                 raw: true,
                 nest: true
             });
-    } catch (err) {
 
+        return users;
+    } catch (err) {
+        console.log(err);
     }
   };
 
   const getActivityType = (activity) => {
     let target = activity.data.target?.['@type'] || '';
-    const object = activity.data.object['@type'];
+    const object = activity.data.object['@type'] || (activity.data.object[0] && activity.data.object[0]['@type']) || (activity.data.object.object && activity.data.object.object['@type']);
+
     if (object.indexOf(target) > -1) {
         return object;
     }
@@ -450,29 +464,51 @@ module.exports = function (app) {
 
   const getRelatedUsers = async (activity) => {
     const activityType = getActivityType(activity);
-    console.log('activityType', activityType);
+    getRelatedItemIds(activity);
     let users = activity.userIds || [];
-    if (activity.topicIds.length) {
-        const topicusers = await getTopicMemberUsers(activity.topicIds);
+    if (activity.topicIds?.length) {
+        const topicusers = await getTopicMemberUsers(activity.topicIds, activityType);
         users = users.concat(topicusers);
     }
-    if (activity.groupIds.length) {
-        const groupUsers = await getGroupMemberUsers(activity.groupIds);
+    if (activity.groupIds?.length) {
+        const groupUsers = await getGroupMemberUsers(activity.groupIds, activityType);
         users = users.concat(groupUsers);
     }
+
     if (users.length) {
-        await filterUsersBySettings(users, activityType);
+        users = await filterUsersBySettings(users, activity.topicIds, activity.groupIds, activityType);
     }
+
     return users;
   }
 
-  const sendActivityNotifications = async (activity) => {
-    if (!activity) return;
-    const usersPromise = getRelatedUsers(activity);
-    const parsePromise = parseActivity(activity);
-    const [users, activityRes] = await Promise.all([usersPromise, parsePromise]);
+  const getRelatedItemIds = (activity) => {
+      if (activity.topicIds?.length || activity.groupIds?.length) return;
+      if (!activity.topicIds) activity.topicIds = [];
+      if (!activity.groupIds) activity.groupIds = [];
+      Object.values(activity.data).forEach((value) => {
+          if (value.topicId) activity.topicIds.push(value.topicId);
+          if (value.groupId) activity.groupIds.push(value.groupId);
+          if (value['@type'] === 'Topic' && value.id) activity.topicIds.push(value.id);
+          if (value['@type'] === 'Group' && value.id) activity.groupIds.push(value.id);
+      });
+  };
 
-    return emailLib.sendTopicNotification(activityRes, users);
+  const sendActivityNotifications = async (activity) => {
+    try {
+        if (!activity) return;
+        getRelatedItemIds(activity);
+        const users = await getRelatedUsers(activity);
+        if (!users?.length) return;
+        const activityRes = await parseActivity(activity);
+
+        const emailLib = app.get('email');
+
+        return emailLib.sendTopicNotification(activityRes, users);
+    } catch (err) {
+        logger.error('Notification sending failed: ', err);
+    }
+
   };
 
   return {

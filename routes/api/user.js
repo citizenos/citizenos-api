@@ -536,21 +536,4 @@ module.exports = function (app) {
         });
     }));
 
-    /**
-     * Update User preferences
-    */
-     app.put('/api/users/:userId/notifications', loginCheck(), asyncMiddleware(async function (req, res) {
-        const settings = req.body;
-        const allowedFields = ['topicId', 'groupId', 'allowNotifications', 'preferences'];
-        const finalSettings = {};
-        Object.keys(settings).forEach((key) => {
-            if (allowedFields.indexOf(key) > -1) finalSettings[key] = settings[key];
-        });
-        finalSettings.userId = req.user.id;
-        const created = await UserNotificationSettings.upsert(finalSettings);
-
-        return res.ok({
-            created
-        });
-    }));
 };
