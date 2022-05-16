@@ -40,6 +40,18 @@ module.exports = {
         type: Sequelize.JSON,
         allowNull: true,
         comment: 'Notification pecific data you want to store.'
+    },
+    createdAt: {
+      allowNull: false,
+      type: Sequelize.DATE
+    },
+    updatedAt: {
+      allowNull: false,
+      type: Sequelize.DATE
+    },
+    deletedAt: {
+      allowNull: true,
+      type: Sequelize.DATE
     }
     });
   },
