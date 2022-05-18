@@ -104,18 +104,18 @@ const loginMobileInit = async function (agent, pid, phoneNumber) {
  * @private
  */
 
-const _loginSmartIdInit = async function (agent, pid, expectedHttpCode) {
+const _loginSmartIdInit = async function (agent, pid, userId, expectedHttpCode) {
     const path = '/api/auth/smartid/init';
     return agent
         .post(path)
         .set('Content-Type', 'application/json')
-        .send({pid: pid})
+        .send({pid, userId})
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
 
-const loginSmartIdInit = async function (agent, pid) {
-    return _loginSmartIdInit(agent, pid, 200);
+const loginSmartIdInit = async function (agent, pid, userId) {
+    return _loginSmartIdInit(agent, pid, userId, 200);
 };
 
 /**
@@ -863,7 +863,7 @@ suite('Auth', function () {
                 test('Fail - 40400 - Invalid PID', async function () {
                     pid = '1010101';
 
-                    const response = (await _loginSmartIdInit(request.agent(app), pid, 404)).body;
+                    const response = (await _loginSmartIdInit(request.agent(app), pid, null, 404)).body;
                     const expectedResponse = {
                         status: {
                             code: 40400,
@@ -888,6 +888,134 @@ suite('Auth', function () {
                                 },
                                 force: true
                             });
+                    });
+
+                    test('Success - Exisiting User, not logged in, multiple PID UserConnections accounts - login to account with provided userId that has connection', async function () {
+                        this.timeout(25000); //eslint-disable-line no-invalid-this
+                        const agent = request.agent(app);
+                        const agent2 = request.agent(app);
+                        const user = await userLib.createUser(agent, null, null, null);
+                        const user2 = await userLib.createUser(agent2, null, null, null);
+                        const ucPromise = UserConnection.create({
+                            userId: user.id,
+                            connectionId: UserConnection.CONNECTION_IDS.smartid,
+                            connectionUserId: 'PNOEE-' + pid
+                        });
+                        const uc2Promise = UserConnection.create({
+                            userId: user2.id,
+                            connectionId: UserConnection.CONNECTION_IDS.smartid,
+                            connectionUserId: 'PNOEE-' + pid
+                        });
+
+                        await Promise.all([ucPromise, uc2Promise]);
+
+                        const response = (await loginSmartIdInit(request.agent(app), pid)).body;
+                        assert.equal(response.status.code, 20001);
+                        assert.match(response.data.challengeID, /[0-9]{4}/);
+
+                        const token = response.data.token;
+                        assert.isNotNull(token);
+
+                        const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                        const loginMobileFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
+
+                        assert.property(loginMobileFlowData, 'sessionId');
+                        assert.property(loginMobileFlowData, 'sessionHash');
+                        assert.property(loginMobileFlowData, 'challengeID');
+                        assert.notProperty(loginMobileFlowData, 'userId');
+                        assert.equal(loginMobileFlowData.challengeID, response.data.challengeID);
+                        const userInfoFromSmartIdStatusResponse = (await loginSmartIdstatus(agent, token)).body;
+                        assert.equal(userInfoFromSmartIdStatusResponse.status.code, 20002);
+                        const userFromStatus = (await status(agent)).body.data;
+                        assert.equal(userFromStatus.id, user.id);
+                        await logout(agent);
+
+                        const response2 = (await loginSmartIdInit(request.agent(app), pid, user2.id)).body;
+                        assert.equal(response2.status.code, 20001);
+                        assert.match(response2.data.challengeID, /[0-9]{4}/);
+
+                        const token2 = response2.data.token;
+                        assert.isNotNull(token2);
+
+                        const tokenData2 = jwt.verify(token2, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                        const loginMobileFlowData2 = cryptoLib.decrypt(config.session.secret, tokenData2.sessionDataEncrypted);
+
+                        assert.property(loginMobileFlowData2, 'sessionId');
+                        assert.property(loginMobileFlowData2, 'sessionHash');
+                        assert.property(loginMobileFlowData2, 'challengeID');
+                        assert.property(loginMobileFlowData2, 'userId');
+                        assert.equal(loginMobileFlowData2.challengeID, response2.data.challengeID);
+
+                        const userInfoFromSmartIdStatusResponse2 = (await loginSmartIdstatus(agent, token2)).body;
+                        assert.equal(userInfoFromSmartIdStatusResponse2.status.code, 20002);
+                        const userFromStatus2 = (await status(agent)).body.data;
+                        assert.equal(userFromStatus2.id, user2.id);
+                        await logout(agent);
+                    });
+
+                    test('Success - Exisiting User, not logged in, multiple PID UserConnections accounts - login to default account with provided invalid userId', async function () {
+                        this.timeout(25000); //eslint-disable-line no-invalid-this
+                        const agent = request.agent(app);
+                        const agent2 = request.agent(app);
+                        const user = await userLib.createUser(agent, null, null, null);
+                        const user2 = await userLib.createUser(agent2, null, null, null);
+                        const ucPromise = UserConnection.create({
+                            userId: user.id,
+                            connectionId: UserConnection.CONNECTION_IDS.smartid,
+                            connectionUserId: 'PNOEE-' + pid
+                        });
+                        const uc2Promise = UserConnection.create({
+                            userId: user2.id,
+                            connectionId: UserConnection.CONNECTION_IDS.smartid,
+                            connectionUserId: 'PNOEE-' + pid
+                        });
+
+                        await Promise.all([ucPromise, uc2Promise]);
+
+                        const response = (await loginSmartIdInit(request.agent(app), pid)).body;
+                        assert.equal(response.status.code, 20001);
+                        assert.match(response.data.challengeID, /[0-9]{4}/);
+
+                        const token = response.data.token;
+                        assert.isNotNull(token);
+
+                        const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                        const loginMobileFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
+
+                        assert.property(loginMobileFlowData, 'sessionId');
+                        assert.property(loginMobileFlowData, 'sessionHash');
+                        assert.property(loginMobileFlowData, 'challengeID');
+                        assert.notProperty(loginMobileFlowData, 'userId');
+                        assert.equal(loginMobileFlowData.challengeID, response.data.challengeID);
+                        const userInfoFromSmartIdStatusResponse = (await loginSmartIdstatus(agent, token)).body;
+                        assert.equal(userInfoFromSmartIdStatusResponse.status.code, 20002);
+                        const userFromStatus = (await status(agent)).body.data;
+                        assert.equal(userFromStatus.id, user.id);
+                        await logout(agent);
+
+                        const randomUUID = uuid.v4();
+                        const response2 = (await loginSmartIdInit(request.agent(app), pid, randomUUID)).body;
+                        assert.equal(response2.status.code, 20001);
+                        assert.match(response2.data.challengeID, /[0-9]{4}/);
+
+                        const token2 = response2.data.token;
+                        assert.isNotNull(token2);
+
+                        const tokenData2 = jwt.verify(token2, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                        const loginMobileFlowData2 = cryptoLib.decrypt(config.session.secret, tokenData2.sessionDataEncrypted);
+
+                        assert.property(loginMobileFlowData2, 'sessionId');
+                        assert.property(loginMobileFlowData2, 'sessionHash');
+                        assert.property(loginMobileFlowData2, 'challengeID');
+                        assert.property(loginMobileFlowData2, 'userId');
+                        assert.equal(loginMobileFlowData2.userId, randomUUID)
+                        assert.equal(loginMobileFlowData2.challengeID, response2.data.challengeID);
+
+                        const userInfoFromSmartIdStatusResponse2 = (await loginSmartIdstatus(agent, token2)).body;
+                        assert.equal(userInfoFromSmartIdStatusResponse2.status.code, 20002);
+                        const userFromStatus2 = (await status(agent)).body.data;
+                        assert.equal(userFromStatus2.id, user.id);
+                        await logout(agent);
                     });
 
                     test('Success - 20003 - created', async function () {
