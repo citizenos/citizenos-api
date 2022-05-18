@@ -464,12 +464,14 @@ module.exports = function (app) {
     app.post('/api/auth/smartid/init', async function (req, res, next) {
         const pid = req.body.pid;
         const countryCode = req.body.countryCode;
+        const userId = req.body.userId;
 
         if (!pid) {
             return res.badRequest('Smart-ID athentication requires users pid', 1);
         }
         try {
             const sessionData = await smartId.authenticate(pid, countryCode);
+            sessionData.userId = userId;
             const sessionDataEncrypted = {sessionDataEncrypted: cryptoLib.encrypt(config.session.secret, sessionData)};
             const token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
                 expiresIn: '5m',
@@ -496,6 +498,7 @@ module.exports = function (app) {
         let t;
         let toCommit = false;
         let personId = personalInfo.pid;
+        const userId = personalInfo.userId;
         if (personalInfo.pid.indexOf('PNO') > -1) {
             personId = personId.split('-')[1];
         }
@@ -508,7 +511,7 @@ module.exports = function (app) {
             t = transaction;
         }
         try {
-            const userConnectionInfo = await UserConnection.findOne({
+            const userConnections = await UserConnection.findAll({
                 where: {
                     connectionId: {
                         [Op.in]: [
@@ -524,6 +527,16 @@ module.exports = function (app) {
                 include: [User],
                 transaction: t
             });
+
+            let userConnectionInfo = userConnections[0];
+            if (userId && userConnections.length > 1) {
+                userConnectionInfo = userConnections.find((user) => {
+                    return user.userId === userId;
+                });
+                if (!userConnectionInfo) {
+                    userConnectionInfo = userConnections[0];
+                }
+            }
 
             if (!userConnectionInfo) {
                 const user = await User.create(
@@ -601,6 +614,9 @@ module.exports = function (app) {
         } else if (response.state === 'COMPLETE') {
             switch (response.result.endResult || response.result) {
                 case 'OK':
+                    if (loginFlowData.userId) {
+                        response.personalInfo.userId = loginFlowData.userId;
+                    }
                     return response.personalInfo;
                 default:
                     throw new Error(response.result?.endResult || response.result || defaultErrorMessage);
@@ -681,6 +697,7 @@ module.exports = function (app) {
     const idCardAuth = async function (req, res, next) {
         const cert = req.headers['x-ssl-client-cert'];
         const token = req.query.token || req.body.token; // Token to access the ID info service
+        const userId = req.query.userId;
 
         if (config.services.idCard && cert) {
             logger.error('X-SSL-Client-Cert header is not allowed when ID-card service is enabled. IF you trust your proxy, sending the X-SSL-Client-Cert, delete the services.idCard from your configuration.');
@@ -693,7 +710,7 @@ module.exports = function (app) {
 
         try {
             let personalInfo = await getIdCardCertStatus(res, token, cert);
-
+            personalInfo.userId = userId;
             const userData = await _getUserByPersonalId(personalInfo, UserConnection.CONNECTION_IDS.esteid, req);
             const user = userData[0];
             const created = userData[1];
@@ -726,38 +743,38 @@ module.exports = function (app) {
      *
      * Initializes Mobiil-ID authentication. For login, client is supposed to poll /api/auth/mid/status to check if authentication succeeded
      */
-    app.post('/api/auth/mobile/init', function (req, res, next) {
+    app.post('/api/auth/mobile/init', async function (req, res, next) {
         const pid = req.body.pid;
         const phoneNumber = req.body.phoneNumber;
+        const userId = req.body.userId;
 
         if (!pid || !phoneNumber) {
             return res.badRequest('mID athentication requires users phoneNumber+pid', 1);
         }
-
-        mobileId
-            .authenticate(pid, phoneNumber, null)
-            .then(function (sessionData) {
-                const sessionDataEncrypted = {sessionDataEncrypted: cryptoLib.encrypt(config.session.secret, sessionData)};
-                const token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
-                    expiresIn: '5m',
-                    algorithm: config.session.algorithm
-                });
-
-                return res.ok({
-                    challengeID: sessionData.challengeID,
-                    token: token
-                }, 1);
-            })
-            .catch(function (e) {
-                if (e.code === 400) {
-                    return res.badRequest(e.message);
-                }
-                if (e.code === 404) {
-                    return res.notFound();
-                }
-
-                return next(e);
+        try {
+            const sessionData = await mobileId.authenticate(pid, phoneNumber, null);
+            sessionData.userId = userId;
+            const sessionDataEncrypted = {sessionDataEncrypted: cryptoLib.encrypt(config.session.secret, sessionData)};
+            const token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
+                expiresIn: '5m',
+                algorithm: config.session.algorithm
             });
+
+            return res.ok({
+                challengeID: sessionData.challengeID,
+                token: token
+            }, 1);
+        } catch (e) {
+            if (e.code === 400) {
+                return res.badRequest(e.message);
+            }
+            if (e.code === 404) {
+                return res.notFound();
+            }
+
+            return next(e);
+        }
+
     });
 
     /**
