@@ -5927,7 +5927,8 @@ module.exports = function (app) {
             description: req.body.description,
             type: req.body.type || Vote.TYPES.regular,
             authType: authType,
-            autoClose: req.body.autoClose
+            autoClose: req.body.autoClose,
+            reminderTime: req.body.reminderTime
         });
 
 
@@ -6135,7 +6136,7 @@ module.exports = function (app) {
         const voteId = req.params.voteId;
 
         // Make sure the Vote is actually related to the Topic through which the permission was granted.
-        const fields = ['endsAt'];
+        const fields = ['endsAt', 'reminderTime'];
 
         const topic = await Topic.findOne({
             where: {

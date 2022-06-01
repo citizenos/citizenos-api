@@ -1506,6 +1506,67 @@ module.exports = function (app) {
         return handleAllPromises(promisesToResolve);
     };
 
+    const _sendVoteReminder = async (users, vote, topicId) => {
+        let topic = vote.Topic;
+        if (!topic) {
+            topic = await Topic
+                .findOne({where:{ id: topicId }});
+        }
+        const linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: topicId});
+        const linkToApplication = urlLib.getFe();
+        const logoFile = emailHeaderLogo;
+        let templateName = 'voteReminder';
+        let customStyles = EMAIL_OPTIONS_DEFAULT.styles;
+
+        const emailsSendPromises = users.map(function (toUser) {
+            console.log(toUser)
+            if (!toUser.email) {
+                logger.info('Skipping invite e-mail to user as there is no email on the profile', toUser.email);
+                return Promise.resolve();
+            }
+
+            const template = resolveTemplate(templateName, toUser.language);
+
+            // Handle Partner links
+            // TODO: could use Mu here...
+            const subject = template.translations.VOTE_REMINDER.SUBJECT
+
+            // In case Topic has no title, just show the full url.
+            topic.title = topic.title ? topic.title : linkViewTopic;
+
+            let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
+            linkedData.translations = template.translations;
+            const emailOptions = {
+                // from: from, - comes from emailClient.js configuration
+                subject: subject,
+                to: toUser.email,
+                images: [
+                    {
+                        name: emailHeaderLogoName,
+                        file: logoFile
+                    },
+                    {
+                        name: emailFooterLogoName,
+                        file: emailFooterLogo
+                    }
+                ],
+                toUser: toUser,
+                topic: topic,
+                voteEndsAt: moment(vote.endsAt).locale(toUser.language).format('LLL'),
+                linkViewTopic: linkViewTopic,
+                linkToApplication: linkToApplication,
+                provider: EMAIL_OPTIONS_DEFAULT.provider,
+                styles: customStyles,
+                linkToPlatformText: template.translations.LAYOUT.LINK_TO_PLATFORM,
+                linkedData
+            };
+
+            return emailClient.sendString(template.body, emailOptions);
+        });
+
+        return handleAllPromises(emailsSendPromises);
+    };
+
     return {
         sendAccountVerification: _sendAccountVerification,
         sendPasswordReset: _sendPasswordReset,
@@ -1519,6 +1580,7 @@ module.exports = function (app) {
         sendGroupMemberUserCreate: _sendGroupMemberUserCreate,
         sendCommentReport: _sendCommentReport,
         sendToParliament: _sendToParliament,
-        sendHelpRequest: _sendHelpRequest
+        sendHelpRequest: _sendHelpRequest,
+        sendVoteReminder: _sendVoteReminder
     };
 };
