@@ -1513,7 +1513,7 @@ module.exports = function (app) {
         const linkTopicNotificationSettings = `${linkViewTopic}?notificationSettings`;
 
         _.forEach(users, function (user) {
-            const template = resolveTemplate('topicNotification', user.language);
+            const template = resolveTemplate('topicNotification', user.language || 'en');
             const translateValues = notification.values;
             for (const [key, value] of Object.entries(notification.values)) {
                 translateValues[key] = (template.translations?.NOTIFICATIONS && template.translations?.NOTIFICATIONS[value]) || value;

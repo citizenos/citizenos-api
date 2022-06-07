@@ -21,6 +21,7 @@ module.exports = {
           model: 'Topics',
           key: 'id'
       },
+      primaryKey: true,
       unique: false
     },
     groupId: {
@@ -30,6 +31,7 @@ module.exports = {
           model: 'Groups',
           key: 'id'
       },
+      primaryKey: true,
       unique: false
     },
     allowNotifications: {

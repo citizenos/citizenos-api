@@ -7594,15 +7594,56 @@ module.exports = function (app) {
         const settings = req.body;
         const allowedFields = ['topicId', 'allowNotifications', 'preferences'];
         const finalSettings = {};
+        const topicId = req.params.topicId;
+        const userId = req.user.id;
 
         Object.keys(settings).forEach((key) => {
             if (allowedFields.indexOf(key) > -1) finalSettings[key] = settings[key];
         });
-        finalSettings.userId = req.user.id;
-        finalSettings.topicId = req.params.topicId;
-        const [userSettings] = await UserNotificationSettings.upsert(finalSettings);
+        finalSettings.userId = userId;
+        finalSettings.topicId = topicId;
+        await db
+            .transaction(async function (t) {
+                const topicPromise = Topic.findOne({where: {
+                    id: topicId
+                }});
+                const userSettingsPromise = UserNotificationSettings.findOne({
+                    where: {
+                        userId,
+                        topicId
+                    }
+                })
+                const [userSettings, topic] = await Promise.all([userSettingsPromise, topicPromise]);
+                if (!userSettings) {
+                    const savedSettings = await UserNotificationSettings.create(
+                        finalSettings,
+                        {
+                            transaction: t
+                        }
+                    );
+                    await cosActivities
+                        .createActivity(savedSettings, topic, {
+                            type: 'User',
+                            id: req.user.userId,
+                            ip: req.ip
+                        }, req.method + ' ' + req.path, t);
+                } else {
+                    userSettings.set(finalSettings);
 
-        return res.ok(userSettings);
+                    await cosActivities
+                        .updateActivity(userSettings, topic, {
+                            type: 'User',
+                            id: req.user.userId,
+                            ip: req.ip
+                        }, req.method + ' ' + req.path, t);
+
+                        await userSettings.save({transaction: t});
+                }
+
+                t.afterCommit(() => {
+                    return res.ok(userSettings);
+                });
+        });
     }));
 
     return {
