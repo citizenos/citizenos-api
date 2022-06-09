@@ -2,6 +2,12 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('UserNotificationSettings', {
+      id: {
+        allowNull: false,
+        autoIncrement: true,
+        primaryKey: true,
+        type: Sequelize.INTEGER
+      },
       userId: {
         type: Sequelize.UUID,
         allowNull: false,
@@ -12,7 +18,6 @@ module.exports = {
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
-        primaryKey: true
     },
     topicId: {
       type: Sequelize.UUID,
@@ -20,9 +25,7 @@ module.exports = {
       references: {
           model: 'Topics',
           key: 'id'
-      },
-      primaryKey: true,
-      unique: false
+      }
     },
     groupId: {
       type: Sequelize.UUID,
@@ -30,9 +33,7 @@ module.exports = {
       references: {
           model: 'Groups',
           key: 'id'
-      },
-      primaryKey: true,
-      unique: false
+      }
     },
     allowNotifications: {
         type: Sequelize.BOOLEAN,
@@ -54,7 +55,14 @@ module.exports = {
     deletedAt: {
       allowNull: true,
       type: Sequelize.DATE
-    }
+    },
+    }, {
+      indexes: [
+        {
+            unique: true,
+            fields: ['userId', 'topicId', 'groupId']
+        }
+    ]
     });
   },
   async down(queryInterface) {

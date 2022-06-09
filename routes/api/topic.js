@@ -7574,7 +7574,34 @@ module.exports = function (app) {
     });
 
      /**
-     * Get User preferences
+     * Get User preferences LIST
+    */
+      app.get('/api/users/:userId/notificationsettings/topics', loginCheck(), async function (req, res, next) {
+          try {
+            const limitDefault = 10;
+            const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
+            let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+
+            const userSettings = await UserNotificationSettings.findAndCountAll({
+                where: {
+                    userId: req.user.id,
+                    topicId: {
+                        [Op.not]: null
+                    }
+                },
+                include: [Topic],
+                limit,
+                offset
+            });
+
+            return res.ok(userSettings || {});
+        } catch (err) {
+            return next(err);
+        }
+    });
+
+    /**
+     * Get User Topic preferences
     */
       app.get('/api/users/:userId/topics/:topicId/notificationsettings', loginCheck(), asyncMiddleware(async function (req, res) {
         const userSettings = await UserNotificationSettings.findOne({
@@ -7590,7 +7617,7 @@ module.exports = function (app) {
     /**
      * Set User preferences
     */
-     app.put('/api/users/:userId/topics/:topicId/notificationsettings', loginCheck(), asyncMiddleware(async function (req, res) {
+     app.put('/api/users/:userId/topics/:topicId/notificationsettings', loginCheck(), async function (req, res) {
         const settings = req.body;
         const allowedFields = ['topicId', 'allowNotifications', 'preferences'];
         const finalSettings = {};
@@ -7602,48 +7629,70 @@ module.exports = function (app) {
         });
         finalSettings.userId = userId;
         finalSettings.topicId = topicId;
-        await db
-            .transaction(async function (t) {
-                const topicPromise = Topic.findOne({where: {
-                    id: topicId
-                }});
-                const userSettingsPromise = UserNotificationSettings.findOne({
-                    where: {
-                        userId,
-                        topicId
-                    }
-                })
-                const [userSettings, topic] = await Promise.all([userSettingsPromise, topicPromise]);
-                if (!userSettings) {
-                    const savedSettings = await UserNotificationSettings.create(
-                        finalSettings,
-                        {
-                            transaction: t
+        try {
+            await db
+                .transaction(async function (t) {
+                    const topicPromise = Topic.findOne({where: {
+                        id: topicId
+                    }});
+                    const userSettingsPromise = UserNotificationSettings.findOne({
+                        where: {
+                            userId,
+                            topicId
                         }
-                    );
-                    await cosActivities
-                        .createActivity(savedSettings, topic, {
-                            type: 'User',
-                            id: req.user.userId,
-                            ip: req.ip
-                        }, req.method + ' ' + req.path, t);
-                } else {
-                    userSettings.set(finalSettings);
+                    });
+                    let [userSettings, topic] = await Promise.all([userSettingsPromise, topicPromise]);
+                    if (!userSettings) {
+                        const savedSettings = await UserNotificationSettings.create(
+                            finalSettings,
+                            {
+                                transaction: t
+                            }
+                        );
+                        await cosActivities
+                            .createActivity(savedSettings, topic, {
+                                type: 'User',
+                                id: req.user.userId,
+                                ip: req.ip
+                            }, req.method + ' ' + req.path, t);
+                        userSettings = savedSettings;
+                    } else {
+                        userSettings.set(finalSettings);
 
-                    await cosActivities
-                        .updateActivity(userSettings, topic, {
-                            type: 'User',
-                            id: req.user.userId,
-                            ip: req.ip
-                        }, req.method + ' ' + req.path, t);
+                        await cosActivities
+                            .updateActivity(userSettings, topic, {
+                                type: 'User',
+                                id: req.user.userId,
+                                ip: req.ip
+                            }, req.method + ' ' + req.path, t);
 
-                        await userSettings.save({transaction: t});
+                            await userSettings.save({transaction: t});
+                    }
+                    t.afterCommit(() => {
+                        return res.ok(userSettings);
+                    });
+            });
+        } catch (err) {
+            console.log(err);
+        }
+    });
+
+    /**
+     * Delete User Topic preferences
+    */
+     app.delete('/api/users/:userId/topics/:topicId/notificationsettings', loginCheck(), asyncMiddleware(async function (req, res, next) {
+        try {
+            await UserNotificationSettings.destroy({
+                where: {
+                    userId: req.user.id,
+                    topicId: req.params.topicId
                 }
+            });
 
-                t.afterCommit(() => {
-                    return res.ok(userSettings);
-                });
-        });
+            return res.ok();
+        } catch (err) {
+            return next(err);
+        }
     }));
 
     return {

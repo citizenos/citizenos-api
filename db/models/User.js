@@ -195,6 +195,10 @@ module.exports = function (sequelize, DataTypes) {
             foreignKey: 'userId',
             constraints: true
         });
+
+        User.hasMany(models.UserNotificationSettings, {
+            foreignKey: 'userId'
+        });
     };
 
     // Overrides the default toJSON() to avoid sensitive data from ending up in the output.

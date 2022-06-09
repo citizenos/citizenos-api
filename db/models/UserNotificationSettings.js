@@ -5,6 +5,12 @@ module.exports = (sequelize, DataTypes) => {
   const UserNotificationSettings = sequelize.define(
       'UserNotificationSettings',
       {
+          id: {
+            allowNull: false,
+            autoIncrement: true,
+            primaryKey: true,
+            type: DataTypes.INTEGER
+          },
           userId: {
               type: DataTypes.UUID,
               allowNull: false,
@@ -14,8 +20,7 @@ module.exports = (sequelize, DataTypes) => {
                   key: 'id'
               },
               onUpdate: 'CASCADE',
-              onDelete: 'CASCADE',
-              primaryKey: true
+              onDelete: 'CASCADE'
           },
           topicId: {
             type: DataTypes.UUID,
@@ -23,8 +28,7 @@ module.exports = (sequelize, DataTypes) => {
             references: {
                 model: 'Topics',
                 key: 'id'
-            },
-            unique: false
+            }
           },
           groupId: {
             type: DataTypes.UUID,
@@ -32,8 +36,7 @@ module.exports = (sequelize, DataTypes) => {
             references: {
                 model: 'Groups',
                 key: 'id'
-            },
-            unique: false
+            }
           },
           allowNotifications: {
               type: DataTypes.BOOLEAN,
@@ -44,7 +47,26 @@ module.exports = (sequelize, DataTypes) => {
               allowNull: true,
               comment: 'Notification pecific data you want to store.'
           }
+      }, {
+        indexes: [
+          {
+              unique: true,
+              fields: ['userId', 'topicId', 'groupId']
+          }
+      ]
       }
   );
+
+  UserNotificationSettings.associate = function (models) {
+      UserNotificationSettings.belongsTo(models.Topic, {
+          foreignKey: 'topicId'
+      });
+      UserNotificationSettings.belongsTo(models.User, {
+         foreignKey: 'userId'
+      });
+      UserNotificationSettings.belongsTo(models.Group, {
+         foreignKey: 'groupId'
+      });
+  };
   return UserNotificationSettings;
 };
