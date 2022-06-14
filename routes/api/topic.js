@@ -7686,7 +7686,8 @@ module.exports = function (app) {
                 where: {
                     userId: req.user.id,
                     topicId: req.params.topicId
-                }
+                },
+                force: true
             });
 
             return res.ok();

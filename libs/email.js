@@ -1515,10 +1515,18 @@ module.exports = function (app) {
         _.forEach(users, function (user) {
             const template = resolveTemplate('topicNotification', user.language || 'en');
             const translateValues = notification.values;
+            let notificationText = '';
             for (const [key, value] of Object.entries(notification.values)) {
                 translateValues[key] = (template.translations?.NOTIFICATIONS && template.translations?.NOTIFICATIONS[value]) || value;
             }
-            const notificationText = Mustache.render((template.translations?.NOTIFICATIONS && template.translations?.NOTIFICATIONS[notification.string]), translateValues);
+            notificationText += Mustache.render((template.translations?.NOTIFICATIONS && template.translations?.NOTIFICATIONS[notification.string]), translateValues);
+            if (notification.values.groupItems && Object.keys(notification.values.groupItems).length > 1) {
+                for (const [field] of Object.keys(notification.values.groupItems)) {
+                    translateValues.fieldName = template.translations?.NOTIFICATIONS[field];
+                    const string = notification.string.replace('_USERACTIVITYGROUP', '');
+                    notificationText += '<p>' + Mustache.render((template.translations?.NOTIFICATIONS && template.translations?.NOTIFICATIONS[string]), translateValues) + '</p>';
+                }
+            }
 
             const emailOptions = Object.assign(
                 _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
