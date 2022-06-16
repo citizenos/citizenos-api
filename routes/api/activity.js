@@ -444,16 +444,16 @@ module.exports = function (app) {
                         JOIN "Topics" t ON t.id = :topicId
                         WHERE
                         ${visibilityCondition}
-                        ARRAY[:topicId] <@  a."topicIds"
+                        ARRAY[:topicId] <@  a."topicIds" AND a.data#>>'{object, @type}' <> 'UserNotificationSettings' OR  ( ARRAY[:topicId] <@  a."topicIds" AND a.data#>>'{object, @type}' = 'UserNotificationSettings' AND a.data#>>'{object, "userId"}' = :userId)
                         ${filterSql}
                         OR
-                        a.data@>'{"type": "View"}'
+                        (a.data@>'{"type": "View"}'
                         AND
                         a."actorType" = 'User'
                         AND
                         a."actorId" = :userId
                         AND
-                        a.data#>>'{object, @type}' = 'Activity'
+                        a.data#>>'{object, @type}' = 'Activity')
                         ORDER BY a."updatedAt" DESC
                         LIMIT :limit OFFSET :offset) a
                     JOIN pg_temp.getActivityData(a.id, a."topicIds", a."groupIds", a."userIds") ad ON ad."id" = a.id
@@ -802,13 +802,15 @@ module.exports = function (app) {
                 return allowedFilters.indexOf(item) > -1 && (input.indexOf(item) === key);
             });
 
-            let where = '';
+            let where = ``;
 
             if (filters.length) {
                 const filtersEscaped = filters.map(function (filter) {
                     return db.escape(filter);
                 });
                 where += `a.data#>>'{object, @type}' IN (${filtersEscaped.join(',')}) OR a.data#>>'{object, 0, @type}' IN (${filtersEscaped.join(',')}) `;
+            } else {
+                where = `a.data#>>'{object, @type}' <> 'UserNotificationSettings' OR  (a.data#>>'{object, @type}' = 'UserNotificationSettings' AND a.data#>>'{object, "userId"}' = :userId) `;
             }
 
             if (where) {
