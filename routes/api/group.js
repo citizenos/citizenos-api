@@ -1067,6 +1067,16 @@ module.exports = function (app) {
                         return;
                     }
                 } else {
+                    const deletedCount = await GroupInviteUser
+                        .destroy(
+                            {
+                                where: {
+                                    userId: member.userId,
+                                    groupId: groupId
+                                }
+                            }
+                        );
+                    logger.info(`Removed ${deletedCount} invites`);
                     const groupInvite = await GroupInviteUser.create(
                         {
                             groupId: groupId,

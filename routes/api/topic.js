@@ -3686,6 +3686,16 @@ module.exports = function (app) {
                         return;
                     }
                 } else {
+                    const deletedCount = await TopicInviteUser
+                        .destroy(
+                            {
+                                where: {
+                                    userId: member.userId,
+                                    topicId: topicId
+                                }
+                            }
+                        );
+                    logger.info(`Removed ${deletedCount} invites`);
                     const topicInvite = await TopicInviteUser.create(
                         {
                             topicId: topicId,
