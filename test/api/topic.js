@@ -4514,9 +4514,6 @@ suite('Users', function () {
                         topicInviteCreated3 = (await topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, topicInvite21)).body.data.rows[0];
                         topicInviteCreated4 = (await topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, topicInvite22)).body.data.rows[0];
 
-                        // Delete an invite
-                        await topicInviteUsersDelete(agentCreator, userCreator.id, topic.id, topicInviteCreated3.id);
-
                         // Expire an invite
                         await TopicInviteUser
                             .update(
@@ -4531,13 +4528,13 @@ suite('Users', function () {
                             );
                     });
 
-                    test('Success - 20000 - 3 invites - 2 to same person with different level, 1 to other but deleted later, 1 to other but expired', async function () {
+                    test('Success - 20000 - 3 invites - 2 to same person with different level lastone is stored, last to other expired', async function () {
                         const invitesListResult = (await topicInviteUsersList(agentCreator, userCreator.id, topic.id, 'level', 'DESC')).body.data;
-                        assert.equal(2, invitesListResult.count);
+                        assert.equal(1, invitesListResult.count);
                         const invitesList = invitesListResult.rows;
                         assert.equal(invitesList[0].level, TopicMemberUser.LEVELS.admin);
                         assert.isArray(invitesList);
-                        assert.equal(2, invitesList.length);
+                        assert.equal(1, invitesList.length);
 
                         // Make sure the deleted invite is not in the result
                         assert.isUndefined(invitesList.find(invite => {
@@ -4546,21 +4543,9 @@ suite('Users', function () {
 
                         // Make sure the double invites are both present
                         // The list result has User object, otherwise the objects should be equal
-                        const inviteListInvite1 = invitesList.find(invite => {
+                        assert.isUndefined(invitesList.find(invite => {
                             return invite.id === topicInviteCreated1.id
-                        });
-
-                        const inviteListInivteUser1 = inviteListInvite1.user;
-                        assert.equal(inviteListInivteUser1.id, userToInvite1.id);
-                        assert.equal(inviteListInivteUser1.name, userToInvite1.name);
-                        assert.property(inviteListInivteUser1, 'imageUrl');
-                        // Exra User info for ADMIN -  https://github.com/citizenos/citizenos-fe/issues/670
-                        assert.property(inviteListInivteUser1, 'email');
-                        assert.notProperty(inviteListInivteUser1, 'pid');
-                        assert.property(inviteListInivteUser1, 'phoneNumber');
-                        delete inviteListInvite1.user;
-
-                        assert.deepEqual(inviteListInvite1, topicInviteCreated1);
+                        }));
 
                         // The list result has User object, otherwise the objects should be equal
                         const inviteListInvite2 = invitesList.find(invite => {
@@ -4571,16 +4556,13 @@ suite('Users', function () {
                         assert.equal(inviteListInivteUser2.name, userToInvite1.name);
                         assert.property(inviteListInivteUser2, 'imageUrl');
                         // Exra User info for ADMIN -  https://github.com/citizenos/citizenos-fe/issues/670
-                        assert.property(inviteListInivteUser1, 'email');
-                        assert.notProperty(inviteListInivteUser1, 'pid');
-                        assert.property(inviteListInivteUser1, 'phoneNumber');
                         delete inviteListInvite2.user;
 
                         assert.deepEqual(inviteListInvite2, topicInviteCreated2);
                     });
 
                     test('Success - 20000 - NOT ADMIN member MUST NOT see extended User info (email, pid, phoneNumber) - https://github.com/citizenos/citizenos-fe/issues/670', async function () {
-                        await topicInviteUsersAccept(userToInvite1Agent, userToInvite1.id, topic.id, topicInviteCreated1.id);
+                        await topicInviteUsersAccept(userToInvite1Agent, userToInvite1.id, topic.id, topicInviteCreated2.id);
 
                         const invitesListResult = (await topicInviteUsersList(userToInvite1Agent, userToInvite1.id, topic.id)).body.data;
                         invitesListResult.rows.forEach(function (invite) {
@@ -4718,34 +4700,6 @@ suite('Users', function () {
                         assert.property(topicMemberUser, 'createdAt');
                         assert.property(topicMemberUser, 'updatedAt');
                         assert.property(topicMemberUser, 'deletedAt');
-                    });
-
-                    test('Success - 20000 - User accepts 2 different invites in a row, higher permissions should apply', async function () {
-                        // @see https://github.com/citizenos/citizenos-api/issues/231
-
-                        const userToInvite2 = await userLib.createUserAndLogin(agentUserToInvite, null, null, null);
-                        const invitation1 = {
-                            userId: userToInvite2.id,
-                            level: TopicMemberUser.LEVELS.read
-                        };
-
-                        const invitation2 = {
-                            userId: userToInvite2.id,
-                            level: TopicMemberUser.LEVELS.edit
-                        };
-
-                        const topicInviteCreatedRead = (await topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation1)).body.data.rows[0];
-                        const topicInviteCreatedEdit = (await topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation2)).body.data.rows[0];
-
-                        await topicInviteUsersAccept(agentUserToInvite, userToInvite.id, topic.id, topicInviteCreatedRead.id);
-                        const topicMemberUserEdit = (await _topicInviteUsersAccept(agentUserToInvite, userToInvite.id, topic.id, topicInviteCreatedEdit.id, 200)).body.data;
-
-                        assert.equal(topicMemberUserEdit.topicId, topic.id);
-                        assert.equal(topicMemberUserEdit.userId, userToInvite2.id);
-                        assert.equal(topicMemberUserEdit.level, topicInviteCreatedEdit.level);
-                        assert.property(topicMemberUserEdit, 'createdAt');
-                        assert.property(topicMemberUserEdit, 'updatedAt');
-                        assert.property(topicMemberUserEdit, 'deletedAt');
                     });
 
                     test('Fail - 40400 - Cannot accept deleted invite', async function () {
