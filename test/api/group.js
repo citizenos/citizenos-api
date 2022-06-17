@@ -1437,7 +1437,7 @@ suite('Users', function () {
                         assert.deepEqual(inviteListInvite2, groupInviteCreated2);
                     });
 
-                    test('Success - 20000 - list duplicate invites', async function () {
+                    test('Success - 20000 - list without duplicate invites', async function () {
                         // Second invite to User 1
                         const groupInvite12 = {
                             userId: userToInvite1.id,
@@ -1450,13 +1450,12 @@ suite('Users', function () {
 
                         const invitesList = invitesListResult.rows;
                         assert.isArray(invitesList);
-                        assert.equal(3, invitesList.length);
+                        assert.equal(2, invitesList.length);
 
                         const originalInvite = invitesList.find(invite => {
                             return invite.id === groupInviteCreated1.id
                         });
-                        assert.isObject(originalInvite);
-                        assert.equal(originalInvite.level, groupInviteCreated1.level);
+                        assert.equal(undefined, originalInvite);
 
                         const duplicateInvite = invitesList.find(invite => {
                             return invite.id === groupInviteCreated12.id
