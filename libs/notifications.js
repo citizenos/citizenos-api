@@ -6,6 +6,7 @@ module.exports = function (app) {
     const _ = require('lodash');
     const models = app.get('models');
     const db = models.sequelize;
+    const Topic = models.Topic;
     const User = models.User;
     const logger = app.get('logger');
 
@@ -61,13 +62,22 @@ module.exports = function (app) {
         });
     };
 
-    const getActivityTopicTitle = function (dataobject, data) {
+    const getActivityTopicTitle = async function (dataobject, data) {
         const target = data.target;
         const origin = data.origin;
         if (['Topic', 'VoteFinalContainer'].indexOf(dataobject['@type']) > -1) {
             return dataobject.title;
         }
+        if (dataobject['@type'] === 'CommentVote') {
+            const topic = await Topic.findOne({
+                where: {
+                    id: dataobject.topicId
+                },
+                attributes: ['title']
+            });
 
+            return topic.title;
+        }
         return dataobject?.topicTitle || target?.title || target?.topicTitle || origin?.title || origin?.topicTitle;
     };
 
@@ -143,8 +153,8 @@ module.exports = function (app) {
             let newValueKey = null;
             let fieldNameKey = null;
             const originType = activity.data.origin['@type'];
-            if (originType === 'Topic' || originType === 'Comment') {
-                fieldNameKey = `NOTIFICATION_${originType.toUpperCase()}_FIELD_${fieldName.toUpperCase()}`;
+            if (['Topic', 'Comment', 'CommentVote'].indexOf(originType) > -1) {
+                fieldNameKey = `NOTIFICATIONS.NOTIFICATION_${originType.toUpperCase()}_FIELD_${fieldName.toUpperCase()}`;
             }
 
             if (Array.isArray(previousValue) && previousValue.length === 0) {
@@ -155,10 +165,10 @@ module.exports = function (app) {
                 if (originType === 'Topic') {
                     if (fieldName === 'status' || fieldName === 'visibility') {
                         if (previousValue) {
-                            previousValueKey = `NOTIFICATION_TOPIC_FIELD_${fieldName.toUpperCase()}_${previousValue.toUpperCase()}`;
+                            previousValueKey = `NOTIFICATIONS.NOTIFICATION_TOPIC_FIELD_${fieldName.toUpperCase()}_${previousValue.toUpperCase()}`;
                         }
                         if (newValue) {
-                            newValueKey = `NOTIFICATION_TOPIC_FIELD_${fieldName.toUpperCase()}_${newValue.toUpperCase()}`;
+                            newValueKey = `NOTIFICATIONS.NOTIFICATION_TOPIC_FIELD_${fieldName.toUpperCase()}_${newValue.toUpperCase()}`;
                         }
                     }
                     if (fieldName === 'categories') {
@@ -178,10 +188,10 @@ module.exports = function (app) {
                         1: 'UP'
                     }
                     if (previousValue === 0 || previousValue) {
-                        previousValueKey = `NOTIFICATION_COMMENTVOTE_FIELD_VALUE_${values[previousValue]}`;
+                        previousValueKey = `NOTIFICATIONS.NOTIFICATION_COMMENTVOTE_FIELD_VALUE_${values[previousValue]}`;
                     }
                     if (newValue === 0 || previousValue) {
-                        newValueKey = `NOTIFICATION_COMMENTVOTE_FIELD_VALUE_${values[newValue]}`;
+                        newValueKey = `NOTIFICATIONS.NOTIFICATION_COMMENTVOTE_FIELD_VALUE_${values[newValue]}`;
                     }
                 }
 
@@ -195,9 +205,9 @@ module.exports = function (app) {
                 activity.values.groupItems[fieldNameKey] = {
                     previousValue: previousValueKey || previousValue
                 };
+                activity.values.groupItems[fieldNameKey].newValue = newValueKey || newValue;
             }
             activity.values.newValue = newValueKey || newValue;
-            activity.values.groupItems[fieldNameKey].newValue = newValueKey || newValue;
 
             if (Object.keys(activity.values.groupItems).length > 1) {
                 activity.string += '_USERACTIVITYGROUP';
@@ -218,7 +228,7 @@ module.exports = function (app) {
               dataobject = dataobject[0];
           }
           await getActivityUsers(activity.data, values);
-          values.topicTitle = getActivityTopicTitle(dataobject, activity.data);
+          values.topicTitle = await getActivityTopicTitle(dataobject, activity.data);
           values.description = getActivityDescription(dataobject, activity.data);
           values.groupName = getActivityGroupName(activity.data);
           values.attachmentName = getActivityAttachmentName(dataobject, activity.data);
@@ -226,7 +236,7 @@ module.exports = function (app) {
           getActivityUserLevel(activity.data, values);
 
           if (dataobject['@type'] === 'CommentVote' && activity.data.type === 'Create') {
-              let str = 'NOTIFICATION_COMMENTVOTE_FIELD_VALUE_';
+              let str = 'NOTIFICATIONS.NOTIFICATION_COMMENTVOTE_FIELD_VALUE_';
               let val = 'UP';
               if (dataobject.value === -1) {
                   val = 'DOWN';
@@ -302,7 +312,7 @@ module.exports = function (app) {
         }
         stringparts.push(val);
     }
-    activity.string = stringparts.join('_').toUpperCase();
+    activity.string = `NOTIFICATIONS.${stringparts.join('_').toUpperCase()}`;
  /*   if (Object.keys(activity.values?.groupItems).length > 1) {
         activity.string += '_USERACTIVITYGROUP';
     }*/
@@ -480,6 +490,10 @@ module.exports = function (app) {
     if (users.length) {
         users = await filterUsersBySettings(users, activity.topicIds, activity.groupIds, activityType);
     }
+
+    users = users.filter((user) => {
+        return user.id !== activity.actorId;
+    });
 
     return users;
   }

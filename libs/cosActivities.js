@@ -371,7 +371,6 @@ module.exports = function (app) {
 
 
         if (act[0].isnew) {
-            console.log('SEND', act[0])
            await notifications.sendActivityNotifications(act[0]);
         }
 

@@ -1506,37 +1506,63 @@ module.exports = function (app) {
 
         return handleAllPromises(promisesToResolve);
     };
+    const flattenObj = (obj, parent, res = {}) => {
+        for (const key of Object.keys(obj)) {
+          const propName = parent ? parent + '.' + key : key;
+          if (typeof obj[key] === 'object') {
+            flattenObj(obj[key], propName, res);
+          } else {
+            res[propName] = obj[key];
+          }
+        }
+        return res;
+    }
+    const handleTranslation = function (translations, key) {
+        if (!translations || !key) return false;
+        let translationsUsed = flattenObj(translations);
+        const translation = translationsUsed[key];
+        if (translation && translation.indexOf('@:') === 0) {
+            return translationsUsed[translation.substring(2)];
+        }
+        if (translation === undefined) return '';
 
+        return translation;
+    }
     const _sendTopicNotification = async (notification, users) => {
         const promisesToResolve = [];
-        const linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: notification.topicIds[0]});
-        const linkTopicNotificationSettings = `${linkViewTopic}?notificationSettings`;
+        let linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: notification.topicIds[0]});
 
+        const linkGeneralNotificationSettings= `${urlLib.getFe('/myaccount')}?tab=notifications`;
+        const linkTopicNotificationSettings = `${linkViewTopic}?notificationSettings`;
+        if (['Comment', 'CommentVote'].indexOf(notification.data.object['@type']) > -1) {
+            linkViewTopic += `?commentId=${notification.data.object.commentId || notification.data.object.id}`;
+        }
         _.forEach(users, function (user) {
             const template = resolveTemplate('topicNotification', user.language || 'en');
             const translateValues = notification.values;
             let notificationText = '';
             for (const [key, value] of Object.entries(notification.values)) {
-                translateValues[key] = (template.translations?.NOTIFICATIONS && template.translations?.NOTIFICATIONS[value]) || value;
+                translateValues[key] = handleTranslation(template.translations, value) || value;
             }
-            notificationText += Mustache.render((template.translations?.NOTIFICATIONS && template.translations?.NOTIFICATIONS[notification.string]), translateValues);
+            notificationText += Mustache.render(handleTranslation(template.translations, notification.string), translateValues);
             if (notification.values.groupItems && Object.keys(notification.values.groupItems).length > 1) {
                 for (const [field] of Object.keys(notification.values.groupItems)) {
-                    translateValues.fieldName = template.translations?.NOTIFICATIONS[field];
+                    translateValues.fieldName = template.translations[field];
                     const string = notification.string.replace('_USERACTIVITYGROUP', '');
-                    notificationText += '<p>' + Mustache.render((template.translations?.NOTIFICATIONS && template.translations?.NOTIFICATIONS[string]), translateValues) + '</p>';
+                    notificationText += '<p>' + Mustache.render(handleTranslation(template.translations, string), translateValues) + '</p>';
                 }
             }
 
             const emailOptions = Object.assign(
                 _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
                 {
-                    subject: template.translations.NOTIFICATIONS.SUBJECT,
+                    subject: Mustache.render(handleTranslation(template.translations, 'NOTIFICATIONS.SUBJECT'), translateValues),
                     to: user.email,
                     toUser: user,
                     userName: user.name,
                     linkViewTopic,
                     linkTopicNotificationSettings,
+                    linkGeneralNotificationSettings,
                     notificationText
                 }
             );
