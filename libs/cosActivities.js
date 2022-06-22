@@ -620,7 +620,7 @@ module.exports = function (app) {
         };
 
         activity.object.object['@type'] = inviteObject.constructor.name;
-
+        console.log(activity);
         return _saveActivity(activity, transaction);
     };
 

@@ -117,7 +117,7 @@ module.exports = function (app) {
     };
 
     const getActivityUserLevel = function (data, values) {
-        let levelKeyPrefix = 'NOTIFICATION_TOPIC_LEVELS_';
+        let levelKeyPrefix = 'NOTIFICATIONS.NOTIFICATION_TOPIC_LEVELS_';
         let levelKey;
 
         if (data.actor && data.actor.level) {
@@ -512,7 +512,7 @@ module.exports = function (app) {
 
   const sendActivityNotifications = async (activity) => {
     try {
-        if (!activity) return;
+        if (!activity || (['Accept', 'Join', 'Leave'].indexOf(activity.data.type) > -1)) return;
         getRelatedItemIds(activity);
         const users = await getRelatedUsers(activity);
         if (!users?.length) return;

@@ -7692,6 +7692,17 @@ module.exports = function (app) {
     */
      app.delete('/api/users/:userId/topics/:topicId/notificationsettings', loginCheck(), asyncMiddleware(async function (req, res, next) {
         try {
+            const topicPromise = Topic.findOne({where: {
+                id: req.params.topicId
+            }});
+            const userSettingsPromise = UserNotificationSettings.findOne({
+                where: {
+                    userId: req.user.id,
+                    topicId: req.params.topicId
+                }
+            });
+            let [userSettings, topic] = await Promise.all([userSettingsPromise, topicPromise]);
+
             await UserNotificationSettings.destroy({
                 where: {
                     userId: req.user.id,
@@ -7699,6 +7710,12 @@ module.exports = function (app) {
                 },
                 force: true
             });
+
+            await cosActivities.deleteActivity(userSettings, topic, {
+                type: 'User',
+                id: req.user.userId,
+                ip: req.ip
+            }, req.method + ' ' + req.path, );
 
             return res.ok();
         } catch (err) {
