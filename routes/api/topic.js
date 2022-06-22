@@ -7592,19 +7592,46 @@ module.exports = function (app) {
             const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
             let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
 
-            const userSettings = await UserNotificationSettings.findAndCountAll({
-                where: {
-                    userId: req.user.id,
-                    topicId: {
-                        [Op.not]: null
-                    }
-                },
-                include: [Topic],
-                limit,
-                offset
-            });
+            const title = `%${req.query.search}%`;
+            let where = '';
+            if (title) {
+                where += ` AND t.title ILIKE :title `;
+            }
+            const userSettings = await db
+            .query(
+                `SELECT
+                    usn.*,
+                    t.id as "Topic.id",
+                    t.title as "Topic.title",
+                    count(*) OVER()::integer AS "countTotal"
+                FROM "UserNotificationSettings" usn
+                JOIN "Topics" t ON t.id = usn."topicId" ${where}
+                WHERE usn."deletedAt" IS NULL
+                AND usn."userId" = :userId
+                LIMIT :limit OFFSET :offset
+                `,
+                {
+                    replacements: {
+                        userId: req.user.id,
+                        title: title,
+                        offset,
+                        limit
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
+            let result = {};
+            if (userSettings.length) {
+                result = {
+                    count: userSettings[0].countTotal,
+                    rows: userSettings
+                };
 
-            return res.ok(userSettings || {});
+            }
+
+            return res.ok(result);
         } catch (err) {
             return next(err);
         }
