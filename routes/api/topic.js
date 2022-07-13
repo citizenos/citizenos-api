@@ -7591,29 +7591,62 @@ module.exports = function (app) {
             const limitDefault = 10;
             const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
             let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+            const partnerId = req.user.partnerId;
 
             const title = `%${req.query.search}%`;
-            let where = '';
+            let where = `t."deletedAt" IS NULL
+                        AND t.title IS NOT NULL
+                        AND COALESCE(tmup.level, tmgp.level, 'none')::"enum_TopicMemberUsers_level" > 'none' `;
             if (title) {
                 where += ` AND t.title ILIKE :title `;
             }
+
+            // All partners should see only Topics created by their site, but our own app sees all.
+            if (partnerId) {
+                where += ` AND t."sourcePartnerId" = :partnerId `;
+            }
+
+            const query = `
+                    SELECT
+                         t.id AS "topicId",
+                         t.title,
+                         t."sourcePartnerId",
+                         t."sourcePartnerObjectId",
+                         usn."allowNotifications",
+                         usn."preferences",
+                         count(*) OVER()::integer AS "countTotal"
+                    FROM "Topics" t
+                    LEFT JOIN (
+                        SELECT
+                            tmu."topicId",
+                            tmu."userId",
+                            tmu.level::text AS level
+                        FROM "TopicMemberUsers" tmu
+                        WHERE tmu."deletedAt" IS NULL
+                    ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId)
+                    LEFT JOIN (
+                        SELECT
+                            tmg."topicId",
+                            gm."userId",
+                            MAX(tmg.level)::text AS level
+                        FROM "TopicMemberGroups" tmg
+                            LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
+                        WHERE tmg."deletedAt" IS NULL
+                        AND gm."deletedAt" IS NULL
+                        GROUP BY "topicId", "userId"
+                    ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
+                    LEFT JOIN "UserNotificationSettings" usn ON usn."userId" = :userId AND usn."topicId" = t.id
+                    WHERE ${where}
+                    ORDER BY t."title" ASC
+                ;`
             const userSettings = await db
             .query(
-                `SELECT
-                    usn.*,
-                    t.id as "Topic.id",
-                    t.title as "Topic.title",
-                    count(*) OVER()::integer AS "countTotal"
-                FROM "UserNotificationSettings" usn
-                JOIN "Topics" t ON t.id = usn."topicId" ${where}
-                WHERE usn."deletedAt" IS NULL
-                AND usn."userId" = :userId
-                LIMIT :limit OFFSET :offset
-                `,
+                query,
                 {
                     replacements: {
                         userId: req.user.id,
                         title: title,
+                        partnerId,
                         offset,
                         limit
                     },
