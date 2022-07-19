@@ -9,6 +9,8 @@ module.exports = function (app) {
     const uuid = app.get('uuid');
     const moment = app.get('moment');
     const logger = app.get('logger');
+    const Sequelize = require('sequelize');
+    const { injectReplacements } = require('sequelize/lib/utils/sql');
 
     const Activity = models.Activity;
 
@@ -251,94 +253,91 @@ module.exports = function (app) {
             activity.context = context;
         }
         const dataString = JSON.stringify(activity);
-
-        return db
-            .query(
-                `
-                DO $$ BEGIN
-                    CASE
-                        WHEN (
-                            SELECT
-                                (
-                                SELECT COUNT(*) = 0
-                                    FROM "Activities"
-                                    WHERE
-                                    ARRAY[:topicId] <@ "topicIds"
-                                    AND
-                                        data@>'{"type": "Update"}'
+        const queryString = injectReplacements(`BEGIN
+            CASE
+                WHEN (
+                    SELECT
+                        (
+                        SELECT COUNT(*) = 0
+                            FROM "Activities"
+                            WHERE
+                            ARRAY[:topicId] <@ "topicIds"
+                            AND
+                                data@>'{"type": "Update"}'
+                            AND (
+                                data#>>'{result , 0, path}' = '/description'
+                                OR data#>>'{result, 0, path}' = '/title'
+                            )
+                            AND "actorType" = 'User'
+                            AND "actorId" = :userId
+                        ) OR (
+                        SELECT
+                                COUNT(*) > 0
+                            FROM "Activities"
+                            WHERE
+                            (
+                            ARRAY[:topicId] <@ "topicIds"
+                            )
+                            AND
+                            (
+                                NOT data@>'{"type": "Update"}'
+                                OR
+                                data@>'{"type": "Update"}'
+                                    AND (
+                                        data#>>'{result , 0, path}' != '/description'
+                                        AND
+                                        data#>>'{result, 0, path}' != '/title')
+                            )
+                            AND "updatedAt" > (
+                                SELECT
+                                    "updatedAt"
+                                FROM "Activities"
+                                WHERE
+                                    data@>'{"type": "Update"}'
                                     AND (
                                         data#>>'{result , 0, path}' = '/description'
-                                        OR data#>>'{result, 0, path}' = '/title'
-                                    )
-                                    AND "actorType" = 'User'
-                                    AND "actorId" = :userId
-                                ) OR (
-                                SELECT
-                                        COUNT(*) > 0
-                                    FROM "Activities"
-                                    WHERE
-                                    (
-                                       ARRAY[:topicId] <@ "topicIds"
-                                    )
-                                    AND
-                                    (
-                                        NOT data@>'{"type": "Update"}'
                                         OR
-                                        data@>'{"type": "Update"}'
-                                            AND (
-                                                data#>>'{result , 0, path}' != '/description'
-                                                AND
-                                                data#>>'{result, 0, path}' != '/title')
+                                        data#>>'{result, 0, path}' = '/title'
                                     )
-                                    AND "updatedAt" > (
-                                        SELECT
-                                            "updatedAt"
-                                        FROM "Activities"
-                                        WHERE
-                                            data@>'{"type": "Update"}'
-                                            AND (
-                                                data#>>'{result , 0, path}' = '/description'
-                                                OR
-                                                data#>>'{result, 0, path}' = '/title'
-                                            )
-                                        AND "actorType" = 'User'
-                                        AND "actorId" = :userId
-                                        ORDER BY "updatedAt"
-                                        DESC LIMIT 1
-                                    ))
-                        )
-                    THEN
-                        INSERT INTO "Activities"
-                        (id, data, "actorType", "actorId", "topicIds", "userIds", "createdAt", "updatedAt")
-                        VALUES
-                        (:id, to_jsonb(:data::json), 'User', :userId , ARRAY[:topicId], ARRAY[:userId], NOW(), NOW());
-                    ELSE
-                    UPDATE
-                        "Activities"
-                        SET
-                            data = to_jsonb(:data::json),
-                            "updatedAt" = NOW()
-                    WHERE id = (
-                        SELECT id FROM "Activities"
-                        WHERE
-                            "actorType" = 'User'
-                            AND
-                            "actorId" = :userId
-                            AND data@>'{"type": "Update"}'
-                            AND ARRAY[:topicId] <@ "topicIds"
-                            AND (data#>>'{result, 0, path}' = '/description' OR data#>>'{result, 0, path}' = '/title')
-                            ORDER BY "updatedAt" DESC LIMIT 1
-                    );
-                    END CASE;
-                END $$
-                ;`,
+                                AND "actorType" = 'User'
+                                AND "actorId" = :userId
+                                ORDER BY "updatedAt"
+                                DESC LIMIT 1
+                            ))
+                )
+            THEN
+                INSERT INTO "Activities"
+                (id, data, "actorType", "actorId", "topicIds", "userIds", "createdAt", "updatedAt")
+                VALUES
+                (:id, to_jsonb(:data::json), 'User', :userId , ARRAY[:topicId], ARRAY[:userId], NOW(), NOW());
+            ELSE
+            UPDATE
+                "Activities"
+                SET
+                    data = to_jsonb(:data::json),
+                    "updatedAt" = NOW()
+            WHERE id = (
+                SELECT id FROM "Activities"
+                WHERE
+                    "actorType" = 'User'
+                    AND
+                    "actorId" = :userId
+                    AND data@>'{"type": "Update"}'
+                    AND ARRAY[:topicId] <@ "topicIds"
+                    AND (data#>>'{result, 0, path}' = '/description' OR data#>>'{result, 0, path}' = '/title')
+                    ORDER BY "updatedAt" DESC LIMIT 1
+            );
+            END CASE;
+        END`, Sequelize.postgres ,{
+            id: uuid.v4(),
+            data: dataString,
+            topicId: instance.id,
+            userId: actor.id
+        }).replace(/\\/gi, '');
+
+        return db
+            .query(`DO $$ ${queryString} $$;`,
                 {
-                    replacements: {
-                        id: uuid.v4(),
-                        data: dataString,
-                        topicId: instance.id,
-                        userId: actor.id
-                    },
                     type: db.QueryTypes.INSERT,
                     raw: true,
                     transaction: transaction
@@ -700,58 +699,56 @@ module.exports = function (app) {
         }
 
         const dataString = JSON.stringify(activity);
-
-        return db
-            .query(`
-                DO $$ BEGIN
-                    CASE
-                        WHEN (
-                            SELECT
-                                (
-                                SELECT COUNT(*) = 0
-                                    FROM "Activities"
-                                    WHERE
-                                        data@>'{"type": "View"}'
-                                    AND
-                                        "actorType" = 'User'
-                                    AND
-                                        "actorId" = :userId
-                                    AND
-                                        data#>>'{object, @type}' = 'Activity'
-                                )
-                            )
-                    THEN
-                        INSERT INTO "Activities"
-                        (id, data, "userIds", "actorType", "actorId", "createdAt", "updatedAt")
-                        VALUES
-                        (:id, to_jsonb(:data::json), ARRAY[:userId], 'User', :userId, NOW(), NOW());
-                    ELSE
-                    UPDATE
-                        "Activities"
-                        SET
-                            data = to_jsonb(:data::json),
-                            "updatedAt" = NOW()
-                    WHERE id = (
-                        SELECT id FROM "Activities"
-                        WHERE
+        const queryString = injectReplacements(`BEGIN
+            CASE
+                WHEN (
+                    SELECT
+                        (
+                        SELECT COUNT(*) = 0
+                            FROM "Activities"
+                            WHERE
+                                data@>'{"type": "View"}'
+                            AND
                                 "actorType" = 'User'
                             AND
                                 "actorId" = :userId
                             AND
-                                data@>'{"type": "View"}'
-                            AND
                                 data#>>'{object, @type}' = 'Activity'
-                            ORDER BY "updatedAt" DESC LIMIT 1
-                    );
-                    END CASE;
-                END $$
-                ;`, {
-                replacements: {
-                    id: uuid.v4(),
-                    data: dataString,
-                    topicId: instance.id,
-                    userId: actor.id
-                },
+                        )
+                    )
+            THEN
+                INSERT INTO "Activities"
+                (id, data, "userIds", "actorType", "actorId", "createdAt", "updatedAt")
+                VALUES
+                (:id, to_jsonb(:data::json), ARRAY[:userId], 'User', :userId, NOW(), NOW());
+            ELSE
+            UPDATE
+                "Activities"
+                SET
+                    data = to_jsonb(:data::json),
+                    "updatedAt" = NOW()
+            WHERE id = (
+                SELECT id FROM "Activities"
+                WHERE
+                        "actorType" = 'User'
+                    AND
+                        "actorId" = :userId
+                    AND
+                        data@>'{"type": "View"}'
+                    AND
+                        data#>>'{object, @type}' = 'Activity'
+                    ORDER BY "updatedAt" DESC LIMIT 1
+            );
+            END CASE;
+        END`, Sequelize.postgres, {
+            id: uuid.v4(),
+            data: dataString,
+            topicId: instance.id,
+            userId: actor.id
+        }).replace(/\\/gi, '');
+        return db
+            .query(`DO $$ ${queryString} $$;`,
+            {
                 type: db.QueryTypes.INSERT,
                 raw: true,
                 transaction: transaction
