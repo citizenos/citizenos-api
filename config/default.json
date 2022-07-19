@@ -45,6 +45,8 @@
     "publicKey": "TO BE OVERWRITTEN IN ENV SPECIFIC CONF",
     "algorithm": "RS256",
     "secret": "sdfsdfsdfsdfdsfdsf",
+    "resave": false,
+    "saveUninitialized": false,
     "cookie": {
       "path": "/api",
       "httpOnly": true,
