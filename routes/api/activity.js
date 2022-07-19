@@ -7,12 +7,13 @@
 module.exports = function (app) {
     const models = app.get('models');
     const db = models.sequelize;
+    const Sequelize = require('sequelize');
+    const { injectReplacements } = require('sequelize/lib/utils/sql');
     const _ = app.get('lodash');
     const cosActivities = app.get('cosActivities');
     const loginCheck = app.get('middleware.loginCheck');
     const topicLib = require('./topic')(app);
     const groupLib = require('./group')(app);
-    const notifications = app.get('notifications');
 
     const Activity = models.Activity;
     const Group = models.Group;
@@ -431,11 +432,8 @@ module.exports = function (app) {
                     }
                 });
 
-                const results = await db.query(
-                    `
-                    ${activitiesDataFunction}
-                    SELECT
-                        ad.*
+                const queryString = injectReplacements(`SELECT
+                    ad.*
                     FROM
                     (SELECT
                         a.id, a."topicIds", a."groupIds", a."userIds"
@@ -458,15 +456,15 @@ module.exports = function (app) {
                         LIMIT :limit OFFSET :offset) a
                     JOIN pg_temp.getActivityData(a.id, a."topicIds", a."groupIds", a."userIds") ad ON ad."id" = a.id
                     ORDER BY ad."updatedAt" DESC
-                    ;`,
+                    ;`, Sequelize.postgres, {
+                        topicId: topicId,
+                        userId: userId,
+                        visibility: visibility,
+                        limit: limit,
+                        offset: offset
+                });
+                const results = await db.query(`${activitiesDataFunction} ${queryString}`,
                     {
-                        replacements: {
-                            topicId: topicId,
-                            userId: userId,
-                            visibility: visibility,
-                            limit: limit,
-                            offset: offset
-                        },
                         type: db.QueryTypes.SELECT,
                         transaction: t,
                         nest: true,
@@ -531,37 +529,37 @@ module.exports = function (app) {
         let wherePartnerTopics = '';
         let wherePartnerGroups = '';
         if (sourcePartnerId) {
-            wherePartnerTopics = ' AND t."sourcePartnerId" = :sourcePartnerId ';
-            wherePartnerGroups = ' AND g."sourcePartnerId" = :sourcePartnerId ';
+            wherePartnerTopics = injectReplacements(` AND t."sourcePartnerId" = :sourcePartnerId `, Sequelize.postgres, {sourcePartnerId});
+            wherePartnerGroups = injectReplacements(`' AND g."sourcePartnerId" = :sourcePartnerId `, Sequelize.postgres, {sourcePartnerId});
         }
         try {
-            const query = `
+            const queryFunctions = `
                 CREATE OR REPLACE FUNCTION pg_temp.getUserTopics(uuid)
                     RETURNS TABLE("topicId" uuid)
                     AS $$
                         SELECT
                                 t.id
                         FROM "Topics" t
-                            LEFT JOIN (
-                                SELECT
-                                    tmu."topicId",
-                                    tmu."userId",
-                                    tmu.level::text AS level
-                                FROM "TopicMemberUsers" tmu
-                                WHERE tmu."deletedAt" IS NULL
-                            ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = $1)
-                            LEFT JOIN (
-                                SELECT
-                                    tmg."topicId",
-                                    gm."userId",
-                                    MAX(tmg.level)::text AS level
-                                FROM "TopicMemberGroups" tmg
-                                    LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
-                                WHERE tmg."deletedAt" IS NULL
-                                AND gm."deletedAt" IS NULL
-                                GROUP BY "topicId", "userId"
-                            ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = $1)
-                            LEFT JOIN "Users" c ON (c.id = t."creatorId")
+                        LEFT JOIN (
+                            SELECT
+                                tmu."topicId",
+                                tmu."userId",
+                                tmu.level::text AS level
+                            FROM "TopicMemberUsers" tmu
+                            WHERE tmu."deletedAt" IS NULL
+                        ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = $1)
+                        LEFT JOIN (
+                            SELECT
+                                tmg."topicId",
+                                gm."userId",
+                                MAX(tmg.level)::text AS level
+                            FROM "TopicMemberGroups" tmg
+                                LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
+                            WHERE tmg."deletedAt" IS NULL
+                            AND gm."deletedAt" IS NULL
+                            GROUP BY "topicId", "userId"
+                        ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = $1)
+                        LEFT JOIN "Users" c ON (c.id = t."creatorId")
                         WHERE
                             t.title IS NOT NULL
                             ${wherePartnerTopics}
@@ -691,7 +689,8 @@ module.exports = function (app) {
                             ORDER BY a."updatedAt" DESC
                     ; $$
                 LANGUAGE SQL IMMUTABLE;
-
+            `;
+            const query = injectReplacements(`
                 SELECT
                         COUNT(uac.id) AS count
                     FROM
@@ -753,16 +752,11 @@ module.exports = function (app) {
                     uac.id <> ua.id
                     AND
                     uac."updatedAt" > ua."updatedAt"
-                ;`;
+                ;`, Sequelize.postgres, {userId: userId});
 
             const results = await db
-                .query(
-                    query,
+                .query(`${queryFunctions} ${query}`,
                     {
-                        replacements: {
-                            userId: userId,
-                            sourcePartnerId: sourcePartnerId
-                        },
                         type: db.QueryTypes.SELECT,
                         raw: true,
                         nest: true
@@ -792,7 +786,7 @@ module.exports = function (app) {
             let offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
             let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
 
-            const includeSql = buildActivityFeedIncludeString(req, visibility);
+            const includeSql = injectReplacements(buildActivityFeedIncludeString(req, visibility), Sequelize.postgres, {userId: userId});
             let queryFilters = req.query.filter || [];
             if (queryFilters && !Array.isArray(queryFilters)) {
                 queryFilters = [queryFilters];
@@ -809,8 +803,8 @@ module.exports = function (app) {
                     return db.escape(filter);
                 });
                 where += `a.data#>>'{object, @type}' IN (${filtersEscaped.join(',')}) OR a.data#>>'{object, 0, @type}' IN (${filtersEscaped.join(',')}) `;
-            } else {
-                where = `a.data#>>'{object, @type}' <> 'UserNotificationSettings' OR  (a.data#>>'{object, @type}' = 'UserNotificationSettings' AND a.data#>>'{object, "userId"}' = :userId) `;
+            } else if (userId) {
+                where = injectReplacements(`a.data#>>'{object, @type}' <> 'UserNotificationSettings' OR  (a.data#>>'{object, @type}' = 'UserNotificationSettings' AND a.data#>>'{object, "userId"}' = :userId ) `, Sequelize.postgres, {userId: req.user.userId});
             }
 
             if (where) {
@@ -828,8 +822,8 @@ module.exports = function (app) {
             let wherePartnerTopics = '';
             let wherePartnerGroups = '';
             if (sourcePartnerId) {
-                wherePartnerTopics = ' AND t."sourcePartnerId" = :sourcePartnerId ';
-                wherePartnerGroups = ' AND g."sourcePartnerId" = :sourcePartnerId ';
+                wherePartnerTopics = injectReplacements(` AND t."sourcePartnerId" = :sourcePartnerId `, Sequelize.postgres, {sourcePartnerId});
+                wherePartnerGroups = injectReplacements(` AND g."sourcePartnerId" = :sourcePartnerId `, Sequelize.postgres, {sourcePartnerId});
             }
 
             const query = `
@@ -1050,24 +1044,28 @@ module.exports = function (app) {
                                 a."actorType" = 'User' AND a."actorId" = $1::text
                     ; $$
                 LANGUAGE SQL IMMUTABLE;
-
-                SELECT
-                    ad.*
-                FROM
-                    (
-                        SELECT a.* FROM
-                        (
-                        ${includeSql}
-                        ) a
-                        ${where}
-                        ORDER BY a."updatedAt" DESC
-                        LIMIT :limit OFFSET :offset
-                    ) uac
-                JOIN pg_temp.getActivityData(uac.id, uac."topicIds", uac."groupIds", uac."userIds") ad ON ad."id" = uac.id
-                    ORDER BY ad."updatedAt" DESC
-                ;`;
+                `;
 
             let activity;
+
+            const selectSql = injectReplacements(`SELECT
+                ad.*
+            FROM
+                (
+                    SELECT a.* FROM
+                    (
+                    ${includeSql}
+                    ) a
+                    ${where}
+                    ORDER BY a."updatedAt" DESC
+                    LIMIT :limit OFFSET :offset
+                ) uac
+            JOIN pg_temp.getActivityData(uac.id, uac."topicIds", uac."groupIds", uac."userIds") ad ON ad."id" = uac.id
+                ORDER BY ad."updatedAt" DESC
+            ;`, Sequelize.postgres, {
+                limit: limit,
+                offset: offset
+            });
 
             await db
                 .transaction(async function (t) {
@@ -1081,15 +1079,8 @@ module.exports = function (app) {
                     }
 
                     const results = await db
-                        .query(
-                            query,
+                        .query(`${query} ${selectSql}`,
                             {
-                                replacements: {
-                                    userId: userId,
-                                    sourcePartnerId: sourcePartnerId,
-                                    limit: limit,
-                                    offset: offset
-                                },
                                 type: db.QueryTypes.SELECT,
                                 raw: true,
                                 nest: true,
@@ -1159,41 +1150,41 @@ module.exports = function (app) {
                     }
                 });
 
-                const results = await db
-                    .query(`
-                        ${activitiesDataFunction}
-                        SELECT
-                            ad.*
+                const selectSql = injectReplacements(`
+                    SELECT
+                        ad.*
+                    FROM
+                    (
+                        SELECT a.id, a."topicIds", a."groupIds", a."userIds"
                         FROM
-                        (
-                            SELECT a.id, a."topicIds", a."groupIds", a."userIds"
-                            FROM
-                            "Activities" a
-                            JOIN "Groups" g ON g.id = :groupId
-                            WHERE
-                            ${visibilityCondition}
-                            ARRAY[:groupId] <@  a."groupIds"
-                            OR
-                            a.data@>'{"type": "View"}'
-                            AND
-                            a."actorType" = 'User'
-                            AND
-                            a."actorId" = :userId
-                            AND
-                            a.data#>>'{object, @type}' = 'Activity'
-                            ORDER BY a."updatedAt" DESC
-                            LIMIT :limit OFFSET :offset
-                        ) a
-                        JOIN pg_temp.getActivityData(a.id, a."topicIds", a."groupIds", a."userIds") ad ON ad.id = a.id
-                        ORDER BY ad."updatedAt" DESC
-                    ;`, {
-                        replacements: {
-                            groupId: groupId,
-                            userId: userId,
-                            visibility: visibility,
-                            limit: limit,
-                            offset: offset
-                        },
+                        "Activities" a
+                        JOIN "Groups" g ON g.id = :groupId
+                        WHERE
+                        ${visibilityCondition}
+                        ARRAY[:groupId] <@  a."groupIds"
+                        OR
+                        a.data@>'{"type": "View"}'
+                        AND
+                        a."actorType" = 'User'
+                        AND
+                        a."actorId" = :userId
+                        AND
+                        a.data#>>'{object, @type}' = 'Activity'
+                        ORDER BY a."updatedAt" DESC
+                        LIMIT :limit OFFSET :offset
+                    ) a
+                    JOIN pg_temp.getActivityData(a.id, a."topicIds", a."groupIds", a."userIds") ad ON ad.id = a.id
+                    ORDER BY ad."updatedAt" DESC
+                    ;`,
+                    Sequelize.postgres, {
+                        groupId: groupId,
+                        userId: userId,
+                        visibility: visibility,
+                        limit: limit,
+                        offset: offset
+                    })
+                const results = await db
+                    .query(`${activitiesDataFunction} ${selectSql}`, {
                         type: db.QueryTypes.SELECT,
                         transaction: t,
                         nest: true,
@@ -1238,7 +1229,7 @@ module.exports = function (app) {
         return groupActivitiesList(req, res, next);
     });
 
-    app.get('/api/acitivites/strings', async (req, res, next) => {
+   /* app.get('/api/acitivites/strings', async (req, res, next) => {
         const strings = [];
 
         try {
@@ -1275,7 +1266,7 @@ module.exports = function (app) {
             activities.forEach(async (activity) => {
                 /*notifications.buildActivityString(activity);
                 notifications.getActivityValues(activity);
-                strings.push(activity.data.type + ' ' + (activity.data.object['@type'] || activity.data.object.type));*/
+                strings.push(activity.data.type + ' ' + (activity.data.object['@type'] || activity.data.object.type));
                 const users = await notifications.getRelatedUsers(activity);
                 console.log(users);
             });
@@ -1284,5 +1275,5 @@ module.exports = function (app) {
             console.log(err);
             next(err)
         }
-    })
+    })*/
 };

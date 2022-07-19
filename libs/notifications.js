@@ -328,7 +328,7 @@ module.exports = function (app) {
                         array_agg(u.id) as users
                     FROM "GroupMemberUsers" gm
                         JOIN "Users" u ON (u.id = gm."userId")
-                    JOIN "UserNotificationSettings" usn ON usn."userId" = u.id AND usn."groupId" = gm."groupId" AND usn.preferences->>:activityType = 'true' AND usn."allowNotifications" = true
+                    JOIN "UserNotificationSettings" usn ON usn."userId" = u.id AND usn."groupId" = gm."groupId" AND usn.preferences->> :activityType = 'true' AND usn."allowNotifications" = true
                     WHERE gm."groupId" IN (:groupIds)
                     AND gm."deletedAt" IS NULL
                     ;`,
@@ -403,7 +403,7 @@ module.exports = function (app) {
                 ) tmg ON tmg."topicId" IN (:topicIds) AND (tmg."userId" = tm.id)
                 GROUP BY tm.id, tm.level, tmu.level, tm.name, tm.company, tm."imageUrl", tm.email, tm."topicId"
                 ) tmu
-                JOIN "UserNotificationSettings" usn ON usn."userId" = tmu.id AND usn."deletedAt" IS NULL AND usn."topicId" = tmu."topicId" AND usn.preferences->>:activityType = 'true' AND usn."allowNotifications" = true
+                JOIN "UserNotificationSettings" usn ON usn."userId" = tmu.id AND usn."deletedAt" IS NULL AND usn."topicId" = tmu."topicId" AND usn.preferences->> :activityType = 'true' AND usn."allowNotifications" = true
              ;`,
               {
                   replacements: {
@@ -442,7 +442,7 @@ module.exports = function (app) {
                     "UserNotificationSettings" usn
                     ON usn."userId" = u.id
                 AND ${where}
-                AND usn.preferences->>:activityType = 'true' AND usn."allowNotifications" = true AND usn."deletedAt" IS NULL
+                AND usn.preferences->> :activityType = 'true' AND usn."allowNotifications" = true AND usn."deletedAt" IS NULL
                 AND u.id IN (:userIds)
             ;`,
             {

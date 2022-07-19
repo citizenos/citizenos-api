@@ -242,7 +242,7 @@ suite('Internal', function () {
                 assert.property(topic, 'padUrl');
                 const activities = (await activityLib.activitiesRead(agent, user.id)).body.data;
                 const text = notifications.buildActivityString(activities[0]);
-                assert.equal('NOTIFICATION_USER_CREATE_TOPIC', text);
+                assert.equal('NOTIFICATIONS.NOTIFICATION_USER_CREATE_TOPIC', text);
             });
         });
 
