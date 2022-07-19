@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "archiver": "5.3.1",
-    "aws-sdk": "2.1174.0",
+    "aws-sdk": "2.1177.0",
     "base64-url": "2.3.3",
     "bluebird": "3.7.2",
     "body-parser": "1.20.0",
@@ -66,7 +66,7 @@
     "pg-query-stream": "4.2.3",
     "prerender-node": "3.5.0",
     "rate-limit-redis": "2.1.0",
-    "rate-limiter-flexible": "2.3.6",
+    "rate-limiter-flexible": "2.3.7",
     "sanitize-filename": "1.6.3",
     "sequelize": "6.21.3",
     "sequelize-cli": "6.4.1",
