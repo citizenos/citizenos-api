@@ -2,6 +2,7 @@
 
 const config = require('config');
 const express = require('express');
+const session = require('express-session');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
@@ -16,7 +17,6 @@ const moment = require('moment');
 const mu = require('mu2');
 const fs = require('fs');
 const querystring = require('querystring');
-const stream = require('stream');
 const fsExtra = require('fs-extra');
 const sanitizeFilename = require('sanitize-filename');
 const uuid = require('uuid');
@@ -170,7 +170,6 @@ app.set('Promise', Promise);
 app.set('fs', fs);
 app.set('crypto', require('crypto'));
 app.set('querystring', querystring);
-app.set('stream', stream);
 app.set('fsExtra', fsExtra);
 app.set('sanitizeFilename', sanitizeFilename);
 app.set('uuid', uuid);
@@ -284,7 +283,7 @@ const cosApiKey = config.api.key;
 if (!cosApiKey) {
     throw new Error('Invalid configuration! Invalid value for "api.key". Was: "' + cosApiKey + '". Must be something unique. This value is used for authenticating to webhooks ("/routes/api/internal") and originally used by Etherpad');
 }
-
+app.use(session(config.session));
 // Cache control for API requests, fixes IE not re-validating eTags - https://trello.com/c/t45AGz4y/372-bug-mobiil-id-login-and-signing-does-not-work-on-ie11-due-to-caching-issues
 app.use(/^\/api\/.*/, function (req, res, next) {
     res.set('Expires', -1);
