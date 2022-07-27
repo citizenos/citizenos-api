@@ -63,6 +63,9 @@ module.exports = function (app) {
             if (activity.object.userId) {
                 activityObject.userIds.push(activity.object.userId);
             }
+            if ('email' in activity.object) {
+                delete activityObject.data.object.email;
+            }
         }
 
         if (activity.origin) {
@@ -82,6 +85,9 @@ module.exports = function (app) {
             if (activity.origin.userId) {
                 activityObject.userIds.push(activity.origin.userId);
             }
+            if ('email' in activity.origin) {
+                delete activityObject.data.origin.email;
+            }
         }
 
         if (activity.target) {
@@ -100,6 +106,9 @@ module.exports = function (app) {
             }
             if (activity.target.userId) {
                 activityObject.userIds.push(activity.target.userId);
+            }
+            if ('email' in activity.target) {
+                delete activityObject.data.target.email;
             }
         }
 
