@@ -283,7 +283,9 @@ const cosApiKey = config.api.key;
 if (!cosApiKey) {
     throw new Error('Invalid configuration! Invalid value for "api.key". Was: "' + cosApiKey + '". Must be something unique. This value is used for authenticating to webhooks ("/routes/api/internal") and originally used by Etherpad');
 }
-app.use(session(config.session));
+const sessionConfig = Object.assign({}, config.session);
+sessionConfig.name = 'sessionID';
+app.use(session(sessionConfig));
 // Cache control for API requests, fixes IE not re-validating eTags - https://trello.com/c/t45AGz4y/372-bug-mobiil-id-login-and-signing-does-not-work-on-ie11-due-to-caching-issues
 app.use(/^\/api\/.*/, function (req, res, next) {
     res.set('Expires', -1);
