@@ -449,6 +449,8 @@ suite('Users', function () {
                         id: null
                     },
                     name: group.name,
+                    description: null,
+                    imageUrl: null,
                     visibility: Group.VISIBILITY.private,
                     creator: {
                         id: user.id,
@@ -2159,11 +2161,12 @@ suite('Users', function () {
                         '@type': 'Group',
                         id: group.id,
                         name: group.name,
+                        description: null,
+                        imageUrl: null,
                         parentId: null,
                         visibility: Group.VISIBILITY.private
                     }
                 };
-
                 assert.deepEqual(groupJoinActivityActual, groupJoinActivityExpected);
 
                 const groupExpected = Object.assign({}, group);
