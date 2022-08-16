@@ -7,7 +7,6 @@ module.exports = function (app) {
     const models = app.get('models');
     const db = models.sequelize;
     const uuid = app.get('uuid');
-    const moment = app.get('moment');
     const logger = app.get('logger');
     const notifications = app.get('notifications');
     const Sequelize = require('sequelize');
@@ -124,8 +123,8 @@ module.exports = function (app) {
         activityObject.topicIds = Array.from(new Set(activityObject.topicIds));
         activityObject.groupIds = Array.from(new Set(activityObject.groupIds));
         activityObject.userIds = Array.from(new Set(activityObject.userIds));
-        activityObject.createdAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS ZZ');
-        activityObject.updatedAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS ZZ');
+        activityObject.createdAt = (new Date()).toISOString();
+        activityObject.updatedAt = (new Date()).toISOString();
 
         const activitySaved = await Activity
             .create(
