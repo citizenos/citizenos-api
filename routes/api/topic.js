@@ -29,7 +29,6 @@ module.exports = function (app) {
     const cosJwt = app.get('cosJwt');
     const twitter = app.get('twitter');
     const hashtagCache = app.get('hashtagCache');
-    const moment = app.get('moment');
     const decode = require('html-entities').decode;
     const https = require('https');
     const crypto = require('crypto');
@@ -47,7 +46,6 @@ module.exports = function (app) {
     const User = models.User;
     const UserConnection = models.UserConnection;
     const Group = models.Group;
-
     const Topic = models.Topic;
     const TopicMemberUser = models.TopicMemberUser;
     const TopicMemberGroup = models.TopicMemberGroup;
@@ -1734,6 +1732,7 @@ module.exports = function (app) {
                             req.method + ' ' + req.path,
                             t
                         ));
+
                     promisesList.push(topic.save({transaction: t}));
 
                     if (isBackToVoting) {
@@ -3809,6 +3808,7 @@ module.exports = function (app) {
                         tiu.level,
                         tiu."topicId",
                         tiu."userId",
+                        tiu."expiresAt",
                         tiu."createdAt",
                         tiu."updatedAt",
                         u.id as "user.id",
@@ -3819,7 +3819,7 @@ module.exports = function (app) {
                     FROM "TopicInviteUsers" tiu
                     JOIN "Users" u ON u.id = tiu."userId"
                     LEFT JOIN "UserConnections" uc ON (uc."userId" = tiu."userId" AND uc."connectionId" = 'esteid')
-                    WHERE tiu."topicId" = :topicId AND tiu."deletedAt" IS NULL AND tiu."createdAt" > NOW() - INTERVAL '${TopicInviteUser.VALID_DAYS}d'
+                    WHERE tiu."topicId" = :topicId AND tiu."deletedAt" IS NULL AND tiu."expiresAt" > NOW()
                     ${where}
                     ${sortSql}
                     LIMIT :limit
@@ -3867,13 +3867,59 @@ module.exports = function (app) {
         const inviteId = req.params.inviteId;
 
         const invite = await TopicInviteUser
-            .findOne(
+            .findOne({
+                where: {
+                    id:inviteId,
+                    topicId: topicId
+                },
+                paranoid: false,
+                include: [
+                    {
+                        model: Topic,
+                        attributes: ['id', 'title', 'visibility', 'creatorId'],
+                        as: 'topic',
+                        required: true
+                    },
+                    {
+                        model: User,
+                        attributes: ['id', 'name', 'company', 'imageUrl'],
+                        as: 'creator',
+                        required: true
+                    },
+                    {
+                        model: User,
+                        attributes: ['id', 'email', 'password', 'source'],
+                        as: 'user',
+                        required: true,
+                        include: [UserConnection]
+                    }
+                ],
+                attributes: {
+                    include: [
+                        [
+                            db.literal(`EXTRACT(DAY FROM (NOW() - "TopicInviteUser"."createdAt"))`),
+                            'createdDaysAgo'
+                        ]
+                    ]
+                }
+            });
+
+        if (!invite) {
+            return res.notFound();
+        }
+        const hasAccess = await _hasPermission(topicId, invite.userId, TopicMemberUser.LEVELS.read, true);
+
+        if (hasAccess) {
+            return res.ok(invite, 1); // Invite has already been accepted OR deleted and the person has access
+        }
+
+        const invites = await TopicInviteUser
+            .findAll(
                 {
                     where: {
-                        id: inviteId,
+                        userId: invite.userId,
                         topicId: topicId
                     },
-                    paranoid: false, // return deleted!
                     include: [
                         {
                             model: Topic,
@@ -3906,22 +3952,26 @@ module.exports = function (app) {
                 }
             );
 
-        if (!invite) {
-            return res.notFound();
-        }
+        const levels = Object.keys(TopicMemberUser.LEVELS);
+        const finalInvites = invites.filter((invite) => {
+            if (invite.expiresAt > Date.now() && invite.deletedAt === null) {
+                return invite;
+            }
+        }).sort((a, b) => {
+            if (levels.indexOf(a.level) < levels.indexOf(b.level)) return 1;
+            if (levels.indexOf(a.level) > levels.indexOf(b.level)) return -1;
+            if (levels.indexOf(a.level) === levels.indexOf(b.level)) return 0;
+        });
 
-        if (invite.deletedAt) {
-            const hasAccess = await _hasPermission(topicId, invite.userId, TopicMemberUser.LEVELS.read, true);
-
-            if (hasAccess) {
-                return res.ok(invite, 1); // Invite has already been accepted OR deleted and the person has access
+        if (!finalInvites.length) {
+            if (invite.deletedAt) {
+                return res.gone('The invite has been deleted', 1);
             }
 
-            return res.gone('The invite has been deleted', 1);
-        }
 
-        if (invite.dataValues.createdDaysAgo > TopicInviteUser.VALID_DAYS) {
-            return res.gone(`The invite has expired. Invites are valid for ${TopicInviteUser.VALID_DAYS} days`, 2);
+            if (invite.expiresAt < Date.now()) {
+                return res.gone(`The invite has expired. Invites are valid for ${TopicInviteUser.VALID_DAYS} days`, 2);
+            }
         }
 
         // At this point we can already confirm users e-mail
@@ -3939,10 +3989,10 @@ module.exports = function (app) {
 
         // User has not been registered by a person but was created by the system on invite - https://github.com/citizenos/citizenos-fe/issues/773
         if (!invite.user.password && invite.user.source === User.SOURCES.citizenos && !invite.user.UserConnections.length) {
-            return res.ok(invite, 2);
+            return res.ok(finalInvites[0], 2);
         }
 
-        return res.ok(invite, 0);
+        return res.ok(finalInvites[0], 0);
     }));
 
     app.put(['/api/topics/:topicId/invites/users/:inviteId', '/api/users/:userId/topics/:topicId/invites/users/:inviteId'], loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
@@ -3994,12 +4044,22 @@ module.exports = function (app) {
     app.delete(['/api/topics/:topicId/invites/users/:inviteId', '/api/users/:userId/topics/:topicId/invites/users/:inviteId'], loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const inviteId = req.params.inviteId;
+        const invite = await TopicInviteUser.findOne({
+            where: {
+                id: inviteId
+            },
+            paranoid: false
+        });
+
+        if (!invite) {
+            return res.notFound('Invite not found', 1);
+        }
 
         const deletedCount = await TopicInviteUser
             .destroy(
                 {
                     where: {
-                        id: inviteId,
+                        userId: invite.userId,
                         topicId: topicId
                     }
                 }
@@ -4031,11 +4091,62 @@ module.exports = function (app) {
                                 'createdDaysAgo'
                             ]
                         ]
-                    }
+                    },
+                    paranoid: false
                 }
             );
 
-        // Find out if the User is already a member of the Topic
+        if (invite && invite.userId !== userId) {
+            return res.forbidden();
+        }
+        const invites = await TopicInviteUser
+            .findAll(
+                {
+                    where: {
+                        userId: invite.userId,
+                        topicId: topicId
+                    },
+                    include: [
+                        {
+                            model: Topic,
+                            attributes: ['id', 'title', 'visibility', 'creatorId'],
+                            as: 'topic',
+                            required: true
+                        },
+                        {
+                            model: User,
+                            attributes: ['id', 'name', 'company', 'imageUrl'],
+                            as: 'creator',
+                            required: true
+                        },
+                        {
+                            model: User,
+                            attributes: ['id', 'email', 'password', 'source'],
+                            as: 'user',
+                            required: true,
+                            include: [UserConnection]
+                        }
+                    ],
+                    attributes: {
+                        include: [
+                            [
+                                db.literal(`EXTRACT(DAY FROM (NOW() - "TopicInviteUser"."createdAt"))`),
+                                'createdDaysAgo'
+                            ]
+                        ]
+                    }
+                }
+            );
+        const levelsArray = Object.values(TopicMemberUser.LEVELS);
+        const finalInvites = invites.filter((invite) => {
+            if (invite.expiresAt > Date.now() && invite.deletedAt === null) {
+                return invite;
+            }
+        }).sort((a, b) => {
+            if (levelsArray.indexOf(a.level) < levelsArray.indexOf(b.level)) return 1;
+            if (levelsArray.indexOf(a.level) > levelsArray.indexOf(b.level)) return -1;
+            if (levelsArray.indexOf(a.level) === levelsArray.indexOf(b.level)) return 0;
+        });
         const memberUserExisting = await TopicMemberUser
             .findOne({
                 where: {
@@ -4043,83 +4154,81 @@ module.exports = function (app) {
                     userId: userId
                 }
             });
-
-        if (invite) {
-            if (invite.userId !== userId) {
-                return res.forbidden();
-            }
-
-            if (memberUserExisting) {
-                // User already a member, see if we need to update the level
-                const levelsArray = Object.values(TopicMemberUser.LEVELS);
-                if (levelsArray.indexOf(memberUserExisting.level) < levelsArray.indexOf(invite.level)) {
-                    const memberUserUpdated = await memberUserExisting.update({
-                        level: invite.level
-                    });
-                    return res.ok(memberUserUpdated);
-                } else {
-                    // No level update, respond with existing member info
-                    return res.ok(memberUserExisting);
-                }
+        if (memberUserExisting) {
+            // User already a member, see if we need to update the level
+            if (finalInvites.length && levelsArray.indexOf(memberUserExisting.level) < levelsArray.indexOf(finalInvites[0].level)) {
+                const memberUserUpdated = await memberUserExisting.update({
+                    level: invite.level
+                });
+                return res.ok(memberUserUpdated);
             } else {
-                // Has the invite expired?
-                if (invite.dataValues.createdDaysAgo > TopicInviteUser.VALID_DAYS) {
-                    return res.gone(`The invite has expired. Invites are valid for ${TopicInviteUser.VALID_DAYS} days`, 2);
-                }
-
-                // Topic needed just for the activity
-                const topic = await Topic.findOne({
-                    where: {
-                        id: invite.topicId
-                    }
-                });
-
-                const memberUserCreated = await db.transaction(async function (t) {
-                    const member = await TopicMemberUser.create(
-                        {
-                            topicId: invite.topicId,
-                            userId: invite.userId,
-                            level: TopicMemberUser.LEVELS[invite.level]
-                        },
-                        {
-                            transaction: t
-                        }
-                    );
-
-                    await invite.destroy({transaction: t});
-
-                    const user = User.build({id: member.userId});
-                    user.dataValues.id = member.userId;
-
-                    await cosActivities.acceptActivity(
-                        invite,
-                        {
-                            type: 'User',
-                            id: req.user.userId,
-                            ip: req.ip
-                        },
-                        {
-                            type: 'User',
-                            id: invite.creatorId
-                        },
-                        topic,
-                        req.method + ' ' + req.path,
-                        t
-                    );
-
-                    return member;
-                });
-
-                return res.created(memberUserCreated);
-            }
-        } else {
-            // Already a member, return that membership information
-            if (memberUserExisting) {
+                // No level update, respond with existing member info
                 return res.ok(memberUserExisting);
-            } else { // No invite, not a member - the User is not invited
-                return res.notFound();
             }
         }
+
+        if (!finalInvites.length) {
+            // Find out if the User is already a member of the Topic
+            if (invite.expiresAt < Date.now()) {
+                return res.gone(`The invite has expired. Invites are valid for ${TopicInviteUser.VALID_DAYS} days`, 2);
+            }
+            return res.notFound();
+        }
+
+        const finalInvite = finalInvites[0];
+        // Has the invite expired?
+
+
+        // Topic needed just for the activity
+        const topic = await Topic.findOne({
+            where: {
+                id: finalInvite.topicId
+            }
+        });
+
+        const memberUserCreated = await db.transaction(async function (t) {
+            const member = await TopicMemberUser.create(
+                {
+                    topicId: finalInvite.topicId,
+                    userId: finalInvite.userId,
+                    level: TopicMemberUser.LEVELS[finalInvite.level]
+                },
+                {
+                    transaction: t
+                }
+            );
+
+            await TopicInviteUser.destroy({
+                where: {
+                    topicId: finalInvite.topicId,
+                    userId: finalInvite.userId
+                },
+                transaction: t
+            });
+
+            const user = User.build({id: member.userId});
+            user.dataValues.id = member.userId;
+
+            await cosActivities.acceptActivity(
+                finalInvite,
+                {
+                    type: 'User',
+                    id: req.user.userId,
+                    ip: req.ip
+                },
+                {
+                    type: 'User',
+                    id: finalInvite.creatorId
+                },
+                topic,
+                req.method + ' ' + req.path,
+                t
+            );
+
+            return member;
+        });
+
+        return res.created(memberUserCreated);
     }));
 
     /**
@@ -4802,7 +4911,7 @@ module.exports = function (app) {
             {
                 text: text,
                 subject: subject,
-                createdAt: moment().format(),
+                createdAt: (new Date()).toISOString(),
                 type: type
             }
         ];
@@ -5343,7 +5452,7 @@ module.exports = function (app) {
             },
             include: [Topic]
         });
-        const now = moment().format();
+        const now = (new Date()).toISOString();
         const edits = comment.edits;
 
         if (text === comment.text && subject === comment.subject && type === comment.type) {
@@ -5674,8 +5783,7 @@ module.exports = function (app) {
             if (data && data.statuses) {
                 logger.info('Twitter response', req.method, req.path, req.user, data.statuses.length);
                 _.forEach(data.statuses, function (m) {
-                    let mTimeStamp = moment(m.created_at, 'ddd MMM DD HH:mm:ss ZZ YYYY');
-                    mTimeStamp = mTimeStamp.format();
+                    let mTimeStamp = new Date(Date.parse(m.created_at)).toISOString();
 
                     const status = {
                         id: m.id,
@@ -5696,7 +5804,7 @@ module.exports = function (app) {
                 const cachedMentions = {
                     count: allMentions.length,
                     rows: allMentions,
-                    createdAt: moment().format(),
+                    createdAt: (new Date()).toISOString(),
                     hashtag: hashtag
                 };
 
@@ -6313,7 +6421,7 @@ module.exports = function (app) {
                     const topicMembers = await _getAllTopicMembers(topicId, userId, false);
                     const voteResults = await getVoteResults(voteId, userId);
                     if (topicMembers.users.count === voteResults[0].votersCount) {
-                        vote.endsAt = moment().format();
+                        vote.endsAt = (new Date()).toISOString();
                         await vote.save();
 
                         return true;
