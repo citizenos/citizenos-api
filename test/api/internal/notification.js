@@ -42,6 +42,7 @@ const activityLib = require('../activity');
 
 const models = app.get('models');
 const Topic = models.Topic;
+const db = models.sequelize;
 const TopicMemberUser = models.TopicMemberUser;
 const Report = models.Report;
 const Vote = models.Vote;
@@ -187,7 +188,6 @@ suite('Internal', function () {
                     };
                     const data = (await updateTopicUserPreferences(agent2, user2.id, topic.id, settings)).body.data;
                     assert.deepEqual(data.preferences, settings.preferences);
-
                     const activities = (await activityLib.activitiesRead(agent, user.id)).body.data;
                     const users = await notifications.getRelatedUsers(activities[0]);
                     assert.equal(users.length, 0);
@@ -216,8 +216,12 @@ suite('Internal', function () {
                         }
                     ];
                     await topicLib.topicVoteVote(agent, user.id, topic.id, voteCreated.id, voteList, null, null, null, null);
-                    const activities3 = (await activityLib.activitiesRead(agent, user.id)).body.data;
-                    const users3 = await notifications.getRelatedUsers(activities3[0]);
+
+                    const act = await db.query(`SELECT * FROM "Activities" WHERE "actorId"=:userId AND data#>>'{object, 0, "@type"}' = 'VoteList' AND data#>>'{target, id}' = :topicId`, {replacements: {
+                        userId: user.id,
+                        topicId: topic.id
+                    }});
+                    const users3 = await notifications.getRelatedUsers(act[0][0]);
                     assert.equal(users3.length, 1);
                     assert.equal(users3[0].id, user2.id);
                 });
