@@ -68,8 +68,8 @@ module.exports = {
             const createGroupJoins = await queryInterface.sequelize.query(
                 `
                 INSERT INTO "GroupJoins"
-                    SELECT 
-                        id, 
+                    SELECT
+                        id,
                         substr(
                             regexp_replace(
                                 encode(
@@ -86,9 +86,9 @@ module.exports = {
                             12
                         ),
                         'read',
-                        NOW(), 
-                        NOW(), 
-                        null 
+                        NOW(),
+                        NOW(),
+                        null
                     FROM "Groups"
                 `,
                 {

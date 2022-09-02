@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 14.4 (Ubuntu 14.4-1.pgdg18.04+1)
--- Dumped by pg_dump version 14.4 (Ubuntu 14.4-1.pgdg18.04+1)
+-- Dumped from database version 14.1 (Ubuntu 14.1-1.pgdg18.04+1)
+-- Dumped by pg_dump version 14.1 (Ubuntu 14.1-1.pgdg18.04+1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -499,7 +499,6 @@ CREATE TABLE public."GroupInviteUsers" (
     "userId" uuid NOT NULL,
     id uuid NOT NULL,
     "creatorId" uuid NOT NULL,
-    "expiresAt" timestamp with time zone,
     "groupId" uuid NOT NULL,
     level public."enum_GroupInviteUsers_level" DEFAULT 'read'::public."enum_GroupInviteUsers_level" NOT NULL,
     "createdAt" timestamp with time zone NOT NULL,
@@ -520,13 +519,6 @@ COMMENT ON COLUMN public."GroupInviteUsers"."userId" IS 'User who is invited.';
 --
 
 COMMENT ON COLUMN public."GroupInviteUsers"."creatorId" IS 'User who created the invite.';
-
-
---
--- Name: COLUMN "GroupInviteUsers"."expiresAt"; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public."GroupInviteUsers"."expiresAt" IS 'Invite expiration time.';
 
 
 --
@@ -969,7 +961,6 @@ CREATE TABLE public."TopicInviteUsers" (
     "userId" uuid NOT NULL,
     id uuid NOT NULL,
     "creatorId" uuid NOT NULL,
-    "expiresAt" timestamp with time zone,
     "topicId" uuid NOT NULL,
     level public."enum_TopicInviteUsers_level" DEFAULT 'read'::public."enum_TopicInviteUsers_level" NOT NULL,
     "createdAt" timestamp with time zone NOT NULL,
@@ -990,13 +981,6 @@ COMMENT ON COLUMN public."TopicInviteUsers"."userId" IS 'User who is invited.';
 --
 
 COMMENT ON COLUMN public."TopicInviteUsers"."creatorId" IS 'User who created the invite.';
-
-
---
--- Name: COLUMN "TopicInviteUsers"."expiresAt"; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public."TopicInviteUsers"."expiresAt" IS 'Invite expiration time.';
 
 
 --
@@ -1431,6 +1415,36 @@ COMMENT ON COLUMN public."UserConsents"."userId" IS 'Id of the User whom the con
 --
 
 COMMENT ON COLUMN public."UserConsents"."partnerId" IS 'Partner id (client_id).';
+
+
+--
+-- Name: UserNotificationSettings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."UserNotificationSettings" (
+    "userId" uuid NOT NULL,
+    "topicId" uuid,
+    "groupId" uuid,
+    "allowNotifications" boolean,
+    preferences json,
+    "createdAt" timestamp with time zone NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL,
+    "deletedAt" timestamp with time zone
+);
+
+
+--
+-- Name: COLUMN "UserNotificationSettings"."userId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."UserNotificationSettings"."userId" IS 'Id of the User whom the connection belongs to.';
+
+
+--
+-- Name: COLUMN "UserNotificationSettings".preferences; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."UserNotificationSettings".preferences IS 'Notification pecific data you want to store.';
 
 
 --
@@ -2133,6 +2147,14 @@ ALTER TABLE ONLY public."UserConsents"
 
 
 --
+-- Name: UserNotificationSettings UserNotificationSettings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."UserNotificationSettings"
+    ADD CONSTRAINT "UserNotificationSettings_pkey" PRIMARY KEY ("userId");
+
+
+--
 -- Name: Users Users_emailVerificationCode_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2714,6 +2736,30 @@ ALTER TABLE ONLY public."UserConsents"
 
 
 --
+-- Name: UserNotificationSettings UserNotificationSettings_groupId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."UserNotificationSettings"
+    ADD CONSTRAINT "UserNotificationSettings_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES public."Groups"(id);
+
+
+--
+-- Name: UserNotificationSettings UserNotificationSettings_topicId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."UserNotificationSettings"
+    ADD CONSTRAINT "UserNotificationSettings_topicId_fkey" FOREIGN KEY ("topicId") REFERENCES public."Topics"(id);
+
+
+--
+-- Name: UserNotificationSettings UserNotificationSettings_userId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."UserNotificationSettings"
+    ADD CONSTRAINT "UserNotificationSettings_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: VoteContainerFiles VoteContainerFiles_voteId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2823,6 +2869,4 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 20220203120245-users-password-comment.js
 20220228174313-duplicate-email-users-issue-234.js
 20220405120631-create-user-notification-settings.js
-20220816103332-alter-topic-invite-user.js
-20220816103355-alter-group-invite-user.js
 \.

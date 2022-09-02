@@ -71,6 +71,7 @@ module.exports = function (app) {
     const TopicAttachment = models.TopicAttachment;
     const Attachment = models.Attachment;
     const TopicPin = models.TopicPin;
+    const UserNotificationSettings = models.UserNotificationSettings;
 
     const createDataHash = (dataToHash) => {
         const hmac = crypto.createHmac('sha256', config.encryption.salt);
@@ -7692,6 +7693,206 @@ module.exports = function (app) {
             return next(err);
         }
     });
+
+     /**
+     * Get User preferences LIST
+    */
+      app.get('/api/users/:userId/notificationsettings/topics', loginCheck(), async function (req, res, next) {
+          try {
+            const limitDefault = 10;
+            const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
+            let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+            const partnerId = req.user.partnerId;
+
+            const title = `%${req.query.search}%`;
+            let where = `t."deletedAt" IS NULL
+                        AND t.title IS NOT NULL
+                        AND COALESCE(tmup.level, tmgp.level, 'none')::"enum_TopicMemberUsers_level" > 'none' `;
+            if (title) {
+                where += ` AND t.title ILIKE :title `;
+            }
+
+            // All partners should see only Topics created by their site, but our own app sees all.
+            if (partnerId) {
+                where += ` AND t."sourcePartnerId" = :partnerId `;
+            }
+
+            const query = `
+                    SELECT
+                         t.id AS "topicId",
+                         t.title,
+                         t."sourcePartnerId",
+                         t."sourcePartnerObjectId",
+                         usn."allowNotifications",
+                         usn."preferences",
+                         count(*) OVER()::integer AS "countTotal"
+                    FROM "Topics" t
+                    LEFT JOIN (
+                        SELECT
+                            tmu."topicId",
+                            tmu."userId",
+                            tmu.level::text AS level
+                        FROM "TopicMemberUsers" tmu
+                        WHERE tmu."deletedAt" IS NULL
+                    ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId)
+                    LEFT JOIN (
+                        SELECT
+                            tmg."topicId",
+                            gm."userId",
+                            MAX(tmg.level)::text AS level
+                        FROM "TopicMemberGroups" tmg
+                            LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
+                        WHERE tmg."deletedAt" IS NULL
+                        AND gm."deletedAt" IS NULL
+                        GROUP BY "topicId", "userId"
+                    ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
+                    LEFT JOIN "UserNotificationSettings" usn ON usn."userId" = :userId AND usn."topicId" = t.id
+                    WHERE ${where}
+                    ORDER BY t."title" ASC
+                ;`
+            const userSettings = await db
+            .query(
+                query,
+                {
+                    replacements: {
+                        userId: req.user.id,
+                        title: title,
+                        partnerId,
+                        offset,
+                        limit
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
+            let result = {};
+            if (userSettings.length) {
+                result = {
+                    count: userSettings[0].countTotal,
+                    rows: userSettings
+                };
+
+            }
+
+            return res.ok(result);
+        } catch (err) {
+            return next(err);
+        }
+    });
+
+    /**
+     * Get User Topic preferences
+    */
+      app.get('/api/users/:userId/topics/:topicId/notificationsettings', loginCheck(), asyncMiddleware(async function (req, res) {
+        const userSettings = await UserNotificationSettings.findOne({
+            where: {
+                userId: req.user.id,
+                topicId: req.params.topicId
+            }
+        });
+
+        return res.ok(userSettings || {});
+    }));
+
+    /**
+     * Set User preferences
+    */
+     app.put('/api/users/:userId/topics/:topicId/notificationsettings', loginCheck(), async function (req, res) {
+        const settings = req.body;
+        const allowedFields = ['topicId', 'allowNotifications', 'preferences'];
+        const finalSettings = {};
+        const topicId = req.params.topicId;
+        const userId = req.user.id;
+
+        Object.keys(settings).forEach((key) => {
+            if (allowedFields.indexOf(key) > -1) finalSettings[key] = settings[key];
+        });
+        finalSettings.userId = userId;
+        finalSettings.topicId = topicId;
+        try {
+            await db
+                .transaction(async function (t) {
+                    const topicPromise = Topic.findOne({where: {
+                        id: topicId
+                    }});
+                    const userSettingsPromise = UserNotificationSettings.findOne({
+                        where: {
+                            userId,
+                            topicId
+                        }
+                    });
+                    let [userSettings, topic] = await Promise.all([userSettingsPromise, topicPromise]);
+                    if (!userSettings) {
+                        const savedSettings = await UserNotificationSettings.create(
+                            finalSettings,
+                            {
+                                transaction: t
+                            }
+                        );
+                        await cosActivities
+                            .createActivity(savedSettings, topic, {
+                                type: 'User',
+                                id: req.user.userId,
+                                ip: req.ip
+                            }, req.method + ' ' + req.path, t);
+                        userSettings = savedSettings;
+                    } else {
+                        userSettings.set(finalSettings);
+
+                        await cosActivities
+                            .updateActivity(userSettings, topic, {
+                                type: 'User',
+                                id: req.user.userId,
+                                ip: req.ip
+                            }, req.method + ' ' + req.path, t);
+
+                            await userSettings.save({transaction: t});
+                    }
+                    t.afterCommit(() => {
+                        return res.ok(userSettings);
+                    });
+            });
+        } catch (err) {
+            console.log(err);
+        }
+    });
+
+    /**
+     * Delete User Topic preferences
+    */
+     app.delete('/api/users/:userId/topics/:topicId/notificationsettings', loginCheck(), asyncMiddleware(async function (req, res, next) {
+        try {
+            const topicPromise = Topic.findOne({where: {
+                id: req.params.topicId
+            }});
+            const userSettingsPromise = UserNotificationSettings.findOne({
+                where: {
+                    userId: req.user.id,
+                    topicId: req.params.topicId
+                }
+            });
+            let [userSettings, topic] = await Promise.all([userSettingsPromise, topicPromise]);
+
+            await UserNotificationSettings.destroy({
+                where: {
+                    userId: req.user.id,
+                    topicId: req.params.topicId
+                },
+                force: true
+            });
+
+            await cosActivities.deleteActivity(userSettings, topic, {
+                type: 'User',
+                id: req.user.userId,
+                ip: req.ip
+            }, req.method + ' ' + req.path, );
+
+            return res.ok();
+        } catch (err) {
+            return next(err);
+        }
+    }));
 
     return {
         hasPermission: hasPermission

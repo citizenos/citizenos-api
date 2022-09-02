@@ -25,6 +25,7 @@ module.exports = function (app) {
     const User = models.User;
     const UserConsent = models.UserConsent;
     const UserConnection = models.UserConnection;
+    const UserNotificationSettings = models.UserNotificationSettings;
     const Op = db.Sequelize.Op;
 
     app.post('/api/users/:userId/upload', loginCheck(['partner']), asyncMiddleware(async function (req, res) {
@@ -512,4 +513,26 @@ module.exports = function (app) {
 
         return res.badRequest();
     }));
+
+
+    /**
+     * Read User preferences
+    */
+    app.get('/api/users/:userId/notifications', loginCheck(), asyncMiddleware(async function (req, res) {
+        const userId = req.user.userId;
+        const type = req.params.type || null;
+
+        const preferences = await UserNotificationSettings
+            .findAll({
+                where: {
+                    userId,
+                    type
+                }
+            });
+
+        return res.ok({
+            preferences
+        });
+    }));
+
 };

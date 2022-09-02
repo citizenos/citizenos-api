@@ -34,6 +34,7 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerDocument = require('./swagger.json');
 const Busboy = require('busboy');
 const StreamUpload = require('stream_upload');
+const notifications = require('./libs/notifications');
 const SlowDown = require('express-slow-down');
 const RateLimit = require('express-rate-limit');
 
@@ -193,6 +194,7 @@ app.set('mu', mu);
 app.set('models', models);
 app.set('QueryStream', QueryStream);
 
+app.set('notifications', notifications(app));
 app.set('cosActivities', require('./libs/cosActivities')(app));
 app.set('urlLib', require('./libs/url')(config));
 app.set('util', require('./libs/util'));
@@ -232,7 +234,6 @@ app.set('emailClient', require('./libs/campaign/emailClient')(config.email));
 app.set('email', require('./libs/email')(app));
 
 app.set('cryptoLib', require('./libs/crypto'));
-
 // Authentication with Passport - http://passportjs.org/guide/
 const passport = require('passport');
 app.set('passport', passport);

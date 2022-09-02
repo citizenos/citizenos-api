@@ -255,6 +255,10 @@ module.exports = function (sequelize, DataTypes) {
             foreignKey: 'topicId'
         });
 
+        Topic.hasMany(models.UserNotificationSettings, {
+            foreignKey: 'topicId'
+        });
+
         Topic.hasMany(models.TopicReport, {
             foreignKey: 'topicId'
         });
