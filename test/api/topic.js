@@ -1503,6 +1503,9 @@ module.exports.topicFavouriteCreate = topicFavouriteCreate;
 module.exports.topicDelete = topicDelete;
 module.exports.topicMemberGroupsCreate = topicMemberGroupsCreate;
 module.exports.topicCommentCreate = topicCommentCreate;
+module.exports.topicReportCreate = topicReportCreate;
+module.exports.topicVoteCreate = topicVoteCreate;
+module.exports.topicVoteVote = topicVoteVote;
 
 const chai = require('chai');
 chai.use(require('chai-datetime'));
@@ -4212,6 +4215,50 @@ suite('Users', function () {
                         assert.deepEqual(inviteRead, expectedInvite);
                     });
 
+                    test('Success - 20000 - Multiple invites last one counts', async function () {
+                        const invitation1 = {
+                            userId: userToInvite.id,
+                            level: TopicMemberUser.LEVELS.admin
+                        };
+
+                        const invitation2 = {
+                            userId: userToInvite.id,
+                            level: TopicMemberUser.LEVELS.read
+                        };
+
+                        const topicInviteCreated1 = (await topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation1)).body.data.rows[0];
+                        const topicInviteCreated2 = (await topicInviteUsersCreate(agentCreator, userCreator.id, topic.id, invitation2)).body.data.rows[0];
+
+                        const inviteRead1 = (await topicInviteUsersRead(request.agent(app), topic.id, topicInviteCreated1.id)).body.data;
+                        const inviteRead2 = (await topicInviteUsersRead(request.agent(app), topic.id, topicInviteCreated2.id)).body.data;
+
+                        const expectedInvite = Object.assign({}, topicInviteCreated2); // Clone
+
+                        expectedInvite.topic = {
+                            id: topic.id,
+                            title: topic.title,
+                            visibility: topic.visibility,
+                            creator: {
+                                id: userCreator.id
+                            }
+                        };
+
+                        expectedInvite.creator = {
+                            company: null,
+                            id: userCreator.id,
+                            imageUrl: null,
+                            name: userCreator.name
+                        };
+
+                        expectedInvite.user = {
+                            id: userToInvite.id,
+                            email: userToInvite.email
+                        };
+
+                        assert.deepEqual(inviteRead1, expectedInvite);
+                        assert.deepEqual(inviteRead2, expectedInvite);
+                    });
+
                     test('Success - 20001 - Invite has been deleted (accepted), but User has access', async function () {
                         const invitation = {
                             userId: userToInvite.id,
@@ -4353,7 +4400,7 @@ suite('Users', function () {
                         await TopicInviteUser
                             .update(
                                 {
-                                    createdAt: db.literal(`NOW() - INTERVAL '${TopicInviteUser.VALID_DAYS + 1}d'`)
+                                    expiresAt: db.literal(`NOW()`)
                                 },
                                 {
                                     where: {
@@ -4518,7 +4565,7 @@ suite('Users', function () {
                         await TopicInviteUser
                             .update(
                                 {
-                                    createdAt: db.literal(`NOW() - INTERVAL '${TopicInviteUser.VALID_DAYS + 1}d'`)
+                                    expiresAt: db.literal(`NOW()`)
                                 },
                                 {
                                     where: {
@@ -4711,7 +4758,7 @@ suite('Users', function () {
                         await TopicInviteUser
                             .update(
                                 {
-                                    createdAt: db.literal(`NOW() - INTERVAL '${TopicInviteUser.VALID_DAYS + 1}d'`)
+                                    expiresAt: db.literal(`NOW()`)
                                 },
                                 {
                                     where: {
@@ -11496,5 +11543,9 @@ suite('Topics', function () {
                 assert.deepEqual(resultMessage, expectedResult);
             });
         });
+    });
+
+    suite('Notifications', function () {
+
     });
 });

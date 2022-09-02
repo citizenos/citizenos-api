@@ -25,6 +25,7 @@ module.exports = function (app) {
     const User = models.User;
     const UserConsent = models.UserConsent;
     const UserConnection = models.UserConnection;
+    const UserNotificationSettings = models.UserNotificationSettings;
     const Op = db.Sequelize.Op;
 
     app.post('/api/users/:userId/upload', loginCheck(['partner']), asyncMiddleware(async function (req, res) {
@@ -104,7 +105,7 @@ module.exports = function (app) {
             }
         }
 
-        if (!data.imageUrl && user.imageUrl) {
+        if (Object.keys(data).indexOf('imageUrl') > -1 && !data.imageUrl && user.imageUrl) {
             const currentImageURL = new URL(user.imageUrl);
             //FIXME: No delete from DB?
             if (config.storage?.type.toLowerCase() === 's3' && currentImageURL.href.indexOf(`https://${config.storage.bucket}.s3.${config.storage.region}.amazonaws.com/users/${req.user.id}`) === 0) {
@@ -116,9 +117,8 @@ module.exports = function (app) {
                 fs.unlinkSync(`${baseFolder}/${path.parse(currentImageURL.pathname).base}`);
             }
         }
-
         const results = await User.update(
-            req.body,
+            data,
             {
                 where: {
                     id: req.user.userId
@@ -513,4 +513,26 @@ module.exports = function (app) {
 
         return res.badRequest();
     }));
+
+
+    /**
+     * Read User preferences
+    */
+    app.get('/api/users/:userId/notifications', loginCheck(), asyncMiddleware(async function (req, res) {
+        const userId = req.user.userId;
+        const type = req.params.type || null;
+
+        const preferences = await UserNotificationSettings
+            .findAll({
+                where: {
+                    userId,
+                    type
+                }
+            });
+
+        return res.ok({
+            preferences
+        });
+    }));
+
 };
