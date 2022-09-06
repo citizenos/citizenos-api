@@ -7749,6 +7749,8 @@ module.exports = function (app) {
                     LEFT JOIN "UserNotificationSettings" usn ON usn."userId" = :userId AND usn."topicId" = t.id
                     WHERE ${where}
                     ORDER BY t."title" ASC
+                    LIMIT :limit
+                    OFFSET :offset
                 ;`
             const userSettings = await db
             .query(
