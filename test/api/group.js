@@ -1133,6 +1133,49 @@ suite('Users', function () {
                         assert.deepEqual(inviteRead, expectedInvite);
                     });
 
+                    test('Success - 20000 - Multiple invites last one counts', async function () {
+                        const invitation1 = {
+                            userId: userToInvite.id,
+                            level: GroupMemberUser.LEVELS.admin
+                        };
+
+                        const invitation2 = {
+                            userId: userToInvite.id,
+                            level: GroupMemberUser.LEVELS.read
+                        };
+
+                        const groupInviteCreated1 = (await groupInviteUsersCreate(agentCreator, userCreator.id, group.id, invitation1)).body.data.rows[0];
+                        const groupInviteCreated2 = (await groupInviteUsersCreate(agentCreator, userCreator.id, group.id, invitation2)).body.data.rows[0];
+
+                        const inviteRead1 = (await groupInviteUsersRead(request.agent(app), group.id, groupInviteCreated1.id)).body.data;
+                        const inviteRead2 = (await groupInviteUsersRead(request.agent(app), group.id, groupInviteCreated2.id)).body.data;
+
+                        const expectedInvite = Object.assign({}, groupInviteCreated2); // Clone
+
+                        expectedInvite.group = {
+                            id: group.id,
+                            name: group.name,
+                            creator: {
+                                id: userCreator.id
+                            }
+                        };
+
+                        expectedInvite.creator = {
+                            company: null,
+                            id: userCreator.id,
+                            imageUrl: null,
+                            name: userCreator.name
+                        };
+
+                        expectedInvite.user = {
+                            id: userToInvite.id,
+                            email: userToInvite.email
+                        };
+
+                        assert.deepEqual(inviteRead1, expectedInvite);
+                        assert.deepEqual(inviteRead2, expectedInvite);
+                    });
+
                     // I invite has been accepted (deleted, but User has access)
                     test('Success - 20001', async function () {
                         const invitation = {
@@ -1274,11 +1317,10 @@ suite('Users', function () {
                         };
 
                         let groupInviteCreated = (await groupInviteUsersCreate(agentCreator, userCreator.id, group.id, invitation)).body.data.rows[0];
-
                         await GroupInviteUser
                             .update(
                                 {
-                                    createdAt: db.literal(`NOW() - INTERVAL '${GroupInviteUser.VALID_DAYS + 1}d'`)
+                                    expiresAt: db.literal(`NOW()`)
                                 },
                                 {
                                     where: {
@@ -1472,7 +1514,7 @@ suite('Users', function () {
                         await GroupInviteUser
                             .update(
                                 {
-                                    createdAt: db.literal(`NOW() - INTERVAL '${GroupInviteUser.VALID_DAYS + 1}d'`)
+                                    expiresAt: db.literal(`NOW()`)
                                 },
                                 {
                                     where: {
@@ -1656,7 +1698,7 @@ suite('Users', function () {
                         await GroupInviteUser
                             .update(
                                 {
-                                    createdAt: db.literal(`NOW() - INTERVAL '${GroupInviteUser.VALID_DAYS + 1}d'`)
+                                    expiresAt: db.literal(`NOW()`)
                                 },
                                 {
                                     where: {

@@ -114,6 +114,10 @@ module.exports = function (sequelize, DataTypes) {
             foreignKey: 'groupId',
             constraints: true
         });
+
+        Group.hasMany(models.UserNotificationSettings, {
+            foreignKey: 'topicId'
+        });
     };
 
     // Overrides the default toJSON() to avoid sensitive data from ending up in the output.

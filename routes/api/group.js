@@ -18,7 +18,6 @@ module.exports = function (app) {
     const validator = app.get('validator');
     const emailLib = app.get('email');
     const util = app.get('util');
-    const moment = app.get('moment');
     const Promise = app.get('Promise');
 
     const loginCheck = app.get('middleware.loginCheck');
@@ -1217,6 +1216,7 @@ module.exports = function (app) {
                     giu.level,
                     giu."groupId",
                     giu."userId",
+                    giu."expiresAt",
                     giu."createdAt",
                     giu."updatedAt",
                     u.id as "user.id",
@@ -1227,7 +1227,7 @@ module.exports = function (app) {
                 FROM "GroupInviteUsers" giu
                 JOIN "Users" u ON u.id = giu."userId"
                 LEFT JOIN "UserConnections" uc ON (uc."userId" = giu."userId" AND uc."connectionId" = 'esteid')
-                WHERE giu."groupId" = :groupId AND giu."deletedAt" IS NULL AND giu."createdAt" > NOW() - INTERVAL '${GroupInviteUser.VALID_DAYS}d'
+                WHERE giu."groupId" = :groupId AND giu."deletedAt" IS NULL AND giu."expiresAt" > NOW()
                 ${where}
                 ORDER BY u.name ASC
                 LIMIT :limit
@@ -1320,25 +1320,76 @@ module.exports = function (app) {
         if (!invite) {
             return res.notFound();
         }
-
-        if (invite.deletedAt) {
-
-            let hasAccess;
-            try {
-                hasAccess = await _hasPermission(groupId, invite.userId, GroupMemberUser.LEVELS.read, null, null);
-            } catch (e) {
-                hasAccess = false;
-            }
-
-            if (hasAccess) {
-                return res.ok(invite, 1); // Invite has already been accepted OR deleted and the person has access
-            }
-
-            return res.gone('The invite has been deleted', 1);
+        let hasAccess;
+        try {
+            hasAccess = await _hasPermission(groupId, invite.userId, GroupMemberUser.LEVELS.read, null, null);
+        } catch (e) {
+            hasAccess = false;
         }
 
-        if (invite.dataValues.createdDaysAgo > GroupInviteUser.VALID_DAYS) {
-            return res.gone(`The invite has expired. Invites are valid for ${GroupInviteUser.VALID_DAYS} days`, 2);
+        if (hasAccess) {
+            return res.ok(invite, 1); // Invite has already been accepted OR deleted and the person has access
+        }
+
+        const invites = await GroupInviteUser
+            .findAll(
+                {
+                    where: {
+                        userId: invite.userId,
+                        groupId: invite.groupId
+                    },
+                    paranoid: false, // return deleted!
+                    include: [
+                        {
+                            model: Group,
+                            attributes: ['id', 'name', 'creatorId'],
+                            as: 'group',
+                            required: true
+                        },
+                        {
+                            model: User,
+                            attributes: ['id', 'name', 'company', 'imageUrl'],
+                            as: 'creator',
+                            required: true
+                        },
+                        {
+                            model: User,
+                            attributes: ['id', 'email', 'password', 'source'],
+                            as: 'user',
+                            required: true,
+                            include: [UserConnection]
+                        }
+                    ],
+                    attributes: {
+                        include: [
+                            [
+                                db.literal(`EXTRACT(DAY FROM (NOW() - "GroupInviteUser"."createdAt"))`),
+                                'createdDaysAgo'
+                            ]
+                        ]
+                    }
+                }
+            );
+        const levels = Object.keys(GroupMemberUser.LEVELS);
+        const finalInvites = invites.filter((invite) => {
+            if (invite.expiresAt > Date.now() && invite.deletedAt === null) {
+                return invite;
+            }
+        }).sort((a, b) => {
+            if (levels.indexOf(a.level) < levels.indexOf(b.level)) return 1;
+            if (levels.indexOf(a.level) > levels.indexOf(b.level)) return -1;
+            if (levels.indexOf(a.level) === levels.indexOf(b.level)) return 0;
+        });
+
+        if (!finalInvites.length) {
+            if (invite.deletedAt) {
+                return res.gone('The invite has been deleted', 1);
+            }
+
+
+            if (invite.expiresAt < Date.now()) {
+                return res.gone(`The invite has expired. Invites are valid for ${GroupInviteUser.VALID_DAYS} days`, 2);
+            }
         }
 
         // At this point we can already confirm users e-mail
@@ -1357,10 +1408,10 @@ module.exports = function (app) {
 
         // User has not been registered by a person but was created by the system on invite - https://github.com/citizenos/citizenos-fe/issues/773
         if (!invite.user.password && invite.user.source === User.SOURCES.citizenos && !invite.user.UserConnections.length) {
-            return res.ok(invite, 2);
+            return res.ok(finalInvites[0], 2);
         }
 
-        return res.ok(invite);
+        return res.ok(finalInvites[0]);
     }));
 
     /**
@@ -1371,12 +1422,22 @@ module.exports = function (app) {
     app.delete(['/api/groups/:groupId/invites/users/:inviteId', '/api/users/:userId/groups/:groupId/invites/users/:inviteId'], loginCheck(), hasPermission(GroupMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
         const groupId = req.params.groupId;
         const inviteId = req.params.inviteId;
+        const invite = await GroupInviteUser.findOne({
+            where: {
+                id: inviteId
+            },
+            paranoid: false
+        });
+
+        if (!invite) {
+            return res.notFound('Invite not found', 1);
+        }
 
         const deletedCount = await GroupInviteUser
             .destroy(
                 {
                     where: {
-                        id: inviteId,
+                        userId: invite.userId,
                         groupId: groupId
                     }
                 }
@@ -1411,10 +1472,62 @@ module.exports = function (app) {
                                 'createdDaysAgo'
                             ]
                         ]
-                    }
+                    },
+                    paranoid: false
                 }
             );
 
+        if (invite && invite.userId !== userId) {
+            return res.forbidden();
+        }
+        const invites = await GroupInviteUser
+            .findAll(
+                {
+                    where: {
+                        userId: invite.userId,
+                        groupId: groupId
+                    },
+                    include: [
+                        {
+                            model: Group,
+                            attributes: ['id', 'name', 'creatorId'],
+                            as: 'group',
+                            required: true
+                        },
+                        {
+                            model: User,
+                            attributes: ['id', 'name', 'company', 'imageUrl'],
+                            as: 'creator',
+                            required: true
+                        },
+                        {
+                            model: User,
+                            attributes: ['id', 'email', 'password', 'source'],
+                            as: 'user',
+                            required: true,
+                            include: [UserConnection]
+                        }
+                    ],
+                    attributes: {
+                        include: [
+                            [
+                                db.literal(`EXTRACT(DAY FROM (NOW() - "GroupInviteUser"."createdAt"))`),
+                                'createdDaysAgo'
+                            ]
+                        ]
+                    }
+                }
+            );
+        const levelsArray = Object.values(GroupMemberUser.LEVELS);
+        const finalInvites = invites.filter((invite) => {
+            if (invite.expiresAt > Date.now() && invite.deletedAt === null) {
+                return invite;
+            }
+        }).sort((a, b) => {
+            if (levelsArray.indexOf(a.level) < levelsArray.indexOf(b.level)) return 1;
+            if (levelsArray.indexOf(a.level) > levelsArray.indexOf(b.level)) return -1;
+            if (levelsArray.indexOf(a.level) === levelsArray.indexOf(b.level)) return 0;
+        });
         // Find out if the User is already a member of the Group
         const memberUserExisting = await GroupMemberUser
             .findOne({
@@ -1423,83 +1536,79 @@ module.exports = function (app) {
                     userId: userId
                 }
             });
-
-        if (invite) {
-            if (invite.userId !== userId) {
-                return res.forbidden();
-            }
-
-            if (memberUserExisting) {
-                // User already a member, see if we need to update the level
-                const levelsArray = Object.keys(GroupMemberUser.LEVELS);
-                if (levelsArray.indexOf(memberUserExisting.level) < levelsArray.indexOf(invite.level)) {
-                    const memberUserUpdated = await memberUserExisting.update({
-                        level: invite.level
-                    });
-                    return res.ok(memberUserUpdated);
-                } else {
-                    // No level update, respond with existing member info
-                    return res.ok(memberUserExisting);
-                }
+        if (memberUserExisting) {
+            // User already a member, see if we need to update the level
+            if (finalInvites.length && levelsArray.indexOf(memberUserExisting.level) < levelsArray.indexOf(finalInvites[0].level)) {
+                const memberUserUpdated = await memberUserExisting.update({
+                    level: invite.level
+                });
+                return res.ok(memberUserUpdated);
             } else {
-                // Has the invite expired?
-                if (invite.dataValues.createdDaysAgo > GroupInviteUser.VALID_DAYS) {
-                    return res.gone(`The invite has expired. Invites are valid for ${GroupInviteUser.VALID_DAYS} days`, 2);
-                }
-
-                // Group needed just for the activity
-                const group = await Group.findOne({
-                    where: {
-                        id: invite.groupId
-                    }
-                });
-
-                const memberUserCreated = await db.transaction(async function (t) {
-                    const member = await GroupMemberUser.create(
-                        {
-                            groupId: invite.groupId,
-                            userId: invite.userId,
-                            level: GroupMemberUser.LEVELS[invite.level]
-                        },
-                        {
-                            transaction: t
-                        }
-                    );
-
-                    await invite.destroy({transaction: t});
-
-                    const user = User.build({id: member.userId});
-                    user.dataValues.id = member.userId;
-
-                    await cosActivities.acceptActivity(
-                        invite,
-                        {
-                            type: 'User',
-                            id: req.user.userId,
-                            ip: req.ip
-                        },
-                        {
-                            type: 'User',
-                            id: invite.creatorId
-                        },
-                        group,
-                        req.method + ' ' + req.path,
-                        t
-                    );
-
-                    return member;
-                });
-
-                return res.created(memberUserCreated);
-            }
-        } else {
-            // Already a member, return that membership information
-            if (memberUserExisting) {
+                // No level update, respond with existing member info
                 return res.ok(memberUserExisting);
-            } else { // No invite, not a member - the User is not invited
-                return res.notFound();
             }
         }
+
+        if (!finalInvites.length) {
+            // Find out if the User is already a member of the Topic
+            if (invite.expiresAt < Date.now()) {
+                return res.gone(`The invite has expired. Invites are valid for ${GroupInviteUser.VALID_DAYS} days`, 2);
+            }
+            return res.notFound();
+        }
+
+        const finalInvite = finalInvites[0];
+
+        // Group needed just for the activity
+        const group = await Group.findOne({
+            where: {
+                id: invite.groupId
+            }
+        });
+
+        const memberUserCreated = await db.transaction(async function (t) {
+            const member = await GroupMemberUser.create(
+                {
+                    groupId: invite.groupId,
+                    userId: invite.userId,
+                    level: GroupMemberUser.LEVELS[invite.level]
+                },
+                {
+                    transaction: t
+                }
+            );
+
+        await GroupInviteUser.destroy({
+            where: {
+                groupId: finalInvite.groupId,
+                userId: finalInvite.userId
+            },
+            transaction: t
+        });
+
+        const user = User.build({id: member.userId});
+        user.dataValues.id = member.userId;
+
+        await cosActivities.acceptActivity(
+            finalInvite,
+            {
+                type: 'User',
+                id: req.user.userId,
+                ip: req.ip
+            },
+            {
+                type: 'User',
+                id: invite.creatorId
+            },
+            group,
+            req.method + ' ' + req.path,
+            t
+        );
+
+        return member;
+    });
+
+    return res.created(memberUserCreated);
     }));
 
     /**
