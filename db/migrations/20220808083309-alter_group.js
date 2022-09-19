@@ -13,7 +13,7 @@ module.exports = {
             type: Sequelize.TEXT,
             comment: 'Short description of what the Group is about.',
             allowNull: true
-          })
+          }, { transaction: t })
       ])
   })
   },

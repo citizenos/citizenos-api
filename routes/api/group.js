@@ -183,7 +183,7 @@ module.exports = function (app) {
                     throw err;
                 }
             }
-
+            console.log(imageUrl.link, groupId);
             await Group.update(
                 {
                     imageUrl: imageUrl.link
