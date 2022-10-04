@@ -183,7 +183,7 @@ module.exports = function (app) {
                     throw err;
                 }
             }
-            console.log(imageUrl.link, groupId);
+
             await Group.update(
                 {
                     imageUrl: imageUrl.link
@@ -209,10 +209,10 @@ module.exports = function (app) {
     const _readGroupUnauth = async (groupId, userId) => {
         let userLevelSql = '';
         let userLevelJoin = '';
-        console.log(userId)
+
         if (userId) {
             userLevelSql = ` COALESCE(gmu.level, null) AS "userLevel", `;
-            userLevelJoin = ` LEFT JOIN "GroupMemberUsers" gmu ON gmu."userId"=:userId `;
+            userLevelJoin = ` LEFT JOIN "GroupMemberUsers" gmu ON gmu."userId"=:userId AND gmu."groupId" = g.id `;
         }
         const [group] = await db
         .query(
@@ -254,7 +254,7 @@ module.exports = function (app) {
                 nest: true
             }
         );
-            console.log(group);
+
         return group;
     };
 
@@ -1109,6 +1109,7 @@ module.exports = function (app) {
 
         const resObject = group.toJSON();
         resObject.join = groupJoin;
+        resObject.userLevel = groupJoin.level;
 
         return res.ok(resObject);
     }));
@@ -1839,7 +1840,7 @@ module.exports = function (app) {
             }
         }
 
-        if (visibility) {
+        if (!userId && visibility) {
             where += ` AND t.visibility=:visibility `;
         }
 
@@ -1869,7 +1870,6 @@ module.exports = function (app) {
         let fields = ``;
         let groupBy = ``;
         if (userId) {
-            console.log(userId);
             if (pinned) {
                 where += ` AND tp."topicId" = t.id AND tp."userId" = :userId`;
             }
@@ -2249,8 +2249,8 @@ module.exports = function (app) {
             const limitMax = 100;
             const limitDefault = 26;
             const userId = req.user?.userId;
-            const orderBy = req.orderBy || 'updatedAt';
-            const order = req.order || 'DESC';
+            const orderBy = req.query.orderBy || 'updatedAt';
+            const order = req.query.order || 'DESC';
 
             let orderBySql = ` ORDER BY`;
             switch (orderBy) {
@@ -2284,8 +2284,8 @@ module.exports = function (app) {
             if (sourcePartnerId) {
                 where.sourcePartnerId = sourcePartnerId;
             }
-            let memberJoin;
-            let memberLevel;
+            let memberJoin = '';
+            let memberLevel = '';
             if (userId) {
                 memberLevel = ` gmu.level AS "userLevel", `;
                 memberJoin = ` LEFT JOIN "GroupMemberUsers" gmu ON gmu."groupId" = g.id AND gmu."userId" = :userId `
@@ -2300,6 +2300,8 @@ module.exports = function (app) {
                         g."parentId",
                         g."imageUrl",
                         g.visibility,
+                        gj.token as "join.token",
+                        gj.level as "join.level",
                         ${memberLevel}
                         c.id as "creator.id",
                         c.name as "creator.name",
@@ -2307,6 +2309,7 @@ module.exports = function (app) {
                         count(*) OVER()::integer AS "countTotal"
                     FROM "Groups" g
                     JOIN "Users" c ON c.id = g."creatorId"
+                    LEFT JOIN "GroupJoins" gj ON gj."groupId" = g.id
                     ${memberJoin}
                     WHERE g.visibility = 'public'
                         AND g."deletedAt" IS NULL
