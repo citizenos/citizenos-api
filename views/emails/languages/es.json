@@ -126,7 +126,7 @@
     "NOTIFICATION_USER_DELETE_TOPICEVENT_TOPIC": "El usuario <em>{{userName}}</em> eliminó una actualización del tema <em>{{topicTitle}}</em>",
     "NOTIFICATION_USER_ADD_ATTACHMENT_TOPIC": "El usuario <em>{{userName}}</em> agregó el archivo adjunto <em>{{attachmentName}}</em> al tema <em>{{topicTitle}}</em>",
     "NOTIFICATION_USER_DELETE_ATTACHMENT_TOPIC": "El usuario <em>{{userName}}</em> eliminó el archivo adjunto <em>{{attachmentName}}</em> del tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_ATTACHMENT_TOPIC": "El usuario <em>{{userName}}</em> actualizó un archivo adjunto del tema <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_UPDATE_ATTACHMENT_TOPIC": "El usuario <em>{{userName}}</em> actualizó un archivo adjunto en el tema <em>{{topicTitle}}</em>",
     "NOTIFICATION_TOPIC_FIELD_DESCRIPTION": "descripción",
     "NOTIFICATION_TOPIC_FIELD_STATUS": "estado",
     "NOTIFICATION_TOPIC_FIELD_STATUS_INPROGRESS": "en curso",
