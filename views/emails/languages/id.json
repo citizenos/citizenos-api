@@ -97,7 +97,7 @@
     "NOTIFICATION_USER_DELETE_TOPICPIN_TOPIC": "User <em>{{userName}}</em> has removed a pin from topic <em>{{topicTitle}}</em>",
     "NOTIFICATION_USER_ADD_TOPIC_TOPICPIN": "User <em>{{userName}}</em> has pinned topic <em>{{topicTitle}}</em>",
     "NOTIFICATION_USER_CREATE_VOTE_TOPIC": "User <em>{{userName}}</em> has opened voting for topic <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_VOTE_TOPIC": "User <em>{{userName}}</em> has updated the voting deadline of topic <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_UPDATE_VOTE_TOPIC": "Pengguna <em>{{userName}}</em> telah memperbarui tenggat voting untuk topik <em>{{topicTitle}}</em>",
     "NOTIFICATION_USER_CREATE_VOTELIST_TOPIC": "User has voted on topic <em>{{topicTitle}}</em>.",
     "NOTIFICATION_USER_CREATE_VOTEDELEGATION_VOTE": "User <em>{{userName}}</em> has delegated his/her vote on topic <em>{{topicTitle}}</em>",
     "NOTIFICATION_USER_DELETE_VOTEDELEGATION_VOTE": "User <em>{{userName}}</em> has revoked delegation of his/her vote on topic <em>{{topicTitle}}</em>",
