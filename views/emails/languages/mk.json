@@ -73,10 +73,10 @@
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
   "NOTIFICATIONS": {
-    "SUBJECT": "Notification from Citizen OS topic {{topicTitle}}",
-    "NOTIFICATION_USER_CREATE_TOPIC": "User <em>{{userName}}</em> has created a topic <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPIC": "User <em>{{userName}}</em> has updated a field <em>{{fieldName}}</em> in topic <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "User <em>{{userName}}</em> has made <em>{{groupCount}}</em> updates to topic <em>{{topicTitle}}</em>",
+    "SUBJECT": "Известување од Citizen OS во тема {{topicTitle}}",
+    "NOTIFICATION_USER_CREATE_TOPIC": "Корисникот <em>{{userName}}</em> креираше тема <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_UPDATE_TOPIC": "Корисникот <em>{{userName}}</em> ажурираше поле <em>{{fieldName}}</em> во темата <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "Корисникот <em>{{userName}}</em> <em>{{groupCount}}</em> ја ажурираше темата <em>{{topicTitle}}</em>",
     "NOTIFICATION_PREVIOUS_VERSION": "Претходна верзија: {{previousValue}}",
     "NOTIFICATION_NEW_VERSION": "Нова верзија: {{newValue}}",
     "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "Системот ажурираше поле <em>{{fieldName}}</em> во темата <em>{{topicTitle}}</em>",
