@@ -664,8 +664,8 @@ module.exports = function (app) {
         let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
         const search = req.query.search;
 
-        const order = req.query.orderBy;
-        let sortOrder = req.query.order || 'ASC';
+        const order = req.query.order;
+        let sortOrder = req.query.sortOrder || 'ASC';
         if (sortOrder && ['asc', 'desc'].indexOf(sortOrder.toLowerCase()) === -1) {
             sortOrder = 'ASC';
         }
@@ -698,12 +698,15 @@ module.exports = function (app) {
                         u.company,
                         u."imageUrl",
                         gm.level,
+                        MAX(a."updatedAt") AS "latestActivity",
                         count(*) OVER()::integer AS "countTotal"
                     FROM "GroupMemberUsers" gm
                     JOIN "Users" u ON (u.id = gm."userId")
+                    LEFT JOIN "Activities" a ON u.id::text = a."actorId" AND ARRAY[:groupId] <@  a."groupIds"
                     WHERE gm."groupId" = :groupId
                     AND gm."deletedAt" IS NULL
                     ${where}
+                    GROUP BY u.id, gm.level
                     ${sortSql}
                     LIMIT :limit
                     OFFSET :offset
