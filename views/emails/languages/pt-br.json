@@ -73,9 +73,9 @@
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
   "NOTIFICATIONS": {
-    "SUBJECT": "Notification from Citizen OS topic {{topicTitle}}",
-    "NOTIFICATION_USER_CREATE_TOPIC": "User <em>{{userName}}</em> has created a topic <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPIC": "User <em>{{userName}}</em> has updated a field <em>{{fieldName}}</em> in topic <em>{{topicTitle}}</em>",
+    "SUBJECT": "Notificação do tópico {{topicTitle}} de Citizen OS",
+    "NOTIFICATION_USER_CREATE_TOPIC": "O usuário <em>{{userName}}</em> criou o tópico <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_UPDATE_TOPIC": "O usuário <em>{{userName}}</em> atualizou o campo <em>{{fieldName}}</em> no tópico <em>{{topicTitle}}</em>",
     "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "User <em>{{userName}}</em> has made <em>{{groupCount}}</em> updates to topic <em>{{topicTitle}}</em>",
     "NOTIFICATION_PREVIOUS_VERSION": "Previous version: {{previousValue}}",
     "NOTIFICATION_NEW_VERSION": "New version: {{newValue}}",
