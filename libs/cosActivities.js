@@ -7,8 +7,10 @@ module.exports = function (app) {
     const models = app.get('models');
     const db = models.sequelize;
     const uuid = app.get('uuid');
-    const moment = app.get('moment');
     const logger = app.get('logger');
+    const notifications = app.get('notifications');
+    const Sequelize = require('sequelize');
+    const { injectReplacements } = require('sequelize/lib/utils/sql');
 
     const Activity = models.Activity;
 
@@ -26,7 +28,7 @@ module.exports = function (app) {
         return targetObject;
     };
 
-    const _saveActivity = function (activity, transaction) { //eslint-disable-line complexity
+    const _saveActivity = async function (activity, transaction) { //eslint-disable-line complexity
         const activityObject = {
             data: activity
         };
@@ -61,6 +63,9 @@ module.exports = function (app) {
             if (activity.object.userId) {
                 activityObject.userIds.push(activity.object.userId);
             }
+            if ('email' in activity.object) {
+                delete activityObject.data.object.email;
+            }
         }
 
         if (activity.origin) {
@@ -79,6 +84,9 @@ module.exports = function (app) {
             }
             if (activity.origin.userId) {
                 activityObject.userIds.push(activity.origin.userId);
+            }
+            if ('email' in activity.origin) {
+                delete activityObject.data.origin.email;
             }
         }
 
@@ -99,6 +107,9 @@ module.exports = function (app) {
             if (activity.target.userId) {
                 activityObject.userIds.push(activity.target.userId);
             }
+            if ('email' in activity.target) {
+                delete activityObject.data.target.email;
+            }
         }
 
         if (activity.actor) {
@@ -112,16 +123,18 @@ module.exports = function (app) {
         activityObject.topicIds = Array.from(new Set(activityObject.topicIds));
         activityObject.groupIds = Array.from(new Set(activityObject.groupIds));
         activityObject.userIds = Array.from(new Set(activityObject.userIds));
-        activityObject.createdAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS ZZ');
-        activityObject.updatedAt = moment().format('YYYY-MM-DD HH:mm:ss.SSS ZZ');
+        activityObject.createdAt = (new Date()).toISOString();
+        activityObject.updatedAt = (new Date()).toISOString();
 
-        return Activity
+        const activitySaved = await Activity
             .create(
                 activityObject,
                 {
                     transaction: transaction
                 }
             );
+
+        return notifications.sendActivityNotifications(activitySaved);
     };
 
     const _getInstanceChangeSet = function (instance) {
@@ -196,7 +209,7 @@ module.exports = function (app) {
         return _saveActivity(activity, transaction);
     };
 
-    const _updateTopicDescriptionActivity = function (instance, target, actor, fields, context, transaction) {
+    const _updateTopicDescriptionActivity = async function (instance, target, actor, fields, context, transaction) {
 
         const originPrevious = instance.previous();
         const origin = _.clone(instance.toJSON());
@@ -252,98 +265,132 @@ module.exports = function (app) {
         }
         const dataString = JSON.stringify(activity);
 
-        return db
-            .query(
-                `
-                DO $$ BEGIN
-                    CASE
-                        WHEN (
-                            SELECT
-                                (
-                                SELECT COUNT(*) = 0
-                                    FROM "Activities"
-                                    WHERE
-                                    ARRAY[:topicId] <@ "topicIds"
-                                    AND
-                                        data@>'{"type": "Update"}'
-                                    AND (
-                                        data#>>'{result , 0, path}' = '/description'
-                                        OR data#>>'{result, 0, path}' = '/title'
-                                    )
-                                    AND "actorType" = 'User'
-                                    AND "actorId" = :userId
-                                ) OR (
-                                SELECT
-                                        COUNT(*) > 0
-                                    FROM "Activities"
-                                    WHERE
-                                    (
-                                       ARRAY[:topicId] <@ "topicIds"
-                                    )
-                                    AND
-                                    (
-                                        NOT data@>'{"type": "Update"}'
-                                        OR
-                                        data@>'{"type": "Update"}'
-                                            AND (
-                                                data#>>'{result , 0, path}' != '/description'
-                                                AND
-                                                data#>>'{result, 0, path}' != '/title')
-                                    )
-                                    AND "updatedAt" > (
-                                        SELECT
-                                            "updatedAt"
-                                        FROM "Activities"
-                                        WHERE
-                                            data@>'{"type": "Update"}'
-                                            AND (
-                                                data#>>'{result , 0, path}' = '/description'
-                                                OR
-                                                data#>>'{result, 0, path}' = '/title'
-                                            )
-                                        AND "actorType" = 'User'
-                                        AND "actorId" = :userId
-                                        ORDER BY "updatedAt"
-                                        DESC LIMIT 1
-                                    ))
-                        )
-                    THEN
-                        INSERT INTO "Activities"
-                        (id, data, "actorType", "actorId", "topicIds", "userIds", "createdAt", "updatedAt")
-                        VALUES
-                        (:id, to_jsonb(:data::json), 'User', :userId , ARRAY[:topicId], ARRAY[:userId], NOW(), NOW());
-                    ELSE
-                    UPDATE
-                        "Activities"
-                        SET
-                            data = to_jsonb(:data::json),
-                            "updatedAt" = NOW()
-                    WHERE id = (
-                        SELECT id FROM "Activities"
-                        WHERE
-                            "actorType" = 'User'
+        const sqlFunctionBody = injectReplacements(`DECLARE passed RECORD;
+        BEGIN
+            CASE
+            WHEN ($1 = 'true')
+            THEN
+                RETURN QUERY
+                INSERT INTO "Activities" AS act
+                (id, data, "actorType", "actorId", "topicIds", "userIds", "createdAt", "updatedAt")
+                VALUES
+                (:id, to_jsonb(:data::json), 'User', :userId , ARRAY[:topicId], ARRAY[:userId], NOW(), NOW())
+                RETURNING act.id, act.data, act."actorId", act."topicIds", act."userIds", act."groupIds", act."createdAt", act."updatedAt";
+            ELSE
+                RETURN QUERY
+                UPDATE
+                    "Activities" AS act
+                SET
+                    data = to_jsonb(:data::json),
+                    "updatedAt" = NOW()
+                WHERE act.id = (
+                    SELECT id FROM "Activities" a
+                    WHERE
+                        a."actorType" = 'User'
+                        AND
+                        a."actorId" = :userId
+                        AND a.data@>'{"type": "Update"}'
+                        AND ARRAY[:topicId] <@ a."topicIds"
+                        AND (a.data#>>'{result, 0, path}' = '/description' OR a.data#>>'{result, 0, path}' = '/title')
+                        ORDER BY a."updatedAt" DESC LIMIT 1
+                )
+                RETURNING act.id, act.data, act."actorId", act."topicIds", act."userIds", act."groupIds", act."createdAt", act."updatedAt";
+            END CASE;`, Sequelize.postgres, {
+                    id: uuid.v4(),
+                    data: dataString,
+                    topicId: instance.id,
+                    userId: actor.id
+            }).replace(/\\/gi, '');
+
+        const queryString = injectReplacements(`WITH checker AS (SELECT (
+            SELECT COUNT(*) = 0
+                FROM "Activities"
+                WHERE
+                ARRAY[:topicId] <@ "topicIds"
+                AND
+                    data@>'{"type": "Update"}'
+                AND (
+                    data#>>'{result , 0, path}' = '/description'
+                    OR data#>>'{result, 0, path}' = '/title'
+                )
+                AND "actorType" = 'User'
+                AND "actorId" = :userId
+            ) OR (
+            SELECT
+                    COUNT(*) > 0
+                FROM "Activities"
+                WHERE
+                (
+                    ARRAY[:topicId] <@ "topicIds"
+                )
+                AND
+                (
+                    NOT data@>'{"type": "Update"}'
+                    OR
+                    data@>'{"type": "Update"}'
+                        AND (
+                            data#>>'{result , 0, path}' != '/description'
                             AND
-                            "actorId" = :userId
-                            AND data@>'{"type": "Update"}'
-                            AND ARRAY[:topicId] <@ "topicIds"
-                            AND (data#>>'{result, 0, path}' = '/description' OR data#>>'{result, 0, path}' = '/title')
-                            ORDER BY "updatedAt" DESC LIMIT 1
-                    );
-                    END CASE;
+                            data#>>'{result, 0, path}' != '/title')
+                )
+                AND "updatedAt" > (
+                    SELECT
+                        "updatedAt"
+                    FROM "Activities"
+                    WHERE
+                        data@>'{"type": "Update"}'
+                        AND (
+                            data#>>'{result , 0, path}' = '/description'
+                            OR
+                            data#>>'{result, 0, path}' = '/title'
+                        )
+                    AND "actorType" = 'User'
+                    AND "actorId" = :userId
+                    ORDER BY "updatedAt"
+                    DESC LIMIT 1
+                )
+            ) AS isnew
+        )
+        SELECT
+            checker.isnew,
+            t."act_id" as "id",
+            t."act_data" as "data",
+            t."act_actorId" as "actorId",
+            t."act_topicIds" as "topicIds",
+            t."act_userIds" as "userIds",
+            t."act_groupIds" as "groupIds",
+            t."act_createdAt" as "createdAt",
+            t."act_updatedAt" as "updatedAt"
+            FROM checker JOIN pg_temp.setTopicActivityData(checker.isnew) t ON checker.isnew=checker.isnew;
+        ;`, Sequelize.postgres ,{
+            id: uuid.v4(),
+            data: dataString,
+            topicId: instance.id,
+            userId: actor.id
+        }).replace(/\\/gi, '');
+
+        const act = await db
+            .query(
+                `CREATE OR REPLACE FUNCTION pg_temp.setTopicActivityData(boolean)
+                RETURNS TABLE("act_id" uuid, "act_data" jsonb, "act_actorId" text, "act_topicIds" text[], "act_userIds" text[], "act_groupIds" text[], "act_createdAt"  timestamp with time zone, "act_updatedAt"  timestamp with time zone)
+                AS $$
+                ${sqlFunctionBody}
                 END $$
-                ;`,
+                LANGUAGE plpgsql;
+                ${queryString}
+                `,
                 {
-                    replacements: {
-                        id: uuid.v4(),
-                        data: dataString,
-                        topicId: instance.id,
-                        userId: actor.id
-                    },
-                    type: db.QueryTypes.INSERT,
+                    type: db.QueryTypes.SELECT,
                     raw: true,
                     transaction: transaction
                 }
             );
+
+
+        if (act[0].isnew) {
+           await notifications.sendActivityNotifications(act[0]);
+        }
+
     };
 
     const _updateActivity = function (instance, target, actor, context, transaction) {
@@ -700,58 +747,56 @@ module.exports = function (app) {
         }
 
         const dataString = JSON.stringify(activity);
-
-        return db
-            .query(`
-                DO $$ BEGIN
-                    CASE
-                        WHEN (
-                            SELECT
-                                (
-                                SELECT COUNT(*) = 0
-                                    FROM "Activities"
-                                    WHERE
-                                        data@>'{"type": "View"}'
-                                    AND
-                                        "actorType" = 'User'
-                                    AND
-                                        "actorId" = :userId
-                                    AND
-                                        data#>>'{object, @type}' = 'Activity'
-                                )
-                            )
-                    THEN
-                        INSERT INTO "Activities"
-                        (id, data, "userIds", "actorType", "actorId", "createdAt", "updatedAt")
-                        VALUES
-                        (:id, to_jsonb(:data::json), ARRAY[:userId], 'User', :userId, NOW(), NOW());
-                    ELSE
-                    UPDATE
-                        "Activities"
-                        SET
-                            data = to_jsonb(:data::json),
-                            "updatedAt" = NOW()
-                    WHERE id = (
-                        SELECT id FROM "Activities"
-                        WHERE
+        const queryString = injectReplacements(`BEGIN
+            CASE
+                WHEN (
+                    SELECT
+                        (
+                        SELECT COUNT(*) = 0
+                            FROM "Activities"
+                            WHERE
+                                data@>'{"type": "View"}'
+                            AND
                                 "actorType" = 'User'
                             AND
                                 "actorId" = :userId
                             AND
-                                data@>'{"type": "View"}'
-                            AND
                                 data#>>'{object, @type}' = 'Activity'
-                            ORDER BY "updatedAt" DESC LIMIT 1
-                    );
-                    END CASE;
-                END $$
-                ;`, {
-                replacements: {
-                    id: uuid.v4(),
-                    data: dataString,
-                    topicId: instance.id,
-                    userId: actor.id
-                },
+                        )
+                    )
+            THEN
+                INSERT INTO "Activities"
+                (id, data, "userIds", "actorType", "actorId", "createdAt", "updatedAt")
+                VALUES
+                (:id, to_jsonb(:data::json), ARRAY[:userId], 'User', :userId, NOW(), NOW());
+            ELSE
+            UPDATE
+                "Activities"
+                SET
+                    data = to_jsonb(:data::json),
+                    "updatedAt" = NOW()
+            WHERE id = (
+                SELECT id FROM "Activities"
+                WHERE
+                        "actorType" = 'User'
+                    AND
+                        "actorId" = :userId
+                    AND
+                        data@>'{"type": "View"}'
+                    AND
+                        data#>>'{object, @type}' = 'Activity'
+                    ORDER BY "updatedAt" DESC LIMIT 1
+            );
+            END CASE;
+        END`, Sequelize.postgres, {
+            id: uuid.v4(),
+            data: dataString,
+            topicId: instance.id,
+            userId: actor.id
+        }).replace(/\\/gi, '');
+        return db
+            .query(`DO $$ ${queryString} $$;`,
+            {
                 type: db.QueryTypes.INSERT,
                 raw: true,
                 transaction: transaction

@@ -293,7 +293,9 @@ module.exports = function (app) {
      * Login
      */
     app.post('/api/auth/login', rateLimiter(50), speedLimiter(15), expressRateLimitInput(['body.email'], 15 * 60 * 1000, 10), function (req, res) {
-        passport.authenticate('local', function (err, user) {
+        passport.authenticate('local', {
+            keepSessionInfo: true
+        }, function (err, user) {
             if (err || !user) {
                 return res.badRequest(err?.message, err?.code);
             }
@@ -866,7 +868,8 @@ module.exports = function (app) {
         setStateCookie(req, res, COOKIE_NAME_COS_AUTH_STATE);
 
         passport.authenticate('google', {
-            scope: ['https://www.googleapis.com/auth/userinfo.email']
+            scope: ['https://www.googleapis.com/auth/userinfo.email'],
+            keepSessionInfo: true
         })(req, res, next);
     });
 
@@ -874,7 +877,8 @@ module.exports = function (app) {
     app.get(
         config.passport.google.callbackUrl,
         passport.authenticate('google', {
-            failureRedirect: urlLib.getFe('/account/login')
+            failureRedirect: urlLib.getFe('/account/login'),
+            keepSessionInfo: true
         }),
         function (req, res) {
             setAuthCookie(req, res, req.user.id);
@@ -889,6 +893,7 @@ module.exports = function (app) {
 
         passport.authenticate('facebook', {
             scope: ['email'],
+            keepSessionInfo: true,
             display: req.query.display ? 'popup' : null
         })(req, res, next);
     });
@@ -897,7 +902,8 @@ module.exports = function (app) {
     app.get(
         config.passport.facebook.callbackUrl,
         passport.authenticate('facebook', {
-            failureRedirect: urlLib.getFe('/account/login')
+            failureRedirect: urlLib.getFe('/account/login'),
+            keepSessionInfo: true
         }),
         function (req, res) {
             setAuthCookie(req, res, req.user.id);

@@ -65,6 +65,16 @@ module.exports = function (sequelize, DataTypes) {
         });
     };
 
+    UserConnection.prototype.toJSON = function () {
+        // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
+        const user = {
+            userId: this.dataValues.userId,
+            connectionId: this.dataValues.connectionId
+        };
+
+        return user;
+    };
+
     UserConnection.CONNECTION_IDS = CONNECTION_IDS;
 
     return UserConnection;

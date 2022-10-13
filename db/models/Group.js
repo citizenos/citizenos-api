@@ -74,7 +74,17 @@ module.exports = function (sequelize, DataTypes) {
                 },
                 onUpdate: 'CASCADE',
                 onDelete: 'CASCADE'
-            }
+            },
+            imageUrl: {
+                type: DataTypes.STRING,
+                allowNull: true,
+                comment: 'Group profile image url.'
+            },
+            description: {
+                type: DataTypes.TEXT,
+                comment: 'Short description of what the Group is about.',
+                allowNull: true
+            },
         }
     );
 
@@ -104,6 +114,10 @@ module.exports = function (sequelize, DataTypes) {
             foreignKey: 'groupId',
             constraints: true
         });
+
+        Group.hasMany(models.UserNotificationSettings, {
+            foreignKey: 'topicId'
+        });
     };
 
     // Overrides the default toJSON() to avoid sensitive data from ending up in the output.
@@ -113,6 +127,8 @@ module.exports = function (sequelize, DataTypes) {
         var data = {
             id: this.dataValues.id,
             parentId: this.dataValues.parentId,
+            description: this.dataValues.description,
+            imageUrl: this.dataValues.imageUrl,
             name: this.dataValues.name,
             creator: this.dataValues.creator,
             visibility: this.dataValues.visibility

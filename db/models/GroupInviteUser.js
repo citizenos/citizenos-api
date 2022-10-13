@@ -63,6 +63,7 @@ module.exports = function (sequelize, DataTypes) {
             userId: this.dataValues.userId,
             creatorId: this.dataValues.creatorId,
             level: this.dataValues.level,
+            expiresAt: this.dataValues.expiresAt,
             createdAt: this.dataValues.createdAt,
             updatedAt: this.dataValues.updatedAt
         };

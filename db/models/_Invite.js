@@ -13,8 +13,7 @@
 
 module.exports.model = function (sequelize, DataTypes) {
 
-
-    var Invite = {
+    const Invite = {
         attributes: {
             id: {
                 type: DataTypes.UUID,
@@ -32,9 +31,27 @@ module.exports.model = function (sequelize, DataTypes) {
                     model: 'Users',
                     key: 'id'
                 }
-            }
+            },
+            expiresAt: {
+                type: DataTypes.DATE,
+                allowNull: true,
+                defaultValue: function () {
+                    const time = new Date();
+                    time.setDate(time.getDate() + Invite.VALID_DAYS);
+                    return time;
+                },
+                comment: 'Invite expiration time.',
+                validate: {
+                    isAfter: {
+                        args: [new Date().toString()],
+                        msg: 'Expiration deadline must be in the future.'
+                    }
+                }
+            },
         }
     };
+
+    Invite.VALID_DAYS = 14; // How many days an invite is considered valid, over that is expired
 
     return Invite;
 };
