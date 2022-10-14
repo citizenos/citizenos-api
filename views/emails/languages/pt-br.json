@@ -84,7 +84,7 @@
     "NOTIFICATION_USER_ADD_USER_TOPIC": "O usuário <em>{{userName}}</em> convidou o usuário <em>{{userName2}}</em> para participar do tópico <em>{{topicTitle}}</em>",
     "NOTIFICATION_USER_INVITE_TOPIC_USER": "@:NOTIFICATIONS.NOTIFICATION_USER_ADD_USER_TOPIC",
     "NOTIFICATION_USER_ACCEPT_INVITE_TOPIC": "O usuário <em>{{userName}}</em> aceitou um convite para participar do tópico <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER": "O usuário <em>{{userName}}</em> alterou o nível de acesso do usuário<em>{{userName2}}</em> no tópico <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER": "O usuário <em>{{userName}}</em> alterou o nível de acesso do usuário <em>{{userName2}}</em> no tópico <em>{{topicTitle}}</em>",
     "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE": "O usuário <em>{{userName}}</em> revogou o acesso do usuário <em>{{userName2}}</em> ao tópico <em>{{topicTitle}}</em>",
     "NOTIFICATION_USER_UPDATE_TOPICINVITEUSER": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER",
     "NOTIFICATION_USER_UPDATE_TOPICINVITEUSER_NONE": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE",
