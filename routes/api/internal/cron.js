@@ -3,6 +3,7 @@ const cron = require('node-cron');
 module.exports = function (app) {
     const models = app.get('models');
     const db = models.sequelize;
+    const Sequelize = require('sequelize');
     const Vote = models.Vote;
     const Topic = models.Topic;
     const emailLib = app.get('email');
@@ -80,6 +81,9 @@ module.exports = function (app) {
     const sendVoteReminder = async function () {
         const votes = await Vote.findAll({
             where: {
+                reminderTime: {
+                    [Sequelize.Op.lte]: new Date()
+                },
                 reminderSent: null
             },
             include: [Topic]

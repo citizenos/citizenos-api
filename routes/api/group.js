@@ -1825,6 +1825,9 @@ module.exports = function (app) {
                     break;
                 case 'lastActivity':
                     sortSql += ` "lastActivity" ${sortOrder}`;
+                    break;
+                default:
+                    sortSql = '';
             }
         } else {
             if (userId) {
