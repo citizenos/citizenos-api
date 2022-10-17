@@ -1625,7 +1625,15 @@ module.exports = function (app) {
         if (include && !Array.isArray(include)) {
             include = [include];
         }
-
+        await cosEtherpad.syncTopicWithPad( // eslint-disable-line require-atomic-updates
+                topicId,
+                req.method + ' ' + req.path,
+                {
+                    type: 'User',
+                    id: req.user.userId,
+                    ip: req.ip
+                }
+            );
         try {
             const topic = await _topicReadUnauth(topicId, include);
 
