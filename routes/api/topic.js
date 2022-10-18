@@ -655,6 +655,8 @@ module.exports = function (app) {
                     , tv."delegationIsAllowed" as "vote.delegationIsAllowed"
                     , tv."description" as "vote.description"
                     , tv."endsAt" as "vote.endsAt"
+                    , tv."reminderSent" AS "vote.reminderSent"
+                    , tv."reminderTime" AS "vote.reminderTime"
                     , tv."maxChoices" as "vote.maxChoices"
                     , tv."minChoices" as "vote.minChoices"
                     , tv."type" as "vote.type"
@@ -756,6 +758,8 @@ module.exports = function (app) {
                             v."delegationIsAllowed",
                             v."description",
                             v."endsAt",
+                            v."reminderSent",
+                            v."reminderTime",
                             v."maxChoices",
                             v."minChoices",
                             v."type",
@@ -864,6 +868,8 @@ module.exports = function (app) {
                     , tv."voteId" as "vote.id"
                     , tv."authType" as "vote.authType"
                     , tv."createdAt" as "vote.createdAt"
+                    , tv."reminderSent" AS "vote.reminderSent"
+                    , tv."reminderTime" AS "vote.reminderTime"
                     , tv."delegationIsAllowed" as "vote.delegationIsAllowed"
                     , tv."description" as "vote.description"
                     , tv."endsAt" as "vote.endsAt"
@@ -1024,6 +1030,8 @@ module.exports = function (app) {
                         v."endsAt",
                         v."maxChoices",
                         v."minChoices",
+                        v."reminderSent",
+                        v."reminderTime",
                         v."type",
                         v."autoClose"
                     FROM "TopicVotes" tv INNER JOIN
@@ -1425,18 +1433,10 @@ module.exports = function (app) {
                 [topicJoin] = await Promise.all([topicJoinPromise, memberUserPromise, activityPromise]);
             });
 
-            // Topic was created with description, force EP to sync with app database for updated title and description
-            if (topicDescription) {
-                topic = await cosEtherpad.syncTopicWithPad( // eslint-disable-line require-atomic-updates
-                    topic.id,
-                    req.method + ' ' + req.path,
-                    {
-                        type: 'User',
-                        id: req.user.userId,
-                        ip: req.ip
-                    }
-                );
-            }
+            topic = await cosEtherpad.syncTopicWithPad( // eslint-disable-line require-atomic-updates
+                topic.id,
+                req.method + ' ' + req.path
+            );
 
             const authors = await User.findAll({
                 where: {
@@ -1606,6 +1606,15 @@ module.exports = function (app) {
             const topicId = req.params.topicId;
             const user = req.user;
             const partner = req.locals.partner;
+            await cosEtherpad.syncTopicWithPad( // eslint-disable-line require-atomic-updates
+                topicId,
+                req.method + ' ' + req.path,
+                {
+                    type: 'User',
+                    id: req.user.userId,
+                    ip: req.ip
+                }
+            );
             const topic = await _topicReadAuth(topicId, include, user, partner);
 
             if (!topic) {
@@ -1627,6 +1636,11 @@ module.exports = function (app) {
         }
 
         try {
+            await cosEtherpad.syncTopicWithPad( // eslint-disable-line require-atomic-updates
+                topicId,
+                req.method + ' ' + req.path,
+                null
+            );
             const topic = await _topicReadUnauth(topicId, include);
 
             if (!topic) {
@@ -4248,7 +4262,12 @@ module.exports = function (app) {
         if (!topicJoin) {
             return res.notFound();
         }
-
+        await cosEtherpad
+            .syncTopicWithPad(
+                topicJoin.topicId,
+                req.method + ' ' + req.path,
+                null
+            );
         const topic = await _topicReadUnauth(topicJoin.topicId, null);
 
         if (!topic) {
@@ -6049,8 +6068,7 @@ module.exports = function (app) {
             description: req.body.description,
             type: req.body.type || Vote.TYPES.regular,
             authType: authType,
-            autoClose: req.body.autoClose,
-            reminderTime: req.body.reminderTime
+            autoClose: req.body.autoClose
         });
 
 
@@ -6258,7 +6276,7 @@ module.exports = function (app) {
         const voteId = req.params.voteId;
 
         // Make sure the Vote is actually related to the Topic through which the permission was granted.
-        const fields = ['endsAt', 'reminderTime'];
+        const fields = ['endsAt'];
 
         const topic = await Topic.findOne({
             where: {

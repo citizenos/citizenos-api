@@ -79,22 +79,26 @@ module.exports = function (app) {
         }
     };
     const sendVoteReminder = async function () {
-        const votes = await Vote.findAll({
-            where: {
-                reminderTime: {
-                    [Sequelize.Op.lte]: new Date()
+        try {
+            const votes = await Vote.findAll({
+                where: {
+                    reminderTime: {
+                        [Sequelize.Op.lte]: new Date()
+                    },
+                    reminderSent: null
                 },
-                reminderSent: null
-            },
-            include: [Topic]
-        });
+                include: [Topic]
+            });
 
-        votes.forEach(async vote => {
-            const users = await getTopicMembers(vote.Topics[0].id);
-            emailLib.sendVoteReminder(users, vote, vote.Topics[0].id);
-            vote.reminderSent = moment();
-            vote.save();
-        });
+            votes.forEach(async vote => {
+                const users = await getTopicMembers(vote.Topics[0].id);
+                emailLib.sendVoteReminder(users, vote, vote.Topics[0].id);
+                vote.reminderSent = moment();
+                vote.save();
+            });
+        } catch (err) {
+            console.error('Cron error: ', err);
+        }
     }
     cron.schedule('* * * * *', async () => {
         /* Send Vote reminder notifications*/

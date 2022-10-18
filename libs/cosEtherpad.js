@@ -233,19 +233,17 @@ module.exports = function (app) {
 
             topic.title = title;
             topic.description = html;
-            if (!actor) {
-                actor = {type: 'System'};
+            if (actor) {
+                // TODO: ADD CHECK HERE, IF another event not updated (description) has been added then create new else update last description edit updatedAt field
+                await cosActivities.updateTopicDescriptionActivity(
+                    topic,
+                    null,
+                    actor,
+                    ['id', 'title', 'status', 'visibility', 'sourcePartnerId'],
+                    context,
+                    t
+                );
             }
-
-            // TODO: ADD CHECK HERE, IF another event not updated (description) has been added then create new else update last description edit updatedAt field
-            await cosActivities.updateTopicDescriptionActivity(
-                topic,
-                null,
-                actor,
-                ['id', 'title', 'status', 'visibility', 'sourcePartnerId'],
-                context,
-                t
-            );
 
             return topic.update(
                 {

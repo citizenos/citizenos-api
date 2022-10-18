@@ -462,6 +462,7 @@ suite('Users', function () {
                         token: groupJoin.token,
                         level: groupJoin.level
                     },
+                    userLevel: "admin",
                     members: {
                         count: 1
                     }
@@ -587,7 +588,6 @@ suite('Users', function () {
                 member2 = await userLib.createUser(request.agent(app), null, null, 'et');
 
                 group = (await groupCreate(agentCreator, user.id, groupName, null, null)).body.data;
-
                 const members = [
                     {
                         userId: member.id,
@@ -647,7 +647,6 @@ suite('Users', function () {
                 assert.isNull(group2.parentId);
 
                 const groupList = (await groupsListUnauth(request.agent(app), null, null, null, null, null)).body.data;
-
                 assert.equal(groupList.count, 1);
                 assert.isArray(groupList.rows);
                 assert.equal(groupList.rows.length, 1);
@@ -724,7 +723,6 @@ suite('Users', function () {
                         }
                     });
             });
-
         });
 
         suite('Invites', function () {
@@ -2173,6 +2171,8 @@ suite('Users', function () {
 
             test('Success - 20000 - default level (read)', async function () {
                 const resActual = (await groupJoinJoin(agentUser, group.join.token)).body;
+                assert.equal(GroupMemberUser.LEVELS.read, resActual.data.userLevel);
+                delete resActual.data.userLevel;
                 const resExpected = {
                     status: {
                         code: 20000
@@ -2220,7 +2220,8 @@ suite('Users', function () {
                     },
                     data: groupExpected
                 };
-
+                assert.equal(GroupMemberUser.LEVELS.read, resJoinRead.body.data.userLevel);
+                delete resJoinRead.body.data.userLevel;
                 assert.deepEqual(resJoinRead.body, expectedResult);
 
                 const groupMembersRead = (await groupMemberUsersList(agentUser, user.id, group.id)).body.data;

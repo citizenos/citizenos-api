@@ -394,6 +394,7 @@ module.exports = function (app) {
                 });
 
                 const groupUpdated = group.toJSON();
+                groupUpdated.userLevel = GroupMemberUser.LEVELS.admin; //As check has already been done, there is no need for db check here
                 groupUpdated.parent = {id: group.parentId};
                 delete groupUpdated.parentId;
                 groupUpdated.creator = creator.dataValues;
@@ -2251,103 +2252,95 @@ module.exports = function (app) {
     /**
      * Group list
      */
-    app.get('/api/groups', asyncMiddleware(async function (req, res) {
-            const limitMax = 100;
-            const limitDefault = 26;
-            const userId = req.user?.userId;
-            const orderBy = req.query.orderBy || 'updatedAt';
-            const order = req.query.order || 'DESC';
+    app.get('/api/groups', asyncMiddleware(async (req, res) => {
+        const limitMax = 100;
+        const limitDefault = 26;
+        const userId = req.user?.userId;
+        const orderBy = req.query.orderBy || 'updatedAt';
+        const order = req.query.order || 'DESC';
 
-            let orderBySql = ` ORDER BY`;
-            switch (orderBy) {
-                case 'name':
-                    orderBySql += ` g.name `
-                    break;
-                default:
-                    orderBySql += ` g."updatedAt" `
+        let orderBySql = ` ORDER BY`;
+        switch (orderBy) {
+            case 'name':
+                orderBySql += ` g.name `
+                break;
+            default:
+                orderBySql += ` g."updatedAt" `
 
+        }
+        orderBySql += order;
+        const offset = req.query.offset || 0;
+        let limit = req.query.limit || limitDefault;
+        if (limit > limitMax) limit = limitDefault;
+
+        let where = ` g.visibility = 'public'
+        AND g.name IS NOT NULL
+        AND g."deletedAt" IS NULL `;
+        const name = req.query.name;
+        if (name) {
+            where += ` AND g.name ILIKE %:name% `;
+        }
+
+        const sourcePartnerId = req.query.sourcePartnerId;
+        if (sourcePartnerId) {
+            where += ` AND g."sourcePartnerId" = :sourcePartnerId `
+        }
+        let memberJoin = '';
+        let memberLevel = '';
+        if (userId) {
+            memberLevel = ` gmu.level AS "userLevel", `;
+            memberJoin = ` LEFT JOIN "GroupMemberUsers" gmu ON gmu."groupId" = g.id AND gmu."userId" = :userId `
+        }
+        const groups = await db
+            .query(`
+                SELECT
+                    g.id,
+                    g.name,
+                    g.description,
+                    g."parentId",
+                    g."imageUrl",
+                    g.visibility,
+                    gj.token as "join.token",
+                    gj.level as "join.level",
+                    ${memberLevel}
+                    c.id as "creator.id",
+                    c.name as "creator.name",
+                    c.company as "creator.company",
+                    count(*) OVER()::integer AS "countTotal"
+                FROM "Groups" g
+                JOIN "Users" c ON c.id = g."creatorId"
+                LEFT JOIN "GroupJoins" gj ON gj."groupId" = g.id
+                ${memberJoin}
+                WHERE ${where}
+                ${orderBySql}
+                OFFSET :offset
+                LIMIT :limit
+            `,
+            {
+                replacements: {
+                    userId,
+                    limit,
+                    sourcePartnerId,
+                    orderBy,
+                    order,
+                    offset
+                },
+                type: db.QueryTypes.SELECT,
+                raw: true,
+                nest: true
             }
-            orderBySql += order;
-            const offset = req.query.offset || 0;
-            let limit = req.query.limit || limitDefault;
-            if (limit > limitMax) limit = limitDefault;
-
-            const where = {
-                visibility: Group.VISIBILITY.public,
-                name: {
-                    [Op.not]: null
-                }
-            };
-
-            const name = req.query.name;
-            if (name) {
-                where.name = {
-                    [Op.iLike]: name
-                };
-            }
-
-            const sourcePartnerId = req.query.sourcePartnerId;
-            if (sourcePartnerId) {
-                where.sourcePartnerId = sourcePartnerId;
-            }
-            let memberJoin = '';
-            let memberLevel = '';
-            if (userId) {
-                memberLevel = ` gmu.level AS "userLevel", `;
-                memberJoin = ` LEFT JOIN "GroupMemberUsers" gmu ON gmu."groupId" = g.id AND gmu."userId" = :userId `
-            }
-
-            const groups = await db
-                .query(`
-                    SELECT
-                        g.id,
-                        g.name,
-                        g.description,
-                        g."parentId",
-                        g."imageUrl",
-                        g.visibility,
-                        gj.token as "join.token",
-                        gj.level as "join.level",
-                        ${memberLevel}
-                        c.id as "creator.id",
-                        c.name as "creator.name",
-                        c.company as "creator.company",
-                        count(*) OVER()::integer AS "countTotal"
-                    FROM "Groups" g
-                    JOIN "Users" c ON c.id = g."creatorId"
-                    LEFT JOIN "GroupJoins" gj ON gj."groupId" = g.id
-                    ${memberJoin}
-                    WHERE g.visibility = 'public'
-                        AND g."deletedAt" IS NULL
-                    ${orderBySql}
-                    OFFSET :offset
-                    LIMIT :limit
-                `,
-                {
-                    replacements: {
-                        userId,
-                        limit,
-                        orderBy,
-                        order,
-                        offset
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true,
-                    nest: true
-                }
-            );
-            let countTotal = groups[0]?.countTotal || 0;
-            groups.forEach((group) => {
-                delete group.countTotal;
-            })
-
-            return res.ok({
-                countTotal: countTotal,
-                count: groups.length,
-                rows: groups
-            });
+        );
+        let countTotal = groups[0]?.countTotal || 0;
+        groups.forEach((group) => {
+            delete group.countTotal;
         })
-    );
+
+        return res.ok({
+            countTotal: countTotal,
+            count: groups.length,
+            rows: groups
+        });
+    }));
 
     return {
         hasPermission: hasPermission
