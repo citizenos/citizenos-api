@@ -38,7 +38,8 @@ module.exports = function (app) {
                             id: pdata.userId,
                             ip: pdata.ip,
                         },
-                        pdata.rev
+                        pdata.rev,
+                        true
                     )
                 );
             });

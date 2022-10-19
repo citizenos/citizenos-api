@@ -25,7 +25,9 @@ module.exports = function (app) {
                 });
         });
 
-        return Promise.all(createPromises);
+        const results = await Promise.all(createPromises);
+
+        return results;
     };
 
     const _groupMemberUsersCreate = async (groupId, members) => {
@@ -40,8 +42,9 @@ module.exports = function (app) {
                 }
             });
         });
+        const results = await Promise.all(createPromises);
 
-        return Promise.all(createPromises);
+        return results;
     };
 
     return {

@@ -954,7 +954,7 @@ suite('Auth', function () {
                     });
 
                     test('Success - Exisiting User, not logged in, multiple PID UserConnections accounts - login to default account with provided invalid userId', async function () {
-                        this.timeout(25000); //eslint-disable-line no-invalid-this
+                        this.timeout(35000); //eslint-disable-line no-invalid-this
                         const agent = request.agent(app);
                         const agent2 = request.agent(app);
                         const user = await userLib.createUser(agent, null, null, null);

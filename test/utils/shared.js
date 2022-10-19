@@ -11,16 +11,13 @@ const logger = app.get('logger');
 const Promise = app.get('Promise');
 const db = app.get('models').sequelize;
 
-const syncDb = function () {
+const syncDb = async function () {
     if (process.env.FORCE_DB_SYNC == true && app.get('env') !== 'production') { // eslint-disable-line no-process-env, eqeqeq
         return db
             .sync({
                 logging: function (msg) {
                     logger.info(msg);
                 }
-            })
-            .then(function () {
-                return Promise.resolve();
             });
     } else {
         return Promise.resolve();

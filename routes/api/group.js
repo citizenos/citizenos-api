@@ -150,11 +150,13 @@ module.exports = function (app) {
                     }
                 );
 
-                const resObject = group.toJSON();
+                t.afterCommit(() => {
+                    const resObject = group.toJSON();
 
-                resObject.join = groupJoin.toJSON();
+                    resObject.join = groupJoin.toJSON();
 
-                return res.created(resObject);
+                    return res.created(resObject);
+                })
             });
     }));
 
@@ -231,7 +233,7 @@ module.exports = function (app) {
 
         await group.validate();
 
-        const [groupUpdated] = await db
+        await db
             .transaction(async function (t) {
                 await cosActivities
                     .updateActivity(
@@ -246,36 +248,36 @@ module.exports = function (app) {
                         t
                     );
 
-                return await db
+                const groupUpdated = await db
                     .query(
-                        'WITH \
-                            updated AS ( \
-                                UPDATE \
-                                    "Groups" SET \
-                                    "name"= :groupName, \
-                                    "updatedAt"=:timestamp \
-                                        WHERE "id" = :groupId \
-                                    RETURNING * \
-                            ) \
-                            SELECT  \
-                                g.id, \
-                                g."parentId" AS "parent.id", \
-                                g.name, \
-                                g.visibility, \
-                                c.id as "creator.id", \
-                                c.email as "creator.email", \
-                                c.name as "creator.name", \
-                                c."createdAt" as "creator.createdAt", \
-                                mc.count as "members.count" \
-                            FROM updated g \
-                            LEFT JOIN \
-                                "Users" c ON (c.id = g."creatorId") \
-                                    LEFT JOIN ( \
-                                        SELECT "groupId", count("userId") AS "count" \
-                                        FROM "GroupMemberUsers" \
-                                        WHERE "deletedAt" IS NULL \
-                                        GROUP BY "groupId" \
-                                    ) AS mc ON (mc."groupId" = g.id);',
+                        `WITH
+                            updated AS (
+                                UPDATE
+                                    "Groups" SET
+                                    "name"= :groupName,
+                                    "updatedAt"=:timestamp
+                                        WHERE "id" = :groupId
+                                    RETURNING *
+                            )
+                            SELECT
+                                g.id,
+                                g."parentId" AS "parent.id",
+                                g.name,
+                                g.visibility,
+                                c.id as "creator.id",
+                                c.email as "creator.email",
+                                c.name as "creator.name",
+                                c."createdAt" as "creator.createdAt",
+                                mc.count as "members.count"
+                            FROM updated g
+                            LEFT JOIN
+                                "Users" c ON (c.id = g."creatorId")
+                                    LEFT JOIN (
+                                        SELECT "groupId", count("userId") AS "count"
+                                        FROM "GroupMemberUsers"
+                                        WHERE "deletedAt" IS NULL
+                                        GROUP BY "groupId"
+                                    ) AS mc ON (mc."groupId" = g.id);`,
                         {
                             replacements: {
                                 timestamp: (new Date()).toISOString(),
@@ -288,13 +290,14 @@ module.exports = function (app) {
                             transaction: t
                         }
                     );
+                t.afterCommit(() => {
+                    if (!groupUpdated.length) {
+                        return res.badRequest();
+                    }
+
+                    return res.ok(groupUpdated[0]);
+                });
             });
-
-        if (!groupUpdated) {
-            return res.badRequest();
-        }
-
-        return res.ok(groupUpdated);
     }));
 
     /**
@@ -320,9 +323,10 @@ module.exports = function (app) {
                 },
                 req.method + ' ' + req.path, t
             );
+            t.afterCommit(() => {
+                return res.ok();
+            });
         });
-
-        return res.ok();
     }));
 
     /**
@@ -666,9 +670,10 @@ module.exports = function (app) {
                     .save({
                         transaction: t
                     });
+                t.afterCommit(() => {
+                    return res.ok();
+                });
             });
-
-        return res.ok();
     }));
 
     /**
@@ -717,18 +722,18 @@ module.exports = function (app) {
 
                 await db
                     .query(
-                        '\
-                        DELETE FROM \
-                            "GroupMemberUsers" \
-                        WHERE ctid IN (\
-                            SELECT \
-                                ctid \
-                            FROM "GroupMemberUsers" \
-                            WHERE "groupId" = :groupId \
-                            AND "userId" = :userId \
-                            LIMIT 1 \
-                        ) \
-                        ',
+                        `
+                        DELETE FROM
+                            "GroupMemberUsers"
+                        WHERE ctid IN (
+                            SELECT
+                                ctid
+                            FROM "GroupMemberUsers"
+                            WHERE "groupId" = :groupId
+                            AND "userId" = :userId
+                            LIMIT 1
+                        )
+                        `,
                         {
                             replacements: {
                                 groupId: groupId,
@@ -739,9 +744,10 @@ module.exports = function (app) {
                             raw: true
                         }
                     );
+                t.afterCommit(() => {
+                    return res.ok();
+                });
             });
-
-        return res.ok();
     }));
 
     /**
@@ -784,9 +790,10 @@ module.exports = function (app) {
                     );
 
                 await groupJoin.save({transaction: t});
+                t.afterCommit(() => {
+                    return res.ok(groupJoin);
+                });
             });
-
-        return res.ok(groupJoin);
     });
 
     /**
@@ -832,9 +839,10 @@ module.exports = function (app) {
                     );
 
                 await groupJoin.save({transaction: t});
+                t.afterCommit(() => {
+                    return res.ok(groupJoin);
+                });
             });
-
-        return res.ok(groupJoin);
     }));
 
     /**
@@ -893,12 +901,14 @@ module.exports = function (app) {
                     t
                 );
             }
+
+            t.afterCommit(() => {
+                const resObject = group.toJSON();
+                resObject.join = groupJoin;
+
+                return res.ok(resObject);
+            });
         });
-
-        const resObject = group.toJSON();
-        resObject.join = groupJoin;
-
-        return res.ok(resObject);
     }));
 
     /**
@@ -966,7 +976,7 @@ module.exports = function (app) {
             });
         }
 
-        let createdInvites = await db.transaction(async function (t) {
+        await db.transaction(async function (t) {
             let createdUsers;
 
             // The leftovers are e-mails for which User did not exist
@@ -1108,27 +1118,28 @@ module.exports = function (app) {
                 }
             });
 
-            return Promise.all(createInvitePromises);
-        });
-
-        createdInvites = createdInvites.filter(function (invite) {
-            return !!invite;
-        });
-
-        for (let invite of createdInvites) { // IF future holds personalized invite messages, every invite has its own message and this code can be removed.
-            invite.inviteMessage = inviteMessage;
-        }
-
-        await emailLib.sendGroupMemberUserInviteCreate(createdInvites);
-
-        if (createdInvites.length) {
-            return res.created({
-                count: createdInvites.length,
-                rows: createdInvites
+            let createdInvites = await Promise.all(createInvitePromises);
+            createdInvites = createdInvites.filter(function (invite) {
+                return !!invite;
             });
-        } else {
-            return res.badRequest('No invites were created. Possibly because no valid userId-s (uuidv4s or emails) were provided.', 1);
-        }
+
+            for (let invite of createdInvites) { // IF future holds personalized invite messages, every invite has its own message and this code can be removed.
+                invite.inviteMessage = inviteMessage;
+            }
+
+            await emailLib.sendGroupMemberUserInviteCreate(createdInvites);
+
+            t.afterCommit(() => {
+                if (createdInvites.length) {
+                    return res.created({
+                        count: createdInvites.length,
+                        rows: createdInvites
+                    });
+                } else {
+                    return res.badRequest('No invites were created. Possibly because no valid userId-s (uuidv4s or emails) were provided.', 1);
+                }
+            });
+        });
     }));
 
     /**
@@ -1524,7 +1535,7 @@ module.exports = function (app) {
             }
         });
 
-        const memberUserCreated = await db.transaction(async function (t) {
+        await db.transaction(async function (t) {
             const member = await GroupMemberUser.create(
                 {
                     groupId: invite.groupId,
@@ -1536,37 +1547,36 @@ module.exports = function (app) {
                 }
             );
 
-        await GroupInviteUser.destroy({
-            where: {
-                groupId: finalInvite.groupId,
-                userId: finalInvite.userId
-            },
-            transaction: t
+            await GroupInviteUser.destroy({
+                where: {
+                    groupId: finalInvite.groupId,
+                    userId: finalInvite.userId
+                },
+                transaction: t
+            });
+
+            const user = User.build({id: member.userId});
+            user.dataValues.id = member.userId;
+
+            await cosActivities.acceptActivity(
+                finalInvite,
+                {
+                    type: 'User',
+                    id: req.user.userId,
+                    ip: req.ip
+                },
+                {
+                    type: 'User',
+                    id: invite.creatorId
+                },
+                group,
+                req.method + ' ' + req.path,
+                t
+            );
+            t.afterCommit(() => {
+                return res.created(member);
+            });
         });
-
-        const user = User.build({id: member.userId});
-        user.dataValues.id = member.userId;
-
-        await cosActivities.acceptActivity(
-            finalInvite,
-            {
-                type: 'User',
-                id: req.user.userId,
-                ip: req.ip
-            },
-            {
-                type: 'User',
-                id: invite.creatorId
-            },
-            group,
-            req.method + ' ' + req.path,
-            t
-        );
-
-        return member;
-    });
-
-    return res.created(memberUserCreated);
     }));
 
     /**
@@ -1575,10 +1585,11 @@ module.exports = function (app) {
     app.get('/api/users/:userId/groups/:groupId/members/topics', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
-        const search = req.query.search;
+        let search = req.query.search;
         let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
         let where = '';
         if (search) {
+            search = `%${search}%`;
             where = ` AND t.title ILIKE :search `
         }
         const userId = req.user.userId;
@@ -1590,7 +1601,6 @@ module.exports = function (app) {
         const showModerated = req.query.showModerated || false;
         const order = req.query.order;
         let sortOrder = req.query.sortOrder || 'ASC';
-
         if (sortOrder && ['asc', 'desc'].indexOf(sortOrder.toLowerCase()) === -1) {
             sortOrder = 'ASC';
         }

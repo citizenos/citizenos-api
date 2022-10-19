@@ -349,12 +349,12 @@ const User = models.User;
 suite('Users', function () {
 
     suiteSetup(async function () {
-        return shared
+        await shared
             .syncDb();
+        return Promise.resolve();
     });
 
     suite('Groups', function () {
-
         suite('Create', function () {
             let agent = request.agent(app);
             let email = 'test_groupc_' + new Date().getTime() + '@test.ee';
@@ -2007,7 +2007,7 @@ suite('Users', function () {
 
                     let creator, user, group, topicCreated, topicCreated2;
 
-                    suiteSetup(async function () {
+                    suiteSetup(async () => {
                         creator = await userLib.createUserAndLogin(agent, creatorEmail, creatorPassword, null);
                         user = await userLib.createUserAndLogin(userAgent, 'test_gmemberstopicsgd_u_' + cosUtil.randomString() + '@test.ee', creatorPassword, null);
 
@@ -2026,6 +2026,7 @@ suite('Users', function () {
                             groupId: group.id,
                             level: TopicMemberGroup.LEVELS.edit
                         };
+
                         await topicLib.topicMemberGroupsCreate(agent, creator.id, topicCreated.id, memberGroup);
                         const memberGroup2 = {
                             groupId: group.id,
@@ -2091,7 +2092,7 @@ suite('Users', function () {
                         const topicsListCreator2 = (await groupMembersTopicsList(agent, creator.id, group.id, null, null, null, null, creator.id)).body.data;
                         assert.equal(topicsListCreator2.rows.length, 2);
                         assert.equal(topicsListCreator2.rows[0].creator.id, creator.id);
-                        topicLib.topicFavouriteCreate(agent, creator.id, topicCreated.id);
+                        await topicLib.topicFavouriteCreate(agent, creator.id, topicCreated.id);
                         const topicsListPinned = (await groupMembersTopicsList(agent, creator.id, group.id, null, null, null, null, null, true)).body.data;
                         assert.equal(topicsListPinned.rows.length, 1);
                         const topicsListPinnedUser = (await groupMembersTopicsList(userAgent, user.id, group.id, null, null, null, null, null, true)).body.data;
