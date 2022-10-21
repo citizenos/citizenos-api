@@ -1288,7 +1288,7 @@
     "clone": {
       "version": "1.0.4",
       "resolved": "https://registry.npmjs.org/clone/-/clone-1.0.4.tgz",
-      "integrity": "sha1-2jCcwmPfFZlMaIypAheco8fNfH4="
+      "integrity": "sha512-JQHZ2QMW6l3aH/j6xCqQThY/9OH4D/9ls34cgkUBiEeocRTU04tHfKPBsUK1PqZCUQM7GiA0IIXJSuXHI64Kbg=="
     },
     "clone-deep": {
       "version": "4.0.1",
@@ -1692,9 +1692,9 @@
       "integrity": "sha512-FJ3UgI4gIl+PHZm53knsuSFpE+nESMr7M4v9QcgB7S63Kj/6WqMiFQJpBBYz1Pt+66bZpP3Q7Lye0Oo9MPKEdg=="
     },
     "defaults": {
-      "version": "1.0.3",
-      "resolved": "https://registry.npmjs.org/defaults/-/defaults-1.0.3.tgz",
-      "integrity": "sha1-xlYFHpgX2f8I7YgUd/P+QBnz730=",
+      "version": "1.0.4",
+      "resolved": "https://registry.npmjs.org/defaults/-/defaults-1.0.4.tgz",
+      "integrity": "sha512-eFuaLoy/Rxalv2kr+lqMlUnrDWV+3j4pljOIJgLIhI058IQfWJ7vXhyEIHu+HtC738klGALYxOKDO0bQP3tg8A==",
       "requires": {
         "clone": "^1.0.2"
       }
@@ -2492,9 +2492,8 @@
       "integrity": "sha1-iLnEAWSv2aVSeGKbKUjmrOe/9F8="
     },
     "express-rate-limit": {
-      "version": "5.5.1",
-      "resolved": "https://registry.npmjs.org/express-rate-limit/-/express-rate-limit-5.5.1.tgz",
-      "integrity": "sha512-MTjE2eIbHv5DyfuFz4zLYWxpqVhEhkTiwFGuB74Q9CSou2WHO52nlE5y3Zlg6SIsiYUIPj6ifFxnkPz6O3sIUg=="
+      "version": "git+https://github.com/ilmartyrk/express-rate-limit.git#824644466bb9d0b5103d02c4b987d6708c03b546",
+      "from": "git+https://github.com/ilmartyrk/express-rate-limit.git#824644466bb9d0b5103d02c4b987d6708c03b546"
     },
     "express-session": {
       "version": "1.17.3",
@@ -2542,9 +2541,9 @@
       }
     },
     "express-slow-down": {
-      "version": "1.4.0",
-      "resolved": "https://registry.npmjs.org/express-slow-down/-/express-slow-down-1.4.0.tgz",
-      "integrity": "sha512-Tw5aa0plPj2STiuc2SyMw2VSjMvBgLGQHHoPhkIL4iPQcFZDueWBaiLxFZ3SrwrJhiu3b3sHNcsP6lXeWnbwAw==",
+      "version": "1.5.0",
+      "resolved": "https://registry.npmjs.org/express-slow-down/-/express-slow-down-1.5.0.tgz",
+      "integrity": "sha512-GCoa2a+mf7CE7C00TIoPMbcgQSXxEVolSAbP97uHyzVy87ssp0/IDtJ/GBxjv+gnfM2R1l2QcEfYixFJK75n7w==",
       "requires": {
         "defaults": "^1.0.3"
       }
@@ -6871,6 +6870,19 @@
       "requires": {
         "defaults": "^1.0.3",
         "redis": "^3.0.2"
+      },
+      "dependencies": {
+        "redis": {
+          "version": "3.1.2",
+          "resolved": "https://registry.npmjs.org/redis/-/redis-3.1.2.tgz",
+          "integrity": "sha512-grn5KoZLr/qrRQVwoSkmzdbw6pwF+/rwODtrOr6vuBRiR/f3rjSTGupbF90Zpqm2oenix8Do6RV7pYEkGwlKkw==",
+          "requires": {
+            "denque": "^1.5.0",
+            "redis-commands": "^1.7.0",
+            "redis-errors": "^1.2.0",
+            "redis-parser": "^3.0.0"
+          }
+        }
       }
     },
     "rate-limiter-flexible": {
@@ -6967,17 +6979,6 @@
           "resolved": "https://registry.npmjs.org/esprima/-/esprima-4.0.1.tgz",
           "integrity": "sha512-eGuFFw7Upda+g4p+QHvnW0RyTX/SVeJBDM/gCtMARO0cLuT2HcEKnTPvhjV6aGeqrCB/sbNop0Kszm0jsaWU4A=="
         }
-      }
-    },
-    "redis": {
-      "version": "3.1.2",
-      "resolved": "https://registry.npmjs.org/redis/-/redis-3.1.2.tgz",
-      "integrity": "sha512-grn5KoZLr/qrRQVwoSkmzdbw6pwF+/rwODtrOr6vuBRiR/f3rjSTGupbF90Zpqm2oenix8Do6RV7pYEkGwlKkw==",
-      "requires": {
-        "denque": "^1.5.0",
-        "redis-commands": "^1.7.0",
-        "redis-errors": "^1.2.0",
-        "redis-parser": "^3.0.0"
       }
     },
     "redis-commands": {
