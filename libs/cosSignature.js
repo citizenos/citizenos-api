@@ -23,7 +23,7 @@ module.exports = function (app) {
     const Certificate = require('undersign/lib/certificate');
     const Asic = require('undersign/lib/asic');
     const Tsl = require('undersign/lib/tsl');
-    const pdf = require('html-pdf');
+    const conversion = require("phantom-html-to-pdf")();
 
     let tslCertificates;
 
@@ -939,16 +939,36 @@ module.exports = function (app) {
 
             mufileStream
                 .on('end', function () {
-                    pdf.create(finalData).toBuffer(function(err, buffer){
+                    conversion({ html: finalData }, async function(err, pdf) {
+                        const buffer = await streamToBuffer(pdf.stream);
                         finalContainer.append(buffer, {
                             name: VOTE_RESULTS_GRAPH_FILE.name,
                             mimeType: VOTE_RESULTS_GRAPH_FILE.mimeType
                         });
                         return resolve();
-                    });
+                      });
                 });
         });
     }
+    const streamToBuffer = async (stream) => {
+        return new Promise((resolve, reject) => {
+          const data = [];
+
+          stream.on('data', (chunk) => {
+            data.push(chunk);
+          });
+
+          stream.on('end', () => {
+            resolve(Buffer.concat(data))
+          })
+
+          stream.on('error', (err) => {
+            reject(err)
+          })
+
+        })
+    }
+
     const _generateFinalContainer = async function (topicId, voteId, type, include, wrap) {
         const voteFileDir = _getVoteFileDir(topicId, voteId, include);
         const finalContainerPath = `${voteFileDir}/final.${type}`;

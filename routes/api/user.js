@@ -225,9 +225,11 @@ module.exports = function (app) {
                     force: true,
                     transaction: t
                 });
-            });
 
-        return res.ok();
+                t.afterCommit(() => {
+                    return res.ok();
+                });
+            });
     }));
     /**
      * Create UserConsent
@@ -267,9 +269,11 @@ module.exports = function (app) {
                             t
                         );
                 }
-            });
 
-        return res.ok();
+                t.afterCommit(() => {
+                    return res.ok();
+                });
+            });
     }));
 
     /**
@@ -344,9 +348,10 @@ module.exports = function (app) {
                 req.method + ' ' + req.path,
                 t
             );
+            t.afterCommit(() => {
+                return res.ok();
+            });
         });
-
-        return res.ok();
     }));
 
 
@@ -490,28 +495,43 @@ module.exports = function (app) {
                             transaction: t
                         }
                     );
+                    t.afterCommit(async () => {
+                        const userConnections = await UserConnection.findAll({
+                            where: {
+                                userId: req.user.id
+                            },
+                            attributes: ['connectionId'],
+                            order: [[db.cast(db.col('connectionId'), 'TEXT'), 'ASC']] // Cast as we want alphabetical order, not enum order.
+                        });
+
+                        return res.ok({
+                            count: userConnections.length,
+                            rows: userConnections
+                        });
+                    });
                 } else if (userConnectionInfo.connectionUserId !== connectionUserId) {
                     await authUser.clearSessionCookies(req, res);
-
-                    return res.forbidden();
+                    t.afterCommit(() => {
+                        return res.forbidden();
+                    });
                 }
             });
-
-            const userConnections = await UserConnection.findAll({
-                where: {
-                    userId: req.user.id
-                },
-                attributes: ['connectionId'],
-                order: [[db.cast(db.col('connectionId'), 'TEXT'), 'ASC']] // Cast as we want alphabetical order, not enum order.
-            });
-
-            return res.ok({
-                count: userConnections.length,
-                rows: userConnections
-            });
+        } else {
+            return res.badRequest();
         }
 
-        return res.badRequest();
+        const userConnections = await UserConnection.findAll({
+            where: {
+                userId: req.user.id
+            },
+            attributes: ['connectionId'],
+            order: [[db.cast(db.col('connectionId'), 'TEXT'), 'ASC']] // Cast as we want alphabetical order, not enum order.
+        });
+
+        return res.ok({
+            count: userConnections.length,
+            rows: userConnections
+        });
     }));
 
 

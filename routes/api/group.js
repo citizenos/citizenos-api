@@ -155,11 +155,13 @@ module.exports = function (app) {
                     }
                 );
 
-                const resObject = group.toJSON();
+                t.afterCommit(() => {
+                    const resObject = group.toJSON();
 
-                resObject.join = groupJoin.toJSON();
+                    resObject.join = groupJoin.toJSON();
 
-                return res.created(resObject);
+                    return res.created(resObject);
+                })
             });
     }));
 
@@ -432,9 +434,10 @@ module.exports = function (app) {
                 },
                 req.method + ' ' + req.path, t
             );
+            t.afterCommit(() => {
+                return res.ok();
+            });
         });
-
-        return res.ok();
     }));
 
     /**
@@ -882,9 +885,10 @@ module.exports = function (app) {
                     .save({
                         transaction: t
                     });
+                t.afterCommit(() => {
+                    return res.ok();
+                });
             });
-
-        return res.ok();
     }));
 
     /**
@@ -933,18 +937,18 @@ module.exports = function (app) {
 
                 await db
                     .query(
-                        '\
-                        DELETE FROM \
-                            "GroupMemberUsers" \
-                        WHERE ctid IN (\
-                            SELECT \
-                                ctid \
-                            FROM "GroupMemberUsers" \
-                            WHERE "groupId" = :groupId \
-                            AND "userId" = :userId \
-                            LIMIT 1 \
-                        ) \
-                        ',
+                        `
+                        DELETE FROM
+                            "GroupMemberUsers"
+                        WHERE ctid IN (
+                            SELECT
+                                ctid
+                            FROM "GroupMemberUsers"
+                            WHERE "groupId" = :groupId
+                            AND "userId" = :userId
+                            LIMIT 1
+                        )
+                        `,
                         {
                             replacements: {
                                 groupId: groupId,
@@ -955,9 +959,10 @@ module.exports = function (app) {
                             raw: true
                         }
                     );
+                t.afterCommit(() => {
+                    return res.ok();
+                });
             });
-
-        return res.ok();
     }));
 
     /**
@@ -1000,9 +1005,10 @@ module.exports = function (app) {
                     );
 
                 await groupJoin.save({transaction: t});
+                t.afterCommit(() => {
+                    return res.ok(groupJoin);
+                });
             });
-
-        return res.ok(groupJoin);
     });
 
     /**
@@ -1048,9 +1054,10 @@ module.exports = function (app) {
                     );
 
                 await groupJoin.save({transaction: t});
+                t.afterCommit(() => {
+                    return res.ok(groupJoin);
+                });
             });
-
-        return res.ok(groupJoin);
     }));
 
     /**
@@ -1109,13 +1116,15 @@ module.exports = function (app) {
                     t
                 );
             }
+
+            t.afterCommit(() => {
+                const resObject = group.toJSON();
+                resObject.join = groupJoin;
+                resObject.userLevel = groupJoin.level;
+
+                return res.ok(resObject);
+            });
         });
-
-        const resObject = group.toJSON();
-        resObject.join = groupJoin;
-        resObject.userLevel = groupJoin.level;
-
-        return res.ok(resObject);
     }));
 
     /**
@@ -1183,7 +1192,7 @@ module.exports = function (app) {
             });
         }
 
-        let createdInvites = await db.transaction(async function (t) {
+        await db.transaction(async function (t) {
             let createdUsers;
 
             // The leftovers are e-mails for which User did not exist
@@ -1325,27 +1334,28 @@ module.exports = function (app) {
                 }
             });
 
-            return Promise.all(createInvitePromises);
-        });
-
-        createdInvites = createdInvites.filter(function (invite) {
-            return !!invite;
-        });
-
-        for (let invite of createdInvites) { // IF future holds personalized invite messages, every invite has its own message and this code can be removed.
-            invite.inviteMessage = inviteMessage;
-        }
-
-        await emailLib.sendGroupMemberUserInviteCreate(createdInvites);
-
-        if (createdInvites.length) {
-            return res.created({
-                count: createdInvites.length,
-                rows: createdInvites
+            let createdInvites = await Promise.all(createInvitePromises);
+            createdInvites = createdInvites.filter(function (invite) {
+                return !!invite;
             });
-        } else {
-            return res.badRequest('No invites were created. Possibly because no valid userId-s (uuidv4s or emails) were provided.', 1);
-        }
+
+            for (let invite of createdInvites) { // IF future holds personalized invite messages, every invite has its own message and this code can be removed.
+                invite.inviteMessage = inviteMessage;
+            }
+
+            await emailLib.sendGroupMemberUserInviteCreate(createdInvites);
+
+            t.afterCommit(() => {
+                if (createdInvites.length) {
+                    return res.created({
+                        count: createdInvites.length,
+                        rows: createdInvites
+                    });
+                } else {
+                    return res.badRequest('No invites were created. Possibly because no valid userId-s (uuidv4s or emails) were provided.', 1);
+                }
+            });
+        });
     }));
 
     /**
@@ -1741,7 +1751,7 @@ module.exports = function (app) {
             }
         });
 
-        const memberUserCreated = await db.transaction(async function (t) {
+        await db.transaction(async function (t) {
             const member = await GroupMemberUser.create(
                 {
                     groupId: invite.groupId,
@@ -1753,44 +1763,43 @@ module.exports = function (app) {
                 }
             );
 
-        await GroupInviteUser.destroy({
-            where: {
-                groupId: finalInvite.groupId,
-                userId: finalInvite.userId
-            },
-            transaction: t
+            await GroupInviteUser.destroy({
+                where: {
+                    groupId: finalInvite.groupId,
+                    userId: finalInvite.userId
+                },
+                transaction: t
+            });
+
+            const user = User.build({id: member.userId});
+            user.dataValues.id = member.userId;
+
+            await cosActivities.acceptActivity(
+                finalInvite,
+                {
+                    type: 'User',
+                    id: req.user.userId,
+                    ip: req.ip
+                },
+                {
+                    type: 'User',
+                    id: invite.creatorId
+                },
+                group,
+                req.method + ' ' + req.path,
+                t
+            );
+            t.afterCommit(() => {
+                return res.created(member);
+            });
         });
-
-        const user = User.build({id: member.userId});
-        user.dataValues.id = member.userId;
-
-        await cosActivities.acceptActivity(
-            finalInvite,
-            {
-                type: 'User',
-                id: req.user.userId,
-                ip: req.ip
-            },
-            {
-                type: 'User',
-                id: invite.creatorId
-            },
-            group,
-            req.method + ' ' + req.path,
-            t
-        );
-
-        return member;
-    });
-
-    return res.created(memberUserCreated);
     }));
 
     /**
      * Get Group member Topics
      */
 
-    const _getPublicGroupMemberTopics = async (req, res, visibility) => {
+    const _getGroupMemberTopics = async (req, res, visibility) => {
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         const search = req.query.search;
@@ -1848,6 +1857,9 @@ module.exports = function (app) {
         }
 
         if (!userId && visibility) {
+            visibility = Group.VISIBILITY.public;
+        }
+        if (visibility) {
             where += ` AND t.visibility=:visibility `;
         }
 
@@ -1878,11 +1890,11 @@ module.exports = function (app) {
         let groupBy = ``;
         if (userId) {
             if (pinned) {
-                where += ` AND tp."topicId" = t.id AND tp."userId" = :userId`;
+                where += ` AND tp."topicId" = t.id AND tp."userId" = :userId `;
             }
             if (creatorId) {
                 if (creatorId === userId) {
-                    where += ` AND u.id =:creatorId `;
+                    where += ` AND u.id = :userId `;
                 }
             }
             replacements.userId = userId;
@@ -2022,231 +2034,13 @@ module.exports = function (app) {
         });
     };
 
-   /* const _getGroupMemberTopics = async (req, res) => {
-        const limitDefault = 10;
-        const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
-        const search = req.query.search;
-        let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
-        let where = '';
-        if (search) {
-            where = ` AND t.title ILIKE :search `
-        }
-        const userId = req.user.userId;
-        const visibility = req.query.visibility;
-        const creatorId = req.query.creatorId;
-        let statuses = req.query.statuses;
-        const pinned = req.query.pinned;
-        const hasVoted = req.query.hasVoted; // Filter out Topics where User has participated in the voting process.
-        const showModerated = req.query.showModerated || false;
-        const order = req.query.order;
-        let sortOrder = req.query.sortOrder || 'ASC';
-
-        if (sortOrder && ['asc', 'desc'].indexOf(sortOrder.toLowerCase()) === -1) {
-            sortOrder = 'ASC';
-        }
-
-        let sortSql = ` ORDER BY `;
-
-        if (order) {
-            switch (order) {
-                case 'title':
-                    sortSql += ` t.title ${sortOrder}`;
-                    break;
-                case 'status':
-                    sortSql += ` t.status ${sortOrder} `;
-                    break;
-                case 'pinned':
-                    sortSql += ` pinned ${sortOrder} `;
-                    break;
-                case 'lastActivity':
-                    sortSql += ` "lastActivity" ${sortOrder}`;
-            }
-        } else {
-            sortSql += `"pinned" DESC, t."updatedAt" DESC`;
-        }
-
-        if (statuses && !Array.isArray(statuses)) {
-            statuses = [statuses];
-        }
-
-        if (visibility) {
-            where += ` AND t.visibility=:visibility `;
-        }
-
-        if (statuses && statuses.length) {
-            where += ` AND t.status IN (:statuses) `;
-        }
-
-        if (pinned) {
-            where += ` AND tp."topicId" = t.id AND tp."userId" = :userId`;
-        }
-
-        if (['true', '1'].includes(hasVoted)) {
-            where += ` AND EXISTS (SELECT TRUE FROM "VoteLists" vl WHERE vl."voteId" = tv."voteId" AND vl."userId" = :userId LIMIT 1)`;
-        } else if (['false', '0'].includes(hasVoted)) {
-            where += ` AND tv."voteId" IS NOT NULL AND t.status = 'voting'::"enum_Topics_status" AND NOT EXISTS (SELECT TRUE FROM "VoteLists" vl WHERE vl."voteId" = tv."voteId" AND vl."userId" = :userId LIMIT 1)`;
-        } else {
-            logger.warn(`Ignored parameter "voted" as invalid value "${hasVoted}" was provided`);
-        }
-
-        if (!showModerated || showModerated == "false") {
-            where += ` AND (tr."moderatedAt" IS NULL OR tr."resolvedAt" IS NOT NULL) `;
-        } else {
-            where += ` AND (tr."moderatedAt" IS NOT NULL AND tr."resolvedAt" IS NULL) `;
-        }
-
-        if (creatorId) {
-            if (creatorId === userId) {
-                where += ` AND u.id =:creatorId `;
-            }
-        }
-
-        const topics = await db
-            .query(
-                `SELECT
-                        t.id,
-                        t.title,
-                        t.visibility,
-                        t.status,
-                        t.categories,
-                        t."endsAt",
-                        CASE
-                            WHEN tp."topicId" = t.id THEN true
-                            ELSE false
-                        END as "pinned",
-                        t.hashtag,
-                        t."updatedAt",
-                        t."createdAt",
-                        COALESCE(MAX(a."updatedAt"), t."updatedAt") as "lastActivity",
-                        u.id as "creator.id",
-                        u.name as "creator.name",
-                        u.company as "creator.company",
-                        u."imageUrl" as "creator.imageUrl",
-                        COALESCE(tmup.level, tmgp.level, 'none') as "permission.level",
-                        COALESCE(tmgp.level, 'none') as "permission.levelGroup",
-                        muc.count as "members.users.count",
-                        COALESCE(mgc.count, 0) as "members.groups.count",
-                        count(*) OVER()::integer AS "countTotal"
-                    FROM "TopicMemberGroups" gt
-                        JOIN "Topics" t ON (t.id = gt."topicId")
-                        LEFT JOIN "TopicReports" tr ON  tr."topicId" = t.id
-                        LEFT JOIN "Users" u ON (u.id = t."creatorId")
-                        LEFT JOIN (
-                            SELECT
-                                tmu."topicId",
-                                tmu."userId",
-                                tmu.level::text AS level
-                            FROM "TopicMemberUsers" tmu
-                            WHERE tmu."deletedAt" IS NULL
-                        ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId)
-                        LEFT JOIN (
-                            SELECT
-                                tmg."topicId",
-                                gm."userId",
-                                MAX(tmg.level)::text AS level
-                            FROM "TopicMemberGroups" tmg
-                                LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
-                            WHERE tmg."deletedAt" IS NULL
-                            AND gm."deletedAt" IS NULL
-                            GROUP BY "topicId", "userId"
-                        ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
-                        LEFT JOIN (
-                            SELECT tmu."topicId", COUNT(tmu."memberId") AS "count" FROM (
-                                SELECT
-                                    tmuu."topicId",
-                                    tmuu."userId" AS "memberId"
-                                FROM "TopicMemberUsers" tmuu
-                                WHERE tmuu."deletedAt" IS NULL
-                                UNION
-                                SELECT
-                                    tmg."topicId",
-                                    gm."userId" AS "memberId"
-                                FROM "TopicMemberGroups" tmg
-                                    JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
-                                WHERE tmg."deletedAt" IS NULL
-                                AND gm."deletedAt" IS NULL
-                            ) AS tmu GROUP BY "topicId"
-                        ) AS muc ON (muc."topicId" = t.id)
-                        LEFT JOIN (
-                            SELECT "topicId", count("groupId")::integer AS "count"
-                            FROM "TopicMemberGroups"
-                            WHERE "deletedAt" IS NULL
-                            GROUP BY "topicId"
-                        ) AS mgc ON (mgc."topicId" = t.id)
-                        LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId
-                        LEFT JOIN (
-                            SELECT
-                                tv."topicId",
-                                tv."voteId",
-                                v."authType",
-                                v."createdAt",
-                                v."delegationIsAllowed",
-                                v."description",
-                                v."endsAt",
-                                v."maxChoices",
-                                v."minChoices",
-                                v."type",
-                                v."autoClose"
-                            FROM "TopicVotes" tv INNER JOIN
-                                (
-                                    SELECT
-                                        MAX("createdAt") as "createdAt",
-                                        "topicId"
-                                    FROM "TopicVotes"
-                                    GROUP BY "topicId"
-                                ) AS _tv ON (_tv."topicId" = tv."topicId" AND _tv."createdAt" = tv."createdAt")
-                            LEFT JOIN "Votes" v
-                                    ON v.id = tv."voteId"
-                        ) AS tv ON (tv."topicId" = t.id)
-                        LEFT JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds"
-                    WHERE gt."groupId" = :groupId
-                        AND gt."deletedAt" IS NULL
-                        AND t."deletedAt" IS NULL
-                        AND COALESCE(tmup.level, tmgp.level, 'none')::"enum_TopicMemberUsers_level" > 'none'
-                        ${where}
-                    GROUP BY t.id, tp."topicId", u.id, tmup.level, tmgp.level, muc.count, mgc.count
-                    ${sortSql}
-                    LIMIT :limit
-                    OFFSET :offset
-                    ;`,
-                {
-                    replacements: {
-                        groupId: req.params.groupId,
-                        userId: userId,
-                        creatorId: userId,
-                        limit,
-                        offset,
-                        search: `%${search}%`,
-                        statuses,
-                        visibility
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true,
-                    nest: true
-                }
-            );
-
-        let countTotal = 0;
-        if (topics && topics.length) {
-            countTotal = topics[0].countTotal;
-            topics.forEach(function (member) {
-                delete member.countTotal;
-            });
-        }
-
-        return res.ok({
-            countTotal,
-            count: topics.length,
-            rows: topics
-        });
-    }*/
     app.get('/api/groups/:groupId/members/topics', asyncMiddleware(async function (req, res) {
-        return _getPublicGroupMemberTopics(req, res, 'public');
+        return _getGroupMemberTopics(req, res, 'public');
     }));
 
     app.get('/api/users/:userId/groups/:groupId/members/topics', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
         const visibility = req.query.visibility;
-        return _getPublicGroupMemberTopics(req, res, visibility);
+        return _getGroupMemberTopics(req, res, visibility);
     }));
 
     /**

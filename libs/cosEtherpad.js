@@ -208,7 +208,7 @@ module.exports = function (app) {
         return html.replace(/style=/gi, 'class=').replace(/text-align:/gi, '');
     };
 
-    const _syncTopicWithPad = async function (topicId, context, actor, rev) {
+    const _syncTopicWithPad = async function (topicId, context, actor, rev, addActivity) {
         logger.info('Sync topic with Pad', topicId, rev);
         const params = {padID: topicId};
         if (rev) {
@@ -233,7 +233,7 @@ module.exports = function (app) {
 
             topic.title = title;
             topic.description = html;
-            if (actor) {
+            if (actor && addActivity) {
                 // TODO: ADD CHECK HERE, IF another event not updated (description) has been added then create new else update last description edit updatedAt field
                 await cosActivities.updateTopicDescriptionActivity(
                     topic,

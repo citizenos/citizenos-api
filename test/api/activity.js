@@ -64,7 +64,7 @@ module.exports.activitiesRead = activitiesRead;
 suite('Users', function () {
 
     suiteSetup(async function () {
-        return shared.syncDb();
+        await shared.syncDb();
     });
 
     // API - /api/users/:userId/activities*
@@ -83,7 +83,7 @@ suite('Users', function () {
             test('Success', async function () {
                 const activities = (await activitiesRead(agent, user.id, null)).body.data;
                 assert.equal(activities.length, 3);
-                activities.forEach(function (activity) {
+                activities.forEach((activity) => {
                     assert.notProperty(activity.data.actor, 'email');
                     assert.notProperty(activity.data.actor, 'imageUrl');
                     assert.notProperty(activity.data.actor, 'language');
@@ -94,7 +94,7 @@ suite('Users', function () {
                 const activities = (await activitiesRead(agent, user.id, {filter: 'Topic'})).body.data;
 
                 assert.equal(activities.length, 1);
-                activities.forEach(function (activity) {
+                activities.forEach((activity) => {
                     assert.notProperty(activity.data.actor, 'email');
                     assert.notProperty(activity.data.actor, 'imageUrl');
                     assert.notProperty(activity.data.actor, 'language');
@@ -109,7 +109,7 @@ suite('Users', function () {
 suite('Activities', function () {
     suiteSetup(async function () {
         process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-        return shared.syncDb();
+        await shared.syncDb();
     });
 
     suite('Read', function () {
@@ -154,9 +154,8 @@ suite('Activities', function () {
 
         test('Success', async function () {
             const activities = (await activitiesReadUnauth(agent2, {sourcePartnerId: partner.id})).body.data;
-
-            assert.equal(activities.length, 2);
-            activities.forEach(function (activity) {
+            assert.equal(activities.length, 1);
+            activities.forEach((activity) => {
                 assert.notProperty(activity.data.actor, 'email');
                 assert.notProperty(activity.data.actor, 'imageUrl');
                 assert.notProperty(activity.data.actor, 'language');
@@ -175,7 +174,7 @@ suite('Activities', function () {
         test('Success - filter', async function () {
             const activities = (await activitiesReadUnauth(agent2, {sourcePartnerId: partner.id, filter: ['User']})).body.data;
             assert.equal(activities.length, 0);
-            activities.forEach(function (activity) {
+            activities.forEach((activity) => {
                 assert.notProperty(activity.data.actor, 'email');
                 assert.notProperty(activity.data.actor, 'imageUrl');
                 assert.notProperty(activity.data.actor, 'language');
@@ -193,8 +192,8 @@ suite('Activities', function () {
 
         test('Success - filter with invalid value', async function () {
             const activities = (await activitiesReadUnauth(agent2, {sourcePartnerId: partner.id, filter: ['Hello', 'Hack']})).body.data;
-            assert.equal(activities.length, 2);
-            activities.forEach(function (activity) {
+            assert.equal(activities.length, 1);
+            activities.forEach((activity) => {
                 assert.notProperty(activity.data.actor, 'email');
                 assert.notProperty(activity.data.actor, 'imageUrl');
                 assert.notProperty(activity.data.actor, 'language');
@@ -212,7 +211,7 @@ suite('Activities', function () {
 
         test('Success - without partnerId', async function () {
             const activities = (await activitiesReadUnauth(agent2, null)).body.data;
-            activities.forEach(function (activity) {
+            activities.forEach((activity) => {
                 assert.notProperty(activity.data.actor, 'email');
                 assert.notProperty(activity.data.actor, 'imageUrl');
                 assert.notProperty(activity.data.actor, 'language');
@@ -274,7 +273,7 @@ suite('Activities', function () {
             await topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST3</h2></body></html>', null);
 
             const count = (await activitiesUnreadCountRead(agent, {sourcePartnerId: partner.id})).body.data.count;
-            assert.equal(count, 2);
+            assert.equal(count, 1);
         });
 
         test('Success - user has viewed all activities', async function () {

@@ -3295,12 +3295,12 @@ suite('Users', function () {
                     assert.equal(groups.count, 2);
                     assert.equal(groups.rows.length, 2);
 
-                    const groupRes = _.find(groups.rows, {id: group.id});
+                    const groupRes = groups.rows.find((g) => {return g.id === group.id});
                     assert.equal(groupRes.name, group.name);
                     assert.equal(groupRes.level, topicMemberGroupLevel);
                     assert.equal(groupRes.permission.level, TopicMemberGroup.LEVELS.admin);
 
-                    const group2Res = _.find(groups.rows, {id: group2.id});
+                    const group2Res = groups.rows.find((g) => {return g.id === group2.id});
                     assert.isNull(group2Res.name);
                     assert.equal(group2Res.level, topicMemberGroupLevel);
                     assert.isNull(group2Res.permission.level);
@@ -3568,7 +3568,7 @@ suite('Users', function () {
                             level: TopicMemberUser.LEVELS.read
                         };
 
-                        memberLib.topicMemberUsersCreate(topic.id, [memberToAdd]);
+                        await memberLib.topicMemberUsersCreate(topic.id, [memberToAdd]);
 
                         await _topicMemberUsersDelete(userWithInsufficientPermissionsAgent, memberToAdd.id, topic.id, member.id, 403);
                         const newLevel = TopicMemberUser.LEVELS.admin;
@@ -3919,7 +3919,7 @@ suite('Users', function () {
                         assert.isArray(createdInvites);
                         assert.equal(createdInvites.length, 2);
 
-                        const createdInviteUser1 = _.find(createdInvites, invite => {
+                        const createdInviteUser1 = createdInvites.find((invite) => {
                             return invite.userId === invitation[0].userId;
                         });
                         assert.uuid(createdInviteUser1.id, 'v4');
@@ -3930,7 +3930,7 @@ suite('Users', function () {
                         assert.isNotNull(createdInviteUser1.createdAt);
                         assert.isNotNull(createdInviteUser1.updatedAt);
 
-                        const createdInviteUser2 = _.find(createdInvites, invite => {
+                        const createdInviteUser2 = createdInvites.find((invite) => {
                             return invite.userId === invitation[1].userId;
                         });
                         assert.uuid(createdInviteUser2.id, 'v4');
@@ -4022,7 +4022,7 @@ suite('Users', function () {
                         assert.isArray(createdInvites);
                         assert.equal(createdInvites.length, 2);
 
-                        const createdInviteUser1 = _.find(createdInvites, {level: invitation[0].level}); // find by level, not by id to keep the code simpler
+                        const createdInviteUser1 = createdInvites.find((i) => {return i.level === invitation[0].level}); // find by level, not by id to keep the code simpler
                         assert.uuid(createdInviteUser1.id, 'v4');
                         assert.equal(createdInviteUser1.topicId, topic.id);
                         assert.equal(createdInviteUser1.creatorId, userCreator.id);
@@ -4040,7 +4040,7 @@ suite('Users', function () {
 
                         assert.equal(userInvited1.email, invitation[0].userId.toLowerCase());
 
-                        const createdInviteUser2 = _.find(createdInvites, {level: invitation[1].level}); // find by level, not by id to keep the code simpler
+                        const createdInviteUser2 = createdInvites.find((i) => {return i.level === invitation[1].level}); // find by level, not by id to keep the code simpler
                         assert.uuid(createdInviteUser2.id, 'v4');
                         assert.equal(createdInviteUser2.topicId, topic.id);
                         assert.equal(createdInviteUser2.creatorId, userCreator.id);
@@ -6170,7 +6170,7 @@ suite('Users', function () {
                         const voteReadAfterVote = (await topicVoteRead(agent, user.id, topic.id, vote.id)).body.data;
 
                         _(voteList).forEach(function (voteOption) {
-                            const option = _.find(voteReadAfterVote.options.rows, {id: voteOption.optionId});
+                            const option = voteReadAfterVote.options.rows.find((o) => {return o.id === voteOption.optionId});
                             assert.equal(option.voteCount, 1);
                         });
                     });
@@ -6199,8 +6199,8 @@ suite('Users', function () {
                         await _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, null, null, null, 205);
                         const voteReadAfterVote = (await topicVoteRead(agent, user.id, topic.id, vote.id)).body.data;
 
-                        _(voteList).forEach(function (voteOption) {
-                            const option = _.find(voteReadAfterVote.options.rows, {id: voteOption.optionId});
+                        voteList.forEach((voteOption) => {
+                            const option = voteReadAfterVote.options.rows.find((vo) => { return vo.id === voteOption.optionId});
                             assert.equal(option.voteCount, 1);
                         });
                         assert.closeTo(new Date(voteReadAfterVote.endsAt).getTime(), new Date().getTime(), 1000);
@@ -6224,10 +6224,10 @@ suite('Users', function () {
 
                         const voteList1 = [
                             {
-                                optionId: _.find(voteRead.options.rows, {value: options[0].value}).id
+                                optionId: voteRead.options.rows.find((o) => {return o.value === options[0].value}).id
                             },
                             {
-                                optionId: _.find(voteRead.options.rows, {value: options[1].value}).id
+                                optionId: voteRead.options.rows.find((o) => {return o.value === options[1].value}).id
                             }
                         ];
 
@@ -6235,17 +6235,17 @@ suite('Users', function () {
                         const voteReadAfterVote1 = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
 
                         _(voteList1).forEach(function (voteOption) {
-                            const option = _.find(voteReadAfterVote1.options.rows, {id: voteOption.optionId});
+                            const option = voteReadAfterVote1.options.rows.find((o) => {return o.id === voteOption.optionId});
                             assert.equal(option.voteCount, 1);
                         });
 
                         // Vote for the 2nd time, change your vote, by choosing 1
                         const voteList2 = [
                             {
-                                optionId: _.find(voteCreated.options.rows, {value: options[1].value}).id
+                                optionId: voteCreated.options.rows.find((o) => {return o.value === options[1].value}).id
                             },
                             {
-                                optionId: _.find(voteCreated.options.rows, {value: options[2].value}).id
+                                optionId: voteCreated.options.rows.find((o) => {return o.value === options[2].value}).id
                             }
                         ];
 
@@ -6270,7 +6270,7 @@ suite('Users', function () {
                         });
 
                         // Check that the 1st vote was overwritten
-                        const optionOverwritten = _.find(voteReadAfterVote2.options.rows, {id: voteList1[0].optionId});
+                        const optionOverwritten = voteReadAfterVote2.options.rows.find((o) => {return o.id === voteList1[0].optionId});
                         assert.notProperty(optionOverwritten, 'voteCount');
                         assert.notProperty(optionOverwritten, 'selected');
 
@@ -7640,10 +7640,10 @@ suite('Users', function () {
                                     // Vote for the first time
                                     const voteList1 = [
                                         {
-                                            optionId: _.find(voteRead.options.rows, {value: options[0].value}).id
+                                            optionId: voteRead.options.rows.find((o) => {return o.value === options[0].value}).id
                                         },
                                         {
-                                            optionId: _.find(voteRead.options.rows, {value: options[1].value}).id
+                                            optionId: voteRead.options.rows.find((o) => {return o.value === options[1].value}).id
                                         }
                                     ];
 
@@ -7653,10 +7653,10 @@ suite('Users', function () {
                                     // Vote for the 2nd time, change your vote, by choosing 1
                                     const voteList2 = [
                                         {
-                                            optionId: _.find(voteRead.options.rows, {value: options[1].value}).id
+                                            optionId: voteRead.options.rows.find((o) => {return o.value === options[1].value}).id
                                         },
                                         {
-                                            optionId: _.find(voteRead.options.rows, {value: options[2].value}).id
+                                            optionId: voteRead.options.rows.find((o) => {return o.value === options[2].value}).id
                                         }
                                     ];
 
@@ -7676,7 +7676,6 @@ suite('Users', function () {
 
                                     const userBdocDownloadToken = userBdocUrlMatches[1];
                                     await topicVoteDownloadBdocUser(agent, topic.id, voteRead.id, userBdocDownloadToken);
-
                                     // Verify the final vote container format and download
                                     const finalBdocUrlRegex = new RegExp(`^${config.url.api}/api/users/self/topics/${topic.id}/votes/${voteRead.id}/downloads/bdocs/final\\?token=([a-zA-Z_.0-9\\-]{676})$`);
                                     const finalBdocUrlMatches = voteReadAfterVoteClosed.downloads.bdocFinal.match(finalBdocUrlRegex);
@@ -7685,7 +7684,6 @@ suite('Users', function () {
 
                                     const finalBdocDownloadToken = finalBdocUrlMatches[1];
                                     await topicVoteDownloadBdocFinal(agent, topic.id, voteRead.id, finalBdocDownloadToken, ['csv']);
-
                                     const pathFinalBdoc = `./test/tmp/final_${voteRead.id}_${user.id}.bdoc`;
                                     const fileWriteStream = fs.createWriteStream(pathFinalBdoc);
                                     const fileWriteStreamPromised = cosUtil.streamToPromise(fileWriteStream);
@@ -9813,7 +9811,7 @@ suite('Topics', function () {
             assert(listOfTopics.length > 0);
             assert(listOfTopics.length <= 26); // No limit, means default limit == 25
 
-            listOfTopics.forEach(function (topic) {
+            listOfTopics.forEach((topic) => {
                 assert.equal(topic.visibility, Topic.VISIBILITY.public);
             });
 

@@ -1431,40 +1431,45 @@ module.exports = function (app) {
                     t
                 );
                 [topicJoin] = await Promise.all([topicJoinPromise, memberUserPromise, activityPromise]);
+                t.afterCommit(async () => {
+                     topic = await cosEtherpad.syncTopicWithPad( // eslint-disable-line require-atomic-updates
+                        topic.id,
+                        req.method + ' ' + req.path,
+                        {
+                            type: 'User',
+                            id: req.user.userId,
+                            ip: req.ip
+                        }
+                    );
+                    const authors = await User.findAll({
+                        where: {
+                            id: topic.authorIds
+                        },
+                        attributes: ['id', 'name'],
+                        raw: true
+                    });
+
+                    const resObject = topic.toJSON();
+                    resObject.authors = authors;
+                    resObject.padUrl = cosEtherpad.getUserAccessUrl(topic, user.id, user.name, user.language, req.locals.partner);
+                    resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+
+                    if (req.locals.partner) {
+                        resObject.sourcePartnerId = req.locals.partner.id;
+                    } else {
+                        resObject.sourcePartnerId = null;
+                    }
+
+                    resObject.pinned = false;
+                    resObject.permission = {
+                        level: TopicMemberUser.LEVELS.admin
+                    };
+
+                    resObject.join = topicJoin.toJSON();
+
+                    return res.created(resObject);
+                });
             });
-
-            topic = await cosEtherpad.syncTopicWithPad( // eslint-disable-line require-atomic-updates
-                topic.id,
-                req.method + ' ' + req.path
-            );
-
-            const authors = await User.findAll({
-                where: {
-                    id: topic.authorIds
-                },
-                attributes: ['id', 'name'],
-                raw: true
-            });
-
-            const resObject = topic.toJSON();
-            resObject.authors = authors;
-            resObject.padUrl = cosEtherpad.getUserAccessUrl(topic, user.id, user.name, user.language, req.locals.partner);
-            resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
-
-            if (req.locals.partner) {
-                resObject.sourcePartnerId = req.locals.partner.id;
-            } else {
-                resObject.sourcePartnerId = null;
-            }
-
-            resObject.pinned = false;
-            resObject.permission = {
-                level: TopicMemberUser.LEVELS.admin
-            };
-
-            resObject.join = topicJoin.toJSON();
-
-            return res.created(resObject);
         } catch (err) {
             return next(err);
         }
@@ -1555,43 +1560,44 @@ module.exports = function (app) {
                     , req.method + ' ' + req.path,
                     t
                 );
+
+                t.afterCommit(async () => {
+                    topic = await cosEtherpad.syncTopicWithPad( // eslint-disable-line require-atomic-updates
+                        topic.id,
+                        req.method + ' ' + req.path,
+                        {
+                            type: 'User',
+                            id: req.user.userId,
+                            ip: req.ip
+                        }
+                    );
+                    const authorIds = topic.authorIds;
+                    const authors = await User.findAll({
+                        where: {
+                            id: authorIds
+                        },
+                        attributes: ['id', 'name'],
+                        raw: true
+                    });
+
+                    const resObject = topic.toJSON();
+                    resObject.authors = authors;
+                    resObject.padUrl = cosEtherpad.getUserAccessUrl(topic, user.id, user.name, user.language, req.locals.partner);
+                    resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+
+                    if (req.locals.partner) {
+                        resObject.sourcePartnerId = req.locals.partner.id;
+                    } else {
+                        resObject.sourcePartnerId = null;
+                    }
+
+                    resObject.pinned = false;
+                    resObject.permission = {
+                        level: TopicMemberUser.LEVELS.admin
+                    };
+                    return res.created(resObject);
+                });
             });
-
-            topic = await cosEtherpad.syncTopicWithPad( // eslint-disable-line require-atomic-updates
-                topic.id,
-                req.method + ' ' + req.path,
-                {
-                    type: 'User',
-                    id: req.user.userId,
-                    ip: req.ip
-                }
-            );
-            const authorIds = topic.authorIds;
-            const authors = await User.findAll({
-                where: {
-                    id: authorIds
-                },
-                attributes: ['id', 'name'],
-                raw: true
-            });
-
-            const resObject = topic.toJSON();
-            resObject.authors = authors;
-            resObject.padUrl = cosEtherpad.getUserAccessUrl(topic, user.id, user.name, user.language, req.locals.partner);
-            resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
-
-            if (req.locals.partner) {
-                resObject.sourcePartnerId = req.locals.partner.id;
-            } else {
-                resObject.sourcePartnerId = null;
-            }
-
-            resObject.pinned = false;
-            resObject.permission = {
-                level: TopicMemberUser.LEVELS.admin
-            };
-
-            return res.created(resObject);
         } catch (err) {
             return next(err);
         }
@@ -1608,12 +1614,7 @@ module.exports = function (app) {
             const partner = req.locals.partner;
             await cosEtherpad.syncTopicWithPad( // eslint-disable-line require-atomic-updates
                 topicId,
-                req.method + ' ' + req.path,
-                {
-                    type: 'User',
-                    id: req.user.userId,
-                    ip: req.ip
-                }
+                req.method + ' ' + req.path
             );
             const topic = await _topicReadAuth(topicId, include, user, partner);
 
@@ -1638,8 +1639,7 @@ module.exports = function (app) {
         try {
             await cosEtherpad.syncTopicWithPad( // eslint-disable-line require-atomic-updates
                 topicId,
-                req.method + ' ' + req.path,
-                null
+                req.method + ' ' + req.path
             );
             const topic = await _topicReadUnauth(topicId, include);
 
@@ -1774,7 +1774,9 @@ module.exports = function (app) {
                             type: 'User',
                             id: req.user.userId,
                             ip: req.ip
-                        }
+                        },
+                        null,
+                        true
                     );
             }
         } catch (err) {
@@ -1845,9 +1847,10 @@ module.exports = function (app) {
                     );
 
                 await topicJoin.save({transaction: t});
+                t.afterCommit(() => {
+                    return res.ok(topicJoin);
+                });
             });
-
-        return res.ok(topicJoin);
     }));
 
     /**
@@ -1893,9 +1896,10 @@ module.exports = function (app) {
                     );
 
                 await topicJoin.save({transaction: t});
+                t.afterCommit(() => {
+                    return res.ok(topicJoin);
+                });
             });
-
-        return res.ok(topicJoin);
     }));
 
 
@@ -2000,6 +2004,8 @@ module.exports = function (app) {
             , tv."delegationIsAllowed" as "vote.delegationIsAllowed"
             , tv."description" as "vote.description"
             , tv."endsAt" as "vote.endsAt"
+            , tv."reminderSent" as "vote.reminderSent"
+            , tv."reminderTime" as "vote.reminderTime"
             , tv."maxChoices" as "vote.maxChoices"
             , tv."minChoices" as "vote.minChoices"
             , tv."type" as "vote.type"
@@ -2169,6 +2175,8 @@ module.exports = function (app) {
                             v."delegationIsAllowed",
                             v."description",
                             v."endsAt",
+                            v."reminderSent",
+                            v."reminderTime",
                             v."maxChoices",
                             v."minChoices",
                             v."type",
@@ -3395,8 +3403,9 @@ module.exports = function (app) {
                                 raw: true
                             }
                         );
-
-                    return res.ok();
+                        t.afterCommit(() => {
+                            return res.ok();
+                        });
                 });
         } catch (err) {
             return next(err);
@@ -3594,7 +3603,7 @@ module.exports = function (app) {
             });
         }
 
-        let createdInvites = await db.transaction(async function (t) {
+        await db.transaction(async function (t) {
             let createdUsers;
 
             // The leftovers are e-mails for which User did not exist
@@ -3740,27 +3749,29 @@ module.exports = function (app) {
                 }
             });
 
-            return Promise.all(createInvitePromises);
-        });
+            let createdInvites = await Promise.all(createInvitePromises);
 
-        createdInvites = createdInvites.filter(function (invite) {
-            return !!invite;
-        });
-
-        for (let invite of createdInvites) {
-            invite.inviteMessage = inviteMessage;
-        }
-
-        await emailLib.sendTopicMemberUserInviteCreate(createdInvites);
-
-        if (createdInvites.length) {
-            return res.created({
-                count: createdInvites.length,
-                rows: createdInvites
+            createdInvites = createdInvites.filter(function (invite) {
+                return !!invite;
             });
-        } else {
-            return res.badRequest('No invites were created. Possibly because no valid userId-s (uuidv4s or emails) were provided.', 1);
-        }
+
+            for (let invite of createdInvites) {
+                invite.inviteMessage = inviteMessage;
+            }
+
+            await emailLib.sendTopicMemberUserInviteCreate(createdInvites);
+
+            t.afterCommit(() => {
+                if (createdInvites.length) {
+                    return res.created({
+                        count: createdInvites.length,
+                        rows: createdInvites
+                    });
+                } else {
+                    return res.badRequest('No invites were created. Possibly because no valid userId-s (uuidv4s or emails) were provided.', 1);
+                }
+            });
+        });
     }));
 
     app.get('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), asyncMiddleware(async function (req, res) {
@@ -4048,9 +4059,11 @@ module.exports = function (app) {
                 await topicMemberUser.save({
                     transaction: t
                 });
-            });
 
-            return res.ok();
+                t.afterCommit(() => {
+                    return res.ok();
+                });
+            });
         } else {
             return res.notFound();
         }
@@ -4201,7 +4214,7 @@ module.exports = function (app) {
             }
         });
 
-        const memberUserCreated = await db.transaction(async function (t) {
+        await db.transaction(async function (t) {
             const member = await TopicMemberUser.create(
                 {
                     topicId: finalInvite.topicId,
@@ -4239,11 +4252,10 @@ module.exports = function (app) {
                 req.method + ' ' + req.path,
                 t
             );
-
-            return member;
+            t.afterCommit(() => {
+                return res.created(member);
+            });
         });
-
-        return res.created(memberUserCreated);
     }));
 
     /**
@@ -4334,23 +4346,23 @@ module.exports = function (app) {
                     t
                 );
             }
+            const authorIds = topic.authorIds;
+            const authors = await User.findAll({
+                where: {
+                    id: authorIds
+                },
+                attributes: ['id', 'name'],
+                raw: true
+            });
+
+            const resObject = topic.toJSON();
+
+            resObject.authors = authors;
+            resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+            t.afterCommit(() => {
+                return res.ok(resObject);
+            });
         });
-
-        const authorIds = topic.authorIds;
-        const authors = await User.findAll({
-            where: {
-                id: authorIds
-            },
-            attributes: ['id', 'name'],
-            raw: true
-        });
-
-        const resObject = topic.toJSON();
-
-        resObject.authors = authors;
-        resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
-
-        return res.ok(resObject);
     }));
 
 
@@ -4955,7 +4967,7 @@ module.exports = function (app) {
             comment.parentVersion = parentVersion;
         }
 
-        const resComment = await db
+        await db
             .transaction(async function (t) {
                 await comment.save({transaction: t});
                 //comment.edits.createdAt = JSON.stringify(comment.createdAt);
@@ -5039,10 +5051,11 @@ module.exports = function (app) {
                     edit.createdAt = new Date(edit.createdAt).toJSON();
                 });
 
-                return Comment.build(c[0][0]);
+                const resComment = await Comment.build(c[0][0]);
+                t.afterCommit(() => {
+                    return res.created(resComment.toJSON());
+                });
             });
-
-        return res.created(resComment.toJSON());
     }));
 
     const topicCommentsList = async function (req, res, next) {
@@ -5451,9 +5464,8 @@ module.exports = function (app) {
                         },
                         transaction: t
                     });
+                t.afterCommit(() => res.ok());
             });
-
-        return res.ok();
     }));
 
     app.put('/api/users/:userId/topics/:topicId/comments/:commentId', loginCheck(['partner']), isCommentCreator());
@@ -5522,26 +5534,25 @@ module.exports = function (app) {
                     WHERE id = :commentId
                     RETURNING *;
                 `,
-                        {
-                            replacements: {
-                                commentId
-                            },
-                            type: db.QueryTypes.UPDATE,
-                            raw: true,
-                            nest: true,
-                            transaction: t
-                        }
-                    );
-            });
+                {
+                    replacements: {
+                        commentId
+                    },
+                    type: db.QueryTypes.UPDATE,
+                    raw: true,
+                    nest: true,
+                    transaction: t
+                });
 
-        return res.ok();
+                t.afterCommit(() => {
+                    return res.ok();
+                });
+            });
     }));
 
     const topicCommentsReportsCreate = async function (req, res, next) {
         const commentId = req.params.commentId;
         try {
-
-
             const comment = await Comment.findOne({
                 where: {
                     id: commentId
@@ -5749,9 +5760,11 @@ module.exports = function (app) {
                         id: eventTokenData.userId,
                         ip: req.ip
                     }, req.method + ' ' + req.path, t);
-            });
 
-        return res.ok();
+                t.afterCommit(() => {
+                    return res.ok();
+                });
+            });
     }));
 
     const topicMentionsList = async function (req, res, next) {
@@ -5975,48 +5988,52 @@ module.exports = function (app) {
                                 ip: req.ip
                             }, req.method + ' ' + req.path, t);
                     }
+
+                    const results = await db
+                        .query(
+                            `
+                            SELECT
+                                tc."up.count",
+                                tc."down.count",
+                                COALESCE(cvus.selected, false) as "up.selected",
+                                COALESCE(cvds.selected, false) as "down.selected"
+                                FROM (
+                                    SELECT
+                                        tc."commentId",
+                                        COALESCE(cvu.count, 0) as "up.count",
+                                        COALESCE(cvd.count, 0) as "down.count"
+                                    FROM "TopicComments" tc
+                                        LEFT JOIN ( SELECT "commentId", COUNT(value) as count FROM "CommentVotes" WHERE value > 0 GROUP BY "commentId") cvu ON tc."commentId" = cvu."commentId"
+                                        LEFT JOIN ( SELECT "commentId", COUNT(value) as count FROM "CommentVotes"  WHERE value < 0 GROUP BY "commentId") cvd ON tc."commentId" = cvd."commentId"
+                                    WHERE tc."topicId" = :topicId
+                                    AND tc."commentId" = :commentId
+                                    GROUP BY tc."commentId", cvu.count, cvd.count
+                                ) tc
+                                LEFT JOIN (SELECT "commentId", "creatorId", value, true AS selected FROM "CommentVotes" WHERE value > 0 AND "creatorId" = :userId) cvus ON (tc."commentId" = cvus."commentId")
+                                LEFT JOIN (SELECT "commentId", "creatorId", value, true AS selected FROM "CommentVotes" WHERE value < 0 AND "creatorId" = :userId) cvds ON (tc."commentId" = cvds."commentId");
+                            `,
+                            {
+                                replacements: {
+                                    topicId: req.params.topicId,
+                                    commentId: req.params.commentId,
+                                    userId: req.user.userId
+                                },
+                                type: db.QueryTypes.SELECT,
+                                raw: true,
+                                nest: true,
+                                transaction: t
+                            }
+                        );
+
+                    t.afterCommit(() => {
+                        if (!results) {
+                            return res.notFound();
+                        }
+
+                        return res.ok(results[0]);
+                    });
                 });
 
-            const results = await db
-                .query(
-                    `
-                    SELECT
-                        tc."up.count",
-                        tc."down.count",
-                        COALESCE(cvus.selected, false) as "up.selected",
-                        COALESCE(cvds.selected, false) as "down.selected"
-                        FROM (
-                            SELECT
-                                tc."commentId",
-                                COALESCE(cvu.count, 0) as "up.count",
-                                COALESCE(cvd.count, 0) as "down.count"
-                            FROM "TopicComments" tc
-                                LEFT JOIN ( SELECT "commentId", COUNT(value) as count FROM "CommentVotes" WHERE value > 0 GROUP BY "commentId") cvu ON tc."commentId" = cvu."commentId"
-                                LEFT JOIN ( SELECT "commentId", COUNT(value) as count FROM "CommentVotes"  WHERE value < 0 GROUP BY "commentId") cvd ON tc."commentId" = cvd."commentId"
-                            WHERE tc."topicId" = :topicId
-                            AND tc."commentId" = :commentId
-                            GROUP BY tc."commentId", cvu.count, cvd.count
-                        ) tc
-                        LEFT JOIN (SELECT "commentId", "creatorId", value, true AS selected FROM "CommentVotes" WHERE value > 0 AND "creatorId" = :userId) cvus ON (tc."commentId" = cvus."commentId")
-                        LEFT JOIN (SELECT "commentId", "creatorId", value, true AS selected FROM "CommentVotes" WHERE value < 0 AND "creatorId" = :userId) cvds ON (tc."commentId" = cvds."commentId");
-                    `,
-                    {
-                        replacements: {
-                            topicId: req.params.topicId,
-                            commentId: req.params.commentId,
-                            userId: req.user.userId
-                        },
-                        type: db.QueryTypes.SELECT,
-                        raw: true,
-                        nest: true
-                    }
-                );
-
-            if (!results) {
-                return res.notFound();
-            }
-
-            return res.ok(results[0]);
         } catch (err) {
             next(err);
         }
@@ -6173,9 +6190,10 @@ module.exports = function (app) {
                 });
 
                 await cosSignature.createVoteFiles(resTopic, vote, voteOptionsCreated, t);
+                t.afterCommit(() => {
+                    return res.created(vote.toJSON());
+                });
             });
-
-        return res.created(vote.toJSON());
     }));
 
 
@@ -6319,9 +6337,10 @@ module.exports = function (app) {
             await vote.save({
                 transaction: t
             });
+            t.afterCommit(() => {
+                return res.ok(vote.toJSON());
+            })
         });
-
-        return res.ok(vote.toJSON());
     }));
 
     /**
@@ -6440,7 +6459,7 @@ module.exports = function (app) {
                 if (condition.value === Vote.AUTO_CLOSE.allMembersVoted) {
                     const topicMembers = await _getAllTopicMembers(topicId, userId, false);
                     const voteResults = await getVoteResults(voteId, userId);
-                    if (topicMembers.users.count === voteResults[0].votersCount) {
+                    if (voteResults.length && topicMembers.users.count === voteResults[0].votersCount) {
                         vote.endsAt = (new Date()).toISOString();
                         await vote.save();
 
@@ -6511,34 +6530,38 @@ module.exports = function (app) {
         await Promise.all([activityPromise, destroyDelegation]);
     };
 
-    const handleTopicVoteSoft = async function (vote, req, res) {
-        const voteId = vote.id;
-        const userId = req.user.userId;
-        const topicId = req.params.topicId;
+    const handleTopicVoteSoft = async function (vote, req, res, next) {
+        try {
+            const voteId = vote.id;
+            const userId = req.user.userId;
+            const topicId = req.params.topicId;
 
-        const voteOptions = req.body.options;
+            const voteOptions = req.body.options;
 
-        await db
-            .transaction(async function (t) {
-                // Store vote options
-                const optionGroupId = Math.random().toString(36).substring(2, 10);
+            await db
+                .transaction(async function (t) {
+                    // Store vote options
+                    const optionGroupId = Math.random().toString(36).substring(2, 10);
 
-                _(voteOptions).forEach(function (o) {
-                    o.voteId = voteId;
-                    o.userId = userId;
-                    o.optionGroupId = optionGroupId;
+                    voteOptions.forEach((o) => {
+                        o.voteId = voteId;
+                        o.userId = userId;
+                        o.optionGroupId = optionGroupId;
+                    });
+
+                    await handleVoteLists(req, userId, topicId, voteId, voteOptions, req.method + ' ' + req.path, t);
+                    t.afterCommit(async () => {
+                        const isClosed = await _handleVoteAutoCloseConditions(voteId, topicId, userId);
+                        if (isClosed) {
+                            return res.reload();
+                        }
+
+                        return res.ok();
+                    });
                 });
-
-                await handleVoteLists(req, userId, topicId, voteId, voteOptions, req.method + ' ' + req.path, t);
-            });
-
-        const isClosed = await _handleVoteAutoCloseConditions(voteId, topicId, userId);
-
-        if (isClosed) {
-            return res.reload();
+        } catch(err) {
+            return next(err);
         }
-
-        return res.ok();
     };
 
     const _checkAuthenticatedUser = async function (userId, personalInfo, transaction) {
@@ -6658,68 +6681,69 @@ module.exports = function (app) {
                     default:
                         throw new Error('Invalid signing method ' + signingMethod);
                 }
+                // Check that the personal ID is not related to another User account. We don't want Users signing Votes from different accounts.
+                t.afterCommit(() => {
+
+                    let sessionData = {
+                        voteOptions: vote.VoteOptions,
+                        signingMethod,
+                        userId: userId, // Required for un-authenticated signing.
+                        voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
+                    }
+
+                    if (signInitResponse.sessionId) {
+                        sessionData.sessionId = signInitResponse.sessionId,
+                            sessionData.sessionHash = signInitResponse.sessionHash,
+                            sessionData.personalInfo = signInitResponse.personalInfo,
+                            sessionData.signatureId = signInitResponse.signatureId;
+                    } else {
+                        switch (signInitResponse.statusCode) {
+                            case 0:
+                                // Common to MID and ID-card signing
+                                sessionData.personalInfo = personalInfo;
+                                sessionData.signableHash = signInitResponse.signableHash;
+                                sessionData.signatureId = signInitResponse.signatureId;
+                                break;
+                            case 101:
+                                return res.badRequest('Invalid input parameters.', 20);
+                            case 301:
+                                return res.badRequest('User is not a Mobile-ID client. Please double check phone number and/or id code.', 21);
+                            case 302:
+                                return res.badRequest('User certificates are revoked or suspended.', 22);
+                            case 303:
+                                return res.badRequest('User certificate is not activated.', 23);
+                            case 304:
+                                return res.badRequest('User certificate is suspended.', 24);
+                            case 305:
+                                return res.badRequest('User certificate is expired.', 25);
+                            default:
+                                logger.error('Unhandled DDS status code', signInitResponse.statusCode);
+                                return res.internalServerError();
+                        }
+                    }
+
+                    // Send JWT with state and expect it back in /sign /status - https://trello.com/c/ZDN2WomW/287-bug-id-card-signing-does-not-work-for-some-users
+                    // Wrapping sessionDataEncrypted in object, otherwise jwt.sign "expiresIn" will not work - https://github.com/auth0/node-jsonwebtoken/issues/166
+                    sessionDataEncrypted = {sessionDataEncrypted: cryptoLib.encrypt(config.session.secret, sessionData)};
+                    token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
+                        expiresIn: '5m',
+                        algorithm: config.session.algorithm
+                    });
+
+                    if (signingMethod === Vote.SIGNING_METHODS.idCard) {
+                        return res.ok({
+                            signedInfoDigest: signInitResponse.signableHash,
+                            signedInfoHashType: cryptoLib.getHashType(signInitResponse.signableHash),
+                            token: token
+                        }, 1);
+                    } else {
+                        return res.ok({
+                            challengeID: signInitResponse.challengeID,
+                            token: token
+                        }, 1);
+                    }
+                });
             });
-            // Check that the personal ID is not related to another User account. We don't want Users signing Votes from different accounts.
-
-            let sessionData = {
-                voteOptions: vote.VoteOptions,
-                signingMethod,
-                userId: userId, // Required for un-authenticated signing.
-                voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
-            }
-
-            if (signInitResponse.sessionId) {
-                sessionData.sessionId = signInitResponse.sessionId,
-                    sessionData.sessionHash = signInitResponse.sessionHash,
-                    sessionData.personalInfo = signInitResponse.personalInfo,
-                    sessionData.signatureId = signInitResponse.signatureId;
-            } else {
-                switch (signInitResponse.statusCode) {
-                    case 0:
-                        // Common to MID and ID-card signing
-                        sessionData.personalInfo = personalInfo;
-                        sessionData.signableHash = signInitResponse.signableHash;
-                        sessionData.signatureId = signInitResponse.signatureId;
-                        break;
-                    case 101:
-                        return res.badRequest('Invalid input parameters.', 20);
-                    case 301:
-                        return res.badRequest('User is not a Mobile-ID client. Please double check phone number and/or id code.', 21);
-                    case 302:
-                        return res.badRequest('User certificates are revoked or suspended.', 22);
-                    case 303:
-                        return res.badRequest('User certificate is not activated.', 23);
-                    case 304:
-                        return res.badRequest('User certificate is suspended.', 24);
-                    case 305:
-                        return res.badRequest('User certificate is expired.', 25);
-                    default:
-                        logger.error('Unhandled DDS status code', signInitResponse.statusCode);
-                        return res.internalServerError();
-                }
-            }
-
-            // Send JWT with state and expect it back in /sign /status - https://trello.com/c/ZDN2WomW/287-bug-id-card-signing-does-not-work-for-some-users
-            // Wrapping sessionDataEncrypted in object, otherwise jwt.sign "expiresIn" will not work - https://github.com/auth0/node-jsonwebtoken/issues/166
-            sessionDataEncrypted = {sessionDataEncrypted: cryptoLib.encrypt(config.session.secret, sessionData)};
-            token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
-                expiresIn: '5m',
-                algorithm: config.session.algorithm
-            });
-
-            if (signingMethod === Vote.SIGNING_METHODS.idCard) {
-                return res.ok({
-                    signedInfoDigest: signInitResponse.signableHash,
-                    signedInfoHashType: cryptoLib.getHashType(signInitResponse.signableHash),
-                    token: token
-                }, 1);
-            } else {
-                return res.ok({
-                    challengeID: signInitResponse.challengeID,
-                    token: token
-                }, 1);
-            }
-
         } catch (error) {
             switch (error.message) {
                 case 'Personal ID already connected to another user account.':
@@ -6756,12 +6780,13 @@ module.exports = function (app) {
      */
     app.post('/api/users/:userId/topics/:topicId/votes/:voteId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.voting]), async function (req, res, next) {
         try {
-            const vote = await handleTopicVotePreconditions(req, res)
+            const vote = await handleTopicVotePreconditions(req, res);
             if (vote.authType === Vote.AUTH_TYPES.soft) {
-                return handleTopicVoteSoft(vote, req, res);
-            } else {
-                return handleTopicVoteHard(vote, req, res);
+                return handleTopicVoteSoft(vote, req, res, next);
             }
+
+            return handleTopicVoteHard(vote, req, res, next);
+
         } catch (err) {
             return next(err);
         }
@@ -7043,24 +7068,24 @@ module.exports = function (app) {
                             }
                         );
                 }
+                t.afterCommit(async () => {
+                    const isClosed = await _handleVoteAutoCloseConditions(voteId, topicId, userId);
+
+                    const resBody = {
+                        bdocUri: getBdocURL({
+                            userId: userId,
+                            topicId: topicId,
+                            voteId: voteId,
+                            type: 'user'
+                        })
+                    };
+                    if (isClosed) {
+                        return res.reload('Signing has been completed and vote is now closed', 2, resBody);
+                    }
+
+                    return res.ok('Signing has been completed', 2, resBody);
+                });
             });
-
-            const isClosed = await _handleVoteAutoCloseConditions(voteId, topicId, userId);
-
-            const resBody = {
-                bdocUri: getBdocURL({
-                    userId: userId,
-                    topicId: topicId,
-                    voteId: voteId,
-                    type: 'user'
-                })
-            };
-
-            if (isClosed) {
-                return res.reload('Signing has been completed and vote is now closed', 2, resBody);
-            }
-
-            return res.ok('Signing has been completed', 2, resBody);
         } catch (err) {
             let statusCode;
             if (err.result && err.result.endResult) {
@@ -7242,7 +7267,6 @@ module.exports = function (app) {
             if (req.query.accept === 'application/x-7z-compressed') {
                 res.set('Content-disposition', 'attachment; filename=final.7z');
                 res.set('Content-type', 'application/x-7z-compressed');
-
                 finalDocStream = await cosSignature.getFinalBdoc(topicId, voteId, include, true);
             } else {
                 res.set('Content-disposition', 'attachment; filename=final.bdoc');
@@ -7559,8 +7583,9 @@ module.exports = function (app) {
                             req.method + ' ' + req.path,
                             t
                         );
-
-                    return res.created(event.toJSON());
+                    t.afterCommit(() => {
+                        return res.created(event.toJSON());
+                    });
                 });
         } catch (err) {
             return next(err);
@@ -7633,16 +7658,18 @@ module.exports = function (app) {
                             ip: req.ip
                         }, req.method + ' ' + req.path, t);
 
-                    return TopicEvent.destroy({
+                    await TopicEvent.destroy({
                         where: {
                             id: eventId,
                             topicId: topicId
                         },
                         transaction: t
                     });
-                });
 
-            return res.ok();
+                    t.afterCommit(() => {
+                        return res.ok();
+                    })
+                });
         } catch (err) {
             return next(err);
         }

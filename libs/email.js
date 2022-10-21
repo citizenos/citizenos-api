@@ -306,6 +306,30 @@ module.exports = function (app) {
     }
 
     /**
+     * Send help request email
+     */
+
+    const _sendFeedback = async (data) => {
+        const template = resolveTemplate('feedback');
+        const emailOptions = Object.assign(
+            _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
+            {
+                subject: 'Feedback',
+                to: ['support@citizenos.com'],
+                from: "no-reply@citizenos.com",
+                linkedData: {
+                    translations: template.translations,
+                },
+                provider: EMAIL_OPTIONS_DEFAULT.provider,
+                message: data.message,
+                userId: data.userId
+            }
+        );
+
+        // https://github.com/bevacqua/campaign#email-sending-option
+        return emailClient.sendString(template.body, emailOptions);
+    }
+    /**
      * Send e-mail verification email.
      *
      * @param {string|Array} to To e-mail(s)
@@ -324,7 +348,7 @@ module.exports = function (app) {
             .then(function (users) {
                 const promisesToResolve = [];
 
-                _.forEach(users, function (user) {
+                users.forEach((user) => {
                     const template = resolveTemplate('accountVerification', user.language);
                     const linkVerify = urlLib.getApi('/api/auth/verify/:code', {code: emailVerificationCode}, {token: token});
 
@@ -368,7 +392,7 @@ module.exports = function (app) {
             .then(function (users) {
                 const promisesToResolve = [];
 
-                _.forEach(users, function (user) {
+                users.forEach((user) => {
                     const template = resolveTemplate('passwordReset', user.language);
 
                     const emailOptions = Object.assign(
@@ -455,7 +479,7 @@ module.exports = function (app) {
             // TODO: could use Mu here...
             const subject = template.translations.INVITE_TOPIC.SUBJECT
                 .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name));
-            const invite = _.find(invites, {userId: toUser.id});
+            const invite = invites.find((i) => {return i.userId === toUser.id});
             const linkViewInvite = urlLib.getFe('/topics/:topicId/invites/users/:inviteId', { // FIXME: Do we want to go through /api/invite/view?
                 inviteId: invite.id,
                 topicId: topic.id
@@ -570,7 +594,7 @@ module.exports = function (app) {
                 if (toUsers && toUsers.length) {
                     const promisesToResolve = [];
 
-                    _.forEach(toUsers, function (user) {
+                    toUsers.forEach((user) => {
                         if (user.email) {
                             const template = resolveTemplate('inviteTopic', user.language);
                             // TODO: Could use Mu here....
@@ -675,7 +699,7 @@ module.exports = function (app) {
             const subject = template.translations.INVITE_GROUP.SUBJECT
                 .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
                 .replace('{{group.name}}', util.escapeHtml(group.name));
-            const invite = _.find(invites, {userId: toUser.id});
+            const invite = invites.find((i) => {return i.userId === toUser.id});
             const linkViewInvite = urlLib.getFe('/groups/:groupId/invites/users/:inviteId', {
                 inviteId: invite.id,
                 groupId: group.id
@@ -774,7 +798,7 @@ module.exports = function (app) {
                 if (toUsers && toUsers.length) {
                     const promisesToResolve = [];
 
-                    _.forEach(toUsers, function (user) {
+                    toUsers.forEach((user) => {
                         if (user.email) {
                             const template = resolveTemplate('inviteGroup', user.language);
 
@@ -831,24 +855,24 @@ module.exports = function (app) {
     const _sendCommentReport = function (commentId, report) {
         return db
             .query(
-                ' \
-                    SELECT \
-                        tc."commentId" as "comment.id", \
-                        c."subject" as "comment.subject", \
-                        c."text" as "comment.text", \
-                        c."updatedAt" as "comment.updatedAt",\
-                        u."name" as "comment.creator.name", \
-                        u."email" as "comment.creator.email", \
-                        u."language" as "comment.creator.language", \
-                        t."id" as "topic.id", \
-                        t."sourcePartnerId" as "topic.sourcePartnerId", \
-                        t."visibility" as "topic.visibility"\
-                    FROM "TopicComments" tc \
-                        JOIN "Topics" t ON (t.id = tc."topicId") \
-                        JOIN "Comments" c ON (c.id = tc."commentId") \
-                        JOIN "Users" u ON (u.id = c."creatorId") \
-                    WHERE tc."commentId" = :commentId \
-                ',
+                `
+                    SELECT
+                        tc."commentId" as "comment.id",
+                        c."subject" as "comment.subject",
+                        c."text" as "comment.text",
+                        c."updatedAt" as "comment.updatedAt",
+                        u."name" as "comment.creator.name",
+                        u."email" as "comment.creator.email",
+                        u."language" as "comment.creator.language",
+                        t."id" as "topic.id",
+                        t."sourcePartnerId" as "topic.sourcePartnerId",
+                        t."visibility" as "topic.visibility"
+                    FROM "TopicComments" tc
+                        JOIN "Topics" t ON (t.id = tc."topicId")
+                        JOIN "Comments" c ON (c.id = tc."commentId")
+                        JOIN "Users" u ON (u.id = c."creatorId")
+                    WHERE tc."commentId" = :commentId
+                `,
                 {
                     replacements: {
                         commentId: commentId
@@ -1537,7 +1561,7 @@ module.exports = function (app) {
         if (['Comment', 'CommentVote'].indexOf(notification.data.object['@type']) > -1) {
             linkViewTopic += `?commentId=${notification.data.object.commentId || notification.data.object.id}`;
         }
-        _.forEach(users, function (user) {
+        users.forEach((user) => {
             const template = resolveTemplate('topicNotification', user.language || 'en');
             const translateValues = notification.values;
             let notificationText = '';
@@ -1651,6 +1675,7 @@ module.exports = function (app) {
         sendToParliament: _sendToParliament,
         sendHelpRequest: _sendHelpRequest,
         sendVoteReminder: _sendVoteReminder,
-        sendTopicNotification: _sendTopicNotification
+        sendTopicNotification: _sendTopicNotification,
+        sendFeedback: _sendFeedback
     };
 };
