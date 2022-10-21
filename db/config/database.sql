@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 14.1 (Ubuntu 14.1-1.pgdg18.04+1)
--- Dumped by pg_dump version 14.1 (Ubuntu 14.1-1.pgdg18.04+1)
+-- Dumped from database version 14.5 (Ubuntu 14.5-0ubuntu0.22.04.1)
+-- Dumped by pg_dump version 14.5 (Ubuntu 14.5-0ubuntu0.22.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -503,7 +503,8 @@ CREATE TABLE public."GroupInviteUsers" (
     level public."enum_GroupInviteUsers_level" DEFAULT 'read'::public."enum_GroupInviteUsers_level" NOT NULL,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone
+    "deletedAt" timestamp with time zone,
+    "expiresAt" timestamp with time zone
 );
 
 
@@ -533,6 +534,13 @@ COMMENT ON COLUMN public."GroupInviteUsers"."groupId" IS 'Group to which member 
 --
 
 COMMENT ON COLUMN public."GroupInviteUsers".level IS 'User membership level.';
+
+
+--
+-- Name: COLUMN "GroupInviteUsers"."expiresAt"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."GroupInviteUsers"."expiresAt" IS 'Invite expiration time.';
 
 
 --
@@ -618,7 +626,9 @@ CREATE TABLE public."Groups" (
     "sourcePartnerId" uuid,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone
+    "deletedAt" timestamp with time zone,
+    "imageUrl" character varying(255),
+    description text
 );
 
 
@@ -655,6 +665,20 @@ COMMENT ON COLUMN public."Groups".visibility IS 'Who can see (read) the Group ap
 --
 
 COMMENT ON COLUMN public."Groups"."sourcePartnerId" IS 'The Partner id of the site from which the Group was created';
+
+
+--
+-- Name: COLUMN "Groups"."imageUrl"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Groups"."imageUrl" IS 'Group profile image url.';
+
+
+--
+-- Name: COLUMN "Groups".description; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Groups".description IS 'Short description of what the Group is about.';
 
 
 --
@@ -965,7 +989,8 @@ CREATE TABLE public."TopicInviteUsers" (
     level public."enum_TopicInviteUsers_level" DEFAULT 'read'::public."enum_TopicInviteUsers_level" NOT NULL,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone
+    "deletedAt" timestamp with time zone,
+    "expiresAt" timestamp with time zone
 );
 
 
@@ -995,6 +1020,13 @@ COMMENT ON COLUMN public."TopicInviteUsers"."topicId" IS 'Topic to which member 
 --
 
 COMMENT ON COLUMN public."TopicInviteUsers".level IS 'User membership level.';
+
+
+--
+-- Name: COLUMN "TopicInviteUsers"."expiresAt"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicInviteUsers"."expiresAt" IS 'Invite expiration time.';
 
 
 --
@@ -1422,6 +1454,7 @@ COMMENT ON COLUMN public."UserConsents"."partnerId" IS 'Partner id (client_id).'
 --
 
 CREATE TABLE public."UserNotificationSettings" (
+    id integer NOT NULL,
     "userId" uuid NOT NULL,
     "topicId" uuid,
     "groupId" uuid,
@@ -1445,6 +1478,26 @@ COMMENT ON COLUMN public."UserNotificationSettings"."userId" IS 'Id of the User 
 --
 
 COMMENT ON COLUMN public."UserNotificationSettings".preferences IS 'Notification pecific data you want to store.';
+
+
+--
+-- Name: UserNotificationSettings_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public."UserNotificationSettings_id_seq"
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: UserNotificationSettings_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public."UserNotificationSettings_id_seq" OWNED BY public."UserNotificationSettings".id;
 
 
 --
@@ -1831,7 +1884,9 @@ CREATE TABLE public."Votes" (
     "autoClose" json[] DEFAULT ARRAY[]::json[],
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone
+    "deletedAt" timestamp with time zone,
+    "reminderSent" timestamp with time zone,
+    "reminderTime" timestamp with time zone
 );
 
 
@@ -1882,6 +1937,27 @@ COMMENT ON COLUMN public."Votes".type IS 'Vote type. Used to decide visual layou
 --
 
 COMMENT ON COLUMN public."Votes"."authType" IS 'Authorization types. Soft - user has to be logged in to Vote. Hard - user has to digitally sign a vote.';
+
+
+--
+-- Name: COLUMN "Votes"."reminderSent"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Votes"."reminderSent" IS 'Time when reminder to vote was sent out';
+
+
+--
+-- Name: COLUMN "Votes"."reminderTime"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Votes"."reminderTime" IS 'Time when reminder to vote will be sent';
+
+
+--
+-- Name: UserNotificationSettings id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."UserNotificationSettings" ALTER COLUMN id SET DEFAULT nextval('public."UserNotificationSettings_id_seq"'::regclass);
 
 
 --
@@ -2151,7 +2227,7 @@ ALTER TABLE ONLY public."UserConsents"
 --
 
 ALTER TABLE ONLY public."UserNotificationSettings"
-    ADD CONSTRAINT "UserNotificationSettings_pkey" PRIMARY KEY ("userId");
+    ADD CONSTRAINT "UserNotificationSettings_pkey" PRIMARY KEY (id);
 
 
 --
@@ -2351,6 +2427,13 @@ CREATE UNIQUE INDEX topics_source_partner_id_source_partner_object_id ON public.
 --
 
 CREATE INDEX topics_title_deleted_at ON public."Topics" USING btree (title, "deletedAt") WHERE ((title IS NOT NULL) AND ("deletedAt" IS NULL));
+
+
+--
+-- Name: user_notification_settings_user_id_topic_id_group_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX user_notification_settings_user_id_topic_id_group_id ON public."UserNotificationSettings" USING btree ("userId", "topicId", "groupId");
 
 
 --
@@ -2740,7 +2823,7 @@ ALTER TABLE ONLY public."UserConsents"
 --
 
 ALTER TABLE ONLY public."UserNotificationSettings"
-    ADD CONSTRAINT "UserNotificationSettings_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES public."Groups"(id);
+    ADD CONSTRAINT "UserNotificationSettings_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES public."Groups"(id) ON UPDATE CASCADE ON DELETE SET NULL;
 
 
 --
@@ -2748,7 +2831,7 @@ ALTER TABLE ONLY public."UserNotificationSettings"
 --
 
 ALTER TABLE ONLY public."UserNotificationSettings"
-    ADD CONSTRAINT "UserNotificationSettings_topicId_fkey" FOREIGN KEY ("topicId") REFERENCES public."Topics"(id);
+    ADD CONSTRAINT "UserNotificationSettings_topicId_fkey" FOREIGN KEY ("topicId") REFERENCES public."Topics"(id) ON UPDATE CASCADE ON DELETE SET NULL;
 
 
 --
@@ -2869,4 +2952,8 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 20220203120245-users-password-comment.js
 20220228174313-duplicate-email-users-issue-234.js
 20220405120631-create-user-notification-settings.js
+20220520100104-add-vote-reminder.js
+20220808083309-alter_group.js
+20220816103332-alter-topic-invite-user.js
+20220816103355-alter-group-invite-user.js
 \.

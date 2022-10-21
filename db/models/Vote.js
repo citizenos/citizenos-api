@@ -119,6 +119,22 @@ module.exports = function (sequelize, DataTypes) {
                 },
                 allowNull: true
             },
+            reminderSent: {
+                type: DataTypes.DATE,
+                allowNull: true,
+                comment: 'Time when reminder to vote was sent out'
+            },
+            reminderTime: {
+                type: DataTypes.DATE,
+                allowNull: true,
+                comment: 'Time when reminder to vote will be sent',
+                isNotInPast: function (value) {
+                    const timeNow = new Date();
+                    const reminderTime = new Date(value);
+                    if (timeNow.getTime() > reminderTime.getTime())
+                        throw new Error(`Invalid reminder time, cannot be in the past`);
+                }
+            }
         }
     );
 
@@ -161,6 +177,8 @@ module.exports = function (sequelize, DataTypes) {
             type: this.dataValues.type,
             authType: this.dataValues.authType,
             autoClose: this.dataValues.autoClose,
+            reminderSent: this.dataValues.reminderSent,
+            reminderTime: this.dataValues.reminderTime,
             downloads: this.dataValues.downloads, // TODO: should be virtual?
             votersCount: this.dataValues.votersCount// TODO: should be virtual?
         };

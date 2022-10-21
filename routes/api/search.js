@@ -312,7 +312,7 @@ module.exports = function (app) {
                             });
                         } else if (model === 'group') {
                             const publicGroupsResult = await Group
-                                .findAll({
+                                .findAndCountAll({
                                     where: {
                                         [Op.and]: [
                                             {

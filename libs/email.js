@@ -306,6 +306,30 @@ module.exports = function (app) {
     }
 
     /**
+     * Send help request email
+     */
+
+    const _sendFeedback = async (data) => {
+        const template = resolveTemplate('feedback');
+        const emailOptions = Object.assign(
+            _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
+            {
+                subject: 'Feedback',
+                to: ['support@citizenos.com'],
+                from: "no-reply@citizenos.com",
+                linkedData: {
+                    translations: template.translations,
+                },
+                provider: EMAIL_OPTIONS_DEFAULT.provider,
+                message: data.message,
+                userId: data.userId
+            }
+        );
+
+        // https://github.com/bevacqua/campaign#email-sending-option
+        return emailClient.sendString(template.body, emailOptions);
+    }
+    /**
      * Send e-mail verification email.
      *
      * @param {string|Array} to To e-mail(s)
@@ -1575,6 +1599,67 @@ module.exports = function (app) {
         return handleAllPromises(promisesToResolve);
     };
 
+    const _sendVoteReminder = async (users, vote, topicId) => {
+        let topic = vote.Topic;
+        if (!topic) {
+            topic = await Topic
+                .findOne({where:{ id: topicId }});
+        }
+        const linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: topicId});
+        const linkToApplication = urlLib.getFe();
+        const logoFile = emailHeaderLogo;
+        let templateName = 'voteReminder';
+        let customStyles = EMAIL_OPTIONS_DEFAULT.styles;
+
+        const emailsSendPromises = users.map(function (toUser) {
+            console.log(toUser)
+            if (!toUser.email) {
+                logger.info('Skipping invite e-mail to user as there is no email on the profile', toUser.email);
+                return Promise.resolve();
+            }
+
+            const template = resolveTemplate(templateName, toUser.language);
+
+            // Handle Partner links
+            // TODO: could use Mu here...
+            const subject = template.translations.VOTE_REMINDER.SUBJECT
+
+            // In case Topic has no title, just show the full url.
+            topic.title = topic.title ? topic.title : linkViewTopic;
+
+            let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
+            linkedData.translations = template.translations;
+            const emailOptions = {
+                // from: from, - comes from emailClient.js configuration
+                subject: subject,
+                to: toUser.email,
+                images: [
+                    {
+                        name: emailHeaderLogoName,
+                        file: logoFile
+                    },
+                    {
+                        name: emailFooterLogoName,
+                        file: emailFooterLogo
+                    }
+                ],
+                toUser: toUser,
+                topic: topic,
+                voteEndsAt: moment(vote.endsAt).locale(toUser.language).format('LLL'),
+                linkViewTopic: linkViewTopic,
+                linkToApplication: linkToApplication,
+                provider: EMAIL_OPTIONS_DEFAULT.provider,
+                styles: customStyles,
+                linkToPlatformText: template.translations.LAYOUT.LINK_TO_PLATFORM,
+                linkedData
+            };
+
+            return emailClient.sendString(template.body, emailOptions);
+        });
+
+        return handleAllPromises(emailsSendPromises);
+    };
+
     return {
         sendAccountVerification: _sendAccountVerification,
         sendPasswordReset: _sendPasswordReset,
@@ -1589,6 +1674,8 @@ module.exports = function (app) {
         sendCommentReport: _sendCommentReport,
         sendToParliament: _sendToParliament,
         sendHelpRequest: _sendHelpRequest,
-        sendTopicNotification: _sendTopicNotification
+        sendVoteReminder: _sendVoteReminder,
+        sendTopicNotification: _sendTopicNotification,
+        sendFeedback: _sendFeedback
     };
 };

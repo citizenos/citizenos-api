@@ -655,6 +655,8 @@ module.exports = function (app) {
                     , tv."delegationIsAllowed" as "vote.delegationIsAllowed"
                     , tv."description" as "vote.description"
                     , tv."endsAt" as "vote.endsAt"
+                    , tv."reminderSent" AS "vote.reminderSent"
+                    , tv."reminderTime" AS "vote.reminderTime"
                     , tv."maxChoices" as "vote.maxChoices"
                     , tv."minChoices" as "vote.minChoices"
                     , tv."type" as "vote.type"
@@ -756,6 +758,8 @@ module.exports = function (app) {
                             v."delegationIsAllowed",
                             v."description",
                             v."endsAt",
+                            v."reminderSent",
+                            v."reminderTime",
                             v."maxChoices",
                             v."minChoices",
                             v."type",
@@ -864,6 +868,8 @@ module.exports = function (app) {
                     , tv."voteId" as "vote.id"
                     , tv."authType" as "vote.authType"
                     , tv."createdAt" as "vote.createdAt"
+                    , tv."reminderSent" AS "vote.reminderSent"
+                    , tv."reminderTime" AS "vote.reminderTime"
                     , tv."delegationIsAllowed" as "vote.delegationIsAllowed"
                     , tv."description" as "vote.description"
                     , tv."endsAt" as "vote.endsAt"
@@ -1024,6 +1030,8 @@ module.exports = function (app) {
                         v."endsAt",
                         v."maxChoices",
                         v."minChoices",
+                        v."reminderSent",
+                        v."reminderTime",
                         v."type",
                         v."autoClose"
                     FROM "TopicVotes" tv INNER JOIN
@@ -1996,6 +2004,8 @@ module.exports = function (app) {
             , tv."delegationIsAllowed" as "vote.delegationIsAllowed"
             , tv."description" as "vote.description"
             , tv."endsAt" as "vote.endsAt"
+            , tv."reminderSent" as "vote.reminderSent"
+            , tv."reminderTime" as "vote.reminderTime"
             , tv."maxChoices" as "vote.maxChoices"
             , tv."minChoices" as "vote.minChoices"
             , tv."type" as "vote.type"
@@ -2165,6 +2175,8 @@ module.exports = function (app) {
                             v."delegationIsAllowed",
                             v."description",
                             v."endsAt",
+                            v."reminderSent",
+                            v."reminderTime",
                             v."maxChoices",
                             v."minChoices",
                             v."type",
@@ -4262,7 +4274,12 @@ module.exports = function (app) {
         if (!topicJoin) {
             return res.notFound();
         }
-
+        await cosEtherpad
+            .syncTopicWithPad(
+                topicJoin.topicId,
+                req.method + ' ' + req.path,
+                null
+            );
         const topic = await _topicReadUnauth(topicJoin.topicId, null);
 
         if (!topic) {
