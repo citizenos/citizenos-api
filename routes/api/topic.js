@@ -1522,7 +1522,14 @@ module.exports = function (app) {
                 );
 
                 const attachments = await getTopicAttachments(req.params.topicId);
-
+                const topicJoin = await TopicJoin.create(
+                    {
+                        topicId: topic.id
+                    },
+                    {
+                        transaction: t
+                    }
+                );
                 attachments.forEach(async (attachment) => {
                     const attachmentClone = await Attachment.create(
                         {
@@ -1595,6 +1602,7 @@ module.exports = function (app) {
                     resObject.permission = {
                         level: TopicMemberUser.LEVELS.admin
                     };
+                    resObject.join = topicJoin;
                     return res.created(resObject);
                 });
             });
@@ -1817,17 +1825,17 @@ module.exports = function (app) {
     app.put('/api/users/:userId/topics/:topicId/join', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const level = req.body.level;
-
+        console.log(topicId, level)
         if (!Object.values(TopicJoin.LEVELS).includes(level)) {
             return res.badRequest('Invalid value for property "level". Possible values are ' + Object.values(TopicJoin.LEVELS) + '.', 1);
         }
 
-        const topicJoin = await TopicJoin.findOne({
+        const topicJoin = await TopicJoin.findOrCreate({
             where: {
                 topicId: topicId
             }
         });
-
+        console.log(topicJoin);
         topicJoin.token = TopicJoin.generateToken();
         topicJoin.level = level;
 
@@ -7750,11 +7758,12 @@ module.exports = function (app) {
             let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
             const partnerId = req.user.partnerId;
 
-            const title = `%${req.query.search}%`;
+            let title = req.query.search;
             let where = `t."deletedAt" IS NULL
                         AND t.title IS NOT NULL
                         AND COALESCE(tmup.level, tmgp.level, 'none')::"enum_TopicMemberUsers_level" > 'none' `;
             if (title) {
+                title = `%${req.query.search}%`;
                 where += ` AND t.title ILIKE :title `;
             }
 
@@ -7814,7 +7823,10 @@ module.exports = function (app) {
                     nest: true
                 }
             );
-            let result = {};
+            let result = {
+                count: 0,
+                rows: []
+            };
             if (userSettings.length) {
                 result = {
                     count: userSettings[0].countTotal,

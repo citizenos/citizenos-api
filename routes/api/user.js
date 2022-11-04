@@ -73,7 +73,7 @@ module.exports = function (app) {
     app.put('/api/users/:userId', loginCheck(['partner']), asyncMiddleware(async function (req, res) {
         const fields = ['name', 'company', 'email', 'language', 'imageUrl', 'termsVersion', 'preferences'];
         const data = req.body;
-        if (!req.user.partnerId) { // Allow only our own app change the password
+        if (!req.user.partnerId && data.password && data.newPassword) { // Allow only our own app change the password
             fields.push('password');
         }
         let updateEmail = false;
