@@ -3045,18 +3045,28 @@ module.exports = function (app) {
             if (result.length < groupIds.length) {
                 return Promise.reject();
             }
+            const checked = [];
+            result.forEach((row) => {
+                checked.push(
+                    new Promise((reject, resolve) => {
+                        const blevel = row.level;
+                        if (LEVELS[minRequiredLevel] > LEVELS[blevel] && row.isPublic === true ) {
+                            logger.warn('Access denied to topic due to member without permissions trying to delete user! ', 'userId:', userId);
 
-            result.forEach(function (row) {
-                const blevel = row.level;
-
-                if (LEVELS[minRequiredLevel] > LEVELS[blevel]) {
-                    logger.warn('Access denied to topic due to member without permissions trying to delete user! ', 'userId:', userId);
-
-                    return Promise.reject();
-                }
+                            throw new Error('Access denied');
+                        }
+                        resolve();
+                    })
+                );
             });
+            await Promise.all(checked)
+                .catch((err) => {
+                    if (err) {
+                        return Promise.reject(err);
+                    }
+                });
 
-            return result;
+                return result;
         } else {
             return Promise.reject();
         }
@@ -3078,7 +3088,7 @@ module.exports = function (app) {
             groupIds.push(member.groupId);
         });
         try {
-            const allowedGroups = await checkPermissionsForGroups(groupIds, req.user.userId); // Checks if all groups are allowed
+            const allowedGroups = await checkPermissionsForGroups(groupIds, req.user.userId, 'admin'); // Checks if all groups are allowed
             if (allowedGroups && allowedGroups[0]) {
                 await db.transaction(async function (t) {
 
@@ -3154,6 +3164,9 @@ module.exports = function (app) {
 
         } catch (err) {
             if (err) {
+                if (err.message === 'Access denied') {
+                    return res.forbidden();
+                }
                 logger.error('Adding Group to Topic failed', req.path, err);
 
                 return next(err);
