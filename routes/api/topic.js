@@ -1825,22 +1825,20 @@ module.exports = function (app) {
     app.put('/api/users/:userId/topics/:topicId/join', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const level = req.body.level;
-        console.log(topicId, level)
         if (!Object.values(TopicJoin.LEVELS).includes(level)) {
             return res.badRequest('Invalid value for property "level". Possible values are ' + Object.values(TopicJoin.LEVELS) + '.', 1);
         }
-
-        const topicJoin = await TopicJoin.findOrCreate({
+        const topicJoin = await TopicJoin.findOne({
             where: {
                 topicId: topicId
             }
         });
-        console.log(topicJoin);
+
         topicJoin.token = TopicJoin.generateToken();
         topicJoin.level = level;
 
         await db
-            .transaction(async function (t) {
+            .transaction(async (t) => {
                 await cosActivities
                     .updateActivity(
                         topicJoin,
