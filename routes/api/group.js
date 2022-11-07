@@ -44,13 +44,13 @@ module.exports = function (app) {
                 g.id
             FROM "Groups" g
             LEFT JOIN "GroupMemberUsers" gm
-                ON(gm."groupId" = g.id)
+                ON(gm."groupId" = g.id
+                AND gm."userId" = :userId
+                AND gm."deletedAt" IS NULL)
             LEFT JOIN "Moderators" m
                 ON (m."partnerId" IS NULL AND m."deletedAt" IS NULL)
                 AND m."userId" = gm."userId"
             WHERE g.id = :groupId
-                AND gm."userId" = :userId
-                AND gm."deletedAt" IS NULL
                 AND g."deletedAt" IS NULL
             GROUP BY g.id, uid, gm.level, m."userId";`,
             {
@@ -89,7 +89,6 @@ module.exports = function (app) {
                     allowDeleteSelf = false;
                 }
             }
-
             try {
                 const authorizationResult = await _hasPermission(groupId, userId, level, allowPublic, allowDeleteSelf);
                 if (authorizationResult) {
@@ -740,7 +739,7 @@ module.exports = function (app) {
             rows: members
         });
     }));
-    app.get('/api/users/:userId/groups/:groupId/members/users', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
+    app.get('/api/users/:userId/groups/:groupId/members/users', hasPermission(GroupMemberUser.LEVELS.read, true, null), asyncMiddleware(async function (req, res) {
         const groupId = req.params.groupId;
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
@@ -2039,7 +2038,7 @@ module.exports = function (app) {
         return _getGroupMemberTopics(req, res, 'public');
     }));
 
-    app.get('/api/users/:userId/groups/:groupId/members/topics', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
+    app.get('/api/users/:userId/groups/:groupId/members/topics', hasPermission(GroupMemberUser.LEVELS.read, true, null), asyncMiddleware(async function (req, res) {
         const visibility = req.query.visibility;
         return _getGroupMemberTopics(req, res, visibility);
     }));
