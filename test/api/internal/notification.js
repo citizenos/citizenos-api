@@ -44,7 +44,6 @@ const models = app.get('models');
 const Topic = models.Topic;
 const db = models.sequelize;
 const TopicMemberUser = models.TopicMemberUser;
-const Report = models.Report;
 const Vote = models.Vote;
 
 suite('Internal', function () {
@@ -138,40 +137,6 @@ suite('Internal', function () {
                     assert.equal(users2[0].id, user2.id);
                 });
 
-                //We dont have topic reports in activity feed
-                test.skip('Success - settings set to TopicReport activity', async () => {
-                    const reportedTopic = (await topicLib.topicCreate(agent, user.id, Topic.VISIBILITY.public, null, null, null, null)).body.data;
-                    const topicMemberUser = {
-                        userId: user2.id,
-                        level: TopicMemberUser.LEVELS.edit
-                    };
-                    await memberLib.topicMemberUsersCreate(reportedTopic.id, [topicMemberUser]);
-
-                    const settings = {
-                        topicId: reportedTopic.id,
-                        allowNotifications: true,
-                        preferences: {
-                            TopicReport: true
-                        }
-                    };
-                    const data = (await updateTopicUserPreferences(agent2, user2.id, reportedTopic.id, settings)).body.data;
-                    assert.deepEqual(data.preferences, settings.preferences);
-
-                    const activities = (await activityLib.activitiesRead(agent, user.id)).body.data;
-                    const users = await notifications.getRelatedUsers(activities[0]);
-                    assert.equal(users.length, 0);
-                    await topicLib.topicCommentCreate(agent, user.id, reportedTopic.id, null, null, 'pro', 'test', 'test content');
-                    const activities2 = (await activityLib.activitiesRead(agent, user.id)).body.data;
-                    const users2 = await notifications.getRelatedUsers(activities2[0]);
-                    assert.equal(users2.length, 0);
-
-                    await topicLib.topicReportCreate(agent, reportedTopic.id, Report.TYPES.spam, 'Topic spam report test');
-                    const activities3 = (await activityLib.activitiesRead(agent, user.id)).body.data;
-                    const users3 = await notifications.getRelatedUsers(activities3[0]);
-                    assert.equal(users3.length, 1);
-                    assert.equal(users3[0].id, user2.id);
-                });
-
                 test('Success - settings set to TopicVoteList activity', async () => {
                     const topicMemberUser = {
                         userId: user2.id,
@@ -248,18 +213,6 @@ suite('Internal', function () {
                 const text = notifications.buildActivityString(activities[0]);
                 assert.equal('NOTIFICATIONS.NOTIFICATION_USER_CREATE_TOPIC', text);
             });
-        });
-
-        suite('Pads', function () {
-
-            suite('Update', function () {
-
-                //FIXME: TEST!
-                test.skip('Success', async function () {
-                });
-
-            });
-
         });
 
     });

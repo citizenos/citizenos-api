@@ -6434,6 +6434,9 @@ module.exports = function (app) {
             return res.badRequest('The Vote has ended.');
         }
 
+        if(! vote.VoteOptions.length) {
+            return res.badRequest('Invalid option');
+        }
         const singleOptions = _.filter(vote.VoteOptions, function (option) {
             const optVal = option.value.toLowerCase();
 
@@ -6661,6 +6664,9 @@ module.exports = function (app) {
             } else {
                 signingMethod = Vote.SIGNING_METHODS.mid;
                 mobileIdCertificate = await mobileId.getUserCertificate(pid, phoneNumber);
+                if (mobileIdCertificate.data && mobileIdCertificate.data.result === 'NOT_FOUND') {
+                    return res.notFound();
+                }
                 certificateInfo = {
                     certificate: mobileIdCertificate,
                     format: 'pem'
@@ -6783,9 +6789,10 @@ module.exports = function (app) {
                     return res.badRequest();
                 case 'Not Found':
                     return res.notFound();
+                default:
+                    logger.error(error)
+                    return res.badRequest(error.message);
             }
-
-            throw error;
         }
     };
 
@@ -6803,8 +6810,7 @@ module.exports = function (app) {
             if (vote.authType === Vote.AUTH_TYPES.soft) {
                 return handleTopicVoteSoft(vote, req, res, next);
             }
-
-            return handleTopicVoteHard(vote, req, res, next);
+            await handleTopicVoteHard(vote, req, res);
 
         } catch (err) {
             return next(err);
@@ -7174,7 +7180,7 @@ module.exports = function (app) {
 
                 return res.badRequest('Un-authenticated Voting is not supported for Votes with authType === soft.');
             } else {
-                return handleTopicVoteHard(vote, req, res);
+                await handleTopicVoteHard(vote, req, res);
             }
         } catch (e) {
             next(e);
@@ -7378,7 +7384,9 @@ module.exports = function (app) {
         }
 
         const vote = await Vote.findOne({
-            where: {id: voteId},
+            where: {
+                id: voteId
+            },
             include: [
                 {
                     model: Topic,
@@ -7386,11 +7394,12 @@ module.exports = function (app) {
                 }
             ]
         });
-
         if (!vote) {
             return res.notFound();
         }
-
+        if (!vote.delegationIsAllowed) {
+            return res.badRequest();
+        }
         if (vote.endsAt && new Date() > vote.endsAt) {
             return res.badRequest('The Vote has ended.');
         }

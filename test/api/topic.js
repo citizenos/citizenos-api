@@ -2160,61 +2160,6 @@ suite('Users', function () {
                 assert.equal(topicRes.status, Topic.STATUSES.voting);
             });
 
-            test.skip('Success - send to Parliament', async function () {
-                this.timeout(20000);
-
-                const voteOptions = [
-                    {
-                        value: 'Option 1'
-                    },
-                    {
-                        value: 'Option 2'
-                    }
-                ];
-
-                await Topic
-                    .update(
-                        {
-                            title: 'TEST TITLE FOR SENDING TO PARLIAMENT', // Add  title which is not there as Topic is not edited in EP,
-                            endsAt: new Date(new Date().getTime() - 1000 * 60 * 60 * 24)
-                        },
-                        {
-                            where: {
-                                id: topic.id
-                            },
-                            validate: false
-                        }
-                    );
-                // NOTE: Creating a Vote.AUTH_TYPES.soft and changing to Vote.AUTH_TYPES.hard after voting just for testing
-                const topicVote = (await topicVoteCreate(agent, user.id, topic.id, voteOptions, 1, 1, false, null, null, Vote.TYPES.regular, Vote.AUTH_TYPES.hard)).body.data;
-
-                const vote = (await topicVoteRead(agent, user.id, topic.id, topicVote.id)).body.data;
-
-                const option = vote.options.rows[0];
-
-                const voteVoteResult = (await topicVoteVote(agent, user.id, topic.id, vote.id, [{optionId: option.id}], null, '60001018800', '+37200000566', null)).body;
-                await topicVoteStatus(agent, user.id, topic.id, vote.id, voteVoteResult.data.token);
-                const agent2 = request.agent(app);
-                const user2 = await userLib.createUserAndLogin(agent2, null, null, null);
-                await memberLib.topicMemberUsersCreate(topic.id, [
-                    {
-                        userId: user2.id,
-                        level: TopicMemberUser.LEVELS.read
-                    }
-                ]);
-                const voteVoteResult1 = (await topicVoteVote(agent2, user2.id, topic.id, vote.id, [{optionId: option.id}], null, '60001019906', '+37200000766', null)).body;
-                await topicVoteStatus(agent2, user2.id, topic.id, vote.id, voteVoteResult1.data.token);
-
-                const contact = {
-                    name: 'Test',
-                    email: 'test@test.com',
-                    phone: '+3725100000'
-                };
-
-                await topicUpdate(agent, user.id, topic.id, Topic.STATUSES.followUp, Topic.VISIBILITY.public, null, null, contact);
-                await _topicUpdate(agent, user.id, topic.id, Topic.STATUSES.voting, Topic.VISIBILITY.public, null, null, contact, 400);
-            });
-
             test('Fail - update - user with edit permissions - update visibility', async () => {
                 await topicUpdate(agent2, user2.id, topic.id, null, Topic.VISIBILITY.public, null, null, null);
                 const topicRes = (await topicRead(agent, user.id, topic.id, null)).body.data
@@ -2297,61 +2242,6 @@ suite('Users', function () {
                 const errors = (await _topicUpdate(agent, user.id, topic.id, topicStatusNew, Topic.VISIBILITY.private, null, topicEndsAtNewInPast, null, 400)).body.errors;
 
                 assert.equal(errors.endsAt, 'Topic deadline must be in the future.');
-            });
-
-            test.skip('Fail - Bad Request - send to Parliament - invalid contact info. Missing or invalid name, email or phone', async function () {
-                const voteOptions = [
-                    {
-                        value: 'Option 1'
-                    },
-                    {
-                        value: 'Option 2'
-                    }
-                ];
-
-                await topicVoteCreate(agent, user.id, topic.id, voteOptions, 1, 1, false, null, null, Vote.TYPES.regular, Vote.AUTH_TYPES.hard)
-
-                const contact = {};
-
-                const resBody = (await _topicUpdate(agent, user.id, topic.id, Topic.STATUSES.followUp, Topic.VISIBILITY.public, null, null, contact, 400)).body;
-
-                const expectedBody = {
-                    status: {
-                        code: 40000,
-                        message: 'Invalid contact info. Missing or invalid name, email or phone'
-                    }
-                };
-
-                assert.deepEqual(resBody, expectedBody);
-            });
-
-            test.skip('Fail - Bad Request - send to Parliament - not enough votes to send to Parliament', async function () {
-                const voteOptions = [
-                    {
-                        value: 'Option 1'
-                    },
-                    {
-                        value: 'Option 2'
-                    }
-                ];
-
-                await topicVoteCreate(agent, user.id, topic.id, voteOptions, 1, 1, false, null, null, Vote.TYPES.regular, Vote.AUTH_TYPES.hard);
-                const contact = {
-                    name: 'Test',
-                    email: 'test@test.com',
-                    phone: '+3725100000'
-                };
-
-                const resBody = (await _topicUpdate(agent, user.id, topic.id, Topic.STATUSES.followUp, Topic.VISIBILITY.public, null, null, contact, 400)).body;
-
-                const expectedBody = {
-                    status: {
-                        code: 40010,
-                        message: 'Not enough votes to send to Parliament. Votes required - ' + config.features.sendToParliament.voteCountMin
-                    }
-                };
-
-                assert.deepEqual(resBody, expectedBody);
             });
 
             test('Fail - Forbidden - at least edit permissions required', async function () {
@@ -6041,8 +5931,37 @@ suite('Users', function () {
                         assert.deepEqual(responseDelegation, responseExpected);
                     });
 
-                    test.skip('Fail - Bad Request - delegation is not allowed for the Vote', async function () {
-                        throw new Error('NOT IMPLEMENTED!');
+                    test('Fail - Bad Request - delegation is not allowed for the Vote', async function () {
+                        const topic = (await topicCreate(agent, user.id, null, null, null, null, null)).body.data;
+                        const voteOptions = [
+                            {
+                                value: 'Option 1'
+                            },
+                            {
+                                value: 'Option 2'
+                            }
+                        ];
+                        const topicVoteCreated = (await topicVoteCreate(agent, user.id, topic.id, voteOptions, null, null, false, null, null, null, null)).body.data;
+                        const voteRead = (await topicVoteRead(agent, user.id, topic.id, topicVoteCreated.id)).body.data;
+                        const members = [
+                            {
+                                topicId: topic.id,
+                                userId: toUser1.id,
+                                level: TopicMemberUser.LEVELS.read
+                            }
+                        ];
+
+                        await memberLib.topicMemberUsersCreate(topic.id, members);
+                        const responseDelegation = (await _topicVoteDelegationCreate(agent, user.id, topic.id, voteRead.id, toUser1.id, 400)).body;
+
+                        const responseExpected = {
+                            status: {
+                                code: 40000,
+                                message: 'Bad request'
+                            }
+                        };
+
+                        assert.deepEqual(responseDelegation, responseExpected);
                     });
                 });
 
@@ -6515,16 +6434,20 @@ suite('Users', function () {
                         ];
 
 
-                        const voteCreated = (await topicVoteCreate(agent, user.id, topic.id, options, 1, 1, false, null, null, null, null)).body.data;
+                        const voteCreated = (await topicVoteCreate(agent, user.id, topic.id, options, 2, 2, false, null, null, null, null)).body.data;
                         const voteRead = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
 
-                        const voteList1 = [];
+                        const voteList1 = [
+                            {
+                                optionId: voteRead.options.rows[0].id
+                            }
+                        ];
 
                         const voteResult = (await _topicVoteVote(agent, user.id, topic.id, voteRead.id, voteList1, null, null, null, null, 400)).body;
                         const voteResultExpected = {
                             status: {
                                 code: 40000,
-                                message: 'The options must be an array of minimum 1 and maximum 1 options.'
+                                message: 'The options must be an array of minimum 2 and maximum 2 options.'
                             }
                         };
 
@@ -6600,9 +6523,37 @@ suite('Users', function () {
                         assert.deepEqual(voteResult, voteResultExpected);
                     });
 
-                    test.skip('Fail - Bad Request - option id does not belong to the Vote', async function () {
-                        //TODO: Check that you cannot vote for options that do not belong to the Vote
-                        throw new Error('NOT IMPLEMENTED!');
+                    test('Fail - Bad Request - option id does not belong to the Vote', async function () {
+                        const options = [
+                            {
+                                value: 'Option 1'
+                            },
+                            {
+                                value: 'Option 2'
+                            },
+                            {
+                                value: 'Option 3'
+                            }
+                        ];
+
+                        const vote1 = (await topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null)).body.data;
+                        const vote2 = (await topicVoteCreate(agent, user.id, topicPublic.id, options, null, null, null, null, null, null, null)).body.data;
+                        const voteRead2 = (await topicVoteRead(agent, user.id, topicPublic.id, vote2.id)).body.data;
+
+                        const voteList = [
+                            {
+                                optionId: voteRead2.options.rows[0].id
+                            }
+                        ];
+                        const voteResult = (await _topicVoteVote(agent, user.id, topic.id, vote1.id, voteList, null, null, null, null, 400)).body;
+
+                        const voteResultExpected = {
+                            status: {
+                                code: 40000,
+                                message: 'Invalid option'
+                            }
+                        };
+                        assert.deepEqual(voteResult, voteResultExpected);
                     });
 
                 });
@@ -6664,7 +6615,7 @@ suite('Users', function () {
                                 const reqAgent = request.agent(app);
                                 const voteList = [
                                     {
-                                        optionId: vote.options.rows[0].id
+                                        optionId: vote2.options.rows[0].id
                                     }
                                 ];
 
@@ -6713,12 +6664,27 @@ suite('Users', function () {
                                 assert.deepEqual(resBody, expectedBody);
                             });
 
-                            test.skip('Fail - 40030 - Personal ID already connected to another user account.', async function () {
-                                // TODO: This test needs to generate a certificate
-                            });
-
-                            test.skip('Fail - 40031 - User account already connected to another PID.', async function () {
-                                // TODO: This test needs to generate a certificate
+                            test('Fail - 40031 - User account already connected to another PID.', async function () {
+                                const voteList = [
+                                    {
+                                        optionId: vote.options.rows[0].id
+                                    }
+                                ];
+                                await UserConnection
+                                    .create({
+                                            userId: user.id,
+                                            connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                            connectionUserId: 'PNOEE-19101010021'
+                                    });
+                                const certificate = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
+                                const resBody = (await _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, certificate, null, null, null, 400)).body;
+                                const expectedBody = {
+                                    status: {
+                                        code: 40031,
+                                        message: "User account already connected to another PID."
+                                    }
+                                }
+                                assert.deepEqual(resBody, expectedBody);
                             });
 
                         });
@@ -7366,7 +7332,8 @@ suite('Users', function () {
                             assert.deepEqual(resBody, expectedResponse);
                         });
                         //Something has changed in SK MID
-                        test.skip('Fail - 40023 - Mobile-ID user certificates are revoked or suspended for Estonian citizen', async function () {
+                        test('Fail - 40023 - Mobile-ID user certificates are revoked or suspended for Estonian citizen', async function () {
+
                             const phoneNumber = '+37200000266';
                             const pid = '60001019939';
 
@@ -7376,18 +7343,18 @@ suite('Users', function () {
                                 }
                             ];
 
-                            const resBody = (await _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 400)).body;
+                            const resBody = (await _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 404)).body;
                             const expectedResponse = {
                                 status: {
-                                    code: 40023,
-                                    message: 'Certificate was found but is not active'
+                                    code: 40400,
+                                    message: "Not Found"
                                 }
                             };
 
                             assert.deepEqual(resBody, expectedResponse);
                         });
                         //Something has changed in SK MID
-                        test.skip('Fail - 40023 - Mobile-ID user certificates are revoked or suspended for Lithuanian citizen', async function () {
+                        test('Fail - 40023 - Mobile-ID user certificates are revoked or suspended for Lithuanian citizen', async function () {
                             const phoneNumber = '+37060000266';
                             const pid = '50001018832';
 
@@ -7397,18 +7364,18 @@ suite('Users', function () {
                                 }
                             ];
 
-                            const resBody = (await _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 400)).body;
+                            const resBody = (await _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 404)).body;
                             const expectedResponse = {
                                 status: {
-                                    code: 40023,
-                                    message: 'Certificate was found but is not active'
+                                    code: 40400,
+                                    message: "Not Found"
                                 }
                             };
 
                             assert.deepEqual(resBody, expectedResponse);
                         });
                         //Something has changed in SK MID
-                        test.skip('Fail - 40023 - User certificate is not activated for Estonian citizen.', async function () {
+                        test('Fail - 40023 - User certificate is not activated for Estonian citizen.', async function () {
                             const phoneNumber = '+37200000366';
                             const pid = '60001019928';
 
@@ -7418,19 +7385,19 @@ suite('Users', function () {
                                 }
                             ];
 
-                            const resBody = (await _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 400)).body;
+                            const resBody = (await _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 404)).body;
 
                             const expectedResponse = {
                                 status: {
-                                    code: 40023,
-                                    message: 'Certificate was found but is not active'
+                                    code: 40400,
+                                    message: "Not Found"
                                 }
                             };
 
                             assert.deepEqual(resBody, expectedResponse);
                         });
                         //Something has changed in SK MID
-                        test.skip('Fail - 40023 - Mobile-ID is not activated for Lithuanian citizen', async function () {
+                        test('Fail - 40023 - Mobile-ID is not activated for Lithuanian citizen', async function () {
                             const phoneNumber = '+37060000366';
                             const pid = '50001018821';
 
@@ -7440,11 +7407,11 @@ suite('Users', function () {
                                 }
                             ];
 
-                            const resBody = (await _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 400)).body;
+                            const resBody = (await _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, null, pid, phoneNumber, null, 404)).body;
                             const expectedResponse = {
                                 status: {
-                                    code: 40023,
-                                    message: 'Certificate was found but is not active'
+                                    code: 40400,
+                                    message: "Not Found"
                                 }
                             };
 
@@ -7481,14 +7448,6 @@ suite('Users', function () {
                             };
 
                             assert.deepEqual(resBody, expectedResponse);
-                        });
-
-                        test.skip('Fail - 40024 - User certificate is suspended', async function () {
-                            //TODO: No test phone numbers available for errorcode = 304 - http://id.ee/?id=36373
-                        });
-
-                        test.skip('Fail - 40025 - User certificate is expired', async function () {
-                            //TODO: No test phone numbers available for errorcode = 305 - http://id.ee/?id=36373
                         });
                     });
 
@@ -7847,7 +7806,6 @@ suite('Users', function () {
                                     const pathFinalBdoc = `./test/tmp/final_${voteRead.id}_${user.id}.bdoc`;
                                     const fileWriteStream = fs.createWriteStream(pathFinalBdoc);
                                     const fileWriteStreamPromised = cosUtil.streamToPromise(fileWriteStream);
-
                                     request('')
                                         .get(voteReadAfterVoteClosed.downloads.bdocFinal.split('?')[0])
                                         .query({token: finalBdocDownloadToken})
@@ -7984,7 +7942,7 @@ suite('Users', function () {
 
                             const voteList = [
                                 {
-                                    optionId: vote.options.rows[0].id
+                                    optionId: vote2.options.rows[0].id
                                 }
                             ];
                             const response = (await _topicVoteVoteUnauth(reqAgent, topicPublic.id, vote2.id, voteList, null, pid, null, countryCode, 200)).body;
@@ -9013,9 +8971,6 @@ suite('Users', function () {
                         }
                     };
                     assert.deepEqual(resBody, expectedBody);
-                });
-
-                test.skip('Get signed download url', async function () {
                 });
 
             });

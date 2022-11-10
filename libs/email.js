@@ -1612,7 +1612,6 @@ module.exports = function (app) {
         let customStyles = EMAIL_OPTIONS_DEFAULT.styles;
 
         const emailsSendPromises = users.map(function (toUser) {
-            console.log(toUser)
             if (!toUser.email) {
                 logger.info('Skipping invite e-mail to user as there is no email on the profile', toUser.email);
                 return Promise.resolve();
