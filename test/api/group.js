@@ -349,12 +349,12 @@ const User = models.User;
 suite('Users', function () {
 
     suiteSetup(async function () {
-        return shared
+        await shared
             .syncDb();
+        return Promise.resolve();
     });
 
     suite('Groups', function () {
-
         suite('Create', function () {
             let agent = request.agent(app);
             let email = 'test_groupc_' + new Date().getTime() + '@test.ee';
@@ -449,6 +449,8 @@ suite('Users', function () {
                         id: null
                     },
                     name: group.name,
+                    description: null,
+                    imageUrl: null,
                     visibility: Group.VISIBILITY.private,
                     creator: {
                         id: user.id,
@@ -460,6 +462,7 @@ suite('Users', function () {
                         token: groupJoin.token,
                         level: groupJoin.level
                     },
+                    userLevel: "admin",
                     members: {
                         count: 1
                     }
@@ -585,7 +588,6 @@ suite('Users', function () {
                 member2 = await userLib.createUser(request.agent(app), null, null, 'et');
 
                 group = (await groupCreate(agentCreator, user.id, groupName, null, null)).body.data;
-
                 const members = [
                     {
                         userId: member.id,
@@ -645,7 +647,6 @@ suite('Users', function () {
                 assert.isNull(group2.parentId);
 
                 const groupList = (await groupsListUnauth(request.agent(app), null, null, null, null, null)).body.data;
-
                 assert.equal(groupList.count, 1);
                 assert.isArray(groupList.rows);
                 assert.equal(groupList.rows.length, 1);
@@ -722,7 +723,6 @@ suite('Users', function () {
                         }
                     });
             });
-
         });
 
         suite('Invites', function () {
@@ -2007,7 +2007,7 @@ suite('Users', function () {
 
                     let creator, user, group, topicCreated, topicCreated2;
 
-                    suiteSetup(async function () {
+                    suiteSetup(async () => {
                         creator = await userLib.createUserAndLogin(agent, creatorEmail, creatorPassword, null);
                         user = await userLib.createUserAndLogin(userAgent, 'test_gmemberstopicsgd_u_' + cosUtil.randomString() + '@test.ee', creatorPassword, null);
 
@@ -2026,6 +2026,7 @@ suite('Users', function () {
                             groupId: group.id,
                             level: TopicMemberGroup.LEVELS.edit
                         };
+
                         await topicLib.topicMemberGroupsCreate(agent, creator.id, topicCreated.id, memberGroup);
                         const memberGroup2 = {
                             groupId: group.id,
@@ -2091,7 +2092,7 @@ suite('Users', function () {
                         const topicsListCreator2 = (await groupMembersTopicsList(agent, creator.id, group.id, null, null, null, null, creator.id)).body.data;
                         assert.equal(topicsListCreator2.rows.length, 2);
                         assert.equal(topicsListCreator2.rows[0].creator.id, creator.id);
-                        topicLib.topicFavouriteCreate(agent, creator.id, topicCreated.id);
+                        await topicLib.topicFavouriteCreate(agent, creator.id, topicCreated.id);
                         const topicsListPinned = (await groupMembersTopicsList(agent, creator.id, group.id, null, null, null, null, null, true)).body.data;
                         assert.equal(topicsListPinned.rows.length, 1);
                         const topicsListPinnedUser = (await groupMembersTopicsList(userAgent, user.id, group.id, null, null, null, null, null, true)).body.data;
@@ -2171,6 +2172,8 @@ suite('Users', function () {
 
             test('Success - 20000 - default level (read)', async function () {
                 const resActual = (await groupJoinJoin(agentUser, group.join.token)).body;
+                assert.equal(GroupMemberUser.LEVELS.read, resActual.data.userLevel);
+                delete resActual.data.userLevel;
                 const resExpected = {
                     status: {
                         code: 20000
@@ -2201,11 +2204,12 @@ suite('Users', function () {
                         '@type': 'Group',
                         id: group.id,
                         name: group.name,
+                        description: null,
+                        imageUrl: null,
                         parentId: null,
                         visibility: Group.VISIBILITY.private
                     }
                 };
-
                 assert.deepEqual(groupJoinActivityActual, groupJoinActivityExpected);
 
                 const groupExpected = Object.assign({}, group);
@@ -2217,7 +2221,8 @@ suite('Users', function () {
                     },
                     data: groupExpected
                 };
-
+                assert.equal(GroupMemberUser.LEVELS.read, resJoinRead.body.data.userLevel);
+                delete resJoinRead.body.data.userLevel;
                 assert.deepEqual(resJoinRead.body, expectedResult);
 
                 const groupMembersRead = (await groupMemberUsersList(agentUser, user.id, group.id)).body.data;

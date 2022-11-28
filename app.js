@@ -36,7 +36,7 @@ const Busboy = require('busboy');
 const StreamUpload = require('stream_upload');
 const notifications = require('./libs/notifications');
 const SlowDown = require('express-slow-down');
-const RateLimit = require('express-rate-limit');
+const rateLimit = require('express-rate-limit')
 
 let rateLimitStore, speedLimitStore;
 if (config.rateLimit && config.rateLimit.storageType === 'redis') {
@@ -58,18 +58,31 @@ if (config.rateLimit && config.rateLimit.storageType === 'redis') {
 }
 
 const rateLimiter = function (allowedRequests, blockTime, skipSuccess) {
-    return new RateLimit({
+    if (app.get('env') === 'test') {
+        return function (req, res, next) {
+            return next();
+        }
+    }
+    return rateLimit({
         store: rateLimitStore,
         windowMs: blockTime || (15 * 60 * 1000), // default 15 minutes
         max: allowedRequests || 100,
         skipSuccessfulRequests: skipSuccess || true,
-        onLimitReached: function (req) {
-            logger.warn('express-rate-limit', 'RATE LIMIT HIT!', `${req.method} ${req.path}`, req.ip, req.rateLimit);
-        }
+        statusCode: 429,
+        requestWasSuccessful: function () {
+        },
+        handler: function () {
+        },
+        message: 'Too many requests'
     });
 };
 
 const speedLimiter = function (allowedRequests, skipSuccess, blockTime, delay) {
+    if (app.get('env') === 'test') {
+        return function (req, res, next) {
+            return next();
+        }
+    }
     return new SlowDown({
         store: speedLimitStore,
         windowMs: blockTime || (15 * 60 * 1000), // default 15 minutes

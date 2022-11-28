@@ -134,6 +134,7 @@ module.exports = function (app) {
         const language = req.body.language;
         const redirectSuccess = req.body.redirectSuccess || urlLib.getFe();
         const preferences = req.body.preferences;
+        const termsVersion = req.body.termsVersion;
 
         let created = false;
 
@@ -168,6 +169,7 @@ module.exports = function (app) {
                             company,
                             source: User.SOURCES.citizenos,
                             language,
+                            termsVersion,
                             preferences
                         },
                         transaction: t

@@ -738,15 +738,6 @@ suite('Auth', function () {
 
                     assert.deepEqual(responseData, expectedResponse);
                 });
-
-                test.skip('Fail - 40024 - User certificate is suspended', async function () {
-                    //TODO: No test phone numbers available for errorcode = 304 - http://id.ee/?id=36373
-                });
-
-                test.skip('Fail - 40025 - User certificate is expired', async function () {
-                    //TODO: No test phone numbers available for errorcode = 305 - http://id.ee/?id=36373
-                });
-
             });
 
             suite('Status', function () {
@@ -880,7 +871,7 @@ suite('Auth', function () {
 
                 suite('New User', function () {
                     teardown(async function () {
-                        return UserConnection
+                        await UserConnection
                             .destroy({
                                 where: {
                                     connectionId: UserConnection.CONNECTION_IDS.smartid,
@@ -891,7 +882,7 @@ suite('Auth', function () {
                     });
 
                     test('Success - Exisiting User, not logged in, multiple PID UserConnections accounts - login to account with provided userId that has connection', async function () {
-                        this.timeout(25000); //eslint-disable-line no-invalid-this
+                        this.timeout(35000); //eslint-disable-line no-invalid-this
                         const agent = request.agent(app);
                         const agent2 = request.agent(app);
                         const user = await userLib.createUser(agent, null, null, null);
@@ -954,7 +945,7 @@ suite('Auth', function () {
                     });
 
                     test('Success - Exisiting User, not logged in, multiple PID UserConnections accounts - login to default account with provided invalid userId', async function () {
-                        this.timeout(25000); //eslint-disable-line no-invalid-this
+                        this.timeout(35000); //eslint-disable-line no-invalid-this
                         const agent = request.agent(app);
                         const agent2 = request.agent(app);
                         const user = await userLib.createUser(agent, null, null, null);
@@ -1312,10 +1303,6 @@ suite('Auth', function () {
     suite('Verify', function () {
         const agent = request.agent(app);
 
-        // Success is already tested as a part of 'Login' suite.
-        test.skip('Success - signup sets redirectSuccess and verify should redirect to it', async function () {
-        });
-
         test('Fail - invalid emailVerificationCode', async function () {
             return agent
                 .get('/api/auth/verify/thisCodeDoesNotExist')
@@ -1599,10 +1586,52 @@ suite('Auth', function () {
                 assert.equal(authRes.headers.location, expectedUrl);
             });
 
-            test.skip('Success - 302 - User is NOT logged in AND has agreed before -> /login -> redirect_uri', async function () {
+            test('Success - 302 - User is NOT logged in AND has agreed before -> /login -> redirect_uri', async function () {
+                const agent = request.agent(app);
+                const user = await userLib.createUser(agent, null, null, null);
+                await UserConsent.create({
+                    userId: user.id,
+                    partnerId: TEST_PARTNER.id
+                });
+
+                const state = '123213asdasas1231';
+                const authRes = await openIdAuthorize(agent, TEST_RESPONSE_TYPE, TEST_PARTNER.id, TEST_CALLBACK_URI, 'openid', state, 'dasd12312sdasAA');
+                const cookie = authRes.headers['set-cookie'][0].split(';')[0].split('=')[1];
+                const jwtPayload = jwt.decode(cookie);
+                assert.equal(jwtPayload.client_id, TEST_PARTNER.id);
+                assert.equal(jwtPayload.redirect_uri, TEST_CALLBACK_URI);
+                const expectedUrl = urlLib.getFe('/:language/partners/:partnerId/login', {
+                    partnerId: TEST_PARTNER.id,
+                    language: 'en'
+                });
+
+                assert.equal(authRes.headers.location, expectedUrl);
             });
 
-            test.skip('Success - 302 - User is NOT logged in AND has not agreed before -> /login -> /consent -> redirect_uri', async function () {
+            test('Success - 302 - User is NOT logged in AND has not agreed before -> /login -> /consent -> redirect_uri', async function () {
+                const agent = request.agent(app);
+                const user = await userLib.createUser(agent, null, null, null);
+
+                const state = '123213asdasas1231';
+                const authRes = await openIdAuthorize(agent, TEST_RESPONSE_TYPE, TEST_PARTNER.id, TEST_CALLBACK_URI, 'openid', state, 'dasd12312sdasAA');
+                const cookie = authRes.headers['set-cookie'][0].split(';')[0].split('=')[1];
+                const jwtPayload = jwt.decode(cookie);
+                assert.equal(jwtPayload.client_id, TEST_PARTNER.id);
+                assert.equal(jwtPayload.redirect_uri, TEST_CALLBACK_URI);
+                const expectedUrl = urlLib.getFe('/:language/partners/:partnerId/login', {
+                    partnerId: TEST_PARTNER.id,
+                    language: 'en'
+                });
+                assert.equal(authRes.headers.location, expectedUrl);
+                // Logs in the Agent
+                await login(agent, user.email, user.email.split('@')[0] + '1A', 'en');
+                const authRes2 = await openIdAuthorize(agent, TEST_RESPONSE_TYPE, TEST_PARTNER.id, TEST_CALLBACK_URI, 'openid', state, 'dasd12312sdasAA');
+                const expectedUrl2 = urlLib.getFe('/:language/partners/:partnerId/consent', {
+                    partnerId: TEST_PARTNER.id,
+                    language: 'en'
+                });
+
+                assert.equal(authRes2.headers.location, expectedUrl2);
             });
 
             test.skip('Success - 302 - User is NOT registered -> /register -> /verify -> /consent -> redirect_uri', async function () {
