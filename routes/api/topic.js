@@ -1620,10 +1620,6 @@ module.exports = function (app) {
             const topicId = req.params.topicId;
             const user = req.user;
             const partner = req.locals.partner;
-            await cosEtherpad.syncTopicWithPad( // eslint-disable-line require-atomic-updates
-                topicId,
-                req.method + ' ' + req.path
-            );
             const topic = await _topicReadAuth(topicId, include, user, partner);
 
             if (!topic) {
@@ -1645,10 +1641,6 @@ module.exports = function (app) {
         }
 
         try {
-            await cosEtherpad.syncTopicWithPad( // eslint-disable-line require-atomic-updates
-                topicId,
-                req.method + ' ' + req.path
-            );
             const topic = await _topicReadUnauth(topicId, include);
 
             if (!topic) {
@@ -4293,12 +4285,6 @@ module.exports = function (app) {
         if (!topicJoin) {
             return res.notFound();
         }
-        await cosEtherpad
-            .syncTopicWithPad(
-                topicJoin.topicId,
-                req.method + ' ' + req.path,
-                null
-            );
         const topic = await _topicReadUnauth(topicJoin.topicId, null);
 
         if (!topic) {
