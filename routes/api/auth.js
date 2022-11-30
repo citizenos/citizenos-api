@@ -871,6 +871,7 @@ module.exports = function (app) {
 
         passport.authenticate('google', {
             scope: ['https://www.googleapis.com/auth/userinfo.email'],
+            prompt: 'select_account',
             keepSessionInfo: true
         })(req, res, next);
     });
