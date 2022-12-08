@@ -751,7 +751,11 @@ module.exports = function (app) {
         if (sortOrder && ['asc', 'desc'].indexOf(sortOrder.toLowerCase()) === -1) {
             sortOrder = 'ASC';
         }
-
+        const group = await Group.findOne({
+            where: {
+                id: groupId
+            }
+        });
         let sortSql = ` ORDER BY `;
 
         if (order) {
@@ -775,7 +779,7 @@ module.exports = function (app) {
         }
 
         let dataForAdmin = '';
-        if (req.locals && req.locals.group && req.locals.group.level === GroupMemberUser.LEVELS.admin) {
+        if (req.locals && req.locals.group && req.locals.group.level === GroupMemberUser.LEVELS.admin && group.visibility !== Group.VISIBILITY.public) {
             dataForAdmin = `
             u.email,
             uc."connectionData"::jsonb->>'phoneNumber' AS "phoneNumber",
