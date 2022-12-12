@@ -24,6 +24,7 @@ module.exports = function (app) {
     const asyncMiddleware = app.get('middleware.asyncMiddleware');
 
     const Group = models.Group;
+    const TopicMemberGroup = models.TopicMemberGroup;
     const GroupInviteUser = models.GroupInviteUser;
     const GroupMemberUser = models.GroupMemberUser;
     const GroupJoin = models.GroupJoin;
@@ -1866,7 +1867,10 @@ module.exports = function (app) {
         if (visibility) {
             where += ` AND t.visibility=:visibility `;
         }
-
+        let defaultPermission = TopicMemberGroup.LEVELS.none;
+        if (visibility === 'public') {
+            defaultPermission = TopicMemberGroup.LEVELS.read;
+        }
         if (userId && ['true', '1'].includes(hasVoted)) {
             where += ` AND EXISTS (SELECT TRUE FROM "VoteLists" vl WHERE vl."voteId" = tv."voteId" AND vl."userId" = :userId LIMIT 1)`;
         } else if (userId && ['false', '0'].includes(hasVoted)) {
@@ -1887,7 +1891,8 @@ module.exports = function (app) {
             offset,
             search: `%${search}%`,
             statuses,
-            visibility
+            visibility,
+            defaultPermission
         };
         let userSql = ``;
         let fields = ``;
@@ -1906,9 +1911,9 @@ module.exports = function (app) {
                 WHEN tp."topicId" = t.id THEN true
                 ELSE false
             END as "pinned",
-            COALESCE(tmup.level, tmgp.level, 'none') as "permission.level",
-            COALESCE(tmgp.level, 'none') as "permission.levelGroup",`;
-            where += `AND COALESCE(tmup.level, tmgp.level, 'none')::"enum_TopicMemberUsers_level" > 'none'`;
+            COALESCE(tmup.level, tmgp.level, :defaultPermission) as "permission.level",
+            COALESCE(tmgp.level, :defaultPermission) as "permission.levelGroup",`;
+            where += `AND COALESCE(tmup.level, tmgp.level, :defaultPermission)::"enum_TopicMemberUsers_level" > 'none'`;
             userSql = `
             LEFT JOIN (
                 SELECT
