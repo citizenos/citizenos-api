@@ -68,7 +68,6 @@ module.exports = function (app) {
         if (result && result[0]) {
             const isPublic = result[0].isPublic;
             const isAllowed = result[0].allowed;
-
             if (isAllowed || (allowPublic && isPublic) || allowSelf) {
                 return {
                     group: result[0]
@@ -1138,7 +1137,7 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/348
      */
-    app.post('/api/users/:userId/groups/:groupId/invites/users', loginCheck(), hasPermission(GroupMemberUser.LEVELS.admin, null, null), asyncMiddleware(async function (req, res) {
+    app.post('/api/users/:userId/groups/:groupId/invites/users', loginCheck(), hasPermission(GroupMemberUser.LEVELS.admin, true, null), asyncMiddleware(async function (req, res) {
         //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
         const groupId = req.params.groupId;
         const userId = req.user.userId;
@@ -1151,8 +1150,25 @@ module.exports = function (app) {
         const validEmailMembers = [];
         let validUserIdMembers = [];
 
+        // Need the Group just for the activity
+        const group = await Group.findOne({
+            where: {
+                id: groupId
+            }
+        });
+        const creator = await GroupMemberUser.findOne({
+            where: {
+                groupId: groupId,
+                userId: req.user.id
+            }
+        });
         // userId can be actual UUID or e-mail, sort to relevant buckets
         _(members).forEach(function (m) {
+            // Regular members can only invite members with read permissions
+            if (group.visibility === Group.VISIBILITY.public && creator.level === GroupMemberUser.LEVELS.read) {
+                m.level = GroupMemberUser.LEVELS.read;
+            }
+
             if (m.userId) {
                 m.userId = m.userId.trim();
 
@@ -1246,13 +1262,6 @@ module.exports = function (app) {
                     validUserIdMembers.push(member);
                 });
             }
-
-            // Need the Group just for the activity
-            const group = await Group.findOne({
-                where: {
-                    id: groupId
-                }
-            });
 
             validUserIdMembers = validUserIdMembers.filter(function (member) {
                 return member.userId !== req.user.userId; // Make sure user does not invite self
