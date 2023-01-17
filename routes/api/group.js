@@ -32,50 +32,57 @@ module.exports = function (app) {
     const UserConnection = models.UserConnection;
 
     const _hasPermission = async function (groupId, userId, level, allowPublic, allowSelf) {
-        const result = await db.query(`
-            SELECT
-                g.visibility = 'public' AS "isPublic",
-                gm.level::"enum_GroupMemberUsers_level" >= :level AS "allowed",
-                gm."userId" AS uid,
-                gm."level" AS level,
-                CASE
-                    WHEN m."userId" IS NOT NULL THEN TRUE
-                    ELSE FALSE
-                END as "isModerator",
-                g.id
-            FROM "Groups" g
-            LEFT JOIN "GroupMemberUsers" gm
-                ON(gm."groupId" = g.id
-                AND gm."userId" = :userId
-                AND gm."deletedAt" IS NULL)
-            LEFT JOIN "Moderators" m
-                ON (m."partnerId" IS NULL AND m."deletedAt" IS NULL)
-                AND m."userId" = gm."userId"
-            WHERE g.id = :groupId
-                AND g."deletedAt" IS NULL
-            GROUP BY g.id, uid, gm.level, m."userId";`,
-            {
-                replacements: {
-                    groupId: groupId,
-                    userId: userId,
-                    level: level
-                },
-                type: db.QueryTypes.SELECT,
-                raw: true
-            }
-        );
+        try {
 
-        if (result && result[0]) {
-            const isPublic = result[0].isPublic;
-            const isAllowed = result[0].allowed;
-            if (isAllowed || (allowPublic && isPublic) || allowSelf) {
-                return {
-                    group: result[0]
-                };
+            const result = await db.query(`
+        SELECT
+            g.visibility = 'public' AS "isPublic",
+            gm.level::"enum_GroupMemberUsers_level" >= :level AS "allowed",
+            gm."userId" AS uid,
+            gm."level" AS level,
+            CASE
+                WHEN m."userId" IS NOT NULL THEN TRUE
+                ELSE FALSE
+            END as "isModerator",
+            g.id
+        FROM "Groups" g
+        LEFT JOIN "GroupMemberUsers" gm
+            ON(gm."groupId" = g.id
+            AND gm."userId" = :userId
+            AND gm."deletedAt" IS NULL)
+        LEFT JOIN "Moderators" m
+            ON (m."partnerId" IS NULL AND m."deletedAt" IS NULL)
+            AND m."userId" = gm."userId"
+        WHERE g.id = :groupId
+            AND g."deletedAt" IS NULL
+        GROUP BY g.id, uid, gm.level, m."userId";`,
+                {
+                    replacements: {
+                        groupId: groupId,
+                        userId: userId,
+                        level: level
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true
+                }
+            );
+
+            if (result && result[0]) {
+                const isPublic = result[0].isPublic;
+                const isAllowed = result[0].allowed;
+                if (isAllowed || (allowPublic && isPublic) || allowSelf) {
+                    return {
+                        group: result[0]
+                    };
+                }
+            } else {
+                return false;
             }
+
+        } catch (err) {
+            logger.error(err);
+            return false;
         }
-
-        return false;
     };
 
     const hasPermission = function (level, allowPublic, allowSelf) {
@@ -120,7 +127,7 @@ module.exports = function (app) {
                         visibility: req.body.visibility || Group.VISIBILITY.private
                     });
 
-                await group.save({transaction: t});
+                await group.save({ transaction: t });
 
                 const groupJoin = await GroupJoin.create(
                     {
@@ -216,8 +223,8 @@ module.exports = function (app) {
             userLevelJoin = ` LEFT JOIN "GroupMemberUsers" gmu ON gmu."userId"=:userId AND gmu."groupId" = g.id `;
         }
         const [group] = await db
-        .query(
-            `SELECT
+            .query(
+                `SELECT
                  g.id,
                  g."parentId" AS "parent.id",
                  g.name,
@@ -245,16 +252,16 @@ module.exports = function (app) {
             WHERE g.id = :groupId
             AND g."deletedAt" IS NULL
             AND g.visibility = 'public';`,
-            {
-                replacements: {
-                    groupId: groupId,
-                    userId
-                },
-                type: db.QueryTypes.SELECT,
-                raw: true,
-                nest: true
-            }
-        );
+                {
+                    replacements: {
+                        groupId: groupId,
+                        userId
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
 
         return group;
     };
@@ -381,7 +388,7 @@ module.exports = function (app) {
                     transaction: t
                 });
                 const memberUsersCount = await GroupMemberUser.count({
-                    where:  {
+                    where: {
                         groupId: group.id
                     },
                     transaction: t
@@ -396,10 +403,10 @@ module.exports = function (app) {
 
                 const groupUpdated = group.toJSON();
                 groupUpdated.userLevel = GroupMemberUser.LEVELS.admin; //As check has already been done, there is no need for db check here
-                groupUpdated.parent = {id: group.parentId};
+                groupUpdated.parent = { id: group.parentId };
                 delete groupUpdated.parentId;
                 groupUpdated.creator = creator.dataValues;
-                groupUpdated.members = {count: memberUsersCount};
+                groupUpdated.members = { count: memberUsersCount };
                 t.afterCommit(() => {
                     if (!groupUpdated) {
                         return res.badRequest();
@@ -421,8 +428,8 @@ module.exports = function (app) {
         }
 
         await db.transaction(async function (t) {
-            await GroupMemberUser.destroy({where: {groupId: group.id}}, {transaction: t});
-            await group.destroy({transaction: t});
+            await GroupMemberUser.destroy({ where: { groupId: group.id } }, { transaction: t });
+            await group.destroy({ transaction: t });
             await cosActivities.deleteActivity(
                 group,
                 null,
@@ -851,7 +858,7 @@ module.exports = function (app) {
                 raw: true
             });
 
-        if (groupMembers.length === 1 && _.find(groupMembers, {userId: memberId})) {
+        if (groupMembers.length === 1 && _.find(groupMembers, { userId: memberId })) {
             return res.badRequest('Cannot revoke admin permissions from the last admin member.');
         }
 
@@ -911,7 +918,7 @@ module.exports = function (app) {
                 raw: true
             });
 
-        if (groupMemberUsers.length === 1 && _.find(groupMemberUsers, {userId: memberId})) {
+        if (groupMemberUsers.length === 1 && _.find(groupMemberUsers, { userId: memberId })) {
             return res.badRequest('Cannot delete the last admin member.');
         }
 
@@ -919,8 +926,8 @@ module.exports = function (app) {
         // NOTE: Postgres does not support LIMIT for DELETE, thus the hidden "ctid" column and subselect is used
         await db
             .transaction(async function (t) {
-                const group = Group.build({id: groupId});
-                const user = User.build({id: memberId});
+                const group = Group.build({ id: groupId });
+                const user = User.build({ id: memberId });
 
                 group.dataValues.id = groupId;
                 user.dataValues.id = memberId;
@@ -1007,7 +1014,7 @@ module.exports = function (app) {
                         t
                     );
 
-                await groupJoin.save({transaction: t});
+                await groupJoin.save({ transaction: t });
                 t.afterCommit(() => {
                     return res.ok(groupJoin);
                 });
@@ -1056,7 +1063,7 @@ module.exports = function (app) {
                         t
                     );
 
-                await groupJoin.save({transaction: t});
+                await groupJoin.save({ transaction: t });
                 t.afterCommit(() => {
                     return res.ok(groupJoin);
                 });
@@ -1203,7 +1210,7 @@ module.exports = function (app) {
 
 
             _(usersExistingEmail).forEach(function (u) {
-                const member = _.find(validEmailMembers, {userId: u.email});
+                const member = _.find(validEmailMembers, { userId: u.email });
                 if (member) {
                     member.userId = u.id;
                     validUserIdMembers.push(member);
@@ -1228,7 +1235,7 @@ module.exports = function (app) {
                     });
                 });
 
-                createdUsers = await User.bulkCreate(usersToCreate, {transaction: t});
+                createdUsers = await User.bulkCreate(usersToCreate, { transaction: t });
 
                 const createdUsersActivitiesCreatePromises = createdUsers.map(async function (user) {
                     return cosActivities.createActivity(
@@ -1254,7 +1261,7 @@ module.exports = function (app) {
                     };
 
                     // Sequelize defaultValue has no effect if "undefined" or "null" is set for attribute...
-                    const level = _.find(validEmailMembers, {userId: u.email}).level;
+                    const level = _.find(validEmailMembers, { userId: u.email }).level;
                     if (level) {
                         member.level = level;
                     }
@@ -1327,7 +1334,7 @@ module.exports = function (app) {
                         }
                     );
 
-                    const userInvited = User.build({id: groupInvite.userId});
+                    const userInvited = User.build({ id: groupInvite.userId });
                     userInvited.dataValues.level = groupInvite.level; // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
                     userInvited.dataValues.inviteId = groupInvite.id;
 
@@ -1596,13 +1603,13 @@ module.exports = function (app) {
                 {
                     emailIsVerified: true
                 }, {
-                    where: {
-                        id: invite.userId
-                    },
-                    fields: ['emailIsVerified'],
-                    limit: 1
-                }
-        );
+                where: {
+                    id: invite.userId
+                },
+                fields: ['emailIsVerified'],
+                limit: 1
+            }
+            );
 
         // User has not been registered by a person but was created by the system on invite - https://github.com/citizenos/citizenos-fe/issues/773
         if (!invite.user.password && invite.user.source === User.SOURCES.citizenos && !invite.user.UserConnections.length) {
@@ -1784,7 +1791,7 @@ module.exports = function (app) {
                 transaction: t
             });
 
-            const user = User.build({id: member.userId});
+            const user = User.build({ id: member.userId });
             user.dataValues.id = member.userId;
 
             await cosActivities.acceptActivity(
@@ -2128,20 +2135,20 @@ module.exports = function (app) {
                 OFFSET :offset
                 LIMIT :limit
             `,
-            {
-                replacements: {
-                    userId,
-                    limit,
-                    sourcePartnerId,
-                    orderBy,
-                    order,
-                    offset
-                },
-                type: db.QueryTypes.SELECT,
-                raw: true,
-                nest: true
-            }
-        );
+                {
+                    replacements: {
+                        userId,
+                        limit,
+                        sourcePartnerId,
+                        orderBy,
+                        order,
+                        offset
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
         let countTotal = groups[0]?.countTotal || 0;
         groups.forEach((group) => {
             delete group.countTotal;
