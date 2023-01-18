@@ -6300,7 +6300,7 @@ module.exports = function (app) {
         const voteId = req.params.voteId;
 
         // Make sure the Vote is actually related to the Topic through which the permission was granted.
-        const fields = ['endsAt'];
+        const fields = ['endsAt', 'reminderTime'];
 
         const topic = await Topic.findOne({
             where: {
