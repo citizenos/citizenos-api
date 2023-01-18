@@ -292,7 +292,7 @@ module.exports = function (app) {
             const isTopicModerator = result[0].topicId === topicId;
 
             if (isUserModerator && isTopicModerator) {
-                return {isModerator: result[0].partnerId ? result[0].partnerId : true};
+                return { isModerator: result[0].partnerId ? result[0].partnerId : true };
             }
         }
 
@@ -795,7 +795,7 @@ module.exports = function (app) {
             return;
         }
 
-        topic.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+        topic.url = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
 
         if (include && include.indexOf('vote') > -1 && topic.vote && topic.vote.id) {
             const voteResults = await getVoteResults(topic.vote.id);
@@ -808,7 +808,7 @@ module.exports = function (app) {
                     value: option[1]
                 };
                 if (voteResults && voteResults.length) {
-                    const res = _.find(voteResults, {'optionId': o.id});
+                    const res = _.find(voteResults, { 'optionId': o.id });
                     if (res) {
                         o.voteCount = res.voteCount;
                     }
@@ -1070,7 +1070,7 @@ module.exports = function (app) {
             return;
         }
         topic.padUrl = cosEtherpad.getUserAccessUrl(topic, topic.user.id, topic.user.name, topic.user.language, partner);
-        topic.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+        topic.url = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
 
         if (topic.visibility === Topic.VISIBILITY.public && topic.permission.level === TopicMemberUser.LEVELS.none) {
             topic.permission.level = TopicMemberUser.LEVELS.read;
@@ -1091,7 +1091,7 @@ module.exports = function (app) {
                     value: option[1]
                 };
                 if (voteResult) {
-                    const res = _.find(voteResult, {'optionId': o.id});
+                    const res = _.find(voteResult, { 'optionId': o.id });
                     if (res) {
                         const count = parseInt(res.voteCount, 10);
                         if (count) {
@@ -1143,7 +1143,7 @@ module.exports = function (app) {
         if (!userId) {
             where = ` AND t.visibility = '${Topic.VISIBILITY.public}'`;
         } else {
-            select = injectReplacements(', (SELECT true FROM pg_temp.votes(v."voteId") WHERE "userId" = :userId AND "optionId" = v."optionId") as "selected" ', Sequelize.postgres, {userId});
+            select = injectReplacements(', (SELECT true FROM pg_temp.votes(v."voteId") WHERE "userId" = :userId AND "optionId" = v."optionId") as "selected" ', Sequelize.postgres, { userId });
             where = `AND COALESCE(tmup.level, tmgp.level, 'none')::"enum_TopicMemberUsers_level" > 'none'`;
             join += injectReplacements(`LEFT JOIN (
                         SELECT
@@ -1164,7 +1164,7 @@ module.exports = function (app) {
                         AND gm."deletedAt" IS NULL
                         GROUP BY "topicId", "userId"
                     ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
-            `, Sequelize.postgres, {userId});
+            `, Sequelize.postgres, { userId });
         }
         const query = `
                         CREATE OR REPLACE FUNCTION pg_temp.delegations(uuid)
@@ -1399,7 +1399,7 @@ module.exports = function (app) {
             let topicJoin;
 
             await db.transaction(async function (t) {
-                await topic.save({transaction: t});
+                await topic.save({ transaction: t });
                 const topicJoinPromise = TopicJoin.create(
                     {
                         topicId: topic.id
@@ -1432,7 +1432,7 @@ module.exports = function (app) {
                 );
                 [topicJoin] = await Promise.all([topicJoinPromise, memberUserPromise, activityPromise]);
                 t.afterCommit(async () => {
-                     topic = await cosEtherpad.syncTopicWithPad( // eslint-disable-line require-atomic-updates
+                    topic = await cosEtherpad.syncTopicWithPad( // eslint-disable-line require-atomic-updates
                         topic.id,
                         req.method + ' ' + req.path,
                         {
@@ -1452,7 +1452,7 @@ module.exports = function (app) {
                     const resObject = topic.toJSON();
                     resObject.authors = authors;
                     resObject.padUrl = cosEtherpad.getUserAccessUrl(topic, user.id, user.name, user.language, req.locals.partner);
-                    resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+                    resObject.url = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
 
                     if (req.locals.partner) {
                         resObject.sourcePartnerId = req.locals.partner.id;
@@ -1510,7 +1510,7 @@ module.exports = function (app) {
 
             await db.transaction(async function (t) {
                 await cosEtherpad.createPadCopy(req.params.topicId, topic.id);
-                await topic.save({transaction: t});
+                await topic.save({ transaction: t });
                 await topic.addMemberUser(// Magic method by Sequelize - https://github.com/sequelize/sequelize/wiki/API-Reference-Associations#hasmanytarget-options
                     user.id,
                     {
@@ -1590,7 +1590,7 @@ module.exports = function (app) {
                     const resObject = topic.toJSON();
                     resObject.authors = authors;
                     resObject.padUrl = cosEtherpad.getUserAccessUrl(topic, user.id, user.name, user.language, req.locals.partner);
-                    resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+                    resObject.url = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
 
                     if (req.locals.partner) {
                         resObject.sourcePartnerId = req.locals.partner.id;
@@ -1685,7 +1685,7 @@ module.exports = function (app) {
 
             const topic = await Topic
                 .findOne({
-                    where: {id: topicId},
+                    where: { id: topicId },
                     include: [Vote]
                 });
 
@@ -1748,7 +1748,7 @@ module.exports = function (app) {
                             t
                         ));
 
-                    promisesList.push(topic.save({transaction: t}));
+                    promisesList.push(topic.save({ transaction: t }));
 
                     if (isBackToVoting) {
                         promisesList.push(cosSignature.deleteFinalBdoc(topicId, vote.id));
@@ -1844,7 +1844,7 @@ module.exports = function (app) {
                         t
                     );
 
-                await topicJoin.save({transaction: t});
+                await topicJoin.save({ transaction: t });
                 t.afterCommit(() => {
                     return res.ok(topicJoin);
                 });
@@ -1893,7 +1893,7 @@ module.exports = function (app) {
                         t
                     );
 
-                await topicJoin.save({transaction: t});
+                await topicJoin.save({ transaction: t });
                 t.afterCommit(() => {
                     return res.ok(topicJoin);
                 });
@@ -2248,7 +2248,7 @@ module.exports = function (app) {
 
             if (rowCount > 0) {
                 rows.forEach((topic) => {
-                    topic.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+                    topic.url = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
 
                     if (include.indexOf('vote') > -1) {
                         if (topic.vote.id) {
@@ -2261,7 +2261,7 @@ module.exports = function (app) {
                                     o.value = optText[1];
                                     let result = 0;
                                     if (voteResults && voteResults.length) {
-                                        result = _.find(voteResults, {'optionId': optText[0]});
+                                        result = _.find(voteResults, { 'optionId': optText[0] });
                                         if (result) {
                                             o.voteCount = parseInt(result.voteCount, 10);
                                             if (result.selected) {
@@ -2543,7 +2543,7 @@ module.exports = function (app) {
             if (topics && topics.length) {
                 countTotal = topics[0].countTotal;
                 topics.forEach(function (topic) {
-                    topic.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+                    topic.url = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
 
                     delete topic.countTotal;
 
@@ -2556,7 +2556,7 @@ module.exports = function (app) {
                                 o.id = optText[0];
                                 o.value = optText[1];
                                 if (voteResults && voteResults.length) {
-                                    const result = _.find(voteResults, {'optionId': optText[0]});
+                                    const result = _.find(voteResults, { 'optionId': optText[0] });
                                     if (result) {
                                         o.voteCount = parseInt(result.voteCount, 10);
                                     }
@@ -3042,7 +3042,7 @@ module.exports = function (app) {
                 checked.push(
                     new Promise((reject, resolve) => {
                         const blevel = row.level;
-                        if (LEVELS[minRequiredLevel] > LEVELS[blevel] && row.isPublic === true ) {
+                        if (LEVELS[minRequiredLevel] > LEVELS[blevel] && row.isPublic === true) {
                             logger.warn('Access denied to topic due to member without permissions trying to delete user! ', 'userId:', userId);
 
                             throw new Error('Access denied');
@@ -3058,7 +3058,7 @@ module.exports = function (app) {
                     }
                 });
 
-                return result;
+            return result;
         } else {
             return Promise.reject();
         }
@@ -3194,7 +3194,7 @@ module.exports = function (app) {
                 }
             });
 
-            if (topicAdminMembers && topicAdminMembers.length === 1 && _.find(topicAdminMembers, {userId: memberId})) {
+            if (topicAdminMembers && topicAdminMembers.length === 1 && _.find(topicAdminMembers, { userId: memberId })) {
                 return res.badRequest('Cannot revoke admin permissions from the last admin member.');
             }
 
@@ -3276,7 +3276,7 @@ module.exports = function (app) {
                         t
                     );
 
-                    await topicMemberGroup.save({transaction: t});
+                    await topicMemberGroup.save({ transaction: t });
 
                     t.afterCommit(() => res.ok());
                 });
@@ -3307,7 +3307,7 @@ module.exports = function (app) {
             });
 
             // At least 1 admin member has to remain at all times..
-            if (result.length === 1 && _.find(result, {userId: memberId})) {
+            if (result.length === 1 && _.find(result, { userId: memberId })) {
                 return res.badRequest('Cannot delete the last admin member.', 10);
             }
             // TODO: Used to use TopicMemberUser.destroy, but that broke when moving 2.x->3.x - https://github.com/sequelize/sequelize/issues/4465
@@ -3414,9 +3414,9 @@ module.exports = function (app) {
                                 raw: true
                             }
                         );
-                        t.afterCommit(() => {
-                            return res.ok();
-                        });
+                    t.afterCommit(() => {
+                        return res.ok();
+                    });
                 });
         } catch (err) {
             return next(err);
@@ -3605,7 +3605,7 @@ module.exports = function (app) {
 
 
             _(usersExistingEmail).forEach(function (u) {
-                const member = _.find(validEmailMembers, {userId: u.email});
+                const member = _.find(validEmailMembers, { userId: u.email });
                 if (member) {
                     member.userId = u.id;
                     validUserIdMembers.push(member);
@@ -3630,7 +3630,7 @@ module.exports = function (app) {
                     });
                 });
 
-                createdUsers = await User.bulkCreate(usersToCreate, {transaction: t});
+                createdUsers = await User.bulkCreate(usersToCreate, { transaction: t });
 
                 const createdUsersActivitiesCreatePromises = createdUsers.map(async function (user) {
                     return cosActivities.createActivity(
@@ -3656,7 +3656,7 @@ module.exports = function (app) {
                     };
 
                     // Sequelize defaultValue has no effect if "undefined" or "null" is set for attribute...
-                    const level = _.find(validEmailMembers, {userId: u.email}).level;
+                    const level = _.find(validEmailMembers, { userId: u.email }).level;
                     if (level) {
                         member.level = level;
                     }
@@ -3740,7 +3740,7 @@ module.exports = function (app) {
                         }
                     );
 
-                    const userInvited = User.build({id: topicInvite.userId});
+                    const userInvited = User.build({ id: topicInvite.userId });
                     userInvited.dataValues.level = topicInvite.level; // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
                     userInvited.dataValues.inviteId = topicInvite.id; // FIXME: HACK? Invite event, pu
 
@@ -3906,7 +3906,7 @@ module.exports = function (app) {
         const invite = await TopicInviteUser
             .findOne({
                 where: {
-                    id:inviteId,
+                    id: inviteId,
                     topicId: topicId
                 },
                 paranoid: false,
@@ -4018,7 +4018,7 @@ module.exports = function (app) {
                     emailIsVerified: true
                 },
                 {
-                    where: {id: invite.userId},
+                    where: { id: invite.userId },
                     fields: ['emailIsVerified'],
                     limit: 1
                 }
@@ -4245,7 +4245,7 @@ module.exports = function (app) {
                 transaction: t
             });
 
-            const user = User.build({id: member.userId});
+            const user = User.build({ id: member.userId });
             user.dataValues.id = member.userId;
 
             await cosActivities.acceptActivity(
@@ -4363,7 +4363,7 @@ module.exports = function (app) {
             const resObject = topic.toJSON();
 
             resObject.authors = authors;
-            resObject.url = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+            resObject.url = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
             t.afterCommit(() => {
                 return res.ok(resObject);
             });
@@ -4397,7 +4397,7 @@ module.exports = function (app) {
             let attachment = Attachment.build(data);
 
             await db.transaction(async function (t) {
-                attachment = await attachment.save({transaction: t});
+                attachment = await attachment.save({ transaction: t });
                 await TopicAttachment.create(
                     {
                         topicId: req.params.topicId,
@@ -4500,7 +4500,7 @@ module.exports = function (app) {
             });
 
             await db.transaction(async function (t) {
-                attachment = await attachment.save({transaction: t});
+                attachment = await attachment.save({ transaction: t });
                 await TopicAttachment.create(
                     {
                         topicId: req.params.topicId,
@@ -4604,7 +4604,7 @@ module.exports = function (app) {
                         ip: req.ip
                     }, req.method + ' ' + req.path, t);
 
-                    await attachment.destroy({transaction: t});
+                    await attachment.destroy({ transaction: t });
 
                     t.afterCommit(() => {
                         return res.ok();
@@ -4880,7 +4880,7 @@ module.exports = function (app) {
         const text = req.body.text;
         try {
             if (!text || text.length < 10 || text.length > 4000) {
-                return res.badRequest(null, 1, {text: 'Parameter "text" has to be between 10 and 4000 characters'});
+                return res.badRequest(null, 1, { text: 'Parameter "text" has to be between 10 and 4000 characters' });
             }
 
             const topicReport = await TopicReport.findOne({
@@ -4974,7 +4974,7 @@ module.exports = function (app) {
 
         await db
             .transaction(async function (t) {
-                await comment.save({transaction: t});
+                await comment.save({ transaction: t });
                 //comment.edits.createdAt = JSON.stringify(comment.createdAt);
                 const topic = await Topic.findOne({
                     where: {
@@ -5174,9 +5174,9 @@ module.exports = function (app) {
                         SELECT "commentId", true AS selected FROM "CommentVotes" WHERE value < 0 AND "creatorId" = :userId
                     ) cvds ON (cvds."commentId"= c.id)
             ),`, Sequelize.postgres, {
-                userId: userId,
-                dateFormat: 'YYYY-MM-DDThh24:mi:ss.msZ',
-            }
+            userId: userId,
+            dateFormat: 'YYYY-MM-DDThh24:mi:ss.msZ',
+        }
         );
 
         const query = `
@@ -5363,11 +5363,11 @@ module.exports = function (app) {
             LIMIT :limit
             OFFSET :offset
         `, Sequelize.postgres,
-        {
-            topicId: req.params.topicId,
-            limit: parseInt(req.query.limit, 10) || 15,
-            offset: parseInt(req.query.offset, 10) || 0
-        }
+            {
+                topicId: req.params.topicId,
+                limit: parseInt(req.query.limit, 10) || 15,
+                offset: parseInt(req.query.offset, 10) || 0
+            }
         );
 
         try {
@@ -5380,7 +5380,7 @@ module.exports = function (app) {
                     }
                 );
             const commentCountQuery = db
-                    .query(`
+                .query(`
                         SELECT
                             c.type,
                             COUNT(c.type)
@@ -5389,10 +5389,10 @@ module.exports = function (app) {
                         WHERE tc."topicId" = :topicId
                         GROUP BY c.type;
                     `, {
-                        replacements: {
-                            topicId: req.params.topicId
-                        }
-                    });
+                    replacements: {
+                        topicId: req.params.topicId
+                    }
+                });
             const [comments, commentsCount] = await Promise.all([commentsQuery, commentCountQuery]);
             let countRes = {
                 pro: 0,
@@ -5539,15 +5539,15 @@ module.exports = function (app) {
                     WHERE id = :commentId
                     RETURNING *;
                 `,
-                {
-                    replacements: {
-                        commentId
-                    },
-                    type: db.QueryTypes.UPDATE,
-                    raw: true,
-                    nest: true,
-                    transaction: t
-                });
+                        {
+                            replacements: {
+                                commentId
+                            },
+                            type: db.QueryTypes.UPDATE,
+                            raw: true,
+                            nest: true,
+                            transaction: t
+                        });
 
                 t.afterCommit(() => {
                     return res.ok();
@@ -5668,7 +5668,7 @@ module.exports = function (app) {
         const type = req.body.type;
 
         if (!type) {
-            return res.badRequest({type: 'Property type is required'});
+            return res.badRequest({ type: 'Property type is required' });
         }
 
         const commentReport = (await db
@@ -5972,7 +5972,7 @@ module.exports = function (app) {
                                 t
                             );
 
-                        await vote.save({transaction: t});
+                        await vote.save({ transaction: t });
                     } else {
                         //User has not voted...
                         const cv = await CommentVote
@@ -6090,7 +6090,8 @@ module.exports = function (app) {
             description: req.body.description,
             type: req.body.type || Vote.TYPES.regular,
             authType: authType,
-            autoClose: req.body.autoClose
+            autoClose: req.body.autoClose,
+            reminderTime: req.body.reminderTime
         });
 
 
@@ -6117,7 +6118,7 @@ module.exports = function (app) {
                         req.method + ' ' + req.path,
                         t
                     );
-                await vote.save({transaction: t});
+                await vote.save({ transaction: t });
                 const voteOptionPromises = [];
                 _(voteOptions).forEach(function (o) {
                     o.voteId = vote.id;
@@ -6154,7 +6155,7 @@ module.exports = function (app) {
                             topicId: req.params.topicId,
                             voteId: vote.id
                         },
-                        {transaction: t}
+                        { transaction: t }
                     );
                 await cosActivities
                     .createActivity(
@@ -6211,11 +6212,11 @@ module.exports = function (app) {
         const userId = req.user.userId;
 
         const voteInfo = await Vote.findOne({
-            where: {id: voteId},
+            where: { id: voteId },
             include: [
                 {
                     model: Topic,
-                    where: {id: topicId}
+                    where: { id: topicId }
                 },
                 VoteOption,
                 {
@@ -6243,7 +6244,7 @@ module.exports = function (app) {
         let hasVoted = false;
         if (voteResults && voteResults.length) {
             voteInfo.dataValues.VoteOptions.forEach(function (option) {
-                const result = _.find(voteResults, {optionId: option.id});
+                const result = _.find(voteResults, { optionId: option.id });
 
                 if (result) {
                     const voteCount = parseInt(result.voteCount, 10);
@@ -6299,7 +6300,7 @@ module.exports = function (app) {
         const voteId = req.params.voteId;
 
         // Make sure the Vote is actually related to the Topic through which the permission was granted.
-        const fields = ['endsAt'];
+        const fields = ['endsAt', 'reminderTime'];
 
         const topic = await Topic.findOne({
             where: {
@@ -6358,11 +6359,11 @@ module.exports = function (app) {
         // TODO: Can be done in 1 query.
         const voteInfo = await Vote
             .findOne({
-                where: {id: voteId},
+                where: { id: voteId },
                 include: [
                     {
                         model: Topic,
-                        where: {id: topicId}
+                        where: { id: topicId }
                     },
                     VoteOption
                 ]
@@ -6375,7 +6376,7 @@ module.exports = function (app) {
         const voteResults = await getVoteResults(voteId);
         if (voteResults && voteResults.length) {
             _(voteInfo.dataValues.VoteOptions).forEach(function (option) {
-                const result = _.find(voteResults, {optionId: option.id});
+                const result = _.find(voteResults, { optionId: option.id });
                 if (result) {
                     option.dataValues.voteCount = parseInt(result.voteCount, 10); //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
                     if (result.selected) {
@@ -6398,15 +6399,15 @@ module.exports = function (app) {
 
         const vote = await Vote
             .findOne({
-                where: {id: voteId},
+                where: { id: voteId },
                 include: [
                     {
                         model: Topic,
-                        where: {id: topicId}
+                        where: { id: topicId }
                     },
                     {
                         model: VoteOption,
-                        where: {id: _.map(voteOptions, 'optionId')},
+                        where: { id: _.map(voteOptions, 'optionId') },
                         required: false
                     }
                 ]
@@ -6420,7 +6421,7 @@ module.exports = function (app) {
             return res.badRequest('The Vote has ended.');
         }
 
-        if(! vote.VoteOptions.length) {
+        if (!vote.VoteOptions.length) {
             return res.badRequest('Invalid option');
         }
         const singleOptions = _.filter(vote.VoteOptions, function (option) {
@@ -6436,7 +6437,7 @@ module.exports = function (app) {
 
                 if (isOption) {
                     isSingelOption = true;
-                    req.body.options = [{optionId: isOption.id}];
+                    req.body.options = [{ optionId: isOption.id }];
                 }
             }
         }
@@ -6453,11 +6454,11 @@ module.exports = function (app) {
     const _handleVoteAutoCloseConditions = async (voteId, topicId, userId) => {
         const vote = await Vote
             .findOne({
-                where: {id: voteId},
+                where: { id: voteId },
                 include: [
                     {
                         model: Topic,
-                        where: {id: topicId}
+                        where: { id: topicId }
                     }
                 ]
             });
@@ -6567,7 +6568,7 @@ module.exports = function (app) {
                         return res.ok();
                     });
                 });
-        } catch(err) {
+        } catch (err) {
             return next(err);
         }
     };
@@ -6735,7 +6736,7 @@ module.exports = function (app) {
 
                     // Send JWT with state and expect it back in /sign /status - https://trello.com/c/ZDN2WomW/287-bug-id-card-signing-does-not-work-for-some-users
                     // Wrapping sessionDataEncrypted in object, otherwise jwt.sign "expiresIn" will not work - https://github.com/auth0/node-jsonwebtoken/issues/166
-                    sessionDataEncrypted = {sessionDataEncrypted: cryptoLib.encrypt(config.session.secret, sessionData)};
+                    sessionDataEncrypted = { sessionDataEncrypted: cryptoLib.encrypt(config.session.secret, sessionData) };
                     token = jwt.sign(sessionDataEncrypted, config.session.privateKey, {
                         expiresIn: '5m',
                         algorithm: config.session.algorithm
@@ -6865,7 +6866,7 @@ module.exports = function (app) {
         let idSignFlowData;
 
         try {
-            tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+            tokenData = jwt.verify(token, config.session.publicKey, { algorithms: [config.session.algorithm] });
             idSignFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
         } catch (err) {
             if (err.name === 'TokenExpiredError') {
@@ -6986,7 +6987,7 @@ module.exports = function (app) {
         let idSignFlowData;
 
         try {
-            tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+            tokenData = jwt.verify(token, config.session.publicKey, { algorithms: [config.session.algorithm] });
             idSignFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
         } catch (err) {
             if (err.name === 'TokenExpiredError') {
@@ -7265,13 +7266,13 @@ module.exports = function (app) {
 
             await cosActivities
                 .downloadFinalContainerActivity({
-                        voteId,
-                        topicId
-                    }, {
-                        type: 'User',
-                        id: userId,
-                        ip: req.ip
-                    },
+                    voteId,
+                    topicId
+                }, {
+                    type: 'User',
+                    id: userId,
+                    ip: req.ip
+                },
                     req.method + ' ' + req.path
                 );
 
@@ -7376,7 +7377,7 @@ module.exports = function (app) {
             include: [
                 {
                     model: Topic,
-                    where: {id: topicId}
+                    where: { id: topicId }
                 }
             ]
         });
@@ -7495,11 +7496,11 @@ module.exports = function (app) {
 
             const vote = await Vote
                 .findOne({
-                    where: {id: voteId},
+                    where: { id: voteId },
                     include: [
                         {
                             model: Topic,
-                            where: {id: topicId}
+                            where: { id: topicId }
                         }
                     ]
                 });
@@ -7754,11 +7755,11 @@ module.exports = function (app) {
         }
     });
 
-     /**
-     * Get User preferences LIST
-    */
-      app.get('/api/users/:userId/notificationsettings/topics', loginCheck(), async function (req, res, next) {
-          try {
+    /**
+    * Get User preferences LIST
+   */
+    app.get('/api/users/:userId/notificationsettings/topics', loginCheck(), async function (req, res, next) {
+        try {
             const limitDefault = 10;
             const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
             let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
@@ -7814,21 +7815,21 @@ module.exports = function (app) {
                     OFFSET :offset
                 ;`
             const userSettings = await db
-            .query(
-                query,
-                {
-                    replacements: {
-                        userId: req.user.id,
-                        title: title,
-                        partnerId,
-                        offset,
-                        limit
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true,
-                    nest: true
-                }
-            );
+                .query(
+                    query,
+                    {
+                        replacements: {
+                            userId: req.user.id,
+                            title: title,
+                            partnerId,
+                            offset,
+                            limit
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true,
+                        nest: true
+                    }
+                );
             let result = {
                 count: 0,
                 rows: []
@@ -7850,7 +7851,7 @@ module.exports = function (app) {
     /**
      * Get User Topic preferences
     */
-      app.get('/api/users/:userId/topics/:topicId/notificationsettings', loginCheck(), asyncMiddleware(async function (req, res) {
+    app.get('/api/users/:userId/topics/:topicId/notificationsettings', loginCheck(), asyncMiddleware(async function (req, res) {
         const userSettings = await UserNotificationSettings.findOne({
             where: {
                 userId: req.user.id,
@@ -7864,7 +7865,7 @@ module.exports = function (app) {
     /**
      * Set User preferences
     */
-     app.put('/api/users/:userId/topics/:topicId/notificationsettings', loginCheck(), async function (req, res) {
+    app.put('/api/users/:userId/topics/:topicId/notificationsettings', loginCheck(), async function (req, res) {
         const settings = req.body;
         const allowedFields = ['topicId', 'allowNotifications', 'preferences'];
         const finalSettings = {};
@@ -7879,9 +7880,11 @@ module.exports = function (app) {
         try {
             await db
                 .transaction(async function (t) {
-                    const topicPromise = Topic.findOne({where: {
-                        id: topicId
-                    }});
+                    const topicPromise = Topic.findOne({
+                        where: {
+                            id: topicId
+                        }
+                    });
                     const userSettingsPromise = UserNotificationSettings.findOne({
                         where: {
                             userId,
@@ -7913,12 +7916,12 @@ module.exports = function (app) {
                                 ip: req.ip
                             }, req.method + ' ' + req.path, t);
 
-                            await userSettings.save({transaction: t});
+                        await userSettings.save({ transaction: t });
                     }
                     t.afterCommit(() => {
                         return res.ok(userSettings);
                     });
-            });
+                });
         } catch (err) {
             console.log(err);
         }
@@ -7927,11 +7930,13 @@ module.exports = function (app) {
     /**
      * Delete User Topic preferences
     */
-     app.delete('/api/users/:userId/topics/:topicId/notificationsettings', loginCheck(), asyncMiddleware(async function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/notificationsettings', loginCheck(), asyncMiddleware(async function (req, res, next) {
         try {
-            const topicPromise = Topic.findOne({where: {
-                id: req.params.topicId
-            }});
+            const topicPromise = Topic.findOne({
+                where: {
+                    id: req.params.topicId
+                }
+            });
             const userSettingsPromise = UserNotificationSettings.findOne({
                 where: {
                     userId: req.user.id,
@@ -7947,12 +7952,13 @@ module.exports = function (app) {
                 },
                 force: true
             });
-
-            await cosActivities.deleteActivity(userSettings, topic, {
-                type: 'User',
-                id: req.user.userId,
-                ip: req.ip
-            }, req.method + ' ' + req.path, );
+            if (userSettings && topic) {
+                await cosActivities.deleteActivity(userSettings, topic, {
+                    type: 'User',
+                    id: req.user.userId,
+                    ip: req.ip
+                }, req.method + ' ' + req.path,);
+            }
 
             return res.ok();
         } catch (err) {
@@ -7964,4 +7970,4 @@ module.exports = function (app) {
         hasPermission: hasPermission
     };
 }
-;
+    ;
