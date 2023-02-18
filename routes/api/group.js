@@ -327,7 +327,7 @@ module.exports = function (app) {
         return res.ok(group);
     }));
 
-    app.get('/api/users/:userId/groups/:groupId', hasPermission(GroupMemberUser.LEVELS.read, null, null), asyncMiddleware(async function (req, res) {
+    app.get('/api/users/:userId/groups/:groupId', hasPermission(GroupMemberUser.LEVELS.read, true, null), asyncMiddleware(async function (req, res) {
         const userId = req.user.userId;
         const groupId = req.params.groupId;
         const group = await _readGroup(groupId, userId);
