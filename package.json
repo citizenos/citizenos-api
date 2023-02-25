@@ -72,7 +72,7 @@
     "rate-limit-redis": "2.1.0",
     "rate-limiter-flexible": "2.3.7",
     "sanitize-filename": "1.6.3",
-    "sequelize": "6.25.2",
+    "sequelize": "6.29.0",
     "sequelize-cli": "6.5.1",
     "smart-id-rest": "1.2.4",
     "stream_upload": "0.1.5",
