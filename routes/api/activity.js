@@ -7,7 +7,6 @@
 module.exports = function (app) {
     const models = app.get('models');
     const db = models.sequelize;
-    const Sequelize = require('sequelize');
     const { injectReplacements } = require('sequelize/lib/utils/sql');
     const _ = app.get('lodash');
     const cosActivities = app.get('cosActivities');
@@ -456,7 +455,7 @@ module.exports = function (app) {
                         LIMIT :limit OFFSET :offset) a
                     JOIN pg_temp.getActivityData(a.id, a."topicIds", a."groupIds", a."userIds") ad ON ad."id" = a.id
                     ORDER BY ad."updatedAt" DESC
-                    ;`, Sequelize.postgres, {
+                    ;`, db.dialect, {
                         topicId: topicId,
                         userId: userId,
                         visibility: visibility,
@@ -529,8 +528,8 @@ module.exports = function (app) {
         let wherePartnerTopics = '';
         let wherePartnerGroups = '';
         if (sourcePartnerId) {
-            wherePartnerTopics = injectReplacements(` AND t."sourcePartnerId" = :sourcePartnerId `, Sequelize.postgres, {sourcePartnerId});
-            wherePartnerGroups = injectReplacements(`' AND g."sourcePartnerId" = :sourcePartnerId `, Sequelize.postgres, {sourcePartnerId});
+            wherePartnerTopics = injectReplacements(` AND t."sourcePartnerId" = :sourcePartnerId `, db.dialect, {sourcePartnerId});
+            wherePartnerGroups = injectReplacements(`' AND g."sourcePartnerId" = :sourcePartnerId `, db.dialect, {sourcePartnerId});
         }
         try {
             const queryFunctions = `
@@ -752,7 +751,7 @@ module.exports = function (app) {
                     uac.id <> ua.id
                     AND
                     uac."updatedAt" > ua."updatedAt"
-                ;`, Sequelize.postgres, {userId: userId});
+                ;`, db.dialect, {userId: userId});
 
             const results = await db
                 .query(`${queryFunctions} ${query}`,
@@ -786,7 +785,7 @@ module.exports = function (app) {
             let offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
             let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
 
-            const includeSql = injectReplacements(buildActivityFeedIncludeString(req, visibility), Sequelize.postgres, {userId: userId});
+            const includeSql = injectReplacements(buildActivityFeedIncludeString(req, visibility), db.dialect, {userId: userId});
             let queryFilters = req.query.filter || [];
             if (queryFilters && !Array.isArray(queryFilters)) {
                 queryFilters = [queryFilters];
@@ -804,7 +803,7 @@ module.exports = function (app) {
                 });
                 where += `a.data#>>'{object, @type}' IN (${filtersEscaped.join(',')}) OR a.data#>>'{object, 0, @type}' IN (${filtersEscaped.join(',')}) `;
             } else if (userId) {
-                where = injectReplacements(`a.data#>>'{object, @type}' <> 'UserNotificationSettings' OR  (a.data#>>'{object, @type}' = 'UserNotificationSettings' AND a.data#>>'{object, "userId"}' = :userId ) `, Sequelize.postgres, {userId: req.user.userId});
+                where = injectReplacements(`a.data#>>'{object, @type}' <> 'UserNotificationSettings' OR  (a.data#>>'{object, @type}' = 'UserNotificationSettings' AND a.data#>>'{object, "userId"}' = :userId ) `, db.dialect, {userId: req.user.userId});
             }
 
             if (where) {
@@ -822,8 +821,8 @@ module.exports = function (app) {
             let wherePartnerTopics = '';
             let wherePartnerGroups = '';
             if (sourcePartnerId) {
-                wherePartnerTopics = injectReplacements(` AND t."sourcePartnerId" = :sourcePartnerId `, Sequelize.postgres, {sourcePartnerId});
-                wherePartnerGroups = injectReplacements(` AND g."sourcePartnerId" = :sourcePartnerId `, Sequelize.postgres, {sourcePartnerId});
+                wherePartnerTopics = injectReplacements(` AND t."sourcePartnerId" = :sourcePartnerId `, db.dialect, {sourcePartnerId});
+                wherePartnerGroups = injectReplacements(` AND g."sourcePartnerId" = :sourcePartnerId `, db.dialect, {sourcePartnerId});
             }
 
             const query = `
@@ -1062,7 +1061,7 @@ module.exports = function (app) {
                 ) uac
             JOIN pg_temp.getActivityData(uac.id, uac."topicIds", uac."groupIds", uac."userIds") ad ON ad."id" = uac.id
                 ORDER BY ad."updatedAt" DESC
-            ;`, Sequelize.postgres, {
+            ;`, db.dialect, {
                 limit: limit,
                 offset: offset
             });
@@ -1176,7 +1175,7 @@ module.exports = function (app) {
                     JOIN pg_temp.getActivityData(a.id, a."topicIds", a."groupIds", a."userIds") ad ON ad.id = a.id
                     ORDER BY ad."updatedAt" DESC
                     ;`,
-                    Sequelize.postgres, {
+                    db.dialect, {
                         groupId: groupId,
                         userId: userId,
                         visibility: visibility,

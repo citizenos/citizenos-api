@@ -295,12 +295,12 @@ module.exports = function (app) {
                         ORDER BY a."updatedAt" DESC LIMIT 1
                 )
                 RETURNING act.id, act.data, act."actorId", act."topicIds", act."userIds", act."groupIds", act."createdAt", act."updatedAt";
-            END CASE;`, Sequelize.postgres, {
-                    id: uuid.v4(),
-                    data: dataString,
-                    topicId: instance.id,
-                    userId: actor.id
-            }).replace(/\\/gi, '');
+            END CASE;`, db.dialect, {
+            id: uuid.v4(),
+            data: dataString,
+            topicId: instance.id,
+            userId: actor.id
+        }).replace(/\\/gi, '');
 
         const queryString = injectReplacements(`WITH checker AS (SELECT (
             SELECT COUNT(*) = 0
@@ -362,7 +362,7 @@ module.exports = function (app) {
             t."act_createdAt" as "createdAt",
             t."act_updatedAt" as "updatedAt"
             FROM checker JOIN pg_temp.setTopicActivityData(checker.isnew) t ON checker.isnew=checker.isnew;
-        ;`, Sequelize.postgres ,{
+        ;`, db.dialect, {
             id: uuid.v4(),
             data: dataString,
             topicId: instance.id,
@@ -388,7 +388,7 @@ module.exports = function (app) {
 
 
         if (act[0].isnew) {
-           await notifications.sendActivityNotifications(act[0]);
+            await notifications.sendActivityNotifications(act[0]);
         }
 
     };
@@ -788,7 +788,7 @@ module.exports = function (app) {
                     ORDER BY "updatedAt" DESC LIMIT 1
             );
             END CASE;
-        END`, Sequelize.postgres, {
+        END`, db.dialect, {
             id: uuid.v4(),
             data: dataString,
             topicId: instance.id,
@@ -796,11 +796,11 @@ module.exports = function (app) {
         }).replace(/\\/gi, '');
         return db
             .query(`DO $$ ${queryString} $$;`,
-            {
-                type: db.QueryTypes.INSERT,
-                raw: true,
-                transaction: transaction
-            });
+                {
+                    type: db.QueryTypes.INSERT,
+                    raw: true,
+                    transaction: transaction
+                });
     };
 
     const _joinActivity = function (instance, actor, context, transaction) {
