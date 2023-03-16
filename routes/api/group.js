@@ -2076,8 +2076,7 @@ module.exports = function (app) {
         const limitDefault = 26;
         const userId = req.user?.userId;
         const orderBy = req.query.orderBy || 'updatedAt';
-        const order = req.query.order || 'DESC';
-
+        const order = (req.query.order && req.query.order.toLowerCase() === 'asc')? 'ASC' : 'DESC';
         let orderBySql = ` ORDER BY`;
         switch (orderBy) {
             case 'name':
