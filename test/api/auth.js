@@ -1019,7 +1019,7 @@ suite('Auth', function () {
                         assert.equal(userInfoFromSmartIdStatusResponse.status.code, 20003);
                         const userFromStatus = (await status(agent)).body.data;
                         assert.deepEqual(userFromStatus, userInfoFromSmartIdStatusResponse.data);
-                        assert.equal('Qualified Ok1 Testnumber', userInfoFromSmartIdStatusResponse.data.name); // Special check for encoding issues
+                        assert.equal('Ok Testnumber', userInfoFromSmartIdStatusResponse.data.name); // Special check for encoding issues
                     });
 
                     test('Fail - 40010 - User refused', async function () {

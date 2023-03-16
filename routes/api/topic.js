@@ -9,7 +9,6 @@ module.exports = function (app) {
     const logger = app.get('logger');
     const models = app.get('models');
     const db = models.sequelize;
-    const Sequelize = require('sequelize');
     const { injectReplacements } = require('sequelize/lib/utils/sql');
     const Op = db.Sequelize.Op;
     const _ = app.get('lodash');
@@ -211,7 +210,6 @@ module.exports = function (app) {
             if (req.user && req.user.moderator) {
                 allowPublic = true;
             }
-
             topicStatusesAllowed = topicStatusesAllowed ? topicStatusesAllowed : null;
             let allowSelfDelete = allowSelf ? allowSelf : null;
             if (allowSelfDelete && req.user.userId !== req.params.memberId) {
@@ -1143,7 +1141,7 @@ module.exports = function (app) {
         if (!userId) {
             where = ` AND t.visibility = '${Topic.VISIBILITY.public}'`;
         } else {
-            select = injectReplacements(', (SELECT true FROM pg_temp.votes(v."voteId") WHERE "userId" = :userId AND "optionId" = v."optionId") as "selected" ', Sequelize.postgres, { userId });
+            select = injectReplacements(', (SELECT true FROM pg_temp.votes(v."voteId") WHERE "userId" = :userId AND "optionId" = v."optionId") as "selected" ', db.dialect, { userId });
             where = `AND COALESCE(tmup.level, tmgp.level, 'none')::"enum_TopicMemberUsers_level" > 'none'`;
             join += injectReplacements(`LEFT JOIN (
                         SELECT
@@ -1164,7 +1162,7 @@ module.exports = function (app) {
                         AND gm."deletedAt" IS NULL
                         GROUP BY "topicId", "userId"
                     ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
-            `, Sequelize.postgres, { userId });
+            `, db.dialect, { userId });
         }
         const query = `
                         CREATE OR REPLACE FUNCTION pg_temp.delegations(uuid)
@@ -5173,7 +5171,7 @@ module.exports = function (app) {
                     LEFT JOIN (
                         SELECT "commentId", true AS selected FROM "CommentVotes" WHERE value < 0 AND "creatorId" = :userId
                     ) cvds ON (cvds."commentId"= c.id)
-            ),`, Sequelize.postgres, {
+            ),`, db.dialect, {
             userId: userId,
             dateFormat: 'YYYY-MM-DDThh24:mi:ss.msZ',
         }
@@ -5362,7 +5360,7 @@ module.exports = function (app) {
             ORDER BY ${orderByComments}
             LIMIT :limit
             OFFSET :offset
-        `, Sequelize.postgres,
+        `, db.dialect,
             {
                 topicId: req.params.topicId,
                 limit: parseInt(req.query.limit, 10) || 15,
@@ -5413,6 +5411,7 @@ module.exports = function (app) {
                 rows: comments
             });
         } catch (err) {
+            console.log('ERR', err)
             return next(err);
         }
     };
