@@ -96,7 +96,6 @@
     "grunt-contrib-watch": "1.1.0",
     "grunt-eslint": "24.0.1",
     "grunt-exec": "3.0.0",
-    "grunt-markdown-toc": "0.0.2",
     "grunt-plantuml": "1.0.3",
     "husky": "8.0.3",
     "mocha": "10.2.0",
