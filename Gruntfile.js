@@ -65,7 +65,6 @@ module.exports = function (grunt) {
     grunt.loadNpmTasks('grunt-concurrent');
     grunt.loadNpmTasks('grunt-exec');
     grunt.loadNpmTasks('grunt-plantuml');
-    grunt.loadNpmTasks('grunt-markdown-toc');
 
     // Default task(s).
     grunt.registerTask('default', ['concurrent:dev']);
