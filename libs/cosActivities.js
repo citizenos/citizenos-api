@@ -9,7 +9,6 @@ module.exports = function (app) {
     const uuid = app.get('uuid');
     const logger = app.get('logger');
     const notifications = app.get('notifications');
-    const Sequelize = require('sequelize');
     const { injectReplacements } = require('sequelize/lib/utils/sql');
 
     const Activity = models.Activity;
