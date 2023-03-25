@@ -7,7 +7,6 @@ suite('cosBdoc', function () {
     const models = app.get('models');
     const db = models.sequelize;
     const logger = app.get('logger');
-    const Promise = app.get('Promise');
     const fs = app.get('fs');
     const cosBdoc = app.get('cosSignature');
     const smartId = app.get('smartId');

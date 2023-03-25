@@ -8,7 +8,6 @@
 
 const app = require('../../app');
 const logger = app.get('logger');
-const Promise = app.get('Promise');
 const db = app.get('models').sequelize;
 
 const syncDb = async function () {

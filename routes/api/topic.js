@@ -18,7 +18,6 @@ module.exports = function (app) {
     const emailLib = app.get('email');
     const cosSignature = app.get('cosSignature');
     const cosActivities = app.get('cosActivities');
-    const Promise = app.get('Promise');
     const sanitizeFilename = app.get('sanitizeFilename');
     const cryptoLib = app.get('cryptoLib');
     const cosEtherpad = app.get('cosEtherpad');
@@ -3109,35 +3108,34 @@ module.exports = function (app) {
 
                     const groupIdsToInvite = [];
                     const memberGroupActivities = [];
-                    await Promise
-                        .allSettled(findOrCreateTopicMemberGroups)
-                        .each(function (inspection) {
-                            if (inspection.isFulfilled()) {
-                                var memberGroup = inspection.value()[0].toJSON();
-                                groupIdsToInvite.push(memberGroup.groupId);
-                                const groupData = _.find(allowedGroups, function (item) {
-                                    return item.id === memberGroup.groupId;
-                                });
-                                const group = Group.build(groupData);
+                    const results = await Promise.allSettled(findOrCreateTopicMemberGroups);
+                    results.forEach((inspection) => {
+                        if (inspection.status === 'fulfilled') {
+                            var memberGroup = inspection.value[0].toJSON();
+                            groupIdsToInvite.push(memberGroup.groupId);
+                            const groupData = _.find(allowedGroups, function (item) {
+                                return item.id === memberGroup.groupId;
+                            });
+                            const group = Group.build(groupData);
 
-                                const addActivity = cosActivities.addActivity(
-                                    topic,
-                                    {
-                                        type: 'User',
-                                        id: req.user.userId,
-                                        ip: req.ip
-                                    },
-                                    null,
-                                    group,
-                                    req.method + ' ' + req.path,
-                                    t
-                                );
-                                memberGroupActivities.push(addActivity);
+                            const addActivity = cosActivities.addActivity(
+                                topic,
+                                {
+                                    type: 'User',
+                                    id: req.user.userId,
+                                    ip: req.ip
+                                },
+                                null,
+                                group,
+                                req.method + ' ' + req.path,
+                                t
+                            );
+                            memberGroupActivities.push(addActivity);
 
-                            } else {
-                                logger.error('Adding Group failed', inspection.reason());
-                            }
-                        });
+                        } else {
+                            logger.error('Adding Group failed', inspection.reason());
+                        }
+                    });
                     await Promise.all(memberGroupActivities);
                     const emailResult = await emailLib.sendTopicMemberGroupCreate(groupIdsToInvite, req.user.userId, topicId);
                     if (emailResult && emailResult.errors) {

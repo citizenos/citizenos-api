@@ -405,8 +405,10 @@ module.exports = function (app) {
 
         await user.save({fields: ['passwordResetCode']});
 
-        await emailLib.sendPasswordReset(user.email, user.passwordResetCode);
-
+        const emailResult = await emailLib.sendPasswordReset(user.email, user.passwordResetCode);
+        if (emailResult.done.length === 0 && emailResult.errors.length) {
+            return res.badRequest(emailResult.errors[0].details)
+        }
         return res.ok('Success! Please check your email :email to complete your password recovery.'.replace(':email', email));
     }));
 

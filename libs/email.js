@@ -9,7 +9,7 @@ module.exports = function (app) {
     const logger = app.get('logger');
     const models = app.get('models');
     const db = models.sequelize;
-    const Promise = app.get('Promise');
+    //  const Promise = app.get('Promise');
     const urlLib = app.get('urlLib');
     const _ = app.get('lodash');
     const config = app.get('config');
@@ -77,7 +77,7 @@ module.exports = function (app) {
      *
      * @private
      */
-    const resolveTemplate = function (template, language) {
+    const resolveTemplate = (template, language) => {
         const lang = language ? language.toLowerCase() : 'en';
 
         const pathTemplate = ':templateRoot/build/:template_:language.html'
@@ -110,18 +110,18 @@ module.exports = function (app) {
 
         // TODO: Rewrite to async FS operations
         try {
-            templateObj.body = fs.readFileSync(pathTemplate, {encoding: 'utf8'}); // eslint-disable-line no-sync
+            templateObj.body = fs.readFileSync(pathTemplate, { encoding: 'utf8' }); // eslint-disable-line no-sync
         } catch (e) {
             logger.warn('Could not read template using fallback instead!', pathTemplate, pathTemplateFallback);
-            templateObj.body = fs.readFileSync(pathTemplateFallback, {encoding: 'utf8'}); // eslint-disable-line no-sync
+            templateObj.body = fs.readFileSync(pathTemplateFallback, { encoding: 'utf8' }); // eslint-disable-line no-sync
         }
 
         // TODO: Rewrite to async FS operations
         try {
-            templateObj.translations = JSON.parse(fs.readFileSync(pathTranslations, {encoding: 'utf8'})); // eslint-disable-line no-sync
+            templateObj.translations = JSON.parse(fs.readFileSync(pathTranslations, { encoding: 'utf8' })); // eslint-disable-line no-sync
         } catch (e) {
             logger.warn('Could not read translations using fallback instead!', pathTemplate, pathTemplateFallback);
-            templateObj.translations = JSON.parse(fs.readFileSync(pathTranslationsFallback, {encoding: 'utf8'})); // eslint-disable-line no-sync
+            templateObj.translations = JSON.parse(fs.readFileSync(pathTranslationsFallback, { encoding: 'utf8' })); // eslint-disable-line no-sync
         }
 
         templateCache[pathTemplate] = templateObj;
@@ -139,7 +139,7 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _getTopicMemberUsers = function (topicId, levelMin) {
+    const _getTopicMemberUsers = (topicId, levelMin) => {
         let levelMinimum = TopicMemberUser.LEVELS.admin;
 
         if (levelMin && TopicMemberUser.LEVELS[levelMin]) {
@@ -171,7 +171,7 @@ module.exports = function (app) {
                             WHERE tmu."deletedAt" IS NULL
                             UNION
                             (
-                                SELECT \
+                                SELECT
                                     tmg."topicId",
                                     gm."userId" AS "memberId",
                                     tmg."level"::text,
@@ -181,7 +181,7 @@ module.exports = function (app) {
                                 WHERE tmg."deletedAt" IS NULL
                                 AND gm."deletedAt" IS NULL
                                 ORDER BY tmg."level"::"enum_TopicMemberGroups_level" DESC
-                            ) \
+                            )
                         ) AS tm ON (tm."topicId" = t.id)
                         JOIN "Users" u ON (u.id = tm."memberId")
                         LEFT JOIN "TopicMemberUsers" tmu ON (tmu."userId" = tm."memberId" AND tmu."topicId" = t.id)
@@ -214,7 +214,7 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _getModerators = function (sourcePartnerId) {
+    const _getModerators = (sourcePartnerId) => {
         return db
             .query(
                 `SELECT
@@ -239,42 +239,41 @@ module.exports = function (app) {
             );
     };
 
-    const handleAllPromises = function (emailPromises) {
+    const handleAllPromises = async (emailPromises) => {
         let errors = [];
         let done = [];
-        return Promise.allSettled(emailPromises)
-            .each(function (inspection) {
-                if (inspection.isRejected()) {
-                    logger.error('FAILED:', inspection.reason());
-                    errors.push({
-                        state: "rejected",
-                        value: inspection.reason()
-                    });
+        const results = await Promise.allSettled(emailPromises);
+        results.forEach((inspection) => {
+            if (inspection.value && inspection.value.status === 'rejected') {
+                logger.error('FAILED:', inspection.value.reason);
+                errors.push(inspection.value);
+            } else {
+                if (Array.isArray(inspection.value)) {
+                    inspection.value.forEach((result) => {
+                        if (result.status === 'ERROR') {
+                            logger.error('ERROR e-mail:', result.message);
+                            errors.push({
+                                state: 'rejected',
+                                value: result.message
+                            })
+                        } else if (result.status === 'rejected') {
+                            logger.error('ERROR e-mail :', result.reason);
+                            errors.push(result.reason);
+                        }
+                    })
                 } else {
-                    if (Array.isArray(inspection.value())) {
-                        inspection.value().forEach((result) => {
-                            if (result.status === 'ERROR') {
-                                logger.error('FAILED:', result.message);
-                                errors.push({
-                                    state: "rejected",
-                                    value: result.message
-                                });
-                            }
-                        })
-                    } else {
-                        done.push({
-                            state: "success",
-                            value: inspection.value()
-                        });
-                    }
+                    done.push({
+                        state: "success",
+                        value: inspection.value
+                    });
                 }
-            })
-            .then(function () {
-                return {
-                    done,
-                    errors
-                };
-            });
+            }
+        });
+
+        return {
+            done,
+            errors
+        }
     };
 
     /**
@@ -297,7 +296,7 @@ module.exports = function (app) {
             }
         );
 
-        Object.keys(debugData).forEach(function (key) {
+        Object.keys(debugData).forEach((key) => {
             emailOptions[key] = debugData[key];
         });
 
@@ -340,38 +339,37 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _sendAccountVerification = function (to, emailVerificationCode, token) {
-        return User
+    const _sendAccountVerification = async (to, emailVerificationCode, token) => {
+        const users = await User
             .findAll({
                 where: db.where(db.fn('lower', db.col('email')), db.fn('lower', to))
             })
-            .then(function (users) {
-                const promisesToResolve = [];
+        const promisesToResolve = [];
 
-                users.forEach((user) => {
-                    const template = resolveTemplate('accountVerification', user.language);
-                    const linkVerify = urlLib.getApi('/api/auth/verify/:code', {code: emailVerificationCode}, {token: token});
+        users.forEach((user) => {
+            const template = resolveTemplate('accountVerification', user.language);
+            const linkVerify = urlLib.getApi('/api/auth/verify/:code', { code: emailVerificationCode }, { token: token });
 
-                    const emailOptions = Object.assign(
-                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
-                        {
-                            subject: template.translations.ACCOUNT_VERIFICATION.SUBJECT,
-                            to: user.email,
-                            //Placeholders
-                            toUser: user,
-                            linkVerify: linkVerify
-                        }
-                    );
+            const emailOptions = Object.assign(
+                _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
+                {
+                    subject: template.translations.ACCOUNT_VERIFICATION.SUBJECT,
+                    to: user.email,
+                    from: "no-reply@citizenos.com",
+                    //Placeholders
+                    toUser: user,
+                    linkVerify: linkVerify
+                }
+            );
 
-                    emailOptions.linkedData.translations = template.translations;
-                    // https://github.com/bevacqua/campaign#email-sending-option
-                    const userEmailPromise = emailClient.sendString(template.body, emailOptions);
+            emailOptions.linkedData.translations = template.translations;
+            // https://github.com/bevacqua/campaign#email-sending-option
+            const userEmailPromise = emailClient.sendString(template.body, emailOptions);
 
-                    promisesToResolve.push(userEmailPromise);
-                });
+            promisesToResolve.push(userEmailPromise);
+        });
 
-                return handleAllPromises(promisesToResolve);
-            });
+        return handleAllPromises(promisesToResolve);
     };
 
     /**
@@ -384,36 +382,32 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _sendPasswordReset = function (to, passwordResetCode) {
-        return User
+    const _sendPasswordReset = async (to, passwordResetCode) => {
+        const users = await User
             .findAll({
                 where: db.where(db.fn('lower', db.col('email')), db.fn('lower', to))
             })
-            .then(function (users) {
-                const promisesToResolve = [];
+        const promisesToResolve = [];
+        users.forEach((user) => {
+            const template = resolveTemplate('passwordReset', user.language);
+            const emailOptions = Object.assign(
+                _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
+                {
+                    subject: template.translations.PASSWORD_RESET.SUBJECT,
+                    to: user.email,
+                    from: "no-reply@citizenos.com",
+                    //Placeholders..
+                    toUser: user,
+                    linkReset: urlLib.getFe('/account/password/reset/:passwordResetCode', { passwordResetCode: passwordResetCode }, { email: user.email })
+                }
+            );
+            emailOptions.linkedData.translations = template.translations;
+            const userEmailPromise = emailClient.sendString(template.body, emailOptions);
 
-                users.forEach((user) => {
-                    const template = resolveTemplate('passwordReset', user.language);
+            promisesToResolve.push(userEmailPromise);
+        });
 
-                    const emailOptions = Object.assign(
-                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
-                        {
-                            subject: template.translations.PASSWORD_RESET.SUBJECT,
-                            to: user.email,
-                            //Placeholders..
-                            toUser: user,
-                            linkReset: urlLib.getFe('/account/password/reset/:passwordResetCode', {passwordResetCode: passwordResetCode}, {email: user.email})
-                        }
-                    );
-
-                    emailOptions.linkedData.translations = template.translations;
-                    const userEmailPromise = emailClient.sendString(template.body, emailOptions);
-
-                    promisesToResolve.push(userEmailPromise);
-                });
-
-                return handleAllPromises(promisesToResolve);
-            });
+        return handleAllPromises(promisesToResolve);
     };
 
     /**
@@ -425,7 +419,7 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _sendTopicMemberUserInviteCreate = async function (invites) {
+    const _sendTopicMemberUserInviteCreate = async (invites) => {
         if (!invites || !Array.isArray(invites)) {
             return Promise.reject(new Error('Missing one or more required parameters'));
         }
@@ -467,7 +461,7 @@ module.exports = function (app) {
         let message = invites[0].inviteMessage;
         let customStyles = EMAIL_OPTIONS_DEFAULT.styles;
 
-        const emailsSendPromises = toUsers.map(function (toUser) {
+        const emailsSendPromises = toUsers.map((toUser) => {
             if (!toUser.email) {
                 logger.info('Skipping invite e-mail to user as there is no email on the profile', toUser.email);
                 return Promise.resolve();
@@ -479,7 +473,7 @@ module.exports = function (app) {
             // TODO: could use Mu here...
             const subject = template.translations.INVITE_TOPIC.SUBJECT
                 .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name));
-            const invite = invites.find((i) => {return i.userId === toUser.id});
+            const invite = invites.find((i) => { return i.userId === toUser.id });
             const linkViewInvite = urlLib.getFe('/topics/:topicId/invites/users/:inviteId', { // FIXME: Do we want to go through /api/invite/view?
                 inviteId: invite.id,
                 topicId: topic.id
@@ -533,7 +527,7 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _sendTopicMemberGroupCreate = function (toGroupIds, fromUserId, topicId) {
+    const _sendTopicMemberGroupCreate = async (toGroupIds, fromUserId, topicId) => {
         if (!toGroupIds || !fromUserId || !topicId) {
             return Promise.reject(new Error('Missing one or more required parameters'));
         }
@@ -549,18 +543,17 @@ module.exports = function (app) {
         }
 
         const toUsersPromise = db
-            .query(
-                '\
-                     SELECT DISTINCT ON (gm."userId") \
-                        gm."userId", \
-                        u."email", \
-                        u."language", \
-                        u.name \
-                     FROM "GroupMemberUsers" gm \
-                     LEFT JOIN "Users" u ON (gm."userId" = u.id) \
-                     WHERE gm."groupId"::text IN (:toGroupIds) \
-                     AND gm."userId" != :fromUserId \
-                ;',
+            .query(`
+                     SELECT DISTINCT ON (gm."userId")
+                        gm."userId",
+                        u."email",
+                        u."language",
+                        u.name
+                     FROM "GroupMemberUsers" gm
+                     LEFT JOIN "Users" u ON (gm."userId" = u.id)
+                     WHERE gm."groupId"::text IN (:toGroupIds)
+                     AND gm."userId" != :fromUserId
+                ;`,
                 {
                     replacements: {
                         toGroupIds: toGroupIds,
@@ -584,54 +577,51 @@ module.exports = function (app) {
             }
         });
 
-        return Promise
+        const [toUsers, fromUserRes, topicRes] = await Promise
             .all([toUsersPromise, fromUserPromise, topicPromise])
-            .then(function (results) {
-                const toUsers = results[0];
-                const fromUser = results[1].toJSON();
-                const topic = results[2].toJSON();
+        const fromUser = fromUserRes.toJSON();
+        const topic = topicRes.toJSON();
 
-                if (toUsers && toUsers.length) {
-                    const promisesToResolve = [];
+        if (toUsers && toUsers.length) {
+            const promisesToResolve = [];
 
-                    toUsers.forEach((user) => {
-                        if (user.email) {
-                            const template = resolveTemplate('inviteTopic', user.language);
-                            // TODO: Could use Mu here....
-                            const subject = template.translations.INVITE_TOPIC.SUBJECT
-                                .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name));
+            toUsers.forEach((user) => {
+                if (user.email) {
+                    const template = resolveTemplate('inviteTopic', user.language);
+                    // TODO: Could use Mu here....
+                    const subject = template.translations.INVITE_TOPIC.SUBJECT
+                        .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name));
 
-                            const linkViewTopic = urlLib.getApi('/api/invite/view', null, {
-                                email: user.email,
-                                topicId: topic.id
-                            });
-
-                            // In case Topic has no title, just show the full url.
-                            topic.title = topic.title ? topic.title : linkViewTopic;
-
-                            const emailOptions = Object.assign(
-                                _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
-                                {
-                                    subject: subject,
-                                    to: user.email,
-                                    toUser: user,
-                                    fromUser: fromUser,
-                                    topic: topic,
-                                    linkViewTopic: linkViewTopic
-                                }
-                            );
-                            emailOptions.linkedData.translations = template.translations;
-                            const sendEmailPromise = emailClient.sendString(template.body, emailOptions);
-
-                            promisesToResolve.push(sendEmailPromise);
-                        }
+                    const linkViewTopic = urlLib.getApi('/api/invite/view', null, {
+                        email: user.email,
+                        topicId: topic.id
                     });
 
-                    return handleAllPromises(promisesToResolve);
-                } else {
-                    logger.info('No Topic Group member User invite emails to be sent as filtering resulted in empty e-mail address list.');
+                    // In case Topic has no title, just show the full url.
+                    topic.title = topic.title ? topic.title : linkViewTopic;
+
+                    const emailOptions = Object.assign(
+                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                        {
+                            subject: subject,
+                            to: user.email,
+                            toUser: user,
+                            fromUser: fromUser,
+                            topic: topic,
+                            linkViewTopic: linkViewTopic
+                        }
+                    );
+                    emailOptions.linkedData.translations = template.translations;
+                    const sendEmailPromise = emailClient.sendString(template.body, emailOptions);
+
+                    promisesToResolve.push(sendEmailPromise);
                 }
             });
+
+            return handleAllPromises(promisesToResolve);
+        } else {
+            logger.info('No Topic Group member User invite emails to be sent as filtering resulted in empty e-mail address list.');
+        }
 
     };
 
@@ -645,7 +635,7 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _sendGroupMemberUserInviteCreate = async function (invites) {
+    const _sendGroupMemberUserInviteCreate = async (invites) => {
         if (!invites || !Array.isArray(invites)) {
             return Promise.reject(new Error('Missing one or more required parameters'));
         }
@@ -687,7 +677,7 @@ module.exports = function (app) {
         let message = invites[0].inviteMessage;
         let customStyles = EMAIL_OPTIONS_DEFAULT.styles;
 
-        const emailsSendPromises = toUsers.map(function (toUser) {
+        const emailsSendPromises = toUsers.map((toUser) => {
             if (!toUser.email) {
                 logger.info('Skipping invite e-mail to user as there is no email on the profile', toUser.email);
                 return Promise.resolve();
@@ -699,7 +689,7 @@ module.exports = function (app) {
             const subject = template.translations.INVITE_GROUP.SUBJECT
                 .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
                 .replace('{{group.name}}', util.escapeHtml(group.name));
-            const invite = invites.find((i) => {return i.userId === toUser.id});
+            const invite = invites.find((i) => { return i.userId === toUser.id });
             const linkViewInvite = urlLib.getFe('/groups/:groupId/invites/users/:inviteId', {
                 inviteId: invite.id,
                 groupId: group.id
@@ -753,7 +743,7 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _sendGroupMemberUserCreate = function (toUserIds, fromUserId, groupId) {
+    const _sendGroupMemberUserCreate = async (toUserIds, fromUserId, groupId) => {
         if (!toUserIds || !fromUserId || !groupId) {
             return Promise.reject(new Error('Missing one or more required parameters'));
         }
@@ -788,58 +778,56 @@ module.exports = function (app) {
             }
         });
 
-        return Promise
+        const [toUsers, fromUsersRes, groupRes] = await Promise
             .all([toUsersPromise, fromUserPromise, groupPromise])
-            .then(function (results) {
-                const toUsers = results[0];
-                const fromUser = results[1].toJSON();
-                const group = results[2].toJSON();
 
-                if (toUsers && toUsers.length) {
-                    const promisesToResolve = [];
+        const fromUser = fromUsersRes.toJSON();
+        const group = groupRes.toJSON();
 
-                    toUsers.forEach((user) => {
-                        if (user.email) {
-                            const template = resolveTemplate('inviteGroup', user.language);
+        if (toUsers && toUsers.length) {
+            const promisesToResolve = [];
 
-                            // TODO: could use Mu here...
-                            const subject = template.translations.INVITE_GROUP.SUBJECT
-                                .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
-                                .replace('{{group.name}}', util.escapeHtml(group.name));
+            toUsers.forEach((user) => {
+                if (user.email) {
+                    const template = resolveTemplate('inviteGroup', user.language);
 
-                            const emailOptions = Object.assign(
-                                _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                    // TODO: could use Mu here...
+                    const subject = template.translations.INVITE_GROUP.SUBJECT
+                        .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
+                        .replace('{{group.name}}', util.escapeHtml(group.name));
+
+                    const emailOptions = Object.assign(
+                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                        {
+                            subject: subject,
+                            to: user.email,
+                            //Placeholders..
+                            toUser: user,
+                            fromUser: fromUser,
+                            group: group,
+                            linkViewGroup: urlLib.getApi(
+                                '/api/invite/view',
+                                null,
                                 {
-                                    subject: subject,
-                                    to: user.email,
-                                    //Placeholders..
-                                    toUser: user,
-                                    fromUser: fromUser,
-                                    group: group,
-                                    linkViewGroup: urlLib.getApi(
-                                        '/api/invite/view',
-                                        null,
-                                        {
-                                            email: user.email,
-                                            groupId: group.id
-                                        }
-                                    )
+                                    email: user.email,
+                                    groupId: group.id
                                 }
-                            );
-                            emailOptions.linkedData.translations = template.translations;
-                            const userEmailPromise = emailClient.sendString(template.body, emailOptions);
-
-                            promisesToResolve.push(userEmailPromise);
+                            )
                         }
-                    });
+                    );
+                    emailOptions.linkedData.translations = template.translations;
+                    const userEmailPromise = emailClient.sendString(template.body, emailOptions);
 
-                    return handleAllPromises(promisesToResolve);
-                } else {
-                    logger.info('No Group member User invite emails to be sent as filtering resulted in empty e-mail address list.');
-
-                    return Promise.resolve();
+                    promisesToResolve.push(userEmailPromise);
                 }
             });
+
+            return handleAllPromises(promisesToResolve);
+        } else {
+            logger.info('No Group member User invite emails to be sent as filtering resulted in empty e-mail address list.');
+
+            return Promise.resolve();
+        }
     };
 
     /**
@@ -852,8 +840,9 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _sendCommentReport = function (commentId, report) {
-        return db
+    const _sendCommentReport = async (commentId, report) => {
+        let moderators;
+        const [commentInfo] = await db
             .query(
                 `
                     SELECT
@@ -881,113 +870,103 @@ module.exports = function (app) {
                     raw: true,
                     nest: true
                 }
-            )
-            .then(function ([commentInfo]) {
-                if (commentInfo.topic.visibility === Topic.VISIBILITY.public) {
-                    logger.debug('Topic is public, sending e-mails to registered partner moderators', commentInfo);
+            );
+        if (commentInfo.topic.visibility === Topic.VISIBILITY.public) {
+            logger.debug('Topic is public, sending e-mails to registered partner moderators', commentInfo);
 
-                    return _getModerators(commentInfo.topic.sourcePartnerId)
-                        .then(function (moderators) {
-                            return [commentInfo, moderators];
-                        });
-                } else {
-                    logger.debug('Topic is NOT public, sending e-mails to Users with admin permissions', commentInfo);
-                    // Private Topics will have moderation by admin Users
+            moderators = await _getModerators(commentInfo.topic.sourcePartnerId);
+        } else {
+            logger.debug('Topic is NOT public, sending e-mails to Users with admin permissions', commentInfo);
+            // Private Topics will have moderation by admin Users
 
-                    return _getTopicMemberUsers(commentInfo.topic.id, TopicMemberUser.LEVELS.admin)
-                        .then(function (moderators) {
-                            return [commentInfo, moderators];
-                        });
+            moderators = await _getTopicMemberUsers(commentInfo.topic.id, TopicMemberUser.LEVELS.admin);
+        }
+        const promisesToResolve = [];
+
+        // Comment creator e-mail - TODO: Comment back in when comment editing goes live!
+        let commentCreatorInformed = true;
+        if (commentInfo.comment.creator.email) {
+            const template = resolveTemplate('reportCommentCreator', commentInfo.comment.creator.language);
+            const linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: commentInfo.topic.id });
+
+            const emailOptions = Object.assign(
+                _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                {
+                    subject: template.translations.REPORT_COMMENT_CREATOR.SUBJECT,
+                    to: commentInfo.comment.creator.email,
+                    //Placeholders
+                    comment: commentInfo.comment,
+                    report: {
+                        type: template.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
+                        text: report.text
+                    },
+                    linkViewTopic: linkViewTopic
                 }
-            })
-            .then(function ([commentInfo, moderators]) {
-                const promisesToResolve = [];
+            );
 
-                // Comment creator e-mail - TODO: Comment back in when comment editing goes live!
-                let commentCreatorInformed = true;
-                if (commentInfo.comment.creator.email) {
-                    const template = resolveTemplate('reportCommentCreator', commentInfo.comment.creator.language);
-                    const linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: commentInfo.topic.id});
+            emailOptions.linkedData.translations = template.translations;
+            const promiseCreatorEmail = emailClient.sendString(template.body, emailOptions);
+
+            promisesToResolve.push(promiseCreatorEmail);
+        } else {
+            logger.info('Comment reported, but no e-mail could be sent to creator as there is no e-mail in the profile', commentInfo);
+            commentCreatorInformed = false;
+        }
+
+        if (moderators) {
+            const linkModerate = urlLib.getFe(
+                '/topics/:topicId/comments/:commentId/reports/:reportId/moderate',
+                {
+                    topicId: commentInfo.topic.id,
+                    commentId: commentInfo.comment.id,
+                    reportId: report.id
+                }
+            );
+
+            moderators.forEach((moderator) => {
+                if (moderator.email) {
+                    const template = resolveTemplate('reportCommentModerator', moderator.language);
+
+                    const token = cosJwt.getTokenRestrictedUse(
+                        {
+                            userId: moderator.id
+                        },
+                        [
+                            'POST /api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
+                                .replace(':topicId', commentInfo.topic.id)
+                                .replace(':commentId', commentInfo.comment.id)
+                                .replace(':reportId', report.id),
+                            'GET /api/topics/:topicId/comments/:commentId/reports/:reportId'
+                                .replace(':topicId', commentInfo.topic.id)
+                                .replace(':commentId', commentInfo.comment.id)
+                                .replace(':reportId', report.id)
+                        ]
+                    );
 
                     const emailOptions = Object.assign(
                         _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
                         {
-                            subject: template.translations.REPORT_COMMENT_CREATOR.SUBJECT,
-                            to: commentInfo.comment.creator.email,
-                            //Placeholders
+                            subject: template.translations.REPORT_COMMENT_MODERATOR.SUBJECT,
+                            to: moderator.email,
+                            //Placeholders...
                             comment: commentInfo.comment,
                             report: {
                                 type: template.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
                                 text: report.text
                             },
-                            linkViewTopic: linkViewTopic
+                            linkModerate: linkModerate + '?token=' + encodeURIComponent(token),
+                            isUserNotified: commentCreatorInformed
                         }
                     );
-
                     emailOptions.linkedData.translations = template.translations;
-                    const promiseCreatorEmail = emailClient.sendString(template.body, emailOptions);
+                    const promiseModeratorEmail = emailClient.sendString(template.body, emailOptions);
 
-                    promisesToResolve.push(promiseCreatorEmail);
-                } else {
-                    logger.info('Comment reported, but no e-mail could be sent to creator as there is no e-mail in the profile', commentInfo);
-                    commentCreatorInformed = false;
+                    promisesToResolve.push(promiseModeratorEmail);
                 }
-
-                if (moderators) {
-                    const linkModerate = urlLib.getFe(
-                        '/topics/:topicId/comments/:commentId/reports/:reportId/moderate',
-                        {
-                            topicId: commentInfo.topic.id,
-                            commentId: commentInfo.comment.id,
-                            reportId: report.id
-                        }
-                    );
-
-                    moderators.forEach(function (moderator) {
-                        if (moderator.email) {
-                            const template = resolveTemplate('reportCommentModerator', moderator.language);
-
-                            const token = cosJwt.getTokenRestrictedUse(
-                                {
-                                    userId: moderator.id
-                                },
-                                [
-                                    'POST /api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
-                                        .replace(':topicId', commentInfo.topic.id)
-                                        .replace(':commentId', commentInfo.comment.id)
-                                        .replace(':reportId', report.id),
-                                    'GET /api/topics/:topicId/comments/:commentId/reports/:reportId'
-                                        .replace(':topicId', commentInfo.topic.id)
-                                        .replace(':commentId', commentInfo.comment.id)
-                                        .replace(':reportId', report.id)
-                                ]
-                            );
-
-                            const emailOptions = Object.assign(
-                                _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
-                                {
-                                    subject: template.translations.REPORT_COMMENT_MODERATOR.SUBJECT,
-                                    to: moderator.email,
-                                    //Placeholders...
-                                    comment: commentInfo.comment,
-                                    report: {
-                                        type: template.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
-                                        text: report.text
-                                    },
-                                    linkModerate: linkModerate + '?token=' + encodeURIComponent(token),
-                                    isUserNotified: commentCreatorInformed
-                                }
-                            );
-                            emailOptions.linkedData.translations = template.translations;
-                            const promiseModeratorEmail = emailClient.sendString(template.body, emailOptions);
-
-                            promisesToResolve.push(promiseModeratorEmail);
-                        }
-                    });
-                }
-
-                return handleAllPromises(promisesToResolve);
             });
+        }
+
+        return handleAllPromises(promisesToResolve);
     };
 
     /**
@@ -1002,7 +981,7 @@ module.exports = function (app) {
      * @see Citizen OS Topic moderation 1 - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
      *
      */
-    const _sendTopicReport = async function (topicReport) {
+    const _sendTopicReport = async (topicReport) => {
         const infoFetchPromises = [];
 
         // Get the topic info
@@ -1025,13 +1004,13 @@ module.exports = function (app) {
         const [topic, userReporter, topicMemberList] = await Promise.all(infoFetchPromises);
         const topicModerators = await _getModerators(topic.sourcePartnerId);
 
-        const linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+        const linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
 
         const sendEmailPromises = [];
 
         if (userReporter.email) {
             // 1.1 To the User (reporter) who reported the topic - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
-            const sendReporterEmail = async function () {
+            const sendReporterEmail = async () => {
                 const template = resolveTemplate('reportTopicReportReporter', userReporter.language);
                 const subject = template.translations.REPORT_TOPIC_REPORT_REPORTER.SUBJECT
                     .replace('{{report.id}}', topicReport.id);
@@ -1063,9 +1042,9 @@ module.exports = function (app) {
         }
 
         // 1.2. To admin/edit Members of the topic - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce?argumentsPage=1
-        topicMemberList.forEach(function (topicMemberUser) {
+        topicMemberList.forEach((topicMemberUser) => {
             if (topicMemberUser.email) {
-                const sendTopicMemberEmail = async function () {
+                const sendTopicMemberEmail = async () => {
                     const template = resolveTemplate('reportTopicReportMember', topicMemberUser.language);
                     const subject = template.translations.REPORT_TOPIC_REPORT_MEMBER.SUBJECT
                         .replace('{{report.id}}', topicReport.id);
@@ -1098,9 +1077,9 @@ module.exports = function (app) {
         });
 
         // 1.3 To the Moderators - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce?argumentsPage=1
-        topicModerators.forEach(function (userModerator) {
+        topicModerators.forEach((userModerator) => {
             if (userModerator.email) {
-                const sendTopicModeratorEmail = async function () {
+                const sendTopicModeratorEmail = async () => {
                     const template = resolveTemplate('reportTopicReportModerator', userModerator.language);
                     const subject = template.translations.REPORT_TOPIC_REPORT_MODERATOR.SUBJECT
                         .replace('{{report.id}}', topicReport.id);
@@ -1147,7 +1126,7 @@ module.exports = function (app) {
      * @see Citizen OS Topic moderation 2 - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
      *
      */
-    const _sendTopicReportModerate = async function (topicReport) {
+    const _sendTopicReportModerate = async (topicReport) => {
         const infoFetchPromises = [];
         const topic = topicReport.topic;
 
@@ -1163,13 +1142,13 @@ module.exports = function (app) {
 
         const [userReporter, topicMemberList] = await Promise.all(infoFetchPromises);
 
-        const linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+        const linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
 
         const sendEmailPromiseses = [];
 
         // 2.1 To the User (reporter) who reported the topic - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
         if (userReporter.email) {
-            const sendReporterEmail = async function () {
+            const sendReporterEmail = async () => {
                 const template = resolveTemplate('reportTopicModerateReporter', userReporter.language);
                 const subject = template.translations.REPORT_TOPIC_MODERATE_REPORTER.SUBJECT
                     .replace('{{report.id}}', topicReport.id);
@@ -1202,9 +1181,9 @@ module.exports = function (app) {
         }
 
         // 2.2 To admin/edit Members of the topic - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce?argumentsPage=1
-        topicMemberList.forEach(function (topicMemberUser) {
+        topicMemberList.forEach((topicMemberUser) => {
             if (topicMemberUser.email) {
-                const sendTopicMemberEmail = async function () {
+                const sendTopicMemberEmail = async () => {
                     const template = resolveTemplate('reportTopicModerateMember', topicMemberUser.language);
                     const subject = template.translations.REPORT_TOPIC_MODERATE_MEMBER.SUBJECT
                         .replace('{{report.id}}', topicReport.id);
@@ -1252,7 +1231,7 @@ module.exports = function (app) {
      *
      * @see Citizen OS Topic moderation 3 - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
      */
-    const _sendTopicReportReview = async function (topicReport, reviewRequestText) {
+    const _sendTopicReportReview = async (topicReport, reviewRequestText) => {
         const topic = await Topic.findOne({
             where: {
                 id: topicReport.topicId
@@ -1261,12 +1240,12 @@ module.exports = function (app) {
 
         const topicModerators = await _getModerators(topic.sourcePartnerId);
 
-        const linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+        const linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
         const sendEmailPromises = [];
 
-        topicModerators.forEach(function (userModerator) {
+        topicModerators.forEach((userModerator) => {
             if (userModerator.email) {
-                const sendTopicModeratorEmail = async function () {
+                const sendTopicModeratorEmail = async () => {
                     const template = resolveTemplate('reportTopicReportReviewModerator', userModerator.language);
                     const subject = template.translations.REPORT_TOPIC_REPORT_REVIEW_MODERATOR.SUBJECT
                         .replace('{{report.id}}', topicReport.id);
@@ -1313,7 +1292,7 @@ module.exports = function (app) {
      *
      * @see Citizen OS Topic moderation 4 - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
      */
-    const _sendTopicReportResolve = async function (topicReport) {
+    const _sendTopicReportResolve = async (topicReport) => {
         const infoFetchPromises = [];
 
         // Topic info
@@ -1335,14 +1314,14 @@ module.exports = function (app) {
 
         const [topic, userReporter, topicMemberList] = await Promise.all(infoFetchPromises);
 
-        const linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: topic.id});
+        const linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
 
 
         const sendEmailPromises = [];
 
         // 4.1 To the User (reporter) who reported the topic - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce
         if (userReporter.email) {
-            const sendReporterEmail = async function () {
+            const sendReporterEmail = async () => {
                 const template = resolveTemplate('reportTopicReportResolveReporter', userReporter.language);
                 const subject = template.translations.REPORT_TOPIC_REPORT_RESOLVE_REPORTER.SUBJECT
                     .replace('{{report.id}}', topicReport.id);
@@ -1373,9 +1352,9 @@ module.exports = function (app) {
 
 
         // 4.2 To admin/edit Members of the topic - https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce?argumentsPage=1
-        topicMemberList.forEach(function (topicMemberUser) {
+        topicMemberList.forEach((topicMemberUser) => {
             if (topicMemberUser.email) {
-                const sendTopicMemberEmail = async function () {
+                const sendTopicMemberEmail = async () => {
                     const template = resolveTemplate('reportTopicReportResolveMember', topicMemberUser.language);
                     const subject = template.translations.REPORT_TOPIC_REPORT_RESOLVE_MEMBER.SUBJECT
                         .replace('{{report.id}}', topicReport.id);
@@ -1420,7 +1399,7 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _sendToParliament = function (topic, contact, linkDownloadBdocFinal, linkDownloadBdocFinalExpiryDate, linkAddEvent) {
+    const _sendToParliament = async (topic, contact, linkDownloadBdocFinal, linkDownloadBdocFinalExpiryDate, linkAddEvent) => {
         if (!topic || !contact || !linkDownloadBdocFinal || !linkDownloadBdocFinalExpiryDate || !linkAddEvent) {
             return Promise.reject(new Error('Missing one or more required parameters'));
         }
@@ -1475,10 +1454,10 @@ module.exports = function (app) {
                     linkedData
                 }
             )
-            .then(function () {
+            .then(() => {
                 logger.info('Sending Parliament e-mail succeeded', topic.id);
             })
-            .catch(function (err) {
+            .catch((err) => {
                 logger.error('Sending Parliament e-mail failed', topic.id, err);
 
                 return Promise.reject(err);
@@ -1517,10 +1496,10 @@ module.exports = function (app) {
                     linkedData
                 }
             )
-            .then(function () {
+            .then(() => {
                 logger.info('Sending Parliament e-mail to creator succeeded', topic.id);
             })
-            .catch(function (err) {
+            .catch((err) => {
                 logger.error('Sending Parliament e-mail to creator failed', topic.id, err);
 
                 return Promise.reject(err);
@@ -1532,16 +1511,16 @@ module.exports = function (app) {
     };
     const flattenObj = (obj, parent, res = {}) => {
         for (const key of Object.keys(obj)) {
-          const propName = parent ? parent + '.' + key : key;
-          if (typeof obj[key] === 'object') {
-            flattenObj(obj[key], propName, res);
-          } else {
-            res[propName] = obj[key];
-          }
+            const propName = parent ? parent + '.' + key : key;
+            if (typeof obj[key] === 'object') {
+                flattenObj(obj[key], propName, res);
+            } else {
+                res[propName] = obj[key];
+            }
         }
         return res;
     }
-    const handleTranslation = function (translations, key) {
+    const handleTranslation = (translations, key) => {
         if (!translations || !key) return false;
         let translationsUsed = flattenObj(translations);
         const translation = translationsUsed[key];
@@ -1554,9 +1533,9 @@ module.exports = function (app) {
     }
     const _sendTopicNotification = async (notification, users) => {
         const promisesToResolve = [];
-        let linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: notification.topicIds[0]});
+        let linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: notification.topicIds[0] });
 
-        const linkGeneralNotificationSettings= `${urlLib.getFe('/myaccount')}?tab=notifications`;
+        const linkGeneralNotificationSettings = `${urlLib.getFe('/myaccount')}?tab=notifications`;
         const linkTopicNotificationSettings = `${linkViewTopic}?notificationSettings`;
         if (['Comment', 'CommentVote'].indexOf(notification.data.object['@type']) > -1) {
             linkViewTopic += `?commentId=${notification.data.object.commentId || notification.data.object.id}`;
@@ -1603,15 +1582,15 @@ module.exports = function (app) {
         let topic = vote.Topic;
         if (!topic) {
             topic = await Topic
-                .findOne({where:{ id: topicId }});
+                .findOne({ where: { id: topicId } });
         }
-        const linkViewTopic = urlLib.getFe('/topics/:topicId', {topicId: topicId});
+        const linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: topicId });
         const linkToApplication = urlLib.getFe();
         const logoFile = emailHeaderLogo;
         let templateName = 'voteReminder';
         let customStyles = EMAIL_OPTIONS_DEFAULT.styles;
 
-        const emailsSendPromises = users.map(function (toUser) {
+        const emailsSendPromises = users.map((toUser) => {
             if (!toUser.email) {
                 logger.info('Skipping invite e-mail to user as there is no email on the profile', toUser.email);
                 return Promise.resolve();
