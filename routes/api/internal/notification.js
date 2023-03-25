@@ -7,7 +7,6 @@
 module.exports = function (app) {
     const logger = app.get('logger');
     const cosEtherpad = app.get('cosEtherpad');
-    const Promise = app.get('Promise');
     const authApiKey = app.get('middleware.authApiKey');
 
     /**
