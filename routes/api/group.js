@@ -18,7 +18,6 @@ module.exports = function (app) {
     const validator = app.get('validator');
     const emailLib = app.get('email');
     const util = app.get('util');
-    const Promise = app.get('Promise');
 
     const loginCheck = app.get('middleware.loginCheck');
     const asyncMiddleware = app.get('middleware.asyncMiddleware');
@@ -238,7 +237,8 @@ module.exports = function (app) {
                  gj.token as "join.token",
                  gj.level as "join.level",
                  ${userLevelSql}
-                 mc.count as "members.count"
+                 mc.count as "members.users.count",
+                 COALESCE(mtc.count, 0) as "members.topics.count"
             FROM "Groups" g
                 LEFT JOIN "Users" c ON (c.id = g."creatorId")
                 LEFT JOIN (
@@ -247,6 +247,12 @@ module.exports = function (app) {
                     WHERE "deletedAt" IS NULL
                     GROUP BY "groupId"
                 ) AS mc ON (mc."groupId" = g.id)
+                LEFT JOIN (
+                    SELECT "groupId", count("topicId") AS "count"
+                    FROM "TopicMemberGroups"
+                    WHERE "deletedAt" IS NULL
+                    GROUP BY "groupId"
+                ) AS mtc ON (mtc."groupId" = g.id)
                 LEFT JOIN "GroupJoins" gj ON (gj."groupId" = g.id)
                 ${userLevelJoin}
             WHERE g.id = :groupId
@@ -286,7 +292,8 @@ module.exports = function (app) {
                      END as "join.token",
                      COALESCE (gmu.level, null) AS "userLevel",
                      gj.level as "join.level",
-                     mc.count as "members.count"
+                     mc.count as "members.users.count",
+                     COALESCE(mtc.count, 0) as "members.topics.count"
                 FROM "Groups" g
                     LEFT JOIN "Users" c ON (c.id = g."creatorId")
                     LEFT JOIN (
@@ -295,6 +302,12 @@ module.exports = function (app) {
                         WHERE "deletedAt" IS NULL
                         GROUP BY "groupId"
                     ) AS mc ON (mc."groupId" = g.id)
+                    LEFT JOIN (
+                        SELECT "groupId", count("topicId") AS "count"
+                        FROM "TopicMemberGroups"
+                        WHERE "deletedAt" IS NULL
+                        GROUP BY "groupId"
+                    ) AS mtc ON (mtc."groupId" = g.id)
                     LEFT JOIN "GroupJoins" gj ON (gj."groupId" = g.id)
                     LEFT JOIN "GroupMemberUsers" gmu ON (gmu."groupId" = g.id AND gmu."userId" = :userId AND gmu."deletedAt" IS NULL)
                 WHERE g.id = :groupId;`,
@@ -393,6 +406,12 @@ module.exports = function (app) {
                     },
                     transaction: t
                 });
+                const memberTopicsCount = await TopicMemberGroup.count({
+                    where: {
+                        groupId: group.id
+                    },
+                    transaction: t
+                });
                 const creator = await User.findOne({
                     where: {
                         id: group.creatorId
@@ -406,7 +425,7 @@ module.exports = function (app) {
                 groupUpdated.parent = { id: group.parentId };
                 delete groupUpdated.parentId;
                 groupUpdated.creator = creator.dataValues;
-                groupUpdated.members = { count: memberUsersCount };
+                groupUpdated.members = { users: { count: memberUsersCount }, topics: { count: memberTopicsCount } };
                 t.afterCommit(() => {
                     if (!groupUpdated) {
                         return res.badRequest();
@@ -2076,7 +2095,7 @@ module.exports = function (app) {
         const limitDefault = 26;
         const userId = req.user?.userId;
         const orderBy = req.query.orderBy || 'updatedAt';
-        const order = (req.query.order && req.query.order.toLowerCase() === 'asc')? 'ASC' : 'DESC';
+        const order = (req.query.order && req.query.order.toLowerCase() === 'asc') ? 'ASC' : 'DESC';
         let orderBySql = ` ORDER BY`;
         switch (orderBy) {
             case 'name':

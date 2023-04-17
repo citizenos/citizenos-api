@@ -143,8 +143,14 @@ module.exports = function (sequelize, DataTypes) {
 
         if (this.dataValues.members) {
             data.members = {
-                count: this.dataValues.members.length,
-                rows: this.dataValues.members
+                users: {
+                    count: this.dataValues.members.users.rows.length,
+                    rows: this.dataValues.members.users
+                },
+                topics: {
+                    count: this.dataValues.members.topics.length,
+                    rows: this.dataValues.members.topics
+                }
             };
         }
 

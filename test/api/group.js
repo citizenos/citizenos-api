@@ -464,7 +464,12 @@ suite('Users', function () {
                     },
                     userLevel: "admin",
                     members: {
-                        count: 1
+                        users: {
+                            count: 1
+                        },
+                        topics: {
+                            count: 0
+                        }
                     }
                 };
 
@@ -1926,14 +1931,14 @@ suite('Users', function () {
 
                         await memberLib.groupMemberUsersCreate(group.id, members);
                         const res = (await groupRead(agent, creator.id, group.id)).body.data;
-                        assert.equal(res.members.count, 2);
+                        assert.equal(res.members.users.count, 2);
                         return;
                     });
 
                     test('Success', async function () {
                         await groupMemberUsersDelete(agent, creator.id, group.id, member.id);
                         const groupR = (await groupRead(agent, creator.id, group.id)).body.data;
-                        assert.equal(groupR.members.count, 1);
+                        assert.equal(groupR.members.users.count, 1);
                     });
 
                     test('Success - Member leaves group', async function () {
@@ -1951,11 +1956,11 @@ suite('Users', function () {
 
                         await memberLib.groupMemberUsersCreate(group.id, members);
                         const readGroup1 = (await groupRead(agent, creator.id, group.id)).body.data;
-                        assert.equal(readGroup1.members.count, 2);
+                        assert.equal(readGroup1.members.users.count, 2);
 
                         await groupMemberUsersDelete(deleteAgent, deleteMember.id, group.id, deleteMember.id);
                         const readGroup2 = (await groupRead(agent, creator.id, group.id)).body.data;
-                        assert.equal(readGroup2.members.count, 1);
+                        assert.equal(readGroup2.members.users.count, 1);
 
                         for (let i = 0; i < readGroup2.members.length; i++) {
                             assert.notEqual(readGroup2.members[i].id, deleteMember.id);
@@ -1989,7 +1994,7 @@ suite('Users', function () {
                         await _groupMemberUsersDelete(agent, creator.id, g.id, creator.id, 400);
                         // Be the error what it is, the member count must remain the same
                         const groupR = (await groupRead(agent, creator.id, g.id)).body.data;
-                        assert.equal(groupR.members.count, 2);
+                        assert.equal(groupR.members.users.count, 2);
                     });
                 });
 
@@ -2128,7 +2133,7 @@ suite('Users', function () {
 
                         await memberLib.groupMemberUsersCreate(group.id, members);
                         const groupR = (await groupRead(agent, creator.id, group.id)).body.data;
-                        assert.equal(groupR.members.count, 2);
+                        assert.equal(groupR.members.users.count, 2);
                     });
 
                     test('Success - Remove Topic from Group after Topic delete', async function () {
