@@ -285,7 +285,7 @@ module.exports = function (app) {
             expiresAt: new Date(tokenData.exp * 1000)
         });
 
-        res.clearCookie(config.session.name, {
+        return res.clearCookie(config.session.name, {
             path: config.session.cookie.path,
             domain: config.session.cookie.domain
         });
@@ -308,11 +308,14 @@ module.exports = function (app) {
         })(req, res);
     });
 
+    app.get('/api/auth/logout', asyncMiddleware(async function (req, res) {
+        await clearSessionCookies(req, res);
+        return res.ok({});
+    }));
 
     app.post('/api/auth/logout', asyncMiddleware(async function (req, res) {
         await clearSessionCookies(req, res);
-
-        return res.ok();
+        return res.ok({});
     }));
 
     app.get('/api/auth/verify/:code', asyncMiddleware(async function (req, res) {
