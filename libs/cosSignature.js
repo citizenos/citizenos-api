@@ -23,7 +23,9 @@ module.exports = function (app) {
     const Certificate = require('undersign/lib/certificate');
     const Asic = require('undersign/lib/asic');
     const Tsl = require('undersign/lib/tsl');
-    const conversion = require("phantom-html-to-pdf")();
+    const conversion = require("phantom-html-to-pdf")({
+        phantomPath: require('phantomjs-prebuilt').path
+    });
 
     let tslCertificates;
 
