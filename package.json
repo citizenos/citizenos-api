@@ -68,6 +68,7 @@
     "pg": "8.10.0",
     "pg-query-stream": "4.4.0",
     "phantom-html-to-pdf": "^0.7.0",
+    "phantomjs-prebuilt": "^2.1.16",
     "prerender-node": "3.5.0",
     "rate-limit-redis": "2.1.0",
     "rate-limiter-flexible": "2.4.1",
