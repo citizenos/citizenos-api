@@ -23,9 +23,7 @@ module.exports = function (app) {
     const Certificate = require('undersign/lib/certificate');
     const Asic = require('undersign/lib/asic');
     const Tsl = require('undersign/lib/tsl');
-    const conversion = require("phantom-html-to-pdf")({
-        phantomPath: require('phantomjs-prebuilt').path
-    });
+    const puppeteer = require('puppeteer');
 
     let tslCertificates;
 
@@ -940,35 +938,19 @@ module.exports = function (app) {
                 });
 
             mufileStream
-                .on('end', function () {
-                    conversion({ html: finalData }, async function(err, pdf) {
-                        const buffer = await streamToBuffer(pdf.stream);
-                        finalContainer.append(buffer, {
-                            name: VOTE_RESULTS_GRAPH_FILE.name,
-                            mimeType: VOTE_RESULTS_GRAPH_FILE.mimeType
-                        });
-                        return resolve();
-                      });
+                .on('end', async function () {
+                    const browser = await puppeteer.launch({headless: true, args: ['--no-sandbox']});
+                    const page = await browser.newPage();
+                    await page.setContent(finalData);
+                    const pdf = await page.pdf({format: 'A4'});
+                    finalContainer.append(pdf, {
+                        name: VOTE_RESULTS_GRAPH_FILE.name,
+                        mimeType: VOTE_RESULTS_GRAPH_FILE.mimeType
+                    });
+                    await browser.close()
+                    return resolve();
                 });
         });
-    }
-    const streamToBuffer = async (stream) => {
-        return new Promise((resolve, reject) => {
-          const data = [];
-
-          stream.on('data', (chunk) => {
-            data.push(chunk);
-          });
-
-          stream.on('end', () => {
-            resolve(Buffer.concat(data))
-          })
-
-          stream.on('error', (err) => {
-            reject(err)
-          })
-
-        })
     }
 
     const _generateFinalContainer = async function (topicId, voteId, type, include, wrap) {
