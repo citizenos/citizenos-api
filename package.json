@@ -68,7 +68,6 @@
     "pg": "8.10.0",
     "pg-query-stream": "4.4.0",
     "prerender-node": "3.5.0",
-    "puppeteer": "^20.1.0",
     "rate-limit-redis": "2.1.0",
     "rate-limiter-flexible": "2.4.1",
     "sanitize-filename": "1.6.3",

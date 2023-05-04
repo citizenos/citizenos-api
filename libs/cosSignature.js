@@ -23,7 +23,6 @@ module.exports = function (app) {
     const Certificate = require('undersign/lib/certificate');
     const Asic = require('undersign/lib/asic');
     const Tsl = require('undersign/lib/tsl');
-    const puppeteer = require('puppeteer');
 
     let tslCertificates;
 
@@ -92,8 +91,8 @@ module.exports = function (app) {
 
     const VOTE_RESULTS_GRAPH_FILE = {
         template: 'bdoc/results_graph.html',
-        name: 'graph.pdf',
-        mimeType: 'application/pdf'
+        name: 'graph.html',
+        mimeType: 'text/html'
     };
 
 
@@ -939,15 +938,11 @@ module.exports = function (app) {
 
             mufileStream
                 .on('end', async function () {
-                    const browser = await puppeteer.launch({headless: true, args: ['--no-sandbox']});
-                    const page = await browser.newPage();
-                    await page.setContent(finalData);
-                    const pdf = await page.pdf({format: 'A4'});
-                    finalContainer.append(pdf, {
+                    finalContainer.append(finalData, {
                         name: VOTE_RESULTS_GRAPH_FILE.name,
                         mimeType: VOTE_RESULTS_GRAPH_FILE.mimeType
                     });
-                    await browser.close()
+
                     return resolve();
                 });
         });
