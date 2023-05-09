@@ -6391,7 +6391,8 @@ module.exports = function (app) {
         const topicId = req.params.topicId;
         const voteId = req.params.voteId;
 
-        let voteOptions = req.body.options;
+        let voteOptions = [...new Map(req.body.options.map(item =>
+            [item['optionId'], item])).values()];
         let isSingelOption = false;
 
         const vote = await Vote
@@ -6541,8 +6542,8 @@ module.exports = function (app) {
             const voteId = vote.id;
             const userId = req.user.userId;
             const topicId = req.params.topicId;
-
-            const voteOptions = req.body.options;
+            const voteOptions = [...new Map(req.body.options.map(item =>
+                [item['optionId'], item])).values()];
 
             await db
                 .transaction(async function (t) {
@@ -7757,6 +7758,24 @@ module.exports = function (app) {
    */
     app.get('/api/users/:userId/notificationsettings/topics', loginCheck(), async function (req, res, next) {
         try {
+            const order = req.query.orderBy;
+            let sortOrder = req.query.order || 'ASC';
+
+            if (sortOrder && ['asc', 'desc'].indexOf(sortOrder.toLowerCase()) === -1) {
+                sortOrder = 'ASC';
+            }
+            let sortSql = ` ORDER BY `;
+            if (order) {
+                switch (order) {
+                    case 'title':
+                        sortSql += ` t.title ${sortOrder} `;
+                        break;
+                    default:
+                        sortSql += ` t.title ASC `
+                }
+            } else {
+                sortSql = ``;
+            }
             const limitDefault = 10;
             const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
             let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
@@ -7807,7 +7826,7 @@ module.exports = function (app) {
                     ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
                     LEFT JOIN "UserNotificationSettings" usn ON usn."userId" = :userId AND usn."topicId" = t.id
                     WHERE ${where}
-                    ORDER BY t."title" ASC
+                    ${sortSql}
                     LIMIT :limit
                     OFFSET :offset
                 ;`

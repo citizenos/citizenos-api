@@ -1129,7 +1129,7 @@ const _topicVoteStatusUnauth = async function (agent, topicId, voteId, token, ex
 };
 
 //TODO: Missing test to use it?
-const topicVoteStatusUnauth = async function (agent, topicId, voteId, userId, token) { //eslint-disable-line no-unused-vars
+const topicVoteStatusUnauth = async function (agent, topicId, voteId, token) { //eslint-disable-line no-unused-vars
     return _topicVoteStatusUnauth(agent, topicId, voteId, token, 200);
 };
 
@@ -6198,6 +6198,40 @@ suite('Users', function () {
                         assert.deepEqual(topicReadAfterVote.vote, voteReadAfterVote2);
                     });
 
+                    test('Success - multiple choice - vote with same options', async function () {
+                        const options = [
+                            {
+                                value: 'Option 1'
+                            },
+                            {
+                                value: 'Option 2'
+                            },
+                            {
+                                value: 'Option 3'
+                            }
+                        ];
+
+                        const voteCreated = (await topicVoteCreate(agent, user.id, topic.id, options, 1, 2, false, null, null, null, null)).body.data;
+                        const voteRead = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
+
+                        const voteList1 = [
+                            {
+                                optionId: voteRead.options.rows.find((o) => {return o.value === options[0].value}).id
+                            },
+                            {
+                                optionId: voteRead.options.rows.find((o) => {return o.value === options[0].value}).id
+                            }
+                        ];
+
+                        await topicVoteVote(agent, user.id, topic.id, voteCreated.id, voteList1, null, null, null, null);
+
+                        const voteReadAfterVote1 = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
+                        _(voteList1).forEach(function (voteOption) {
+                            const option = voteReadAfterVote1.options.rows.find((o) => {return o.id === voteOption.optionId});
+                            assert.equal(option.voteCount, 1);
+                        });
+                    });
+
                     test('Success - multiple choice - vote Veto', async function () {
                         const options = [
                             {
@@ -7684,7 +7718,7 @@ suite('Users', function () {
                                         `${options[2].value}.html`,
                                         `PNOEE-${pid}.bdoc`,
                                         'votes.csv',
-                                        'graph.pdf',
+                                        'graph.html',
                                         'META-INF/manifest.xml'
                                     ];
                                     const fileListReturned = [];
@@ -7889,7 +7923,7 @@ suite('Users', function () {
                             ];
                             vote = (await topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
                             vote = (await topicVoteRead(agent, user.id, topic.id, vote.id)).body.data;
-                            vote2 = (await topicVoteCreate(agent, user.id, topicPublic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                            vote2 = (await topicVoteCreate(agent, user.id, topicPublic.id, options, 1, 2, null, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
                         });
 
                         teardown(async function () {
@@ -7949,6 +7983,39 @@ suite('Users', function () {
 
                             assert.equal(response.status.code, 20001);
                             assert.match(response.data.challengeID, /[0-9]{4}/);
+                        });
+
+                        test('Success - unauth - Estonian PID 2 time same option', async function () {
+                            this.timeout(30000); //eslint-disable-line no-invalid-this
+                            const reqAgent = request.agent(app);
+                            await UserConnection.destroy({
+                                where: {
+                                    connectionId: [UserConnection.CONNECTION_IDS.esteid, UserConnection.CONNECTION_IDS.smartid],
+                                    connectionUserId: ['PNOEE-30403039917', 'PNOEE-30303039914', 'PNOEE-11412090004']
+                                },
+                                force: true
+                            });
+
+                            const countryCode = 'EE';
+                            const pid = '30303039914';
+
+                            const voteList = [
+                                {
+                                    optionId: vote2.options.rows[0].id
+                                },
+                                {
+                                    optionId: vote2.options.rows[0].id
+                                }
+                            ];
+                            const response = (await _topicVoteVoteUnauth(reqAgent, topicPublic.id, vote2.id, voteList, null, pid, null, countryCode, 200)).body;
+
+                            assert.equal(response.status.code, 20001);
+                            assert.match(response.data.challengeID, /[0-9]{4}/);
+                            const statusresponse = (await topicVoteStatusUnauth(reqAgent, topicPublic.id, vote2.id, response.data.token)).body;
+                            assert.equal(statusresponse.status.code, 20002);
+                            assert.property(statusresponse.data, 'bdocUri');
+                            await topicReadUnauth(reqAgent, topicPublic.id);
+                            await topicVoteReadUnauth(reqAgent, topicPublic.id, vote2.id);
                         });
 
                         test('Success - Latvian PID', async function () {
