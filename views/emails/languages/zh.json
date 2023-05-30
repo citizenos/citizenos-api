@@ -176,6 +176,9 @@
     "FILTER_USER": "Activities related to user",
     "FILTER_SELF": "My activities"
   },
+  "VOTE_REMINDER": {
+    "SUBJECT": "Reminder to vote on a topic"
+  },
   "TXT_TOPIC_CATEGORY_ALL": "every category",
   "TXT_TOPIC_CATEGORY_CITIZENOS": "Citizen OS",
   "TXT_TOPIC_CATEGORY_BIOTOOPIA": "Biotoopia",
