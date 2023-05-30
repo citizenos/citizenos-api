@@ -35,7 +35,7 @@ module.exports = function (app) {
             let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
             if (limit > limitMax) limit = limitDefault;
             const page = parseInt(req.query.page, 10) ? parseInt(req.query.page, 10) : 1;
-            const offset = (page * limit) - limit;
+            const offset = req.query.offset || (page * limit) - limit;
             const params = Object.keys(req.query);
             let statuses;
             let queryStatuses = req.query.statuses;
