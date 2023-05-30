@@ -73,31 +73,7 @@
         "DELETE",
         "PATCH"
       ],
-      "credentials": true,
-      "allowedHeaders": [
-        "Pragma",
-        "x-api-key",
-        "X-API-KEY",
-        "Origin",
-        "X-Requested-With",
-        "X-Auth-Token",
-        "Content-Type",
-        "Content-Length",
-        "Accept",
-        "Access-Control-Request-Method",
-        "Access-Control-Allow-Credentials",
-        "Access-Control-Allow-Origin",
-        "Cache-Control",
-        "Authorization",
-        "c-content-range",
-        "Referer",
-        "Connection",
-        "Date",
-        "Etag",
-        "Keep-Alive",
-        "Cookie",
-        "Expires"
-      ]
+      "credentials": true
     },
     "key": ""
   },
@@ -219,21 +195,21 @@
             "CN": "TEST of ESTEID-SK 2016"
           },
           {
-            "C":"EE",
-            "O":"AS Sertifitseerimiskeskus",
-            "CN":"TEST of EID-SK 2011",
-            "E":"pki@sk.ee"
+            "C": "EE",
+            "O": "AS Sertifitseerimiskeskus",
+            "CN": "TEST of EID-SK 2011",
+            "E": "pki@sk.ee"
           },
           {
             "CN": "TEST of ESTEID2018",
             "OID": "NTREE-10747013",
             "O": "SK ID Solutions AS",
-            "C":"EE"
+            "C": "EE"
           }
         ]
       },
       "timemarkUrl": "http://demo.sk.ee/ocsp",
-	    "timestampUrl": "http://demo.sk.ee/tsa"
+      "timestampUrl": "http://demo.sk.ee/tsa"
     },
     "smartId": {
       "hostname": "smartid.citizenos.com:8001",
@@ -301,7 +277,29 @@
     "limit": 10
   },
   "storage": {
-    "allowedFileTypes": ["txt", "pdf", "doc", "docx", "ddoc", "bdoc", "asice", "odf", "odt", "jpg", "jpeg", "png", "rtf", "xls", "xlsx", "ppt", "pptx", "pps", "xlt"],
-    "allowedMimeTypes": ["application\/vnd\\.etsi\\.asic-e\\+zip"]
+    "allowedFileTypes": [
+      "txt",
+      "pdf",
+      "doc",
+      "docx",
+      "ddoc",
+      "bdoc",
+      "asice",
+      "odf",
+      "odt",
+      "jpg",
+      "jpeg",
+      "png",
+      "rtf",
+      "xls",
+      "xlsx",
+      "ppt",
+      "pptx",
+      "pps",
+      "xlt"
+    ],
+    "allowedMimeTypes": [
+      "application\/vnd\\.etsi\\.asic-e\\+zip"
+    ]
   }
 }

@@ -5,11 +5,11 @@ module.exports = function (app) {
     const db = models.sequelize;
     const Sequelize = require('sequelize');
     const Vote = models.Vote;
-    const Topic = models.Topic;
+    const TopicVote = models.TopicVote;
     const emailLib = app.get('email');
     const moment = require('moment');
 
-    const getTopicMembers = async (topicId) => {
+    const getTopicMembers = async (voteId) => {
         try {
             const users = await db
                 .query(
@@ -23,12 +23,12 @@ module.exports = function (app) {
                           SELECT DISTINCT ON(id)
                               tm."memberId" as id,
                               tm."level",
-                              t.id as "topicId",
+                              tv."topicId" as "topicId",
                               u.name,
                               u.company,
                               u."imageUrl",
                               u.email
-                          FROM "Topics" t
+                          FROM "TopicVotes" tv
                           JOIN (
                               SELECT
                                   tmu."topicId",
@@ -47,12 +47,13 @@ module.exports = function (app) {
                               LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
                               WHERE tmg."deletedAt" IS NULL
                               AND gm."deletedAt" IS NULL
-                          ) AS tm ON (tm."topicId" = t.id)
+                          ) AS tm ON (tm."topicId" = tv."topicId")
                           JOIN "Users" u ON (u.id = tm."memberId")
-                          WHERE t.id = :topicId
+                          WHERE tv."voteId" = :voteId
                           ORDER BY id, tm.priority, tm."level"::"enum_TopicMemberUsers_level" DESC
                       ) tm
-                      LEFT JOIN "TopicMemberUsers" tmu ON (tmu."userId" = tm.id AND tmu."topicId" = :topicId)
+                      JOIN "TopicVotes" tv ON tv."voteId"=:voteId
+                      LEFT JOIN "TopicMemberUsers" tmu ON (tmu."userId" = tm.id AND tmu."topicId" = tv."topicId")
                       LEFT JOIN (
                           SELECT gm."userId", tmg."groupId", tmg."topicId", tmg.level, g.name
                           FROM "GroupMemberUsers" gm
@@ -60,13 +61,13 @@ module.exports = function (app) {
                           LEFT JOIN "Groups" g ON g.id = tmg."groupId" AND g."deletedAt" IS NULL
                           WHERE gm."deletedAt" IS NULL
                           AND tmg."deletedAt" IS NULL
-                      ) tmg ON tmg."topicId" = :topicId AND (tmg."userId" = tm.id)
+                      ) tmg ON tmg."topicId" = tv."topicId" AND (tmg."userId" = tm.id)
                       JOIN "Users" u ON u.id = tm.id
                       GROUP BY tm.id, u.id, tm.level, tmu.level, tm.name, tm.company, tm."imageUrl", tm.email, tm."topicId"
                    ;`,
                     {
                         replacements: {
-                            topicId: topicId
+                            voteId: voteId
                         },
                         type: db.QueryTypes.SELECT,
                         raw: true,
@@ -86,13 +87,16 @@ module.exports = function (app) {
                         [Sequelize.Op.lte]: new Date()
                     },
                     reminderSent: null
-                },
-                include: [Topic]
+                }
             });
 
             votes.forEach(async vote => {
-                const users = await getTopicMembers(vote.Topics[0].id);
-                emailLib.sendVoteReminder(users, vote, vote.Topics[0].id);
+                const users = await getTopicMembers(vote.id);
+                if (users && users.length) {
+                    const topicVote = await TopicVote.findOne({ where: { voteId: vote.id } });
+                    emailLib.sendVoteReminder(users, vote, topicVote.topicId);
+                }
+
                 vote.reminderSent = moment();
                 vote.save();
             });
