@@ -176,6 +176,9 @@
     "FILTER_USER": "Aktivity související s uživatelem",
     "FILTER_SELF": "Moje aktivity"
   },
+  "VOTE_REMINDER": {
+    "SUBJECT": "Reminder to vote on a topic"
+  },
   "TXT_TOPIC_CATEGORY_ALL": "všechny kategorie",
   "TXT_TOPIC_CATEGORY_CITIZENOS": "Citizen OS",
   "TXT_TOPIC_CATEGORY_BIOTOOPIA": "Biotoopia",
