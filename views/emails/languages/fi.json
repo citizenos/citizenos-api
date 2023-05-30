@@ -176,6 +176,9 @@
     "FILTER_USER": "Käyttäjään liittyvä toiminta",
     "FILTER_SELF": "Oma toimintani"
   },
+  "VOTE_REMINDER": {
+    "SUBJECT": "Reminder to vote on a topic"
+  },
   "TXT_TOPIC_CATEGORY_ALL": "kaikki luokat",
   "TXT_TOPIC_CATEGORY_CITIZENOS": "Citizen OS",
   "TXT_TOPIC_CATEGORY_BIOTOOPIA": "Biotoopia",

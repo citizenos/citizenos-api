@@ -176,6 +176,9 @@
     "FILTER_USER": "Ar lietotāju saistītās aktivitātes",
     "FILTER_SELF": "Manas aktivitātes"
   },
+  "VOTE_REMINDER": {
+    "SUBJECT": "Reminder to vote on a topic"
+  },
   "TXT_TOPIC_CATEGORY_ALL": "katrā kategorijā",
   "TXT_TOPIC_CATEGORY_CITIZENOS": "Citizen OS",
   "TXT_TOPIC_CATEGORY_BIOTOOPIA": "Biotoopia",
