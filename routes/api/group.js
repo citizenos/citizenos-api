@@ -474,10 +474,21 @@ module.exports = function (app) {
         // Falling back to raw SQL
         // TODO: support LIMIT & OFFSET
         // TODO: This cannot possibly be the most effective query in the world..
+
+        const visibility = req.query.visibility;
+        const search = req.query.search;
+
         let joinText = '';
         let returnFields = '';
         if (include && !Array.isArray(include)) {
             include = [include];
+        }
+        let where = ` WHERE g."deletedAt" IS NULL
+        AND gmu."deletedAt" is NULL
+        AND gmu."userId" = :userId `;
+
+        if (search) {
+            where += ` AND g.name ILIKE :search `
         }
 
         if (include) {
@@ -543,6 +554,10 @@ module.exports = function (app) {
                 members."memberLevel" as "member.level", `;
         }
 
+        if (visibility && Object.values(Group.VISIBILITY).indexOf(visibility) > -1) {
+            where += ` AND g.visibility=:visibility `;
+        }
+
         const rows = await db
             .query(`
                 SELECT
@@ -597,14 +612,14 @@ module.exports = function (app) {
                     ) AS gt ON (gt."groupId" = g.id)
                     LEFT JOIN "GroupJoins" gj ON (gj."groupId" = g.id)
                     ${joinText}
-                WHERE g."deletedAt" IS NULL
-                    AND gmu."deletedAt" is NULL
-                    AND gmu."userId" = :userId
+                    ${where}
                 ORDER BY g."updatedAt" DESC, g.id;
                 `,
                 {
                     replacements: {
-                        userId: req.user.userId
+                        userId: req.user.userId,
+                        visibility: visibility,
+                        search: '%' + search + '%'
                     },
                     type: db.QueryTypes.SELECT,
                     raw: true,
