@@ -328,7 +328,7 @@ module.exports = function (app) {
 
                             if (activity.data.result) {
                                 for (const obj of activity.data.result) {
-                                    if (obj.path && obj.path ==='/token') {
+                                    if (obj.path && obj.path === '/token') {
                                         obj.value = obj.value.replace(obj.value.substr(2, 8), '********');
                                         break;
                                     }
@@ -456,11 +456,11 @@ module.exports = function (app) {
                     JOIN pg_temp.getActivityData(a.id, a."topicIds", a."groupIds", a."userIds") ad ON ad."id" = a.id
                     ORDER BY ad."updatedAt" DESC
                     ;`, db.dialect, {
-                        topicId: topicId,
-                        userId: userId,
-                        visibility: visibility,
-                        limit: limit,
-                        offset: offset
+                    topicId: topicId,
+                    userId: userId,
+                    visibility: visibility,
+                    limit: limit,
+                    offset: offset
                 });
                 const results = await db.query(`${activitiesDataFunction} ${queryString}`,
                     {
@@ -505,13 +505,13 @@ module.exports = function (app) {
     });
 
     app.get('/api/test/users/:userId/activities', function (req, res, next) {
-        req.user = {id: req.params.userId};
+        req.user = { id: req.params.userId };
 
         return activitiesList(req, res, next);
     });
 
     app.get('/api/test/old/users/:userId/activities', function (req, res, next) {
-        req.user = {id: req.params.userId};
+        req.user = { id: req.params.userId };
 
         return activitiesList(req, res, next);
     });
@@ -528,8 +528,8 @@ module.exports = function (app) {
         let wherePartnerTopics = '';
         let wherePartnerGroups = '';
         if (sourcePartnerId) {
-            wherePartnerTopics = injectReplacements(` AND t."sourcePartnerId" = :sourcePartnerId `, db.dialect, {sourcePartnerId});
-            wherePartnerGroups = injectReplacements(`' AND g."sourcePartnerId" = :sourcePartnerId `, db.dialect, {sourcePartnerId});
+            wherePartnerTopics = injectReplacements(` AND t."sourcePartnerId" = :sourcePartnerId `, db.dialect, { sourcePartnerId });
+            wherePartnerGroups = injectReplacements(`' AND g."sourcePartnerId" = :sourcePartnerId `, db.dialect, { sourcePartnerId });
         }
         try {
             const queryFunctions = `
@@ -751,7 +751,7 @@ module.exports = function (app) {
                     uac.id <> ua.id
                     AND
                     uac."updatedAt" > ua."updatedAt"
-                ;`, db.dialect, {userId: userId});
+                ;`, db.dialect, { userId: userId });
 
             const results = await db
                 .query(`${queryFunctions} ${query}`,
@@ -785,7 +785,7 @@ module.exports = function (app) {
             let offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
             let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
 
-            const includeSql = injectReplacements(buildActivityFeedIncludeString(req, visibility), db.dialect, {userId: userId});
+            const includeSql = injectReplacements(buildActivityFeedIncludeString(req, visibility), db.dialect, { userId: userId });
             let queryFilters = req.query.filter || [];
             if (queryFilters && !Array.isArray(queryFilters)) {
                 queryFilters = [queryFilters];
@@ -803,7 +803,7 @@ module.exports = function (app) {
                 });
                 where += `a.data#>>'{object, @type}' IN (${filtersEscaped.join(',')}) OR a.data#>>'{object, 0, @type}' IN (${filtersEscaped.join(',')}) `;
             } else if (userId) {
-                where = injectReplacements(`a.data#>>'{object, @type}' <> 'UserNotificationSettings' OR  (a.data#>>'{object, @type}' = 'UserNotificationSettings' AND a.data#>>'{object, "userId"}' = :userId ) `, db.dialect, {userId: req.user.userId});
+                where = injectReplacements(`a.data#>>'{object, @type}' <> 'UserNotificationSettings' OR  (a.data#>>'{object, @type}' = 'UserNotificationSettings' AND a.data#>>'{object, "userId"}' = :userId ) `, db.dialect, { userId: req.user.userId });
             }
 
             if (where) {
@@ -821,8 +821,8 @@ module.exports = function (app) {
             let wherePartnerTopics = '';
             let wherePartnerGroups = '';
             if (sourcePartnerId) {
-                wherePartnerTopics = injectReplacements(` AND t."sourcePartnerId" = :sourcePartnerId `, db.dialect, {sourcePartnerId});
-                wherePartnerGroups = injectReplacements(` AND g."sourcePartnerId" = :sourcePartnerId `, db.dialect, {sourcePartnerId});
+                wherePartnerTopics = injectReplacements(` AND t."sourcePartnerId" = :sourcePartnerId `, db.dialect, { sourcePartnerId });
+                wherePartnerGroups = injectReplacements(` AND g."sourcePartnerId" = :sourcePartnerId `, db.dialect, { sourcePartnerId });
             }
 
             const query = `
@@ -1176,12 +1176,12 @@ module.exports = function (app) {
                     ORDER BY ad."updatedAt" DESC
                     ;`,
                     db.dialect, {
-                        groupId: groupId,
-                        userId: userId,
-                        visibility: visibility,
-                        limit: limit,
-                        offset: offset
-                    })
+                    groupId: groupId,
+                    userId: userId,
+                    visibility: visibility,
+                    limit: limit,
+                    offset: offset
+                })
                 const results = await db
                     .query(`${activitiesDataFunction} ${selectSql}`, {
                         type: db.QueryTypes.SELECT,
@@ -1228,51 +1228,135 @@ module.exports = function (app) {
         return groupActivitiesList(req, res, next);
     });
 
-   /* app.get('/api/acitivites/strings', async (req, res, next) => {
-        const strings = [];
+    const groupUnreadActivitiesCount = async (req, res, next, visibility) => {
+        const userId = req.user.userId;
+        const groupId = req.params.groupId;
+
+        let visibilityCondition = '';
+        if (visibility) {
+            visibilityCondition = 'g.visibility = :visibility AND';
+        }
 
         try {
-            const activities = await db
-            .query(`
-                ${activitiesDataFunction}
-                SELECT DISTINCT
-                    a.id,
-                    a.data,
-                    a."createdAt",
-                    a."updatedAt",
-                    a."deletedAt",
-                    a."topicIds",
-                    a."userIds",
-                    a."groupIds",
-                    jsonb_agg(t.*) AS topics,
-                    jsonb_agg(g.*) AS groups,
-                    jsonb_agg(u.*) AS users
-                FROM
-                "Activities" a
-                LEFT JOIN
-                    "Topics" t ON ARRAY[t.id::text] <@ string_to_array(array_to_string(a."topicIds", ','), ',')
-                LEFT JOIN
-                    "Groups" g ON ARRAY[g.id::text] <@ string_to_array(array_to_string(a."groupIds", ','), ',')
-                LEFT JOIN
-                    "Users" u ON ARRAY[u.id::text] <@ string_to_array(array_to_string(a."userIds", ','), ',')
-                GROUP BY a.id
-                ORDER BY a."updatedAt" DESC
-            ;`, {
-                type: db.QueryTypes.SELECT,
-                nest: true,
-                raw: true
-            });
-            activities.forEach(async (activity) => {
-                /*notifications.buildActivityString(activity);
-                notifications.getActivityValues(activity);
-                strings.push(activity.data.type + ' ' + (activity.data.object['@type'] || activity.data.object.type));
-                const users = await notifications.getRelatedUsers(activity);
-                console.log(users);
-            });
-            return res.ok(Array.from(new Set(strings)));
+
+            const query = injectReplacements(`
+                SELECT
+                        COUNT(uac.id) AS count
+                    FROM
+                        (
+                            SELECT
+                            a.*
+                            FROM
+                            (
+                                SELECT a.id, a."topicIds", a."groupIds", a."userIds", a."updatedAt", a."createdAt"
+                                FROM
+                                "Activities" a
+                                JOIN "Groups" g ON g.id = :groupId
+                                WHERE
+                                ${visibilityCondition}
+                                ARRAY[:groupId] <@  a."groupIds"
+                                OR
+                                a.data@>'{"type": "View"}'
+                                AND
+                                a."actorType" = 'User'
+                                AND
+                                a."actorId" = :userId
+                                AND
+                                a.data#>>'{object, @type}' = 'Activity'
+                                ORDER BY a."updatedAt" DESC
+                            ) a
+                            ORDER BY a."updatedAt" DESC
+                        ) uac
+                JOIN (
+                    SELECT
+                        va.id,
+                        va.data,
+                        va."createdAt",
+                        va."updatedAt",
+                        va."deletedAt"
+                    FROM "Activities" va
+                    WHERE
+                        va."actorType" = 'User' AND va."actorId" = :userId::text
+                    AND va.data@>'{"type": "View"}'
+                    AND va.data#>>'{object, @type}' = 'Activity'
+                ) ua ON ua.id = ua.id
+                WHERE
+                    uac.id <> ua.id
+                    AND
+                    uac."createdAt" > ua."updatedAt"
+                OR
+                    uac.id <> ua.id
+                    AND
+                    uac."updatedAt" > ua."updatedAt"
+                ;`, db.dialect, { userId: userId, groupId: groupId});
+
+            const results = await db
+                .query(query,
+                    {
+                        type: db.QueryTypes.SELECT,
+                        raw: true,
+                        nest: true
+                    }
+                );
+
+            return res.ok(results[0]);
+
         } catch (err) {
-            console.log(err);
-            next(err)
+            return next(err);
         }
-    })*/
+    }
+    app.get('/api/groups/:groupId/activities/unread', async (req, res, next) => {
+        return groupUnreadActivitiesCount(req, res, next, 'public');
+    });
+
+    app.get('/api/users/:userId/groups/:groupId/activities/unread', loginCheck(['partner']), groupLib.hasPermission(GroupMemberUser.LEVELS.read, true), async (req, res, next) => {
+        return groupUnreadActivitiesCount(req, res, next);
+    });
+    /* app.get('/api/acitivites/strings', async (req, res, next) => {
+         const strings = [];
+
+         try {
+             const activities = await db
+             .query(`
+                 ${activitiesDataFunction}
+                 SELECT DISTINCT
+                     a.id,
+                     a.data,
+                     a."createdAt",
+                     a."updatedAt",
+                     a."deletedAt",
+                     a."topicIds",
+                     a."userIds",
+                     a."groupIds",
+                     jsonb_agg(t.*) AS topics,
+                     jsonb_agg(g.*) AS groups,
+                     jsonb_agg(u.*) AS users
+                 FROM
+                 "Activities" a
+                 LEFT JOIN
+                     "Topics" t ON ARRAY[t.id::text] <@ string_to_array(array_to_string(a."topicIds", ','), ',')
+                 LEFT JOIN
+                     "Groups" g ON ARRAY[g.id::text] <@ string_to_array(array_to_string(a."groupIds", ','), ',')
+                 LEFT JOIN
+                     "Users" u ON ARRAY[u.id::text] <@ string_to_array(array_to_string(a."userIds", ','), ',')
+                 GROUP BY a.id
+                 ORDER BY a."updatedAt" DESC
+             ;`, {
+                 type: db.QueryTypes.SELECT,
+                 nest: true,
+                 raw: true
+             });
+             activities.forEach(async (activity) => {
+                 /*notifications.buildActivityString(activity);
+                 notifications.getActivityValues(activity);
+                 strings.push(activity.data.type + ' ' + (activity.data.object['@type'] || activity.data.object.type));
+                 const users = await notifications.getRelatedUsers(activity);
+                 console.log(users);
+             });
+             return res.ok(Array.from(new Set(strings)));
+         } catch (err) {
+             console.log(err);
+             next(err)
+         }
+     })*/
 };
