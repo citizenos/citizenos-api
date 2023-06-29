@@ -205,6 +205,15 @@
             "OID": "NTREE-10747013",
             "O": "SK ID Solutions AS",
             "C": "EE"
+          },
+          {
+            "CN":"NQ-SK 2016",
+            "OID":"NTREE-10747013",
+            "O":"AS Sertifitseerimiskeskus",
+            "C":"EE"
+          },
+          {
+            "C": "EE", "O": "SK ID Solutions AS", "OU": "TSA", "OID": "NTREE-10747013", "CN": "SK TIMESTAMPING AUTHORITY 2022"
           }
         ]
       },
