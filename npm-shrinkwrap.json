@@ -44,7 +44,7 @@
         "lodash": "4.17.21",
         "log4js": "6.9.0",
         "mime-types": "2.1.35",
-        "mobiil-id-rest": "1.2.4",
+        "mobiil-id-rest": "1.2.5",
         "moment": "2.29.4",
         "morgan": "1.10.0",
         "mu2": "0.5.21",
@@ -5333,9 +5333,9 @@
       }
     },
     "node_modules/mobiil-id-rest": {
-      "version": "1.2.4",
-      "resolved": "https://registry.npmjs.org/mobiil-id-rest/-/mobiil-id-rest-1.2.4.tgz",
-      "integrity": "sha512-4/7fJZ421roUNVtDNN8+tHYvopZbsdwaqAJTxt3yRh/BuO8b2vaiV707bQLpnBFJCgSGQ0e8Asj8D5Y3ESJO6A==",
+      "version": "1.2.5",
+      "resolved": "https://registry.npmjs.org/mobiil-id-rest/-/mobiil-id-rest-1.2.5.tgz",
+      "integrity": "sha512-Nt20+3PcGXhHc0nsy2pFz83fQVXBQDi5eI1j+syZ+VSwYfgiyyrwHDgGL6RQ8QyuVDVl+nRqf5x5opDgB5Jv4w==",
       "dependencies": {
         "asn1js": "3.0.5",
         "elliptic": "6.5.4",
