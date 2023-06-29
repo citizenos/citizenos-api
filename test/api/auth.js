@@ -609,7 +609,7 @@ suite('Auth', function () {
                         .destroy({
                             where: {
                                 connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                connectionUserId: ['PNOEE-60001019906']
+                                connectionUserId: ['PNOEE-60001019906', 'PNOEE-60001017869']
                             },
                             force: true
                         });
@@ -634,6 +634,36 @@ suite('Auth', function () {
                     delete responseData.id;
                     assert.deepEqual(responseData, {
                         name: 'Mary Änn O’Connež-Šuslik Testnumber',
+                        company: null,
+                        language: 'en',
+                        email: null,
+                        imageUrl: null,
+                        preferences: null,
+                        termsVersion: null,
+                        termsAcceptedAt: null
+                    });
+
+                });
+
+                test('Success - 20001 - Estonian mobile number and PID EID2016', async function () {
+                    this.timeout(15000); //eslint-disable-line no-invalid-this
+
+                    const phoneNumber = '+37268000769';
+                    const pid = '60001017869';
+                    const response = (await loginMobileInit(request.agent(app), pid, phoneNumber)).body;
+
+                    assert.equal(response.status.code, 20001);
+                    assert.match(response.data.challengeID, /[0-9]{4}/);
+                    const tokenData = jwt.verify(response.data.token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                    const loginMobileFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
+                    assert.property(loginMobileFlowData, 'sessionHash');
+
+                    const responseData = (await loginMobilestatus(request.agent(app), response.data.token)).body.data;
+
+                    assert.property(responseData, 'id');
+                    delete responseData.id;
+                    assert.deepEqual(responseData, {
+                        name: 'Eid2016 Testnumber',
                         company: null,
                         language: 'en',
                         email: null,

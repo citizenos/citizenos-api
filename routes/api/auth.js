@@ -774,6 +774,7 @@ module.exports = function (app) {
                 token: token
             }, 1);
         } catch (e) {
+            console.log(e);
             if (e.code === 400) {
                 return res.badRequest(e.message);
             }
