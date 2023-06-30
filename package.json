@@ -32,6 +32,7 @@
     "campaign-nodemailer": "1.1.0",
     "campaign-terminal": "git+https://github.com/citizenos/campaign-terminal#83bca04d61f8730b23c5439601d513ceae7c4012",
     "config": "3.3.9",
+    "connect-redis": "^7.1.0",
     "cookie-parser": "1.4.6",
     "cors": "2.8.5",
     "docx": "7.4.1",

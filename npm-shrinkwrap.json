@@ -23,6 +23,7 @@
         "campaign-nodemailer": "1.1.0",
         "campaign-terminal": "git+https://github.com/citizenos/campaign-terminal#83bca04d61f8730b23c5439601d513ceae7c4012",
         "config": "3.3.9",
+        "connect-redis": "^7.1.0",
         "cookie-parser": "1.4.6",
         "cors": "2.8.5",
         "docx": "7.4.1",
@@ -1580,6 +1581,17 @@
       "dependencies": {
         "ini": "^1.3.4",
         "proto-list": "~1.2.1"
+      }
+    },
+    "node_modules/connect-redis": {
+      "version": "7.1.0",
+      "resolved": "https://registry.npmjs.org/connect-redis/-/connect-redis-7.1.0.tgz",
+      "integrity": "sha512-UaqO1EirWjON2ENsyau7N5lbkrdYBpS6mYlXSeff/OYXsd6EGZ+SXSmNPoljL2PSua8fgjAEaldSA73PMZQ9Eg==",
+      "engines": {
+        "node": ">=16"
+      },
+      "peerDependencies": {
+        "express-session": ">=1"
       }
     },
     "node_modules/content-disposition": {

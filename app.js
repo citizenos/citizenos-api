@@ -3,6 +3,7 @@
 const config = require('config');
 const express = require('express');
 const session = require('express-session');
+const RedisStore = require("connect-redis").default
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
@@ -37,23 +38,28 @@ const StreamUpload = require('stream_upload');
 const notifications = require('./libs/notifications');
 const SlowDown = require('express-slow-down');
 const rateLimit = require('express-rate-limit')
+const Redis = require('ioredis');
 
 let rateLimitStore, speedLimitStore;
 if (config.rateLimit && config.rateLimit.storageType === 'redis') {
-    const RedisStore = require('rate-limit-redis');
-    const Redis = require('ioredis');
+    const RLRedisStore = require('rate-limit-redis');
     const redisUrl = config.rateLimit.client?.url;
     const redisOptions = config.rateLimit.client?.options;
     const client = new Redis(redisUrl, redisOptions);
 
-    rateLimitStore = new RedisStore({
+    rateLimitStore = new RLRedisStore({
         client,
         prefix: 'rl'
     });
 
-    speedLimitStore = new RedisStore({
+    speedLimitStore = new RLRedisStore({
         client,
         prefix: 'sl'
+    });
+
+    /*Set Redis Session store*/
+    config.session.store = new RedisStore({
+        client
     });
 }
 
