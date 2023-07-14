@@ -1229,14 +1229,16 @@ module.exports = function (app) {
     });
 
     const groupUnreadActivitiesCount = async (req, res, next, visibility) => {
-        const userId = req.user.userId;
+        const userId = req.user?.userId;
         const groupId = req.params.groupId;
 
         let visibilityCondition = '';
         if (visibility) {
             visibilityCondition = 'g.visibility = :visibility AND';
         }
-
+        if (!userId) {
+            return res.ok({count: 0});
+        }
         try {
 
             const query = injectReplacements(`
@@ -1288,7 +1290,7 @@ module.exports = function (app) {
                     uac.id <> ua.id
                     AND
                     uac."updatedAt" > ua."updatedAt"
-                ;`, db.dialect, { userId: userId, groupId: groupId});
+                ;`, db.dialect, { visibility, userId: userId, groupId: groupId});
 
             const results = await db
                 .query(query,
