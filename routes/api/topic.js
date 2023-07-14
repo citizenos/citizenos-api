@@ -6463,7 +6463,7 @@ module.exports = function (app) {
 
         if (vote.autoClose) {
             const promises = vote.autoClose.map(async (condition) => {
-                if (condition.value === Vote.AUTO_CLOSE.allMembersVoted) {
+                if (condition.enabled && condition.value === Vote.AUTO_CLOSE.allMembersVoted) {
                     const topicMembers = await _getAllTopicMembers(topicId, userId, false);
                     const voteResults = await getVoteResults(voteId, userId);
                     if (voteResults.length && topicMembers.users.count === voteResults[0].votersCount) {
