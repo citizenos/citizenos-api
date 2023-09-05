@@ -1854,6 +1854,7 @@ module.exports = function (app) {
      */
 
     const _getGroupMemberTopics = async (req, res, visibility) => {
+        const group = await Group.findOne({where: {id: req.params.groupId}});
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         let search = req.query.search;
@@ -1918,7 +1919,7 @@ module.exports = function (app) {
             where += ` AND t.visibility=:visibility `;
         }
         let defaultPermission = TopicMemberGroup.LEVELS.none;
-        if (visibility === 'public') {
+        if (visibility === 'public' || group.visibility === 'public') {
             defaultPermission = TopicMemberGroup.LEVELS.read;
         }
         if (userId && ['true', '1'].includes(hasVoted)) {

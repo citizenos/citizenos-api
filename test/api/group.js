@@ -266,6 +266,29 @@ const groupMembersTopicsList = async function (agent, userId, groupId, offset, l
     return _groupMembersTopicsList(agent, userId, groupId, offset, limit, statuses, visibility, creatorId, pinned, hasVoted, showModerated, 200);
 };
 
+
+const _publicGroupMembersTopicsList = async function (agent, groupId, offset, limit, statuses, visibility, creatorId, showModerated, expectedHttpCode) {
+    const path = '/api/groups/:groupId/members/topics'
+        .replace(':groupId', groupId);
+
+    return agent
+        .get(path)
+        .query({
+            offset,
+            limit,
+            statuses,
+            visibility,
+            creatorId,
+            showModerated,
+
+        })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+const publicGroupMembersTopicsList = async function (agent, groupId, offset, limit, statuses, visibility, creatorId, showModerated) {
+    return _publicGroupMembersTopicsList(agent, groupId, offset, limit, statuses, visibility, creatorId, showModerated, 200);
+};
+
 const _groupUpdateTokenJoin = async function (agent, userId, groupId, level, expectedHttpCode) {
     const path = '/api/users/:userId/groups/:groupId/join'
         .replace(':userId', userId)
@@ -2010,13 +2033,14 @@ suite('Users', function () {
                     const creatorEmail = 'test_gmemberstopicsgd_c_' + cosUtil.randomString() + '@test.ee';
                     const creatorPassword = 'testPassword123';
 
-                    let creator, user, group, topicCreated, topicCreated2;
+                    let creator, user, group, publicGroup, topicCreated, topicCreated2, topicCreatedPublic, topicCreatedPrivate;
 
                     suiteSetup(async () => {
                         creator = await userLib.createUserAndLogin(agent, creatorEmail, creatorPassword, null);
                         user = await userLib.createUserAndLogin(userAgent, 'test_gmemberstopicsgd_u_' + cosUtil.randomString() + '@test.ee', creatorPassword, null);
 
                         group = (await groupCreate(agent, creator.id, 'Test Group list member topics', null, null)).body.data;
+                        publicGroup = (await groupCreate(agent, creator.id, 'Test public Group list member topics', null, Group.VISIBILITY.public)).body.data;
                         const members = [
                             {
                                 userId: user.id,
@@ -2027,6 +2051,8 @@ suite('Users', function () {
                         await memberLib.groupMemberUsersCreate(group.id, members);
                         topicCreated = (await topicLib.topicCreate(agent, creator.id, null, null, null, '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>', null)).body.data;
                         topicCreated2 = (await topicLib.topicCreate(agent, creator.id, null, null, null, '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>', null)).body.data;
+                        topicCreatedPublic = (await topicLib.topicCreate(agent, creator.id, Topic.VISIBILITY.public, null, null, '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>', null)).body.data;
+                        topicCreatedPrivate = (await topicLib.topicCreate(agent, creator.id, null, null, null, '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>', null)).body.data;
                         const memberGroup = {
                             groupId: group.id,
                             level: TopicMemberGroup.LEVELS.edit
@@ -2038,6 +2064,14 @@ suite('Users', function () {
                             level: TopicMemberGroup.LEVELS.edit
                         };
                         await topicLib.topicMemberGroupsCreate(agent, creator.id, topicCreated2.id, memberGroup2);
+
+                        const memberGroupPublic = {
+                            groupId: publicGroup.id,
+                            level: TopicMemberGroup.LEVELS.edit
+                        };
+                        await topicLib.topicMemberGroupsCreate(agent, creator.id, topicCreatedPublic.id, memberGroupPublic);
+                        await topicLib.topicMemberGroupsCreate(agent, creator.id, topicCreatedPrivate.id, memberGroupPublic);
+
                     });
 
 
@@ -2058,6 +2092,59 @@ suite('Users', function () {
                         assert.equal(groupMemberTopic.permission.level, GroupMemberUser.LEVELS.admin);
                         assert.equal(groupMemberTopic.permission.levelGroup, TopicMemberGroup.LEVELS.edit);
 
+                    });
+
+                    test('Success - public group', async function () {
+                        const topicsList = (await groupMembersTopicsList(agent, creator.id, publicGroup.id)).body.data;
+                        assert.equal(topicsList.rows.length, 2);
+
+                        const groupMemberTopic = topicsList.rows[0];
+
+                        assert.isNotNull(groupMemberTopic.id);
+                        assert.isNotNull(groupMemberTopic.title);
+
+                        const creatorExpected = creator.toJSON();
+                        delete creatorExpected.email;
+                        delete creatorExpected.language;
+                        assert.deepEqual(groupMemberTopic.creator, creatorExpected);
+
+                        assert.equal(groupMemberTopic.permission.level, GroupMemberUser.LEVELS.admin);
+                        assert.equal(groupMemberTopic.permission.levelGroup, TopicMemberGroup.LEVELS.edit);
+
+                        /*public user logged in*/
+                        const topicsList2 = (await groupMembersTopicsList(userAgent, null, publicGroup.id)).body.data;
+                        assert.equal(topicsList2.rows.length, 2);
+
+                        const groupMemberTopic2 = topicsList.rows[0];
+
+                        assert.isNotNull(groupMemberTopic2.id);
+                        assert.isNotNull(groupMemberTopic2.title);
+
+                        const creatorExpected2 = creator.toJSON();
+                        delete creatorExpected2.email;
+                        delete creatorExpected2.language;
+                        assert.deepEqual(groupMemberTopic2.creator, creatorExpected2);
+
+                        assert.equal(groupMemberTopic2.permission.level, GroupMemberUser.LEVELS.admin);
+                        assert.equal(groupMemberTopic2.permission.levelGroup, TopicMemberGroup.LEVELS.edit);
+                        /*logged out user*/
+                        const topicsList3 = (await publicGroupMembersTopicsList(request.agent(app), publicGroup.id)).body.data;
+                        assert.equal(topicsList3.rows.length, 1);
+                        assert.equal(topicsList3.countTotal, 1);
+                        assert.equal(topicsList3.count, 1);
+
+                        const groupMemberTopic3 = topicsList.rows[0];
+
+                        assert.isNotNull(groupMemberTopic3.id);
+                        assert.isNotNull(groupMemberTopic3.title);
+
+                        const creatorExpected3 = creator.toJSON();
+                        delete creatorExpected3.email;
+                        delete creatorExpected3.language;
+                        assert.deepEqual(groupMemberTopic3.creator, creatorExpected3);
+
+                        assert.equal(groupMemberTopic3.permission.level, GroupMemberUser.LEVELS.admin);
+                        assert.equal(groupMemberTopic3.permission.levelGroup, TopicMemberGroup.LEVELS.edit);
                     });
 
                     test('Success - filter status', async function () {
