@@ -6321,9 +6321,9 @@ module.exports = function (app) {
 
         await db.transaction(async function (t) {
             fields.forEach(function (field) {
-                vote[field] = req.body[field];
+                if (Object.keys(req.body).indexOf(field) > -1)
+                    vote[field] = req.body[field];
             });
-
             await cosActivities
                 .updateActivity(
                     vote,
