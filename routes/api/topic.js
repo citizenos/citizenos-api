@@ -27,10 +27,12 @@ module.exports = function (app) {
     const cosJwt = app.get('cosJwt');
     const twitter = app.get('twitter');
     const hashtagCache = app.get('hashtagCache');
+    const CosHtmlToDocx = app.get('cosHtmlToDocx');
     const decode = require('html-entities').decode;
     const https = require('https');
     const crypto = require('crypto');
     const path = require('path');
+    const stream = require('stream');
 
     const loginCheck = app.get('middleware.loginCheck');
     const asyncMiddleware = app.get('middleware.asyncMiddleware');
@@ -1650,6 +1652,35 @@ module.exports = function (app) {
         }
     });
 
+    app.get('/api/topics/:topicId/download', async (req, res, next) => {
+        try {
+            const topicId = req.params.topicId;
+       //     const FILE_CREATE_MODE = '0760';
+            const destinationDir = `/tmp/${topicId}`;
+         //  await fs.mkdir(destinationDir, FILE_CREATE_MODE);
+            const topic = await Topic.findOne({
+                where: {
+                    id: topicId
+                }
+            });
+
+            const filePath = `${destinationDir} / ${topicId}.docx`;
+
+            const doc = new CosHtmlToDocx(topic.description, topic.title, filePath);
+
+            const docxBuffer = await doc.processHTML();
+            var readStream = new stream.PassThrough();
+            readStream.end(docxBuffer);
+
+            res.set('Content-disposition', `attachment; filename=${topicId}.docx` );
+            res.set('Content-Type', 'text/plain');
+
+            readStream.pipe(res);
+        } catch (err) {
+            return next(err);
+        }
+    });
+
     app.get('/api/users/:userId/topics/:topicId/inlinecomments', loginCheck(['partner']), async (req, res, next) => {
         const topicId = req.params.topicId;
         const user = req.user;
@@ -1706,7 +1737,7 @@ module.exports = function (app) {
             }
 
             // NOTE: Description is handled separately below
-            const fieldsAllowedToUpdate = ['categories', 'endsAt', 'hashtag', 'sourcePartnerObjectId'];
+            const fieldsAllowedToUpdate = ['title', 'categories', 'endsAt', 'hashtag', 'sourcePartnerObjectId'];
             if (req.locals.topic.permissions.level === TopicMemberUser.LEVELS.admin) {
                 fieldsAllowedToUpdate.push('visibility');
                 fieldsAllowedToUpdate.push('status');
@@ -7755,7 +7786,7 @@ module.exports = function (app) {
 
     /**
     * Get User preferences LIST
-   */
+    */
     app.get('/api/users/:userId/notificationsettings/topics', loginCheck(), async function (req, res, next) {
         try {
             const order = req.query.orderBy;
@@ -7985,5 +8016,4 @@ module.exports = function (app) {
     return {
         hasPermission: hasPermission
     };
-}
-    ;
+};

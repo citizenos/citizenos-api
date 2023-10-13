@@ -246,7 +246,12 @@ const findItemByClass = function (item, className) {
 function CosHtmlToDocx (html, title, resPath) {
     this.html = html;
     this.path = resPath;
-    const finalParagraphs = [];
+    const finalParagraphs = [
+        new Paragraph({
+            text: title,
+            heading: HeadingLevel.HEADING_1
+        })
+    ];
     let params = {
         creator: 'citizenos.com',
         sections: []

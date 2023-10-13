@@ -217,7 +217,7 @@ module.exports = function (app) {
 
         let html = (await etherpadClient.getHTMLAsync(params)).html;
         html = await _inlineToClasses(html);
-        const title = _getTopicTitleFromPadContent(html);
+       // const title = _getTopicTitleFromPadContent(html);
 
         return db.transaction(async function (t) {
             const topic = await Topic.findOne(
@@ -231,7 +231,7 @@ module.exports = function (app) {
                 }
             );
 
-            topic.title = title;
+           // topic.title = title;
             topic.description = html;
             if (actor && addActivity) {
                 // TODO: ADD CHECK HERE, IF another event not updated (description) has been added then create new else update last description edit updatedAt field
@@ -239,7 +239,7 @@ module.exports = function (app) {
                     topic,
                     null,
                     actor,
-                    ['id', 'title', 'status', 'visibility', 'sourcePartnerId'],
+                    ['id', 'status', 'visibility', 'sourcePartnerId'],
                     context,
                     t
                 );
@@ -247,7 +247,6 @@ module.exports = function (app) {
 
             return topic.update(
                 {
-                    title: title,
                     description: html
                 },
                 {
