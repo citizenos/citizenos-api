@@ -1104,6 +1104,30 @@ module.exports = function (app) {
             });
     }));
 
+    app.get('/api/groups/join/:token', loginCheck(), async (req, res, next) => {
+        try {
+            const token = req.params.token;
+
+            const groupJoin = await GroupJoin.findOne({
+                where: {
+                    token: token
+                }
+            });
+
+            if (!groupJoin) {
+                return res.badRequest('Matching token not found', 1);
+            }
+            const group = await Group.findOne({
+                where: {
+                    id: groupJoin.groupId
+                }
+            });
+
+            return res.ok(group.toJSON());
+        } catch (err) {
+            next(err);
+        }
+    })
     /**
      * Join authenticated User to Group with a given token.
      *
@@ -1854,7 +1878,7 @@ module.exports = function (app) {
      */
 
     const _getGroupMemberTopics = async (req, res, visibility) => {
-        const group = await Group.findOne({where: {id: req.params.groupId}});
+        const group = await Group.findOne({ where: { id: req.params.groupId } });
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         let search = req.query.search;

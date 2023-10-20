@@ -919,14 +919,8 @@ module.exports = function (app) {
                     t.status,
                     t.visibility,
                     t.hashtag,
-                    CASE
-                    WHEN COALESCE(tmup.level, tmgp.level, 'none') = 'admin' THEN tj.token
-                    ELSE NULL
-                    END as "join.token",
-                    CASE
-                    WHEN COALESCE(tmup.level, tmgp.level, 'none') = 'admin' THEN tj.level
-                    ELSE NULL
-                    END as "join.level",
+                    tj.token as "join.token",
+                    tj.level as "join.level",
                     CASE
                     WHEN tp."topicId" = t.id THEN true
                     ELSE false
@@ -944,7 +938,7 @@ module.exports = function (app) {
                     COALESCE(
                         tmup.level,
                         tmgp.level,
-                            'none '
+                            'none'
                     ) as "permission.level",
                     muc.count as "members.users.count",
                     COALESCE(mgc.count, 0) as "members.groups.count",
@@ -1071,8 +1065,9 @@ module.exports = function (app) {
         topic.padUrl = cosEtherpad.getUserAccessUrl(topic, topic.user.id, topic.user.name, topic.user.language, partner);
         topic.url = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
 
-        if (topic.visibility === Topic.VISIBILITY.public && topic.permission.level === TopicMemberUser.LEVELS.none) {
-            topic.permission.level = TopicMemberUser.LEVELS.read;
+        if (topic.visibility === Topic.VISIBILITY.private && topic.permission.level !== TopicMemberUser.LEVELS.admin) {
+            topic.token.join = null;
+            topic.token.level = null;
         }
         // Remove the user info from output, was only needed for padUrl generation
         delete topic.user;
