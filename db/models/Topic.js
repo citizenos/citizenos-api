@@ -164,6 +164,21 @@ module.exports = function (sequelize, DataTypes) {
                     }
                 }
             },
+            country: {
+                type: DataTypes.STRING,
+                allowNull: true,
+                comment: 'Topic location country'
+            },
+            language: {
+                type: DataTypes.STRING,
+                allowNull: true,
+                comment: 'Topic language'
+            },
+            contact: {
+                type: DataTypes.STRING,
+                allowNull: true,
+                comment: 'Topic contact address or phone'
+            },
             hashtag: {
                 type: DataTypes.STRING(60),
                 comment: 'Hashtag to search related content from external sources.',
@@ -282,6 +297,9 @@ module.exports = function (sequelize, DataTypes) {
             status: this.dataValues.status,
             visibility: this.dataValues.visibility,
             categories: this.dataValues.categories,
+            country: this.dataValues.country,
+            language: this.dataValues.language,
+            contact: this.dataValues.contact,
             padUrl: this.dataValues.padUrl,
             sourcePartnerId: this.dataValues.sourcePartnerId,
             sourcePartnerObjectId: this.dataValues.sourcePartnerObjectId,

@@ -80,6 +80,27 @@ module.exports = function (sequelize, DataTypes) {
                 allowNull: true,
                 comment: 'Group profile image url.'
             },
+            country: {
+                type: DataTypes.STRING,
+                allowNull: true,
+                comment: 'Group location country'
+            },
+            language: {
+                type: DataTypes.STRING,
+                allowNull: true,
+                comment: 'Group language'
+            },
+            rules: {
+                type: DataTypes.ARRAY(DataTypes.STRING),
+                defaultValue: [],
+                allowNull: true,
+                comment: 'Group rules'
+            },
+            contact: {
+                type: DataTypes.STRING,
+                allowNull: true,
+                comment: 'Group contact info'
+            },
             description: {
                 type: DataTypes.TEXT,
                 comment: 'Short description of what the Group is about.',
@@ -129,6 +150,10 @@ module.exports = function (sequelize, DataTypes) {
             parentId: this.dataValues.parentId,
             description: this.dataValues.description,
             imageUrl: this.dataValues.imageUrl,
+            country: this.dataValues.country,
+            language: this.dataValues.language,
+            contact: this.dataValues.contact,
+            rules: this.dataValues.rules,
             name: this.dataValues.name,
             creator: this.dataValues.creator,
             visibility: this.dataValues.visibility

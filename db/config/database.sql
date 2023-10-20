@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 14.5 (Ubuntu 14.5-0ubuntu0.22.04.1)
--- Dumped by pg_dump version 14.5 (Ubuntu 14.5-0ubuntu0.22.04.1)
+-- Dumped from database version 14.9 (Ubuntu 14.9-0ubuntu0.22.04.1)
+-- Dumped by pg_dump version 14.9 (Ubuntu 14.9-0ubuntu0.22.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -499,12 +499,12 @@ CREATE TABLE public."GroupInviteUsers" (
     "userId" uuid NOT NULL,
     id uuid NOT NULL,
     "creatorId" uuid NOT NULL,
+    "expiresAt" timestamp with time zone,
     "groupId" uuid NOT NULL,
     level public."enum_GroupInviteUsers_level" DEFAULT 'read'::public."enum_GroupInviteUsers_level" NOT NULL,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone,
-    "expiresAt" timestamp with time zone
+    "deletedAt" timestamp with time zone
 );
 
 
@@ -523,6 +523,13 @@ COMMENT ON COLUMN public."GroupInviteUsers"."creatorId" IS 'User who created the
 
 
 --
+-- Name: COLUMN "GroupInviteUsers"."expiresAt"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."GroupInviteUsers"."expiresAt" IS 'Invite expiration time.';
+
+
+--
 -- Name: COLUMN "GroupInviteUsers"."groupId"; Type: COMMENT; Schema: public; Owner: -
 --
 
@@ -534,13 +541,6 @@ COMMENT ON COLUMN public."GroupInviteUsers"."groupId" IS 'Group to which member 
 --
 
 COMMENT ON COLUMN public."GroupInviteUsers".level IS 'User membership level.';
-
-
---
--- Name: COLUMN "GroupInviteUsers"."expiresAt"; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public."GroupInviteUsers"."expiresAt" IS 'Invite expiration time.';
 
 
 --
@@ -624,11 +624,15 @@ CREATE TABLE public."Groups" (
     "creatorId" uuid NOT NULL,
     visibility public."enum_Groups_visibility" DEFAULT 'private'::public."enum_Groups_visibility" NOT NULL,
     "sourcePartnerId" uuid,
+    "imageUrl" character varying(255),
+    country character varying(255),
+    language character varying(255),
+    rules character varying(255)[] DEFAULT (ARRAY[]::character varying[])::character varying(255)[],
+    contact character varying(255),
+    description text,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone,
-    "imageUrl" character varying(255),
-    description text
+    "deletedAt" timestamp with time zone
 );
 
 
@@ -672,6 +676,34 @@ COMMENT ON COLUMN public."Groups"."sourcePartnerId" IS 'The Partner id of the si
 --
 
 COMMENT ON COLUMN public."Groups"."imageUrl" IS 'Group profile image url.';
+
+
+--
+-- Name: COLUMN "Groups".country; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Groups".country IS 'Group location country';
+
+
+--
+-- Name: COLUMN "Groups".language; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Groups".language IS 'Group language';
+
+
+--
+-- Name: COLUMN "Groups".rules; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Groups".rules IS 'Group rules';
+
+
+--
+-- Name: COLUMN "Groups".contact; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Groups".contact IS 'Group contact info';
 
 
 --
@@ -985,12 +1017,12 @@ CREATE TABLE public."TopicInviteUsers" (
     "userId" uuid NOT NULL,
     id uuid NOT NULL,
     "creatorId" uuid NOT NULL,
+    "expiresAt" timestamp with time zone,
     "topicId" uuid NOT NULL,
     level public."enum_TopicInviteUsers_level" DEFAULT 'read'::public."enum_TopicInviteUsers_level" NOT NULL,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone,
-    "expiresAt" timestamp with time zone
+    "deletedAt" timestamp with time zone
 );
 
 
@@ -1009,6 +1041,13 @@ COMMENT ON COLUMN public."TopicInviteUsers"."creatorId" IS 'User who created the
 
 
 --
+-- Name: COLUMN "TopicInviteUsers"."expiresAt"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicInviteUsers"."expiresAt" IS 'Invite expiration time.';
+
+
+--
 -- Name: COLUMN "TopicInviteUsers"."topicId"; Type: COMMENT; Schema: public; Owner: -
 --
 
@@ -1020,13 +1059,6 @@ COMMENT ON COLUMN public."TopicInviteUsers"."topicId" IS 'Topic to which member 
 --
 
 COMMENT ON COLUMN public."TopicInviteUsers".level IS 'User membership level.';
-
-
---
--- Name: COLUMN "TopicInviteUsers"."expiresAt"; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public."TopicInviteUsers"."expiresAt" IS 'Invite expiration time.';
 
 
 --
@@ -1301,6 +1333,9 @@ CREATE TABLE public."Topics" (
     "creatorId" uuid NOT NULL,
     "padUrl" character varying(255) NOT NULL,
     "endsAt" timestamp with time zone,
+    country character varying(255),
+    language character varying(255),
+    contact character varying(255),
     hashtag character varying(60) DEFAULT NULL::character varying,
     "authorIds" uuid[] DEFAULT ARRAY[]::uuid[],
     "createdAt" timestamp with time zone NOT NULL,
@@ -1370,6 +1405,27 @@ COMMENT ON COLUMN public."Topics"."padUrl" IS 'Etherpad Pad absolute url.';
 --
 
 COMMENT ON COLUMN public."Topics"."endsAt" IS 'Deadline for the Topic. If NULL then no deadline at all.';
+
+
+--
+-- Name: COLUMN "Topics".country; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics".country IS 'Topic location country';
+
+
+--
+-- Name: COLUMN "Topics".language; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics".language IS 'Topic language';
+
+
+--
+-- Name: COLUMN "Topics".contact; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics".contact IS 'Topic contact address or phone';
 
 
 --
@@ -1882,11 +1938,11 @@ CREATE TABLE public."Votes" (
     type public."enum_Votes_type" DEFAULT 'regular'::public."enum_Votes_type" NOT NULL,
     "authType" public."enum_Votes_authType" DEFAULT 'soft'::public."enum_Votes_authType" NOT NULL,
     "autoClose" json[] DEFAULT ARRAY[]::json[],
+    "reminderSent" timestamp with time zone,
+    "reminderTime" timestamp with time zone,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone,
-    "reminderSent" timestamp with time zone,
-    "reminderTime" timestamp with time zone
+    "deletedAt" timestamp with time zone
 );
 
 
@@ -2952,8 +3008,10 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 20220203120245-users-password-comment.js
 20220228174313-duplicate-email-users-issue-234.js
 20220405120631-create-user-notification-settings.js
-20220520100104-add-vote-reminder.js
 20220808083309-alter_group.js
 20220816103332-alter-topic-invite-user.js
 20220816103355-alter-group-invite-user.js
+20220520100104-add-vote-reminder.js
+20231020153809-alter-group-add-location.js
+20231020154400-alter-topic-add-location.js
 \.
