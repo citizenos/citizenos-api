@@ -395,11 +395,19 @@ suite('Users', function () {
             });
 
             test('Success', async function () {
-                const group = (await groupCreate(agent, user.id, groupName, null, null)).body.data;
+                const country = 'Estonia';
+                const language = 'Estonian';
+                const contact = 'contact@groupcreator.com'
+                const rules = ['Respectfull discussions', 'Everyone is accepted'];
+                const group = (await groupCreate(agent, user.id, groupName, null, null, country, language, contact, rules)).body.data;
 
                 assert.property(group, 'id');
                 assert.equal(group.creator.id, user.id);
                 assert.equal(group.name, groupName);
+                assert.equal(group.country, country);
+                assert.equal(group.language, language);
+                assert.equal(group.contact, contact);
+                assert.deepEqual(group.rules, rules);
                 assert.isNull(group.parentId);
 
                 assert.property(group, 'join');
@@ -458,7 +466,7 @@ suite('Users', function () {
 
             suiteSetup(async function () {
                 user = await userLib.createUserAndLogin(agent, email, password, null);
-                group = (await groupCreate(agent, user.id, groupName, null, null)).body.data;
+                group = (await groupCreate(agent, user.id, groupName)).body.data;
             });
 
             test('Success', async function () {
@@ -530,7 +538,7 @@ suite('Users', function () {
 
             suiteSetup(async function () {
                 user = await userLib.createUserAndLogin(agent, email, password, null);
-                group = (await groupCreate(agent, user.id, groupName, null, null,)).body.data;
+                group = (await groupCreate(agent, user.id, groupName)).body.data;
             });
 
             test('Success', async function () {
@@ -579,7 +587,7 @@ suite('Users', function () {
 
             suiteSetup(async function () {
                 user = await userLib.createUserAndLogin(agent, email, password, null);
-                group = (await groupCreate(agent, user.id, groupName, null, null)).body.data;
+                group = (await groupCreate(agent, user.id, groupName)).body.data;
             });
 
             test('Success', async function () {
@@ -618,7 +626,7 @@ suite('Users', function () {
                 user = await userLib.createUserAndLogin(agentCreator, null, null, null);
                 member2 = await userLib.createUser(request.agent(app), null, null, 'et');
 
-                group = (await groupCreate(agentCreator, user.id, groupName, null, null)).body.data;
+                group = (await groupCreate(agentCreator, user.id, groupName)).body.data;
                 const members = [
                     {
                         userId: member.id,
@@ -770,7 +778,7 @@ suite('Users', function () {
 
                     setup(async function () {
                         userCreator = await userLib.createUserAndLogin(agentCreator, null, null, null);
-                        group = (await groupCreate(agentCreator, userCreator.id, groupName, null, null)).body.data;
+                        group = (await groupCreate(agentCreator, userCreator.id, groupName)).body.data;
                     });
 
                     test('Success - 20100 - invite a single User with userId', async function () {
@@ -1124,7 +1132,7 @@ suite('Users', function () {
                     });
 
                     setup(async function () {
-                        group = (await groupCreate(agentCreator, userCreator.id, groupName, null, null)).body.data;
+                        group = (await groupCreate(agentCreator, userCreator.id, groupName)).body.data;
                     });
 
                     test('Success - 20000', async function () {
@@ -1392,7 +1400,7 @@ suite('Users', function () {
                         userToInvite1 = await userLib.createUserAndLogin(agentUserToInvite1, null, null, null);
                         userToInvite2 = await userLib.createUser(request.agent(app), null, null, null);
 
-                        group = (await groupCreate(agentCreator, userCreator.id, 'TEST CASE: User Invites List', null, null)).body.data;
+                        group = (await groupCreate(agentCreator, userCreator.id, 'TEST CASE: User Invites List')).body.data;
 
                         const groupInvite1 = {
                             userId: userToInvite1.id,
@@ -1607,7 +1615,7 @@ suite('Users', function () {
                     suiteSetup(async function () {
                         userToInvite = await userLib.createUser(request.agent(app), null, null, null);
                         userCreator = await userLib.createUserAndLogin(agentCreator, null, null, null);
-                        group = (await groupCreate(agentCreator, userCreator.id, 'TEST CASE: User Invites Delete', null, null)).body.data;
+                        group = (await groupCreate(agentCreator, userCreator.id, 'TEST CASE: User Invites Delete')).body.data;
 
                         const invitation = {
                             userId: userToInvite.id,
@@ -1680,7 +1688,7 @@ suite('Users', function () {
                     setup(async function () {
                         userToInvite = await userLib.createUserAndLogin(agentUserToInvite, null, null, null);
                         userCreator = await userLib.createUserAndLogin(agentCreator, null, null, null);
-                        group = (await groupCreate(agentCreator, userCreator.id, 'TEST CASE: User Invites List', null, null)).body.data;
+                        group = (await groupCreate(agentCreator, userCreator.id, 'TEST CASE: User Invites List')).body.data;
 
                         const invitation = {
                             userId: userToInvite.id,
@@ -1776,7 +1784,7 @@ suite('Users', function () {
                     suiteSetup(async function () {
                         userCreator = await userLib.createUserAndLogin(agentCreator, null, null, null);
                         userMember = await userLib.createUserAndLogin(agentMemberUser, null, null, null);
-                        group = (await groupCreate(agentCreator, userCreator.id, 'TEST GROUP USER MEMBERS LIST', null, null)).body.data;
+                        group = (await groupCreate(agentCreator, userCreator.id, 'TEST GROUP USER MEMBERS LIST')).body.data;
 
                         await memberLib.groupMemberUsersCreate(group.id, [
                             {
@@ -1879,7 +1887,7 @@ suite('Users', function () {
                         member = await userLib.createUser(agent, memberEmail, memberPassword, null);
 
                         creator = await userLib.createUserAndLogin(agent, creatorEmail, creatorPassword, null);
-                        group = (await groupCreate(agent, creator.id, 'Test Group edit members', null, null)).body.data;
+                        group = (await groupCreate(agent, creator.id, 'Test Group edit members')).body.data;
 
                         const members = [
                             {
@@ -1917,7 +1925,7 @@ suite('Users', function () {
 
 
                     test('Fail - Bad Request - cannot revoke admin permissions from the last admin user', async function () {
-                        const g = (await groupCreate(agent, creator.id, 'Test Group edit members fail', null, null)).body.data;
+                        const g = (await groupCreate(agent, creator.id, 'Test Group edit members fail')).body.data;
 
                         // Add one non-admin member just to mix the water a bit...
                         const members = [
@@ -1947,7 +1955,7 @@ suite('Users', function () {
                     suiteSetup(async function () {
                         member = await userLib.createUser(agent, memberEmail, memberPassword, null);
                         creator = await userLib.createUserAndLogin(agent, creatorEmail, creatorPassword, null);
-                        group = (await groupCreate(agent, creator.id, 'Test Group add members', null, null)).body.data;
+                        group = (await groupCreate(agent, creator.id, 'Test Group add members')).body.data;
                         const members = [
                             {
                                 userId: member.id,
@@ -2005,7 +2013,7 @@ suite('Users', function () {
 
 
                     test('Fail - Bad Request - Cannot delete the last admin member', async function () {
-                        const g = (await groupCreate(agent, creator.id, 'Test Group delete members fail', null, null)).body.data;
+                        const g = (await groupCreate(agent, creator.id, 'Test Group delete members fail')).body.data;
 
                         // Add one non-admin member just to mix the water a bit...
                         const members = [
@@ -2042,7 +2050,7 @@ suite('Users', function () {
                         creator = await userLib.createUserAndLogin(agent, creatorEmail, creatorPassword, null);
                         user = await userLib.createUserAndLogin(userAgent, 'test_gmemberstopicsgd_u_' + cosUtil.randomString() + '@test.ee', creatorPassword, null);
 
-                        group = (await groupCreate(agent, creator.id, 'Test Group list member topics', null, null)).body.data;
+                        group = (await groupCreate(agent, creator.id, 'Test Group list member topics')).body.data;
                         publicGroup = (await groupCreate(agent, creator.id, 'Test public Group list member topics', null, Group.VISIBILITY.public)).body.data;
                         const members = [
                             {
@@ -2212,7 +2220,7 @@ suite('Users', function () {
                     suiteSetup(async function () {
                         member = await userLib.createUser(agent, memberEmail, memberPassword, null);
                         creator = await userLib.createUserAndLogin(agent, creatorEmail, creatorPassword, null);
-                        group = (await groupCreate(agent, creator.id, 'Test Group add members', null, null)).body.data;
+                        group = (await groupCreate(agent, creator.id, 'Test Group add members')).body.data;
                         const members = [
                             {
                                 userId: member.id,

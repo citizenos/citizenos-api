@@ -121,6 +121,10 @@ module.exports = function (app) {
                     .build({
                         name: req.body.name,
                         description: req.body.description,
+                        country: req.body.country,
+                        language: req.body.language,
+                        contact: req.body.contact,
+                        rules: req.body.rules,
                         creatorId: req.user.userId,
                         parentId: req.body.parentId, //TODO: check that user actually has Permissions on the Parent and the Parent exists?
                         visibility: req.body.visibility || Group.VISIBILITY.private
