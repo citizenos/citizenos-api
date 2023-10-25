@@ -684,6 +684,7 @@ module.exports = function (app) {
                 `SELECT
                      t.id,
                      t.title,
+                     t.intro,
                      t.description,
                      t.status,
                      t.visibility,
@@ -919,6 +920,7 @@ module.exports = function (app) {
                     t.id,
                     t.title,
                     t.description,
+                    t.intro,
                     t.status,
                     t.visibility,
                     t.hashtag,
@@ -1374,6 +1376,7 @@ module.exports = function (app) {
                 creatorId: req.user.userId,
                 categories: req.body.categories,
                 hashtag: req.body.hashtag,
+                intro: req.body.intro,
                 country: req.body.country,
                 contact: req.body.contact,
                 language: req.body.language,
@@ -1742,7 +1745,7 @@ module.exports = function (app) {
             }
 
             // NOTE: Description is handled separately below
-            const fieldsAllowedToUpdate = ['title', 'categories', 'endsAt', 'hashtag', 'sourcePartnerObjectId'];
+            const fieldsAllowedToUpdate = ['title', 'categories', 'endsAt', 'hashtag', 'contact', 'country', 'language', 'intro', 'sourcePartnerObjectId'];
             if (req.locals.topic.permissions.level === TopicMemberUser.LEVELS.admin) {
                 fieldsAllowedToUpdate.push('visibility');
                 fieldsAllowedToUpdate.push('status');
@@ -2113,6 +2116,10 @@ module.exports = function (app) {
                      t.status,
                      t.visibility,
                      t.hashtag,
+                     t.contact,
+                     t.intro,
+                     t.country,
+                     t.language,
                      CASE
                      WHEN COALESCE(tmup.level, tmgp.level, 'none') = 'admin' THEN tj.token
                      ELSE NULL
@@ -2445,6 +2452,10 @@ module.exports = function (app) {
                         tj."level" AS "join.level",
                         t.categories,
                         t."endsAt",
+                        t.contact,
+                        t.country,
+                        t.language,
+                        t.intro,
                         t."createdAt",
                         t."sourcePartnerId",
                         t."sourcePartnerObjectId",
@@ -3485,6 +3496,10 @@ module.exports = function (app) {
                             t.description as "Topic.description",
                             t.status as "Topic.status",
                             t.visibility as "Topic.visibility",
+                            t.intro as "Topic.intro",
+                            t.country as "Topic.country",
+                            t.language as "Topic.language",
+                            t.contact as "Topic.contact",
                             tj."token" as "Topic.join.token",
                             tj."level" as "Topic.join.level",
                             t.categories as "Topic.categories",
@@ -3498,7 +3513,11 @@ module.exports = function (app) {
                             g."parentId" as "Group.parentId",
                             g.name as "Group.name",
                             g."creatorId" as "Group.creator.id",
-                            g.visibility as "Group.visibility"
+                            g.visibility as "Group.visibility",
+                            g.contact as "Group.contact",
+                            g.country as "Group.country",
+                            g.language as "Group.language",
+                            g.rules as "Group.rules"
                         FROM
                             "TopicMemberGroups" tmg
                         JOIN "Topics" t

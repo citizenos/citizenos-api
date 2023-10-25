@@ -1,6 +1,6 @@
 'use strict';
 
-const _topicCreate = async function (agent, userId, title, description, visibility, categories, endsAt, hashtag, contact, country, language, expectedHttpCode) {
+const _topicCreate = async function (agent, userId, title, description, visibility, categories, endsAt, hashtag, contact, country, language, intro, expectedHttpCode) {
     const path = '/api/users/:userId/topics'
         .replace(':userId', userId);
 
@@ -12,6 +12,7 @@ const _topicCreate = async function (agent, userId, title, description, visibili
             visibility: visibility,
             categories: categories,
             description: description,
+            intro: intro,
             endsAt: endsAt,
             contact: contact,
             country: country,
@@ -23,8 +24,8 @@ const _topicCreate = async function (agent, userId, title, description, visibili
         .expect('Content-Type', /json/)
 };
 
-const topicCreate = async function (agent, userId, title, description, visibility, categories, endsAt, hashtag, contact, country, language) {
-    return _topicCreate(agent, userId, title, description, visibility, categories, endsAt, hashtag, contact, country, language, 201);
+const topicCreate = async function (agent, userId, title, description, visibility, categories, endsAt, hashtag, contact, country, language, intro) {
+    return _topicCreate(agent, userId, title, description, visibility, categories, endsAt, hashtag, contact, country, language, intro, 201);
 };
 
 const _topicRead = async function (agent, userId, topicId, include, expectedHttpCode) {
@@ -1645,12 +1646,24 @@ suite('Users', function () {
                 assert.equal(topic.language, language);
             });
 
+            test('Success - Intro', async function () {
+                const contact = 'creator@topicauthor.eu';
+                const country = 'Estonia';
+                const language = 'Estonian';
+                const intro = 'This is an introduction text to the topic that will be displayed before the main content of the document in the final read view';
+                const topic = (await topicCreate(agent, user.id, null, null, null, null, null, null, contact, country, language, intro)).body.data;
+                assert.equal(topic.contact, contact);
+                assert.equal(topic.country, country);
+                assert.equal(topic.language, language);
+                assert.equal(topic.intro, intro);
+            });
+
             test('Fail - 40100', async function () {
-                await _topicCreate(request.agent(app), user.id, Topic.VISIBILITY.public, null, null, null, null, null, null, null, null, 401);
+                await _topicCreate(request.agent(app), user.id, Topic.VISIBILITY.public, null, null, null, null, null, null, null, null, null, 401);
             });
 
             test('Fail - 40000 - invalid hashtag', async function () {
-                const res = await _topicCreate(agent, user.id, null, null, null, null, null, 'üüüüüüüüüüüüüüüüüüüüüüüüüüüüüüü', null, null, null, 400)
+                const res = await _topicCreate(agent, user.id, null, null, null, null, null, 'üüüüüüüüüüüüüüüüüüüüüüüüüüüüüüü', null, null, null, null, 400)
                 const expectedBody = {
                     status: {
                         code: 40000
@@ -4761,9 +4774,10 @@ suite('Users', function () {
                         status: topic.status,
                         visibility: topic.visibility,
                         categories: topic.categories,
-                        contact: null,
-                        country: null,
-                        language: null,
+                        contact: topic.contact,
+                        country: topic.country,
+                        language: topic.language,
+                        intro: topic.intro,
                         padUrl: topic.padUrl, // NOTE: topic.padUrl has JWT tokens etc, but we modify the url above!
                         sourcePartnerId: topic.sourcePartnerId,
                         sourcePartnerObjectId: topic.sourcePartnerObjectId,

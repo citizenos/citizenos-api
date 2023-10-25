@@ -54,8 +54,14 @@ module.exports = function (sequelize, DataTypes) {
 
     const CATEGORIES_COUNT_MAX = 3; // Maximum of 3 categories allowed at the time.
     let TITLE_LENGTH_MAX = config.topic.titleLengthMax; // Maximum length of "title"
+    let INTRO_LENGTH_MAX = config.topic.introLengthMax;
+
     if (!parseInt(TITLE_LENGTH_MAX, 10) || TITLE_LENGTH_MAX > 1000) {
         TITLE_LENGTH_MAX = 1000;
+    }
+
+    if (!parseInt(INTRO_LENGTH_MAX, 10) || INTRO_LENGTH_MAX > 500) {
+        TITLE_LENGTH_MAX = 500;
     }
     const HASHTAG_BYTES_LENGTH_MAX = 59; //Maximum bytelenght of twitter hashtag in search API.
 
@@ -78,6 +84,17 @@ module.exports = function (sequelize, DataTypes) {
                     len: {
                         args: [1, TITLE_LENGTH_MAX],
                         msg: 'Title can be 1 to ' + TITLE_LENGTH_MAX + ' characters long.'
+                    }
+                }
+            },
+            intro: {
+                type: DataTypes.STRING(INTRO_LENGTH_MAX),
+                allowNull: true,
+                comment: 'Topic introduction text',
+                validate: {
+                    len: {
+                        args: [1, INTRO_LENGTH_MAX],
+                        msg: 'Intro can be 1 to ' + INTRO_LENGTH_MAX + ' characters long.'
                     }
                 }
             },
@@ -300,6 +317,7 @@ module.exports = function (sequelize, DataTypes) {
             country: this.dataValues.country,
             language: this.dataValues.language,
             contact: this.dataValues.contact,
+            intro: this.dataValues.intro,
             padUrl: this.dataValues.padUrl,
             sourcePartnerId: this.dataValues.sourcePartnerId,
             sourcePartnerObjectId: this.dataValues.sourcePartnerObjectId,
