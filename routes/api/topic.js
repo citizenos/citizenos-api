@@ -688,6 +688,9 @@ module.exports = function (app) {
                      t.status,
                      t.visibility,
                      t.categories,
+                     t.contact,
+                     t.country,
+                     t.language,
                      t."endsAt",
                      t."padUrl",
                      t."sourcePartnerId",
@@ -919,6 +922,9 @@ module.exports = function (app) {
                     t.status,
                     t.visibility,
                     t.hashtag,
+                    t.country,
+                    t.contact,
+                    t.language,
                     tj.token as "join.token",
                     tj.level as "join.level",
                     CASE
@@ -1066,8 +1072,8 @@ module.exports = function (app) {
         topic.url = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
 
         if (topic.visibility === Topic.VISIBILITY.private && topic.permission.level !== TopicMemberUser.LEVELS.admin) {
-            topic.token.join = null;
-            topic.token.level = null;
+            topic.join.token = null;
+            topic.join.level = null;
         }
         // Remove the user info from output, was only needed for padUrl generation
         delete topic.user;
@@ -1363,10 +1369,14 @@ module.exports = function (app) {
         try {
             // I wish Sequelize Model.build supported "fields". This solution requires you to add a field here once new are defined in model.
             let topic = Topic.build({
+                title: req.body.title,
                 visibility: req.body.visibility || Topic.VISIBILITY.private,
                 creatorId: req.user.userId,
                 categories: req.body.categories,
                 hashtag: req.body.hashtag,
+                country: req.body.country,
+                contact: req.body.contact,
+                language: req.body.language,
                 endsAt: req.body.endsAt,
                 sourcePartnerObjectId: req.body.sourcePartnerObjectId,
                 authorIds: [req.user.userId]

@@ -61,7 +61,7 @@ suite('Internal', function () {
                 setup( async() => {
                     user = await userLib.createUserAndLogin(agent);
                     user2 = await userLib.createUserAndLogin(agent2);
-                    topic = (await topicLib.topicCreate(agent, user.id, null, null, null, null, null)).body.data;
+                    topic = (await topicLib.topicCreate(agent, user.id)).body.data;
                 });
 
                 test('Success', async () => {
@@ -200,7 +200,7 @@ suite('Internal', function () {
             let topic;
             suiteSetup( async() => {
                 user = await userLib.createUserAndLogin(agent);
-                topic = (await topicLib.topicCreate(agent, user.id, null, null, null, null, null)).body.data;
+                topic = (await topicLib.topicCreate(agent, user.id)).body.data;
             });
 
             test('Success', async () => {

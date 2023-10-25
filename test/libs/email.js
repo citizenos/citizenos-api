@@ -65,7 +65,7 @@ suite('Email', function () {
             suiteSetup(async() => {
                 user = await userLib.createUserAndLogin(agent, null, null, null);
                 user2 = await userLib.createUserAndLogin(agent2);
-                topic = (await topicLib.topicCreate(agent, user.id, null, null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null)).body.data;
+                topic = (await topicLib.topicCreate(agent, user.id, 'TEST', '<html><head></head><body><h2>TEST</h2></body></html>')).body.data;
                 group = (await groupLib.create(agent, user.id, 'Test Group' + Date.now(), null, null)).body.data;
             });
 
@@ -118,7 +118,7 @@ suite('Email', function () {
             suiteSetup(async function () {
                 user = await userLib.createUserAndLogin(agent, null, null, null);
                 user2 = await userLib.createUserAndLogin(agent2, null, null, null);
-                topic = (await topicLib.topicCreate(agent, user.id, null, null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null)).body.data;
+                topic = (await topicLib.topicCreate(agent, user.id, 'TEST', '<html><head></head><body><h2>TEST</h2></body></html>')).body.data;
                 comment = (await topicLib.topicCommentCreate(agent, user.id, topic.id, null, null, Comment.TYPES.pro, 'subject', 'text')).body.data;
 
                 report = await TopicReport.create({

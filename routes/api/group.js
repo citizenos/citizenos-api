@@ -358,6 +358,10 @@ module.exports = function (app) {
         const groupName = req.body.name;
         const description = req.body.description || null;
         const imageUrl = req.body.imageUrl || null;
+        const country = req.body.country;
+        const contact = req.body.contact;
+        const language = req.body.language;
+        const rules = req.body.rules;
         const group = await Group
             .findOne({
                 where: {
@@ -381,6 +385,10 @@ module.exports = function (app) {
         group.name = groupName;
         group.description = description;
         group.imageUrl = imageUrl;
+        group.country = country;
+        group.contact = contact;
+        group.language = language;
+        group.rules = rules;
 
         await db
             .transaction(async function (t) {

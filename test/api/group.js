@@ -1,6 +1,6 @@
 'use strict';
 
-const _groupCreate = async function (agent, userId, name, parentId, visibility, expectedHttpCode) {
+const _groupCreate = async function (agent, userId, name, parentId, visibility, country, language, contact, rules, expectedHttpCode) {
     const path = '/api/users/:userId/groups'.replace(':userId', userId);
 
     return agent
@@ -8,6 +8,10 @@ const _groupCreate = async function (agent, userId, name, parentId, visibility, 
         .set('Content-Type', 'application/json')
         .send({
             name: name,
+            country: country,
+            contact: contact,
+            language: language,
+            rules: rules,
             parentId: parentId,
             visibility: visibility
         })
@@ -15,8 +19,8 @@ const _groupCreate = async function (agent, userId, name, parentId, visibility, 
         .expect('Content-Type', /json/);
 };
 
-const groupCreate = async function (agent, userId, name, parentId, visibility) {
-    return _groupCreate(agent, userId, name, parentId, visibility, 201);
+const groupCreate = async function (agent, userId, name, parentId, visibility, country, language, contact, rules) {
+    return _groupCreate(agent, userId, name, parentId, visibility, country, language, contact, rules, 201);
 };
 
 const _groupRead = async function (agent, userId, groupId, expectedHttpCode) {
@@ -418,19 +422,18 @@ suite('Users', function () {
                     code: 40100,
                     message: 'Unauthorized'
                 };
-                const err = (await _groupCreate(request.agent(app), user.id, groupName, null, null, 401)).body;
-
+                const err = (await _groupCreate(request.agent(app), user.id, groupName, null, null, null, null, null, null, 401)).body;
                 assert.deepEqual(err.status, expectedStatus);
             });
 
             test('Fail - Bad Request - name is NULL', async function () {
-                const errors = (await _groupCreate(agent, user.id, null, null, null, 400)).body.errors;
+                const errors = (await _groupCreate(agent, user.id, null, null, null, null, null, null, null, 400)).body.errors;
                 assert.property(errors, 'name');
                 assert.equal(errors.name, 'Group.name cannot be null');
             });
 
             test('Fail - Bad Request - name is empty', async function () {
-                const errors = (await _groupCreate(agent, user.id, '   ', null, null, 400)).body.errors;
+                const errors = (await _groupCreate(agent, user.id, '   ', null, null, null, null,null, null, 400)).body.errors;
                 assert.property(errors, 'name');
                 assert.equal(errors.name, 'Group name can be 2 to 255 characters long.');
             });
@@ -627,7 +630,7 @@ suite('Users', function () {
                     }
                 ];
                 await memberLib.groupMemberUsersCreate(group.id, members);
-                topic = (await topicLib.topicCreate(agentCreator, user.id, null, null, null, null, null)).body.data;
+                topic = (await topicLib.topicCreate(agentCreator, user.id)).body.data;
 
                 const memberGroup = {
                     groupId: group.id,
@@ -2049,10 +2052,10 @@ suite('Users', function () {
                         ];
 
                         await memberLib.groupMemberUsersCreate(group.id, members);
-                        topicCreated = (await topicLib.topicCreate(agent, creator.id, null, null, null, '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>', null)).body.data;
-                        topicCreated2 = (await topicLib.topicCreate(agent, creator.id, null, null, null, '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>', null)).body.data;
-                        topicCreatedPublic = (await topicLib.topicCreate(agent, creator.id, Topic.VISIBILITY.public, null, null, '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>', null)).body.data;
-                        topicCreatedPrivate = (await topicLib.topicCreate(agent, creator.id, null, null, null, '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>', null)).body.data;
+                        topicCreated = (await topicLib.topicCreate(agent, creator.id, 'H1', '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>')).body.data;
+                        topicCreated2 = (await topicLib.topicCreate(agent, creator.id, 'H1', '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>')).body.data;
+                        topicCreatedPublic = (await topicLib.topicCreate(agent, creator.id, 'H1', '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>', Topic.VISIBILITY.public)).body.data;
+                        topicCreatedPrivate = (await topicLib.topicCreate(agent, creator.id, 'H1', '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>')).body.data;
                         const memberGroup = {
                             groupId: group.id,
                             level: TopicMemberGroup.LEVELS.edit
@@ -2080,7 +2083,6 @@ suite('Users', function () {
                         assert.equal(topicsList.rows.length, 2);
 
                         const groupMemberTopic = topicsList.rows[0];
-
                         assert.isNotNull(groupMemberTopic.id);
                         assert.isNotNull(groupMemberTopic.title);
 
@@ -2224,7 +2226,7 @@ suite('Users', function () {
                     });
 
                     test('Success - Remove Topic from Group after Topic delete', async function () {
-                        const topic = (await topicLib.topicCreate(agent, member.id, null, null, null, null, null)).body.data;
+                        const topic = (await topicLib.topicCreate(agent, member.id)).body.data;
                         const memberGroup = {
                             groupId: group.id,
                             level: TopicMemberGroup.LEVELS.read
@@ -2296,9 +2298,13 @@ suite('Users', function () {
                         '@type': 'Group',
                         id: group.id,
                         name: group.name,
+                        contact: null,
+                        country: null,
                         description: null,
                         imageUrl: null,
+                        language: null,
                         parentId: null,
+                        rules: [],
                         visibility: Group.VISIBILITY.private
                     }
                 };

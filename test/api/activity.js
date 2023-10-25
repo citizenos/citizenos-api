@@ -77,7 +77,7 @@ suite('Users', function () {
 
             suiteSetup(async function () {
                 user = await userLib.createUserAndLogin(agent, null, null, null);
-                await topicLib.topicCreate(agent, user.id, null, null, null, null, null);
+                await topicLib.topicCreate(agent, user.id);
             });
 
             test('Success', async function () {
@@ -123,8 +123,8 @@ suite('Activities', function () {
 
         suiteSetup(async function () {
             user = await userLib.createUserAndLogin(agent, null, null, null);
-            await topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null);
-            topic = (await topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null)).body.data;
+            await topicLib.topicCreate(agent, user.id, 'TEST', '<html><head></head><body><h2>TEST</h2></body></html>', Topic.VISIBILITY.public);
+            topic = (await topicLib.topicCreate(agent, user.id, 'TEST', '<html><head></head><body><h2>TEST</h2></body></html>', Topic.VISIBILITY.public)).body.data;
             user2 = await userLib.createUser(agent2, null, null, null);
             partner = await Partner.create({
                 website: 'notimportant',
@@ -239,8 +239,8 @@ suite('Activities', function () {
 
         suiteSetup(async function () {
             user = await userLib.createUserAndLogin(agent, null, null, null)
-            await topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST</h2></body></html>', null);
-            topic = (await topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST2</h2></body></html>', null)).body.data;
+            await topicLib.topicCreate(agent, user.id, 'TEST', '<html><head></head><body><h2>TEST</h2></body></html>', Topic.VISIBILITY.public);
+            topic = (await topicLib.topicCreate(agent, user.id, 'TEST2', '<html><head></head><body><h2>TEST2</h2></body></html>', Topic.VISIBILITY.public)).body.data;
             user2 = await (userLib.createUser(agent2, null, null, null));
             partner = await Partner
                 .create({
@@ -270,7 +270,7 @@ suite('Activities', function () {
         test('Success', async function () {
             const activities = (await activitiesRead(agent, user.id, null)).body.data
             assert.isTrue(activities.length > 0);
-            await topicLib.topicCreate(agent, user.id, 'public', null, null, '<html><head></head><body><h2>TEST3</h2></body></html>', null);
+            await topicLib.topicCreate(agent, user.id, 'TEST3', '<html><head></head><body><h2>TEST3</h2></body></html>', Topic.VISIBILITY.public);
 
             const count = (await activitiesUnreadCountRead(agent, {sourcePartnerId: partner.id})).body.data.count;
             assert.equal(count, 1);

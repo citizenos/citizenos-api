@@ -52,7 +52,7 @@ suite('Search', function () {
             const agent = request.agent(app);
             const user = await userLib.createUserAndLogin(agent, null, null, null);
             const description = '<!DOCTYPE HTML><html><body><h1>SEARCH TEST 1</h1><br><h2>SEARCH TEST H2</h2></body></html>';
-            await topicLib.topicCreate(agent, user.id, null, null, null, description, null);
+            await topicLib.topicCreate(agent, user.id, 'SEARCH TEST 1', description);
         });
 
         test('Success', async function () {
