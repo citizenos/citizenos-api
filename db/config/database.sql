@@ -492,6 +492,30 @@ COMMENT ON COLUMN public."Comments".edits IS 'Comment versions in JSONB array';
 
 
 --
+-- Name: GroupFavourites; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."GroupFavourites" (
+    "groupId" uuid NOT NULL,
+    "userId" uuid NOT NULL
+);
+
+
+--
+-- Name: COLUMN "GroupFavourites"."groupId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."GroupFavourites"."groupId" IS 'To what Group this row belongs to.';
+
+
+--
+-- Name: COLUMN "GroupFavourites"."userId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."GroupFavourites"."userId" IS 'Which User this row belongs to.';
+
+
+--
 -- Name: GroupInviteUsers; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1010,6 +1034,30 @@ COMMENT ON COLUMN public."TopicEvents".text IS 'Text of the Event.';
 
 
 --
+-- Name: TopicFavourites; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."TopicFavourites" (
+    "topicId" uuid NOT NULL,
+    "userId" uuid NOT NULL
+);
+
+
+--
+-- Name: COLUMN "TopicFavourites"."topicId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicFavourites"."topicId" IS 'To what Topic this Pin belongs to.';
+
+
+--
+-- Name: COLUMN "TopicFavourites"."userId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicFavourites"."userId" IS 'Which User this Pin belongs to.';
+
+
+--
 -- Name: TopicInviteUsers; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1167,30 +1215,6 @@ COMMENT ON COLUMN public."TopicMemberUsers".level IS 'User membership level.';
 
 
 --
--- Name: TopicPins; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public."TopicPins" (
-    "topicId" uuid NOT NULL,
-    "userId" uuid NOT NULL
-);
-
-
---
--- Name: COLUMN "TopicPins"."topicId"; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public."TopicPins"."topicId" IS 'To what Topic this Pin belongs to.';
-
-
---
--- Name: COLUMN "TopicPins"."userId"; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public."TopicPins"."userId" IS 'Which User this Pin belongs to.';
-
-
---
 -- Name: TopicReports; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1323,7 +1347,8 @@ COMMENT ON COLUMN public."TopicVotes"."voteId" IS 'Which Vote belongs to this To
 
 CREATE TABLE public."Topics" (
     id uuid NOT NULL,
-    title character varying(1000),
+    title character varying(500),
+    intro character varying(255),
     description text,
     status public."enum_Topics_status" DEFAULT 'inProgress'::public."enum_Topics_status" NOT NULL,
     visibility public."enum_Topics_visibility" DEFAULT 'private'::public."enum_Topics_visibility" NOT NULL,
@@ -1349,6 +1374,13 @@ CREATE TABLE public."Topics" (
 --
 
 COMMENT ON COLUMN public."Topics".title IS 'Title of the Topic.';
+
+
+--
+-- Name: COLUMN "Topics".intro; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics".intro IS 'Topic introduction text';
 
 
 --
@@ -2071,6 +2103,14 @@ ALTER TABLE ONLY public."Comments"
 
 
 --
+-- Name: GroupFavourites GroupFavourites_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."GroupFavourites"
+    ADD CONSTRAINT "GroupFavourites_pkey" PRIMARY KEY ("groupId", "userId");
+
+
+--
 -- Name: GroupInviteUsers GroupInviteUsers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2191,6 +2231,14 @@ ALTER TABLE ONLY public."TopicEvents"
 
 
 --
+-- Name: TopicFavourites TopicFavourites_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicFavourites"
+    ADD CONSTRAINT "TopicFavourites_pkey" PRIMARY KEY ("topicId", "userId");
+
+
+--
 -- Name: TopicInviteUsers TopicInviteUsers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2228,14 +2276,6 @@ ALTER TABLE ONLY public."TopicMemberGroups"
 
 ALTER TABLE ONLY public."TopicMemberUsers"
     ADD CONSTRAINT "TopicMemberUsers_pkey" PRIMARY KEY ("userId", "topicId");
-
-
---
--- Name: TopicPins TopicPins_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."TopicPins"
-    ADD CONSTRAINT "TopicPins_pkey" PRIMARY KEY ("topicId", "userId");
 
 
 --
@@ -2579,6 +2619,22 @@ ALTER TABLE ONLY public."Comments"
 
 
 --
+-- Name: GroupFavourites GroupFavourites_groupId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."GroupFavourites"
+    ADD CONSTRAINT "GroupFavourites_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES public."Groups"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: GroupFavourites GroupFavourites_userId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."GroupFavourites"
+    ADD CONSTRAINT "GroupFavourites_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: GroupInviteUsers GroupInviteUsers_creatorId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2707,6 +2763,22 @@ ALTER TABLE ONLY public."TopicEvents"
 
 
 --
+-- Name: TopicFavourites TopicFavourites_topicId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicFavourites"
+    ADD CONSTRAINT "TopicFavourites_topicId_fkey" FOREIGN KEY ("topicId") REFERENCES public."Topics"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: TopicFavourites TopicFavourites_userId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicFavourites"
+    ADD CONSTRAINT "TopicFavourites_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: TopicInviteUsers TopicInviteUsers_creatorId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2768,22 +2840,6 @@ ALTER TABLE ONLY public."TopicMemberUsers"
 
 ALTER TABLE ONLY public."TopicMemberUsers"
     ADD CONSTRAINT "TopicMemberUsers_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
--- Name: TopicPins TopicPins_topicId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."TopicPins"
-    ADD CONSTRAINT "TopicPins_topicId_fkey" FOREIGN KEY ("topicId") REFERENCES public."Topics"(id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
--- Name: TopicPins TopicPins_userId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."TopicPins"
-    ADD CONSTRAINT "TopicPins_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -3014,4 +3070,6 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 20220520100104-add-vote-reminder.js
 20231020153809-alter-group-add-location.js
 20231020154400-alter-topic-add-location.js
+20231025094913-alter-topic-add-intro.js
+20231027115040-rename-topic-pin-group-pin.js
 \.

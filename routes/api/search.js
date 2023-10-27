@@ -111,7 +111,7 @@ module.exports = function (app) {
                             }
 
                             if (pinned) {
-                                myTopicWhere += ` AND tp."topicId" = t.id AND tp."userId" = :userId`;
+                                myTopicWhere += ` AND tf."topicId" = t.id AND tf."userId" = :userId`;
                             }
 
                             // TODO: NOT THE MOST EFFICIENT QUERY IN THE WORLD, tune it when time.
@@ -125,7 +125,7 @@ module.exports = function (app) {
                                     t.visibility,
                                     t.hashtag,
                                     CASE
-                                    WHEN tp."topicId" = t.id THEN true
+                                    WHEN tf."topicId" = t.id THEN true
                                     ELSE false
                                     END as "pinned",
                                     t.categories,
@@ -180,9 +180,9 @@ module.exports = function (app) {
                                     ) AS mgc ON (mgc."topicId" = t.id)
                                     LEFT JOIN "TopicVotes" tv
                                         ON (tv."topicId" = t.id)
-                                    LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId
+                                    LEFT JOIN "TopicFavourites" tf ON tf."topicId" = t.id AND tf."userId" = :userId
                                 WHERE ${myTopicWhere}
-                                GROUP BY t.id, tmup.level, tmgp.level, muc.count, mgc.count, tv."voteId", tp."topicId"
+                                GROUP BY t.id, tmup.level, tmgp.level, muc.count, mgc.count, tv."voteId", tf."topicId"
                                 ORDER BY t.title ASC
                                 LIMIT :limit
                                 OFFSET :offset

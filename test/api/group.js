@@ -244,7 +244,7 @@ const groupMemberUsersDelete = async function (agent, userId, groupId, memberId)
     return _groupMemberUsersDelete(agent, userId, groupId, memberId, 200);
 };
 
-const _groupMembersTopicsList = async function (agent, userId, groupId, offset, limit, statuses, visibility, creatorId, pinned, hasVoted, showModerated, expectedHttpCode) {
+const _groupMembersTopicsList = async function (agent, userId, groupId, offset, limit, statuses, visibility, creatorId, favourite, hasVoted, showModerated, expectedHttpCode) {
     const path = '/api/users/:userId/groups/:groupId/members/topics'
         .replace(':userId', userId)
         .replace(':groupId', groupId);
@@ -257,7 +257,7 @@ const _groupMembersTopicsList = async function (agent, userId, groupId, offset, 
             statuses,
             visibility,
             creatorId,
-            pinned,
+            favourite,
             hasVoted,
             showModerated,
 
@@ -266,8 +266,8 @@ const _groupMembersTopicsList = async function (agent, userId, groupId, offset, 
         .expect('Content-Type', /json/);
 };
 
-const groupMembersTopicsList = async function (agent, userId, groupId, offset, limit, statuses, visibility, creatorId, pinned, hasVoted, showModerated) {
-    return _groupMembersTopicsList(agent, userId, groupId, offset, limit, statuses, visibility, creatorId, pinned, hasVoted, showModerated, 200);
+const groupMembersTopicsList = async function (agent, userId, groupId, offset, limit, statuses, visibility, creatorId, favourite, hasVoted, showModerated) {
+    return _groupMembersTopicsList(agent, userId, groupId, offset, limit, statuses, visibility, creatorId, favourite, hasVoted, showModerated, 200);
 };
 
 
@@ -344,6 +344,36 @@ const _groupJoinJoin = async function (agent, token, expectedHttpCode) {
 
 const groupJoinJoin = async function (agent, token) {
     return _groupJoinJoin(agent, token, 200);
+};
+
+const _groupFavouriteCreate = async function (agent, userId, groupId, expectedHttpCode) {
+    const path = '/api/users/:userId/groups/:groupId/favourite'
+        .replace(':userId', userId)
+        .replace(':groupId', groupId);
+
+    return agent
+        .post(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const groupFavouriteCreate = async function (agent, userId, groupId) {
+    return _groupFavouriteCreate(agent, userId, groupId, 200);
+};
+
+const _groupFavouriteDelete = async function (agent, userId, groupId, expectedHttpCode) {
+    const path = '/api/users/:userId/groups/:groupId/favourite'
+        .replace(':userId', userId)
+        .replace(':groupId', groupId);
+
+    return agent
+        .delete(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const groupFavouriteDelete = async function (agent, userId, groupId) {
+    return _groupFavouriteDelete(agent, userId, groupId, 200);
 };
 
 module.exports.create = groupCreate;
@@ -484,6 +514,11 @@ suite('Users', function () {
                     },
                     name: group.name,
                     description: null,
+                    country: null,
+                    language: null,
+                    contact: null,
+                    favourite: false,
+                    rules: [],
                     imageUrl: null,
                     visibility: Group.VISIBILITY.private,
                     creator: {
@@ -549,6 +584,7 @@ suite('Users', function () {
 
                 const expectedGroup = (await groupRead(agent, user.id, group.id)).body.data;
                 delete expectedGroup.join; // Update does not return GroupJoin info
+                delete expectedGroup.favourite; // Update does not return favourite info
 
                 assert.deepEqual(returnedGroup, expectedGroup);
             });
@@ -2535,7 +2571,53 @@ suite('Users', function () {
 
 
         });
+        suite('Favourite', function () {
+            const agent = request.agent(app);
 
+            let user;
+            let group;
+
+            setup(async function () {
+                user = await userLib.createUserAndLogin(agent, null, null, null);
+                group = (await groupCreate(agent, user.id, 'Test Group favourite')).body.data;
+            });
+
+            suite('Create', function () {
+                test('Success', async function () {
+                    const resBody = (await groupFavouriteCreate(agent, user.id, group.id)).body;
+
+                    const expectedBody = {
+                        status: {
+                            code: 20000
+                        }
+                    };
+
+                    assert.deepEqual(resBody, expectedBody);
+                });
+            });
+
+            suite('Delete', function () {
+
+                test('Success', async function () {
+                    const resBody = (await groupFavouriteCreate(agent, user.id, group.id)).body;
+                    const expectedBody = {
+                        status: {
+                            code: 20000
+                        }
+                    };
+
+                    assert.deepEqual(resBody, expectedBody);
+
+                    const resBody2 = (await groupFavouriteDelete(agent, user.id, group.id)).body
+                    const expectedBody2 = {
+                        status: {
+                            code: 20000
+                        }
+                    };
+
+                    assert.deepEqual(resBody2, expectedBody2);
+                });
+            });
+        });
     });
-
 });

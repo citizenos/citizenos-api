@@ -27,6 +27,7 @@ module.exports = function (app) {
     const GroupInviteUser = models.GroupInviteUser;
     const GroupMemberUser = models.GroupMemberUser;
     const GroupJoin = models.GroupJoin;
+    const GroupFavourite = models.GroupFavourite;
     const User = models.User;
     const UserConnection = models.UserConnection;
 
@@ -294,6 +295,10 @@ module.exports = function (app) {
                      g.contact,
                      g.visibility,
                      g."imageUrl",
+                     CASE
+                    WHEN gf."groupId" = g.id THEN true
+                        ELSE false
+                    END as "favourite",
                      c.id as "creator.id",
                      c.email as "creator.email",
                      c.name as "creator.name",
@@ -320,6 +325,7 @@ module.exports = function (app) {
                         WHERE "deletedAt" IS NULL
                         GROUP BY "groupId"
                     ) AS mtc ON (mtc."groupId" = g.id)
+                    LEFT JOIN "GroupFavourites" gf ON gf."groupId" = g.id AND gf."userId" = :userId
                     LEFT JOIN "GroupJoins" gj ON (gj."groupId" = g.id)
                     LEFT JOIN "GroupMemberUsers" gmu ON (gmu."groupId" = g.id AND gmu."userId" = :userId AND gmu."deletedAt" IS NULL)
                 WHERE g.id = :groupId;`,
@@ -370,10 +376,10 @@ module.exports = function (app) {
         const groupName = req.body.name;
         const description = req.body.description || null;
         const imageUrl = req.body.imageUrl || null;
-        const country = req.body.country;
-        const contact = req.body.contact;
-        const language = req.body.language;
-        const rules = req.body.rules;
+        const country = req.body.country || null;
+        const contact = req.body.contact || null;
+        const language = req.body.language || null;
+        const rules = req.body.rules || [];
         const group = await Group
             .findOne({
                 where: {
@@ -497,6 +503,7 @@ module.exports = function (app) {
 
         const visibility = req.query.visibility;
         const search = req.query.search;
+        const favourite = req.query.favourite;
 
         let joinText = '';
         let returnFields = '';
@@ -509,6 +516,10 @@ module.exports = function (app) {
 
         if (search) {
             where += ` AND g.name ILIKE :search `
+        }
+
+        if (favourite) {
+            where += ` AND gf."groupId" = g.id AND gf."userId" = :userId`;
         }
 
         if (include) {
@@ -592,6 +603,10 @@ module.exports = function (app) {
                     g.country,
                     g.language,
                     g.contact,
+                    CASE
+                        WHEN gf."groupId" = g.id THEN true
+                        ELSE false
+                     END as "favourite",
                     g.visibility,
                     c.id as "creator.id",
                     c.email as "creator.email",
@@ -634,6 +649,7 @@ module.exports = function (app) {
                         WHERE tmg."deletedAt" IS NULL
                         ORDER BY t."updatedAt" ASC
                     ) AS gt ON (gt."groupId" = g.id)
+                    LEFT JOIN "GroupFavourites" gf ON (gf."groupId" = g.id AND gf."userId" = :userId)
                     LEFT JOIN "GroupJoins" gj ON (gj."groupId" = g.id)
                     ${joinText}
                     ${where}
@@ -1915,7 +1931,7 @@ module.exports = function (app) {
         const userId = req.user?.userId;
         const creatorId = req.query.creatorId;
         let statuses = req.query.statuses;
-        const pinned = req.query.pinned;
+        const favourite = req.query.favourite;
         const hasVoted = req.query.hasVoted; // Filter out Topics where User has participated in the voting process.
         const showModerated = req.query.showModerated || false;
         const order = req.query.order;
@@ -1934,8 +1950,8 @@ module.exports = function (app) {
                 case 'status':
                     sortSql += ` t.status ${sortOrder} `;
                     break;
-                case 'pinned':
-                    sortSql += ` pinned ${sortOrder} `;
+                case 'favourite':
+                    sortSql += ` favourite ${sortOrder} `;
                     break;
                 case 'lastActivity':
                     sortSql += ` "lastActivity" ${sortOrder}`;
@@ -1945,7 +1961,7 @@ module.exports = function (app) {
             }
         } else {
             if (userId) {
-                sortSql += `pinned DESC, `;
+                sortSql += `favourite DESC, `;
             }
             sortSql += `t."updatedAt" DESC`;
         }
@@ -1997,8 +2013,8 @@ module.exports = function (app) {
         let fields = ``;
         let groupBy = ``;
         if (userId) {
-            if (pinned) {
-                where += ` AND tp."topicId" = t.id AND tp."userId" = :userId `;
+            if (favourite) {
+                where += ` AND tf."topicId" = t.id AND tf."userId" = :userId `;
             }
             if (creatorId) {
                 if (creatorId === userId) {
@@ -2007,9 +2023,9 @@ module.exports = function (app) {
             }
             replacements.userId = userId;
             fields = ` CASE
-                WHEN tp."topicId" = t.id THEN true
+                WHEN tf."topicId" = t.id THEN true
                 ELSE false
-            END as "pinned",
+            END as "favourite",
             COALESCE(tmup.level, tmgp.level, :defaultPermission) as "permission.level",
             COALESCE(tmgp.level, :defaultPermission) as "permission.levelGroup",`;
             where += `AND COALESCE(tmup.level, tmgp.level, :defaultPermission)::"enum_TopicMemberUsers_level" > 'none'`;
@@ -2033,8 +2049,8 @@ module.exports = function (app) {
                 AND gm."deletedAt" IS NULL
                 GROUP BY "topicId", "userId"
             ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
-            LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId `;
-            groupBy = `tmup.level, tmgp.level, tp."topicId", `;
+            LEFT JOIN "TopicFavourites" tf ON tf."topicId" = t.id AND tf."userId" = :userId `;
+            groupBy = `tmup.level, tmgp.level, tf."topicId", `;
         }
         const topics = await db
             .query(
@@ -2249,6 +2265,63 @@ module.exports = function (app) {
             rows: groups
         });
     }));
+
+    app.post('/api/users/:userId/groups/:groupId/favourite', loginCheck(['partner']), async function (req, res, next) {
+        const userId = req.user.userId;
+        const groupId = req.params.groupId;
+
+        try {
+            await db
+                .transaction(async function (t) {
+                    await GroupFavourite.findOrCreate({
+                        where: {
+                            groupId: groupId,
+                            userId: userId
+                        },
+                        transaction: t
+                    });
+
+                    t.afterCommit(() => {
+                        return res.ok();
+                    })
+                });
+        } catch (err) {
+            return next(err);
+        }
+    });
+
+    app.delete('/api/users/:userId/groups/:groupId/favourite', loginCheck(['partner']), async function (req, res, next) {
+        const userId = req.user.userId;
+        const groupId = req.params.groupId;
+
+        try {
+            const groupFavourite = await GroupFavourite.findOne({
+                where: {
+                    userId: userId,
+                    groupId: groupId
+                }
+            });
+
+            if (groupFavourite) {
+                await db
+                    .transaction(async function (t) {
+                        await GroupFavourite.destroy({
+                            where: {
+                                userId: userId,
+                                groupId: groupId
+                            },
+                            transaction: t
+                        });
+
+                        t.afterCommit(() => {
+                            return res.ok();
+                        });
+                    });
+            }
+        } catch (err) {
+            return next(err);
+        }
+    });
 
     return {
         hasPermission: hasPermission

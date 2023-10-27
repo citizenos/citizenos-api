@@ -70,7 +70,7 @@ module.exports = function (app) {
     const TopicVote = models.TopicVote;
     const TopicAttachment = models.TopicAttachment;
     const Attachment = models.Attachment;
-    const TopicPin = models.TopicPin;
+    const TopicFavourite = models.TopicFavourite;
     const UserNotificationSettings = models.UserNotificationSettings;
 
     const createDataHash = (dataToHash) => {
@@ -930,9 +930,9 @@ module.exports = function (app) {
                     tj.token as "join.token",
                     tj.level as "join.level",
                     CASE
-                    WHEN tp."topicId" = t.id THEN true
+                    WHEN tf."topicId" = t.id THEN true
                     ELSE false
-                    END as "pinned",
+                    END as "favourite",
                     t.categories,
                     t."endsAt",
                     t."padUrl",
@@ -959,7 +959,7 @@ module.exports = function (app) {
                     tr."moderatedReasonText" AS "report.moderatedReasonText",
                     au.authors
                     ${returncolumns}
-            FROM "Topics" t
+                FROM "Topics" t
                     LEFT JOIN (
                     SELECT
                         tmu."topicId",
@@ -1046,7 +1046,7 @@ module.exports = function (app) {
                     LEFT JOIN "Votes" v
                             ON v.id = tv."voteId"
                 ) AS tv ON (tv."topicId" = t.id)
-                LEFT JOIN "TopicPins" tp ON tp."topicId" = t.id AND tp."userId" = :userId
+                LEFT JOIN "TopicFavourites" tf ON tf."topicId" = t.id AND tf."userId" = :userId
                 LEFT JOIN "TopicReports" tr ON (tr."topicId" = t.id AND tr."resolvedById" IS NULL AND tr."deletedAt" IS NULL)
                 LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                 ${join}
@@ -1467,7 +1467,7 @@ module.exports = function (app) {
                         resObject.sourcePartnerId = null;
                     }
 
-                    resObject.pinned = false;
+                    resObject.favourite = false;
                     resObject.permission = {
                         level: TopicMemberUser.LEVELS.admin
                     };
@@ -1605,7 +1605,7 @@ module.exports = function (app) {
                         resObject.sourcePartnerId = null;
                     }
 
-                    resObject.pinned = false;
+                    resObject.favourite = false;
                     resObject.permission = {
                         level: TopicMemberUser.LEVELS.admin
                     };
@@ -2005,7 +2005,7 @@ module.exports = function (app) {
         const visibility = req.query.visibility;
         const creatorId = req.query.creatorId;
         let statuses = req.query.statuses;
-        const pinned = req.query.pinned;
+        const favourite = req.query.favourite;
         const hasVoted = req.query.hasVoted; // Filter out Topics where User has participated in the voting process.
         const showModerated = req.query.showModerated || false;
         if (statuses && !Array.isArray(statuses)) {
@@ -2080,8 +2080,8 @@ module.exports = function (app) {
             where += ` AND t.status IN (:statuses) `;
         }
 
-        if (pinned) {
-            where += ` AND tp."topicId" = t.id AND tp."userId" = :userId`;
+        if (favourite) {
+            where += ` AND tf."topicId" = t.id AND tf."userId" = :userId`;
         }
 
         if (['true', '1'].includes(hasVoted)) {
@@ -2129,9 +2129,9 @@ module.exports = function (app) {
                      ELSE NULL
                      END as "join.level",
                      CASE
-                        WHEN tp."topicId" = t.id THEN true
+                        WHEN tf."topicId" = t.id THEN true
                         ELSE false
-                     END as "pinned",
+                     END as "favourite",
                      t.categories,
                      t."sourcePartnerId",
                      t."sourcePartnerObjectId",
@@ -2252,11 +2252,11 @@ module.exports = function (app) {
                                 ) AS tcc
                             GROUP BY tcc."topicId"
                     ) AS com ON (com."topicId" = t.id)
-                    LEFT JOIN "TopicPins" tp ON (tp."topicId" = t.id AND tp."userId" = :userId)
+                    LEFT JOIN "TopicFavourites" tf ON (tf."topicId" = t.id AND tf."userId" = :userId)
                     LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                     ${join}
                 WHERE ${where}
-                ORDER BY "pinned" DESC, "order" ASC, t."updatedAt" DESC
+                ORDER BY "favourite" DESC, "order" ASC, t."updatedAt" DESC
             ;`;
 
         try {
@@ -7743,14 +7743,14 @@ module.exports = function (app) {
         }
     });
 
-    app.post('/api/users/:userId/topics/:topicId/pin', loginCheck(['partner']), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/favourite', loginCheck(['partner']), async function (req, res, next) {
         const userId = req.user.userId;
         const topicId = req.params.topicId;
 
         try {
             await db
                 .transaction(async function (t) {
-                    await TopicPin.findOrCreate({
+                    await TopicFavourite.findOrCreate({
                         where: {
                             topicId: topicId,
                             userId: userId
@@ -7767,30 +7767,22 @@ module.exports = function (app) {
         }
     });
 
-    app.delete('/api/users/:userId/topics/:topicId/pin', loginCheck(['partner']), async function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/favourite', loginCheck(['partner']), async function (req, res, next) {
         const userId = req.user.userId;
         const topicId = req.params.topicId;
 
         try {
-            const topicPin = await TopicPin.findOne({
+            const topicFavourite = await TopicFavourite.findOne({
                 where: {
                     userId: userId,
                     topicId: topicId
                 }
             });
 
-            if (topicPin) {
+            if (topicFavourite) {
                 await db
                     .transaction(async function (t) {
-                        const topic = await Topic.findOne({
-                            where: {
-                                id: topicId
-                            }
-                        });
-
-                        topic.description = null;
-
-                        await TopicPin.destroy({
+                        await TopicFavourite.destroy({
                             where: {
                                 userId: userId,
                                 topicId: topicId

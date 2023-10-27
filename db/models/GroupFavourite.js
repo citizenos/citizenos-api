@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * TopicComment
+ * GroupFavourite
  *
  * @param {object} sequelize Sequelize instance
  * @param {object} DataTypes Sequelize DataTypes
@@ -12,15 +12,15 @@
  */
 module.exports = function (sequelize, DataTypes) {
 
-    var TopicPin = sequelize.define(
-        'TopicPin',
+    var GroupFavourite = sequelize.define(
+        'GroupFavourite',
         {
-            topicId: {
+            groupId: {
                 type: DataTypes.UUID,
                 allowNull: false,
-                comment: 'To what Topic this Pin belongs to.',
+                comment: 'To what Group this row belongs to.',
                 references: {
-                    model: 'Topics',
+                    model: 'Groups',
                     key: 'id'
                 },
                 onUpdate: 'CASCADE',
@@ -30,7 +30,7 @@ module.exports = function (sequelize, DataTypes) {
             userId: {
                 type: DataTypes.UUID,
                 allowNull: false,
-                comment: 'Which User this Pin belongs to.',
+                comment: 'Which User this row belongs to.',
                 references: {
                     model: 'Users',
                     key: 'id'
@@ -45,5 +45,5 @@ module.exports = function (sequelize, DataTypes) {
         }
     );
 
-    return TopicPin;
+    return GroupFavourite;
 };

@@ -196,7 +196,7 @@ const topicDelete = async function (agent, userId, topicId) {
     return _topicDelete(agent, userId, topicId, 200);
 };
 
-const _topicList = async function (agent, userId, include, visibility, statuses, creatorId, hasVoted, showModerated, pinned, expectedHttpCode) {
+const _topicList = async function (agent, userId, include, visibility, statuses, creatorId, hasVoted, showModerated, favourite, expectedHttpCode) {
     const path = '/api/users/:userId/topics'.replace(':userId', userId);
 
     return agent
@@ -209,14 +209,14 @@ const _topicList = async function (agent, userId, include, visibility, statuses,
             creatorId: creatorId,
             hasVoted: hasVoted,
             showModerated: showModerated,
-            pinned: pinned
+            favourite: favourite
         })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
 
-const topicList = async function (agent, userId, include, visibility, statuses, creatorId, hasVoted, showModerated, pinned) {
-    return _topicList(agent, userId, include, visibility, statuses, creatorId, hasVoted, showModerated, pinned, 200);
+const topicList = async function (agent, userId, include, visibility, statuses, creatorId, hasVoted, showModerated, favourite) {
+    return _topicList(agent, userId, include, visibility, statuses, creatorId, hasVoted, showModerated, favourite, 200);
 };
 
 const _topicsListUnauth = async function (agent, statuses, categories, orderBy, offset, limit, sourcePartnerId, include, expectedHttpCode) {
@@ -1411,7 +1411,7 @@ const topicEventDelete = async function (agent, userId, topicId, eventId) {
 };
 
 const _topicFavouriteCreate = async function (agent, userId, topicId, expectedHttpCode) {
-    const path = '/api/users/:userId/topics/:topicId/pin'
+    const path = '/api/users/:userId/topics/:topicId/favourite'
         .replace(':userId', userId)
         .replace(':topicId', topicId);
 
@@ -1426,7 +1426,7 @@ const topicFavouriteCreate = async function (agent, userId, topicId) {
 };
 
 const _topicFavouriteDelete = async function (agent, userId, topicId, expectedHttpCode) {
-    const path = '/api/users/:userId/topics/:topicId/pin'
+    const path = '/api/users/:userId/topics/:topicId/favourite'
         .replace(':userId', userId)
         .replace(':topicId', topicId);
 
@@ -2968,7 +2968,7 @@ suite('Users', function () {
                     }
                 });
 
-                test('Success - include pinned', async function () {
+                test('Success - include favourite', async function () {
                     await topicFavouriteCreate(agent, user.id, topic.id);
 
                     const list = (await topicList(agent, user.id, null, null, null, null, null, null, true)).body.data.rows;
@@ -2976,7 +2976,7 @@ suite('Users', function () {
                     assert.equal(list.length, 1);
                     list.forEach(function (topicItem) {
                         assert.equal(topicItem.visibility, Topic.VISIBILITY.private);
-                        assert.equal(topicItem.pinned, true);
+                        assert.equal(topicItem.favourite, true);
                     });
 
                     const list2 = (await topicList(agent, user.id, null, null, null, null, null, null)).body.data.rows;
@@ -4730,7 +4730,7 @@ suite('Users', function () {
                 const res = await topicJoinJoin(agentUser, topic.join.token);
 
                 delete topic.permission;
-                delete topic.pinned;
+                delete topic.favourite;
                 delete topic.join;
 
                 topic.padUrl = topic.padUrl.split('?')[0]; // Pad url will not have JWT token as the user gets read-only by default
@@ -4791,7 +4791,7 @@ suite('Users', function () {
                 assert.deepEqual(topicJoinActivityActual, topicJoinActivityExpected);
 
                 delete topic.permission;
-                delete topic.pinned;
+                delete topic.favourite;
                 delete topic.join;
 
                 const expectedResult = {
@@ -9635,7 +9635,7 @@ suite('Topics', function () {
             assert.notProperty(topicR.data, 'events');
 
             delete topicR.data.join; // Unauth read of Topic should not give out TopicJoin info!
-            delete topicR.data.pinned; // Unauth read of Topic should not give out pinned tag value!
+            delete topicR.data.favourite; // Unauth read of Topic should not give out favourite tag value!
 
             // Also, padUrl will not have authorization token
             topicR.data.padUrl = topicR.data.padUrl.split('?')[0];
@@ -9660,7 +9660,7 @@ suite('Topics', function () {
                 topicR.data.permission.level = TopicMemberUser.LEVELS.none;
 
                 delete topicR.data.join; // Unauth read of Topic should not give out TopicJoin info!
-                delete topicR.data.pinned; // Unauth read of Topic should not give out pinned tag value!
+                delete topicR.data.favourite; // Unauth read of Topic should not give out favourite tag value!
 
                 // Also, padUrl will not have authorization token
                 topicR.data.padUrl = topicR.data.padUrl.split('?')[0];
@@ -9689,7 +9689,7 @@ suite('Topics', function () {
                 topicR.data.permission.level = TopicMemberUser.LEVELS.none;
 
                 delete topicR.data.join; // Unauth read of Topic should not give out TopicJoin info!
-                delete topicR.data.pinned; // Unauth read of Topic should not give out pinned tag value!
+                delete topicR.data.favourite; // Unauth read of Topic should not give out favourite tag value!
 
                 // Also, padUrl will not have authorization token
                 topicR.data.padUrl = topicR.data.padUrl.split('?')[0];
@@ -9722,7 +9722,7 @@ suite('Topics', function () {
             topicR.data.permission.level = TopicMemberUser.LEVELS.none;
 
             delete topicR.data.join; // Unauth read of Topic should not give out TopicJoin info!
-            delete topicR.data.pinned; // Unauth read of Topic should not give out pinned tag value!
+            delete topicR.data.favourite; // Unauth read of Topic should not give out favourite tag value!
 
             // Also, padUrl will not have authorization token
             topicR.data.padUrl = topicR.data.padUrl.split('?')[0];
@@ -11497,7 +11497,7 @@ suite('Topics', function () {
 
     });
 
-    suite('Pin', function () {
+    suite('Favourite', function () {
         const agent = request.agent(app);
 
         let user;
