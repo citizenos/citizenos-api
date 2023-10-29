@@ -488,11 +488,7 @@ module.exports = function (app) {
                 const finalResults = parseActivitiesResults(results);
 
                 t.afterCommit(() => {
-                    if (finalResults && finalResults.length && finalResults[0]) {
-                        return res.ok(finalResults);
-                    }
-
-                    return res.notFound();
+                    return res.ok(finalResults);
                 });
             });
         } catch (err) {
@@ -518,6 +514,94 @@ module.exports = function (app) {
 
     app.get('/api/users/:userId/topics/:topicId/activities', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), function (req, res, next) {
         return topicActivitiesList(req, res, next);
+    });
+
+    const topicUnreadActivitiesCount = async (req, res, next, visibility) => {
+        const userId = req.user?.userId;
+        const topicId = req.params.topicId;
+
+        let visibilityCondition = '';
+        if (visibility) {
+            visibilityCondition = 't.visibility = :visibility AND';
+        }
+        if (!userId) {
+            return res.ok({ count: 0 });
+        }
+        try {
+
+            const query = injectReplacements(`
+                SELECT
+                        COUNT(uac.id) AS count
+                    FROM
+                        (
+                            SELECT
+                            a.*
+                            FROM
+                            (
+                                SELECT a.id, a."topicIds", a."groupIds", a."userIds", a."updatedAt", a."createdAt"
+                                FROM
+                                "Activities" a
+                                JOIN "Topics" t ON t.id = :topicId
+                                WHERE
+                                ${visibilityCondition}
+                                ARRAY[:topicId] <@  a."topicIds"
+                                OR
+                                a.data@>'{"type": "View"}'
+                                AND
+                                a."actorType" = 'User'
+                                AND
+                                a."actorId" = :userId
+                                AND
+                                a.data#>>'{object, @type}' = 'Activity'
+                                ORDER BY a."updatedAt" DESC
+                            ) a
+                            ORDER BY a."updatedAt" DESC
+                        ) uac
+                JOIN (
+                    SELECT
+                        va.id,
+                        va.data,
+                        va."createdAt",
+                        va."updatedAt",
+                        va."deletedAt"
+                    FROM "Activities" va
+                    WHERE
+                        va."actorType" = 'User' AND va."actorId" = :userId::text
+                    AND va.data@>'{"type": "View"}'
+                    AND va.data#>>'{object, @type}' = 'Activity'
+                ) ua ON ua.id = ua.id
+                WHERE
+                    uac.id <> ua.id
+                    AND
+                    uac."createdAt" > ua."updatedAt"
+                OR
+                    uac.id <> ua.id
+                    AND
+                    uac."updatedAt" > ua."updatedAt"
+                ;`, db.dialect, { visibility, userId: userId, topicId: topicId });
+
+            const results = await db
+                .query(query,
+                    {
+                        type: db.QueryTypes.SELECT,
+                        raw: true,
+                        nest: true
+                    }
+                );
+
+            return res.ok(results[0]);
+
+        } catch (err) {
+            return next(err);
+        }
+    }
+
+    app.get('/api/topics/:topicId/activities/unread', async (req, res, next) => {
+        return topicUnreadActivitiesCount(req, res, next, 'public');
+    });
+
+    app.get('/api/users/:userId/topics/:topicId/activities/unread', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), function (req, res, next) {
+        return topicUnreadActivitiesCount(req, res, next);
     });
 
     app.get('/api/users/:userId/activities/unread', loginCheck(['partner']), async function (req, res, next) {
@@ -1207,12 +1291,7 @@ module.exports = function (app) {
                 const finalResults = parseActivitiesResults(results);
 
                 t.afterCommit(() => {
-                    if (finalResults && finalResults.length && finalResults[0]) {
-                        return res.ok(finalResults);
-                    } else {
-                        return res.notFound();
-                    }
-
+                    return res.ok(finalResults);
                 });
             });
         } catch (err) {
@@ -1237,7 +1316,7 @@ module.exports = function (app) {
             visibilityCondition = 'g.visibility = :visibility AND';
         }
         if (!userId) {
-            return res.ok({count: 0});
+            return res.ok({ count: 0 });
         }
         try {
 
@@ -1290,7 +1369,7 @@ module.exports = function (app) {
                     uac.id <> ua.id
                     AND
                     uac."updatedAt" > ua."updatedAt"
-                ;`, db.dialect, { visibility, userId: userId, groupId: groupId});
+                ;`, db.dialect, { visibility, userId: userId, groupId: groupId });
 
             const results = await db
                 .query(query,
