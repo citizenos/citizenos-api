@@ -7,11 +7,11 @@
     {{/topic}}
     <style type="text/css">
         body {
-            font-family: Arial;
-            font-size: 16px;
+            font-family: Open Sans, Arial;
+            font-size: 14px;
             line-height: 24px;
-            color: #2A2A2A;
-            background-color: #FBFBFB;
+            color: #2C3B47;
+            background-color: #F1F7FC;
             margin: 0;
             padding: 0;
             min-width: 100%;
@@ -23,7 +23,7 @@
         }
 
         p {
-            margin: 20px 0;
+            margin: 4px 0;
         }
 
         p.important {
@@ -54,7 +54,7 @@
         }
 
         a {
-            color: #0680FC;
+            color: #1168a8;
             text-decoration: none;
         }
 
@@ -86,11 +86,10 @@
             width: 100% !important;
             height: 100% !important;
             line-height: 100% !important;
-            background-color: #F6F6F6;
+            background-color: #F1F7FC;
         }
 
         #templateBody {
-            background-color: #FFFFFF;
             margin: 0;
             padding: 20px 30px;
             width: 600px;
@@ -98,22 +97,43 @@
         }
 
         #bodyContent {
+            padding: 32px;
             background-color: #FFFFFF;
-            padding: 0 20px;
+            border-radius: 0px 0px 16px 16px;
         }
 
-        #header, #footer {
+        #bodyHeader {
+            padding: 16px;
+            border-radius: 16px 16px 0px 0px;
+            background-color: #D7E9F8;
+            vertical-align: middle;
+        }
+        #header {
             padding: 20px 30px;
         }
 
         #header {
-            height: 70px;
+            height: 112px;
+        }
+
+        #templateWrapper {
+            width: 600px;
+            padding-bottom: 32px;
+        }
+
+        #info_table {
+            border-radius: 8px;
+            background-color: #F9FBFD;
+            padding: 24px;
+            width: 100%;
         }
 
         #footer {
-            background-color: #EAEAEA;
-            height: 60px;
+            background-color: #D7E9F8;
+            height: 274px;
             width: 600px;
+            padding: 20px 30px 0 20px;
+            border-radius: 16px 16px 0px 0px;
         }
 
         #footer table {
@@ -133,19 +153,16 @@
             padding: 20px;
         }
 
-        #templateBody {
+        #footer tr {
             width: 100%;
         }
 
-        #footer-mobile tr {
-            width: 100%;
-        }
-
-        #footer-mobile td {
+        #footer td {
             padding-top: 10px;
             padding-bottom: 10px;
         }
-        #footer-mobile img {
+
+        #footer img {
             margin-right: auto;
             margin-left: auto;
         }
@@ -167,16 +184,16 @@
                         <tbody>
                             <tr>
                                 <td id="header" style="background-color: {{styles.headerBackgroundColor}}">
-                                    <img width="{{styles.logoWidth}}" height="{{styles.logoHeight}}" src="cid:logo.png" alt="logo"/>
+                                    <img style="margin-right: auto;margin-left: auto;" width="{{styles.logoWidth}}" height="{{styles.logoHeight}}" src="cid:logo.png" alt="logo"/>
                                 </td>
                             </tr>
 
                             <tr>
                                 <td>
-                                    <table id="templateBody">
+                                    <table id="templateWrapper">
                                         <tbody>
                                             <tr>
-                                                <td class="bodyContent">
+                                                <td>
                                                     {{{body}}}
                                                 </td>
                                             </tr>
@@ -191,17 +208,55 @@
             </tr>
             <tr>
                 <td align="center">
-                    <table id="footer-mobile" style="width: 600px;text-align: center;">
+                    <table id="footer" style="width: 600px;text-align: center;">
                         <tbody>
                             <tr style="width: 600px;">
-                                <td style="width: 49%; display: inline-block;"><a href="{{linkedData.footerLinks.linkToPlatform}}" target="_blank">{{{linkedData.translations.LAYOUT.LINK_TO_PLATFORM}}}</a></td>
-                                <td style="width: 49%; display: inline-block;"><a href="{{linkedData.footerLinks.linkToPrivacyPolicy}}" target="_blank">{{{linkedData.translations.LAYOUT.LINK_PRIVACY_POLICY}}}</a></td>
+                                <td style="display: inline-block;margin-left: 12px; margin-right: 12px;">
+                                    <a href="https://twitter.com/Citizen_OS" target="_blank">
+                                        <img src="cid:Twitter.png" />
+                                    </a>
+                                </td>
+                                <td style="display: inline-block;margin-left: 12px; margin-right: 12px;">
+                                    <a href="https://www.linkedin.com/company/citizenos" target="_blank">
+                                        <img src="cid:LinkedIn.png"/>
+                                    </a>
+                                </td>
+                                <td style="display: inline-block;margin-left: 12px; margin-right: 12px;">
+                                    <a href="https://www.facebook.com/citizenos.web" target="_blank">
+                                        <img src="cid:Facebook.png"/>
+                                    </a>
+                                </td>
+                                <td style="display: inline-block;margin-left: 12px; margin-right: 12px;">
+                                    <a href="https://www.instagram.com/citizen_os_foundation/" target="_blank">
+                                        <img src="cid:Instagram.png" />
+                                    </a>
+                                </td>
+                                <td style="display: inline-block;margin-left: 12px; margin-right: 12px;">
+                                    <a href="https://www.youtube.com/@citizenos9026" target="_blank">
+                                        <img src="cid:YouTube.png" />
+                                    </a>
+                                </td>
+                                <td style="display: inline-block;margin-left: 12px; margin-right: 12px;">
+                                    <a href="https://medium.com/@Citizen_OS" target="_blank">
+                                        <img src="cid:Medium.png" />
+                                    </a>
+                                </td>
+                                <td style="display: inline-block;margin-left: 12px; margin-right: 12px;">
+                                    <a href="http://github.com/citizenos" target="_blank">
+                                        <img src="cid:GitHub.png" />
+                                    </a>
+                                </td>
                             </tr>
                             <tr style="width: 600px;">
-                                <td style="width: 100%;"><a href="https://citizenos.com" target="_blank" style="color: black; text-decoration: none;">Empowered by</a></td>
+                                <td>For more information, please see our <a
+                                        href="https:&#x2F;&#x2F;app.citizenos.com&#x2F;en&#x2F;topics&#x2F;7abdd244-d45b-40d3-997c-a6290d4e972c"
+                                        target="_blank">privacy policy</a></td>
                             </tr>
                             <tr style="width: 600px;">
-                                <td style="width: 100%;"><a href="https://citizenos.com" target="_blank" ><img width="97" height="18" src="cid:logo_footer.png" alt="logo"/></a></td>
+                                <td style="width: 100%; padding-bottom: 0; vertical-align: bottom;"><a href="https://citizenos.com" target="_blank">
+                                    <img width="282px" height="90px" src="cid:together.png" />
+                                    </a>
+                                </td>
                             </tr>
                         </tbody>
                     </table>

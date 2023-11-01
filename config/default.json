@@ -104,21 +104,9 @@
     "linkViewModerationGuidelines": "https://app.citizenos.com/en/topics/ac8b66a4-ca56-4d02-8406-5e19da73d7ce",
     "trap": false,
     "styles": {
-      "headerBackgroundColor": "#252525",
-      "logoWidth": 162,
-      "logoHeight": 30
-    },
-    "partnerStyles": {
-      "rahvaalgatus.ee": {
-        "headerBackgroundColor": "#004892",
-        "logoWidth": 360,
-        "logoHeight": 51
-      },
-      "uuseakus.rahvaalgatus.ee": {
-        "headerBackgroundColor": "#004892",
-        "logoWidth": 300,
-        "logoHeight": 91
-      }
+      "headerBackgroundColor": "#F1F7FC",
+      "logoWidth": 260,
+      "logoHeight": 48
     }
   },
   "services": {

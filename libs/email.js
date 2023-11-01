@@ -29,9 +29,10 @@ module.exports = function (app) {
     const templateRootLocal = app.get('EMAIL_TEMPLATE_ROOT_LOCAL');
 
     const emailHeaderLogoName = 'logo.png';
-    const emailFooterLogoName = 'logo_footer.png';
+    const emailHeaderIconName = 'header_icon.png';
+    const emailFooterImageName = 'together.png';
     let emailHeaderLogo = path.join(templateRoot, 'images/logo-email.png');
-    const emailFooterLogo = path.join(templateRoot, 'images/logo-email-small.png');
+    const emailFooterImage = path.join(templateRoot, 'images/together.png');
     if (fs.existsSync(path.join(templateRootLocal, 'images/logo-email.png'))) { //eslint-disable-line no-sync
         emailHeaderLogo = path.join(templateRootLocal, 'images/logo-email.png');
     }
@@ -46,8 +47,8 @@ module.exports = function (app) {
                 file: emailHeaderLogo
             },
             {
-                name: emailFooterLogoName,
-                file: emailFooterLogo
+                name: emailFooterImageName,
+                file: emailFooterImage
             }
         ],
         styles: config.email.styles,
@@ -62,6 +63,14 @@ module.exports = function (app) {
         }
     };
 
+    const socialItems = ['Twitter', 'LinkedIn', 'Facebook', 'Instagram', 'YouTube', 'Medium', 'GitHub'];
+
+    socialItems.forEach((item) => {
+        EMAIL_OPTIONS_DEFAULT.images.push({
+            name: `${item}.png`,
+            file: path.join(templateRoot, `images/${item}.png`)
+        });
+    });
 
     const templateCache = {};
 
@@ -401,6 +410,12 @@ module.exports = function (app) {
                     linkReset: urlLib.getFe('/account/password/reset/:passwordResetCode', { passwordResetCode: passwordResetCode }, { email: user.email })
                 }
             );
+
+            emailOptions.images.push({
+                name: emailHeaderIconName,
+                file: path.join(templateRoot, `images/PasswordReset.png`)
+            });
+
             emailOptions.linkedData.translations = template.translations;
             const userEmailPromise = emailClient.sendString(template.body, emailOptions);
 
@@ -455,7 +470,6 @@ module.exports = function (app) {
 
         const [fromUser, topic, toUsers] = await Promise.all([fromUserPromise, topicPromise, toUsersPromise]);
 
-        let logoFile = emailHeaderLogo;
         let templateName = 'inviteTopic';
         let linkToApplication = urlLib.getFe();
         let message = invites[0].inviteMessage;
@@ -484,20 +498,16 @@ module.exports = function (app) {
 
             let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
             linkedData.translations = template.translations;
+            const images = EMAIL_OPTIONS_DEFAULT.images;
+            images.push({
+                name: emailHeaderIconName,
+                file: path.join(templateRoot, `images/Topic.png`)
+            })
             const emailOptions = {
                 // from: from, - comes from emailClient.js configuration
                 subject: subject,
                 to: toUser.email,
-                images: [
-                    {
-                        name: emailHeaderLogoName,
-                        file: logoFile
-                    },
-                    {
-                        name: emailFooterLogoName,
-                        file: emailFooterLogo
-                    }
-                ],
+                images: images,
                 toUser: toUser,
                 message,
                 fromUser: fromUser,
@@ -658,7 +668,7 @@ module.exports = function (app) {
             where: {
                 id: invites[0].groupId
             },
-            attributes: ['id', 'name', 'visibility']
+            attributes: ['id', 'name', 'visibility', 'description', 'imageUrl']
         });
 
         const toUsersPromise = User.findAll({
@@ -671,7 +681,6 @@ module.exports = function (app) {
 
         const [fromUser, group, toUsers] = await Promise.all([fromUserPromise, groupPromise, toUsersPromise]);
 
-        let logoFile = emailHeaderLogo;
         let templateName = 'inviteGroup';
         let linkToApplication = urlLib.getFe();
         let message = invites[0].inviteMessage;
@@ -700,20 +709,19 @@ module.exports = function (app) {
 
             let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
             linkedData.translations = template.translations;
+            const images = EMAIL_OPTIONS_DEFAULT.images;
+            if (group.imageUrl) {
+                images.push({
+                    name: emailHeaderIconName,
+                    file: group.imageUrl
+                })
+            }
+
             const emailOptions = {
                 // from: from, - comes from emailClient.js configuration
                 subject: subject,
                 to: toUser.email,
-                images: [
-                    {
-                        name: emailHeaderLogoName,
-                        file: logoFile
-                    },
-                    {
-                        name: emailFooterLogoName,
-                        file: emailFooterLogo
-                    }
-                ],
+                images: images,
                 toUser: toUser,
                 message,
                 fromUser: fromUser,
@@ -1415,9 +1423,9 @@ module.exports = function (app) {
 
         const promisesToResolve = [];
         const customStyles = {
-            headerBackgroundColor: '#004892',
-            logoWidth: 360,
-            logoHeight: 51
+            headerBackgroundColor: '#F1F7FC',
+            logoWidth: 260,
+            logoHeight: 48
         };
 
         // Email to Parliament
@@ -1435,10 +1443,6 @@ module.exports = function (app) {
                         {
                             name: emailHeaderLogoName,
                             file: logoFile
-                        },
-                        {
-                            name: emailFooterLogoName,
-                            file: emailFooterLogo
                         }
                     ],
                     //Placeholders..
@@ -1477,10 +1481,6 @@ module.exports = function (app) {
                         {
                             name: emailHeaderLogoName,
                             file: logoFile
-                        },
-                        {
-                            name: emailFooterLogoName,
-                            file: emailFooterLogo
                         }
                     ],
                     //Placeholders..
@@ -1615,10 +1615,6 @@ module.exports = function (app) {
                     {
                         name: emailHeaderLogoName,
                         file: logoFile
-                    },
-                    {
-                        name: emailFooterLogoName,
-                        file: emailFooterLogo
                     }
                 ],
                 toUser: toUser,

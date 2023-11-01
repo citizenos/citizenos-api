@@ -1,38 +1,70 @@
-<table border="0" cellpadding="10" cellspacing="0" width="100%">
+<table id="bodyHeader" width="100%">
     <tbody>
-
         <tr>
-            <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Noto-Serif;font-size:20px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Hi {{toUser.name}}!</p>
+            <td valign="middle" width="72">
+                <img src="cid:header_icon.png" />
+            </td>
+            <td valign="middle">
+                <p style="font-size:13px; font-weight:bold;color:#2C3B47;">An invitation to</p>
+                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{group.name}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle">
+                <p style="font-size:16px; color:#2C3B47;">Hi {{toUser.name}}!</p>
             </td>
         </tr>
 
         <tr>
-            <td  align="center" valign="middle" style="background-color: #FFFFFF; border-top: 1px solid #fbfbfb; " height="130">
-                <p style="font-family: Open Sans,sans-serif; font-size:14px;background-color: #FFFFFF; color:#252525;">Citizen OS user <b>{{fromUser.name}}</b> just invited you to join group</p>
-                <p style="font-family: Open Sans,sans-serif; font-size:20px; font-weight: bold; background-color: #FFFFFF;">{{group.name}}</p>
-                {{#message}}
-                <p style="font-family: Open Sans,sans-serif; font-size:14px;background-color: #FFFFFF; color:#252525;">{{message}}</p>
-                {{/message}}
-                <p style="background-color: #FFFFFF;padding-top:30px;">
-                    <p style="font-family: Open Sans,sans-serif; font-size:14px;background-color: #FFFFFF; color:#252525;"><i><b>Please note: </b>You must log in using the same email address ({{toUser.email}}) to access this group.</i></p>
+            <td valign="middle">
+                <p style="color:#2C3B47;">User {{fromUser.name}} from group <b>{{group.name}}</b> is
+                    inviting you to join this group</p>
+            </td>
+            {{#message}}
+            <td>
+                <p style="color:#2C3B47;">
+                    {{message}}
+                </p>
+            </td>
+            {{/message}}
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table id="info_table">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <p style="font-size: 13px; color:#727C84; line-height: 16px;">Group name</p>
+                                <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height: 24px;">
+                                    {{group.name}}</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <p>{{group.description}}</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <p
+                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+                    <a href="{{linkViewGroup}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">Join group</a>
                 </p>
             </td>
         </tr>
         <tr>
-            <td align="center" style="padding-top:30px">
-                <a href="{{linkViewGroup}}" target="_blank" style="border-radius:5px;padding:10px;width:200px;background-color:#0680fc;color:#FFFFFF; text-decoration: none; font-family: Open Sans,sans-serif;">Join group</a>
-            </td>
-        </tr>
-        <tr>
-            <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0; border-top: 1px solid #fbfbfb; " height="130">
-                <p style="font-family: Open Sans,sans-serif; font-size:12px;background-color: #FFFFFF; color:#252525;"><b>Having trouble? <a href="https://citizenos.com/help" target="_blank" style="text-decoration:underline;padding-right: 5px;color:#0680fc;">View our FAQs</a></b></p>
-            </td>
-        </tr>
-
-        <tr>
-            <td  align="center" valign="bottom" style="background-color: #FFFFFF;border-top: 1px solid #fbfbfb;" height="120">
-                <p style="font-family: Open Sans,sans-serif; font-size:14px;background-color: #FFFFFF; color:#252525;">Citizen OS team</p>
+            <td valign="bottom" height="30" style="border-top: 1px solid #E1E7EE;padding-top:16px;">
+                <p style="font-size:14px;">Please note: You must log in using the same email address ({{toUser.email}})
+                    to access this group.</p>
             </td>
         </tr>
 
