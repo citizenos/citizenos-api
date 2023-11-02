@@ -7,8 +7,8 @@
     {{/topic}}
     <style type="text/css">
         body {
-            font-family: Open Sans, Arial;
-            font-size: 14px;
+            font-family: Arial, Open Sans;
+            font-size: 16px;
             line-height: 24px;
             color: #2C3B47;
             background-color: #F1F7FC;
@@ -27,19 +27,19 @@
         }
 
         p.important {
-            margin: 30px 0;
-            padding: 20px;
+            margin: 32px 0;
+            padding: 16px;
             background-color: #D5EAFF;
             border: 1px solid #BADCFF;
         }
 
         ul, ol {
             margin: 0;
-            padding: 0 0 0 20px;
+            padding: 0 0 0 16px;
         }
 
         li {
-            margin: 20px 0;
+            margin: 16px 0;
         }
 
         /*Many email clients don't support "ol>li" - https://www.campaignmonitor.com/css/selectors/child/*/
@@ -63,21 +63,8 @@
             border-style: none;
         }
 
-        hr {
-            display: block;
-            height: 0px;
-            border-top: 1px;
-            border-style: solid;
-            border-color: #DEDEDE; /** Chrome & Safari **/
-            background-color: #DEDEDE; /** FF & Opera **/
-            color: #DEDEDE; /** IE7+ `**/
-            padding: 0;
-            margin-top: 50px;
-            margin-bottom: 30px;
-        }
-
         .blue {
-            color: #0680FC;
+            color: #1168a8;
         }
 
         #background {
@@ -89,13 +76,6 @@
             background-color: #F1F7FC;
         }
 
-        #templateBody {
-            margin: 0;
-            padding: 20px 30px;
-            width: 600px;
-            border: none;
-        }
-
         #bodyContent {
             padding: 32px;
             background-color: #FFFFFF;
@@ -103,16 +83,13 @@
         }
 
         #bodyHeader {
-            padding: 16px;
+            padding-left: 16px;
             border-radius: 16px 16px 0px 0px;
             background-color: #D7E9F8;
             vertical-align: middle;
         }
         #header {
-            padding: 20px 30px;
-        }
-
-        #header {
+            padding: 16px 24px;
             height: 112px;
         }
 
@@ -121,10 +98,11 @@
             padding-bottom: 32px;
         }
 
-        #info_table {
+        .info_table {
             border-radius: 8px;
             background-color: #F9FBFD;
             padding: 24px;
+            margin-bottom: 16px;
             width: 100%;
         }
 
@@ -132,7 +110,7 @@
             background-color: #D7E9F8;
             height: 274px;
             width: 600px;
-            padding: 20px 30px 0 20px;
+            padding: 16px 24px 0 16px;
             border-radius: 16px 16px 0px 0px;
         }
 
@@ -150,7 +128,7 @@
         }
 
         #trapped td {
-            padding: 20px;
+            padding: 16px;
         }
 
         #footer tr {
@@ -158,8 +136,8 @@
         }
 
         #footer td {
-            padding-top: 10px;
-            padding-bottom: 10px;
+            padding-top: 8px;
+            padding-bottom: 8px;
         }
 
         #footer img {
@@ -248,9 +226,7 @@
                                 </td>
                             </tr>
                             <tr style="width: 600px;">
-                                <td>For more information, please see our <a
-                                        href="https:&#x2F;&#x2F;app.citizenos.com&#x2F;en&#x2F;topics&#x2F;7abdd244-d45b-40d3-997c-a6290d4e972c"
-                                        target="_blank">privacy policy</a></td>
+                                <td>{{{linkedData.translations.LAYOUT.FOR_MORE_INFORMATION}}} <a href="{{linkedData.footerLinks.linkToPlatform}}" target="_blank">{{{linkedData.translations.LAYOUT.LINK_PRIVACY_POLICY}}}</a></td>
                             </tr>
                             <tr style="width: 600px;">
                                 <td style="width: 100%; padding-bottom: 0; vertical-align: bottom;"><a href="https://citizenos.com" target="_blank">

@@ -1,12 +1,8 @@
-
 <table id="bodyHeader" width="100%">
     <tbody>
         <tr>
-            <td valign="middle" width="72">
-                <img src="cid:header_icon.png"/>
-            </td>
-            <td valign="middle">
-                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">Account verification</p>
+            <td valign="middle" style="font-size:22px; font-weight:bold;color:#2C3B47;padding:0;height: 88px;">
+                Account verification
             </td>
         </tr>
     </tbody>
@@ -14,23 +10,28 @@
 <table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
     <tbody>
         <tr>
-            <td valign="middle">
-                <p style="font-size:16px; color:#2C3B47;">Hi {{toUser.name}}!</p>
+            <td valign="middle" style="padding-bottom: 16px;">
+                Hi {{toUser.name}}!
             </td>
         </tr>
-
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">To activate your account, please verify your email address by
+                clicking on the button below.</td>
+        </tr>
         <tr>
             <td valign="middle">
-                <p style="font-size:14px; color:#252525;">To activate your account, please verify your email address by clicking on the button below.</p>
-                <p style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
-                    <a  href="{{linkVerify}}" target="_blank" style="color:#FFFFFF; text-decoration: none; font-family: Open Sans; font-weight: 600;">Verify my email</a>
+                <p
+                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; padding-bottom: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+                    <a href="{{linkVerify}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">Verify
+                        my email</a>
                 </p>
             </td>
         </tr>
 
         <tr>
-            <td valign="bottom" height="30">
-                <p style="font-size:14px; color:#252525;">If you didn’t make this request, you can ignore this e-mail.</p>
+            <td valign="bottom" style="font-size:14px; color:#252525;padding-top: 32px;">
+               If you didn’t make this request, you can ignore this e-mail.
             </td>
         </tr>
 
