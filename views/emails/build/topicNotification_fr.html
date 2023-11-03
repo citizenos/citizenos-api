@@ -1,19 +1,66 @@
-<!-- E-mail sent to moderators when a Topic is reported -->
-<p>
-    Bonjour <span class="blue">{{toUser.name}}</span>,
-</p>
+<table id="bodyHeader" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding:0;height: 88px;">
+                <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding:0;">An update from</p>
+                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 16px;">
+                Hi {{toUser.name}}!
+            </td>
+        </tr>
 
-<h1>Notification</h1>
-<p>{{{notificationText}}}</p>
+        <tr>
+            <td valign="middle" style="padding-bottom: 16px;">
+                {{{notificationText}}}
+            </td>
+        </tr>
 
+        <tr>
+            <td valign="middle">
+                <table class="info_table" style="background-color: #F1FAF3;">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <img src="cid:icon_vote.png" />
+                            </td>
+                            <td style="font-size: 16px;line-height:24px;">
+                                <b>{{voteCount}}</b>/{{votesCountRequired}} votes collected
+                            </td>
+                            <td style="font-size: 16px;line-height:24px;">
+                                Deadline {{voteEndsAt}}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 32px;">
+                <p
+                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">Regarder le sujet</a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size:14px;">
+                Please note: You must log in using the same email address ({{toUser.email}}) to access this topic.
+            </td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <p><a href="{{linkTopicNotificationSettings}}">Gérer les paramètres de notification pour ce sujet</a></p>
+                <p><a href="{{linkGeneralNotificationSettings}}">Gérer tous les paramètres de notification</a></p>
+            </td>
+        </tr>
 
-<p align="center" style="padding-top:30px">
-    <a href="{{linkViewTopic}}" target="_blank" style="border-radius:5px;padding:10px;width:200px;background-color:#0680fc;color:#FFFFFF; text-decoration: none; font-family: Open Sans,sans-serif;">Regarder le sujet</a>
-</p>
-<p><a href="{{linkTopicNotificationSettings}}">Gérer les paramètres de notification pour ce sujet</a></p>
-<p><a href="{{linkGeneralNotificationSettings}}">Gérer tous les paramètres de notification</a></p>
-
-<hr/>
-<p>
-    Merci ! Ensemble, nous pouvons maintenir une haute qualité de contenu dans la communauté des utilisateurs de Citizen OS.
-</p>
+    </tbody>
+</table>
