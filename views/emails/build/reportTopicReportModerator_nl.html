@@ -1,38 +1,69 @@
 <!-- E-mail sent to moderators when a Topic is reported -->
-<p>
-    Hallo <span class="blue">{{userModerator.name}}</span>,
-</p>
-<p class="important">
-    <b>U ontvangt deze e-mail als communitymoderator van Citizen OS.</b>
-    <br><br>
-    Een Citizen OS-gebruiker is van mening dat de topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" een overtreding van de communityrichtlijnen bevat. Zie hieronder de door de gebruiker ingediende melding.
-</p>
+<table id="bodyHeader" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding:0;height: 88px;">
+                <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding:0;">A topic has
+                    been reported</p>
+                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 16px;">
+                Hi {{userModerator.name}}!
+            </td>
+        </tr>
 
-<h1>Details van de melding</h1>
-<p>Topic: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
-<p>Meldingkenmerk: <b>{{report.id}}</b>
-<p>Type overtreding: <b>"{{report.type}}"</b>
-<p>Uw uitleg: <b>"{{report.text}}"</b>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 8px;">A topic has been reported as inappropriate
+                by someone from the community</td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">Review the reason below.</td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;">
+                                {{report.type}}
+                            </td>
+                        </tr>
 
-<h1>Wat is de volgende stap?</h1>
-<p>
-<ol>
-    <li class="li">
-        Beoordeel de melding en de topic en neem dan een beslissing.
-        <ul>
-            <li><b>JA</b>, er is een overtreding van de communityrichtlijnen, beperk de toegang tot de topic.</li>
-            <li></b>NEE</b>, er is geen overtreding, verwerp de melding.</li>
-        </ul>
-    </li>
-    <li class="li">Beheerders en bewerkers van de topic hebben deze melding ook ontvangen. Zij kunnen de topic op elk moment aanpassen om mogelijke overtredingen te verhelpen. Vervolgens kunnen zij de topic naar de moderators verzenden ter beoordeling.
-    </li>
-    <li class="li">Na een beoordelingsverzoek kunt u de topic beoordelen en alle beperkingen opheffen indien de overtredingen zijn verholpen.
-    </li>
-</ol>
-</p>
-<p><a href="{{linkViewModerationGuidelines}}">Meer informatie over het moderatieproces van Citizen OS vindt u hier.</a></p>
+                        {{#report.text}}
+                        <tr>
+                            <td style="font-size:14px;line-height:20px; color:#2C3B47;">
+                                {{report.text}}
+                            </td>
+                        </tr>
+                        {{/report.text}}
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 32px;">
+                <p
+                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">Review topic</a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size: 14px;">
+                <a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process
+                    here.</a>
+            </td>
+        </tr>
 
-<hr/>
-<p>
-    Bedankt! Samen kunnen we voor een hoge kwaliteit van inhoud zorgen in de gebruikerscommunity van Citizen OS.
-</p>
+        <tr>
+            <td>Thank you! Together we can maintain a high quality of content in Citizen OS user community.</td>
+        </tr>
+    </tbody>
+</table>
