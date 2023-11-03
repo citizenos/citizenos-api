@@ -1,113 +1,123 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Noto+Sans:bold,semibold,normal">
     <title></title><!--Empty title or Pandoc generates "title" for the resulting docx -->
-                <style type="text/css">
-                    .voting_platform_wrap {
-                        background: #fff;
-                        margin: 40px 60px 22px;
-                        box-shadow: 0 2px 3px 0 rgb(0 0 0 / 10%);
-                        padding: 20px;
-                    }
-                    .vote_casting_header {
-                        margin-bottom: 11px;
-                    }
-                    .vote_casting_header_section {
-                        height: 15px;
-                        display: table;
-                        float: left;
-                    }
+    <style type="text/css">
 
-                    .vote_casting_description {
-                        height: inherit;
-                        font-weight: 700!important;
-                        font-size: 18px;
-                        display: table-cell;
-                        vertical-align: middle;
-                        text-align: left;
-                        font-family: "Noto Sans",sans-serif;
-                        color: #252525;
-                    }
+        * {
+            box-sizing: border-box;
+            font-family: "Noto Sans", sans-serif;
+            font-size: 14px;
+            line-height: 16px;
+        }
 
-                    .clearer {
-                        clear: both;
-                    }
+        .vote_wrap {
+            background-color: #F1FAF3;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            border-radius: 16px;
+            margin-bottom: 20px;
+        }
 
-                    .lightest_line {
-                        width: 100%;
-                        height: 1px;
-                        background: #e5e5e5;
-                    }
+        .vote_header {
+            display: flex;
+            width: 100%;
+            padding: 12px 16px;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #E0F5E3;
+            border-radius: 16px 16px 0px 0px;
+        }
 
-                    .big_graph {
-                        margin-top: 30px;
-                    }
+        .header_division {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
 
-                    .long_text_holder {
-                        font-size: 14px;
-                    }
+        .vote_question {
+            font-size: 18px;
+            font-style: normal;
+            font-weight: 600;
+            line-height: 24px;
+        }
 
-                    .long_text {
-                        display: inline-block;
-                        padding: 5px 3px;
-                    }
+        .vote_content {
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+            gap: 16px;
+        }
 
-                    .long_text.active {
-                        color: #00ce8f;
-                        font-weight: 700;
-                    }
+        .big_graph {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            border-left: 1px solid #98daa2;
+            padding: 16px;
+        }
 
-                    .bold {
-                        font-weight: 700!important;
-                    }
+        .graph_item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+        }
 
-                    .graph_wrap {
-                        border-left: 1px solid #e5e5e5; width: 100%;text-align: center; position: relative;padding: 10px 100px 10px 0;box-sizing: border-box;margin-top: 30px;
-                    }
+        .graph_bar {
+            width: 100%;
+            height: 24px;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='24' viewBox='0 0 100 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 -1L-23 25' stroke='%2398DAA2'/%3E%3Cpath d='M7 -1L-19 25' stroke='%2398DAA2'/%3E%3Cpath d='M11 -1L-15 25' stroke='%2398DAA2'/%3E%3Cpath d='M15 -1L-11 25' stroke='%2398DAA2'/%3E%3Cpath d='M19 -1L-7 25' stroke='%2398DAA2'/%3E%3Cpath d='M23 -1L-3 25' stroke='%2398DAA2'/%3E%3Cpath d='M27 -1L1 25' stroke='%2398DAA2'/%3E%3Cpath d='M31 -1L5 25' stroke='%2398DAA2'/%3E%3Cpath d='M35 -1L9 25' stroke='%2398DAA2'/%3E%3Cpath d='M39 -1L13 25' stroke='%2398DAA2'/%3E%3Cpath d='M43 -1L17 25' stroke='%2398DAA2'/%3E%3Cpath d='M47 -1L21 25' stroke='%2398DAA2'/%3E%3Cpath d='M51 -1L25 25' stroke='%2398DAA2'/%3E%3Cpath d='M55 -1L29 25' stroke='%2398DAA2'/%3E%3Cpath d='M59 -1L33 25' stroke='%2398DAA2'/%3E%3Cpath d='M63 -1L37 25' stroke='%2398DAA2'/%3E%3Cpath d='M67 -1L41 25' stroke='%2398DAA2'/%3E%3Cpath d='M71 -1L45 25' stroke='%2398DAA2'/%3E%3Cpath d='M75 -1L49 25' stroke='%2398DAA2'/%3E%3Cpath d='M79 -1L53 25' stroke='%2398DAA2'/%3E%3Cpath d='M83 -1L57 25' stroke='%2398DAA2'/%3E%3Cpath d='M87 -1L61 25' stroke='%2398DAA2'/%3E%3Cpath d='M91 -1L65 25' stroke='%2398DAA2'/%3E%3Cpath d='M95 -1L69 25' stroke='%2398DAA2'/%3E%3Cpath d='M99 -1L73 25' stroke='%2398DAA2'/%3E%3Cpath d='M103 -1L77 25' stroke='%2398DAA2'/%3E%3Cpath d='M107 -1L81 25' stroke='%2398DAA2'/%3E%3Cpath d='M111 -1L85 25' stroke='%2398DAA2'/%3E%3Cpath d='M115 -1L89 25' stroke='%2398DAA2'/%3E%3Cpath d='M119 -1L93 25' stroke='%2398DAA2'/%3E%3Cpath d='M123 -1L97 25' stroke='%2398DAA2'/%3E%3C/svg%3E%0A");
+        }
 
-                    .graph_row {
-                        margin-bottom: 10px;position: relative;height: 40px;width: 100%;
-                    }
+        .graph_bar.active {
+            background-color: #5ab467;
+            background-image: none;
+        }
 
-                    .graph_row.active .graph_row_fill {
-                        background: #2eecb4;
-                    }
+        .grap_item_info {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
 
-                    .graph_row_fill {
-                        height:100%;
-                        position:relative;
-                    }
+        .your_vote {
+            display: flex;
+            padding: 4px 12px;
+            align-items: flex-start;
+            font-size: 12px;
+            font-style: normal;
+            font-weight: 600;
+            line-height: 16px;
+            gap: 8px;
+            background-color: #FFF;
+            border-radius: 12px;
+            color: #346933;
+        }
+    </style>
+</head>
 
-                    .graph_row_text_wrap {
-                        display: table;height: 100%;width: 200px;min-width: 150px;position: absolute;right: -200px;
-                    }
-                    .table-cell {
-                        display: table-cell;vertical-align: middle;
-                    }
+<body>
+    <div class="vote_wrap">
+        <div class="vote_header">
+            <div class="header_division">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" clip-rule="evenodd"
+                        d="M16 0C7.168 0 0 7.168 0 16C0 24.832 7.168 32 16 32C24.832 32 32 24.832 32 16C32 7.168 24.832 0 16 0ZM12.8889 24L25.3333 11.6491L23 9.33333L12.8889 19.3684L9 15.5088L6.66667 17.8246L12.8889 24Z"
+                        fill="#5AB467" />
+                </svg>
+                <div class="vote_question">{{{title}}}</div>
+            </div>
+        </div>
+        <div class="vote_content">
+            <div class="big_graph">
+                {{{rows}}}
+            </div>
+        </div>
+</body>
 
-                    .graph_row_text {
-                        box-sizing: border-box;padding-left: 10px;font-size: 13px;line-height: 15px;text-align: left;word-wrap: break-word;width: 200px;min-width: 150px;
-                    }
-                </style>
-                </head>
-                <body>
-                    <div class="voting_platform_wrap vote_casting_wrap">
-                        <div class="vote_casting_header">
-                            <div class="vote_casting_header_section">
-                                <div class="vote_casting_description">{{title}}</div>
-                            </div>
-                            <div class="clearer"></div>
-                        </div>
-                        <div class="line lightest_line"></div>
-                        <div class="big_graph">
-                            <div class="long_text_holder">
-                                {{{longText}}}
-                            </div>
-                            <div class="graph_wrap">
-                                {{{rows}}}
-                            </div>
-                        </div>
-                    </div>
-                </body>
-            </html>
+</html>
