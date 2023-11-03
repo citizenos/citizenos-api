@@ -1,33 +1,121 @@
 <!-- E-mail sent to Topic members of a reported Topic -->
-<p>
-    Здравствуйте, <span class="blue">{{userMember.name}}</span>!
-</p>
-<p class="important">
-    <b>Модераторы рассмотрели жалобу <span class="blue">№{{report.id}}</span> от {{report.createdAt}} в отношении созданной вами темы «<a href="{{linkViewTopic}}">{{topic.title}}</a>».</b>
-</p>
+<table id="bodyHeader" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding:0;height: 88px;">
+                <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding:0;">A moderator
+                    has reviewed the report on topic</p>
+                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 16px;">
+                Hi {{userMember.name}}!
+            </td>
+        </tr>
 
-<h1>Решение модератора:</h1>
-<p>
-<ul>
-    <li class="li">Тип нарушения: «{{report.moderatedReasonType}}»</li>
-    <li class="li">Обоснование: «{{report.moderatedReasonText}}»</li>
-</ul>
-</p>
-<p>
-    Теперь, при попытке ознакомиться с содеражнием вашей темы, пользователи увидят оповещение, предупреждающее их о том, что данная тема содержит нарушения. Однако пользователи все равно смогут изучить вашу тему на свой риск.
-</p>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">A moderator has reviewed the report about your Citizen OS topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" being
+                inappropriate.</td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">You can see the decision below</td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <p
+                                    style="font-size: 13px;font-weight:600;color:#727C84; line-height: 16px;padding-bottom:0;">
+                                    Report reference number</p>
+                                <p
+                                    style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;padding-bottom:16px;">
+                                    {{report.id}}
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <p
+                                    style="font-size: 13px; font-weight:600;color:#727C84; line-height: 16px;padding-bottom:0;">
+                                    Report created</p>
+                                <p
+                                    style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;padding-bottom:16px;">
+                                    {{report.createdAt}}
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <p style="font-size: 13px; color:#727C84;font-weight:600;line-height: 16px;padding-bottom:0;">Violation
+                                    type</p>
+                                <p
+                                    style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;padding-bottom:16px;">
+                                    {{report.moderatedReasonType}}
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <p style="font-size: 13px; color:#727C84;font-weight:600;line-height: 16px;padding-bottom:0;">Reasoning
+                                </p>
+                                <p style="font-size:14px;line-height:20px;font-weight:600;color:#2C3B47;padding-bottom:16px;">
+                                    {{report.moderatedReasonText}}
+                                </p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td>
 
-<h1>Что будет дальше?</h1>
-<p>
-<ol>
-    <li class="li">Вы, ваши администраторы и редакторы могут изменить содержание темы в любое время для того, чтобы устранить возможные нарушения. После этого вы сможете отправить запрос модераторам на повторное рассмотрение содержания вашей темы.</li>
-    <li class="li">После повторного рассмотрения модераторы снимут ограничения, наложенные на вашу тему, если все возможные нарушения были устранены.</li>
-    <li class="li">До этого времени доступ к теме будет ограничен.</li>
-</ol>
-</p>
-<p><a href="{{linkViewModerationGuidelines}}">Прочитайте информацию о процессе модерации на платформе Citizen OS.</a></p>
+                                <h1>What happens next?</h1>
+                                <p>
+                                <ol>
+                                    <li class="li">You and other admins and editors of the topic can edit topic content
+                                        at any time to clear possible violations. You can then send the topic to
+                                        moderators for review.</li>
+                                    <li class="li">Upon a review request, moderators will review the topic and remove
+                                        restrictions if violations have been cleared.</li>
+                                    <li class="li">Until such time, access to the topic will remain restricted.</li>
+                                </ol>
+                                </p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 32px;">
+                <p
+                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">Review topic</a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size: 14px;">
+                <a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process
+                    here.</a>
+            </td>
+        </tr>
+        <tr>
+            <td>Thank you! Together we can maintain a high quality of content in Citizen OS user community.</td>
+        </tr>
 
-<hr/>
-<p>
-    Мы просим вас пересмотреть содержание темы «<a href="{{linkViewTopic}}">{{topic.title}}</a>» на предмет нарушения правил сообщества. Вместе мы сможем обеспечить высокое качество контента для сообщества пользователей Citizen OS.
-</p>
+    </tbody>
+</table>
