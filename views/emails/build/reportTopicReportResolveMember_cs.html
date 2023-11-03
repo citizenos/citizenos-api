@@ -1,18 +1,48 @@
 <!-- E-mail sent to Topic members of a reported Topic -->
-<p>
-    Dobrý den <span class="blue">{{userMember.name}}</span>
-</p>
+<table id="bodyHeader" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding:0;height: 88px;">
+                <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding:0;">A report on topic has been
+                    resolved</p>
+                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 16px;">
+                Hi {{userMember.name}}!
+            </td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 16px;">A moderator has reviewed the revised version of your topic and decided that it is now in compliance with Citizen OS community guidelines.</td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">Access to your topic has been restored. There will be no indication that it was previously reported. Thank you for revising it!</td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 32px;">
+                <p
+                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">View topic</a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size: 14px;">
+                <a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process
+                    here.</a>
+            </td>
+        </tr>
 
-<p class="important">
-    Moderátor přezkoumal revidovanou verzi vašeho tématu "<a href="{{linkViewTopic}}">{{topic.title}}</a>" a rozhodl, že je nyní v souladu s komunitními pokyny Citizen OS.
-    <br><br>
-    <b>Přístup k vašemu tématu byl obnoven. Nic nenasvědčuje tomu, že to bylo dříve nahlášeno. Děkujeme vám za jeho revizi!</b>
-</p>
+        <tr>
+            <td style="padding-top:16px;font-size: 14px;">Thank you! Together we can maintain a high quality of content in Citizen OS user community.</td>
+        </tr>
+    </tbody>
+</table>
 
-<p><a href="{{linkViewModerationGuidelines}}">Více informací o procesu modifikace Citizen OS naleznete zde.</a></p>
 
-<hr/>
-
-<p>
-    Děkujeme, že jste nám pomohli zajistit vysokou kvalitu obsahu v komunitě uživatelů Citizen OS!
-</p>
