@@ -1,39 +1,69 @@
 <!-- E-mail sent to moderators when a Topic is reported -->
-<p>
-    Hola, <span class="blue">{{userModerator.name}}</span>:
-</p>
-<p class="important">
-    <b>Recibe este correo electrónico porque es un moderador de la comunidad de Citizen OS.</b>
-    <br><br>
-    Un usuario de Citizen OS piensa que el tema «<a href="{{linkViewTopic}}">{{topic.title}}</a>» infringe las normas de la comunidad. A continuación, encontrará la denuncia presentada.
-</p>
+<table id="bodyHeader" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding:0;height: 88px;">
+                <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding:0;">A topic has
+                    been reported</p>
+                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 16px;">
+                Hi {{userModerator.name}}!
+            </td>
+        </tr>
 
-<h1>Detalles de la denuncia</h1>
-<p>Tema: <b>«<a href="{{linkViewTopic}}">{{topic.title}}</a>»</b>
-<p>Número de referencia de la denuncia: <b>{{report.id}}</b>
-<p>Tipo de infracción: <b>«{{report.type}}»</b>
-<p>Su explicación: <b>«{{report.text}}»</b>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 8px;">A topic has been reported as inappropriate
+                by someone from the community</td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">Review the reason below.</td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;">
+                                {{report.type}}
+                            </td>
+                        </tr>
 
-<h1>¿Qué ocurre a continuación?</h1>
-<p>
-<ol>
-    <li class="li">
-        Revise la denuncia y el tema y, a continuación, tome una decisión:
-        <ul>
-            <li><b>SÍ</b>, contiene una infracción de las normas de la comunidad y se restringirá el acceso al tema.</li>
-            <li></b>NO</b> contiene ninguna infracción y se rechazará la denuncia.</li>
-        </ul>
-    </li>
-    <li class="li">Los administradores y editores del tema también han recibido la denuncia. Pueden editar el tema en cualquier momento para eliminar las posibles infracciones. A continuación, pueden enviar el tema a los moderadores para su
-        revisión.
-    </li>
-    <li class="li">Al recibir una solicitud de revisión, puede revisar el tema y quitar todas las restricciones si se han eliminado las infracciones.
-    </li>
-</ol>
-</p>
-<p><a href="{{linkViewModerationGuidelines}}">Aquí encontrará más información sobre el proceso de moderación de Citizen OS.</a></p>
+                        {{#report.text}}
+                        <tr>
+                            <td style="font-size:14px;line-height:20px; color:#2C3B47;">
+                                {{report.text}}
+                            </td>
+                        </tr>
+                        {{/report.text}}
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 32px;">
+                <p
+                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">Review topic</a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size: 14px;">
+                <a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process
+                    here.</a>
+            </td>
+        </tr>
 
-<hr/>
-<p>
-    ¡Gracias! Juntos, podemos garantizar contenido de alta calidad en la comunidad de usuarios de Citizen OS.
-</p>
+        <tr>
+            <td>Thank you! Together we can maintain a high quality of content in Citizen OS user community.</td>
+        </tr>
+    </tbody>
+</table>
