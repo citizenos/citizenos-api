@@ -1,39 +1,69 @@
 <!-- E-mail sent to moderators when a Topic is reported -->
-<p>
-    Tere, <span class="blue">{{userModerator.name}}</span>!
-</p>
-<p class="important">
-    <b>Saad selle kirja, sest oled Citizen OS-i kogukonna moderaator.</b>
-    <br><br>
-    Üks Citizen OS-i kasutaja arvab, et teemas "<a href="{{linkViewTopic}}">{{topic.title}}</a>" rikutakse Citizen OS-i kogukonnareegleid. Palun loe tema esitatud raportit.
-</p>
+<table id="bodyHeader" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding:0;height: 88px;">
+                <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding:0;">A topic has
+                    been reported</p>
+                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 16px;">
+                Hi {{userModerator.name}}!
+            </td>
+        </tr>
 
-<h1>Raporti üksikasjad</h1>
-<p>Teema: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
-<p>Raporti viitenumber: <b>{{report.id}}</b>
-<p>Rikkumise tüüp: <b>"{{report.type}}"</b>
-<p>Sinu selgitus: <b>"{{report.text}}"</b>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 8px;">A topic has been reported as inappropriate
+                by someone from the community</td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">Review the reason below.</td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;">
+                                {{report.type}}
+                            </td>
+                        </tr>
 
-<h1>Mis edasi saab?</h1>
-<p>
-<ol>
-    <li class="li">
-        Palun vaata raport ja kõnealune teema üle ning tee üks kahest otsusest:
-        <ul>
-            <li><b>JAH</b>, kogukonnareegleid on rikutud, juurdepääs teemale tuleb piirata.</li>
-            <li></b>EI</b>, rikkumist pole, kustuta raport.</li>
-        </ul>
-    </li>
-    <li class="li">See raport saadeti ka selle teema administraatoritele ja toimetajatele. Nad võivad oma teema igal ajal reeglitekohaseks muuta. Seejärel võivad nad paluda moderaatoritel teema uuesti
-        üle vaadata.
-    </li>
-    <li class="li">Ülevaatamistaotluse saamisel võid teema uuesti üle vaadata ja, kui kõik on reeglitepärane, võid piirangu eemaldada.
-    </li>
-</ol>
-</p>
-<p><a href="{{linkViewModerationGuidelines}}">Täpsemalt võid Citizen OS-i modereerimisprotsessi kohta lugeda siit.</a></p>
+                        {{#report.text}}
+                        <tr>
+                            <td style="font-size:14px;line-height:20px; color:#2C3B47;">
+                                {{report.text}}
+                            </td>
+                        </tr>
+                        {{/report.text}}
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 32px;">
+                <p
+                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">Review topic</a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size: 14px;">
+                <a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process
+                    here.</a>
+            </td>
+        </tr>
 
-<hr/>
-<p>
-    Aitäh! Koostöös saame Citizen OS-i kasutajakogukonnas avaldatud sisu kõrge kvaliteedi lihtsamini tagada.
-</p>
+        <tr>
+            <td>Thank you! Together we can maintain a high quality of content in Citizen OS user community.</td>
+        </tr>
+    </tbody>
+</table>
