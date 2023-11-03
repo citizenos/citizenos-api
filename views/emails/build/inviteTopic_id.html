@@ -1,35 +1,85 @@
-<table border="0" cellpadding="10" cellspacing="0" width="100%">
+<table id="bodyHeader" width="100%">
     <tbody>
-
         <tr>
-            <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Noto-Serif;font-size:20px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Hai {{toUser.name}}!</p>
+            <td valign="middle" style="padding:0;height: 88px;">
+                <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding:0;">An invitation to join the discussion</p>
+                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 16px;">
+                Hi {{toUser.name}}!
             </td>
         </tr>
 
         <tr>
-            <td  align="center" valign="middle" style="background-color: #FFFFFF; border-top: 1px solid #fbfbfb; " height="130">
-                <p style="font-family: Open Sans,sans-serif; font-size:14px;background-color: #FFFFFF; color:#252525;">Pengguna Citizen OS <b>{{fromUser.name}}</b> baru saja mengundang Anda untuk mengikuti diskusi tentang:</p>
-                <p style="font-family: Open Sans,sans-serif; font-size:20px; font-weight: bold; background-color: #FFFFFF;">{{topic.title}}</p>
-                <p style="font-family: Open Sans,sans-serif; font-size:14px;background-color: #FFFFFF; color:#252525;">{{message}}</p>
-                <p style="background-color: #FFFFFF;padding-top:30px;">
-                    <p style="font-family: Open Sans,sans-serif; font-size:14px;background-color: #FFFFFF; color:#252525;"><i><b>Perhatikan: </b>Anda harus masuk menggunakan alamat email yang sama ({{toUser.email}}) untuk mengakses topik ini.</i></p>
+            <td valign="middle" style="padding-bottom: 16px;">
+                User <b>{{fromUser.name}}</b> from topic <b>{{topic.title}}</b> is inviting you to join the discussion
+            </td>
+        </tr>
+
+        {{#message}}
+        <tr>
+            <td valign="middle">
+                <i>{{message}}</i>
+            </td>
+        </tr>
+        {{/message}}
+        <tr>
+            <td valign="middle" style="padding-top: 32px;">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <p style="font-size: 13px; color:#727C84; line-height: 16px;padding:0;">Topic title</p>
+                                <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
+                                    {{topic.title}}</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-top: 16px">
+                                <p style="font-size: 13px;color:#727C84;line-height:16px;padding:0;">Status</p>
+                                <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
+                                    {{topic.status}}
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-top: 16px">
+                                <p style="font-size: 13px;color:#727C84;line-height:16px;padding:0;">Participants</p>
+                                <p style="font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
+                                    {{memberCount}}
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-top: 16px">
+                                <p style="font-size: 13px;color:#727C84;line-height:16px;padding:0;">Latest activity</p>
+                                <p style="font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
+                                    {{latestActivity}}
+                                </p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 32px;">
+                <p
+                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">Join the discussion</a>
                 </p>
             </td>
         </tr>
         <tr>
-            <td align="center" style="padding-top:30px">
-                <a href="{{linkViewTopic}}" target="_blank" style="border-radius:5px;padding:10px;width:200px;background-color:#0680fc;color:#FFFFFF; text-decoration: none; font-family: Open Sans,sans-serif;">Ikuti topik</a>
-            </td>
-        </tr>
-        <tr>
-            <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0; border-top: 1px solid #fbfbfb; " height="130">
-                <p style="font-family: Open Sans,sans-serif; font-size:12px;background-color: #FFFFFF; color:#252525;"><b>Mengalami masalah? <a href="https://citizenos.com/help" target="_blank" style="text-decoration:underline;padding-right: 5px;color:#0680fc;">Lihat Pusat Bantuan kami.</a></b></p>
-            </td>
-        </tr>
-        <tr>
-            <td  align="center" valign="bottom" style="background-color: #FFFFFF;border-top: 1px solid #fbfbfb;" height="120">
-                <p style="font-family: Open Sans,sans-serif; font-size:14px;background-color: #FFFFFF; color:#252525;">Tim Citizen OS</p>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size:14px;">
+                Please note: You must log in using the same email address ({{toUser.email}}) to access this topic.
             </td>
         </tr>
 
