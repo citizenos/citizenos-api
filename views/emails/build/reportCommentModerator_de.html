@@ -1,39 +1,91 @@
-<table border="0" cellpadding="10" cellspacing="0" width="100%">
+<table id="bodyHeader" width="100%">
     <tbody>
+        <tr>
+            <td valign="middle" style="padding:0;height: 88px;">
+                <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding:0;">An argument has been
+                    reported in topic</p>
+                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 16px;">
+                Hi Admin!
+            </td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 8px;">An argument has been reported as
+                inappropriate by someone from the community</td>
+        </tr>
 
         <tr>
-            <td valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Noto-Serif;font-size:20px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Ein Argument wurde von jemanden aus der Gemeinschaft als unangemessen gemeldet</p>
+            <td style="font-size:14px; color:#252525; padding-bottom: 8px;">
+                {{#isUserNotified}}User was
+                notified{{/isUserNotified}}{{^isUserNotified}}User was NOT
+                notified{{/isUserNotified}}
             </td>
         </tr>
 
         <tr>
-            <td  valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#252525;">Ihr Wortlaut:</p>
-                {{#comment.subject}}
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#707070; font-style: italic">"{{comment.subject}}"</p>
-                {{/comment.subject}}
-                <p style="font-family: Open Sans,sans-serif;font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#707070; font-style: italic">"{{comment.text}}"</p>
+            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">Review the reason below.</td>
+        </tr>
+
+        <tr>
+            <td valign="middle">
+                <table class="info_table" style="padding-top: 32px;">
+                    <tbody>
+                        <tr>
+                            <td width="70">
+                                <img src="cid:icon_argument.png" />
+                            </td>
+                            <td>
+                                {{#comment.subject}}
+                                <p
+                                    style="font-size:16px;font-weight:600;color:#1168A8;line-height:24px;padding-bottom:0;">
+                                    {{comment.subject}}
+                                </p>
+                                {{/comment.subject}}
+                                <p style="font-size:14px; color:#2C3B47;line-height:16px;padding-bottom:0;">
+                                    {{comment.text}}
+                                </p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;">
+                                {{report.type}}
+                            </td>
+                        </tr>
+                        {{#report.text}}
+                        <tr>
+                            <td style="font-size:14px;line-height:20px; color:#2C3B47;">
+                                {{report.text}}
+                            </td>
+                        </tr>
+                        {{/report.text}}
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 32px;">
+                <p
+                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+                    <a href="{{linkModerate}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">Review argument</a>
+                </p>
             </td>
         </tr>
 
         <tr>
-            <td valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Begründung des Benutzers für die Meldung:</p>
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#252525; font-style: italic">{{report.type}}</p>
-                {{#report.text}}
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#707070; font-style: italic">"{{report.text}}"</p>
-                {{/report.text}}
-            </td>
-        </tr>
-
-        <tr>
-            <td valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Open Sans,sans-serif;font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Hier ist was du tun kannst:</p>
-                <ol>
-                    <li style="font-family: Open Sans,sans-serif;font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#0680fc; margin-bottom: 17px;"><a href="{{linkModerate}}">Dieses Argument moderieren</a> – {{#isUserNotified}}Benutzer wurde benachrichtigt{{/isUserNotified}}{{^isUserNotified}}Benutzer wurde NICHT benachrichtigt{{/isUserNotified}}</li>
-                    <li style="font-family: Open Sans,sans-serif;font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#252525; margin-bottom: 17px;">Lassen, wie es ist, jedoch können Moderatoren dennoch entscheiden, den Kommentar in der Standardansicht auszublenden.</li>
-                </ol>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size:14px;">
+                Leave it as is, but community moderators may still decide to have it hidden by default.
             </td>
         </tr>
     </tbody>
