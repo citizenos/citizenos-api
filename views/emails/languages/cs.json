@@ -1,7 +1,8 @@
 {
   "LAYOUT": {
+    "FOR_MORE_INFORMATION": "For more information, please see our",
     "LINK_TO_PLATFORM": "Odkaz na platformu",
-    "LINK_PRIVACY_POLICY": "Zásady ochrany soukromých údajů",
+    "LINK_PRIVACY_POLICY": "privacy policy",
     "EMPOWERED_BY": "Běží na"
   },
   "ACCOUNT_VERIFICATION": {
@@ -206,5 +207,10 @@
   "TXT_TOPIC_CATEGORY_YOUTH": "Mládež",
   "TXT_TOPIC_CATEGORY_SCIENCE": "Věda a technologie",
   "TXT_TOPIC_CATEGORY_SOCIETY": "Demokracie a občanská společnost",
-  "TXT_TOPIC_CATEGORY_EUROCHANGEMAKERS": "EuroChangeMakers"
+  "TXT_TOPIC_CATEGORY_EUROCHANGEMAKERS": "EuroChangeMakers",
+  "TXT_TOPIC_STATUS_INPROGRESS": "in progress",
+  "TXT_TOPIC_STATUS_VOTING": "in voting",
+  "TXT_TOPIC_STATUS_FOLLOWUP": "in follow-up",
+  "TXT_TOPIC_STATUS_CLOSED": "closed",
+  "TXT_TOPIC_STATUS_MODERATED": "hidden by admin"
 }
