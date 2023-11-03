@@ -1,35 +1,136 @@
 <!-- E-mail sent to User who reported the Topic -->
-<p>
-    Здраво <span class="blue">{{userReporter.name}}</span>,
-</p>
-<p class="important">
-    <b>Модератор ја разгледа пријавата <span class="blue">#{{report.id}}</span>, поднесена на {{report.createdAt}} за тоа дека вашата Citizen OS-тема "<a href="{{linkViewTopic}}">{{topic.title}}</a>" е несоодветна.</b>
-    <br><br>Не треба ништо да направите, оваа е-пошта е само информативна.
-</p>
+<table id="bodyHeader" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding:0;height: 88px;">
+                <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding:0;">A moderator
+                    has reviewed yout report on topic</p>
+                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 16px;">
+                Hi {{userReporter.name}}!
+            </td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 8px;">A moderator has reviewed the report about
+                your Citizen OS topic <a href="{{linkViewTopic}}">{{topic.title}}</a>
+                being
+                inappropriate.
+            </td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">You can see the decision below</td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <p
+                                    style="font-size: 13px;font-weight:600;color:#727C84; line-height: 16px;padding-bottom:0;">
+                                    Report reference number</p>
+                                <p
+                                    style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;padding-bottom:16px;">
+                                    {{report.id}}
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <p
+                                    style="font-size: 13px; font-weight:600;color:#727C84; line-height: 16px;padding-bottom:0;">
+                                    Report created</p>
+                                <p
+                                    style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;padding-bottom:16px;">
+                                    {{report.createdAt}}
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <p
+                                    style="font-size: 13px; color:#727C84;font-weight:600;line-height:16px;padding-bottom:0;">
+                                    Violation
+                                    type</p>
+                                <p
+                                    style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;padding-bottom:16px;">
+                                    {{report.moderatedReasonType}}
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <p
+                                    style="font-size: 13px; color:#727C84;font-weight:600;line-height: 16px;padding-bottom:0;">
+                                    Reasoning
+                                </p>
+                                <p style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;padding-bottom:16px;">
+                                    {{report.moderatedReasonText}}
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <b>
+                                    When accessing the topic, users will now see an overlay, warning about violations in
+                                    the topic. However, viewers have an option to bypass the overlay and view topic
+                                    content at their own risk anyway
+                                </b>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <h1>What happens next?</h1>
+                                <p>
+                                <ol>
+                                    <li class="li">Admins and editors of the topic have also received the report. They
+                                        can edit their topic at any time to clear possible violations. They can then
+                                        send the topic to moderators for review.</li>
+                                    <li class="li">Upon a review request, moderators will review the topic and remove
+                                        restrictions if violations have been cleared.</li>
+                                    <li class="li">Until such time, access to the topic will remain restricted.</li>
+                                </ol>
+                                </p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 32px;">
+                <p
+                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">View topic</a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size: 14px;">
+                <a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process
+                    here.</a>
+            </td>
+        </tr>
 
-<h1>Одлука на модераторот:</h1>
-<p>
-<ul>
-    <li class="li">Повреда од тип: "{{report.moderatedReasonType}}"</li>
-    <li class="li">Објасување: "{{report.moderatedReasonText}}"</li>
-</ul>
-</p>
-<p>
-    Кога ѝ пристапуваат на темата, корисниците сега ќе видат преклопување, предупредување дека има повреди во темата. Сепак, гледачите имаат опција да го поминат преклопот и да ја гледаат содржината на темата на сопствен ризик
-</p>
-
-<h1>Што е следно?</h1>
-<p>
-<ol>
-    <li class="li">Администраторите и уредниците на темата исто така ја добија пријавата. Можат да ја уредат својата тема во кое било време за да ги отстранат можните повреди. Потоа, можат да им на пратат темата на модераторите на разгледување.</li>
-    <li class="li">По барање за разгледување, модераторите ќе ја разгледаат темата и ќе ги отстранат ограничувањата ако биле отстранети повредите.</li>
-    <li class="li">Дотогаш, пристапот до темата ќе остане ограничен.</li>
-</ol>
-</p>
-<p><a href="{{linkViewModerationGuidelines}}">Повеќе детали за процесот за модерирање на Citizen OS можете да дознаете тука.</a></p>
-
-<hr/>
-
-<p>
-    Ви благодариме што ни помагате да го одржуваме високиот квалитет на содржината во заедницата на корисници на Citizen OS!
-</p>
+        <tr>
+            <td style="padding-top:16px;font-size: 14px;">Thank you! Together we can maintain a high quality of content
+                in Citizen OS user community.</td>
+        </tr>
+    </tbody>
+</table>
