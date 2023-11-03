@@ -1,39 +1,69 @@
 <!-- E-mail sent to moderators when a Topic is reported -->
-<p>
-    Ahoj <span class="blue">{{userModerator.name}}</span>,
-</p>
-<p class="important">
-    <b>Tento mail ste dostali, pretože ste moderátorom komunity na Citizen OS.</b>
-    <br><br>    
-    Užívateľ Citizen OS sa domnieva, že v téme "<a href="{{linkViewTopic}}">{{topic.title}}</a>" došlo k porušeniu pravidiel komunity. Nižšie nájdete správu, ktorá je nahlásením porušenia pravidiel.
-</p>
+<table id="bodyHeader" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding:0;height: 88px;">
+                <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding:0;">A topic has
+                    been reported</p>
+                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 16px;">
+                Hi {{userModerator.name}}!
+            </td>
+        </tr>
 
-<h1>Podrobnosti správy</h1>
-<p>Téma: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
-<p>Referenčné číslo správy: <b>{{report.id}}</b>
-<p>Typ porušenia: <b>"{{report.type}}"</b>
-<p>Vaše vysvetlenie: <b>"{{report.text}}"</b>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 8px;">A topic has been reported as inappropriate
+                by someone from the community</td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">Review the reason below.</td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;">
+                                {{report.type}}
+                            </td>
+                        </tr>
 
-<h1>Čo bude nasledovať?</h1>
-<p>
-<ol>
-    <li class="li">
-        Preskúmajte prosím správu, tému a potom rozhodnite:
-        <ul>
-            <li><b>ÁNO</b>, došlo k porušeniu pravidiel komunity - obmedziť prístup k téme.</li>
-            <li></b>ŽIADNE</b> porušenie pravidiel nenastalo - správu/nahlásenie zrušiť.</li>
-        </ul>
-    </li>
-    <li class="li">Aj admini a editori témy dostali túto správu. Aby vymazali prípadné porušenia pravidiel, môžu tému kedykoľvek upravovať. Môžu potom poslať tému moderátorom na 
-        preskúmanie.
-    </li>
-    <li class="li">Po prijatí požiadavky o preskúmanie môžete tému preskúmať a odstrániť obmedzenia, ak boli porušenia pravidiel vymazané.
-    </li>
-</ol>
-</p>
-<p><a href="{{linkViewModerationGuidelines}}">O procese moderovania Citizen OS nájdete viac podrobností tu.</a></p>
+                        {{#report.text}}
+                        <tr>
+                            <td style="font-size:14px;line-height:20px; color:#2C3B47;">
+                                {{report.text}}
+                            </td>
+                        </tr>
+                        {{/report.text}}
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 32px;">
+                <p
+                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">Review topic</a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size: 14px;">
+                <a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process
+                    here.</a>
+            </td>
+        </tr>
 
-<hr/>
-<p>
-    Ďakujeme! Spolu môžme udržať vysokú kvalitu obsahu v komunite užívateľov Citizen OS.
-</p>
+        <tr>
+            <td>Thank you! Together we can maintain a high quality of content in Citizen OS user community.</td>
+        </tr>
+    </tbody>
+</table>
