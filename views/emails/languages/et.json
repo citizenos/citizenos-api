@@ -1,7 +1,8 @@
 {
   "LAYOUT": {
+    "FOR_MORE_INFORMATION": "For more information, please see our",
     "LINK_TO_PLATFORM": "Ava platvorm",
-    "LINK_PRIVACY_POLICY": "Privaatsuspoliitika",
+    "LINK_PRIVACY_POLICY": "privacy policy",
     "EMPOWERED_BY": "Head arutelu hoiab"
   },
   "ACCOUNT_VERIFICATION": {
@@ -206,5 +207,10 @@
   "TXT_TOPIC_CATEGORY_YOUTH": "Noored",
   "TXT_TOPIC_CATEGORY_SCIENCE": "Teadus ja tehnoloogia",
   "TXT_TOPIC_CATEGORY_SOCIETY": "Demokraatia ja kodanikuühiskond",
-  "TXT_TOPIC_CATEGORY_EUROCHANGEMAKERS": "EuroChangeMakers"
+  "TXT_TOPIC_CATEGORY_EUROCHANGEMAKERS": "EuroChangeMakers",
+  "TXT_TOPIC_STATUS_INPROGRESS": "in progress",
+  "TXT_TOPIC_STATUS_VOTING": "in voting",
+  "TXT_TOPIC_STATUS_FOLLOWUP": "in follow-up",
+  "TXT_TOPIC_STATUS_CLOSED": "closed",
+  "TXT_TOPIC_STATUS_MODERATED": "hidden by admin"
 }
