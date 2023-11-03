@@ -1,7 +1,8 @@
 {
   "LAYOUT": {
+    "FOR_MORE_INFORMATION": "For more information, please see our",
     "LINK_TO_PLATFORM": "Линк до платформата",
-    "LINK_PRIVACY_POLICY": "Политика на приватност",
+    "LINK_PRIVACY_POLICY": "privacy policy",
     "EMPOWERED_BY": "Покренато од"
   },
   "ACCOUNT_VERIFICATION": {
@@ -206,5 +207,10 @@
   "TXT_TOPIC_CATEGORY_YOUTH": "Млади",
   "TXT_TOPIC_CATEGORY_SCIENCE": "Наука и техологија",
   "TXT_TOPIC_CATEGORY_SOCIETY": "Демократија и граѓанско општество",
-  "TXT_TOPIC_CATEGORY_EUROCHANGEMAKERS": "EuroChangeMakers"
+  "TXT_TOPIC_CATEGORY_EUROCHANGEMAKERS": "EuroChangeMakers",
+  "TXT_TOPIC_STATUS_INPROGRESS": "in progress",
+  "TXT_TOPIC_STATUS_VOTING": "in voting",
+  "TXT_TOPIC_STATUS_FOLLOWUP": "in follow-up",
+  "TXT_TOPIC_STATUS_CLOSED": "closed",
+  "TXT_TOPIC_STATUS_MODERATED": "hidden by admin"
 }
