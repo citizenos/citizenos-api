@@ -1,39 +1,82 @@
-<table border="0" cellpadding="10" cellspacing="0" width="100%">
+<table id="bodyHeader" width="100%">
     <tbody>
-
         <tr>
-            <td valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Noto-Serif;font-size:20px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Váš argument byl někým z komunity nahlášen jako nevhodný</p>
+            <td valign="middle" style="padding:0;height: 88px;">
+                <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding:0;">Your argument has been
+                    reported in topic</p>
+                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
             </td>
         </tr>
-
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
         <tr>
-            <td valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#252525;">Píšete:</p>
-                {{#comment.subject}}
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#707070; font-style: italic">"{{comment.subject}}"</p>
-                {{/comment.subject}}
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight: bold;background-color: #FFFFFF; color:#707070; font-style: italic">"{{comment.text}}"</p>
+            <td valign="middle" style="padding-bottom: 16px;">
+                Hi {{toUser.name}}!
             </td>
         </tr>
-
         <tr>
-            <td valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold; background-color: #FFFFFF; color:#252525;">Odůvodnění uživatele platformy pro nahlášení:</p>
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold; background-color: #FFFFFF; color:#252525; font-style: italic">{{report.type}}</p>
-                {{#report.text}}
-                <p style="font-family: Open Sans,sans-serif; font-size:14px; font-weight:bold; background-color: #FFFFFF; color:#707070; font-style: italic">"{{report.text}}"</p>
-                {{/report.text}}
+            <td style="font-size:14px; color:#252525; padding-bottom: 8px;">Your argument has been reported as
+                inappropriate by someone from the
+                community.</td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">Review the reason below.</td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td width="70">
+                                <img src="cid:icon_argument.png" />
+                            </td>
+                            <td>
+                                {{#comment.subject}}
+                                <p
+                                    style="font-size:16px;font-weight:600;color:#1168A8;line-height:24px;padding-bottom:0;">
+                                    {{comment.subject}}
+                                </p>
+                                {{/comment.subject}}
+                                <p style="font-size:14px; color:#2C3B47;line-height:16px;padding-bottom:0;">
+                                    {{comment.text}}
+                                </p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <table class="info_table" >
+                    <tbody>
+                        <tr>
+                            <td style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;">
+                                {{report.type}}
+                            </td>
+                        </tr>
+                        {{#report.text}}
+                        <tr>
+                            <td style="font-size:14px;line-height:20px; color:#2C3B47;">
+                                {{report.text}}
+                            </td>
+                        </tr>
+                        {{/report.text}}
+                    </tbody>
+                </table>
             </td>
         </tr>
-
         <tr>
-            <td valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Open Sans,sans-serif;font-size:14px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Zde je to, co můžete udělat:</p>
-                <ol>
-                    <li style="font-family: Open Sans,sans-serif;font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#0680fc; margin-bottom: 17px;"><a href="{{linkViewTopic}}" style="color:#0680FC; text-decoration: none; font-family: Open Sans,sans-serif;">Upravit nebo odstranit váš argument</a></li>
-                    <li style="font-family: Open Sans,sans-serif;font-size:14px; font-weight: bold; background-color: #FFFFFF; color:#252525; margin-bottom: 17px;">Ponechte to tak, jak je, ale komunitní moderátoři se stále mohou rozhodnout, že budou ve výchozím nastavení skryti (před tím, než uvidíte váš argument, budou mít uživatelé upozornění).</li>
-                </ol>
+            <td style="padding-bottom: 32px;">
+                <p
+                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">Edit or delete your argument</a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size:14px;">
+                You can also leave it as is, but community moderators may still decide to have it hidden
+                by default (users will get a warning prior to seeing your argument).
             </td>
         </tr>
     </tbody>
