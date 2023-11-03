@@ -1,7 +1,8 @@
 {
   "LAYOUT": {
+    "FOR_MORE_INFORMATION": "For more information, please see our",
     "LINK_TO_PLATFORM": "Link to platform",
-    "LINK_PRIVACY_POLICY": "Privacy Policy",
+    "LINK_PRIVACY_POLICY": "privacy policy",
     "EMPOWERED_BY": "Empowered by"
   },
   "ACCOUNT_VERIFICATION": {
@@ -206,5 +207,10 @@
   "TXT_TOPIC_CATEGORY_YOUTH": "Youth",
   "TXT_TOPIC_CATEGORY_SCIENCE": "Science and Technology",
   "TXT_TOPIC_CATEGORY_SOCIETY": "Democracy and civil society",
-  "TXT_TOPIC_CATEGORY_EUROCHANGEMAKERS": "EuroChangeMakers"
+  "TXT_TOPIC_CATEGORY_EUROCHANGEMAKERS": "EuroChangeMakers",
+  "TXT_TOPIC_STATUS_INPROGRESS": "in progress",
+  "TXT_TOPIC_STATUS_VOTING": "in voting",
+  "TXT_TOPIC_STATUS_FOLLOWUP": "in follow-up",
+  "TXT_TOPIC_STATUS_CLOSED": "closed",
+  "TXT_TOPIC_STATUS_MODERATED": "hidden by admin"
 }
