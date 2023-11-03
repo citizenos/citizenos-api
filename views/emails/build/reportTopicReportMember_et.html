@@ -1,39 +1,107 @@
 <!-- E-mail sent to Topic members of a reporter Topic -->
-<p>
-    Tere, <span class="blue">{{userMember.name}}</span>!
-</p>
-<p class="important">
-    <b>Üks Citizen OS-i kasutaja arvab, et Sinu loodud teema "<a href="{{linkViewTopic}}">{{topic.title}}</a>" rikub Citizen OS-i kogukonnareegleid, ja esitas selle kohta raporti <span class="blue">#{{report.id}}</span>.</b>
-    <br><br>
-    See raport saadetakse kõigile selle teema toimetajatele ja kogukonna moderaatoritele. Palun tutvu üksikasjadega allpool.
-</p>
+<table id="bodyHeader" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding:0;height: 88px;">
+                <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding:0;">A topic has
+                    been reported</p>
+                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 16px;">
+                Hi {{userMember.name}}!
+            </td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 8px;">A Citizen OS user thinks there is a
+                violation
+                of Citizen OS community guidelines in your topic</td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 8px;">All editors of the topic and community
+                moderators are receiving this report, please see details below.</td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">Review the reason below.</td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;">
+                                {{report.type}}
+                            </td>
+                        </tr>
+                        {{#report.text}}
+                        <tr>
+                            <td style="font-size:14px;line-height:20px; color:#2C3B47;">
+                                {{report.text}}
+                            </td>
+                        </tr>
+                        {{/report.text}}
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td>
 
-<h1>Raporti üksikasjad</h1>
-<p>Teema: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
-<p>Raporti viitenumber: <b>{{report.id}}</b>
-<p>Rikkumise tüüp: <b>"{{report.type}}"</b>
-<p>Sinu selgitus: <b>"{{report.text}}"</b>
+                                <h1>What happens next?</h1>
+                                <p>
+                                <ol>
+                                    <li class="li">Moderators are currently reviewing the topic. If they confirm a
+                                        violation, they will restrict access to the topic.
+                                    </li>
+                                    <li class="li">However, you and other editors can edit the topic at any time to
+                                        clear possible violations. If the violations have been cleared, the topic can be
+                                        sent for review to Citizen OS
+                                        moderators.
+                                    </li>
+                                    <li class="li">Upon a review request, moderators will review the topic and withdraw
+                                        all restrictions if violations have been removed.</li>
+                                    <li class="li">
+                                        We will notify you if:
+                                        <ul>
+                                            <li>moderators apply restrictions to the topic</li>
+                                            <li>Removal of violations has been reviewed and restrictions withdrawn.</li>
+                                        </ul>
+                                    </li>
+                                </ol>
+                                </p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 32px;">
+                <p
+                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">Review topic</a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size: 14px;">
+                <a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process
+                    here.</a>
+            </td>
+        </tr>
 
-<h1>Mis edasi saab?</h1>
-<p>
-<ol>
-    <li class="li">Moderaatorid vaatavad praegu seda teemat üle. Kui rikkumine saab kinnitust, piiravad nad juurdepääsu sellele teemale.
-    </li>
-    <li class="li">Sinul ja teistel selle teema toimetajatel on aga igal ajal õigus võimalikud rikkumised kõrvaldada. Pärast teema sisu reeglitepäraseks muutmist, võid saata selle ülevaatamiseks 
-        Citizen OS-i moderaatoritele.
-    </li>
-    <li class="li">Ülevaatamistaotluse saamisel kontrollivad moderaatorid teema uuesti üle ja kui kõik on reeglitepärane, siis eemaldavad piirangu.</li>
-    <li class="li">
-        Anname Sulle teada, kui:
-        <ul>
-            <li>moderaatorid määravad teemale piirangu,</li>
-            <li>rikkumiste kõrvaldamine on üle kontrollitud ja piirangud eemaldatud.</li>
-        </ul>
-    </li>
-</ol>
-</p>
-<p><a href="{{linkViewModerationGuidelines}}">Täpsemalt võid Citizen OS-i modereerimisprotsessi kohta lugeda siit.</a></p>
-<hr/>
-<p>
-    Palun kontrolli, et Sinu algatatud teemas "<a href="{{linkViewTopic}}">{{topic.title}}</a>" poleks kogukonnareegleid rikkuvat sisu. Koostöös saame Citizen OS-i kasutajakogukonnas avaldatud sisu kõrge kvaliteedi lihtsamini tagada.
-</p>
+        <tr>
+            <td style="padding-top:16px;font-size: 14px;">Thank you! Together we can maintain a high quality of content in Citizen OS user community.</td>
+        </tr>
+    </tbody>
+</table>
