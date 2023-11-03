@@ -1,39 +1,107 @@
 <!-- E-mail sent to Topic members of a reporter Topic -->
-<p>
-    Ahoj, <span class="blue">{{userMember.name}}</span>
-</p>
-<p class="important">
-    <b>Užívateľ Citizen OS sa domnieva, že došlo k porušeniu pravidiel komunity Citizen OS vo vašej téme "<a href="{{linkViewTopic}}">{{topic.title}}</a>" a nahlásil to správou <span class="blue">#{{report.id}}</span>.</b>
-    <br><br>
-    Túto správu dostanú všetci editori témy a komunitní moderátori, pozrite si detaily nižšie.
-</p>
+<table id="bodyHeader" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding:0;height: 88px;">
+                <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding:0;">A topic has
+                    been reported</p>
+                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 16px;">
+                Hi {{userMember.name}}!
+            </td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 8px;">A Citizen OS user thinks there is a
+                violation
+                of Citizen OS community guidelines in your topic</td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 8px;">All editors of the topic and community
+                moderators are receiving this report, please see details below.</td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">Review the reason below.</td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;">
+                                {{report.type}}
+                            </td>
+                        </tr>
+                        {{#report.text}}
+                        <tr>
+                            <td style="font-size:14px;line-height:20px; color:#2C3B47;">
+                                {{report.text}}
+                            </td>
+                        </tr>
+                        {{/report.text}}
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td>
 
-<h1>Podrobnosti správy</h1>
-<p>Téma: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
-<p>Referenčné číslo správy: <b>{{report.id}}</b>
-<p>Typ porušenia: <b>"{{report.type}}"</b>
-<p>Vaše vysvetlenie: <b>"{{report.text}}"</b>
+                                <h1>What happens next?</h1>
+                                <p>
+                                <ol>
+                                    <li class="li">Moderators are currently reviewing the topic. If they confirm a
+                                        violation, they will restrict access to the topic.
+                                    </li>
+                                    <li class="li">However, you and other editors can edit the topic at any time to
+                                        clear possible violations. If the violations have been cleared, the topic can be
+                                        sent for review to Citizen OS
+                                        moderators.
+                                    </li>
+                                    <li class="li">Upon a review request, moderators will review the topic and withdraw
+                                        all restrictions if violations have been removed.</li>
+                                    <li class="li">
+                                        We will notify you if:
+                                        <ul>
+                                            <li>moderators apply restrictions to the topic</li>
+                                            <li>Removal of violations has been reviewed and restrictions withdrawn.</li>
+                                        </ul>
+                                    </li>
+                                </ol>
+                                </p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 32px;">
+                <p
+                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">Review topic</a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size: 14px;">
+                <a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process
+                    here.</a>
+            </td>
+        </tr>
 
-<h1>Čo bude nasledovať?</h1>
-<p>
-<ol>
-    <li class="li">Moderátori teraz preskúmajú tému. Ak potvrdia porušenie pravidiel, obmedzia k téme prístup.
-    </li>
-    <li class="li">Vy a ďalší editori však môžte tému kedykoľvek upraviť, aby ste vymazali možné porušenia pravidiel. Ak budú porušenia pravidiel vymazané, téma sa odošle k preskúmaniu
-        moderátorom Citizen OS.
-    </li>
-    <li class="li">Po prijatí požiadavky o preskúmanie, moderátori tému preskúmajú a ak boli porušenia pravidiel vymazané, odstránia všetky obmedzenia.</li>
-    <li class="li">
-        Upovedomíme vás, ak:
-        <ul>
-            <li>moderátori uplatnia na tému obmedzenia</li>
-            <li>Odstránenie porušení pravidiel bolo preskúmané a obmedzenia stiahnuté.</li>
-        </ul>
-    </li>
-</ol>
-</p>
-<p><a href="{{linkViewModerationGuidelines}}">O procese moderovania Citizen OS nájdete viac podrobností tu.</a></p>
-<hr/>
-<p>
-    Preskúmajte prosím vašu tému "<a href="{{linkViewTopic}}">{{topic.title}}</a>" či obsahuje porušenia usmernení komunity. Spolu môžme udržať vysokú kvalitu obsahu v komunite užívateľov Citizen OS.
-</p>
+        <tr>
+            <td style="padding-top:16px;font-size: 14px;">Thank you! Together we can maintain a high quality of content in Citizen OS user community.</td>
+        </tr>
+    </tbody>
+</table>
