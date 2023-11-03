@@ -1,38 +1,107 @@
 <!-- E-mail sent to Topic members of a reporter Topic -->
-<p>
-    Bonjour <span class="blue">{{userMember.name}}</span>,
-</p>
-<p class="important">
-    <b>Un utilisateur de Citizen OS pense qu'il y a une violation des directives de la communauté de Citizen OS dans votre sujet « <a href="{{linkViewTopic}}">{{topic.title}}</a> » et a envoyé un rapport <span class="blue">#{{report.id}}</span>.</b>
-    <br><br>
-    Tous les éditeurs du sujet et les modérateurs de la communauté reçoivent ce rapport, veuillez voir les détails ci-dessous.
-</p>
+<table id="bodyHeader" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding:0;height: 88px;">
+                <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding:0;">A topic has
+                    been reported</p>
+                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 16px;">
+                Hi {{userMember.name}}!
+            </td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 8px;">A Citizen OS user thinks there is a
+                violation
+                of Citizen OS community guidelines in your topic</td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 8px;">All editors of the topic and community
+                moderators are receiving this report, please see details below.</td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">Review the reason below.</td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;">
+                                {{report.type}}
+                            </td>
+                        </tr>
+                        {{#report.text}}
+                        <tr>
+                            <td style="font-size:14px;line-height:20px; color:#2C3B47;">
+                                {{report.text}}
+                            </td>
+                        </tr>
+                        {{/report.text}}
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td>
 
-<h1>Détails du signalement</h1>
-<p>Sujet : <b>« <a href="{{linkViewTopic}}">{{topic.title}}</a> »</b>
-<p>Numéro de référence du rapport : <b>{{report.id}}</b>
-<p>Type de violation : <b>« {{report.type}} »</b>
-<p>Votre explication : <b>« {{report.text}} »</b>
+                                <h1>What happens next?</h1>
+                                <p>
+                                <ol>
+                                    <li class="li">Moderators are currently reviewing the topic. If they confirm a
+                                        violation, they will restrict access to the topic.
+                                    </li>
+                                    <li class="li">However, you and other editors can edit the topic at any time to
+                                        clear possible violations. If the violations have been cleared, the topic can be
+                                        sent for review to Citizen OS
+                                        moderators.
+                                    </li>
+                                    <li class="li">Upon a review request, moderators will review the topic and withdraw
+                                        all restrictions if violations have been removed.</li>
+                                    <li class="li">
+                                        We will notify you if:
+                                        <ul>
+                                            <li>moderators apply restrictions to the topic</li>
+                                            <li>Removal of violations has been reviewed and restrictions withdrawn.</li>
+                                        </ul>
+                                    </li>
+                                </ol>
+                                </p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 32px;">
+                <p
+                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">Review topic</a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size: 14px;">
+                <a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process
+                    here.</a>
+            </td>
+        </tr>
 
-<h1>Que se passe-t-il maintenant ?</h1>
-<p>
-<ol>
-    <li class="li">Les modérateurs examinent actuellement le sujet. S'ils confirment une infraction, ils limiteront l'accès au sujet.
-    </li>
-    <li class="li">Cependant, vous et d'autres éditeurs pouvez modifier le sujet à tout moment pour éliminer les éventuelles infractions. Si les infractions ont été effacées, le sujet peut être envoyé pour examen aux modérateurs de Citizen OS        .
-    </li>
-    <li class="li">À la demande d'examen, les modérateurs examineront le sujet et retireront toutes les restrictions si des infractions ont été supprimées.</li>
-    <li class="li">
-        Nous vous informerons si :
-        <ul>
-            <li>les modérateurs appliquent des restrictions au sujet</li>
-            <li>La suppression des violations a été examinée et les restrictions ont été retirées.</li>
-        </ul>
-    </li>
-</ol>
-</p>
-<p><a href="{{linkViewModerationGuidelines}}">Vous pouvez trouver plus de détails sur le processus de modération de Citizen OS ici.</a></p>
-<hr/>
-<p>
-    Veuillez consulter votre sujet « <a href="{{linkViewTopic}}">{{topic.title}}</a> » et voir s'il contient des violations des directives communautaires. Ensemble, nous pouvons maintenir un contenu de qualité dans la communauté des utilisateurs de Citizen OS.
-</p>
+        <tr>
+            <td style="padding-top:16px;font-size: 14px;">Thank you! Together we can maintain a high quality of content in Citizen OS user community.</td>
+        </tr>
+    </tbody>
+</table>
