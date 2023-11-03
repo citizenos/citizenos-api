@@ -1,38 +1,69 @@
 <!-- E-mail sent to moderators when a Topic is reported -->
-<p>
-    Здраво <span class="blue">{{userModerator.name}}</span>,
-</p>
-<p class="important">
-    <b>Ја добивате оваа е-пошта како модератор на заедницата на Citizen OS.</b>
-    <br><br>
-    Citizen OS-корисник смета дека има повреда на насоките на заедницата во темата "<a href="{{linkViewTopic}}">{{topic.title}}</a>". Подолу е пријавата која ја поднесоа.
-</p>
+<table id="bodyHeader" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding:0;height: 88px;">
+                <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding:0;">A topic has
+                    been reported</p>
+                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 16px;">
+                Hi {{userModerator.name}}!
+            </td>
+        </tr>
 
-<h1>Детали за пријавата</h1>
-<p>Тема: <b>"<a href="{{linkViewTopic}}">{{topic.title}}</a>"</b>
-<p>Упатувачки број за пријавата: <b>{{report.id}}</b>
-<p>Вид повреда: <b>"{{report.type}}"</b>
-<p>Вашето објаснување: <b>"{{report.text}}"</b>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 8px;">A topic has been reported as inappropriate
+                by someone from the community</td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">Review the reason below.</td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;">
+                                {{report.type}}
+                            </td>
+                        </tr>
 
-<h1>Што е следно?</h1>
-<p>
-<ol>
-    <li class="li">
-        Ве молиме, разгледајте ја пријавата, проверете ја темата и потоа одлучете:
-        <ul>
-            <li><b>ДА</b>, има повреда на насоките на заедницата, ограничете пристап до темата.</li>
-            <li></b>НЕМА</b> повреда, отфрлете ја пријавата.</li>
-        </ul>
-    </li>
-    <li class="li">Администраторите и уредниците на темата исто така ја добија оваа пријава. Можат да ја уредат својата тема во кое било време за да ги отстранат можните повреди. Потоа, можат да им ја пратат темата на модераторите на разгледување.
-    </li>
-    <li class="li">По барање за разгледување, можете да ја разгледате темата и да ги отстраните сите ограничувања ако биле отстранети повредите.
-    </li>
-</ol>
-</p>
-<p><a href="{{linkViewModerationGuidelines}}">Повеќе детали за процесот на модерирање на Citizen OS можете да најдете тука.</a></p>
+                        {{#report.text}}
+                        <tr>
+                            <td style="font-size:14px;line-height:20px; color:#2C3B47;">
+                                {{report.text}}
+                            </td>
+                        </tr>
+                        {{/report.text}}
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 32px;">
+                <p
+                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">Review topic</a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size: 14px;">
+                <a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process
+                    here.</a>
+            </td>
+        </tr>
 
-<hr/>
-<p>
-    Ви благодариме! Заедно можеме да го одржуваме високиот квалитет на содржината во заедницата на Citizen OS-корисници.
-</p>
+        <tr>
+            <td>Thank you! Together we can maintain a high quality of content in Citizen OS user community.</td>
+        </tr>
+    </tbody>
+</table>
