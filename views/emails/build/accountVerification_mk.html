@@ -1,22 +1,37 @@
-<table border="0" cellpadding="10" cellspacing="0" width="100%">
+<table id="bodyHeader" width="100%">
     <tbody>
-
         <tr>
-            <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0;" height="80">
-                <p style="font-family: Noto-Serif;font-size:20px; font-weight:bold;background-color: #FFFFFF; color:#252525;">Здраво {{toUser.name}}!</p>
+            <td valign="middle" style="font-size:22px; font-weight:bold;color:#2C3B47;padding:0;height: 88px;">
+                Account verification
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 16px;">
+                Hi {{toUser.name}}!
+            </td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">To activate your account, please verify your email address by
+                clicking on the button below.</td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <p
+                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; padding-bottom: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+                    <a href="{{linkVerify}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">Verify
+                        my email</a>
+                </p>
             </td>
         </tr>
 
         <tr>
-            <td  align="center" valign="middle" style="background-color: #FFFFFF;border-bottom: 1px solid #f0f0f0; border-top: 1px solid #fbfbfb; " height="130">
-                <p style="font-family: Open Sans,sans-serif; font-size:14px;background-color: #FFFFFF; color:#252525;">За да ја активирате својата сметка, ве молиме потврдете ја својата е-пошта со кликнување на линкот подолу.</p>
-                <p style="font-family: Open Sans,sans-serif; font-size:20px; font-weight: bold; background-color: #FFFFFF; color:#0680fc;"><a href="{{linkVerify}}" target="_blank" style="color:#0680FC; text-decoration: none; font-family: Open Sans,sans-serif;">Потврди ја мојата е-пошта</a></p>
-            </td>
-        </tr>
-
-        <tr>
-            <td  align="center" valign="bottom" style="background-color: #FFFFFF;border-top: 1px solid #fbfbfb;" height="120">
-                <p style="font-family: Open Sans,sans-serif; font-size:14px;background-color: #FFFFFF; color:#252525;">Citizen OS-тимот</p>
+            <td valign="bottom" style="font-size:14px; color:#252525;padding-top: 32px;">
+               If you didn’t make this request, you can ignore this e-mail.
             </td>
         </tr>
 
