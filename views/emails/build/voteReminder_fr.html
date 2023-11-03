@@ -1,17 +1,62 @@
-<!-- E-mail sent to moderators when a Topic is reported -->
-<p>
-    Bonjour <span class="blue">{{toUser.name}}</span>,
-</p>
+<table id="bodyHeader" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle">
+                <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding-bottom:0;">A vote reminder for</p>
+                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle">
+                <p style="font-size:16px; color:#2C3B47;">Hi {{toUser.name}}!</p>
+            </td>
+        </tr>
 
-<h1>Envoyez votre vote !</h1>
-<p>Voting for the topic <em>{{topic.title}}</em> is almost over, don't forget to cast your vote!</p>
+        <tr>
+            <td valign="middle">
+                <p style="color:#2C3B47;">The vote deadline is coming close! <b>You have only {{daysLeft}} left to cast your vote</b></p>
+            </td>
+        </tr>
 
+        <tr>
+            <td valign="middle">
+                <table class="info_table" style="background-color: #F1FAF3;">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <img src="cid:icon_vote.png" />
+                            </td>
+                            <td style="font-size: 16px;line-height:24px;">
+                                <b>{{voteCount}}</b>/{{votesCountRequired}} votes collected
+                            </td>
+                            <td style="font-size: 16px;line-height:24px;">
+                                Deadline {{voteEndsAt}}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <p
+                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">Cast your vote</a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" height="30" style="border-top: 1px solid #E1E7EE;padding-top:16px;">
+                <p style="font-size:14px;">Please note: You must log in using the same email address ({{toUser.email}})
+                    to access this topic.</p>
+            </td>
+        </tr>
 
-<p align="center" style="padding-top:30px">
-    <a href="{{linkViewTopic}}" target="_blank" style="border-radius:5px;padding:10px;width:200px;background-color:#0680fc;color:#FFFFFF; text-decoration: none; font-family: Open Sans,sans-serif;">Regarder le sujet</a>
-</p>
+    </tbody>
+</table>
 
-<hr/>
-<p>
-    Merci ! Ensemble, nous pouvons maintenir une haute qualité de contenu dans la communauté des utilisateurs de Citizen OS.
-</p>
