@@ -1,29 +1,90 @@
-<!-- E-mail sent to moderators when a Topic report is sent for a review -->
-<p>
-    Доброго дня, <span class="blue">{{userModerator.name}}</span>,
-</p>
-<p class="important">
-    <b>Ви отримали це повідомлення у якості модератора спільноти Citizen OS.</b>
-    <br><br>
-    Тема Citizen OS "<a href="{{linkViewTopic}}">{{topic.title}}</a>", оскаржена як недоречна, була переглянута адміністратором/редактором цієї теми. Вони надіслали зміни на перегляд і надали наступне пояснення:
-    <br><br>
-    <i>{{reviewRequestText}}</i>
-</p>
+<table id="bodyHeader" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding:0;height: 88px;">
+                <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding:0;">A topic has
+                    been sent for review</p>
+                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 16px;">
+                Hi {{userModerator.name}}!
+            </td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 8px;">Citizen OS topic "<a
+                    href="{{linkViewTopic}}">{{topic.title}}</a>", that was reported as inappropriate, has been
+                revised by an admin / editor of that topic.</td>
+        </tr>
+        <tr>
+            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">Explanation</td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;padding-bottom:0;">
+                                {{reviewRequestText}}
+                            </td>
+                            <td>
+                                <p style="font-size: 13px; color:#727C84; line-height: 16px;padding-bottom:0;">Violation
+                                    type</p>
+                                <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height: 24px;">
+                                    {{report.moderatedReasonType}}
+                                </p>
+                            </td>
+                            <td>
+                                <p style="font-size: 13px; color:#727C84; line-height: 16px;padding-bottom:0;">Reasoning
+                                </p>
+                                <p
+                                    style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;padding-bottom:0;">
+                                    {{report.moderatedReasonText}}
+                                </p>
+                            </td>
+                        </tr>
 
-<h1>Ви або інший модератор раніше вирішили обмежити доступ до теми.</h1>
-<p>
-<ul>
-    <li class="li">Тип порушення: "{{report.moderatedReasonType}}"</li>
-    <li class="li">Пояснення: "{{report.moderatedReasonText}}"</li>
-</ul>
-</p>
-<p>
-    <b>Будь ласка, передивіться тему "<a href="{{linkViewTopic}}">{{topic.title}}</a>" і вирішіть, чи відповідає вона тепер рекомендаціям для спільноти, і чи потрібно знімати обмеження доступу.</b>
-</p>
-<p><a href="{{linkViewModerationGuidelines}}">Ви можете більш детально ознайомитися з процесом модерації Citizen OS тут.</a></p>
+                        {{#report.text}}
+                        <tr>
+                            <td>
+                                {{report.text}}
+                            </td>
+                        </tr>
+                        {{/report.text}}
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <b>Please review the topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" and decide if it is now in
+                    compliance
+                    with guidelines and access restriction should be removed or not.</b>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 32px;">
+                <p
+                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">Review topic</a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size: 14px;">
+                <a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process
+                    here.</a>
+            </td>
+        </tr>
 
-<hr/>
-
-<p>
-    Дякуємо! Разом ми можемо підтримувати високу якість вмісту у користувацькій спільноті Citizen OS.
-</p>
+        <tr>
+            <td style="padding-top:16px;font-size: 14px;">Thank you! Together we can maintain a high quality of content in Citizen OS user community.</td>
+        </tr>
+    </tbody>
+</table>
