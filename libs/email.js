@@ -483,7 +483,7 @@ module.exports = function (app) {
             ;`,
             {
                 replacements: {
-                    groupId: invites[0].topicId,
+                    topicId: invites[0].topicId,
                 },
                 type: db.QueryTypes.SELECT,
                 raw: true,
@@ -521,10 +521,6 @@ module.exports = function (app) {
             let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
             linkedData.translations = template.translations;
             const images = EMAIL_OPTIONS_DEFAULT.images;
-            images.push({
-                name: emailHeaderIconName,
-                file: path.join(templateRoot, `images/Topic.png`)
-            })
             const emailOptions = {
                 // from: from, - comes from emailClient.js configuration
                 subject: subject,
@@ -755,12 +751,6 @@ module.exports = function (app) {
             let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
             linkedData.translations = template.translations;
             const images = EMAIL_OPTIONS_DEFAULT.images;
-            if (group.imageUrl) {
-                images.push({
-                    name: emailHeaderIconName,
-                    file: group.imageUrl
-                })
-            }
 
             const emailOptions = {
                 // from: from, - comes from emailClient.js configuration
@@ -1601,7 +1591,6 @@ module.exports = function (app) {
     const _sendTopicNotification = async (notification, users) => {
         const promisesToResolve = [];
         let linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: notification.topicIds[0] });
-
         const linkGeneralNotificationSettings = `${urlLib.getFe('/myaccount')}?tab=notifications`;
         const linkTopicNotificationSettings = `${linkViewTopic}?notificationSettings`;
         if (['Comment', 'CommentVote'].indexOf(notification.data.object['@type']) > -1) {
@@ -1633,7 +1622,8 @@ module.exports = function (app) {
                     linkViewTopic,
                     linkTopicNotificationSettings,
                     linkGeneralNotificationSettings,
-                    notificationText
+                    notificationText,
+                    topicTitle: notification.values.topicTitle
                 }
             );
 
