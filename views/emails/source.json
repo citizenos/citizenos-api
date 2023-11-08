@@ -9,7 +9,7 @@
     "SUBJECT": "Activate your Citizen OS account"
   },
   "INVITE_GROUP": {
-    "SUBJECT": "{{fromUser.name}} is inviting you to join our group “{{group.name}}” on Citizen OS"
+    "SUBJECT": "{{fromUser.name}} is inviting you to join the group “{{group.name}}” on Citizen OS"
   },
   "INVITE_TOPIC": {
     "SUBJECT": "{{fromUser.name}} is inviting you to make a collaborative decision",
@@ -21,16 +21,16 @@
     "SUBJECT": "Reset your Citizen OS account password"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Thank you, we received your report (#{{report.id}})"
+    "SUBJECT": "Thank you for reporting a topic (#{{report.id}})"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
     "SUBJECT": "Report #{{report.id}}: your Citizen OS topic may contain a violation of guidelines"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "A Citizen OS topic has been reported (#{{report.id}}), please moderate"
+    "SUBJECT": "Please moderate this reported Citizen OS topic (#{{report.id}})"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Your Citizen OS report #{{report.id}} has been reviewed"
+    "SUBJECT": "The Citizen OS topic you reported #{{report.id}} has been reviewed"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
     "SUBJECT": "Report #{{report.id}}: Your Citizen OS topic has been reviewed by a moderator"
@@ -39,7 +39,7 @@
     "SUBJECT": "A reported (#{{report.id}}) Citizen OS topic has been revised, please review"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: access to your Citizen OS topic has been restored."
+    "SUBJECT": "Report #{{report.id}}: access to your Citizen OS topic has been restored"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
     "SUBJECT": "Your report (#{{report.id}}) in Citizen OS has been resolved"
