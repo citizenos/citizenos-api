@@ -9,10 +9,10 @@
     "SUBJECT": "Activate your Citizen OS account"
   },
   "INVITE_GROUP": {
-    "SUBJECT": "{{fromUser.name}} is inviting you to join the group “{{group.name}}” on Citizen OS"
+    "SUBJECT": "{{fromUser.name}} is inviting you to join the group “{{group.name}}”"
   },
   "INVITE_TOPIC": {
-    "SUBJECT": "{{fromUser.name}} is inviting you to make a collaborative decision",
+    "SUBJECT": "{{fromUser.name}} is inviting you to a topic",
     "SUBJECT_rahvaalgatus_ee": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust",
     "SUBJECT_rahvaalgatus_test": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust"
@@ -21,28 +21,28 @@
     "SUBJECT": "Reset your Citizen OS account password"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Thank you for reporting a topic (#{{report.id}})"
+    "SUBJECT": "Thank you for reporting a topic"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: your Citizen OS topic may contain a violation of guidelines"
+    "SUBJECT": "Your Citizen OS topic has been reported to moderators"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "Please moderate this reported Citizen OS topic (#{{report.id}})"
+    "SUBJECT": "Please moderate this reported Citizen OS topic"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "The Citizen OS topic you reported #{{report.id}} has been reviewed"
+    "SUBJECT": "The Citizen OS topic you reported has been reviewed"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: Your Citizen OS topic has been reviewed by a moderator"
+    "SUBJECT": "Your Citizen OS topic has been reviewed by a moderator"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "A reported (#{{report.id}}) Citizen OS topic has been revised, please review"
+    "SUBJECT": "A reported Citizen OS topic has been revised, please review"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Report #{{report.id}}: access to your Citizen OS topic has been restored"
+    "SUBJECT": "Access to your reported Citizen OS topic has been restored"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
-    "SUBJECT": "Your report (#{{report.id}}) in Citizen OS has been resolved"
+    "SUBJECT": "The issue you reported has been resolved"
   },
   "REPORT": {
     "REPORT_TYPE": {
@@ -65,40 +65,40 @@
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Your argument has been reported as inappropriate by the community"
+    "SUBJECT": "Your argument has been reported as inappropriate"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "An argument has been reported as inappropriate by the community"
+    "SUBJECT": "An argument has been reported as inappropriate"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
   "NOTIFICATIONS": {
     "SUBJECT": "Notification from Citizen OS topic {{topicTitle}}",
-    "NOTIFICATION_USER_CREATE_TOPIC": "User <em>{{userName}}</em> has created a topic <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPIC": "User <em>{{userName}}</em> has updated a field <em>{{fieldName}}</em> in topic <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "User <em>{{userName}}</em> has made <em>{{groupCount}}</em> updates to topic <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_CREATE_TOPIC": "<em>{{userName}}</em> has created topic <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_UPDATE_TOPIC": "<em>{{userName}}</em> has updated the field <em>{{fieldName}}</em> in topic <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "<em>{{userName}}</em> has made <em>{{groupCount}}</em> updates to topic <em>{{topicTitle}}</em>",
     "NOTIFICATION_PREVIOUS_VERSION": "Previous version: {{previousValue}}",
     "NOTIFICATION_NEW_VERSION": "New version: {{newValue}}",
-    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "System has updated a field <em>{{fieldName}}</em> in topic <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_TOPIC": "User <em>{{userName}}</em> has deleted a topic <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_USER_TOPIC": "User <em>{{userName}}</em> has invited user <em>{{userName2}}</em> to participate in topic <em>{{topicTitle}}</em>",
+    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "The Citizen OS system has updated a field <em>{{fieldName}}</em> in topic <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_DELETE_TOPIC": "<em>{{userName}}</em> has deleted topic <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_ADD_USER_TOPIC": "<em>{{userName}}</em> has invited <em>{{userName2}}</em> to participate in topic <em>{{topicTitle}}</em>",
     "NOTIFICATION_USER_INVITE_TOPIC_USER": "@:NOTIFICATIONS.NOTIFICATION_USER_ADD_USER_TOPIC",
-    "NOTIFICATION_USER_ACCEPT_INVITE_TOPIC": "User <em>{{userName}}</em> has accepted an invite to topic <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER": "User <em>{{userName}}</em> has changed the access level of user <em>{{userName2}}</em> to topic <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE": "User <em>{{userName}}</em> has revoked access from user <em>{{userName2}}</em> to topic <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_ACCEPT_INVITE_TOPIC": "<em>{{userName}}</em> has accepted an invite to topic <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER": "<em>{{userName}}</em> has changed the access level of user <em>{{userName2}}</em> to topic <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE": "<em>{{userName}}</em> has revoked access from user <em>{{userName2}}</em> to topic <em>{{topicTitle}}</em>",
     "NOTIFICATION_USER_UPDATE_TOPICINVITEUSER": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER",
     "NOTIFICATION_USER_UPDATE_TOPICINVITEUSER_NONE": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE",
     "NOTIFICATION_USER_UPDATE_TOPICJOIN": "Topic <em>{{topicTitle}}</em>: user <em>{{userName}}</em> has updated some share link attributes:",
     "NOTIFICATION_USER_UPDATE_GROUPJOIN": "Group <em>{{groupName}}</em>: user <em>{{userName}}</em> has updated some share link attributes:",
     "NOTIFICATION_USER_DELETE_USER_TOPIC": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE",
-    "NOTIFICATION_USER_JOIN_TOPIC": "User <em>{{userName}}</em> has joined topic <em>{{topicTitle}}</em> with access level: {{accessLevel}}",
-    "NOTIFICATION_USER_JOIN_GROUP": "User <em>{{userName}}</em> has joined group <em>{{groupName}}</em> with access level: {{accessLevel}}",
-    "NOTIFICATION_USER_LEAVE_TOPIC": "User <em>{{userName}}</em> has left topic <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_TOPICPIN_TOPIC": "User <em>{{userName}}</em> has removed a pin from topic <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_TOPIC_TOPICPIN": "User <em>{{userName}}</em> has pinned topic <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_VOTE_TOPIC": "User <em>{{userName}}</em> has opened voting for topic <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_VOTE_TOPIC": "User <em>{{userName}}</em> has updated the voting deadline of topic <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_JOIN_TOPIC": "<em>{{userName}}</em> has joined topic <em>{{topicTitle}}</em> with access level: {{accessLevel}}",
+    "NOTIFICATION_USER_JOIN_GROUP": "<em>{{userName}}</em> has joined group <em>{{groupName}}</em> with access level: {{accessLevel}}",
+    "NOTIFICATION_USER_LEAVE_TOPIC": "<em>{{userName}}</em> has left topic <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_DELETE_TOPICPIN_TOPIC": "<em>{{userName}}</em> has removed a pin from topic <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_ADD_TOPIC_TOPICPIN": "<em>{{userName}}</em> has pinned topic <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_CREATE_VOTE_TOPIC": "<em>{{userName}}</em> has opened voting for topic <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_UPDATE_VOTE_TOPIC": "<em>{{userName}}</em> has updated the voting deadline of topic <em>{{topicTitle}}</em>",
     "NOTIFICATION_USER_CREATE_VOTELIST_TOPIC": "User has voted on topic <em>{{topicTitle}}</em>.",
     "NOTIFICATION_USER_CREATE_VOTEDELEGATION_VOTE": "User <em>{{userName}}</em> has delegated his/her vote on topic <em>{{topicTitle}}</em>",
     "NOTIFICATION_USER_DELETE_VOTEDELEGATION_VOTE": "User <em>{{userName}}</em> has revoked delegation of his/her vote on topic <em>{{topicTitle}}</em>",
@@ -178,7 +178,7 @@
     "FILTER_SELF": "My activities"
   },
   "VOTE_REMINDER": {
-    "SUBJECT": "Reminder to vote on a topic"
+    "SUBJECT": "Don't forget to vote"
   },
   "TXT_TOPIC_CATEGORY_ALL": "every category",
   "TXT_TOPIC_CATEGORY_CITIZENOS": "Citizen OS",
