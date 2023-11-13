@@ -161,7 +161,7 @@
     "NOTIFICATION_USER_UPDATE_GROUPMEMBERUSER": "User <em>{{userName}}</em> has changed the access level of user <em>{{userName2}}</em> to group <em>{{groupName}}</em>",
     "NOTIFICATION_USER_UPDATE_GROUPMEMBERUSER_NONE": "User <em>{{userName}}</em> has revoked access from user <em>{{userName2}}</em> to group <em>{{groupName}}</em>",
     "USER_DELETE_USER_GROUP": "User <em>{{userName}}</em> has removed user <em>{{userName2}}</em> from group <em>{{groupName}}</em>",
-    "NOTIFICATION_USER_ADD_USERCONNECTION_USER": "User <em>{{userName}}</em> has added a new log-in method: <em>{{connectionName}}</em>",
+    "NOTIFICATION_USER_ADD_USERCONNECTION_USER": "User <em>{{userName}}</em> has added a new login method: <em>{{connectionName}}</em>",
     "NOTIFICATION_USER_CREATE_USER": "User <em>{{userName}}</em> has just been created",
     "NOTIFICATION_SYSTEM_CREATE_USER": "User has been created in the system by invite from another user.",
     "NOTIFICATION_USER_CREATE_USERCONSENT": "",
