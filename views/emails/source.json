@@ -12,7 +12,7 @@
     "SUBJECT": "{{fromUser.name}} is inviting you to join the group “{{group.name}}”"
   },
   "INVITE_TOPIC": {
-    "SUBJECT": "{{fromUser.name}} is inviting you to a topic",
+    "SUBJECT": "{{fromUser.name}} is inviting you to join the topic “{{topicTitle}}”",
     "SUBJECT_rahvaalgatus_ee": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust",
     "SUBJECT_rahvaalgatus_test": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust"
@@ -74,7 +74,7 @@
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
   "NOTIFICATIONS": {
-    "SUBJECT": "Notification from Citizen OS topic {{topicTitle}}",
+    "SUBJECT": "Notification from Citizen OS topic “{{topicTitle}}”",
     "NOTIFICATION_USER_CREATE_TOPIC": "User <em>{{userName}}</em> has created topic <em>{{topicTitle}}</em>",
     "NOTIFICATION_USER_UPDATE_TOPIC": "User <em>{{userName}}</em> has updated the field <em>{{fieldName}}</em> in topic <em>{{topicTitle}}</em>",
     "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "User <em>{{userName}}</em> has made <em>{{groupCount}}</em> updates to topic <em>{{topicTitle}}</em>",
