@@ -1618,6 +1618,71 @@ module.exports = function (app) {
         }
 
     });
+    app.get('/api/users/:userId/topics/count', loginCheck(['partner']), async function (req, res, next) {
+        try {
+            const userId = req.user.userId;
+            const partnerId = req.user.partnerId;
+            let where = ` t."deletedAt" IS NULL
+                    AND t.title IS NOT NULL
+                    AND COALESCE(tmup.level, tmgp.level, 'none')::"enum_TopicMemberUsers_level" > 'none' `;
+
+            // All partners should see only Topics created by their site, but our own app sees all.
+            if (partnerId) {
+                where += ` AND t."sourcePartnerId" = :partnerId `;
+            }
+            const query = `
+                SELECT
+                    COUNT(t.id),
+                    t.status
+                FROM "Topics" t
+                    LEFT JOIN (
+                        SELECT
+                            tmu."topicId",
+                            tmu."userId",
+                            tmu.level::text AS level
+                        FROM "TopicMemberUsers" tmu
+                        WHERE tmu."deletedAt" IS NULL
+                    ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId)
+                    LEFT JOIN (
+                        SELECT
+                            tmg."topicId",
+                            gm."userId",
+                            MAX(tmg.level)::text AS level
+                        FROM "TopicMemberGroups" tmg
+                            LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
+                        WHERE tmg."deletedAt" IS NULL
+                        AND gm."deletedAt" IS NULL
+                        GROUP BY "topicId", "userId"
+                    ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
+                WHERE ${where}
+                GROUP BY t.status
+            ;`;
+
+            const rows = await db
+                .query(
+                    query,
+                    {
+                        replacements: {
+                            userId: userId,
+                            partnerId: partnerId
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true,
+                        nest: true
+                    }
+                );
+            const finalResults = {}
+            Object.keys(Topic.STATUSES).forEach((status) => {
+                const item = rows.find(i => i.status === status);
+                finalResults[status] = item?.count || 0;
+            });
+
+            return res.ok(finalResults);
+        } catch (err) {
+            next(err);
+        }
+    });
+
     /**
      * Read a Topic
      */
@@ -1663,9 +1728,9 @@ module.exports = function (app) {
     app.get('/api/topics/:topicId/download', async (req, res, next) => {
         try {
             const topicId = req.params.topicId;
-       //     const FILE_CREATE_MODE = '0760';
+            //     const FILE_CREATE_MODE = '0760';
             const destinationDir = `/tmp/${topicId}`;
-         //  await fs.mkdir(destinationDir, FILE_CREATE_MODE);
+            //  await fs.mkdir(destinationDir, FILE_CREATE_MODE);
             const topic = await Topic.findOne({
                 where: {
                     id: topicId
@@ -1680,7 +1745,7 @@ module.exports = function (app) {
             var readStream = new stream.PassThrough();
             readStream.end(docxBuffer);
 
-            res.set('Content-disposition', `attachment; filename=${topicId}.docx` );
+            res.set('Content-disposition', `attachment; filename=${topicId}.docx`);
             res.set('Content-Type', 'text/plain');
 
             readStream.pipe(res);
@@ -2331,7 +2396,6 @@ module.exports = function (app) {
             return next(e);
         }
     });
-
 
     /**
      * Topic list

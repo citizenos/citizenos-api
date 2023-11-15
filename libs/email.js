@@ -491,7 +491,7 @@ module.exports = function (app) {
             }
         );
         const [fromUser, topic, toUsers] = await Promise.all([fromUserPromise, topicPromise, toUsersPromise]);
-
+        const statusKey = `TXT_TOPIC_STATUS_${topic.status.toUpperCase()}`;
         let templateName = 'inviteTopic';
         let linkToApplication = urlLib.getFe();
         let message = invites[0].inviteMessage;
@@ -517,7 +517,7 @@ module.exports = function (app) {
 
             // In case Topic has no title, just show the full url.
             topic.title = topic.title ? topic.title : linkViewInvite;
-            topic.status = template.translations[`TXT_TOPIC_STATUS_${topic.status.toUpperCase()}`];
+            topic.status = template.translations[statusKey];
             let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
             linkedData.translations = template.translations;
             const images = EMAIL_OPTIONS_DEFAULT.images;
