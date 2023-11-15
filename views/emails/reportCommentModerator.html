@@ -24,13 +24,12 @@ r<table id="bodyHeader" width="100%">
         <tr>
             <td style="font-size:14px; color:#252525; padding-bottom: 8px;">
                 {{#isUserNotified}}The argument's author has been
-                notified{{/isUserNotified}}{{^isUserNotified}}The argument's author has not been
-                notified{{/isUserNotified}}
+                notified{{/isUserNotified}}{{^isUserNotified}}The argument's author has deleted their account{{/isUserNotified}}
             </td>
         </tr>
 
         <tr>
-            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">Review the reasons below.</td>
+            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">Review the reasons for reporting below.</td>
         </tr>
 
         <tr>
@@ -85,7 +84,7 @@ r<table id="bodyHeader" width="100%">
 
         <tr>
             <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size:14px;">
-                You can also leave it as is, but other moderators may still decide to have it hidden by default.
+                You can also leave it as is, but other moderators may decide to have it hidden by default (users will get a warning prior to seeing the argument).
             </td>
         </tr>
     </tbody>

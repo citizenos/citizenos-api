@@ -1,10 +1,9 @@
-<!-- E-mail sent to moderators when a Topic is reported -->
 <table id="bodyHeader" width="100%">
     <tbody>
         <tr>
             <td valign="middle" style="padding:0;height: 88px;">
                 <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding:0;">A topic has
-                    been reported</p>
+                    been submitted for review</p>
                 <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
             </td>
         </tr>
@@ -17,32 +16,54 @@
                 Hi {{userModerator.name}}!
             </td>
         </tr>
-
         <tr>
-            <td style="font-size:14px; color:#252525; padding-bottom: 8px;">A topic has been reported as inappropriate, and requires review by a moderator.</td>
+            <td style="font-size:14px; color:#252525; padding-bottom: 8px;">Citizen OS topic "<a
+                    href="{{linkViewTopic}}">{{topic.title}}</a>", that was reported as inappropriate, has been
+                revised by an admin / editor of that topic.</td>
         </tr>
         <tr>
-            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">Please see the reasons below.</td>
+            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">Explanation</td>
         </tr>
         <tr>
             <td valign="middle">
                 <table class="info_table">
                     <tbody>
                         <tr>
-                            <td style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;">
-                                {{report.type}}
+                            <td style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;padding-bottom:0;">
+                                {{reviewRequestText}}
+                            </td>
+                            <td>
+                                <p style="font-size: 13px; color:#727C84; line-height: 16px;padding-bottom:0;">Report category</p>
+                                <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height: 24px;">
+                                    {{report.moderatedReasonType}}
+                                </p>
+                            </td>
+                            <td>
+                                <p style="font-size: 13px; color:#727C84; line-height: 16px;padding-bottom:0;">Reasoning
+                                </p>
+                                <p
+                                    style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;padding-bottom:0;">
+                                    {{report.moderatedReasonText}}
+                                </p>
                             </td>
                         </tr>
 
                         {{#report.text}}
                         <tr>
-                            <td style="font-size:14px;line-height:20px; color:#2C3B47;">
+                            <td>
                                 {{report.text}}
                             </td>
                         </tr>
                         {{/report.text}}
                     </tbody>
                 </table>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <b>Please review the topic "<a href="{{linkViewTopic}}">{{topic.title}}</a>" and decide if it is now in
+                    compliance
+                    with guidelines and access restriction should be removed or not.</b>
             </td>
         </tr>
         <tr>
@@ -62,7 +83,7 @@
         </tr>
 
         <tr>
-            <td>Thank you! Together we can maintain a high quality of content in Citizen OS user community.</td>
+            <td style="padding-top:16px;font-size: 14px;">Thank you! Together we can maintain a high quality of content in Citizen OS user community.</td>
         </tr>
     </tbody>
 </table>
