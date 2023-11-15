@@ -2499,9 +2499,10 @@ module.exports = function (app) {
                 where += ' AND t."sourcePartnerId" IN (:partnerId)';
             }
 
-            const title = req.query.title;
+            let title = req.query.title || req.query.search;
             if (title) {
-                where += ` AND t.title LIKE '%:title%' `;
+                title = `%${title}%`;
+                where += ` AND t.title ILIKE :title `;
             }
 
             const query = `
@@ -2635,6 +2636,7 @@ module.exports = function (app) {
                             categories: categories,
                             statuses: statuses,
                             limit: limit,
+                            title: title,
                             offset: offset
                         },
                         type: db.QueryTypes.SELECT,
