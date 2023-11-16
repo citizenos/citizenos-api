@@ -2071,6 +2071,8 @@ module.exports = function (app) {
         const creatorId = req.query.creatorId;
         let statuses = req.query.statuses;
         const favourite = req.query.favourite;
+        const country = req.query.country;
+        const language = req.query.language;
         const hasVoted = req.query.hasVoted; // Filter out Topics where User has participated in the voting process.
         const showModerated = req.query.showModerated || false;
         if (statuses && !Array.isArray(statuses)) {
@@ -2132,6 +2134,14 @@ module.exports = function (app) {
                     AND t.title IS NOT NULL
                     AND COALESCE(tmup.level, tmgp.level, 'none')::"enum_TopicMemberUsers_level" > 'none' `;
 
+        let categories = req.query.categories;
+        if (categories && !Array.isArray(categories)) {
+            categories = [categories];
+        }
+
+        if (categories && categories.length) {
+            where += `AND t."categories" @> ARRAY[:categories]::VARCHAR(255)[] `;
+        }
         // All partners should see only Topics created by their site, but our own app sees all.
         if (partnerId) {
             where += ` AND t."sourcePartnerId" = :partnerId `;
@@ -2147,6 +2157,14 @@ module.exports = function (app) {
 
         if (favourite) {
             where += ` AND tf."topicId" = t.id AND tf."userId" = :userId`;
+        }
+
+        if (country) {
+            where += ` AND t.country=:country `;
+        }
+
+        if (language) {
+            where += ` AND t.language=:language `;
         }
 
         if (['true', '1'].includes(hasVoted)) {
@@ -2169,6 +2187,12 @@ module.exports = function (app) {
             } else {
                 return res.badRequest('No rights!');
             }
+        }
+
+        let title = req.query.title || req.query.search;
+        if (title) {
+            title = `%${title}%`;
+            where += ` AND t.title ILIKE :title `;
         }
 
         // TODO: NOT THE MOST EFFICIENT QUERY IN THE WORLD, tune it when time.
@@ -2331,11 +2355,15 @@ module.exports = function (app) {
                     query,
                     {
                         replacements: {
+                            categories: categories,
                             userId: userId,
                             partnerId: partnerId,
                             visibility: visibility,
                             statuses: statuses,
-                            creatorId: creatorId
+                            creatorId: creatorId,
+                            title: title,
+                            language: language,
+                            country: country
                         },
                         type: db.QueryTypes.SELECT,
                         raw: true,
@@ -2409,6 +2437,8 @@ module.exports = function (app) {
             let returncolumns = '';
             let voteResults = false;
             let showModerated = req.query.showModerated || false;
+            let country = req.query.country;
+            let language = req.query.language;
 
             const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
             let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
@@ -2489,6 +2519,14 @@ module.exports = function (app) {
 
             if (statuses && statuses.length) {
                 where += ' AND t.status IN (:statuses)';
+            }
+
+            if (country) {
+                where += ` AND t.country=:country `;
+            }
+
+            if (language) {
+                where += ` AND t.language=:language `;
             }
 
             let sourcePartnerId = req.query.sourcePartnerId;
@@ -2637,7 +2675,9 @@ module.exports = function (app) {
                             statuses: statuses,
                             limit: limit,
                             title: title,
-                            offset: offset
+                            offset: offset,
+                            country: country,
+                            language: language
                         },
                         type: db.QueryTypes.SELECT,
                         raw: true,
@@ -2844,7 +2884,7 @@ module.exports = function (app) {
     /**
      * Get all member Users of the Topic
      */
-    app.get('/api/users/:userId/topics/:topicId/members/users', loginCheck(['partner']), isModerator(), hasPermission(TopicMemberUser.LEVELS.read), async function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId/members/users', loginCheck(['partner']), isModerator(), hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
@@ -2997,7 +3037,116 @@ module.exports = function (app) {
     /**
      * Get all member Groups of the Topic
      */
-    app.get('/api/users/:userId/topics/:topicId/members/groups', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), async function (req, res, next) {
+    app.get('/api/topics/:topicId/members/groups', async function (req, res, next) {
+        const limitDefault = 10;
+        const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
+        let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+        const search = req.query.search;
+        const order = req.query.order;
+        let sortOrder = req.query.sortOrder || 'ASC';
+
+        if (sortOrder && ['asc', 'desc'].indexOf(sortOrder.toLowerCase()) === -1) {
+            sortOrder = 'ASC';
+        }
+
+        let sortSql = ` ORDER BY `;
+
+        if (order) {
+            switch (order) {
+                case 'name':
+                    sortSql += ` mg.name ${sortOrder} `;
+                    break;
+                case 'level':
+                    sortSql += ` mg."level"::"enum_TopicMemberGroups_level" ${sortOrder} `;
+                    break;
+                case 'members.users.count':
+                    sortSql += ` mg."members.users.count" ${sortOrder} `;
+                    break;
+                default:
+                    sortSql = ` `
+            }
+        } else {
+            sortSql = ` `;
+        }
+
+        let where = '';
+        if (search) {
+            where = `WHERE mg.name ILIKE :search`
+        }
+        let userLevelField = '';
+        let userLevelJoin ='';
+        if (req.user?.id) {
+            userLevelField = ` gmu.level as "permission.level", `,
+            userLevelJoin = ` LEFT JOIN "GroupMemberUsers" gmu ON (gmu."groupId" = g.id AND gmu."userId" = :userId AND gmu."deletedAt" IS NULL) `;
+        }
+        try {
+            const groups = await db
+                .query(
+                    `
+                    SELECT mg.*,count(*) OVER()::integer AS "countTotal" FROM (
+                        SELECT
+                            g.id,
+                            g.name,
+                            tmg.level,
+                            ${userLevelField}
+                            g.visibility,
+                            gmuc.count as "members.users.count"
+                        FROM "TopicMemberGroups" tmg
+                            JOIN "Groups" g ON (tmg."groupId" = g.id)
+                            JOIN (
+                                SELECT
+                                    "groupId",
+                                    COUNT(*) as count
+                                FROM "GroupMemberUsers"
+                                WHERE "deletedAt" IS NULL
+                                GROUP BY 1
+                            ) as gmuc ON (gmuc."groupId" = g.id)
+                            ${userLevelJoin}
+                        WHERE tmg."topicId" = :topicId AND g."visibility" = 'public'
+                        AND tmg."deletedAt" IS NULL
+                        AND g."deletedAt" IS NULL
+                        ORDER BY level DESC
+                    ) mg
+                    ${where}
+                    ${sortSql}
+                    LIMIT :limit
+                    OFFSET :offset;`,
+                    {
+                        replacements: {
+                            topicId: req.params.topicId,
+                            userId: req.user?.userId,
+                            search: `%${search}%`,
+                            limit,
+                            offset
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true,
+                        nest: true
+                    }
+                );
+
+            let countTotal = 0;
+            if (groups && groups.length) {
+                countTotal = groups[0].countTotal;
+            }
+            groups.forEach(function (group) {
+                delete group.countTotal;
+            });
+
+            return res.ok({
+                countTotal,
+                count: groups.length,
+                rows: groups
+            });
+        } catch (err) {
+            return next(err);
+        }
+    });
+
+    /**
+     * Get all member Groups of the Topic
+     */
+    app.get('/api/users/:userId/topics/:topicId/members/groups', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;

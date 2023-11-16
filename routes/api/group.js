@@ -2177,12 +2177,17 @@ module.exports = function (app) {
         const limitMax = 100;
         const limitDefault = 26;
         const userId = req.user?.userId;
+        const country = req.query.country;
+        const language = req.query.language;
         const orderBy = req.query.orderBy || 'updatedAt';
         const order = (req.query.order && req.query.order.toLowerCase() === 'asc') ? 'ASC' : 'DESC';
         let orderBySql = ` ORDER BY`;
         switch (orderBy) {
             case 'name':
                 orderBySql += ` g.name `
+                break;
+            case 'activity':
+                orderBySql += `ga.updatedAt`
                 break;
             default:
                 orderBySql += ` g."updatedAt" `
@@ -2198,7 +2203,7 @@ module.exports = function (app) {
         AND g."deletedAt" IS NULL `;
         const name = req.query.name;
         if (name) {
-            where += ` AND g.name ILIKE %:name% `;
+            where += ` AND g.name ILIKE :search `;
         }
 
         const sourcePartnerId = req.query.sourcePartnerId;
@@ -2210,6 +2215,13 @@ module.exports = function (app) {
         if (userId) {
             memberLevel = ` gmu.level AS "userLevel", `;
             memberJoin = ` LEFT JOIN "GroupMemberUsers" gmu ON gmu."groupId" = g.id AND gmu."userId" = :userId `
+        }
+        if (country) {
+            where += ` AND g.country=:country `;
+        }
+
+        if (language) {
+            where += ` AND g.language=:language `;
         }
         const groups = await db
             .query(`
@@ -2223,6 +2235,7 @@ module.exports = function (app) {
                     g.country,
                     g.language,
                     g.contact,
+                    ga."updatedAt" AS "latestActivity",
                     g.visibility,
                     gj.token as "join.token",
                     gj.level as "join.level",
@@ -2230,10 +2243,47 @@ module.exports = function (app) {
                     c.id as "creator.id",
                     c.name as "creator.name",
                     c.company as "creator.company",
+                    mc.count as "members.users.count",
+                    COALESCE(gtc.count, 0) as "members.topics.count",
+                    gt."topicId" as "members.topics.latest.id",
+                    gt.title as "members.topics.latest.title",
                     count(*) OVER()::integer AS "countTotal"
                 FROM "Groups" g
                 JOIN "Users" c ON c.id = g."creatorId"
+                LEFT JOIN (
+                    SELECT
+                        MAX("updatedAt") as "updatedAt",
+                        "groupIds"
+                    FROM
+                    "Activities" WHERE array_length("groupIds", 1) > 0
+                    GROUP BY "groupIds" ORDER BY "groupIds"
+                ) ga ON g.id::text = ANY(ga."groupIds")
                 LEFT JOIN "GroupJoins" gj ON gj."groupId" = g.id
+                JOIN (
+                    SELECT "groupId", count("userId") AS "count"
+                    FROM "GroupMemberUsers"
+                    WHERE "deletedAt" IS NULL
+                    GROUP BY "groupId"
+                ) AS mc ON (mc."groupId" = g.id)
+                LEFT JOIN (
+                    SELECT
+                        tmg."groupId",
+                        count(tmg."topicId") AS "count"
+                    FROM "TopicMemberGroups" tmg
+                    WHERE tmg."deletedAt" IS NULL
+                    GROUP BY tmg."groupId"
+                ) AS gtc ON (gtc."groupId" = g.id)
+                LEFT JOIN (
+                    SELECT
+                        tmg."groupId",
+                        tmg."topicId",
+                        t.title
+                    FROM "TopicMemberGroups" tmg
+                        LEFT JOIN "Topics" t ON (t.id = tmg."topicId")
+                    WHERE tmg."deletedAt" IS NULL
+                    AND t.visibility = 'public'
+                    ORDER BY t."updatedAt" ASC
+                ) AS gt ON (gt."groupId" = g.id)
                 ${memberJoin}
                 WHERE ${where}
                 ${orderBySql}
@@ -2247,6 +2297,9 @@ module.exports = function (app) {
                         sourcePartnerId,
                         orderBy,
                         order,
+                        country,
+                        language,
+                        search: `%${name}%`,
                         offset
                     },
                     type: db.QueryTypes.SELECT,
