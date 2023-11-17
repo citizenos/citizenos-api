@@ -110,6 +110,11 @@ module.exports = function (sequelize, DataTypes) {
                 allowNull: false,
                 defaultValue: STATUSES.inProgress
             },
+            imageUrl: {
+                type: DataTypes.STRING,
+                allowNull: true,
+                comment: 'Topic header image url.'
+            },
             visibility: {
                 type: DataTypes.ENUM,
                 values: _.values(VISIBILITY),
@@ -313,6 +318,7 @@ module.exports = function (sequelize, DataTypes) {
             description: this.dataValues.description,
             status: this.dataValues.status,
             visibility: this.dataValues.visibility,
+            imageUrl: this.dataValues.imageUrl,
             categories: this.dataValues.categories,
             country: this.dataValues.country,
             language: this.dataValues.language,

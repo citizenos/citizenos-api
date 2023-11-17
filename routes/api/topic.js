@@ -33,6 +33,7 @@ module.exports = function (app) {
     const crypto = require('crypto');
     const path = require('path');
     const stream = require('stream');
+    const fs = require('fs');
 
     const loginCheck = app.get('middleware.loginCheck');
     const asyncMiddleware = app.get('middleware.asyncMiddleware');
@@ -691,6 +692,7 @@ module.exports = function (app) {
                      t.categories,
                      t.contact,
                      t.country,
+                     t."imageUrl",
                      t.language,
                      t."endsAt",
                      t."padUrl",
@@ -923,6 +925,7 @@ module.exports = function (app) {
                     t.intro,
                     t.status,
                     t.visibility,
+                    t."imageUrl",
                     t.hashtag,
                     t.country,
                     t.contact,
@@ -1809,8 +1812,21 @@ module.exports = function (app) {
                 }
             }
 
+            if (Object.keys(req.body).indexOf('imageUrl') > -1 && !req.body.imageUrl && topic.imageUrl) {
+                const currentImageURL = new URL(topic.imageUrl);
+                //FIXME: No delete from DB?
+                if (config.storage?.type.toLowerCase() === 's3' && currentImageURL.href.indexOf(`https://${config.storage.bucket}.s3.${config.storage.region}.amazonaws.com/users/${req.user.id}`) === 0) {
+                    await cosUpload.delete(currentImageURL.pathname)
+                } else if (config.storage?.type.toLowerCase() === 'local' && currentImageURL.hostname === (new URL(config.url.api)).hostname) {
+                    const appDir = __dirname.replace('/routes/api', '/public/uploads/users');
+                    const baseFolder = config.storage.baseFolder || appDir;
+
+                    fs.unlinkSync(`${baseFolder}/${path.parse(currentImageURL.pathname).base}`);
+                }
+            }
+
             // NOTE: Description is handled separately below
-            const fieldsAllowedToUpdate = ['title', 'categories', 'endsAt', 'hashtag', 'contact', 'country', 'language', 'intro', 'sourcePartnerObjectId'];
+            const fieldsAllowedToUpdate = ['title', 'categories', 'endsAt', 'hashtag', 'imageUrl', 'contact', 'country', 'language', 'intro', 'sourcePartnerObjectId'];
             if (req.locals.topic.permissions.level === TopicMemberUser.LEVELS.admin) {
                 fieldsAllowedToUpdate.push('visibility');
                 fieldsAllowedToUpdate.push('status');
@@ -1884,6 +1900,46 @@ module.exports = function (app) {
             return next(err);
         }
     };
+
+    app.post('/api/users/:userId/topics/:topicId/upload', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
+        const topicId = req.params.topicId;
+        let topic = await Topic.findOne({
+            where: {
+                id: topicId
+            }
+        });
+
+        if (topic) {
+            let imageUrl;
+
+            try {
+                imageUrl = await cosUpload.upload(req, 'topics', topicId);
+            } catch (err) {
+                if (err.type && (err.type === 'fileSize' || err.type === 'fileType')) {
+                    return res.forbidden(err.message);
+                } else {
+                    throw err;
+                }
+            }
+
+            await Topic.update(
+                {
+                    imageUrl: imageUrl.link
+                },
+                {
+                    where: {
+                        id: topicId
+                    },
+                    limit: 1,
+                    returning: true
+                }
+            );
+
+            return res.created(imageUrl);
+        } else {
+            res.forbidden();
+        }
+    }));
 
     /**
      * Update Topic info

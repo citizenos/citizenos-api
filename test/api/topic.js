@@ -4775,6 +4775,7 @@ suite('Users', function () {
                         visibility: topic.visibility,
                         categories: topic.categories,
                         contact: topic.contact,
+                        imageUrl: topic.imageUrl,
                         country: topic.country,
                         language: topic.language,
                         intro: topic.intro,
