@@ -9,10 +9,10 @@
     "SUBJECT": "Activate your CitizenOS account"
   },
   "INVITE_GROUP": {
-    "SUBJECT": "{{fromUser.name}} is inviting you to join our group “{{group.name}}” on CitizenOS"
+    "SUBJECT": "User {{fromUser.name}} is inviting you to join the group “{{group.name}}”"
   },
   "INVITE_TOPIC": {
-    "SUBJECT": "{{fromUser.name}} le invita a tomar una decisión colaborativa",
+    "SUBJECT": "User {{fromUser.name}} is inviting you to join the topic “{{topicTitle}}”",
     "SUBJECT_rahvaalgatus_ee": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust",
     "SUBJECT_rahvaalgatus_test": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust"
@@ -21,28 +21,28 @@
     "SUBJECT": "Restablezca su contraseña de la cuenta de Citizen OS"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Gracias, hemos recibido su denuncia ({{report.id}})"
+    "SUBJECT": "Thank you for reporting a topic"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Denuncia {{report.id}}: es posible que su tema de Citizen OS infrinja las normas"
+    "SUBJECT": "Your Citizen OS topic has been reported to moderators"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "Se ha denunciado un tema de Citizen OS ({{report.id}}), actúe como moderador"
+    "SUBJECT": "Please moderate this reported Citizen OS topic"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Se ha revisado su denuncia {{report.id}} de Citizen OS"
+    "SUBJECT": "The Citizen OS topic you reported has been reviewed"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Denuncia {{report.id}}: un moderador ha revisado su tema de Citizen OS"
+    "SUBJECT": "Your Citizen OS topic has been reviewed by a moderator"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "Se ha revisado un tema de Citizen OS ({{report.id}}) denunciado, compruébelo"
+    "SUBJECT": "A reported Citizen OS topic has been revised, please review"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Denuncia {{report.id}}: se ha restablecido el acceso a su tema de Citizen OS."
+    "SUBJECT": "Access to your reported Citizen OS topic has been restored"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
-    "SUBJECT": "Se ha solucionado su denuncia ({{report.id}}) en Citizen OS"
+    "SUBJECT": "The issue you reported has been resolved"
   },
   "REPORT": {
     "REPORT_TYPE": {
@@ -65,69 +65,69 @@
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "La comunidad ha denunciado su argumento como inapropiado"
+    "SUBJECT": "Your argument has been reported as inappropriate"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "La comunidad ha denunciado un argumento como inapropiado"
+    "SUBJECT": "An argument has been reported as inappropriate"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
   "NOTIFICATIONS": {
-    "SUBJECT": "Notificación del tema de Citizen OS {{topicTitle}}",
-    "NOTIFICATION_USER_CREATE_TOPIC": "El usuario <em>{{userName}}</em> creó el tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPIC": "El usuario <em>{{userName}}</em> actualizó el campo <em>{{fieldName}}</em> en el tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "El usuario <em>{{userName}}</em> realizó <em>{{groupCount}}</em> actualizaciones en el tema <em>{{topicTitle}}</em>",
+    "SUBJECT": "An update on topic “{{topicTitle}}”",
+    "NOTIFICATION_USER_CREATE_TOPIC": "User <em>{{userName}}</em> has created a new topic.",
+    "NOTIFICATION_USER_UPDATE_TOPIC": "User <em>{{userName}}</em> has updated the field <em>{{fieldName}}</em> in this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "User <em>{{userName}}</em> has made <em>{{groupCount}}</em> updates to this topic.",
     "NOTIFICATION_PREVIOUS_VERSION": "Versión anterior: {{previousValue}}",
     "NOTIFICATION_NEW_VERSION": "Nueva versión: {{newValue}}",
-    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "El sistema actualizó el campo <em>{{fieldName}}</em> en el tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_TOPIC": "El usuario <em>{{userName}}</em> eliminó el tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_USER_TOPIC": "El usuario <em>{{userName}}</em> invitó al usuario <em>{{userName2}}</em> a participar en el tema <em>{{topicTitle}}</em>",
+    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "The Citizen OS system has updated a field <em>{{fieldName}}</em> in this topic.",
+    "NOTIFICATION_USER_DELETE_TOPIC": "User <em>{{userName}}</em> has deleted this topic.",
+    "NOTIFICATION_USER_ADD_USER_TOPIC": "User <em>{{userName}}</em> has invited <em>{{userName2}}</em> to participate in this topic.",
     "NOTIFICATION_USER_INVITE_TOPIC_USER": "@:NOTIFICATIONS.NOTIFICATION_USER_ADD_USER_TOPIC",
-    "NOTIFICATION_USER_ACCEPT_INVITE_TOPIC": "El usuario <em>{{userName}}</em> aceptó una invitación al tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER": "El usuario <em>{{userName}}</em> cambió el nivel de acceso del usuario <em>{{userName2}}</em> al tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE": "El usuario <em>{{userName}}</em> revocó el acceso del usuario <em>{{userName2}}</em> al tema <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_ACCEPT_INVITE_TOPIC": "User <em>{{userName}}</em> has accepted an invite to this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER": "User <em>{{userName}}</em> has changed the access level of user <em>{{userName2}}</em> for this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE": "User <em>{{userName}}</em> has revoked access from user <em>{{userName2}}</em> to this topic.",
     "NOTIFICATION_USER_UPDATE_TOPICINVITEUSER": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER",
     "NOTIFICATION_USER_UPDATE_TOPICINVITEUSER_NONE": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE",
-    "NOTIFICATION_USER_UPDATE_TOPICJOIN": "Tema <em>{{topicTitle}}</em>: el usuario <em>{{userName}}</em> actualizó algunos atributos del enlace para compartir:",
-    "NOTIFICATION_USER_UPDATE_GROUPJOIN": "Grupo <em>{{groupName}}</em>: el usuario <em>{{userName}}</em> actualizó algunos atributos del enlace para compartir:",
+    "NOTIFICATION_USER_UPDATE_TOPICJOIN": "User <em>{{userName}}</em> has edited the share link settings for this topic.",
+    "NOTIFICATION_USER_UPDATE_GROUPJOIN": "User <em>{{userName}}</em> has edited the share link settings for this group.",
     "NOTIFICATION_USER_DELETE_USER_TOPIC": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE",
-    "NOTIFICATION_USER_JOIN_TOPIC": "El usuario <em>{{userName}}</em> se unió al tema <em>{{topicTitle}}</em> con el nivel de acceso: {{accessLevel}}",
-    "NOTIFICATION_USER_JOIN_GROUP": "El usuario <em>{{userName}}</em> se unió al grupo <em>{{groupName}}</em> con el siguiente nivel de acceso: {{accessLevel}}",
-    "NOTIFICATION_USER_LEAVE_TOPIC": "El usuario <em>{{userName}}</em> abandonó el tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_TOPICPIN_TOPIC": "El usuario <em>{{userName}}</em> desancló el tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_TOPIC_TOPICPIN": "El usuario <em>{{userName}}</em> ancló el tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_VOTE_TOPIC": "El usuario <em>{{userName}}</em> abrió la votación del tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_VOTE_TOPIC": "El usuario <em>{{userName}}</em> actualizó la fecha límite para la votación del tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_VOTELIST_TOPIC": "El usuario votó en el tema: <em>{{topicTitle}}</em>.",
-    "NOTIFICATION_USER_CREATE_VOTEDELEGATION_VOTE": "El usuario <em>{{userName}}</em> delegó su voto en el tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_VOTEDELEGATION_VOTE": "El usuario <em>{{userName}}</em> revocó la delegación de su voto en el tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_VIEW_VOTEUSERCONTAINER": "El usuario <em>{{userName}}</em> descargó los resultados de la votación del tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_VIEW_VOTEFINALCONTAINER": "El usuario <em>{{userName}}</em> descargó los resultados de la votación del tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC": "El usuario <em>{{userName}}</em> agregó un nuevo argumento al tema: <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_COMMENT_TOPIC": "El usuario <em>{{userName}}</em> actualizó su argumento en el tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_MODERATOR_UPDATE_COMMENT_TOPIC": "El usuario <em>{{userName}}</em> (moderador) actualizó el campo del argumento <em>{{fieldName}}</em> en el tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_COMMENT_TOPIC": "El usuario <em>{{userName}}</em> eliminó su argumento del tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_MODERATOR_DELETE_COMMENT_TOPIC": "El usuario <em>{{userName}}</em> (moderador) eliminó un argumento del tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_REPORT_COMMENT": "El usuario <em>{{userName}}</em> denunció un argumento en el tema {{topicTitle}} ",
-    "NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_UP": "El usuario <em>{{userName}}</em> dejó una reacción <em>{{reaction}}</em> en un argumento del tema {{topicTitle}}",
-    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_UP": "El usuario <em>{{userName}}</em> actualizó su reacción sobre un argumento en el tema {{topicTitle}}",
+    "NOTIFICATION_USER_JOIN_TOPIC": "User <em>{{userName}}</em> has joined this topic with access level: {{accessLevel}}",
+    "NOTIFICATION_USER_JOIN_GROUP": "User <em>{{userName}}</em> has joined this group with access level: {{accessLevel}}",
+    "NOTIFICATION_USER_LEAVE_TOPIC": "User <em>{{userName}}</em> has left this topic.",
+    "NOTIFICATION_USER_DELETE_TOPICPIN_TOPIC": "User <em>{{userName}}</em> has removed a pin from this topic.",
+    "NOTIFICATION_USER_ADD_TOPIC_TOPICPIN": "User <em>{{userName}}</em> has pinned this topic.",
+    "NOTIFICATION_USER_CREATE_VOTE_TOPIC": "User <em>{{userName}}</em> has opened voting for this topic.",
+    "NOTIFICATION_USER_UPDATE_VOTE_TOPIC": "User <em>{{userName}}</em> has updated the voting deadline for this topic.",
+    "NOTIFICATION_USER_CREATE_VOTELIST_TOPIC": "Someone has voted on this topic.",
+    "NOTIFICATION_USER_CREATE_VOTEDELEGATION_VOTE": "User <em>{{userName}}</em> has delegated their vote in this topic.",
+    "NOTIFICATION_USER_DELETE_VOTEDELEGATION_VOTE": "User <em>{{userName}}</em> has revoked delegation of their vote in this topic.",
+    "NOTIFICATION_USER_VIEW_VOTEUSERCONTAINER": "User <em>{{userName}}</em> has downloaded the voting results for this topic.",
+    "NOTIFICATION_USER_VIEW_VOTEFINALCONTAINER": "User <em>{{userName}}</em> has downloaded the voting results for this topic.",
+    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC": "User <em>{{userName}}</em> has added a new argument in this topic.",
+    "NOTIFICATION_USER_UPDATE_COMMENT_TOPIC": "User <em>{{userName}}</em> has edited their argument in this topic.",
+    "NOTIFICATION_MODERATOR_UPDATE_COMMENT_TOPIC": "User <em>{{userName}}</em> (moderator) has updated the argument field <em>{{fieldName}}</em> in this topic.",
+    "NOTIFICATION_USER_DELETE_COMMENT_TOPIC": "User <em>{{userName}}</em> has deleted their argument in this topic.",
+    "NOTIFICATION_MODERATOR_DELETE_COMMENT_TOPIC": "User <em>{{userName}}</em> (moderator) has deleted an argument in this topic.",
+    "NOTIFICATION_USER_ADD_REPORT_COMMENT": "User <em>{{userName}}</em> has reported an argument in this topic.",
+    "NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_UP": "User <em>{{userName}}</em> has left a reaction <em>{{reaction}}</em> on an argument in this topic.",
+    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_UP": "User <em>{{userName}}</em> has updated their reaction to an argument in this topic.",
     "NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_DOWN": "@:NOTIFICATIONS.NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_UP",
     "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_DOWN": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_UP",
-    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_REMOVE": "El usuario <em>{{userName}}</em> actualizó su reacción a un argumento en el tema {{topicTitle}} ",
+    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_REMOVE": "User <em>{{userName}}</em> has removed their reaction to an argument in this topic.",
     "NOTIFICATION_COMMENTVOTE_FIELD_VALUE_UP": "arriba",
     "NOTIFICATION_COMMENTVOTE_FIELD_VALUE_DOWN": "abajo",
     "NOTIFICATION_COMMENTVOTE_FIELD_VALUE_REMOVE": "quitar",
-    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC_IN_REPLY_TO_COMMENT": "El usuario <em>{{userName}}</em> dejó una respuesta en un argumento del tema <em>{{topicTitle}}</em>: ",
-    "NOTIFICATION_USER_ADD_TOPIC_GROUP": "El usuario <em>{{userName}}</em> agregó el tema <em>{{topicTitle}}</em> al grupo <em>{{groupName}}</em>",
-    "NOTIFICATION_USER_DELETE_GROUP_TOPIC": "El usuario <em>{{userName}}</em> quitó el tema <em>{{topicTitle}}</em> del grupo <em>{{groupName}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP": "El usuario <em>{{userName}}</em> cambió el nivel de acceso del grupo <em>{{groupName}}</em> al tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP_NONE": "El usuario <em>{{userName}}</em> revocó el acceso del grupo <em>{{groupName}}</em> al tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_TOPICEVENT_TOPIC": "El usuario <em>{{userName}}</em> creó una actualización en el tema <em>{{topicTitle}}</em>:",
-    "NOTIFICATION_USER_DELETE_TOPICEVENT_TOPIC": "El usuario <em>{{userName}}</em> eliminó una actualización del tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_ATTACHMENT_TOPIC": "El usuario <em>{{userName}}</em> agregó el archivo adjunto <em>{{attachmentName}}</em> al tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_ATTACHMENT_TOPIC": "El usuario <em>{{userName}}</em> eliminó el archivo adjunto <em>{{attachmentName}}</em> del tema <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_ATTACHMENT_TOPIC": "El usuario <em>{{userName}}</em> actualizó un archivo adjunto en el tema <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC_IN_REPLY_TO_COMMENT": "User <em>{{userName}}</em> has left a reply to an argument in this topic.",
+    "NOTIFICATION_USER_ADD_TOPIC_GROUP": "User <em>{{userName}}</em> has added this topic to group <em>{{groupName}}</em>",
+    "NOTIFICATION_USER_DELETE_GROUP_TOPIC": "User <em>{{userName}}</em> has removed this topic from group <em>{{groupName}}</em>",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP": "User <em>{{userName}}</em> has changed the access level of group <em>{{groupName}}</em> to this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP_NONE": "User <em>{{userName}}</em> has revoked access from group <em>{{groupName}}</em> to this topic.",
+    "NOTIFICATION_USER_CREATE_TOPICEVENT_TOPIC": "User <em>{{userName}}</em> has posted an update for this topic.",
+    "NOTIFICATION_USER_DELETE_TOPICEVENT_TOPIC": "User <em>{{userName}}</em> has deleted an update from this topic.",
+    "NOTIFICATION_USER_ADD_ATTACHMENT_TOPIC": "User <em>{{userName}}</em> has added an attachment <em>{{attachmentName}}</em> to this topic.",
+    "NOTIFICATION_USER_DELETE_ATTACHMENT_TOPIC": "User <em>{{userName}}</em> has deleted an attachment <em>{{attachmentName}}</em> from this topic.",
+    "NOTIFICATION_USER_UPDATE_ATTACHMENT_TOPIC": "User <em>{{userName}}</em> has updated an attachment in this topic.",
     "NOTIFICATION_TOPIC_FIELD_DESCRIPTION": "descripción",
     "NOTIFICATION_TOPIC_FIELD_STATUS": "estado",
     "NOTIFICATION_TOPIC_FIELD_STATUS_INPROGRESS": "en curso",
@@ -161,7 +161,7 @@
     "NOTIFICATION_USER_UPDATE_GROUPMEMBERUSER": "El usuario <em>{{userName}}</em> cambió el nivel de acceso del usuario <em>{{userName2}}</em> en el grupo <em>{{groupName}}</em>",
     "NOTIFICATION_USER_UPDATE_GROUPMEMBERUSER_NONE": "El usuario <em>{{userName}}</em> revocó el acceso del usuario <em>{{userName2}}</em> al grupo <em>{{groupName}}</em>",
     "USER_DELETE_USER_GROUP": "El usuario <em>{{userName}}</em> quitó el usuario <em>{{userName2}}</em> del grupo <em>{{groupName}}</em>",
-    "NOTIFICATION_USER_ADD_USERCONNECTION_USER": "El usuario <em>{{userName}}</em> agregó un nuevo método de inicio de sesión: <em>{{connectionName}}</em>",
+    "NOTIFICATION_USER_ADD_USERCONNECTION_USER": "User <em>{{userName}}</em> has added a new login method: <em>{{connectionName}}</em>",
     "NOTIFICATION_USER_CREATE_USER": "Se creó el usuario <em>{{userName}}</em>",
     "NOTIFICATION_SYSTEM_CREATE_USER": "Se creó el usuario en el sistema mediante una invitación de otro usuario.",
     "NOTIFICATION_USER_CREATE_USERCONSENT": "",
@@ -178,7 +178,7 @@
     "FILTER_SELF": "Mis actividades"
   },
   "VOTE_REMINDER": {
-    "SUBJECT": "Reminder to vote on a topic"
+    "SUBJECT": "A reminder to vote"
   },
   "TXT_TOPIC_CATEGORY_ALL": "todas las categorías",
   "TXT_TOPIC_CATEGORY_CITIZENOS": "Citizen OS",
@@ -194,9 +194,9 @@
   "TXT_TOPIC_CATEGORY_TRANSPORT": "Transporte público y seguridad en carretera",
   "TXT_TOPIC_CATEGORY_TAXES": "Impuestos y presupuestos",
   "TXT_TOPIC_CATEGORY_AGRICULTURE": "Agricultura",
-  "TXT_TOPIC_CATEGORY_ENVIRONMENT": "Medioambiente, protección de los animales",
+  "TXT_TOPIC_CATEGORY_ENVIRONMENT": "Environment and animal protection",
   "TXT_TOPIC_CATEGORY_CULTURE": "Cultura, medios de comunicación y deportes",
-  "TXT_TOPIC_CATEGORY_HEALTH": "Asistencia sanitaria y servicios sociales",
+  "TXT_TOPIC_CATEGORY_HEALTH": "Health and social care",
   "TXT_TOPIC_CATEGORY_WORK": "Trabajo y empleo",
   "TXT_TOPIC_CATEGORY_EDUCATION": "Educación",
   "TXT_TOPIC_CATEGORY_POLITICS": "Política y administración pública",
