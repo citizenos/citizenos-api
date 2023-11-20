@@ -495,6 +495,12 @@ module.exports = function (app) {
      * Get all Groups User belongs to
      */
     app.get('/api/users/:userId/groups', loginCheck(['partner']), asyncMiddleware(async function (req, res) {
+        const limitMax = 100;
+        const limitDefault = 26;
+        const offset = req.query.offset || 0;
+        let limit = req.query.limit || limitDefault;
+        if (limit > limitMax) limit = limitDefault;
+
         let include = req.query.include;
         // Sequelize and associations are giving too eager results + not being the most effective. https://github.com/sequelize/sequelize/issues/2458
         // Falling back to raw SQL
@@ -620,6 +626,7 @@ module.exports = function (app) {
                     mc.count as "members.users.count",
                     COALESCE(gtc.count, 0) as "members.topics.count",
                     gt."topicId" as "members.topics.latest.id",
+                    count(*) OVER()::integer AS "countTotal",
                     ${returnFields}
                     gt.title as "members.topics.latest.title"
                 FROM "Groups" g
@@ -653,12 +660,15 @@ module.exports = function (app) {
                     LEFT JOIN "GroupJoins" gj ON (gj."groupId" = g.id)
                     ${joinText}
                     ${where}
-                ORDER BY g."updatedAt" DESC, g.id;
+                ORDER BY g."updatedAt" DESC, g.id
+                OFFSET :offset LIMIT :limit;
                 `,
                 {
                     replacements: {
                         userId: req.user.userId,
                         visibility: visibility,
+                        offset: offset,
+                        limit: limit,
                         search: '%' + search + '%'
                     },
                     type: db.QueryTypes.SELECT,
@@ -668,12 +678,15 @@ module.exports = function (app) {
             );
 
         const results = {
+            countTotal: 0,
             count: 0,
             rows: []
         };
         const memberGroupIds = [];
 
         rows.forEach(function (groupRow) {
+            results.countTotal = groupRow.countTotal;
+            delete groupRow.countTotal;
             const group = _.cloneDeep(groupRow);
             const member = _.clone(group.member);
 

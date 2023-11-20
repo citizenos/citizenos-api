@@ -2121,6 +2121,13 @@ module.exports = function (app) {
     app.get('/api/users/:userId/topics', loginCheck(['partner']), async function (req, res, next) {
         const userId = req.user.userId;
         const partnerId = req.user.partnerId;
+        const limitDefault = 26;
+        const limitMax = 500;
+        const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
+        let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+
+        if (limit > limitMax) limit = limitDefault;
+
 
         let include = req.query.include;
 
@@ -2298,6 +2305,7 @@ module.exports = function (app) {
                      ELSE 4
                      END AS "order",
                      COALESCE(tc.count, 0) AS "comments.count",
+                     count(*) OVER()::integer AS "countTotal",
                      com."createdAt" AS "comments.lastCreatedAt"
                     ${returncolumns}
                 FROM "Topics" t
@@ -2404,6 +2412,7 @@ module.exports = function (app) {
                     ${join}
                 WHERE ${where}
                 ORDER BY "favourite" DESC, "order" ASC, t."updatedAt" DESC
+                OFFSET :offset LIMIT :limit
             ;`;
 
         try {
@@ -2421,7 +2430,9 @@ module.exports = function (app) {
                             creatorId: creatorId,
                             title: title,
                             language: language,
-                            country: country
+                            country: country,
+                            offset: offset,
+                            limit: limit
                         },
                         type: db.QueryTypes.SELECT,
                         raw: true,
@@ -2434,11 +2445,14 @@ module.exports = function (app) {
             // Sequelize returns empty array for no results.
             const result = {
                 count: rowCount,
+                countTotal: rowCount,
                 rows: []
             };
 
             if (rowCount > 0) {
                 rows.forEach((topic) => {
+                    result.countTotal = topic.countTotal;
+                    delete topic.countTotal;
                     topic.url = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
 
                     if (include.indexOf('vote') > -1) {
@@ -3133,10 +3147,10 @@ module.exports = function (app) {
             where = `WHERE mg.name ILIKE :search`
         }
         let userLevelField = '';
-        let userLevelJoin ='';
+        let userLevelJoin = '';
         if (req.user?.id) {
             userLevelField = ` gmu.level as "permission.level", `,
-            userLevelJoin = ` LEFT JOIN "GroupMemberUsers" gmu ON (gmu."groupId" = g.id AND gmu."userId" = :userId AND gmu."deletedAt" IS NULL) `;
+                userLevelJoin = ` LEFT JOIN "GroupMemberUsers" gmu ON (gmu."groupId" = g.id AND gmu."userId" = :userId AND gmu."deletedAt" IS NULL) `;
         }
         try {
             const groups = await db
