@@ -9,10 +9,10 @@
     "SUBJECT": "Aktivoi Citizen OS -tilisi"
   },
   "INVITE_GROUP": {
-    "SUBJECT": "{{fromUser.name}} kutsuu sinut liittymään ryhmäämme ”{{group.name}}” Citizen OS:ssa"
+    "SUBJECT": "User {{fromUser.name}} is inviting you to join the group “{{group.name}}”"
   },
   "INVITE_TOPIC": {
-    "SUBJECT": "{{fromUser.name}} kutsuu sinut tekemään päätöksen yhteistyössä",
+    "SUBJECT": "User {{fromUser.name}} is inviting you to join the topic “{{topicTitle}}”",
     "SUBJECT_rahvaalgatus_ee": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust",
     "SUBJECT_rahvaalgatus_test": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust"
@@ -21,28 +21,28 @@
     "SUBJECT": "Nollaa Citizen OS -tilisi salasana"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Kiitos, olemme vastaanottaneet ilmoituksesi (nro {{report.id}})"
+    "SUBJECT": "Thank you for reporting a topic"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Ilmoitus nro {{report.id}}: Citizen OS -aiheesi saattaa sisältää ohjeiden vastaisen rikkomuksen"
+    "SUBJECT": "Your Citizen OS topic has been reported to moderators"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "Citizen OS -aiheesta on ilmoitettu (nro {{report.id}}). Ole hyvä ja moderoi"
+    "SUBJECT": "Please moderate this reported Citizen OS topic"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Citizen OS -ilmoituksesi nro {{report.id}} on arvioitu"
+    "SUBJECT": "The Citizen OS topic you reported has been reviewed"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Ilmoitus nro {{report.id}}: Moderoija on arvioinut Citizen OS -aiheesi"
+    "SUBJECT": "Your Citizen OS topic has been reviewed by a moderator"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "Ilmoitettu (nro {{report.id}}) Citizen OS -aihe on korjattu. Ole hyvä ja arvioi"
+    "SUBJECT": "A reported Citizen OS topic has been revised, please review"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Ilmoitus nro {{report.id}}: Citizen OS -aiheesi käyttöoikeudet on palautettu."
+    "SUBJECT": "Access to your reported Citizen OS topic has been restored"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
-    "SUBJECT": "Ilmoituksesi (nro {{report.id}}) Citizen OS:stä suhteen on tehty päätös"
+    "SUBJECT": "The issue you reported has been resolved"
   },
   "REPORT": {
     "REPORT_TYPE": {
@@ -65,69 +65,69 @@
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Yhteisö on ilmoittanut kannanottosi olevan sopimaton"
+    "SUBJECT": "Your argument has been reported as inappropriate"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "Yhteisö on ilmoittanut sopimattomasta kannanotosta"
+    "SUBJECT": "An argument has been reported as inappropriate"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
   "NOTIFICATIONS": {
-    "SUBJECT": "Ilmoitus Citizen OS -aiheesta {{topicTitle}}",
-    "NOTIFICATION_USER_CREATE_TOPIC": "Käyttäjä <em>{{userName}}</em> on luonut aiheen <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPIC": "Käyttäjä <em>{{userName}}</em> on päivittänyt kentän <em>{{fieldName}}</em> aiheessa <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "Käyttäjä <em>{{userName}}</em> on tehnyt <em>{{groupCount}}</em> päivitystä aiheeseen <em>{{topicTitle}}</em>",
+    "SUBJECT": "An update on topic “{{topicTitle}}”",
+    "NOTIFICATION_USER_CREATE_TOPIC": "User <em>{{userName}}</em> has created a new topic.",
+    "NOTIFICATION_USER_UPDATE_TOPIC": "User <em>{{userName}}</em> has updated the field <em>{{fieldName}}</em> in this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "User <em>{{userName}}</em> has made <em>{{groupCount}}</em> updates to this topic.",
     "NOTIFICATION_PREVIOUS_VERSION": "Edellinen versio: {{previousValue}}",
     "NOTIFICATION_NEW_VERSION": "Uusi versio: {{newValue}}",
-    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "Järjestelmä on päivittänyt kentän <em>{{fieldName}}</em> aiheessa <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_TOPIC": "Käyttäjä <em>{{userName}}</em> on poistanut aiheen <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_USER_TOPIC": "Käyttäjä <em>{{userName}}</em> on kutsunut käyttäjän <em>{{userName2}}</em> aiheeseen <em>{{topicTitle}}</em>",
+    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "The Citizen OS system has updated a field <em>{{fieldName}}</em> in this topic.",
+    "NOTIFICATION_USER_DELETE_TOPIC": "User <em>{{userName}}</em> has deleted this topic.",
+    "NOTIFICATION_USER_ADD_USER_TOPIC": "User <em>{{userName}}</em> has invited <em>{{userName2}}</em> to participate in this topic.",
     "NOTIFICATION_USER_INVITE_TOPIC_USER": "@:NOTIFICATIONS.NOTIFICATION_USER_ADD_USER_TOPIC",
-    "NOTIFICATION_USER_ACCEPT_INVITE_TOPIC": "Käyttäjä <em>{{userName}}</em> on hyväksynyt kutsun aiheeseen <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER": "Käyttäjä <em>{{userName}}</em> on muuttanut käyttäjän <em>{{userName2}}</em> käyttöoikeustasoa aiheessa <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE": "Käyttäjä <em>{{userName}}</em> on kumonnut käyttäjän <em>{{userName2}}</em> käyttöoikeudet aiheeseen <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_ACCEPT_INVITE_TOPIC": "User <em>{{userName}}</em> has accepted an invite to this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER": "User <em>{{userName}}</em> has changed the access level of user <em>{{userName2}}</em> for this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE": "User <em>{{userName}}</em> has revoked access from user <em>{{userName2}}</em> to this topic.",
     "NOTIFICATION_USER_UPDATE_TOPICINVITEUSER": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER",
     "NOTIFICATION_USER_UPDATE_TOPICINVITEUSER_NONE": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE",
-    "NOTIFICATION_USER_UPDATE_TOPICJOIN": "Aihe <em>{{topicTitle}}</em>: käyttäjä <em>{{userName}}</em> on päivittänyt joitakin jakolinkin ominaisuuksia:",
-    "NOTIFICATION_USER_UPDATE_GROUPJOIN": "Ryhmä <em>{{groupName}}</em>: käyttäjä <em>{{userName}}</em> on päivittänyt joitakin jakolinkin ominaisuuksia:",
+    "NOTIFICATION_USER_UPDATE_TOPICJOIN": "User <em>{{userName}}</em> has edited the share link settings for this topic.",
+    "NOTIFICATION_USER_UPDATE_GROUPJOIN": "User <em>{{userName}}</em> has edited the share link settings for this group.",
     "NOTIFICATION_USER_DELETE_USER_TOPIC": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE",
-    "NOTIFICATION_USER_JOIN_TOPIC": "Käyttäjä <em>{{userName}}</em> on liittynyt aiheeseen <em>{{topicTitle}}</em> käyttöoikeustasonaan {{accessLevel}}",
-    "NOTIFICATION_USER_JOIN_GROUP": "Käyttäjä <em>{{userName}}</em> on liittynyt ryhmään <em>{{groupName}}</em> käyttöoikeustasonaan {{accessLevel}}",
-    "NOTIFICATION_USER_LEAVE_TOPIC": "Käyttäjä <em>{{userName}}</em> on poistunut aiheesta <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_TOPICPIN_TOPIC": "Käyttäjä <em>{{userName}}</em> on poistanut kiinnityksen aiheesta <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_TOPIC_TOPICPIN": "Käyttäjä <em>{{userName}}</em> on kiinnittänyt aiheen <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_VOTE_TOPIC": "Käyttäjä <em>{{userName}}</em> on käynnistänyt äänestyksen aiheesta <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_VOTE_TOPIC": "Käyttäjä <em>{{userName}}</em> on päivittänyt äänestyksen määräajan aiheessa <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_VOTELIST_TOPIC": "Käyttäjä on äänestänyt aiheessa <em>{{topicTitle}}</em>.",
-    "NOTIFICATION_USER_CREATE_VOTEDELEGATION_VOTE": "Käyttäjä <em>{{userName}}</em> on delegoinut äänensä aiheessa <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_VOTEDELEGATION_VOTE": "Käyttäjä <em>{{userName}}</em> on kumonnut äänensä delegoinnin aiheessa <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_VIEW_VOTEUSERCONTAINER": "Käyttäjä <em>{{userName}}</em> on ladannut aiheen <em>{{topicTitle}}</em> äänestystulokset",
-    "NOTIFICATION_USER_VIEW_VOTEFINALCONTAINER": "Käyttäjä <em>{{userName}}</em> on ladannut aiheen <em>{{topicTitle}}</em> äänestystulokset",
-    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC": "Käyttäjä <em>{{userName}}</em> on lisännyt uuden kannanoton aiheeseen <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_COMMENT_TOPIC": "Käyttäjä <em>{{userName}}</em> on päivittänyt kannanottoaan aiheessa <em>{{topicTitle}}</em>",
-    "NOTIFICATION_MODERATOR_UPDATE_COMMENT_TOPIC": "Käyttäjä <em>{{userName}}</em> (moderaattori) on päivittänyt kannanoton kenttää <em>{{fieldName}}</em> aiheessa <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_COMMENT_TOPIC": "Käyttäjä <em>{{userName}}</em> on poistanut kannanottonsa aiheessa <em>{{topicTitle}}</em>",
-    "NOTIFICATION_MODERATOR_DELETE_COMMENT_TOPIC": "Käyttäjä <em>{{userName}}</em> (moderaattori) on poistanut kannanoton aiheessa <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_REPORT_COMMENT": "Käyttäjä <em>{{userName}}</em> on tehnyt ilmoituksen kannanotosta aiheessa {{topicTitle}} ",
-    "NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_UP": "Käyttäjä <em>{{userName}}</em> on jättänyt reaktion <em>{{reaction}}</em> kannanottoon aiheessa {{topicTitle}}",
-    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_UP": "Käyttäjä <em>{{userName}}</em> on päivittänyt reaktionsa kannanottoon aiheessa {{topicTitle}}",
+    "NOTIFICATION_USER_JOIN_TOPIC": "User <em>{{userName}}</em> has joined this topic with access level: {{accessLevel}}",
+    "NOTIFICATION_USER_JOIN_GROUP": "User <em>{{userName}}</em> has joined this group with access level: {{accessLevel}}",
+    "NOTIFICATION_USER_LEAVE_TOPIC": "User <em>{{userName}}</em> has left this topic.",
+    "NOTIFICATION_USER_DELETE_TOPICPIN_TOPIC": "User <em>{{userName}}</em> has removed a pin from this topic.",
+    "NOTIFICATION_USER_ADD_TOPIC_TOPICPIN": "User <em>{{userName}}</em> has pinned this topic.",
+    "NOTIFICATION_USER_CREATE_VOTE_TOPIC": "User <em>{{userName}}</em> has opened voting for this topic.",
+    "NOTIFICATION_USER_UPDATE_VOTE_TOPIC": "User <em>{{userName}}</em> has updated the voting deadline for this topic.",
+    "NOTIFICATION_USER_CREATE_VOTELIST_TOPIC": "Someone has voted on this topic.",
+    "NOTIFICATION_USER_CREATE_VOTEDELEGATION_VOTE": "User <em>{{userName}}</em> has delegated their vote in this topic.",
+    "NOTIFICATION_USER_DELETE_VOTEDELEGATION_VOTE": "User <em>{{userName}}</em> has revoked delegation of their vote in this topic.",
+    "NOTIFICATION_USER_VIEW_VOTEUSERCONTAINER": "User <em>{{userName}}</em> has downloaded the voting results for this topic.",
+    "NOTIFICATION_USER_VIEW_VOTEFINALCONTAINER": "User <em>{{userName}}</em> has downloaded the voting results for this topic.",
+    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC": "User <em>{{userName}}</em> has added a new argument in this topic.",
+    "NOTIFICATION_USER_UPDATE_COMMENT_TOPIC": "User <em>{{userName}}</em> has edited their argument in this topic.",
+    "NOTIFICATION_MODERATOR_UPDATE_COMMENT_TOPIC": "User <em>{{userName}}</em> (moderator) has updated the argument field <em>{{fieldName}}</em> in this topic.",
+    "NOTIFICATION_USER_DELETE_COMMENT_TOPIC": "User <em>{{userName}}</em> has deleted their argument in this topic.",
+    "NOTIFICATION_MODERATOR_DELETE_COMMENT_TOPIC": "User <em>{{userName}}</em> (moderator) has deleted an argument in this topic.",
+    "NOTIFICATION_USER_ADD_REPORT_COMMENT": "User <em>{{userName}}</em> has reported an argument in this topic.",
+    "NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_UP": "User <em>{{userName}}</em> has left a reaction <em>{{reaction}}</em> on an argument in this topic.",
+    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_UP": "User <em>{{userName}}</em> has updated their reaction to an argument in this topic.",
     "NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_DOWN": "@:NOTIFICATIONS.NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_UP",
     "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_DOWN": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_UP",
-    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_REMOVE": "Käyttäjä <em>{{userName}}</em> on poistanut reaktionsa kannanottoon aiheessa {{topicTitle}} ",
+    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_REMOVE": "User <em>{{userName}}</em> has removed their reaction to an argument in this topic.",
     "NOTIFICATION_COMMENTVOTE_FIELD_VALUE_UP": "ylös",
     "NOTIFICATION_COMMENTVOTE_FIELD_VALUE_DOWN": "alas",
     "NOTIFICATION_COMMENTVOTE_FIELD_VALUE_REMOVE": "poista",
-    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC_IN_REPLY_TO_COMMENT": "Käyttäjä <em>{{userName}}</em> on vastannut kannanottoon aiheessa <em>{{topicTitle}}</em>: ",
-    "NOTIFICATION_USER_ADD_TOPIC_GROUP": "Käyttäjä <em>{{userName}}</em> on lisännyt aiheen <em>{{topicTitle}}</em> ryhmään <em>{{groupName}}</em>",
-    "NOTIFICATION_USER_DELETE_GROUP_TOPIC": "Käyttäjä <em>{{userName}}</em> on poistanut aiheen <em>{{topicTitle}}</em> ryhmästä <em>{{groupName}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP": "Käyttäjä <em>{{userName}}</em> on muuttanut ryhmän <em>{{groupName}}</em> käyttöoikeustasoa aiheessa <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP_NONE": "Käyttäjä <em>{{userName}}</em> on kumonnut ryhmän <em>{{groupName}}</em> käyttöoikeudet aiheeseen <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_TOPICEVENT_TOPIC": "Käyttäjä <em>{{userName}}</em> on tehnyt päivityksen aiheeseen <em>{{topicTitle}}</em>:",
-    "NOTIFICATION_USER_DELETE_TOPICEVENT_TOPIC": "Käyttäjä <em>{{userName}}</em> on poistanut päivityksen aiheesta <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_ATTACHMENT_TOPIC": "Käyttäjä <em>{{userName}}</em> on lisännyt liitteen <em>{{attachmentName}}</em> aiheeseen <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_ATTACHMENT_TOPIC": "Käyttäjä <em>{{userName}}</em> on poistanut liitteen <em>{{attachmentName}}</em> aiheesta <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_ATTACHMENT_TOPIC": "Käyttäjä <em>{{userName}}</em> on päivittänyt liitteen aiheessa <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC_IN_REPLY_TO_COMMENT": "User <em>{{userName}}</em> has left a reply to an argument in this topic.",
+    "NOTIFICATION_USER_ADD_TOPIC_GROUP": "User <em>{{userName}}</em> has added this topic to group <em>{{groupName}}</em>",
+    "NOTIFICATION_USER_DELETE_GROUP_TOPIC": "User <em>{{userName}}</em> has removed this topic from group <em>{{groupName}}</em>",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP": "User <em>{{userName}}</em> has changed the access level of group <em>{{groupName}}</em> to this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP_NONE": "User <em>{{userName}}</em> has revoked access from group <em>{{groupName}}</em> to this topic.",
+    "NOTIFICATION_USER_CREATE_TOPICEVENT_TOPIC": "User <em>{{userName}}</em> has posted an update for this topic.",
+    "NOTIFICATION_USER_DELETE_TOPICEVENT_TOPIC": "User <em>{{userName}}</em> has deleted an update from this topic.",
+    "NOTIFICATION_USER_ADD_ATTACHMENT_TOPIC": "User <em>{{userName}}</em> has added an attachment <em>{{attachmentName}}</em> to this topic.",
+    "NOTIFICATION_USER_DELETE_ATTACHMENT_TOPIC": "User <em>{{userName}}</em> has deleted an attachment <em>{{attachmentName}}</em> from this topic.",
+    "NOTIFICATION_USER_UPDATE_ATTACHMENT_TOPIC": "User <em>{{userName}}</em> has updated an attachment in this topic.",
     "NOTIFICATION_TOPIC_FIELD_DESCRIPTION": "kuvaus",
     "NOTIFICATION_TOPIC_FIELD_STATUS": "tila",
     "NOTIFICATION_TOPIC_FIELD_STATUS_INPROGRESS": "kesken",
@@ -161,7 +161,7 @@
     "NOTIFICATION_USER_UPDATE_GROUPMEMBERUSER": "Käyttäjä <em>{{userName}}</em> on muuttanut käyttäjän <em>{{userName2}}</em> käyttöoikeustasoa ryhmässä <em>{{groupName}}</em>",
     "NOTIFICATION_USER_UPDATE_GROUPMEMBERUSER_NONE": "Käyttäjä <em>{{userName}}</em> on kumonnut käyttäjän <em>{{userName2}}</em> käyttöoikeudet ryhmään <em>{{groupName}}</em>",
     "USER_DELETE_USER_GROUP": "Käyttäjä <em>{{userName}}</em> on poistanut käyttäjän <em>{{userName2}}</em> ryhmästä <em>{{groupName}}</em>",
-    "NOTIFICATION_USER_ADD_USERCONNECTION_USER": "Käyttäjä <em>{{userName}}</em> on lisännyt uuden kirjautumismenetelmän: <em>{{connectionName}}</em>",
+    "NOTIFICATION_USER_ADD_USERCONNECTION_USER": "User <em>{{userName}}</em> has added a new login method: <em>{{connectionName}}</em>",
     "NOTIFICATION_USER_CREATE_USER": "Käyttäjä <em>{{userName}}</em> on luotu",
     "NOTIFICATION_SYSTEM_CREATE_USER": "Käyttäjä on luotu järjestelmään toisen käyttäjän kutsusta.",
     "NOTIFICATION_USER_CREATE_USERCONSENT": "",
@@ -178,7 +178,7 @@
     "FILTER_SELF": "Oma toimintani"
   },
   "VOTE_REMINDER": {
-    "SUBJECT": "Reminder to vote on a topic"
+    "SUBJECT": "A reminder to vote"
   },
   "TXT_TOPIC_CATEGORY_ALL": "kaikki luokat",
   "TXT_TOPIC_CATEGORY_CITIZENOS": "Citizen OS",
@@ -194,9 +194,9 @@
   "TXT_TOPIC_CATEGORY_TRANSPORT": "Julkinen liikenne ja tieturvallisuus",
   "TXT_TOPIC_CATEGORY_TAXES": "Verot ja budjetointi",
   "TXT_TOPIC_CATEGORY_AGRICULTURE": "Maatalous",
-  "TXT_TOPIC_CATEGORY_ENVIRONMENT": "Ympäristö, eläinten suojelu",
+  "TXT_TOPIC_CATEGORY_ENVIRONMENT": "Environment and animal protection",
   "TXT_TOPIC_CATEGORY_CULTURE": "Kulttuuri, media ja urheilu",
-  "TXT_TOPIC_CATEGORY_HEALTH": "Terveydenhoito ja sosiaalihuolto",
+  "TXT_TOPIC_CATEGORY_HEALTH": "Health and social care",
   "TXT_TOPIC_CATEGORY_WORK": "Työ ja työllisyys",
   "TXT_TOPIC_CATEGORY_EDUCATION": "Koulutus",
   "TXT_TOPIC_CATEGORY_POLITICS": "Politiikka ja julkishallinto",
