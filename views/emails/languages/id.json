@@ -9,10 +9,10 @@
     "SUBJECT": "Mengaktifkan akun Citizen OS"
   },
   "INVITE_GROUP": {
-    "SUBJECT": "{{fromUser.name}} mengundang Anda untuk bergabung dengan kelompoknya \"{{group.name}}\" dalam Citizen OS"
+    "SUBJECT": "User {{fromUser.name}} is inviting you to join the group “{{group.name}}”"
   },
   "INVITE_TOPIC": {
-    "SUBJECT": "{{fromUser.name}} adalah mengundang Anda untuk membuat keputusan secara kolaboratif",
+    "SUBJECT": "User {{fromUser.name}} is inviting you to join the topic “{{topicTitle}}”",
     "SUBJECT_rahvaalgatus_ee": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust",
     "SUBJECT_rahvaalgatus_test": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust"
@@ -21,28 +21,28 @@
     "SUBJECT": "Atur ulang kata sandi akun Citizen OS Anda"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Terima kasih, kami telah menerima laporan (#{{report.id}}) Anda"
+    "SUBJECT": "Thank you for reporting a topic"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Laporan #{{report.id}}: topik Citizen OS Anda mungkin memuat pelanggaran terhadap panduan"
+    "SUBJECT": "Your Citizen OS topic has been reported to moderators"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "Sebuah topik Citizen OS telah dilaporkan (#{{report.id}}), silakan dimoderasi"
+    "SUBJECT": "Please moderate this reported Citizen OS topic"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Laporan #{{report.id}} Citizen OS Anda telah diperiksa"
+    "SUBJECT": "The Citizen OS topic you reported has been reviewed"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Laporan #{{report.id}}: Topik Citizen OS Anda telah diperiksa oleh moderator"
+    "SUBJECT": "Your Citizen OS topic has been reviewed by a moderator"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "Topik (#{{report.id}}) Citizen OS yang dilaporkan telah direvisi, silakan diperiksa"
+    "SUBJECT": "A reported Citizen OS topic has been revised, please review"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Laporan #{{report.id}}: akses ke topik Citizen OS Anda telah dipulihkan."
+    "SUBJECT": "Access to your reported Citizen OS topic has been restored"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
-    "SUBJECT": "Laporan (#{{report.id}}) Anda dalam Citizen OS telah diselesaikan"
+    "SUBJECT": "The issue you reported has been resolved"
   },
   "REPORT": {
     "REPORT_TYPE": {
@@ -65,69 +65,69 @@
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Argumen Anda telah dilaporkan sebagai hal yang tidak pantas oleh masyarakat"
+    "SUBJECT": "Your argument has been reported as inappropriate"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "Sebuah argumen telah dilaporkan sebagai hal yang tidak pantas oleh masyarakat"
+    "SUBJECT": "An argument has been reported as inappropriate"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
   "NOTIFICATIONS": {
-    "SUBJECT": "Notifikasi dari topik Citizen OS {{topicTitle}}",
-    "NOTIFICATION_USER_CREATE_TOPIC": "Pengguna <em>{{userName}}</em> telah membuat topik <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPIC": "Pengguna <em>{{userName}}</em> telah memperbarui bagian <em>{{fieldName}}</em> dalam topik <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "Pengguna <em>{{userName}}</em> telah membuat <em>{{groupCount}}</em> update untuk topik <em>{{topicTitle}}</em>",
+    "SUBJECT": "An update on topic “{{topicTitle}}”",
+    "NOTIFICATION_USER_CREATE_TOPIC": "User <em>{{userName}}</em> has created a new topic.",
+    "NOTIFICATION_USER_UPDATE_TOPIC": "User <em>{{userName}}</em> has updated the field <em>{{fieldName}}</em> in this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "User <em>{{userName}}</em> has made <em>{{groupCount}}</em> updates to this topic.",
     "NOTIFICATION_PREVIOUS_VERSION": "Versi sebelumnya: {{previousValue}}",
     "NOTIFICATION_NEW_VERSION": "Versi baru: {{newValue}}",
-    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "Sistem telah memperbarui bagian <em>{{fieldName}}</em> dalam topik <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_TOPIC": "Pengguna <em>{{userName}}</em> telah menghapus topik <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_USER_TOPIC": "Pengguna <em>{{userName}}</em> telah mengundang pengguna <em>{{userName2}}</em> untuk berpartisipasi dalam topik <em>{{topicTitle}}</em>",
+    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "The Citizen OS system has updated a field <em>{{fieldName}}</em> in this topic.",
+    "NOTIFICATION_USER_DELETE_TOPIC": "User <em>{{userName}}</em> has deleted this topic.",
+    "NOTIFICATION_USER_ADD_USER_TOPIC": "User <em>{{userName}}</em> has invited <em>{{userName2}}</em> to participate in this topic.",
     "NOTIFICATION_USER_INVITE_TOPIC_USER": "@:NOTIFICATIONS.NOTIFICATION_USER_ADD_USER_TOPIC",
-    "NOTIFICATION_USER_ACCEPT_INVITE_TOPIC": "Pengguna <em>{{userName}}</em> telah menerima undangan ke topik <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER": "Pengguna <em>{{userName}}</em> telah mengubah tingkat akses pengguna <em>{{userName2}}</em> untuk topik <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE": "Pengguna <em>{{userName}}</em> telah mencabut akses ke topik <em>{{topicTitle}}</em> dari pengguna <em>{{userName2}}</em>",
+    "NOTIFICATION_USER_ACCEPT_INVITE_TOPIC": "User <em>{{userName}}</em> has accepted an invite to this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER": "User <em>{{userName}}</em> has changed the access level of user <em>{{userName2}}</em> for this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE": "User <em>{{userName}}</em> has revoked access from user <em>{{userName2}}</em> to this topic.",
     "NOTIFICATION_USER_UPDATE_TOPICINVITEUSER": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER",
     "NOTIFICATION_USER_UPDATE_TOPICINVITEUSER_NONE": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE",
-    "NOTIFICATION_USER_UPDATE_TOPICJOIN": "Topik <em>{{topicTitle}}</em>: pengguna <em>{{userName}}</em> telah memperbarui beberapa atribut tautan bersama:",
-    "NOTIFICATION_USER_UPDATE_GROUPJOIN": "Grup <em>{{groupName}}</em>: pengguna <em>{{userName}}</em> telah memperbarui beberapa atribut tautan bersama:",
+    "NOTIFICATION_USER_UPDATE_TOPICJOIN": "User <em>{{userName}}</em> has edited the share link settings for this topic.",
+    "NOTIFICATION_USER_UPDATE_GROUPJOIN": "User <em>{{userName}}</em> has edited the share link settings for this group.",
     "NOTIFICATION_USER_DELETE_USER_TOPIC": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE",
-    "NOTIFICATION_USER_JOIN_TOPIC": "Pengguna <em>{{userName}}</em> telah mengikuti topik <em>{{topicTitle}}</em> dengan tingkat akses: {{accessLevel}}",
-    "NOTIFICATION_USER_JOIN_GROUP": "Pengguna <em>{{userName}}</em> telah bergabung ke grup <em>{{groupName}}</em> dengan tingkat akses: {{accessLevel}}",
-    "NOTIFICATION_USER_LEAVE_TOPIC": "Pengguna <em>{{userName}}</em> telah meninggalkan topik <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_TOPICPIN_TOPIC": "Pengguna <em>{{userName}}</em> telah mencabut pin dari topik <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_TOPIC_TOPICPIN": "Pengguna <em>{{userName}}</em> telah menyematkan pin pada topik <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_VOTE_TOPIC": "Pengguna <em>{{userName}}</em> telah membuka voting untuk topik <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_VOTE_TOPIC": "Pengguna <em>{{userName}}</em> telah memperbarui tenggat voting untuk topik <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_VOTELIST_TOPIC": "Pengguna telah menggunakan hak pilih untuk topik <em>{{topicTitle}}</em>.",
-    "NOTIFICATION_USER_CREATE_VOTEDELEGATION_VOTE": "Pengguna <em>{{userName}}</em> telah mewakilkan hak pilihnya untuk topik: <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_VOTEDELEGATION_VOTE": "Pengguna <em>{{userName}}</em> telah mencabut perwakilan hak pilihnya untuk topik: <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_VIEW_VOTEUSERCONTAINER": "Pengguna <em>{{userName}}</em> telah mengunduh hasil voting untuk topik <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_VIEW_VOTEFINALCONTAINER": "Pengguna <em>{{userName}}</em> telah mengunduh hasil voting untuk topik <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC": "Pengguna <em>{{userName}}</em> telah menambahkan argumen baru untuk topik: <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_COMMENT_TOPIC": "Pengguna <em>{{userName}}</em> telah memperbarui argumennya untuk topik <em>{{topicTitle}}</em>",
-    "NOTIFICATION_MODERATOR_UPDATE_COMMENT_TOPIC": "Pengguna <em>{{userName}}</em> (moderator) telah memperbarui bagian argumen <em>{{fieldName}}</em> dalam topik <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_COMMENT_TOPIC": "Pengguna <em>{{userName}}</em> telah menghapus argumennya untuk topik <em>{{topicTitle}}</em>",
-    "NOTIFICATION_MODERATOR_DELETE_COMMENT_TOPIC": "Pengguna <em>{{userName}}</em> (moderator) telah menghapus sebuah argumen untuk topik <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_REPORT_COMMENT": "Pengguna <em>{{userName}}</em> telah melaporkan sebuah argumen dalam topik {{topicTitle}} ",
-    "NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_UP": "Pengguna <em>{{userName}}</em> telah memberikan reaksi <em>{{reaction}}</em> untuk argumen dalam topik {{topicTitle}}",
-    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_UP": "Pengguna <em>{{userName}}</em> telah memperbarui reaksinya untuk argumen dalam topik {{topicTitle}}",
+    "NOTIFICATION_USER_JOIN_TOPIC": "User <em>{{userName}}</em> has joined this topic with access level: {{accessLevel}}",
+    "NOTIFICATION_USER_JOIN_GROUP": "User <em>{{userName}}</em> has joined this group with access level: {{accessLevel}}",
+    "NOTIFICATION_USER_LEAVE_TOPIC": "User <em>{{userName}}</em> has left this topic.",
+    "NOTIFICATION_USER_DELETE_TOPICPIN_TOPIC": "User <em>{{userName}}</em> has removed a pin from this topic.",
+    "NOTIFICATION_USER_ADD_TOPIC_TOPICPIN": "User <em>{{userName}}</em> has pinned this topic.",
+    "NOTIFICATION_USER_CREATE_VOTE_TOPIC": "User <em>{{userName}}</em> has opened voting for this topic.",
+    "NOTIFICATION_USER_UPDATE_VOTE_TOPIC": "User <em>{{userName}}</em> has updated the voting deadline for this topic.",
+    "NOTIFICATION_USER_CREATE_VOTELIST_TOPIC": "Someone has voted on this topic.",
+    "NOTIFICATION_USER_CREATE_VOTEDELEGATION_VOTE": "User <em>{{userName}}</em> has delegated their vote in this topic.",
+    "NOTIFICATION_USER_DELETE_VOTEDELEGATION_VOTE": "User <em>{{userName}}</em> has revoked delegation of their vote in this topic.",
+    "NOTIFICATION_USER_VIEW_VOTEUSERCONTAINER": "User <em>{{userName}}</em> has downloaded the voting results for this topic.",
+    "NOTIFICATION_USER_VIEW_VOTEFINALCONTAINER": "User <em>{{userName}}</em> has downloaded the voting results for this topic.",
+    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC": "User <em>{{userName}}</em> has added a new argument in this topic.",
+    "NOTIFICATION_USER_UPDATE_COMMENT_TOPIC": "User <em>{{userName}}</em> has edited their argument in this topic.",
+    "NOTIFICATION_MODERATOR_UPDATE_COMMENT_TOPIC": "User <em>{{userName}}</em> (moderator) has updated the argument field <em>{{fieldName}}</em> in this topic.",
+    "NOTIFICATION_USER_DELETE_COMMENT_TOPIC": "User <em>{{userName}}</em> has deleted their argument in this topic.",
+    "NOTIFICATION_MODERATOR_DELETE_COMMENT_TOPIC": "User <em>{{userName}}</em> (moderator) has deleted an argument in this topic.",
+    "NOTIFICATION_USER_ADD_REPORT_COMMENT": "User <em>{{userName}}</em> has reported an argument in this topic.",
+    "NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_UP": "User <em>{{userName}}</em> has left a reaction <em>{{reaction}}</em> on an argument in this topic.",
+    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_UP": "User <em>{{userName}}</em> has updated their reaction to an argument in this topic.",
     "NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_DOWN": "@:NOTIFICATIONS.NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_UP",
     "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_DOWN": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_UP",
-    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_REMOVE": "Pengguna <em>{{userName}}</em> telah menghapus reaksinya untuk argumen dalam topik {{topicTitle}} ",
+    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_REMOVE": "User <em>{{userName}}</em> has removed their reaction to an argument in this topic.",
     "NOTIFICATION_COMMENTVOTE_FIELD_VALUE_UP": "naik",
     "NOTIFICATION_COMMENTVOTE_FIELD_VALUE_DOWN": "turun",
     "NOTIFICATION_COMMENTVOTE_FIELD_VALUE_REMOVE": "hapus",
-    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC_IN_REPLY_TO_COMMENT": "Pengguna <em>{{userName}}</em> telah memberikan balasan untuk argumen dalam topik: <em>{{topicTitle}}</em>: ",
-    "NOTIFICATION_USER_ADD_TOPIC_GROUP": "Pengguna <em>{{userName}}</em> telah menambahkan topik <em>{{topicTitle}}</em> ke dalam grup <em>{{groupName}}</em>",
-    "NOTIFICATION_USER_DELETE_GROUP_TOPIC": "Pengguna <em>{{userName}}</em> telah menghapus topik <em>{{topicTitle}}</em> dari grup <em>{{groupName}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP": "Pengguna <em>{{userName}}</em> telah mengubah tingkat akses grup <em>{{groupName}}</em> untuk topik <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP_NONE": "Pengguna <em>{{userName}}</em> telah mencabut akses dari grup <em>{{groupName}}</em> untuk topik <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_TOPICEVENT_TOPIC": "Pengguna <em>{{userName}}</em> telah membuat update untuk topik <em>{{topicTitle}}</em>:",
-    "NOTIFICATION_USER_DELETE_TOPICEVENT_TOPIC": "Pengguna <em>{{userName}}</em> telah menghapus update dari topik <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_ATTACHMENT_TOPIC": "Pengguna <em>{{userName}}</em> telah menambahkan lampiran <em>{{attachmentName}}</em> ke topik <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_ATTACHMENT_TOPIC": "Pengguna <em>{{userName}}</em> telah menghapus lampiran <em>{{attachmentName}}</em> dari topik <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_ATTACHMENT_TOPIC": "Pengguna <em>{{userName}}</em> telah memperbarui lampiran dalam topik <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC_IN_REPLY_TO_COMMENT": "User <em>{{userName}}</em> has left a reply to an argument in this topic.",
+    "NOTIFICATION_USER_ADD_TOPIC_GROUP": "User <em>{{userName}}</em> has added this topic to group <em>{{groupName}}</em>",
+    "NOTIFICATION_USER_DELETE_GROUP_TOPIC": "User <em>{{userName}}</em> has removed this topic from group <em>{{groupName}}</em>",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP": "User <em>{{userName}}</em> has changed the access level of group <em>{{groupName}}</em> to this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP_NONE": "User <em>{{userName}}</em> has revoked access from group <em>{{groupName}}</em> to this topic.",
+    "NOTIFICATION_USER_CREATE_TOPICEVENT_TOPIC": "User <em>{{userName}}</em> has posted an update for this topic.",
+    "NOTIFICATION_USER_DELETE_TOPICEVENT_TOPIC": "User <em>{{userName}}</em> has deleted an update from this topic.",
+    "NOTIFICATION_USER_ADD_ATTACHMENT_TOPIC": "User <em>{{userName}}</em> has added an attachment <em>{{attachmentName}}</em> to this topic.",
+    "NOTIFICATION_USER_DELETE_ATTACHMENT_TOPIC": "User <em>{{userName}}</em> has deleted an attachment <em>{{attachmentName}}</em> from this topic.",
+    "NOTIFICATION_USER_UPDATE_ATTACHMENT_TOPIC": "User <em>{{userName}}</em> has updated an attachment in this topic.",
     "NOTIFICATION_TOPIC_FIELD_DESCRIPTION": "deskripsi",
     "NOTIFICATION_TOPIC_FIELD_STATUS": "status",
     "NOTIFICATION_TOPIC_FIELD_STATUS_INPROGRESS": "sedang berjalan",
@@ -161,7 +161,7 @@
     "NOTIFICATION_USER_UPDATE_GROUPMEMBERUSER": "Pengguna <em>{{userName}}</em> telah mengubah tingkat akses pengguna <em>{{userName2}}</em> untuk grup <em>{{groupName}}</em>",
     "NOTIFICATION_USER_UPDATE_GROUPMEMBERUSER_NONE": "Pengguna <em>{{userName}}</em> telah mencabut akses dari pengguna <em>{{userName2}}</em> untuk grup <em>{{groupName}}</em>",
     "USER_DELETE_USER_GROUP": "Pengguna <em>{{userName}}</em> telah menghapus pengguna <em>{{userName2}}</em> dari grup <em>{{groupName}}</em>",
-    "NOTIFICATION_USER_ADD_USERCONNECTION_USER": "Pengguna <em>{{userName}}</em> telah menambahkan metode log-in baru: <em>{{connectionName}}</em>",
+    "NOTIFICATION_USER_ADD_USERCONNECTION_USER": "User <em>{{userName}}</em> has added a new login method: <em>{{connectionName}}</em>",
     "NOTIFICATION_USER_CREATE_USER": "Pengguna <em>{{userName}}</em> baru saja dibuat",
     "NOTIFICATION_SYSTEM_CREATE_USER": "Pengguna telah dimasukkan ke dalam sistem dengan undangan dari pengguna lain.",
     "NOTIFICATION_USER_CREATE_USERCONSENT": "",
@@ -178,7 +178,7 @@
     "FILTER_SELF": "Aktivitas saya"
   },
   "VOTE_REMINDER": {
-    "SUBJECT": "Reminder to vote on a topic"
+    "SUBJECT": "A reminder to vote"
   },
   "TXT_TOPIC_CATEGORY_ALL": "setiap kategori",
   "TXT_TOPIC_CATEGORY_CITIZENOS": "Citizen OS",
@@ -194,9 +194,9 @@
   "TXT_TOPIC_CATEGORY_TRANSPORT": "Keselamatan jalan dan transportasi umum",
   "TXT_TOPIC_CATEGORY_TAXES": "Pajak dan penganggaran",
   "TXT_TOPIC_CATEGORY_AGRICULTURE": "Pertanian",
-  "TXT_TOPIC_CATEGORY_ENVIRONMENT": "Lingkungan, perlindungan hewan",
+  "TXT_TOPIC_CATEGORY_ENVIRONMENT": "Environment and animal protection",
   "TXT_TOPIC_CATEGORY_CULTURE": "Kebudayaan, media, dan olahraga",
-  "TXT_TOPIC_CATEGORY_HEALTH": "Kepedulian kesehatan dan sosial",
+  "TXT_TOPIC_CATEGORY_HEALTH": "Health and social care",
   "TXT_TOPIC_CATEGORY_WORK": "Pekerjaan dan ketenagakerjaan",
   "TXT_TOPIC_CATEGORY_EDUCATION": "Pendidikan",
   "TXT_TOPIC_CATEGORY_POLITICS": "Politik dan administrasi publik",
