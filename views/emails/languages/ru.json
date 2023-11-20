@@ -9,10 +9,10 @@
     "SUBJECT": "Активируйте свой аккаунт Citizen OS"
   },
   "INVITE_GROUP": {
-    "SUBJECT": "Пользователь {{fromUser.name}} приглашает Вас присоединиться к нашей группе “{{group.name}}” в приложении Citizen OS"
+    "SUBJECT": "User {{fromUser.name}} is inviting you to join the group “{{group.name}}”"
   },
   "INVITE_TOPIC": {
-    "SUBJECT": "Пользователь {{fromUser.name}} приглашает Вас принять совместное решение",
+    "SUBJECT": "User {{fromUser.name}} is inviting you to join the topic “{{topicTitle}}”",
     "SUBJECT_rahvaalgatus_ee": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust",
     "SUBJECT_rahvaalgatus_test": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust"
@@ -21,28 +21,28 @@
     "SUBJECT": "Восстановить пароль учетной записи Citizen OS"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Спасибо! Мы получили вашу жалобу (№{{report.id}})"
+    "SUBJECT": "Thank you for reporting a topic"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Жалоба №{{report.id}}: возможно, содержание вашей темы Citizen OS противоречит правилам сообщества Citizen OS"
+    "SUBJECT": "Your Citizen OS topic has been reported to moderators"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "В отношении темы на портале Citizen OS была составлена жалоба (№{{report.id}}). Рассмотрите ее"
+    "SUBJECT": "Please moderate this reported Citizen OS topic"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Ваша жалоба №{{report.id}} была рассмотрена"
+    "SUBJECT": "The Citizen OS topic you reported has been reviewed"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Жалоба №{{report.id}}: ваша тема Citizen OS была рассмотрена модератором"
+    "SUBJECT": "Your Citizen OS topic has been reviewed by a moderator"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "Содержание темы (жалоба №{{report.id}}) было изменено. Пожалуйста, пересмотрите тему"
+    "SUBJECT": "A reported Citizen OS topic has been revised, please review"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Жалоба №{{report.id}}: доступ к содержанию вашей темы был восстановлен."
+    "SUBJECT": "Access to your reported Citizen OS topic has been restored"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
-    "SUBJECT": "Ваша жалоба (№{{report.id}}) на портале Citizen OS была разрешена"
+    "SUBJECT": "The issue you reported has been resolved"
   },
   "REPORT": {
     "REPORT_TYPE": {
@@ -65,69 +65,69 @@
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Ваш аргумент был помечен сообществом, как неуместный"
+    "SUBJECT": "Your argument has been reported as inappropriate"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "Аргумент был помечен сообществом, как неуместный"
+    "SUBJECT": "An argument has been reported as inappropriate"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
   "NOTIFICATIONS": {
-    "SUBJECT": "Уведомление по теме Citizen OS {{topicTitle}}",
-    "NOTIFICATION_USER_CREATE_TOPIC": "Пользователь <em>{{userName}}</em> создал тему <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPIC": "Пользователь <em>{{userName}}</em> обновил поле <em>{{fieldName}}</em> в теме: <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "Пользователь <em>{{userName}}</em> создал <em>{{groupCount}}</em> обновления в теме <em>{{topicTitle}}</em>",
+    "SUBJECT": "An update on topic “{{topicTitle}}”",
+    "NOTIFICATION_USER_CREATE_TOPIC": "User <em>{{userName}}</em> has created a new topic.",
+    "NOTIFICATION_USER_UPDATE_TOPIC": "User <em>{{userName}}</em> has updated the field <em>{{fieldName}}</em> in this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "User <em>{{userName}}</em> has made <em>{{groupCount}}</em> updates to this topic.",
     "NOTIFICATION_PREVIOUS_VERSION": "Предыдущая версия: {{previousValue}}",
     "NOTIFICATION_NEW_VERSION": "Новая версия: {{newValue}}",
-    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "Система обновила поле <em>{{fieldName}}</em> в теме <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_TOPIC": "Пользователь <em>{{userName}}</em> удалил тему <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_USER_TOPIC": "Пользователь <em>{{userName}}</em>пригласил пользователя <em>{{userName2}}</em> принять участие в теме <em>{{topicTitle}}</em>",
+    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "The Citizen OS system has updated a field <em>{{fieldName}}</em> in this topic.",
+    "NOTIFICATION_USER_DELETE_TOPIC": "User <em>{{userName}}</em> has deleted this topic.",
+    "NOTIFICATION_USER_ADD_USER_TOPIC": "User <em>{{userName}}</em> has invited <em>{{userName2}}</em> to participate in this topic.",
     "NOTIFICATION_USER_INVITE_TOPIC_USER": "@:NOTIFICATIONS.NOTIFICATION_USER_ADD_USER_TOPIC",
-    "NOTIFICATION_USER_ACCEPT_INVITE_TOPIC": "Пользователь <em>{{userName}}</em> принял приглашение принять участие в теме <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER": "Пользователь <em>{{userName}}</em> обновил уровень доступа пользователя <em>{{userName2}}</em> к теме <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE": "Пользователь <em>{{userName}}</em> отменил доступ пользователя <em>{{userName2}}</em> к теме <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_ACCEPT_INVITE_TOPIC": "User <em>{{userName}}</em> has accepted an invite to this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER": "User <em>{{userName}}</em> has changed the access level of user <em>{{userName2}}</em> for this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE": "User <em>{{userName}}</em> has revoked access from user <em>{{userName2}}</em> to this topic.",
     "NOTIFICATION_USER_UPDATE_TOPICINVITEUSER": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER",
     "NOTIFICATION_USER_UPDATE_TOPICINVITEUSER_NONE": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE",
-    "NOTIFICATION_USER_UPDATE_TOPICJOIN": "Тема <em>{{topicTitle}}</em>: пользователь <em>{{userName}}</em> обновил свойства ссылки для доступа:",
-    "NOTIFICATION_USER_UPDATE_GROUPJOIN": "Группа <em>{{groupName}}</em>: пользователь <em>{{userName}}</em> обновил свойства ссылки для доступа:",
+    "NOTIFICATION_USER_UPDATE_TOPICJOIN": "User <em>{{userName}}</em> has edited the share link settings for this topic.",
+    "NOTIFICATION_USER_UPDATE_GROUPJOIN": "User <em>{{userName}}</em> has edited the share link settings for this group.",
     "NOTIFICATION_USER_DELETE_USER_TOPIC": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE",
-    "NOTIFICATION_USER_JOIN_TOPIC": "Пользователь <em>{{userName}}</em> присоединился к теме <em>{{topicTitle}}</em> с уровнем доступа {{accessLevel}}",
-    "NOTIFICATION_USER_JOIN_GROUP": "Пользователь <em>{{userName}}</em> присоединился к группе <em>{{groupName}}</em> с уровнем доступа: {{accessLevel}}",
-    "NOTIFICATION_USER_LEAVE_TOPIC": "Пользователь <em>{{userName}}</em> покинул тему <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_TOPICPIN_TOPIC": "Пользователь <em>{{userName}}</em> удалил тему <em>{{topicTitle}}</em> из избранных",
-    "NOTIFICATION_USER_ADD_TOPIC_TOPICPIN": "Пользователь <em>{{userName}}</em> добавил тему <em>{{topicTitle}}</em> к избранным",
-    "NOTIFICATION_USER_CREATE_VOTE_TOPIC": "Пользователь <em>{{userName}}</em> открыл голосование по теме <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_VOTE_TOPIC": "Пользователь <em>{{userName}}</em> обновил срок голосования по теме <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_VOTELIST_TOPIC": "Пользователь проголосовал по теме <em>{{topicTitle}}</em>.",
-    "NOTIFICATION_USER_CREATE_VOTEDELEGATION_VOTE": "Пользователь <em>{{userName}}</em> передал свои полномочия голосования по теме <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_VOTEDELEGATION_VOTE": "Пользователь <em>{{userName}}</em> отменил передачу полномочия голосования по теме <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_VIEW_VOTEUSERCONTAINER": "Пользователь <em>{{userName}}</em> скачал результаты голосования по теме <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_VIEW_VOTEFINALCONTAINER": "Пользователь <em>{{userName}}</em> скачал результаты голосования по теме <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC": "Пользователь <em>{{userName}}</em> добавил новый аргумент по теме <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_COMMENT_TOPIC": "Пользователь <em>{{userName}}</em> обновил свой аргумент по теме <em>{{topicTitle}}</em>",
-    "NOTIFICATION_MODERATOR_UPDATE_COMMENT_TOPIC": "Пользователь <em>{{userName}}</em> (модератор) обновил поле аргумента <em>{{fieldName}}</em> в теме <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_COMMENT_TOPIC": "Пользователь <em>{{userName}}</em> удалил свой аргумент по теме <em>{{topicTitle}}</em>",
-    "NOTIFICATION_MODERATOR_DELETE_COMMENT_TOPIC": "Пользователь <em>{{userName}}</em> (модератор) удалил аргумент по теме <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_REPORT_COMMENT": "Пользователь <em>{{userName}}</em> сообщил о неуместном аргументе в теме {{topicTitle}} ",
-    "NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_UP": "Пользователь <em>{{userName}}</em> оставил реакцию <em>{{reaction}}</em> на аргумент в теме: {{topicTitle}}",
-    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_UP": "Пользователь <em>{{userName}}</em> обновил свою реакцию на аргумент в теме: {{topicTitle}}",
+    "NOTIFICATION_USER_JOIN_TOPIC": "User <em>{{userName}}</em> has joined this topic with access level: {{accessLevel}}",
+    "NOTIFICATION_USER_JOIN_GROUP": "User <em>{{userName}}</em> has joined this group with access level: {{accessLevel}}",
+    "NOTIFICATION_USER_LEAVE_TOPIC": "User <em>{{userName}}</em> has left this topic.",
+    "NOTIFICATION_USER_DELETE_TOPICPIN_TOPIC": "User <em>{{userName}}</em> has removed a pin from this topic.",
+    "NOTIFICATION_USER_ADD_TOPIC_TOPICPIN": "User <em>{{userName}}</em> has pinned this topic.",
+    "NOTIFICATION_USER_CREATE_VOTE_TOPIC": "User <em>{{userName}}</em> has opened voting for this topic.",
+    "NOTIFICATION_USER_UPDATE_VOTE_TOPIC": "User <em>{{userName}}</em> has updated the voting deadline for this topic.",
+    "NOTIFICATION_USER_CREATE_VOTELIST_TOPIC": "Someone has voted on this topic.",
+    "NOTIFICATION_USER_CREATE_VOTEDELEGATION_VOTE": "User <em>{{userName}}</em> has delegated their vote in this topic.",
+    "NOTIFICATION_USER_DELETE_VOTEDELEGATION_VOTE": "User <em>{{userName}}</em> has revoked delegation of their vote in this topic.",
+    "NOTIFICATION_USER_VIEW_VOTEUSERCONTAINER": "User <em>{{userName}}</em> has downloaded the voting results for this topic.",
+    "NOTIFICATION_USER_VIEW_VOTEFINALCONTAINER": "User <em>{{userName}}</em> has downloaded the voting results for this topic.",
+    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC": "User <em>{{userName}}</em> has added a new argument in this topic.",
+    "NOTIFICATION_USER_UPDATE_COMMENT_TOPIC": "User <em>{{userName}}</em> has edited their argument in this topic.",
+    "NOTIFICATION_MODERATOR_UPDATE_COMMENT_TOPIC": "User <em>{{userName}}</em> (moderator) has updated the argument field <em>{{fieldName}}</em> in this topic.",
+    "NOTIFICATION_USER_DELETE_COMMENT_TOPIC": "User <em>{{userName}}</em> has deleted their argument in this topic.",
+    "NOTIFICATION_MODERATOR_DELETE_COMMENT_TOPIC": "User <em>{{userName}}</em> (moderator) has deleted an argument in this topic.",
+    "NOTIFICATION_USER_ADD_REPORT_COMMENT": "User <em>{{userName}}</em> has reported an argument in this topic.",
+    "NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_UP": "User <em>{{userName}}</em> has left a reaction <em>{{reaction}}</em> on an argument in this topic.",
+    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_UP": "User <em>{{userName}}</em> has updated their reaction to an argument in this topic.",
     "NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_DOWN": "@:NOTIFICATIONS.NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_UP",
     "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_DOWN": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_UP",
-    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_REMOVE": "Пользователь <em>{{userName}}</em> удалил свою реакцию на аргумент в теме: {{topicTitle}} ",
+    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_REMOVE": "User <em>{{userName}}</em> has removed their reaction to an argument in this topic.",
     "NOTIFICATION_COMMENTVOTE_FIELD_VALUE_UP": "поддерживаю",
     "NOTIFICATION_COMMENTVOTE_FIELD_VALUE_DOWN": "не поддерживаю",
     "NOTIFICATION_COMMENTVOTE_FIELD_VALUE_REMOVE": "удалить",
-    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC_IN_REPLY_TO_COMMENT": "Пользователь <em>{{userName}}</em> ответил на аргумент в теме <em>{{topicTitle}}</em>: ",
-    "NOTIFICATION_USER_ADD_TOPIC_GROUP": "Пользователь <em>{{userName}}</em> добавил тему <em>{{topicTitle}}</em> в группу <em>{{groupName}}</em>",
-    "NOTIFICATION_USER_DELETE_GROUP_TOPIC": "Пользователь <em>{{userName}}</em> удалил тему <em>{{topicTitle}}</em> из группы <em>{{groupName}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP": "Пользователь <em>{{userName}}</em> обновил уровень доступа группы <em>{{groupName}}</em> к теме <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP_NONE": "Пользователь <em>{{userName}}</em> отменил доступ группы <em>{{groupName}}</em> к теме <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_TOPICEVENT_TOPIC": "Пользователь <em>{{userName}}</em> создал обновление по теме <em>{{topicTitle}}</em>:",
-    "NOTIFICATION_USER_DELETE_TOPICEVENT_TOPIC": "Пользователь <em>{{userName}}</em> удалил обновление по теме <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_ATTACHMENT_TOPIC": "Пользователь <em>{{userName}}</em> прикрепил файл <em>{{attachmentName}}</em> к теме <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_ATTACHMENT_TOPIC": "Пользователь <em>{{userName}}</em> удалил прикрепленный файл <em>{{attachmentName}}</em> из темы <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_ATTACHMENT_TOPIC": "Пользователь <em>{{userName}}</em> обновил прикрепленный файл в теме <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC_IN_REPLY_TO_COMMENT": "User <em>{{userName}}</em> has left a reply to an argument in this topic.",
+    "NOTIFICATION_USER_ADD_TOPIC_GROUP": "User <em>{{userName}}</em> has added this topic to group <em>{{groupName}}</em>",
+    "NOTIFICATION_USER_DELETE_GROUP_TOPIC": "User <em>{{userName}}</em> has removed this topic from group <em>{{groupName}}</em>",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP": "User <em>{{userName}}</em> has changed the access level of group <em>{{groupName}}</em> to this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP_NONE": "User <em>{{userName}}</em> has revoked access from group <em>{{groupName}}</em> to this topic.",
+    "NOTIFICATION_USER_CREATE_TOPICEVENT_TOPIC": "User <em>{{userName}}</em> has posted an update for this topic.",
+    "NOTIFICATION_USER_DELETE_TOPICEVENT_TOPIC": "User <em>{{userName}}</em> has deleted an update from this topic.",
+    "NOTIFICATION_USER_ADD_ATTACHMENT_TOPIC": "User <em>{{userName}}</em> has added an attachment <em>{{attachmentName}}</em> to this topic.",
+    "NOTIFICATION_USER_DELETE_ATTACHMENT_TOPIC": "User <em>{{userName}}</em> has deleted an attachment <em>{{attachmentName}}</em> from this topic.",
+    "NOTIFICATION_USER_UPDATE_ATTACHMENT_TOPIC": "User <em>{{userName}}</em> has updated an attachment in this topic.",
     "NOTIFICATION_TOPIC_FIELD_DESCRIPTION": "описание",
     "NOTIFICATION_TOPIC_FIELD_STATUS": "статус",
     "NOTIFICATION_TOPIC_FIELD_STATUS_INPROGRESS": "создается",
@@ -161,7 +161,7 @@
     "NOTIFICATION_USER_UPDATE_GROUPMEMBERUSER": "Пользователь <em>{{userName}}</em> обновил уровень доступа пользователя <em>{{userName2}}</em> к группе <em>{{groupName}}</em>",
     "NOTIFICATION_USER_UPDATE_GROUPMEMBERUSER_NONE": "Пользователь <em>{{userName}}</em> отменил доступ пользователя <em>{{userName2}}</em> к группе <em>{{groupName}}</em>",
     "USER_DELETE_USER_GROUP": "Пользователь <em>{{userName}}</em> удалил пользователя <em>{{userName2}}</em> из группы <em>{{groupName}}</em>",
-    "NOTIFICATION_USER_ADD_USERCONNECTION_USER": "Пользователь <em>{{userName}}</em> добавил новый способ входа в систему: <em>{{connectionName}}</em>",
+    "NOTIFICATION_USER_ADD_USERCONNECTION_USER": "User <em>{{userName}}</em> has added a new login method: <em>{{connectionName}}</em>",
     "NOTIFICATION_USER_CREATE_USER": "Создан пользователь <em>{{userName}}</em>",
     "NOTIFICATION_SYSTEM_CREATE_USER": "Пользователь был создан в системе по приглашению другого пользователя.",
     "NOTIFICATION_USER_CREATE_USERCONSENT": "",
@@ -178,7 +178,7 @@
     "FILTER_SELF": "Мои обновления"
   },
   "VOTE_REMINDER": {
-    "SUBJECT": "Напоминание проголосовать по теме"
+    "SUBJECT": "A reminder to vote"
   },
   "TXT_TOPIC_CATEGORY_ALL": "все категории",
   "TXT_TOPIC_CATEGORY_CITIZENOS": "Citizen OS",
@@ -194,9 +194,9 @@
   "TXT_TOPIC_CATEGORY_TRANSPORT": "Общественный транспорт и безопасность на дорогах",
   "TXT_TOPIC_CATEGORY_TAXES": "Налоги и госбюджет",
   "TXT_TOPIC_CATEGORY_AGRICULTURE": "Сельское хозяйство",
-  "TXT_TOPIC_CATEGORY_ENVIRONMENT": "Окружающая среда и защита животных",
+  "TXT_TOPIC_CATEGORY_ENVIRONMENT": "Environment and animal protection",
   "TXT_TOPIC_CATEGORY_CULTURE": "Культура, СМИ и спорт",
-  "TXT_TOPIC_CATEGORY_HEALTH": "Здравоохранение и социальное обеспечение",
+  "TXT_TOPIC_CATEGORY_HEALTH": "Health and social care",
   "TXT_TOPIC_CATEGORY_WORK": "Работа и занятость на рынке труда",
   "TXT_TOPIC_CATEGORY_EDUCATION": "Образование",
   "TXT_TOPIC_CATEGORY_POLITICS": "Политика и государственное управление",
