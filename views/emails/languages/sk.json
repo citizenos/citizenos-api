@@ -9,10 +9,10 @@
     "SUBJECT": "Aktivujte si účet Citizen OS"
   },
   "INVITE_GROUP": {
-    "SUBJECT": "{{fromUser.name}} vás pozýva pridať sa do skupiny \"{{group.name}}\" na Citizen OS"
+    "SUBJECT": "User {{fromUser.name}} is inviting you to join the group “{{group.name}}”"
   },
   "INVITE_TOPIC": {
-    "SUBJECT": "{{fromUser.name}} vás pozýva podieľať sa na spoločnom rozhodnutí",
+    "SUBJECT": "User {{fromUser.name}} is inviting you to join the topic “{{topicTitle}}”",
     "SUBJECT_rahvaalgatus_ee": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust",
     "SUBJECT_rahvaalgatus_test": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust"
@@ -21,28 +21,28 @@
     "SUBJECT": "Obnovte si heslo k účtu Citizen OS"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Ďakujeme, vašu správu (#{{report.id}}) sme prijali"
+    "SUBJECT": "Thank you for reporting a topic"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Správa #{{report.id}}: vaša téma na Citizen OS môže obsahovať porušenie usmernení"
+    "SUBJECT": "Your Citizen OS topic has been reported to moderators"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "Téma Citizen OS bola nahlásená (#{{report.id}}), prosíme o jej moderáciu"
+    "SUBJECT": "Please moderate this reported Citizen OS topic"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Vaša správa #{{report.id}} Citizen OS bola preskúmaná"
+    "SUBJECT": "The Citizen OS topic you reported has been reviewed"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Správa #{{report.id}}: Vaša téma Citizen OS bola preskúmaná moderátorom"
+    "SUBJECT": "Your Citizen OS topic has been reviewed by a moderator"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "Nahlásená (#{{report.id}}) téma Citizen OS bola zrevidovaná, preskúmať prosím"
+    "SUBJECT": "A reported Citizen OS topic has been revised, please review"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Správa #{{report.id}}: prístup k vašej Citizen OS téme bol obnovený."
+    "SUBJECT": "Access to your reported Citizen OS topic has been restored"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
-    "SUBJECT": "Vaša správa (#{{report.id}}) v Citizen OS bola vyriešená"
+    "SUBJECT": "The issue you reported has been resolved"
   },
   "REPORT": {
     "REPORT_TYPE": {
@@ -65,69 +65,69 @@
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Váš príspevok bol komunitou nahlásený ako nevhodný"
+    "SUBJECT": "Your argument has been reported as inappropriate"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "Príspevok bol komunitou nahlásený ako nevhodný"
+    "SUBJECT": "An argument has been reported as inappropriate"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
   "NOTIFICATIONS": {
-    "SUBJECT": "Oznámenie z témy Citizen OS {{topicTitle}}",
-    "NOTIFICATION_USER_CREATE_TOPIC": "Užívateľ/ka <em>{{userName}}</em> vytvoril/a tému <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPIC": "Užívateľ/ka <em>{{userName}}</em>aktualizoval/a pole <em>{{fieldName}}</em>v téme <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "Užívateľ/ka <em>{{userName}}</em> vykonal/a <em>{{groupCount}}</em> aktualizácií k téme <em>{{topicTitle}}</em>",
+    "SUBJECT": "An update on topic “{{topicTitle}}”",
+    "NOTIFICATION_USER_CREATE_TOPIC": "User <em>{{userName}}</em> has created a new topic.",
+    "NOTIFICATION_USER_UPDATE_TOPIC": "User <em>{{userName}}</em> has updated the field <em>{{fieldName}}</em> in this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "User <em>{{userName}}</em> has made <em>{{groupCount}}</em> updates to this topic.",
     "NOTIFICATION_PREVIOUS_VERSION": "Predošlá verzia: {{previousValue}}",
     "NOTIFICATION_NEW_VERSION": "Nová verzia: {{newValue}}",
-    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "Systém aktualizoval pole <em>{{fieldName}}</em> v téme <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_TOPIC": "Užívateľ/ka <em>{{userName}}</em> vymazal/a tému <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_USER_TOPIC": "Užívateľ/ka <em>{{userName}}</em> pozval/a užívateľa/ku <em>{{userName2}}</em>, aby sa zúčastnil/a témy <em>{{topicTitle}}</em>",
+    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "The Citizen OS system has updated a field <em>{{fieldName}}</em> in this topic.",
+    "NOTIFICATION_USER_DELETE_TOPIC": "User <em>{{userName}}</em> has deleted this topic.",
+    "NOTIFICATION_USER_ADD_USER_TOPIC": "User <em>{{userName}}</em> has invited <em>{{userName2}}</em> to participate in this topic.",
     "NOTIFICATION_USER_INVITE_TOPIC_USER": "@:NOTIFICATIONS.NOTIFICATION_USER_ADD_USER_TOPIC",
-    "NOTIFICATION_USER_ACCEPT_INVITE_TOPIC": "Užívateľ/ka <em>{{userName}}</em> prijal/a pozvanie do témy <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER": "Užívateľ/ka <em>{{userName}}</em> zmenil/a úroveň prístupu užívateľa <em>{{userName2}}</em> k téme <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE": "Užívateľ/ka <em>{{userName}}</em> zrušil/a prístup od užívateľa/ky <em>{{userName2}}</em> k téme <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_ACCEPT_INVITE_TOPIC": "User <em>{{userName}}</em> has accepted an invite to this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER": "User <em>{{userName}}</em> has changed the access level of user <em>{{userName2}}</em> for this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE": "User <em>{{userName}}</em> has revoked access from user <em>{{userName2}}</em> to this topic.",
     "NOTIFICATION_USER_UPDATE_TOPICINVITEUSER": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER",
     "NOTIFICATION_USER_UPDATE_TOPICINVITEUSER_NONE": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE",
-    "NOTIFICATION_USER_UPDATE_TOPICJOIN": "Téma <em>{{topicTitle}}</em>: užívateľ/ka <em>{{userName}}</em> aktualizoval/a niektoré atribúty odkazu na zdieľanie:",
-    "NOTIFICATION_USER_UPDATE_GROUPJOIN": "Skupina <em>{{groupName}}</em>: užívateľ/ka <em>{{userName}}</em> aktualizoval/a niektoré atribúty odkazu na zdieľanie:",
+    "NOTIFICATION_USER_UPDATE_TOPICJOIN": "User <em>{{userName}}</em> has edited the share link settings for this topic.",
+    "NOTIFICATION_USER_UPDATE_GROUPJOIN": "User <em>{{userName}}</em> has edited the share link settings for this group.",
     "NOTIFICATION_USER_DELETE_USER_TOPIC": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE",
-    "NOTIFICATION_USER_JOIN_TOPIC": "Užívateľ/ka <em>{{userName}}</em> sa pridal/a k téme <em>{{topicTitle}}</em> s úrovňou prístupu: {{accessLevel}}",
-    "NOTIFICATION_USER_JOIN_GROUP": "Užívateľ/ka <em>{{userName}}</em> sa pridal/a do skupiny <em>{{groupName}}</em> s úrovňou prístupu: {{accessLevel}}",
-    "NOTIFICATION_USER_LEAVE_TOPIC": "Užívateľ/ka <em>{{userName}}</em> opustil/a tému <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_TOPICPIN_TOPIC": "Užívateľ/ka <em>{{userName}}</em> odstránil/a prišpendlenie z témy <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_TOPIC_TOPICPIN": "Užívateľ/ka <em>{{userName}}</em> prišpendlil/a tému <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_VOTE_TOPIC": "Užívateľ/ka <em>{{userName}}</em> otvoril/a hlasovanie pre tému <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_VOTE_TOPIC": "Užívateľ/ka <em>{{userName}}</em> aktualizoval/a deadline hlasovania pre tému <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_VOTELIST_TOPIC": "Užívateľ/ka hlasoval/a o téme <em>{{topicTitle}}</em>.",
-    "NOTIFICATION_USER_CREATE_VOTEDELEGATION_VOTE": "Užívateľ/ka <em>{{userName}}</em> delegoval/a svoj hlas pre tému <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_VOTEDELEGATION_VOTE": "Užívateľ/ka <em>{{userName}}</em> zrušil/a delegáciu svojho hlasu pre tému <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_VIEW_VOTEUSERCONTAINER": "Užívateľ/ka <em>{{userName}}</em> si stiahol/a výsledky hlasovania o téme <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_VIEW_VOTEFINALCONTAINER": "Užívateľ/ka <em>{{userName}}</em> si stiahol/a výsledky hlasovania o téme <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC": "Užívateľ/ka <em>{{userName}}</em> pridal/a nový argument pre tému <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_COMMENT_TOPIC": "Užívateľ/ka <em>{{userName}}</em> aktualizoval/a svoj argument pre tému <em>{{topicTitle}}</em>",
-    "NOTIFICATION_MODERATOR_UPDATE_COMMENT_TOPIC": "Užívateľ/ka <em>{{userName}}</em> (moderátor/ka) aktualizoval/a pole argumentu <em>{{fieldName}}</em> v téme <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_COMMENT_TOPIC": "Užívateľ/ka <em>{{userName}}</em> vymazal/a svoj argument pre tému <em>{{topicTitle}}</em>",
-    "NOTIFICATION_MODERATOR_DELETE_COMMENT_TOPIC": "Užívateľ/ka <em>{{userName}}</em> (moderátor) vymazal/a argument pre tému <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_REPORT_COMMENT": "Užívateľ/ka <em>{{userName}}</em> nahlásil/a príspevok v téme {{topicTitle}} ",
-    "NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_UP": "Užívateľ/ka <em>{{userName}}</em> zareagoval/a <em>{{reaction}}</em> na argument v téme: {{topicTitle}}",
-    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_UP": "Užívateľ/ka <em>{{userName}}</em> aktualizoval/a svoju reakciu na argument v téme: {{topicTitle}}",
+    "NOTIFICATION_USER_JOIN_TOPIC": "User <em>{{userName}}</em> has joined this topic with access level: {{accessLevel}}",
+    "NOTIFICATION_USER_JOIN_GROUP": "User <em>{{userName}}</em> has joined this group with access level: {{accessLevel}}",
+    "NOTIFICATION_USER_LEAVE_TOPIC": "User <em>{{userName}}</em> has left this topic.",
+    "NOTIFICATION_USER_DELETE_TOPICPIN_TOPIC": "User <em>{{userName}}</em> has removed a pin from this topic.",
+    "NOTIFICATION_USER_ADD_TOPIC_TOPICPIN": "User <em>{{userName}}</em> has pinned this topic.",
+    "NOTIFICATION_USER_CREATE_VOTE_TOPIC": "User <em>{{userName}}</em> has opened voting for this topic.",
+    "NOTIFICATION_USER_UPDATE_VOTE_TOPIC": "User <em>{{userName}}</em> has updated the voting deadline for this topic.",
+    "NOTIFICATION_USER_CREATE_VOTELIST_TOPIC": "Someone has voted on this topic.",
+    "NOTIFICATION_USER_CREATE_VOTEDELEGATION_VOTE": "User <em>{{userName}}</em> has delegated their vote in this topic.",
+    "NOTIFICATION_USER_DELETE_VOTEDELEGATION_VOTE": "User <em>{{userName}}</em> has revoked delegation of their vote in this topic.",
+    "NOTIFICATION_USER_VIEW_VOTEUSERCONTAINER": "User <em>{{userName}}</em> has downloaded the voting results for this topic.",
+    "NOTIFICATION_USER_VIEW_VOTEFINALCONTAINER": "User <em>{{userName}}</em> has downloaded the voting results for this topic.",
+    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC": "User <em>{{userName}}</em> has added a new argument in this topic.",
+    "NOTIFICATION_USER_UPDATE_COMMENT_TOPIC": "User <em>{{userName}}</em> has edited their argument in this topic.",
+    "NOTIFICATION_MODERATOR_UPDATE_COMMENT_TOPIC": "User <em>{{userName}}</em> (moderator) has updated the argument field <em>{{fieldName}}</em> in this topic.",
+    "NOTIFICATION_USER_DELETE_COMMENT_TOPIC": "User <em>{{userName}}</em> has deleted their argument in this topic.",
+    "NOTIFICATION_MODERATOR_DELETE_COMMENT_TOPIC": "User <em>{{userName}}</em> (moderator) has deleted an argument in this topic.",
+    "NOTIFICATION_USER_ADD_REPORT_COMMENT": "User <em>{{userName}}</em> has reported an argument in this topic.",
+    "NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_UP": "User <em>{{userName}}</em> has left a reaction <em>{{reaction}}</em> on an argument in this topic.",
+    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_UP": "User <em>{{userName}}</em> has updated their reaction to an argument in this topic.",
     "NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_DOWN": "@:NOTIFICATIONS.NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_UP",
     "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_DOWN": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_UP",
-    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_REMOVE": "Užívateľ/ka <em>{{userName}}</em> odstránil/a svoju reakciu na argument v téme: {{topicTitle}} ",
+    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_REMOVE": "User <em>{{userName}}</em> has removed their reaction to an argument in this topic.",
     "NOTIFICATION_COMMENTVOTE_FIELD_VALUE_UP": "nahor",
     "NOTIFICATION_COMMENTVOTE_FIELD_VALUE_DOWN": "dole",
     "NOTIFICATION_COMMENTVOTE_FIELD_VALUE_REMOVE": "odstrániť",
-    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC_IN_REPLY_TO_COMMENT": "Užívateľ/ka <em>{{userName}}</em> nechal/a odpoveď na argument v téme <em>{{topicTitle}}</em>: ",
-    "NOTIFICATION_USER_ADD_TOPIC_GROUP": "Užívateľ/ka <em>{{userName}}</em> pridal/a tému <em>{{topicTitle}}</em> do skupiny <em>{{groupName}}</em>",
-    "NOTIFICATION_USER_DELETE_GROUP_TOPIC": "Užívateľ/ka <em>{{userName}}</em> odstránil/a tému <em>{{topicTitle}}</em> zo skupiny <em>{{groupName}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP": "Užívateľ/ka <em>{{userName}}</em> zmenil/a úrovne prístupu skupiny <em>{{groupName}}</em> k téme <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP_NONE": "Užívateľ/ka <em>{{userName}}</em> zrušil/a prístup od skupiny <em>{{groupName}}</em> k téme <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_TOPICEVENT_TOPIC": "Užívateľ/ka <em>{{userName}}</em> vytvoril/a aktualizáciu témy <em>{{topicTitle}}</em>:",
-    "NOTIFICATION_USER_DELETE_TOPICEVENT_TOPIC": "Užívateľ/ka <em>{{userName}}</em> vymazal/a aktualizáciu z témy <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_ATTACHMENT_TOPIC": "Užívateľ/ka <em>{{userName}}</em> pridal/a prílohu <em>{{attachmentName}}</em> do témy <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_ATTACHMENT_TOPIC": "Užívateľ/ka <em>{{userName}}</em> vymazal/a prílohu <em>{{attachmentName}}</em> z témy <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_ATTACHMENT_TOPIC": "Užívateľ/ka <em>{{userName}}</em> aktualizoval/a prílohu v téme <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC_IN_REPLY_TO_COMMENT": "User <em>{{userName}}</em> has left a reply to an argument in this topic.",
+    "NOTIFICATION_USER_ADD_TOPIC_GROUP": "User <em>{{userName}}</em> has added this topic to group <em>{{groupName}}</em>",
+    "NOTIFICATION_USER_DELETE_GROUP_TOPIC": "User <em>{{userName}}</em> has removed this topic from group <em>{{groupName}}</em>",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP": "User <em>{{userName}}</em> has changed the access level of group <em>{{groupName}}</em> to this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP_NONE": "User <em>{{userName}}</em> has revoked access from group <em>{{groupName}}</em> to this topic.",
+    "NOTIFICATION_USER_CREATE_TOPICEVENT_TOPIC": "User <em>{{userName}}</em> has posted an update for this topic.",
+    "NOTIFICATION_USER_DELETE_TOPICEVENT_TOPIC": "User <em>{{userName}}</em> has deleted an update from this topic.",
+    "NOTIFICATION_USER_ADD_ATTACHMENT_TOPIC": "User <em>{{userName}}</em> has added an attachment <em>{{attachmentName}}</em> to this topic.",
+    "NOTIFICATION_USER_DELETE_ATTACHMENT_TOPIC": "User <em>{{userName}}</em> has deleted an attachment <em>{{attachmentName}}</em> from this topic.",
+    "NOTIFICATION_USER_UPDATE_ATTACHMENT_TOPIC": "User <em>{{userName}}</em> has updated an attachment in this topic.",
     "NOTIFICATION_TOPIC_FIELD_DESCRIPTION": "popis",
     "NOTIFICATION_TOPIC_FIELD_STATUS": "status",
     "NOTIFICATION_TOPIC_FIELD_STATUS_INPROGRESS": "rozpracované",
@@ -161,7 +161,7 @@
     "NOTIFICATION_USER_UPDATE_GROUPMEMBERUSER": "Užívateľ/ka <em>{{userName}}</em> zmenil/a úroveň prístupu užívateľa/ky <em>{{userName2}}</em> k skupine <em>{{groupName}}</em>",
     "NOTIFICATION_USER_UPDATE_GROUPMEMBERUSER_NONE": "Užívateľ/ka <em>{{userName}}</em> zrušil/a prístup užívateľa/ky <em>{{userName2}}</em> do skupiny <em>{{groupName}}</em>",
     "USER_DELETE_USER_GROUP": "Užívateľ/ka <em>{{userName}}</em> odstránil/a užívateľa/ku <em>{{userName2}}</em> zo skupiny <em>{{groupName}}</em>",
-    "NOTIFICATION_USER_ADD_USERCONNECTION_USER": "Užívateľ/ka <em>{{userName}}</em> pridal/a novú prihlasovaciu metódu: <em>{{connectionName}}</em>",
+    "NOTIFICATION_USER_ADD_USERCONNECTION_USER": "User <em>{{userName}}</em> has added a new login method: <em>{{connectionName}}</em>",
     "NOTIFICATION_USER_CREATE_USER": "Užívateľ/ka <em>{{userName}}</em> bol práve vytvorený",
     "NOTIFICATION_SYSTEM_CREATE_USER": "Užívateľ/ka bol v systéme vytvorený pozvánkou od iného užívateľa.",
     "NOTIFICATION_USER_CREATE_USERCONSENT": "",
@@ -178,7 +178,7 @@
     "FILTER_SELF": "Moje aktivity"
   },
   "VOTE_REMINDER": {
-    "SUBJECT": "Reminder to vote on a topic"
+    "SUBJECT": "A reminder to vote"
   },
   "TXT_TOPIC_CATEGORY_ALL": "všetky kategórie",
   "TXT_TOPIC_CATEGORY_CITIZENOS": "Citizen OS",
@@ -194,9 +194,9 @@
   "TXT_TOPIC_CATEGORY_TRANSPORT": "Verejná doprava a bezpečnosť na cestách",
   "TXT_TOPIC_CATEGORY_TAXES": "Dane a rozpočty",
   "TXT_TOPIC_CATEGORY_AGRICULTURE": "Poľnohospodárstvo",
-  "TXT_TOPIC_CATEGORY_ENVIRONMENT": "Životné prostredie, ochrana zvierat",
+  "TXT_TOPIC_CATEGORY_ENVIRONMENT": "Environment and animal protection",
   "TXT_TOPIC_CATEGORY_CULTURE": "Kultúra, médiá a šport",
-  "TXT_TOPIC_CATEGORY_HEALTH": "Starostlivosť o zdravie a sociálna opatera",
+  "TXT_TOPIC_CATEGORY_HEALTH": "Health and social care",
   "TXT_TOPIC_CATEGORY_WORK": "Práca a zamestnanosť",
   "TXT_TOPIC_CATEGORY_EDUCATION": "Vzdelávanie",
   "TXT_TOPIC_CATEGORY_POLITICS": "Politika a verejná správa",
