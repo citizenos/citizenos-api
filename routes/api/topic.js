@@ -1819,7 +1819,7 @@ module.exports = function (app) {
                 if (config.storage?.type.toLowerCase() === 's3' && currentImageURL.href.indexOf(`https://${config.storage.bucket}.s3.${config.storage.region}.amazonaws.com/users/${req.user.id}`) === 0) {
                     await cosUpload.delete(currentImageURL.pathname)
                 } else if (config.storage?.type.toLowerCase() === 'local' && currentImageURL.hostname === (new URL(config.url.api)).hostname) {
-                    const appDir = __dirname.replace('/routes/api', '/public/uploads/users');
+                    const appDir = __dirname.replace('/routes/api', '/public/uploads/topics');
                     const baseFolder = config.storage.baseFolder || appDir;
 
                     fs.unlinkSync(`${baseFolder}/${path.parse(currentImageURL.pathname).base}`);
