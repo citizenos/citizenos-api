@@ -5443,7 +5443,7 @@ module.exports = function (app) {
                     c.subject,
                     c.text,
                     pg_temp.editCreatedAtToJson(c.edits) as edits,
-                    jsonb_build_object('id', u.id,'name',u.name, 'company', u.company ${dataForModerator}) as creator,
+                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl", 'company', u.company ${dataForModerator}) as creator,
                     CASE
                         WHEN c."deletedById" IS NOT NULL THEN jsonb_build_object('id', c."deletedById", 'name', dbu.name )
                         ELSE jsonb_build_object('id', c."deletedById")
@@ -5481,7 +5481,7 @@ module.exports = function (app) {
                     c.subject,
                     c.text,
                     pg_temp.editCreatedAtToJson(c.edits) as edits,
-                    jsonb_build_object('id', u.id,'name',u.name, 'company', u.company ${dataForModerator}) as creator,
+                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl", 'company', u.company ${dataForModerator}) as creator,
                     CASE
                         WHEN c."deletedById" IS NOT NULL THEN jsonb_build_object('id', c."deletedById", 'name', dbu.name )
                         ELSE jsonb_build_object('id', c."deletedById")
