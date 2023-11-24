@@ -3912,12 +3912,11 @@ module.exports = function (app) {
         _(members).forEach(function (m) {
             if (m.userId) {
                 m.userId = m.userId.trim();
-
                 // Is it an e-mail?
                 if (validator.isEmail(m.userId)) {
                     m.userId = m.userId.toLowerCase(); // https://github.com/citizenos/citizenos-api/issues/234
                     validEmailMembers.push(m); // The whole member object with level
-                } else if (validator.isUUID(m.userId, 4)) {
+                } else if (validator.isUUID(m.userId)) {
                     validUserIdMembers.push(m);
                 } else {
                     logger.warn('Invalid member ID, is not UUID or email thus ignoring', req.method, req.path, m, req.body);

@@ -11,7 +11,7 @@ module.exports = function (app) {
     var validator = app.get('validator');
 
     app.param(['topicId', 'groupId', 'memberId', 'partnerId', 'commentId', 'voteId'], function (req, res, next, id) {
-        if (!validator.isUUID(id, 4)) {
+        if (!validator.isUUID(id)) {
             return res.notFound();
         }
 

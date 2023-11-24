@@ -9261,7 +9261,7 @@ suite('Users', function () {
                     const reportText = 'Topic spam report test';
 
                     const reportResult = (await topicReportCreate(agentReporter, topic.id, reportType, reportText)).body.data;
-                    assert.isTrue(validator.isUUID(reportResult.id, 4));
+                    assert.isTrue(validator.isUUID(reportResult.id));
                     assert.equal(reportResult.type, reportType);
                     assert.equal(reportResult.text, reportText);
                     assert.property(reportResult, 'createdAt');
@@ -10772,7 +10772,7 @@ suite('Topics', function () {
                     const reportText = 'Hate speech report test';
 
                     const reportResult = (await topicCommentReportCreate(agentReporter, topic.id, comment.id, Report.TYPES.hate, reportText)).body.data;
-                    assert.isTrue(validator.isUUID(reportResult.id, 4));
+                    assert.isTrue(validator.isUUID(reportResult.id));
                     assert.equal(reportResult.type, Report.TYPES.hate);
                     assert.equal(reportResult.text, reportText);
                     assert.property(reportResult, 'createdAt');
