@@ -2226,8 +2226,13 @@ module.exports = function (app) {
         let memberJoin = '';
         let memberLevel = '';
         if (userId) {
-            memberLevel = ` gmu.level AS "userLevel", `;
-            memberJoin = ` LEFT JOIN "GroupMemberUsers" gmu ON gmu."groupId" = g.id AND gmu."userId" = :userId `
+            memberLevel = ` gmu.level AS "userLevel",
+            CASE
+            WHEN gf."groupId" = g.id THEN true
+                ELSE false
+            END as "favourite", `;
+            memberJoin = ` LEFT JOIN "GroupMemberUsers" gmu ON gmu."groupId" = g.id AND gmu."userId" = :userId
+            LEFT JOIN "GroupFavourites" gf ON (gf."groupId" = g.id AND gf."userId" = :userId) `
         }
         if (country) {
             where += ` AND g.country=:country `;
