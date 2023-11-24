@@ -951,15 +951,7 @@ module.exports = function (app) {
                     linkViewTopic: linkViewTopic
                 }
             );
-            emailOptions.images.push(
-                {
-                    name: 'header_icon.png',
-                    file: path.join(templateRoot, 'images/ArgumentReport.png')
-                },
-                {
-                    name: 'icon_argument.png',
-                    file: path.join(templateRoot, 'images/Discussions.png')
-                });
+
             emailOptions.linkedData.translations = template.translations;
             const promiseCreatorEmail = emailClient.sendString(template.body, emailOptions);
 
@@ -1014,15 +1006,7 @@ module.exports = function (app) {
                             isUserNotified: commentCreatorInformed
                         }
                     );
-                    emailOptions.images.push(
-                        {
-                            name: 'header_icon.png',
-                            file: path.join(templateRoot, 'images/ArgumentReport.png')
-                        },
-                        {
-                            name: 'icon_argument.png',
-                            file: path.join(templateRoot, 'images/Discussions.png')
-                        });
+
                     emailOptions.linkedData.translations = template.translations;
                     const promiseModeratorEmail = emailClient.sendString(template.body, emailOptions);
 
@@ -1665,11 +1649,6 @@ module.exports = function (app) {
             linkedData.translations = template.translations;
             const images = EMAIL_OPTIONS_DEFAULT.images;
 
-            images.push(
-                {
-                    name: 'icon_vote.png',
-                    file: path.join(templateRoot, 'images/Voting.png')
-                })
             const emailOptions = {
                 // from: from, - comes from emailClient.js configuration
                 subject: subject,
