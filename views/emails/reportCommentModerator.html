@@ -1,8 +1,8 @@
-r<table id="bodyHeader" width="100%">
+<table id="bodyHeader" width="100%">
     <tbody>
         <tr>
             <td valign="middle" style="padding:0;height: 88px;">
-                <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding:0;">Some discussion content has been
+                <p style="font-size:13px;line-height: 16px; font-weight:bold;color:#2C3B47;padding:0;">Some discussion content has been
                     reported in</p>
                 <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
             </td>
@@ -12,12 +12,12 @@ r<table id="bodyHeader" width="100%">
 <table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
     <tbody>
         <tr>
-            <td valign="middle" style="padding-bottom: 16px;">
+            <td valign="middle" style="padding-bottom: 32px;">
                 Hi moderator,
             </td>
         </tr>
         <tr>
-            <td style="font-size:14px; color:#252525; padding-bottom: 8px;">Some discussion content has been reported as
+          <td style="font-size:14px; color:#252525; padding-bottom: 32px;">Some discussion content has been reported as
                 inappropriate.</td>
         </tr>
 
@@ -31,7 +31,9 @@ r<table id="bodyHeader" width="100%">
         <tr>
             <td style="font-size:14px; color:#252525; padding-bottom: 32px;">Review the reasons for reporting below.</td>
         </tr>
-
+        <tr>
+            <td><p style="font-size:13px;font-weight:bold;color:#4D5C6A; line-height: 16px;padding:0;padding-top: 16px;">Content</p></td>
+        </tr>
         <tr>
             <td valign="middle">
                 <table class="info_table" style="padding-top: 32px;">
@@ -54,10 +56,17 @@ r<table id="bodyHeader" width="100%">
                         </tr>
                     </tbody>
                 </table>
-                <table class="info_table">
+            </td>
+        </tr>
+        <tr>
+            <td><p style="font-size:13px;font-weight:bold;color:#4D5C6A; line-height: 16px;padding:0;padding-top: 16px;">Reason</p></td>
+        </tr>
+        <tr>
+            <td>
+                <table class="info_table" >
                     <tbody>
                         <tr>
-                            <td style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;">
+                            <td style="font-size:14px;font-weight:bold;color:#2C3B47;line-height:16px;padding-bottom: 16px;">
                                 {{report.type}}
                             </td>
                         </tr>
