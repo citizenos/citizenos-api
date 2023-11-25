@@ -65,10 +65,10 @@
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Your argument has been reported as inappropriate"
+    "SUBJECT": "Your discussion contribution has been reported as inappropriate"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "An argument has been reported as inappropriate"
+    "SUBJECT": "Some discussion content has been reported as inappropriate"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
@@ -82,7 +82,7 @@
     "NOTIFICATION_NEW_VERSION": "Dernière version : {{newValue}}",
     "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "The Citizen OS system has updated a field <em>{{fieldName}}</em> in this topic.",
     "NOTIFICATION_USER_DELETE_TOPIC": "User <em>{{userName}}</em> has deleted this topic.",
-    "NOTIFICATION_USER_ADD_USER_TOPIC": "User <em>{{userName}}</em> has invited <em>{{userName2}}</em> to participate in this topic.",
+    "NOTIFICATION_USER_ADD_USER_TOPIC": "User <em>{{userName}}</em> has invited user <em>{{userName2}}</em> to participate in this topic.",
     "NOTIFICATION_USER_INVITE_TOPIC_USER": "@:NOTIFICATIONS.NOTIFICATION_USER_ADD_USER_TOPIC",
     "NOTIFICATION_USER_ACCEPT_INVITE_TOPIC": "User <em>{{userName}}</em> has accepted an invite to this topic.",
     "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER": "User <em>{{userName}}</em> has changed the access level of user <em>{{userName2}}</em> for this topic.",
