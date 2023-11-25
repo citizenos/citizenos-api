@@ -457,35 +457,34 @@ module.exports = function (app) {
         const toUsersPromise = User.findAll({
             where: {
                 id: {
-                    [db.Sequelize.Op.in]:invites.map(invite => invite.userId)
+                    [db.Sequelize.Op.in]: invites.map(invite => invite.userId)
                 }
             },
             attributes: ['id', 'email', 'language', 'name'],
             raw: true
         });
-
         const memberCount = await TopicMemberUser.count({
             where: {
                 topicId: invites[0].topicId
             }
         });
         const lastActivity = await db
-        .query(`
+            .query(`
                  SELECT "createdAt"
                  FROM "Activities"
                  WHERE :topicId =ANY("topicIds")
                  ORDER BY "createdAt" DESC
                  LIMIT 1;
             ;`,
-            {
-                replacements: {
-                    topicId: invites[0].topicId,
-                },
-                type: db.QueryTypes.SELECT,
-                raw: true,
-                nest: true
-            }
-        );
+                {
+                    replacements: {
+                        topicId: invites[0].topicId,
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
         const [fromUser, topic, toUsers] = await Promise.all([fromUserPromise, topicPromise, toUsersPromise]);
         const statusKey = `TXT_TOPIC_STATUS_${topic.status.toUpperCase()}`;
         let templateName = 'inviteTopic';
@@ -692,27 +691,27 @@ module.exports = function (app) {
             }
         });
         const lastActivity = await db
-        .query(`
+            .query(`
                  SELECT "createdAt"
                  FROM "Activities"
                  WHERE :groupId =ANY("groupIds")
                  ORDER BY "createdAt" DESC
                  LIMIT 1;
             ;`,
-            {
-                replacements: {
-                    groupId: invites[0].groupId,
-                },
-                type: db.QueryTypes.SELECT,
-                raw: true,
-                nest: true
-            }
-        );
+                {
+                    replacements: {
+                        groupId: invites[0].groupId,
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
 
         const toUsersPromise = User.findAll({
             where: {
                 id: {
-                    [db.Sequelize.Op.in]:invites.map(invite => invite.userId)
+                    [db.Sequelize.Op.in]: invites.map(invite => invite.userId)
                 }
             },
             attributes: ['id', 'email', 'language', 'name'],
@@ -947,7 +946,11 @@ module.exports = function (app) {
                     linkViewTopic: linkViewTopic
                 }
             );
-
+            emailOptions.images.push(
+                {
+                    name: 'icon_argument.png',
+                    file: path.join(templateRoot, 'images/Discussions.png')
+                });
             emailOptions.linkedData.translations = template.translations;
             const promiseCreatorEmail = emailClient.sendString(template.body, emailOptions);
 
@@ -994,6 +997,7 @@ module.exports = function (app) {
                             to: moderator.email,
                             //Placeholders...
                             comment: commentInfo.comment,
+                            topic: commentInfo.topic,
                             report: {
                                 type: template.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
                                 text: report.text
@@ -1002,7 +1006,11 @@ module.exports = function (app) {
                             isUserNotified: commentCreatorInformed
                         }
                     );
-
+                    emailOptions.images.push(
+                        {
+                            name: 'icon_argument.png',
+                            file: path.join(templateRoot, 'images/Discussions.png')
+                        });
                     emailOptions.linkedData.translations = template.translations;
                     const promiseModeratorEmail = emailClient.sendString(template.body, emailOptions);
 
@@ -1644,7 +1652,11 @@ module.exports = function (app) {
             let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
             linkedData.translations = template.translations;
             const images = EMAIL_OPTIONS_DEFAULT.images;
-
+            images.push(
+                {
+                    name: 'icon_vote.png',
+                    file: path.join(templateRoot, 'images/Vote.png')
+                });
             const emailOptions = {
                 // from: from, - comes from emailClient.js configuration
                 subject: subject,

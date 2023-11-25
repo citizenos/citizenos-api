@@ -1,10 +1,11 @@
 <table id="bodyHeader" width="100%">
     <tbody>
         <tr>
-            <td valign="middle" style="padding:0;height: 88px;">
-                <p style="font-size:13px;line-height: 16px; font-weight:bold;color:#2C3B47;padding:0;">Some discussion content has been
-                    reported in</p>
-                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
+            <td valign="middle" style="padding:22px 22px 22px 0;">
+                <p id="header_title_description">
+                    Some discussion content has been reported in
+                </p>
+                <p id="header_title">{{topic.title}}</p>
             </td>
         </tr>
     </tbody>
@@ -17,29 +18,36 @@
             </td>
         </tr>
         <tr>
-          <td style="font-size:14px; color:#252525; padding-bottom: 32px;">Some discussion content has been reported as
-                inappropriate.</td>
+          <td style="font-size:14px; color:#252525; padding-bottom: 32px;">
+            Some discussion content has been reported as inappropriate.
+        </td>
         </tr>
 
         <tr>
             <td style="font-size:14px; color:#252525; padding-bottom: 8px;">
-                {{#isUserNotified}}The argument's author has been
-                notified{{/isUserNotified}}{{^isUserNotified}}The argument's author has deleted their account{{/isUserNotified}}
+                {{#isUserNotified}}
+                    The argument's author has been notified
+                {{/isUserNotified}}
+                {{^isUserNotified}}
+                    The argument's author has deleted their account
+                {{/isUserNotified}}
             </td>
         </tr>
 
         <tr>
-            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">Review the reasons for reporting below.</td>
+            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">
+                Review the reasons for reporting below.
+            </td>
         </tr>
         <tr>
-            <td><p style="font-size:13px;font-weight:bold;color:#4D5C6A; line-height: 16px;padding:0;padding-top: 16px;">Content</p></td>
+            <td><p class="info_heading">Content</p></td>
         </tr>
         <tr>
             <td valign="middle">
-                <table class="info_table" style="padding-top: 32px;">
+                <table class="info_table">
                     <tbody>
                         <tr>
-                            <td width="70">
+                            <td width="54">
                                 <img src="cid:icon_argument.png" />
                             </td>
                             <td>
@@ -59,7 +67,7 @@
             </td>
         </tr>
         <tr>
-            <td><p style="font-size:13px;font-weight:bold;color:#4D5C6A; line-height: 16px;padding:0;padding-top: 16px;">Reason</p></td>
+            <td><p class="info_heading">Reason</p></td>
         </tr>
         <tr>
             <td>
@@ -82,9 +90,8 @@
             </td>
         </tr>
         <tr>
-            <td style="padding-bottom: 32px;">
-                <p
-                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+            <td style="padding-bottom: 32px; padding-top: 16px;">
+                <p class="submit_button">
                     <a href="{{linkModerate}}" target="_blank"
                         style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 140px;">Review argument</a>
                 </p>

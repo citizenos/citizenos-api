@@ -4108,10 +4108,9 @@ module.exports = function (app) {
                 invite.inviteMessage = inviteMessage;
             }
 
-            await emailLib.sendTopicMemberUserInviteCreate(createdInvites);
-
-            t.afterCommit(() => {
+            t.afterCommit(async () => {
                 if (createdInvites.length) {
+                    await emailLib.sendTopicMemberUserInviteCreate(createdInvites);
                     return res.created({
                         count: createdInvites.length,
                         rows: createdInvites
