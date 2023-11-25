@@ -1,9 +1,9 @@
 <table id="bodyHeader" width="100%">
     <tbody>
         <tr>
-            <td valign="middle">
-                <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding-bottom:0;">A vote reminder for</p>
-                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
+            <td valign="middle" style="padding:22px 22px 22px 0;">
+                <p id="header_title_description">A vote reminder for</p>
+                <p id="header_title">{{topic.title}}</p>
             </td>
         </tr>
     </tbody>
@@ -11,14 +11,16 @@
 <table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
     <tbody>
         <tr>
-            <td valign="middle">
-                <p style="font-size:16px; color:#2C3B47;">Hi {{toUser.name}}!</p>
+            <td valign="middle" style="font-size:16px; line-height: 24px; color:#2C3B47; padding-bottom: 16px;">
+                Hi {{toUser.name}}!
             </td>
         </tr>
 
         <tr>
             <td valign="middle">
-                <p style="color:#2C3B47;">The vote deadline is coming close! <b>You have only {{daysLeft}} left to cast your vote</b></p>
+                <p style="font-size:16px; line-height: 24px; color:#2C3B47;">
+                    The vote deadline is coming close! <b>You have only {{daysLeft}} left to cast your vote</b>
+                </p>
             </td>
         </tr>
 
@@ -31,10 +33,10 @@
                                 <img src="cid:icon_vote.png" />
                             </td>
                             <td style="font-size: 16px;line-height:24px;">
-                                <b>{{voteCount}}</b>/{{votesCountRequired}} votes collected
+                                <b>Votes collected: {{voteCount}}</b>/{{votesCountRequired}}
                             </td>
                             <td style="font-size: 16px;line-height:24px;">
-                                Deadline {{voteEndsAt}}
+                                Deadline: {{voteEndsAt}}
                             </td>
                         </tr>
                     </tbody>
@@ -43,20 +45,21 @@
         </tr>
         <tr>
             <td>
-                <p
-                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+                <p class="submit_button">
                     <a href="{{linkViewTopic}}" target="_blank"
-                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">Cast your vote</a>
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 140px;">
+                        Cast your vote
+                    </a>
                 </p>
             </td>
         </tr>
         <tr>
             <td valign="bottom" height="30" style="border-top: 1px solid #E1E7EE;padding-top:16px;">
-                <p style="font-size:14px;">Please note: You must log in using the same email address ({{toUser.email}})
-                    to access this topic.</p>
+                <p style="font-size:14px;">
+                    Please note: You must log in using the same email address ({{toUser.email}}) to access this topic.
+                </p>
             </td>
         </tr>
 
     </tbody>
 </table>
-
