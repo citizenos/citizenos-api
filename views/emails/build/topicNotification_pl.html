@@ -1,9 +1,9 @@
 <table id="bodyHeader" width="100%">
     <tbody>
         <tr>
-            <td valign="middle" style="padding:0;height: 88px;">
-                <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding:0;">An update from</p>
-                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
+            <td valign="middle" style="padding:22px 22px 22px 0;">
+                <p id="header_title_description">An update on</p>
+                <p id="header_title">{{topicTitle}}</p>
             </td>
         </tr>
     </tbody>
@@ -21,32 +21,11 @@
                 {{{notificationText}}}
             </td>
         </tr>
-
-        <tr>
-            <td valign="middle">
-                <table class="info_table" style="background-color: #F1FAF3;">
-                    <tbody>
-                        <tr>
-                            <td>
-                                <img src="cid:icon_vote.png" />
-                            </td>
-                            <td style="font-size: 16px;line-height:24px;">
-                                <b>{{voteCount}}</b>/{{votesCountRequired}} votes collected
-                            </td>
-                            <td style="font-size: 16px;line-height:24px;">
-                                Deadline {{voteEndsAt}}
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </td>
-        </tr>
         <tr>
             <td style="padding-bottom: 32px;">
-                <p
-                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+                <p class="submit_button">
                     <a href="{{linkViewTopic}}" target="_blank"
-                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">Zobacz temat</a>
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 140px;">Zobacz temat</a>
                 </p>
             </td>
         </tr>
