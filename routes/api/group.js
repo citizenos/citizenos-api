@@ -1474,10 +1474,10 @@ module.exports = function (app) {
                 invite.inviteMessage = inviteMessage;
             }
 
-            await emailLib.sendGroupMemberUserInviteCreate(createdInvites);
-
-            t.afterCommit(() => {
+            t.afterCommit(async () => {
                 if (createdInvites.length) {
+
+                    await emailLib.sendGroupMemberUserInviteCreate(createdInvites);
                     return res.created({
                         count: createdInvites.length,
                         rows: createdInvites

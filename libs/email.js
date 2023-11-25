@@ -29,7 +29,6 @@ module.exports = function (app) {
     const templateRootLocal = app.get('EMAIL_TEMPLATE_ROOT_LOCAL');
 
     const emailHeaderLogoName = 'logo.png';
-    const emailHeaderIconName = 'header_icon.png';
     const emailFooterImageName = 'together.png';
     let emailHeaderLogo = path.join(templateRoot, 'images/logo-email.png');
     const emailFooterImage = path.join(templateRoot, 'images/together.png');
@@ -411,11 +410,6 @@ module.exports = function (app) {
                 }
             );
 
-            emailOptions.images.push({
-                name: emailHeaderIconName,
-                file: path.join(templateRoot, `images/PasswordReset.png`)
-            });
-
             emailOptions.linkedData.translations = template.translations;
             const userEmailPromise = emailClient.sendString(template.body, emailOptions);
 
@@ -462,7 +456,9 @@ module.exports = function (app) {
 
         const toUsersPromise = User.findAll({
             where: {
-                id: invites.map(invite => invite.userId)
+                id: {
+                    [db.Sequelize.Op.in]:invites.map(invite => invite.userId)
+                }
             },
             attributes: ['id', 'email', 'language', 'name'],
             raw: true
@@ -712,16 +708,17 @@ module.exports = function (app) {
                 nest: true
             }
         );
+
         const toUsersPromise = User.findAll({
             where: {
-                id: invites.map(invite => invite.userId)
+                id: {
+                    [db.Sequelize.Op.in]:invites.map(invite => invite.userId)
+                }
             },
             attributes: ['id', 'email', 'language', 'name'],
             raw: true
         });
-
         const [fromUser, group, toUsers] = await Promise.all([fromUserPromise, groupPromise, toUsersPromise]);
-
         let templateName = 'inviteGroup';
         let linkToApplication = urlLib.getFe();
         let message = invites[0].inviteMessage;
@@ -734,7 +731,6 @@ module.exports = function (app) {
             }
 
             const template = resolveTemplate(templateName, toUser.language);
-
             // TODO: could use Mu here...
             const subject = template.translations.INVITE_GROUP.SUBJECT
                 .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))

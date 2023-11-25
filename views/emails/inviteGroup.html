@@ -2,8 +2,8 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding:0;height: 88px;">
-                <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding:0;">An invitation to join group</p>
-                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{group.name}}</p>
+                <p style="font-size:13px; line-height: 16px; font-weight:bold;color:#2C3B47;padding:0;">An invitation to join group</p>
+                <p style="font-size:22px; line-height: 24px;font-weight:bold;color:#2C3B47;">{{group.name}}</p>
             </td>
         </tr>
     </tbody>
@@ -17,25 +17,39 @@
         </tr>
 
         <tr>
-            <td valign="middle" style="padding-bottom: 16px;">
+            <td valign="middle">
                 User {{fromUser.name}} from group <b>{{group.name}}</b> is inviting you to join this group.
             </td>
         </tr>
 
         {{#message}}
         <tr>
+            <td><p style="font-size:13px;font-weight:bold;color:#4D5C6A; line-height: 16px;padding:0;padding-top: 32px;">Message</p></td>
+        </tr>
+        <tr>
             <td valign="middle">
-                <i>{{message}}</i>
+                <table class="message_table">
+                    <tbody>
+                        <tr>
+                            <td style="font-size: 14px;font-weight: 400;line-height: 20px;">
+                            {{message}}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </td>
         </tr>
         {{/message}}
         <tr>
-            <td valign="middle" style="padding-top: 32px;">
+            <td><p style="font-size:13px;font-weight:bold;color:#4D5C6A; line-height: 16px;padding:0;padding-top: 32px;">Group details</p></td>
+        </tr>
+        <tr>
+            <td valign="middle">
                 <table class="info_table">
                     <tbody>
                         <tr>
                             <td>
-                                <p style="font-size: 13px; color:#727C84; line-height: 16px;padding:0;">Group
+                                <p style="font-size:13px;font-weight:bold;color:#727C84; line-height: 16px;padding:0;">Group
                                     name</p>
                                 <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
                                     {{group.name}}</p>
@@ -48,7 +62,7 @@
                         </tr>
                         <tr>
                             <td style="padding-top: 16px">
-                                <p style="font-size: 13px;color:#727C84;line-height:16px;padding:0;">Members</p>
+                                <p style="font-size:13px;font-weight:bold;color:#727C84;line-height:16px;padding:0;">Members</p>
                                 <p style="font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
                                     {{memberCount}}
                                 </p>
@@ -56,7 +70,7 @@
                         </tr>
                         <tr>
                             <td style="padding-top: 16px">
-                                <p style="font-size: 13px;color:#727C84;line-height:16px;padding:0;">Latest activity</p>
+                                <p style="font-size:13px;font-weight:bold;color:#727C84;line-height:16px;padding:0;">Latest activity</p>
                                 <p style="font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
                                     {{latestActivity}}
                                 </p>
@@ -71,12 +85,12 @@
                 <p
                     style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
                     <a href="{{linkViewGroup}}" target="_blank"
-                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">Join group</a>
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 140px;">Join group</a>
                 </p>
             </td>
         </tr>
         <tr>
-            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size:14px;">
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size:14px;color:#4D5C6A;">
                 Please note: You must log in using the same email address ({{toUser.email}}) to access this group.
             </td>
         </tr>
