@@ -2,8 +2,8 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding:0;height: 88px;">
-                <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding:0;">An invitation to join topic</p>
-                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
+                <p style="font-size:13px; line-height: 16px;font-weight:bold;color:#2C3B47;padding:0;">An invitation to join topic</p>
+                <p style="font-size:22px; line-height: 24px;font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
             </td>
         </tr>
     </tbody>
@@ -24,25 +24,39 @@
 
         {{#message}}
         <tr>
+            <td><p style="font-size:13px;font-weight:bold;color:#4D5C6A; line-height: 16px;padding:0;padding-top: 32px;">Message</p></td>
+        </tr>
+        <tr>
             <td valign="middle">
-                <i>{{message}}</i>
+                <table class="message_table">
+                    <tbody>
+                        <tr>
+                            <td style="font-size: 14px;font-weight: 400;line-height: 20px;">
+                            {{message}}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </td>
         </tr>
         {{/message}}
         <tr>
-            <td valign="middle" style="padding-top: 32px;">
+            <td><p style="font-size:13px;font-weight:bold;color:#4D5C6A; line-height: 16px;padding:0;padding-top: 32px;">Topic details</p></td>
+        </tr>
+        <tr>
+            <td valign="middle">
                 <table class="info_table">
                     <tbody>
                         <tr>
                             <td>
-                                <p style="font-size: 13px; color:#727C84; line-height: 16px;padding:0;">Topic title</p>
+                                <p style="font-size:13px;font-weight:bold;color:#727C84; line-height: 16px;padding:0;">Topic title</p>
                                 <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
                                     {{topic.title}}</p>
                             </td>
                         </tr>
                         <tr>
                             <td style="padding-top: 16px">
-                                <p style="font-size: 13px;color:#727C84;line-height:16px;padding:0;">Status</p>
+                                <p style="font-size: 13px;font-weight:bold;color:#727C84;line-height:16px;padding:0;">Status</p>
                                 <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
                                     {{topic.status}}
                                 </p>
@@ -50,7 +64,7 @@
                         </tr>
                         <tr>
                             <td style="padding-top: 16px">
-                                <p style="font-size: 13px;color:#727C84;line-height:16px;padding:0;">Participants</p>
+                                <p style="font-size:13px;font-weight:bold;color:#727C84;line-height:16px;padding:0;">Participants</p>
                                 <p style="font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
                                     {{memberCount}}
                                 </p>
@@ -58,7 +72,7 @@
                         </tr>
                         <tr>
                             <td style="padding-top: 16px">
-                                <p style="font-size: 13px;color:#727C84;line-height:16px;padding:0;">Latest activity</p>
+                                <p style="font-size:13px;font-weight:bold;color:#727C84;line-height:16px;padding:0;">Latest activity</p>
                                 <p style="font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
                                     {{latestActivity}}
                                 </p>
@@ -78,7 +92,7 @@
             </td>
         </tr>
         <tr>
-            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size:14px;">
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size:14px;color:#4D5C6A;">
                 Please note: You must log in using the same email address ({{toUser.email}}) to access this topic.
             </td>
         </tr>
