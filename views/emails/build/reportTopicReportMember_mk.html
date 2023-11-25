@@ -2,10 +2,9 @@
 <table id="bodyHeader" width="100%">
     <tbody>
         <tr>
-            <td valign="middle" style="padding:0;height: 88px;">
-                <p style="font-size:13px; font-weight:bold;color:#2C3B47;padding:0;">A topic has
-                    been reported</p>
-                <p style="font-size:22px; font-weight:bold;color:#2C3B47;">{{topic.title}}</p>
+            <td valign="middle" style="padding:22px 22px 22px 0;">
+                <p id="header_title_description">Your topic has been reported</p>
+                <p id="header_title">{{topic.title}}</p>
             </td>
         </tr>
     </tbody>
@@ -13,28 +12,26 @@
 <table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
     <tbody>
         <tr>
-            <td valign="middle" style="padding-bottom: 16px;">
+            <td valign="middle" style="padding-bottom: 32px;">
                 Hi {{userMember.name}}!
             </td>
         </tr>
         <tr>
-            <td style="font-size:14px; color:#252525; padding-bottom: 8px;">A Citizen OS user thinks there is a
-                violation
-                of Citizen OS community guidelines in your topic</td>
+            <td style="font-size:14px; color:#252525; padding-bottom: 8px;">Someone has reported your topic as inappropriate.</td>
         </tr>
         <tr>
-            <td style="font-size:14px; color:#252525; padding-bottom: 8px;">All editors of the topic and community
-                moderators are receiving this report, please see details below.</td>
+            <td style="font-size:14px; color:#252525; padding-bottom: 8px;">All admins and editors of the topic, as well as Citizen OS moderators,
+                have been notified. Please review the reasons below.</td>
         </tr>
         <tr>
-            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">Review the reason below.</td>
+            <td><p class="info_heading">Reason</p></td>
         </tr>
         <tr>
             <td valign="middle">
                 <table class="info_table">
                     <tbody>
                         <tr>
-                            <td style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;">
+                            <td style="font-size:14px;font-weight:600;color:#2C3B47;line-height:16px;padding-bottom: 16px;">
                                 {{report.type}}
                             </td>
                         </tr>
@@ -59,21 +56,19 @@
                                 <h1>What happens next?</h1>
                                 <p>
                                 <ol>
-                                    <li class="li">Moderators are currently reviewing the topic. If they confirm a
-                                        violation, they will restrict access to the topic.
+                                    <li class="li">Moderators are currently reviewing the topic. If they agree with the reporter, they will restrict access to the topic (users will get a warning prior to entering the topic).
                                     </li>
-                                    <li class="li">However, you and other editors can edit the topic at any time to
-                                        clear possible violations. If the violations have been cleared, the topic can be
-                                        sent for review to Citizen OS
+                                    <li class="li">However, you and fellow topic admins or editors can edit the topic at any time, to
+                                        rectify any issues raised. The topic can then be sent for review by Citizen OS
                                         moderators.
                                     </li>
-                                    <li class="li">Upon a review request, moderators will review the topic and withdraw
-                                        all restrictions if violations have been removed.</li>
+                                    <li class="li">If a review is requested, moderators will review the topic and withdraw
+                                        all restrictions if the issues have been rectified.</li>
                                     <li class="li">
                                         We will notify you if:
                                         <ul>
                                             <li>moderators apply restrictions to the topic</li>
-                                            <li>Removal of violations has been reviewed and restrictions withdrawn.</li>
+                                            <li>a review is carried out and restrictions withdrawn.</li>
                                         </ul>
                                     </li>
                                 </ol>
@@ -86,10 +81,9 @@
         </tr>
         <tr>
             <td style="padding-bottom: 32px;">
-                <p
-                    style="font-size:14px; line-height: 16px; border-radius:16px; padding: 10px; background-color: #2C3B47; color:#FFFFFF;text-align: center;">
+                <p class="submit_button">
                     <a href="{{linkViewTopic}}" target="_blank"
-                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;">Review topic</a>
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 140px;">Review topic</a>
                 </p>
             </td>
         </tr>
