@@ -18,24 +18,52 @@
         </tr>
 
         <tr>
-            <td style="font-size:14px; color:#252525; padding-bottom: 32px;">A topic has been reported as inappropriate, and requires review by a moderator. Please see the reasons below.</td>
+            <td width="100%">
+                A topic has been reported as inappropriate, and requires review by a moderator. Please see the reasons below.
+            </td>
         </tr>
         <tr>
-            <td><p class="info_heading">Reason</p></td>
+            <td><p class="info_heading">Report details</p></td>
         </tr>
         <tr>
             <td valign="middle">
                 <table class="info_table">
                     <tbody>
                         <tr>
-                            <td style="font-size:14px;font-weight:bold;color:#2C3B47;line-height:16px;padding-bottom: 16px;">
+                            <td style="padding-top: 16px">
+                                <p class="info_row_heading">
+                                Topic
+                                </p>
+                            </td>
+                        <tr>
+                        <tr>
+                            <td style="font-size:14px;font-weight:600;color:#1168a8;line-height:16px;">
+                                {{topic.title}}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-top: 16px">
+                                <p class="info_row_heading">
+                                Type of vioaltion
+                                </p>
+                            </td>
+                        <tr>
+                        <tr>
+                            <td style="font-size:14px;font-weight:600;color:#2C3B47;line-height:16px;">
                                 {{report.type}}
                             </td>
                         </tr>
 
                         {{#report.text}}
                         <tr>
-                            <td style="font-size:14px;line-height:20px; color:#2C3B47;">
+                            <td style="padding-top: 16px">
+                                <p class="info_row_heading">
+                                Reasoning
+                                </p>
+                            </td>
+                        <tr>
+                        <tr>
+                            <td style="font-size:14px;font-weight:600;color:#2C3B47;line-height:16px;">
                                 {{report.text}}
                             </td>
                         </tr>
@@ -57,10 +85,6 @@
                 <a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process
                     here.</a>
             </td>
-        </tr>
-
-        <tr>
-            <td>Thank you! Together we can maintain a high quality of content in Citizen OS user community.</td>
         </tr>
     </tbody>
 </table>
