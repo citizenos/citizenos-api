@@ -1,18 +1,18 @@
 {
   "LAYOUT": {
-    "FOR_MORE_INFORMATION": "For more information, please see our",
+    "FOR_MORE_INFORMATION": "Для получения дополнительной информации, пожалуйста, просмотрите документ:",
     "LINK_TO_PLATFORM": "Ссылка на платформу",
-    "LINK_PRIVACY_POLICY": "privacy policy",
+    "LINK_PRIVACY_POLICY": "политика конфиденциальности",
     "EMPOWERED_BY": "При поддержке"
   },
   "ACCOUNT_VERIFICATION": {
     "SUBJECT": "Активируйте свой аккаунт Citizen OS"
   },
   "INVITE_GROUP": {
-    "SUBJECT": "User {{fromUser.name}} is inviting you to join the group “{{group.name}}”"
+    "SUBJECT": "Пользователь {{fromUser.name}} приглашает Вас присоединиться к группе “{{group.name}}”"
   },
   "INVITE_TOPIC": {
-    "SUBJECT": "User {{fromUser.name}} is inviting you to join the topic “{{topicTitle}}”",
+    "SUBJECT": "Пользователь {{fromUser.name}} приглашает Вас присоединиться к теме “{{topicTitle}}”",
     "SUBJECT_rahvaalgatus_ee": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust",
     "SUBJECT_rahvaalgatus_test": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust"
@@ -21,28 +21,28 @@
     "SUBJECT": "Восстановить пароль учетной записи Citizen OS"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Thank you for reporting a topic"
+    "SUBJECT": "Благодарим за жалобу в отношении неуместной темы"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Your Citizen OS topic has been reported to moderators"
+    "SUBJECT": "В отношении вашей темы в Citizen OS была отправлена жалоба модераторам"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "Please moderate this reported Citizen OS topic"
+    "SUBJECT": "Пожалуйста, модерируйте эту тему в Citizen OS"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "The Citizen OS topic you reported has been reviewed"
+    "SUBJECT": "Тема, в отношении которой была отправлена жалоба в Citizen OS, была проверена"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Your Citizen OS topic has been reviewed by a moderator"
+    "SUBJECT": "Ваша тема в Citizen OS была просмотрена модератором"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "A reported Citizen OS topic has been revised, please review"
+    "SUBJECT": "Содержание темы, в отношении которой была отправлена жалоба в Citizen OS, было корректировано."
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Access to your reported Citizen OS topic has been restored"
+    "SUBJECT": "Доступ к вашей теме Citizen OS был восстановлен"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
-    "SUBJECT": "The issue you reported has been resolved"
+    "SUBJECT": "Проблема, в отношении которой Вы отправляли жалобу, была решена"
   },
   "REPORT": {
     "REPORT_TYPE": {
@@ -74,22 +74,22 @@
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
   "NOTIFICATIONS": {
-    "SUBJECT": "An update on topic “{{topicTitle}}”",
-    "NOTIFICATION_USER_CREATE_TOPIC": "User <em>{{userName}}</em> has created a new topic.",
-    "NOTIFICATION_USER_UPDATE_TOPIC": "User <em>{{userName}}</em> has updated the field <em>{{fieldName}}</em> in this topic.",
-    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "User <em>{{userName}}</em> has made <em>{{groupCount}}</em> updates to this topic.",
+    "SUBJECT": "Обновление по теме “{{topicTitle}}”",
+    "NOTIFICATION_USER_CREATE_TOPIC": "Пользователь <em>{{userName}}</em> создал новую тему.",
+    "NOTIFICATION_USER_UPDATE_TOPIC": "Пользователь <em>{{userName}}</em> обновил поле <em>{{fieldName}}</em> в этой теме.",
+    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "Пользователь <em>{{userName}}</em> создал обновления <em>{{groupCount}}</em> в этой теме.",
     "NOTIFICATION_PREVIOUS_VERSION": "Предыдущая версия: {{previousValue}}",
     "NOTIFICATION_NEW_VERSION": "Новая версия: {{newValue}}",
-    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "The Citizen OS system has updated a field <em>{{fieldName}}</em> in this topic.",
-    "NOTIFICATION_USER_DELETE_TOPIC": "User <em>{{userName}}</em> has deleted this topic.",
+    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "Система Citizen OS обновила поле <em>{{fieldName}}</em> в этой теме.",
+    "NOTIFICATION_USER_DELETE_TOPIC": "Пользователь <em>{{userName}}</em> удалил эту тему.",
     "NOTIFICATION_USER_ADD_USER_TOPIC": "User <em>{{userName}}</em> has invited user <em>{{userName2}}</em> to participate in this topic.",
     "NOTIFICATION_USER_INVITE_TOPIC_USER": "@:NOTIFICATIONS.NOTIFICATION_USER_ADD_USER_TOPIC",
-    "NOTIFICATION_USER_ACCEPT_INVITE_TOPIC": "User <em>{{userName}}</em> has accepted an invite to this topic.",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER": "User <em>{{userName}}</em> has changed the access level of user <em>{{userName2}}</em> for this topic.",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE": "User <em>{{userName}}</em> has revoked access from user <em>{{userName2}}</em> to this topic.",
+    "NOTIFICATION_USER_ACCEPT_INVITE_TOPIC": "Пользователь <em>{{userName}}</em> принял приглашение принять участие в теме.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER": "Пользователь <em>{{userName}}</em> обновил уровень доступа пользователя <em>{{userName2}}</em> к теме.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE": "Пользователь <em>{{userName}}</em> отменил доступ пользователя <em>{{userName2}}</em> к теме.",
     "NOTIFICATION_USER_UPDATE_TOPICINVITEUSER": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER",
     "NOTIFICATION_USER_UPDATE_TOPICINVITEUSER_NONE": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE",
-    "NOTIFICATION_USER_UPDATE_TOPICJOIN": "User <em>{{userName}}</em> has edited the share link settings for this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPICJOIN": "Пользователь <em>{{userName}}</em> отредактировал настройки ссылки для общего доступа к этой теме.",
     "NOTIFICATION_USER_UPDATE_GROUPJOIN": "User <em>{{userName}}</em> has edited the share link settings for this group.",
     "NOTIFICATION_USER_DELETE_USER_TOPIC": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE",
     "NOTIFICATION_USER_JOIN_TOPIC": "User <em>{{userName}}</em> has joined this topic with access level: {{accessLevel}}",

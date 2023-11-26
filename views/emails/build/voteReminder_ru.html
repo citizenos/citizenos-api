@@ -2,7 +2,7 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding:22px 22px 22px 0;">
-                <p id="header_title_description">A vote reminder for</p>
+                <p id="header_title_description">Напоминание о голосовании по</p>
                 <p id="header_title">{{topic.title}}</p>
             </td>
         </tr>
@@ -12,14 +12,14 @@
     <tbody>
         <tr>
             <td valign="middle" width="100%" style="padding-bottom: 16px;">
-                Hi {{toUser.name}}!
+                Здравствуйте, {{toUser.name}}!
             </td>
         </tr>
 
         <tr>
             <td valign="middle">
                 <p width="100%">
-                    The vote deadline is coming close! <b>You have only {{daysLeft}} left to cast your vote</b>
+                    Срок голосования заканчивается! <b>У вас осталось только {{daysLeft}} для голосования</b>
                 </p>
             </td>
         </tr>
@@ -33,10 +33,10 @@
                                 <img src="cid:icon_vote.png" />
                             </td>
                             <td style="font-size: 16px;line-height:24px;">
-                                <b>Votes collected: {{voteCount}}</b>/{{votesCountRequired}}
+                                <b>Голосов собрано: {{voteCount}}</b>/{{votesCountRequired}}
                             </td>
                             <td style="font-size: 16px;line-height:24px;">
-                                Deadline: {{voteEndsAt}}
+                                Крайний срок: {{voteEndsAt}}
                             </td>
                         </tr>
                     </tbody>
@@ -48,7 +48,7 @@
                 <p class="submit_button">
                     <a href="{{linkViewTopic}}" target="_blank"
                         style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 140px;">
-                        Cast your vote
+                        Проголосуйте
                     </a>
                 </p>
             </td>
@@ -56,7 +56,7 @@
         <tr>
             <td valign="bottom" height="30" style="border-top: 1px solid #E1E7EE;padding-top:16px;">
                 <p style="font-size:14px;">
-                    Please note: You must log in using the same email address ({{toUser.email}}) to access this topic.
+                    Обратите внимание: для доступа к этой теме необходимо войти в систему, используя тот же адрес эл. почты ({{toUser.email}}).
                 </p>
             </td>
         </tr>

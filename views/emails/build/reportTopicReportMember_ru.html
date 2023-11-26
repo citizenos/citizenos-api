@@ -3,7 +3,7 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding:22px 22px 22px 0;">
-                <p id="header_title_description">Your topic has been reported</p>
+                <p id="header_title_description">Ваша тема была отмечена, как неуместная</p>
                 <p id="header_title">{{topic.title}}</p>
             </td>
         </tr>
@@ -13,20 +13,20 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding-bottom: 32px;">
-                Hi {{userMember.name}}!
+                Здравствуйте, {{userMember.name}}!
             </td>
         </tr>
         <tr>
-            <td width="100%" style="padding-bottom: 16px;">Someone has reported your topic as inappropriate.</td>
+            <td width="100%" style="padding-bottom: 16px;">Кто-то отметил вашу тему как неуместную.</td>
         </tr>
         <tr>
             <td width="100%">
-                All admins and editors of the topic, as well as Citizen OS moderators, have been notified. Please review the reasons below.
+                Все администраторы и редакторы темы, а также модераторы Citizen OS были уведомлены. Пожалуйста, ознакомьтесь с причинами ниже.
             </td>
         </tr>
         <tr>
             <td>
-                <p class="info_heading">Reason</p>
+                <p class="info_heading">Причина</p>
             </td>
         </tr>
         <tr>
@@ -36,7 +36,7 @@
                         <tr>
                             <td style="padding-top: 16px">
                                 <p class="info_row_heading">
-                                Type of violation
+                                Тип нарушения
                                 </p>
                             </td>
                         <tr>
@@ -48,7 +48,7 @@
                         {{#report.text}}
                         <td style="padding-top: 16px">
                             <p class="info_row_heading">
-                            Reasoning
+                            Обоснование
                             </p>
                         </td>
                         <tr>
@@ -63,7 +63,7 @@
         </tr>
         <tr>
             <td>
-                <p class="info_heading">What happens next?</p>
+                <p class="info_heading">Что будет дальше?</p>
             </td>
         </tr>
         <tr>
@@ -74,19 +74,19 @@
                             <td>
                                 <ol>
                                     <li class="li">
-                                        Moderators are currently reviewing the topic. If they agree with the reporter, they will restrict access to the topic (users will get a warning prior to entering the topic).
+                                        Модераторы проверяют содержание темы. Если они согласны с тем, кто написал жалобу, они ограничат доступ к теме (пользователи получат предупреждение перед входом в тему).
                                     </li>
                                     <li class="li">
-                                        However, you and fellow topic admins or editors can edit the topic at any time, to rectify any issues raised. The topic can then be sent for review by Citizen OS moderators.
+                                        Тем не менее, вы и администраторы или редакторы темы могут редактировать эту тему в любое время, чтобы исправить все найденные проблемы. Затем тема может быть отправлена модераторам Citizen OS для просмотра.
                                     </li>
                                     <li class="li">
-                                        If a review is requested, moderators will review the topic and withdraw all restrictions if the issues have been rectified.
+                                        В случае запроса на рецензирование модераторы проверят тему и снимут ограничения, если проблемы были устранены.
                                     </li>
                                     <li class="li">
-                                        We will notify you if:
+                                        Мы уведомим вас, если:
                                         <ul>
-                                            <li>moderators apply restrictions to the topic</li>
-                                            <li>a review is carried out and restrictions withdrawn.</li>
+                                            <li>модераторы наложат ограничение на просмотр темы</li>
+                                            <li>проведется рецензия и будут сняты ограничения.</li>
                                         </ul>
                                     </li>
                                 </ol>
@@ -100,15 +100,13 @@
             <td style="padding-bottom: 32px;">
                 <p class="submit_button">
                     <a href="{{linkViewTopic}}" target="_blank"
-                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 140px;">Review
-                        topic</a>
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 140px;">Просмотр темы</a>
                 </p>
             </td>
         </tr>
         <tr>
             <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size: 14px;">
-                <a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process
-                    here.</a>
+                <a href="{{linkViewModerationGuidelines}}">Узнайте подробнее о процессе модерирования Citizen OS здесь.</a>
             </td>
         </tr>
     </tbody>
