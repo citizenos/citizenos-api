@@ -9,10 +9,10 @@
     "SUBJECT": "Aktivujte si účet Citizen OS"
   },
   "INVITE_GROUP": {
-    "SUBJECT": "User {{fromUser.name}} is inviting you to join the group “{{group.name}}”"
+    "SUBJECT": "Uživatel {{fromUser.name}} vás zve, abyste se připojili ke skupině „{{group.name}}“"
   },
   "INVITE_TOPIC": {
-    "SUBJECT": "User {{fromUser.name}} is inviting you to join the topic “{{topicTitle}}”",
+    "SUBJECT": "Uživatel {{fromUser.name}} vás zve, abyste se připojili k tématu „{{topicTitle}}“",
     "SUBJECT_rahvaalgatus_ee": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust",
     "SUBJECT_rahvaalgatus_test": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust"
@@ -21,22 +21,22 @@
     "SUBJECT": "Obnovit heslo k účtu Citizen OS"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Thank you for reporting a topic"
+    "SUBJECT": "Děkujeme za nahlášení tématu"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Your Citizen OS topic has been reported to moderators"
+    "SUBJECT": "Téma vašeho Občanského OS bylo nahlášeno moderátorům"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "Please moderate this reported Citizen OS topic"
+    "SUBJECT": "Prosím moderujte toto nahlášené téma Citizen OS"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "The Citizen OS topic you reported has been reviewed"
+    "SUBJECT": "Téma Citizen OS které jste nahlásili, bylo zkontrolováno"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Your Citizen OS topic has been reviewed by a moderator"
+    "SUBJECT": "Téma vašeho Citizen OS bylo přezkoumáno moderátorem"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "A reported Citizen OS topic has been revised, please review"
+    "SUBJECT": "Nahlášené téma Citizen OS bylo revidováno, prosím zkontrolujte"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
     "SUBJECT": "Access to your reported Citizen OS topic has been restored"
