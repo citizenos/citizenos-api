@@ -3,7 +3,7 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding:22px 22px 22px 0;">
-                <p id="header_title_description">You have reported topic</p>
+                <p id="header_title_description">Вы пожаловались на тему</p>
                 <p id="header_title">{{topic.title}}</p>
             </td>
         </tr>
@@ -13,18 +13,18 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding-bottom: 32px;">
-                Hi {{userReporter.name}}!
+                Здравствуйте, {{userReporter.name}}!
             </td>
         </tr>
 
         <tr>
             <td width="100%">
-                You have successfully reported a topic for review by Citizen OS moderators
+                Вы успешно создали жалобу на тему для отзыва модераторами Citizen OS
             </td>
         </tr>
         <tr>
             <td>
-                <p class="info_heading">What happens next?</p>
+                <p class="info_heading">Что будет дальше?</p>
             </td>
         </tr>
         <tr>
@@ -35,16 +35,16 @@
                             <td>
                                 <ol>
                                     <li class="li">
-                                        Moderators will review the report. If they agree with the issues raised, access to the topic will be restricted (users will get a warning prior to seeing the topic).
+                                        Модераторы изучат жалобу. Если они согласны с озвученной критикой, доступ к теме будет ограничен (пользователи получат предупреждение перед просмотром темы).
                                     </li>
                                     <li class="li">
-                                        Meanwhile admins and editors of the topic will be invited to edit it, in order to resolve the issues. If they do so, the moderators will review the topic, and remove restrictions if all issues have been resolved.
+                                        Тем временем админам и редакторам темы будет предложено ее редактировать, чтобы решить проблему. В таком случае модераторы рассмотрят эту тему и устранят ограничения, когда все проблемы будут решены.
                                     </li>
                                     <li class="li">
-                                        We will notify you if:
+                                        Мы уведомим вас, если:
                                         <ul>
-                                            <li>moderators apply restrictions to the topic</li>
-                                            <li>all issues have been resolved and restrictions removed.</li>
+                                            <li>модераторы наложат ограничение на просмотр темы</li>
+                                            <li>все проблемы были решены и сняты ограничения.</li>
                                         </ul>
                                     </li>
                                 </ol>
@@ -56,7 +56,7 @@
         </tr>
         <tr>
             <td>
-                <p class="info_heading">Report details</p>
+                <p class="info_heading">Детали жалобы</p>
             </td>
         </tr>
         <tr>
@@ -67,7 +67,7 @@
                         <tr>
                             <td>
                                 <p class="info_row_heading">
-                                    Topic title
+                                    Название темы
                                 </p>
                                 <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
                                     <a href="{{linkViewTopic}}">{{topic.title}}</a>
@@ -77,7 +77,7 @@
                         <tr>
                             <td style="padding-top: 16px">
                                 <p class="info_row_heading">
-                                    Report reference number
+                                    Номер отчета
                                 </p>
                                 <p style="font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
                                     {{report.id}}
@@ -87,7 +87,7 @@
                         <tr>
                             <td style="padding-top: 16px">
                                 <p class="info_row_heading">
-                                    Type of violation
+                                    Тип нарушения
                                 </p>
                                 <p style="font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
                                     {{report.type}}
@@ -97,7 +97,7 @@
                         <tr>
                             <td style="padding-top: 16px">
                                 <p class="info_row_heading">
-                                    Your explanation
+                                    Ваше объяснение
                                 </p>
                                 <p style="font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
                                     {{report.text}}
@@ -113,24 +113,23 @@
             <td style="padding-bottom: 32px; padding-top: 16px;">
                 <p class="submit_button">
                     <a href="{{linkViewTopic}}" target="_blank"
-                        style="color:#FFFFFF; text-decoration: none; font-weight: 600; padding: 9px 140px;">Review topic</a>
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600; padding: 9px 140px;">Просмотр темы</a>
                 </p>
             </td>
         </tr>
         <tr>
             <td valign="middle" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size:14px;">
-                You can also leave it as is, but moderators may still decide to have it hidden by default (users will get a warning prior to seeing your topic).
+                Можете оставить все как есть, но модераторы сообщества могут решить скрыть это по умолчанию от других пользователей (пользователи увидят предупреждение перед тем, как просмотреть Вашу тему).
             </td>
         </tr>
         <tr>
             <td valign="bottom" style="padding-top:16px;font-size: 14px;">
-                <a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process
-                    here.</a>
+                <a href="{{linkViewModerationGuidelines}}">Узнайте подробнее о процессе модерирования Citizen OS здесь.</a>
             </td>
         </tr>
 
         <tr>
-            <td style="padding-top:16px;font-size: 14px;">Thank you! Together we can maintain a high quality of content in Citizen OS user community.</td>
+            <td style="padding-top:16px;font-size: 14px;">Благодарим вас! Вместе мы сможем обеспечить высокое качество контента для сообщества пользователей Citizen OS.</td>
         </tr>
     </tbody>
 </table>
