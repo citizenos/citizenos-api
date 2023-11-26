@@ -1,8 +1,8 @@
 {
   "LAYOUT": {
-    "FOR_MORE_INFORMATION": "For more information, please see our",
+    "FOR_MORE_INFORMATION": "Viac informácií nájdete v našej",
     "LINK_TO_PLATFORM": "Odkaz na platformu",
-    "LINK_PRIVACY_POLICY": "privacy policy",
+    "LINK_PRIVACY_POLICY": "zásady ochrany osobných údajov",
     "EMPOWERED_BY": "Splnomocnenie od"
   },
   "ACCOUNT_VERIFICATION": {
@@ -208,9 +208,9 @@
   "TXT_TOPIC_CATEGORY_SCIENCE": "Veda a technológie",
   "TXT_TOPIC_CATEGORY_SOCIETY": "Demokracia a občianska spoločnosť",
   "TXT_TOPIC_CATEGORY_EUROCHANGEMAKERS": "Organizácia EuroChangeMakers",
-  "TXT_TOPIC_STATUS_INPROGRESS": "in progress",
-  "TXT_TOPIC_STATUS_VOTING": "in voting",
-  "TXT_TOPIC_STATUS_FOLLOWUP": "in follow-up",
-  "TXT_TOPIC_STATUS_CLOSED": "closed",
-  "TXT_TOPIC_STATUS_MODERATED": "hidden by admin"
+  "TXT_TOPIC_STATUS_INPROGRESS": "rozpracované",
+  "TXT_TOPIC_STATUS_VOTING": "v hlasovaní",
+  "TXT_TOPIC_STATUS_FOLLOWUP": "v nadväzujúcich opatreniach",
+  "TXT_TOPIC_STATUS_CLOSED": "uzavreté",
+  "TXT_TOPIC_STATUS_MODERATED": "skryté adminom"
 }
