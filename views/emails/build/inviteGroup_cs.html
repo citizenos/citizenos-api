@@ -2,7 +2,7 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding:22px 22px 22px 0;">
-                <p id="header_title_description">An invitation to join group</p>
+                <p id="header_title_description">Pozvánka do skupiny</p>
                 <p id="header_title">{{group.name}}</p>
             </td>
         </tr>
@@ -12,19 +12,19 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding-bottom: 16px;">
-                Hi {{toUser.name}}!
+                Ahoj {{toUser.name}}!
             </td>
         </tr>
 
         <tr>
             <td valign="middle">
-                User {{fromUser.name}} from group <b>{{group.name}}</b> is inviting you to join this group.
+                Uživatel {{fromUser.name}} ze skupiny <b>{{group.name}}</b> vás zve, abyste se připojili do této skupiny.
             </td>
         </tr>
 
         {{#message}}
         <tr>
-            <td><p class="info_heading">Message</p></td>
+            <td><p class="info_heading">Zpráva</p></td>
         </tr>
         <tr>
             <td valign="middle">
@@ -41,7 +41,7 @@
         </tr>
         {{/message}}
         <tr>
-            <td><p class="info_heading">Group details</p></td>
+            <td><p class="info_heading">Podrobnosti o skupině</p></td>
         </tr>
         <tr>
             <td valign="middle">
@@ -49,7 +49,7 @@
                     <tbody>
                         <tr>
                             <td>
-                                <p class="info_row_heading">Group name</p>
+                                <p class="info_row_heading">Název skupiny</p>
                                 <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
                                     {{group.name}}</p>
                             </td>
@@ -61,7 +61,7 @@
                         </tr>
                         <tr>
                             <td style="padding-top: 16px">
-                                <p class="info_row_heading">Members</p>
+                                <p class="info_row_heading">Členové</p>
                                 <p style="font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
                                     {{memberCount}}
                                 </p>
@@ -69,7 +69,7 @@
                         </tr>
                         <tr>
                             <td style="padding-top: 16px">
-                                <p class="info_row_heading">Latest activity</p>
+                                <p class="info_row_heading">Poslední aktivita</p>
                                 <p style="font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
                                     {{latestActivity}}
                                 </p>
@@ -83,13 +83,13 @@
             <td style="padding-bottom: 32px;padding-top: 16px">
                 <p class="submit_button">
                     <a href="{{linkViewGroup}}" target="_blank"
-                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 140px;">Join group</a>
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 140px;">Připojit se ke skupině</a>
                 </p>
             </td>
         </tr>
         <tr>
             <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size:14px;color:#4D5C6A;">
-                Please note: You must log in using the same email address ({{toUser.email}}) to access this group.
+                Upozornění: Pro přístup k této skupině se musíte přihlásit pomocí stejné e-mailové adresy ({{toUser.email}}).
             </td>
         </tr>
 
