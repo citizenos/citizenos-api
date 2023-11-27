@@ -1,17 +1,18 @@
 {
   "LAYOUT": {
+    "FOR_MORE_INFORMATION": "For more information, please see our",
     "LINK_TO_PLATFORM": "Линк до платформата",
-    "LINK_PRIVACY_POLICY": "Политика на приватност",
+    "LINK_PRIVACY_POLICY": "privacy policy",
     "EMPOWERED_BY": "Покренато од"
   },
   "ACCOUNT_VERIFICATION": {
     "SUBJECT": "Активирајте ја својата Citizen OS-сметка"
   },
   "INVITE_GROUP": {
-    "SUBJECT": "{{fromUser.name}} ве поканува да се приклучите на групата “{{group.name}}” на Citizen OS"
+    "SUBJECT": "User {{fromUser.name}} is inviting you to join the group “{{group.name}}”"
   },
   "INVITE_TOPIC": {
-    "SUBJECT": "{{fromUser.name}} ве поканува да направите колаборативна одлука",
+    "SUBJECT": "User {{fromUser.name}} is inviting you to join the topic “{{topicTitle}}”",
     "SUBJECT_rahvaalgatus_ee": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust",
     "SUBJECT_rahvaalgatus_test": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust"
@@ -20,28 +21,28 @@
     "SUBJECT": "Ресетирајте ја својата Citizen OS-лозинка"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Благодариме, ја добивме вашата пријава (#{{report.id}})"
+    "SUBJECT": "Thank you for reporting a topic"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Пријава #{{report.id}}: вашата Citizen OS-тема можеби ги повредува насоките"
+    "SUBJECT": "Your Citizen OS topic has been reported to moderators"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "Пријавена е Citizen OS-тема (#{{report.id}}), ве молиме, модерирајте"
+    "SUBJECT": "Please moderate this reported Citizen OS topic"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Разгледана е вашата Citizen OS-пријава #{{report.id}}"
+    "SUBJECT": "The Citizen OS topic you reported has been reviewed"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Пријава #{{report.id}}: Вашата Citizen OS-тема ја разгледа модератор"
+    "SUBJECT": "Your Citizen OS topic has been reviewed by a moderator"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "Пријавена (#{{report.id}}) Citizen OS-тема е изменета, ве молиме разгледајте ја"
+    "SUBJECT": "A reported Citizen OS topic has been revised, please review"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Пријава #{{report.id}}: обновен е пристап до вашата Citizen OS-тема."
+    "SUBJECT": "Access to your reported Citizen OS topic has been restored"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
-    "SUBJECT": "Решена е вашата пријава (#{{report.id}}) во Citizen OS"
+    "SUBJECT": "The issue you reported has been resolved"
   },
   "REPORT": {
     "REPORT_TYPE": {
@@ -64,69 +65,69 @@
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Вашиот аргумент е пријавен како несоодветен од страна на заедницата"
+    "SUBJECT": "Your discussion contribution has been reported as inappropriate"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "Аргумент е пријавен како несоодветен од страна на заедницата"
+    "SUBJECT": "Some discussion content has been reported as inappropriate"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
   "NOTIFICATIONS": {
-    "SUBJECT": "Известување од Citizen OS во тема {{topicTitle}}",
-    "NOTIFICATION_USER_CREATE_TOPIC": "Корисникот <em>{{userName}}</em> креираше тема <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPIC": "Корисникот <em>{{userName}}</em> ажурираше поле <em>{{fieldName}}</em> во темата <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "Корисникот <em>{{userName}}</em> <em>{{groupCount}}</em> ја ажурираше темата <em>{{topicTitle}}</em>",
+    "SUBJECT": "An update on topic “{{topicTitle}}”",
+    "NOTIFICATION_USER_CREATE_TOPIC": "User <em>{{userName}}</em> has created a new topic.",
+    "NOTIFICATION_USER_UPDATE_TOPIC": "User <em>{{userName}}</em> has updated the field <em>{{fieldName}}</em> in this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "User <em>{{userName}}</em> has made <em>{{groupCount}}</em> updates to this topic.",
     "NOTIFICATION_PREVIOUS_VERSION": "Претходна верзија: {{previousValue}}",
     "NOTIFICATION_NEW_VERSION": "Нова верзија: {{newValue}}",
-    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "Системот ажурираше поле <em>{{fieldName}}</em> во темата <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_TOPIC": "Корисникот <em>{{userName}}</em> избриша тема <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_USER_TOPIC": "Корисникот <em>{{userName}}</em> го покани корисникот <em>{{userName2}}</em> да учествува во темата <em>{{topicTitle}}</em>",
+    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "The Citizen OS system has updated a field <em>{{fieldName}}</em> in this topic.",
+    "NOTIFICATION_USER_DELETE_TOPIC": "User <em>{{userName}}</em> has deleted this topic.",
+    "NOTIFICATION_USER_ADD_USER_TOPIC": "User <em>{{userName}}</em> has invited user <em>{{userName2}}</em> to participate in this topic.",
     "NOTIFICATION_USER_INVITE_TOPIC_USER": "@:NOTIFICATIONS.NOTIFICATION_USER_ADD_USER_TOPIC",
-    "NOTIFICATION_USER_ACCEPT_INVITE_TOPIC": "Корисникот <em>{{userName}}</em> ја прифати поканата за темата <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER": "Корисникот <em>{{userName}}</em> го смени нивото на пристап на корисникот <em>{{userName2}}</em> за темата <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE": "Корисникот <em>{{userName}}</em> го повлече пристапот за корисникот <em>{{userName2}}</em> за темата <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_ACCEPT_INVITE_TOPIC": "User <em>{{userName}}</em> has accepted an invite to this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER": "User <em>{{userName}}</em> has changed the access level of user <em>{{userName2}}</em> for this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE": "User <em>{{userName}}</em> has revoked access from user <em>{{userName2}}</em> to this topic.",
     "NOTIFICATION_USER_UPDATE_TOPICINVITEUSER": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER",
     "NOTIFICATION_USER_UPDATE_TOPICINVITEUSER_NONE": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE",
-    "NOTIFICATION_USER_UPDATE_TOPICJOIN": "Тема <em>{{topicTitle}}</em>: корисникот <em>{{userName}}</em> ажурираше неколку атрибути на линкот за споделување:",
-    "NOTIFICATION_USER_UPDATE_GROUPJOIN": "Група <em>{{groupName}}</em>: корисникот <em>{{userName}}</em> ажурираше некои атрибути на линкот за споделување:",
+    "NOTIFICATION_USER_UPDATE_TOPICJOIN": "User <em>{{userName}}</em> has edited the share link settings for this topic.",
+    "NOTIFICATION_USER_UPDATE_GROUPJOIN": "User <em>{{userName}}</em> has edited the share link settings for this group.",
     "NOTIFICATION_USER_DELETE_USER_TOPIC": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE",
-    "NOTIFICATION_USER_JOIN_TOPIC": "Корисникот <em>{{userName}}</em> се вклучи во темата <em>{{topicTitle}}</em> со ниво на пристап: {{accessLevel}}",
-    "NOTIFICATION_USER_JOIN_GROUP": "Корисникот <em>{{userName}}</em> се вклучи во групата <em>{{groupName}}</em> со ниво на пристап: {{accessLevel}}",
-    "NOTIFICATION_USER_LEAVE_TOPIC": "Корисникот <em>{{userName}}</em> замина од темата <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_TOPICPIN_TOPIC": "Корисникот <em>{{userName}}</em> го отстрани закачениот податок од темата <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_TOPIC_TOPICPIN": "Корисникот <em>{{userName}}</em> закачи податок во темата <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_VOTE_TOPIC": "Корисникот <em>{{userName}}</em> отвори можност за гласање за темата <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_VOTE_TOPIC": "Корисникот <em>{{userName}}</em> го ажурираше крајниот рок за можноста за гласање за темата <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_VOTELIST_TOPIC": "Корисникот гласаше на темата: <em>{{topicTitle}}</em>.",
-    "NOTIFICATION_USER_CREATE_VOTEDELEGATION_VOTE": "Корисникот <em>{{userName}}</em> го делегираше својот глас на темата <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_VOTEDELEGATION_VOTE": "Корисникот <em>{{userName}}</em> ја избриша делегацијата на својот глас за темата <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_VIEW_VOTEUSERCONTAINER": "Корисникот <em>{{userName}}</em> ги презеде резултатите од гласањето за темата: <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_VIEW_VOTEFINALCONTAINER": "Корисникот <em>{{userName}}</em> ги презеде резултатите од гласањето за темата: <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC": "Корисникот <em>{{userName}}</em> додаде нов аргумент за темата: <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_COMMENT_TOPIC": "Корисникот <em>{{userName}}</em> ги обнови своите аргументи за темата <em>{{topicTitle}}</em>",
-    "NOTIFICATION_MODERATOR_UPDATE_COMMENT_TOPIC": "Корисникот <em>{{userName}}</em> (moderator) го ажурираше полето за аргументи <em>{{fieldName}}</em> за темата <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_COMMENT_TOPIC": "Корисникот <em>{{userName}}</em> го избриша својот аргумент за темата <em>{{topicTitle}}</em>",
-    "NOTIFICATION_MODERATOR_DELETE_COMMENT_TOPIC": "Корисникот <em>{{userName}}</em> (модератор) избриша аргумент за темата <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_REPORT_COMMENT": "Корисникот <em>{{userName}}</em> пријави аргумент во темата {{topicTitle}} ",
-    "NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_UP": "Корисникот <em>{{userName}}</em> остави реакција <em>{{reaction}}</em> на аргумент во темата {{topicTitle}}",
-    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_UP": "Корисникот <em>{{userName}}</em> ја обнови својата реакција на аргумент во темата {{topicTitle}}",
+    "NOTIFICATION_USER_JOIN_TOPIC": "User <em>{{userName}}</em> has joined this topic with access level: {{accessLevel}}",
+    "NOTIFICATION_USER_JOIN_GROUP": "User <em>{{userName}}</em> has joined this group with access level: {{accessLevel}}",
+    "NOTIFICATION_USER_LEAVE_TOPIC": "User <em>{{userName}}</em> has left this topic.",
+    "NOTIFICATION_USER_DELETE_TOPICPIN_TOPIC": "User <em>{{userName}}</em> has removed a pin from this topic.",
+    "NOTIFICATION_USER_ADD_TOPIC_TOPICPIN": "User <em>{{userName}}</em> has pinned this topic.",
+    "NOTIFICATION_USER_CREATE_VOTE_TOPIC": "User <em>{{userName}}</em> has opened voting for this topic.",
+    "NOTIFICATION_USER_UPDATE_VOTE_TOPIC": "User <em>{{userName}}</em> has updated the voting deadline for this topic.",
+    "NOTIFICATION_USER_CREATE_VOTELIST_TOPIC": "Someone has voted on this topic.",
+    "NOTIFICATION_USER_CREATE_VOTEDELEGATION_VOTE": "User <em>{{userName}}</em> has delegated their vote in this topic.",
+    "NOTIFICATION_USER_DELETE_VOTEDELEGATION_VOTE": "User <em>{{userName}}</em> has revoked delegation of their vote in this topic.",
+    "NOTIFICATION_USER_VIEW_VOTEUSERCONTAINER": "User <em>{{userName}}</em> has downloaded the voting results for this topic.",
+    "NOTIFICATION_USER_VIEW_VOTEFINALCONTAINER": "User <em>{{userName}}</em> has downloaded the voting results for this topic.",
+    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC": "User <em>{{userName}}</em> has added a new argument in this topic.",
+    "NOTIFICATION_USER_UPDATE_COMMENT_TOPIC": "User <em>{{userName}}</em> has edited their argument in this topic.",
+    "NOTIFICATION_MODERATOR_UPDATE_COMMENT_TOPIC": "User <em>{{userName}}</em> (moderator) has updated the argument field <em>{{fieldName}}</em> in this topic.",
+    "NOTIFICATION_USER_DELETE_COMMENT_TOPIC": "User <em>{{userName}}</em> has deleted their argument in this topic.",
+    "NOTIFICATION_MODERATOR_DELETE_COMMENT_TOPIC": "User <em>{{userName}}</em> (moderator) has deleted an argument in this topic.",
+    "NOTIFICATION_USER_ADD_REPORT_COMMENT": "User <em>{{userName}}</em> has reported an argument in this topic.",
+    "NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_UP": "User <em>{{userName}}</em> has left a reaction <em>{{reaction}}</em> on an argument in this topic.",
+    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_UP": "User <em>{{userName}}</em> has updated their reaction to an argument in this topic.",
     "NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_DOWN": "@:NOTIFICATIONS.NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_UP",
     "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_DOWN": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_UP",
-    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_REMOVE": "Корисникот <em>{{userName}}</em> ја отстрани својата реакција на аргумент во темата {{topicTitle}} ",
+    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_REMOVE": "User <em>{{userName}}</em> has removed their reaction to an argument in this topic.",
     "NOTIFICATION_COMMENTVOTE_FIELD_VALUE_UP": "горе",
     "NOTIFICATION_COMMENTVOTE_FIELD_VALUE_DOWN": "доле",
     "NOTIFICATION_COMMENTVOTE_FIELD_VALUE_REMOVE": "отстрани",
-    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC_IN_REPLY_TO_COMMENT": "Корисникот <em>{{userName}}</em> остави одговор на аргумент за темата <em>{{topicTitle}}</em>: ",
-    "NOTIFICATION_USER_ADD_TOPIC_GROUP": "Корисникот <em>{{userName}}</em> додаде тема <em>{{topicTitle}}</em> во групата <em>{{groupName}}</em>",
-    "NOTIFICATION_USER_DELETE_GROUP_TOPIC": "Корисникот <em>{{userName}}</em> отстрани тема <em>{{topicTitle}}</em> од групата <em>{{groupName}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP": "Корисникот <em>{{userName}}</em> го смени нивото на пристап на групата <em>{{groupName}}</em> за темата <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP_NONE": "Корисникот <em>{{userName}}</em> го повлече пристапот за групата <em>{{groupName}}</em> за темата <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_CREATE_TOPICEVENT_TOPIC": "Корисникот <em>{{userName}}</em> ажурираше внес за темата <em>{{topicTitle}}</em>:",
-    "NOTIFICATION_USER_DELETE_TOPICEVENT_TOPIC": "Корисникот <em>{{userName}}</em> избриша ажууриран внес за темата <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_ADD_ATTACHMENT_TOPIC": "Корисникот <em>{{userName}}</em> додаде прилог <em>{{attachmentName}}</em> во темата <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_DELETE_ATTACHMENT_TOPIC": "Корисникот <em>{{userName}}</em> избриша прилог <em>{{attachmentName}}</em> во темата <em>{{topicTitle}}</em>",
-    "NOTIFICATION_USER_UPDATE_ATTACHMENT_TOPIC": "Корисникот <em>{{userName}}</em> ажурираше прилог во темата <em>{{topicTitle}}</em>",
+    "NOTIFICATION_USER_CREATE_COMMENT_TOPIC_IN_REPLY_TO_COMMENT": "User <em>{{userName}}</em> has left a reply to an argument in this topic.",
+    "NOTIFICATION_USER_ADD_TOPIC_GROUP": "User <em>{{userName}}</em> has added this topic to group <em>{{groupName}}</em>",
+    "NOTIFICATION_USER_DELETE_GROUP_TOPIC": "User <em>{{userName}}</em> has removed this topic from group <em>{{groupName}}</em>",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP": "User <em>{{userName}}</em> has changed the access level of group <em>{{groupName}}</em> to this topic.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP_NONE": "User <em>{{userName}}</em> has revoked access from group <em>{{groupName}}</em> to this topic.",
+    "NOTIFICATION_USER_CREATE_TOPICEVENT_TOPIC": "User <em>{{userName}}</em> has posted an update for this topic.",
+    "NOTIFICATION_USER_DELETE_TOPICEVENT_TOPIC": "User <em>{{userName}}</em> has deleted an update from this topic.",
+    "NOTIFICATION_USER_ADD_ATTACHMENT_TOPIC": "User <em>{{userName}}</em> has added an attachment <em>{{attachmentName}}</em> to this topic.",
+    "NOTIFICATION_USER_DELETE_ATTACHMENT_TOPIC": "User <em>{{userName}}</em> has deleted an attachment <em>{{attachmentName}}</em> from this topic.",
+    "NOTIFICATION_USER_UPDATE_ATTACHMENT_TOPIC": "User <em>{{userName}}</em> has updated an attachment in this topic.",
     "NOTIFICATION_TOPIC_FIELD_DESCRIPTION": "опис",
     "NOTIFICATION_TOPIC_FIELD_STATUS": "статус",
     "NOTIFICATION_TOPIC_FIELD_STATUS_INPROGRESS": "во тек",
@@ -160,7 +161,7 @@
     "NOTIFICATION_USER_UPDATE_GROUPMEMBERUSER": "Корисникот <em>{{userName}}</em> го смени нивото на пристап на корисникот <em>{{userName2}}</em> за групата <em>{{groupName}}</em>",
     "NOTIFICATION_USER_UPDATE_GROUPMEMBERUSER_NONE": "Корисникот <em>{{userName}}</em> го повлече пристапот за корисникот <em>{{userName2}}</em> за групата <em>{{groupName}}</em>",
     "USER_DELETE_USER_GROUP": "Корисникот <em>{{userName}}</em> го отстрани корисникот <em>{{userName2}}</em> од групата <em>{{groupName}}</em>",
-    "NOTIFICATION_USER_ADD_USERCONNECTION_USER": "Корисникот <em>{{userName}}</em> додаде нов метод на пријавување: <em>{{connectionName}}</em>",
+    "NOTIFICATION_USER_ADD_USERCONNECTION_USER": "User <em>{{userName}}</em> has added a new login method: <em>{{connectionName}}</em>",
     "NOTIFICATION_USER_CREATE_USER": "Корисникот <em>{{userName}}</em> е штотуку создаден",
     "NOTIFICATION_SYSTEM_CREATE_USER": "Корисникот е креиран во системот по покана од друг корисник.",
     "NOTIFICATION_USER_CREATE_USERCONSENT": "",
@@ -177,7 +178,7 @@
     "FILTER_SELF": "Моите активности"
   },
   "VOTE_REMINDER": {
-    "SUBJECT": "Reminder to vote on a topic"
+    "SUBJECT": "A reminder to vote"
   },
   "TXT_TOPIC_CATEGORY_ALL": "секоја категорија",
   "TXT_TOPIC_CATEGORY_CITIZENOS": "Citizen OS",
@@ -193,9 +194,9 @@
   "TXT_TOPIC_CATEGORY_TRANSPORT": "Јавен превоз и безбедност во сообраќајот",
   "TXT_TOPIC_CATEGORY_TAXES": "Даноци и буџетирање",
   "TXT_TOPIC_CATEGORY_AGRICULTURE": "Земјоделство",
-  "TXT_TOPIC_CATEGORY_ENVIRONMENT": "Животна средина, заштита на животни",
+  "TXT_TOPIC_CATEGORY_ENVIRONMENT": "Environment and animal protection",
   "TXT_TOPIC_CATEGORY_CULTURE": "Култура, медиуми и спорт",
-  "TXT_TOPIC_CATEGORY_HEALTH": "Здравствена заштита и социјална грижа",
+  "TXT_TOPIC_CATEGORY_HEALTH": "Health and social care",
   "TXT_TOPIC_CATEGORY_WORK": "Работа и вработување",
   "TXT_TOPIC_CATEGORY_EDUCATION": "Образование",
   "TXT_TOPIC_CATEGORY_POLITICS": "Политика и јавна администрација",
@@ -206,5 +207,10 @@
   "TXT_TOPIC_CATEGORY_YOUTH": "Млади",
   "TXT_TOPIC_CATEGORY_SCIENCE": "Наука и техологија",
   "TXT_TOPIC_CATEGORY_SOCIETY": "Демократија и граѓанско општество",
-  "TXT_TOPIC_CATEGORY_EUROCHANGEMAKERS": "EuroChangeMakers"
+  "TXT_TOPIC_CATEGORY_EUROCHANGEMAKERS": "EuroChangeMakers",
+  "TXT_TOPIC_STATUS_INPROGRESS": "in progress",
+  "TXT_TOPIC_STATUS_VOTING": "in voting",
+  "TXT_TOPIC_STATUS_FOLLOWUP": "in follow-up",
+  "TXT_TOPIC_STATUS_CLOSED": "closed",
+  "TXT_TOPIC_STATUS_MODERATED": "hidden by admin"
 }

@@ -1,0 +1,115 @@
+<!-- E-mail sent to Topic members of a reporter Topic -->
+<table id="bodyHeader" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding:22px 22px 22px 0;">
+                <p id="header_title_description">Your topic has been reported</p>
+                <p id="header_title">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 32px;">
+                Hi {{userMember.name}}!
+            </td>
+        </tr>
+        <tr>
+            <td width="100%" style="padding-bottom: 16px;">Someone has reported your topic as inappropriate.</td>
+        </tr>
+        <tr>
+            <td width="100%">
+                All admins and editors of the topic, as well as Citizen OS moderators, have been notified. Please review the reasons below.
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <p class="info_heading">Reason</p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td style="padding-top: 16px">
+                                <p class="info_row_heading">
+                                Type of violation
+                                </p>
+                            </td>
+                        <tr>
+                            <td
+                                style="font-size:14px;font-weight:600;color:#2C3B47;line-height:16px;">
+                                {{report.type}}
+                            </td>
+                        </tr>
+                        {{#report.text}}
+                        <td style="padding-top: 16px">
+                            <p class="info_row_heading">
+                            Reasoning
+                            </p>
+                        </td>
+                        <tr>
+                            <td style="font-size:14px;font-weight:600;color:#2C3B47;line-height:16px;">
+                                {{report.text}}
+                            </td>
+                        </tr>
+                        {{/report.text}}
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <p class="info_heading">What happens next?</p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <ol>
+                                    <li class="li">
+                                        Moderators are currently reviewing the topic. If they agree with the reporter, they will restrict access to the topic (users will get a warning prior to entering the topic).
+                                    </li>
+                                    <li class="li">
+                                        However, you and fellow topic admins or editors can edit the topic at any time, to rectify any issues raised. The topic can then be sent for review by Citizen OS moderators.
+                                    </li>
+                                    <li class="li">
+                                        If a review is requested, moderators will review the topic and withdraw all restrictions if the issues have been rectified.
+                                    </li>
+                                    <li class="li">
+                                        We will notify you if:
+                                        <ul>
+                                            <li>moderators apply restrictions to the topic</li>
+                                            <li>a review is carried out and restrictions withdrawn.</li>
+                                        </ul>
+                                    </li>
+                                </ol>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 32px;">
+                <p class="submit_button">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 140px;">Review
+                        topic</a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size: 14px;">
+                <a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process
+                    here.</a>
+            </td>
+        </tr>
+    </tbody>
+</table>

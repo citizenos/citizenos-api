@@ -1,0 +1,113 @@
+<!-- E-mail sent to Topic members of a reporter Topic -->
+<table id="bodyHeader" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding:22px 22px 22px 0;">
+                <p id="header_title_description">Ваша тема была отмечена, как неуместная</p>
+                <p id="header_title">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 32px;">
+                Здравствуйте, {{userMember.name}}!
+            </td>
+        </tr>
+        <tr>
+            <td width="100%" style="padding-bottom: 16px;">Кто-то отметил вашу тему как неуместную.</td>
+        </tr>
+        <tr>
+            <td width="100%">
+                Все администраторы и редакторы темы, а также модераторы Citizen OS были уведомлены. Пожалуйста, ознакомьтесь с причинами ниже.
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <p class="info_heading">Причина</p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td style="padding-top: 16px">
+                                <p class="info_row_heading">
+                                Тип нарушения
+                                </p>
+                            </td>
+                        <tr>
+                            <td
+                                style="font-size:14px;font-weight:600;color:#2C3B47;line-height:16px;">
+                                {{report.type}}
+                            </td>
+                        </tr>
+                        {{#report.text}}
+                        <td style="padding-top: 16px">
+                            <p class="info_row_heading">
+                            Обоснование
+                            </p>
+                        </td>
+                        <tr>
+                            <td style="font-size:14px;font-weight:600;color:#2C3B47;line-height:16px;">
+                                {{report.text}}
+                            </td>
+                        </tr>
+                        {{/report.text}}
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <p class="info_heading">Что будет дальше?</p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <ol>
+                                    <li class="li">
+                                        Модераторы проверяют содержание темы. Если они согласны с тем, кто написал жалобу, они ограничат доступ к теме (пользователи получат предупреждение перед входом в тему).
+                                    </li>
+                                    <li class="li">
+                                        Тем не менее, вы и администраторы или редакторы темы могут редактировать эту тему в любое время, чтобы исправить все найденные проблемы. Затем тема может быть отправлена модераторам Citizen OS для просмотра.
+                                    </li>
+                                    <li class="li">
+                                        В случае запроса на рецензирование модераторы проверят тему и снимут ограничения, если проблемы были устранены.
+                                    </li>
+                                    <li class="li">
+                                        Мы уведомим вас, если:
+                                        <ul>
+                                            <li>модераторы наложат ограничение на просмотр темы</li>
+                                            <li>проведется рецензия и будут сняты ограничения.</li>
+                                        </ul>
+                                    </li>
+                                </ol>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 32px;">
+                <p class="submit_button">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 140px;">Просмотр темы</a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size: 14px;">
+                <a href="{{linkViewModerationGuidelines}}">Узнайте подробнее о процессе модерирования Citizen OS здесь.</a>
+            </td>
+        </tr>
+    </tbody>
+</table>

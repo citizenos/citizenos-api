@@ -1,0 +1,100 @@
+<table id="bodyHeader" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding:22px 22px 22px 0;">
+                <p id="header_title_description">Pozvánka do tématu</p>
+                <p id="header_title">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 16px;">
+                Ahoj {{toUser.name}}!
+            </td>
+        </tr>
+
+        <tr>
+            <td valign="middle">
+                User <b>{{fromUser.name}}</b> is inviting you to join this topic.
+            </td>
+        </tr>
+
+        {{#message}}
+        <tr>
+            <td><p class="info_heading">Zpráva</p></td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="message_table">
+                    <tbody>
+                        <tr>
+                            <td style="font-size: 14px;font-weight: 400;line-height: 20px;">
+                            {{message}}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        {{/message}}
+        <tr>
+            <td><p class="info_heading">Detaily tématu</p></td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <p class="info_row_heading">Název tématu</p>
+                                <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
+                                    {{topic.title}}</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-top: 16px">
+                                <p class="info_row_heading">Stav</p>
+                                <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
+                                    {{topic.status}}
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-top: 16px">
+                                <p class="info_row_heading">Účastníci</p>
+                                <p style="font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
+                                    {{memberCount}}
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-top: 16px">
+                                <p class="info_row_heading">Poslední aktivita</p>
+                                <p style="font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
+                                    {{latestActivity}}
+                                </p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 32px;padding-top: 16px">
+                <p class="submit_button">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 140px;">Připojit se k tématu</a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size:14px;color:#4D5C6A;">
+                Please note: You must log in using the same email address ({{toUser.email}}) to access this topic.
+            </td>
+        </tr>
+
+    </tbody>
+</table>

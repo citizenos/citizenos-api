@@ -1,0 +1,89 @@
+<!-- E-mail sent to moderators when a Topic is reported -->
+<table id="bodyHeader" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding:22px 22px 22px 0;">
+                <p id="header_title_description">Тема была отмечена, как неуместная</p>
+                <p id="header_title">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 32px;">
+                Здравствуйте, {{userModerator.name}}!
+            </td>
+        </tr>
+
+        <tr>
+            <td width="100%">
+                Тема была отмечена, как неприемлемая, и требует рассмотрения модератором. Пожалуйста, ознакомьтесь с причинами ниже.
+            </td>
+        </tr>
+        <tr>
+            <td><p class="info_heading">Детали жалобы</p></td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td style="padding-top: 16px">
+                                <p class="info_row_heading">
+                                Тема
+                                </p>
+                            </td>
+                        <tr>
+                        <tr>
+                            <td style="font-size:14px;font-weight:600;color:#1168a8;line-height:16px;">
+                                {{topic.title}}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-top: 16px">
+                                <p class="info_row_heading">
+                                Тип нарушения
+                                </p>
+                            </td>
+                        <tr>
+                        <tr>
+                            <td style="font-size:14px;font-weight:600;color:#2C3B47;line-height:16px;">
+                                {{report.type}}
+                            </td>
+                        </tr>
+
+                        {{#report.text}}
+                        <tr>
+                            <td style="padding-top: 16px">
+                                <p class="info_row_heading">
+                                Обоснование
+                                </p>
+                            </td>
+                        <tr>
+                        <tr>
+                            <td style="font-size:14px;font-weight:600;color:#2C3B47;line-height:16px;">
+                                {{report.text}}
+                            </td>
+                        </tr>
+                        {{/report.text}}
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 32px;">
+                <p class="submit_button">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 140px;">Просмотр темы</a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size: 14px;">
+                <a href="{{linkViewModerationGuidelines}}">Узнайте подробнее о процессе модерирования Citizen OS здесь.</a>
+            </td>
+        </tr>
+    </tbody>
+</table>
