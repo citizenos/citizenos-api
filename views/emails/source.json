@@ -68,7 +68,7 @@
     "SUBJECT": "Your discussion contribution has been reported as inappropriate"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "Some discussion content has been reported as inappropriate"
+    "SUBJECT": "Please moderate this reported Citizen OS discussion content"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
