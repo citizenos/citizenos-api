@@ -3,7 +3,7 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding:22px 22px 22px 0;">
-                <p id="header_title_description">A moderator has reviewed the topic you reported</p>
+                <p id="header_title_description">Модератор просмотрел тему, насчет которой Вы написали жалобу</p>
                 <p id="header_title">{{topic.title}}</p>
             </td>
         </tr>
@@ -13,18 +13,18 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding-bottom: 32px;">
-                Hi {{userReporter.name}}!
+                Здравствуйте, {{userReporter.name}}!
             </td>
         </tr>
         <tr>
             <td width="100%">
-                A moderator has reviewed your report of the above topic as inappropriate. You can see the decision below.
+                Модератор просмотрел Вашу жалобу по теме. Вы можете увидеть решение ниже.
             </td>
         </tr>
         <tr>
             <td>
                 <p class="info_heading">
-                    Report details
+                    Детали жалобы
                 </p>
             </td>
         </tr>
@@ -35,7 +35,7 @@
                         <tr>
                             <td>
                                 <p class="info_row_heading">
-                                    Report reference number</p>
+                                    Номер отчета</p>
                                 <p
                                     style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;padding-bottom:16px;">
                                     {{report.id}}
@@ -45,7 +45,7 @@
                         <tr>
                             <td>
                                 <p class="info_row_heading">
-                                    Report created</p>
+                                    Отчет создан</p>
                                 <p
                                     style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;padding-bottom:16px;">
                                     {{report.createdAt}}
@@ -55,7 +55,7 @@
                         <tr>
                             <td>
                                 <p class="info_row_heading">
-                                    Report category</p>
+                                    Категория жалобы</p>
                                 <p
                                     style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;padding-bottom:16px;">
                                     {{report.moderatedReasonType}}
@@ -65,7 +65,7 @@
                         <tr>
                             <td>
                                 <p class="info_row_heading">
-                                    Reasoning
+                                    Обоснование
                                 </p>
                                 <p
                                     style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;padding-bottom:16px;">
@@ -84,7 +84,7 @@
                         <td>
                             <p
                                 style="font-size:14px;color:#2C3B47;line-height:20px;padding-bottom:16px;font-weight: 600;">
-                            When accessing the topic, users will now see an overlay, warning about violations in the topic. However, viewers have an option to bypass the overlay and view the topic content at their own risk anyway
+                            Теперь, при попытке ознакомиться с содержанием темы, пользователи увидят оповещение, предупреждающее их о том, что данная тема содержит нарушения. Однако пользователи все равно смогут изучить тему на свой риск
                             </p>
                         </td>
                     </tr>
@@ -96,15 +96,13 @@
             <td style="padding-bottom: 32px;padding-top: 16px;">
                 <p class="submit_button">
                     <a href="{{linkViewTopic}}" target="_blank"
-                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 140px;">View
-                        topic</a>
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 140px;">Просмотр темы</a>
                 </p>
             </td>
         </tr>
         <tr>
             <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size: 14px;">
-                <a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process
-                    here.</a>
+                <a href="{{linkViewModerationGuidelines}}">Узнайте подробнее о процессе модерирования Citizen OS здесь.</a>
             </td>
         </tr>
     </tbody>
