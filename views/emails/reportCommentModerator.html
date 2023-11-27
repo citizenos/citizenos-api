@@ -14,7 +14,7 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding-bottom: 32px;">
-                Hi moderator,
+                Hi {{userModerator.name}},
             </td>
         </tr>
         <tr>
@@ -26,10 +26,10 @@
         <tr>
             <td width="100%" style="padding-bottom: 8px;">
                 {{#isUserNotified}}
-                    The argument's author has been notified
+                    The argument's author has been notified.
                 {{/isUserNotified}}
                 {{^isUserNotified}}
-                    The argument's author has deleted their account
+                    The argument's author has now deleted their account.
                 {{/isUserNotified}}
             </td>
         </tr>
