@@ -503,7 +503,8 @@ module.exports = function (app) {
             // Handle Partner links
             // TODO: could use Mu here...
             const subject = template.translations.INVITE_TOPIC.SUBJECT
-                .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name));
+                .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
+                .replace('{{topicTitle}}', util.escapeHtml(topic.title ? topic.title : topic.id));
             const invite = invites.find((i) => { return i.userId === toUser.id });
             const linkViewInvite = urlLib.getFe('/topics/:topicId/invites/users/:inviteId', { // FIXME: Do we want to go through /api/invite/view?
                 inviteId: invite.id,
