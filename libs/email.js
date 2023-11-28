@@ -62,7 +62,7 @@ module.exports = function (app) {
         }
     };
 
-    const socialItems = ['Twitter', 'LinkedIn', 'Facebook', 'Instagram', 'YouTube', 'Medium', 'GitHub'];
+    const socialItems = ['Twitter', 'LinkedIn', 'Facebook', 'Instagram', 'YouTube', 'GitHub'];
 
     socialItems.forEach((item) => {
         EMAIL_OPTIONS_DEFAULT.images.push({
