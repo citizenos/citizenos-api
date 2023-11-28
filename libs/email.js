@@ -1226,6 +1226,11 @@ module.exports = function (app) {
                 );
                 emailOptions.linkedData.translations = template.translations;
 
+                emailOptions.images.push(
+                    {
+                        name: 'icon_info.png',
+                        file: path.join(templateRoot, 'images/Information.png')
+                    });
                 return await emailClient.sendString(template.body, emailOptions);
             };
             sendEmailPromiseses.push(sendReporterEmail());
