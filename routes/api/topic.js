@@ -5471,6 +5471,17 @@ module.exports = function (app) {
         let orderByComments = '"createdAt" DESC';
         let orderByReplies = '"createdAt" ASC';
         let dataForModerator = '';
+        let where = '';
+        let types = req.query.types;
+        if (types && !Array.isArray(types)) {
+            types = [types];
+            types = types.filter((type) => Comment.TYPES[type]);
+        }
+
+        if (types && types.length) {
+            where += ` AND ct.type IN (:types) `
+        }
+
         if (req.user) {
             userId = req.user.userId;
 
@@ -5757,11 +5768,13 @@ module.exports = function (app) {
             JOIN "Comments" c ON c.id = tc."commentId" AND c.id = c."parentId"
             JOIN pg_temp.getCommentTree(tc."commentId") ct ON ct.id = ct.id
             WHERE tc."topicId" = :topicId
+            ${where}
             ORDER BY ${orderByComments}
             LIMIT :limit
             OFFSET :offset
         `, db.dialect,
             {
+                types: types,
                 topicId: req.params.topicId,
                 limit: parseInt(req.query.limit, 10) || 15,
                 offset: parseInt(req.query.offset, 10) || 0
@@ -6336,7 +6349,7 @@ module.exports = function (app) {
                 });
 
             if (!comment) {
-                return comment;
+                return res.notFound();
             }
 
             await db
