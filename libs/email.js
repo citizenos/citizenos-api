@@ -523,7 +523,7 @@ module.exports = function (app) {
                 to: toUser.email,
                 images: images,
                 toUser: toUser,
-                message,
+                message: message,
                 fromUser: fromUser,
                 topic: topic,
                 linkViewTopic: linkViewInvite,

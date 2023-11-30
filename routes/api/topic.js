@@ -2243,6 +2243,11 @@ module.exports = function (app) {
             where += ` AND (tr."moderatedAt" IS NULL OR tr."resolvedAt" IS NOT NULL) `;
         } else {
             where += ` AND (tr."moderatedAt" IS NOT NULL AND tr."resolvedAt" IS NULL) `;
+            returncolumns += `
+            ,tr.id AS "report.id"
+            ,tr."moderatedReasonType" AS "report.moderatedReasonType"
+            ,tr."moderatedReasonText" AS "report.moderatedReasonText"
+            `;
         }
 
         if (creatorId) {
@@ -2587,6 +2592,11 @@ module.exports = function (app) {
                 where += 'AND (tr."moderatedAt" IS NULL OR tr."resolvedAt" IS NOT NULL OR tr."deletedAt" IS NOT NULL) ';
             } else {
                 where += 'AND tr."moderatedAt" IS NOT NULL AND tr."resolvedAt" IS NULL AND tr."deletedAt" IS NULL ';
+                returncolumns += `
+                ,tr.id AS "report.id"
+                ,tr."moderatedReasonType" AS "report.moderatedReasonType"
+                ,tr."moderatedReasonText" AS "report.moderatedReasonText"
+                `;
             }
 
             if (statuses && statuses.length) {
@@ -2732,7 +2742,7 @@ module.exports = function (app) {
                         LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                         ${join}
                     WHERE ${where}
-                    GROUP BY t.id, tj."token", tj.level, c.id, muc.count, mgc.count, tv."voteId", tc.count, com."createdAt"
+                    GROUP BY t.id, tr.id, tr."moderatedReasonType", tr."moderatedReasonText", tj."token", tj.level, c.id, muc.count, mgc.count, tv."voteId", tc.count, com."createdAt"
                     ${groupBy}
                     ORDER BY "lastActivity" DESC
                     LIMIT :limit OFFSET :offset
