@@ -24,7 +24,7 @@ module.exports = function (sequelize, DataTypes) {
     const TYPE_LENGTH_LIMIT = {
         pro: 2048,
         con: 2048,
-        poi: 500,
+        poi: 2048,
         reply: 2048
     };
 
