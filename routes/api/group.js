@@ -527,7 +527,34 @@ module.exports = function (app) {
         if (favourite) {
             where += ` AND gf."groupId" = g.id AND gf."userId" = :userId`;
         }
+        const orderBy = req.query.orderBy || 'updatedAt';
+        const order = (req.query.order && req.query.order.toLowerCase() === 'asc') ? 'ASC' : 'DESC';
+        let orderBySql = ` ORDER BY`;
 
+        switch (orderBy) {
+            case 'name':
+                orderBySql += ` g.name `
+                break;
+            case 'activityCount':
+                orderBySql += ` ga.count `
+                break;
+            case 'memberCount':
+                orderBySql += ` "members.users.count" `
+                break;
+            case 'topicCount':
+                orderBySql += ` "members.topics.count" `
+                break;
+            case 'createdAt':
+                orderBySql += ` g."createdAt" `
+                break;
+            case 'activity':
+                orderBySql += ` ga."updatedAt" `
+                break;
+            default:
+                orderBySql += ` g."updatedAt" `
+        }
+
+        orderBySql += order;
         if (include) {
             let union = false;
             joinText = 'LEFT JOIN (';
@@ -656,11 +683,28 @@ module.exports = function (app) {
                         WHERE tmg."deletedAt" IS NULL
                         ORDER BY t."updatedAt" ASC
                     ) AS gt ON (gt."groupId" = g.id)
+                    LEFT JOIN (
+                        SELECT
+                            MAX(a."updatedAt") as "updatedAt",
+                            ag.count,
+                            a."groupIds"
+                        FROM
+                        "Activities" a
+                        LEFT JOIN (
+                            SELECT COUNT(*) as "count",
+                            "groupIds"
+                            FROM "Activities"
+                            WHERE array_length("groupIds", 1) > 0
+                            GROUP BY "groupIds"
+                        ) ag ON a."groupIds" = ag."groupIds"
+                        WHERE array_length(a."groupIds", 1) > 0
+                        GROUP BY a."groupIds", ag.count ORDER BY a."groupIds"
+                    ) ga ON g.id::text = ANY(ga."groupIds")
                     LEFT JOIN "GroupFavourites" gf ON (gf."groupId" = g.id AND gf."userId" = :userId)
                     LEFT JOIN "GroupJoins" gj ON (gj."groupId" = g.id)
                     ${joinText}
                     ${where}
-                ORDER BY g."updatedAt" DESC, g.id
+                ${orderBySql}
                 OFFSET :offset LIMIT :limit;
                 `,
                 {
@@ -2195,17 +2239,30 @@ module.exports = function (app) {
         const orderBy = req.query.orderBy || 'updatedAt';
         const order = (req.query.order && req.query.order.toLowerCase() === 'asc') ? 'ASC' : 'DESC';
         let orderBySql = ` ORDER BY`;
+
         switch (orderBy) {
             case 'name':
                 orderBySql += ` g.name `
                 break;
+            case 'activityCount':
+                orderBySql += ` ga.count `
+                break;
+            case 'memberCount':
+                orderBySql += ` "members.users.count" `
+                break;
+            case 'topicCount':
+                orderBySql += ` "members.topics.count" `
+                break;
+            case 'createdAt':
+                orderBySql += ` g."createdAt" `
+                break;
             case 'activity':
-                orderBySql += `ga.updatedAt`
+                orderBySql += ` ga."updatedAt" `
                 break;
             default:
                 orderBySql += ` g."updatedAt" `
-
         }
+
         orderBySql += order;
         const offset = req.query.offset || 0;
         let limit = req.query.limit || limitDefault;
@@ -2270,11 +2327,20 @@ module.exports = function (app) {
                 JOIN "Users" c ON c.id = g."creatorId"
                 LEFT JOIN (
                     SELECT
-                        MAX("updatedAt") as "updatedAt",
-                        "groupIds"
+                        MAX(a."updatedAt") as "updatedAt",
+                        ag.count,
+                        a."groupIds"
                     FROM
-                    "Activities" WHERE array_length("groupIds", 1) > 0
-                    GROUP BY "groupIds" ORDER BY "groupIds"
+                    "Activities" a
+                    LEFT JOIN (
+                        SELECT COUNT(*) as "count",
+                        "groupIds"
+                        FROM "Activities"
+                        WHERE array_length("groupIds", 1) > 0
+                        GROUP BY "groupIds"
+                    ) ag ON a."groupIds" = ag."groupIds"
+                    WHERE array_length(a."groupIds", 1) > 0
+                    GROUP BY a."groupIds", ag.count ORDER BY a."groupIds"
                 ) ga ON g.id::text = ANY(ga."groupIds")
                 LEFT JOIN "GroupJoins" gj ON gj."groupId" = g.id
                 JOIN (
