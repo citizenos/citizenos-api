@@ -4612,7 +4612,7 @@ module.exports = function (app) {
      */
     app.get('/api/topics/join/:token', async function (req, res) {
         const token = req.params.token;
-
+        const user = req.user;
         const topicJoin = await TopicJoin.findOne({
             where: {
                 token: token
@@ -4622,10 +4622,61 @@ module.exports = function (app) {
         if (!topicJoin) {
             return res.notFound();
         }
-        const topic = await _topicReadUnauth(topicJoin.topicId, null);
+        let topicMember;
+        if (user) {
+            topicMember = await db.query(`
+            SELECT
+            COALESCE(
+                tmup.level,
+                tmgp.level,
+                    'none'
+            ) as "level"
+            FROM "Topics" t
+                LEFT JOIN (
+                SELECT
+                    tmu."topicId",
+                    tmu."userId",
+                    tmu.level::text AS level
+                FROM "TopicMemberUsers" tmu
+                WHERE tmu."deletedAt" IS NULL
+            ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId)
+            LEFT JOIN (
+                SELECT
+                    tmg."topicId",
+                    gm."userId",
+                    MAX(tmg.level)::text AS level
+                FROM "TopicMemberGroups" tmg
+                    LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
+                WHERE tmg."deletedAt" IS NULL
+                AND gm."deletedAt" IS NULL
+                GROUP BY "topicId", "userId"
+            ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
+            WHERE t.id = :topicId
+            `, {
+                replacements: {
+                    topicId: topicJoin.topicId,
+                    userId: user.id
+                },
+                type: db.QueryTypes.SELECT,
+                raw: true,
+                nest: true
+            });
+        }
+        let topic = await Topic.findOne({
+            where: {
+                id: topicJoin.topicId
+            },
+            attributes: ['id', 'visibility', 'title']
+        });
 
         if (!topic) {
             return res.notFound();
+        } else if (topic.visibility === Topic.VISIBILITY.private && !topicMember) {
+            return res.ok({ title: topic.title });
+        }
+        topic = topic.toJSON();
+        if (topicMember.length) {
+            topic.permission = { level: topicMember[0].level };
         }
 
         return res.ok(topic);
