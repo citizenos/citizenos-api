@@ -504,7 +504,7 @@ module.exports = function (app) {
             // TODO: could use Mu here...
             const subject = template.translations.INVITE_TOPIC.SUBJECT
                 .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
-                .replace('{{topicTitle}}', util.escapeHtml(topic.title ? topic.title : topic.id));
+                .replace('{{topicTitle}}', topic.title ? topic.title : topic.id);
             const invite = invites.find((i) => { return i.userId === toUser.id });
             const linkViewInvite = urlLib.getFe('/topics/:topicId/invites/users/:inviteId', { // FIXME: Do we want to go through /api/invite/view?
                 inviteId: invite.id,
@@ -734,7 +734,7 @@ module.exports = function (app) {
             // TODO: could use Mu here...
             const subject = template.translations.INVITE_GROUP.SUBJECT
                 .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
-                .replace('{{group.name}}', util.escapeHtml(group.name));
+                .replace('{{group.name}}', group.name);
             const invite = invites.find((i) => { return i.userId === toUser.id });
             const linkViewInvite = urlLib.getFe('/groups/:groupId/invites/users/:inviteId', {
                 inviteId: invite.id,
@@ -996,6 +996,7 @@ module.exports = function (app) {
                         {
                             subject: template.translations.REPORT_COMMENT_MODERATOR.SUBJECT,
                             to: moderator.email,
+                            userModerator: moderator,
                             //Placeholders...
                             comment: commentInfo.comment,
                             topic: commentInfo.topic,
