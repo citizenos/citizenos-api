@@ -5,7 +5,7 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding:22px 22px 22px 0;">
-                <p id="header_title_description">A report has been resolved in topic</p>
+                <p id="header_title_description">A reported topic needs re-review</p>
                 <p id="header_title">{{topic.title}}</p>
             </td>
         </tr>
@@ -20,23 +20,12 @@
         </tr>
         <tr>
             <td width="100%" style="padding-bottom: 32px;">
-                A topic, that was reported as inappropriate, has been revised by an admin/editor of that topic.
-            </td>
-        </tr>
-
-        <tr>
-            <td width="100%" style="padding-bottom: 32px;">
-                You or another admin originally decided to restrict access to the topic.
-            </td>
-        </tr>
-        <tr>
-            <td width="100%" style="padding-bottom: 32px;">
-                They have submitted their changes for review and have provided the following explanation.
+                After being reported as inappropriate, access to {{topic.title}} was restricted by yourself or another moderator. It has now been revised by an admin or editor of that topic, and submitted for re-review.
             </td>
         </tr>
         <tr>
             <td width="100%">
-                Please review the topic and decide if it is now in compliance with guidelines and access restriction should be removed or not.
+                Please read their explanation below, review the topic, and indicate whether restrictions can now be removed.
             </td>
         </tr>
         <tr>
@@ -67,24 +56,24 @@
                         <tr>
                             <td>
                                 <p class="info_row_heading">Topic</p>
-                                <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height: 24px;padding-bottom:16px;">
-                                    {{topic.title}}
+                                <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height: 24px;padding-bottom:16px;width: 100%;">
+                                    <a href="{{linkViewTopic}}" target="_blank" >{{topic.title}}</a>
                                 </p>
                             </td>
                         </tr>
                         <tr>
                             <td>
                                 <p class="info_row_heading">Type of violation</p>
-                                <p style="font-size: 16px;font-weight: 600;line-height: 24px;padding-bottom:16px;">
+                                <p style="font-size: 16px;font-weight: 600;line-height: 24px;padding-bottom:16px;width: 100%;">
                                     {{report.moderatedReasonType}}
                                 </p>
                             </td>
                         </tr>
                         <tr>
                             <td>
-                                <p class="info_row_heading">Zdôvodnenie
+                                <p class="info_row_heading">Reasoning
                                 </p>
-                                <p style="font-size: 16px;font-weight: 600;line-height: 24px;padding-bottom:16px;">
+                                <p style="font-size: 16px;font-weight: 600;line-height: 24px;padding-bottom:16px;width: 100%;">
                                     {{report.moderatedReasonText}}
                                 </p>
                             </td>
@@ -97,8 +86,13 @@
             <td style="padding-bottom: 32px;padding-top: 16px;">
                 <p class="submit_button">
                     <a href="{{linkViewTopic}}" target="_blank"
-                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 140px;">Preskúmať tému</a>
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 60px;">Review topic</a>
                 </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size: 14px;">
+                <a href="{{linkViewModerationGuidelines}}">You can find more details about Citizen OS moderation process here.</a>
             </td>
         </tr>
     </tbody>

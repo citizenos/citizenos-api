@@ -18,7 +18,7 @@
         </tr>
         <tr>
             <td width="100%">
-                Модератор просмотрел Вашу жалобу по теме. Вы можете увидеть решение ниже.
+                A moderator has reviewed your reporting of the above topic. They agreed that the content was inappropriate, and have hidden it behind a content warning. Please see further details below.
             </td>
         </tr>
         <tr>
@@ -55,7 +55,7 @@
                         <tr>
                             <td>
                                 <p class="info_row_heading">
-                                    Категория жалобы</p>
+                                    Type of violation</p>
                                 <p
                                     style="font-size:16px;font-weight:600;color:#2C3B47;line-height:24px;padding-bottom:16px;">
                                     {{report.moderatedReasonType}}
@@ -78,12 +78,16 @@
             </td>
         </tr>
         <tr>
-            <td valign="middle">
-                <table class="info_table">
+            <td valign="middle" style="padding-top: 16px;">
+                <table class="notification_box">
+                    <tr>
+                        <td style="padding-bottom: 16px;">
+                            <img src="cid:icon_info.png" />
+                        </td>
+                    </tr>
                     <tr>
                         <td>
-                            <p
-                                style="font-size:14px;color:#2C3B47;line-height:20px;padding-bottom:16px;font-weight: 600;">
+                            <p style="font-size: 16px;line-height: 24px;">
                             Теперь, при попытке ознакомиться с содержанием темы, пользователи увидят оповещение, предупреждающее их о том, что данная тема содержит нарушения. Однако пользователи все равно смогут изучить тему на свой риск
                             </p>
                         </td>
@@ -96,13 +100,14 @@
             <td style="padding-bottom: 32px;padding-top: 16px;">
                 <p class="submit_button">
                     <a href="{{linkViewTopic}}" target="_blank"
-                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 140px;">Просмотр темы</a>
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 60px;">View topic</a>
                 </p>
             </td>
         </tr>
         <tr>
             <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size: 14px;">
-                <a href="{{linkViewModerationGuidelines}}">Узнайте подробнее о процессе модерирования Citizen OS здесь.</a>
+                <a href="{{linkViewModerationGuidelines}}">Learn more about the Citizen OS moderation process
+                    here.</a>
             </td>
         </tr>
     </tbody>
