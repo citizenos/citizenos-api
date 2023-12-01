@@ -14,12 +14,12 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding-bottom: 32px;">
-                Hi {{userModerator.name}}!
+                Здравствуйте, {{userModerator.name}}!
             </td>
         </tr>
         <tr>
           <td width="100%">
-            Some discussion content has been reported as inappropriate in a topic you moderate.{{#isUserNotified}} The argument's author has been notified. {{/isUserNotified}}{{^isUserNotified}}The argument's author has now deleted their account.{{/isUserNotified}} Please see the reasons for reporting below, review the content, and decide on the necessary course of action.
+            Некоторый вклад в обсуждение в модерируемой Вами теме был отмечен, как неуместный.{{#isUserNotified}} Автор аргумента уже оповещен. {{/isUserNotified}}{{^isUserNotified}}Автор аргумента удалил свою учетную запись.{/isUserNotified}} Пожалуйста, ознакомьтесь с приведенной ниже причиной жалобы, изучите содержание вклада и примите решение о необходимых действиях.
             </td>
         </tr>
         <tr>
@@ -88,8 +88,7 @@
         </tr>
         <tr>
             <td valign="bottom" style="padding-top:16px;font-size: 14px;">
-                <a href="{{linkViewModerationGuidelines}}">Learn more about the Citizen OS moderation process
-                    here.</a>
+                <a href="{{linkViewModerationGuidelines}}">Узнайте подробнее о процессе модерирования Citizen OS здесь.</a>
             </td>
         </tr>
     </tbody>
