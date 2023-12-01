@@ -29,7 +29,6 @@ module.exports = function (app) {
     const templateRootLocal = app.get('EMAIL_TEMPLATE_ROOT_LOCAL');
 
     const emailHeaderLogoName = 'logo.png';
-    const emailHeaderIconName = 'header_icon.png';
     const emailFooterImageName = 'together.png';
     let emailHeaderLogo = path.join(templateRoot, 'images/logo-email.png');
     const emailFooterImage = path.join(templateRoot, 'images/together.png');
@@ -63,7 +62,7 @@ module.exports = function (app) {
         }
     };
 
-    const socialItems = ['Twitter', 'LinkedIn', 'Facebook', 'Instagram', 'YouTube', 'Medium', 'GitHub'];
+    const socialItems = ['Twitter', 'LinkedIn', 'Facebook', 'Instagram', 'YouTube', 'GitHub'];
 
     socialItems.forEach((item) => {
         EMAIL_OPTIONS_DEFAULT.images.push({
@@ -411,11 +410,6 @@ module.exports = function (app) {
                 }
             );
 
-            emailOptions.images.push({
-                name: emailHeaderIconName,
-                file: path.join(templateRoot, `images/PasswordReset.png`)
-            });
-
             emailOptions.linkedData.translations = template.translations;
             const userEmailPromise = emailClient.sendString(template.body, emailOptions);
 
@@ -462,36 +456,37 @@ module.exports = function (app) {
 
         const toUsersPromise = User.findAll({
             where: {
-                id: invites.map(invite => invite.userId)
+                id: {
+                    [db.Sequelize.Op.in]: invites.map(invite => invite.userId)
+                }
             },
             attributes: ['id', 'email', 'language', 'name'],
             raw: true
         });
-
         const memberCount = await TopicMemberUser.count({
             where: {
                 topicId: invites[0].topicId
             }
         });
         const lastActivity = await db
-        .query(`
+            .query(`
                  SELECT "createdAt"
                  FROM "Activities"
                  WHERE :topicId =ANY("topicIds")
                  ORDER BY "createdAt" DESC
                  LIMIT 1;
             ;`,
-            {
-                replacements: {
-                    groupId: invites[0].topicId,
-                },
-                type: db.QueryTypes.SELECT,
-                raw: true,
-                nest: true
-            }
-        );
+                {
+                    replacements: {
+                        topicId: invites[0].topicId,
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
         const [fromUser, topic, toUsers] = await Promise.all([fromUserPromise, topicPromise, toUsersPromise]);
-
+        const statusKey = `TXT_TOPIC_STATUS_${topic.status.toUpperCase()}`;
         let templateName = 'inviteTopic';
         let linkToApplication = urlLib.getFe();
         let message = invites[0].inviteMessage;
@@ -508,7 +503,8 @@ module.exports = function (app) {
             // Handle Partner links
             // TODO: could use Mu here...
             const subject = template.translations.INVITE_TOPIC.SUBJECT
-                .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name));
+                .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
+                .replace('{{topicTitle}}', topic.title ? topic.title : topic.id);
             const invite = invites.find((i) => { return i.userId === toUser.id });
             const linkViewInvite = urlLib.getFe('/topics/:topicId/invites/users/:inviteId', { // FIXME: Do we want to go through /api/invite/view?
                 inviteId: invite.id,
@@ -517,21 +513,17 @@ module.exports = function (app) {
 
             // In case Topic has no title, just show the full url.
             topic.title = topic.title ? topic.title : linkViewInvite;
-            topic.status = template.translations[`TXT_TOPIC_STATUS_${topic.status.toUpperCase()}`];
+            topic.status = template.translations[statusKey];
             let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
             linkedData.translations = template.translations;
             const images = EMAIL_OPTIONS_DEFAULT.images;
-            images.push({
-                name: emailHeaderIconName,
-                file: path.join(templateRoot, `images/Topic.png`)
-            })
             const emailOptions = {
                 // from: from, - comes from emailClient.js configuration
                 subject: subject,
                 to: toUser.email,
                 images: images,
                 toUser: toUser,
-                message,
+                message: message,
                 fromUser: fromUser,
                 topic: topic,
                 linkViewTopic: linkViewInvite,
@@ -700,32 +692,33 @@ module.exports = function (app) {
             }
         });
         const lastActivity = await db
-        .query(`
+            .query(`
                  SELECT "createdAt"
                  FROM "Activities"
                  WHERE :groupId =ANY("groupIds")
                  ORDER BY "createdAt" DESC
                  LIMIT 1;
             ;`,
-            {
-                replacements: {
-                    groupId: invites[0].groupId,
-                },
-                type: db.QueryTypes.SELECT,
-                raw: true,
-                nest: true
-            }
-        );
+                {
+                    replacements: {
+                        groupId: invites[0].groupId,
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
+
         const toUsersPromise = User.findAll({
             where: {
-                id: invites.map(invite => invite.userId)
+                id: {
+                    [db.Sequelize.Op.in]: invites.map(invite => invite.userId)
+                }
             },
             attributes: ['id', 'email', 'language', 'name'],
             raw: true
         });
-
         const [fromUser, group, toUsers] = await Promise.all([fromUserPromise, groupPromise, toUsersPromise]);
-
         let templateName = 'inviteGroup';
         let linkToApplication = urlLib.getFe();
         let message = invites[0].inviteMessage;
@@ -738,11 +731,10 @@ module.exports = function (app) {
             }
 
             const template = resolveTemplate(templateName, toUser.language);
-
             // TODO: could use Mu here...
             const subject = template.translations.INVITE_GROUP.SUBJECT
                 .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
-                .replace('{{group.name}}', util.escapeHtml(group.name));
+                .replace('{{group.name}}', group.name);
             const invite = invites.find((i) => { return i.userId === toUser.id });
             const linkViewInvite = urlLib.getFe('/groups/:groupId/invites/users/:inviteId', {
                 inviteId: invite.id,
@@ -755,12 +747,6 @@ module.exports = function (app) {
             let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
             linkedData.translations = template.translations;
             const images = EMAIL_OPTIONS_DEFAULT.images;
-            if (group.imageUrl) {
-                images.push({
-                    name: emailHeaderIconName,
-                    file: group.imageUrl
-                })
-            }
 
             const emailOptions = {
                 // from: from, - comes from emailClient.js configuration
@@ -963,10 +949,6 @@ module.exports = function (app) {
             );
             emailOptions.images.push(
                 {
-                    name: 'header_icon.png',
-                    file: path.join(templateRoot, 'images/ArgumentReport.png')
-                },
-                {
                     name: 'icon_argument.png',
                     file: path.join(templateRoot, 'images/Discussions.png')
                 });
@@ -1014,8 +996,10 @@ module.exports = function (app) {
                         {
                             subject: template.translations.REPORT_COMMENT_MODERATOR.SUBJECT,
                             to: moderator.email,
+                            userModerator: moderator,
                             //Placeholders...
                             comment: commentInfo.comment,
+                            topic: commentInfo.topic,
                             report: {
                                 type: template.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
                                 text: report.text
@@ -1025,10 +1009,6 @@ module.exports = function (app) {
                         }
                     );
                     emailOptions.images.push(
-                        {
-                            name: 'header_icon.png',
-                            file: path.join(templateRoot, 'images/ArgumentReport.png')
-                        },
                         {
                             name: 'icon_argument.png',
                             file: path.join(templateRoot, 'images/Discussions.png')
@@ -1248,6 +1228,11 @@ module.exports = function (app) {
                 );
                 emailOptions.linkedData.translations = template.translations;
 
+                emailOptions.images.push(
+                    {
+                        name: 'icon_info.png',
+                        file: path.join(templateRoot, 'images/Information.png')
+                    });
                 return await emailClient.sendString(template.body, emailOptions);
             };
             sendEmailPromiseses.push(sendReporterEmail());
@@ -1601,7 +1586,6 @@ module.exports = function (app) {
     const _sendTopicNotification = async (notification, users) => {
         const promisesToResolve = [];
         let linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: notification.topicIds[0] });
-
         const linkGeneralNotificationSettings = `${urlLib.getFe('/myaccount')}?tab=notifications`;
         const linkTopicNotificationSettings = `${linkViewTopic}?notificationSettings`;
         if (['Comment', 'CommentVote'].indexOf(notification.data.object['@type']) > -1) {
@@ -1633,7 +1617,8 @@ module.exports = function (app) {
                     linkViewTopic,
                     linkTopicNotificationSettings,
                     linkGeneralNotificationSettings,
-                    notificationText
+                    notificationText,
+                    topicTitle: notification.values.topicTitle
                 }
             );
 
@@ -1674,12 +1659,11 @@ module.exports = function (app) {
             let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
             linkedData.translations = template.translations;
             const images = EMAIL_OPTIONS_DEFAULT.images;
-
             images.push(
                 {
                     name: 'icon_vote.png',
-                    file: path.join(templateRoot, 'images/Voting.png')
-                })
+                    file: path.join(templateRoot, 'images/Vote.png')
+                });
             const emailOptions = {
                 // from: from, - comes from emailClient.js configuration
                 subject: subject,
