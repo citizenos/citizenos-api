@@ -18,28 +18,28 @@
     "SUBJECT_rahvaalgatus_test": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Obnovit heslo k účtu Citizen OS"
+    "SUBJECT": "Reset your password"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
     "SUBJECT": "Děkujeme za nahlášení tématu"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Téma vašeho Občanského OS bylo nahlášeno moderátorům"
+    "SUBJECT": "Your topic has been reported to moderators"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "Prosím moderujte toto nahlášené téma Citizen OS"
+    "SUBJECT": "Please moderate this reported topic"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Téma Citizen OS které jste nahlásili, bylo zkontrolováno"
+    "SUBJECT": "The topic you reported has been reviewed"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Téma vašeho Citizen OS bylo přezkoumáno moderátorem"
+    "SUBJECT": "Your topic has been reviewed by a moderator"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "Nahlášené téma Citizen OS bylo revidováno, prosím zkontrolujte"
+    "SUBJECT": "A reported topic has been revised, please review"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Přístup k vašemu hlášenému tématu Citizen OS byl obnoven"
+    "SUBJECT": "Access to your reported topic has been restored"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
     "SUBJECT": "The issue you reported has been resolved"
@@ -68,7 +68,7 @@
     "SUBJECT": "Your discussion contribution has been reported as inappropriate"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "Some discussion content has been reported as inappropriate"
+    "SUBJECT": "Please moderate this reported discussion content"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
