@@ -18,28 +18,28 @@
     "SUBJECT_rahvaalgatus_test": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Восстановить пароль учетной записи Citizen OS"
+    "SUBJECT": "Reset your password"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
     "SUBJECT": "Благодарим за жалобу в отношении неуместной темы"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "В отношении вашей темы в Citizen OS была отправлена жалоба модераторам"
+    "SUBJECT": "Your topic has been reported to moderators"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "Пожалуйста, модерируйте эту тему в Citizen OS"
+    "SUBJECT": "Please moderate this reported topic"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Тема, в отношении которой была отправлена жалоба в Citizen OS, была проверена"
+    "SUBJECT": "The topic you reported has been reviewed"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Ваша тема в Citizen OS была просмотрена модератором"
+    "SUBJECT": "Your topic has been reviewed by a moderator"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "Содержание темы, в отношении которой была отправлена жалоба в Citizen OS, было корректировано."
+    "SUBJECT": "A reported topic has been revised, please review"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Доступ к вашей теме Citizen OS был восстановлен"
+    "SUBJECT": "Access to your reported topic has been restored"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
     "SUBJECT": "Проблема, в отношении которой Вы отправляли жалобу, была решена"
@@ -68,7 +68,7 @@
     "SUBJECT": "Ваш вклад в обсуждение был отмечен, как неуместный"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "Некоторый вклад в обсуждение был отмечен, как неуместный"
+    "SUBJECT": "Please moderate this reported discussion content"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
