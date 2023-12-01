@@ -14,29 +14,12 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding-bottom: 32px;">
-                Hi moderator,
+                Hi {{userModerator.name}}!
             </td>
         </tr>
         <tr>
-          <td width="100%" style="padding-bottom: 32px;">
-            Some discussion content has been reported as inappropriate.
-        </td>
-        </tr>
-
-        <tr>
-            <td width="100%" style="padding-bottom: 8px;">
-                {{#isUserNotified}}
-                    The argument's author has been notified
-                {{/isUserNotified}}
-                {{^isUserNotified}}
-                    The argument's author has deleted their account
-                {{/isUserNotified}}
-            </td>
-        </tr>
-
-        <tr>
-            <td width="100%" style="padding-bottom: 32px;">
-                Review the reasons for reporting below.
+          <td width="100%">
+            Some discussion content has been reported as inappropriate in a topic you moderate.{{#isUserNotified}} The argument's author has been notified. {{/isUserNotified}}{{^isUserNotified}}The argument's author has now deleted their account.{{/isUserNotified}} Please see the reasons for reporting below, review the content, and decide on the necessary course of action.
             </td>
         </tr>
         <tr>
@@ -93,7 +76,7 @@
             <td style="padding-bottom: 32px; padding-top: 16px;">
                 <p class="submit_button">
                     <a href="{{linkModerate}}" target="_blank"
-                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 140px;">Review argument</a>
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 60px;">Review argument</a>
                 </p>
             </td>
         </tr>
@@ -101,6 +84,12 @@
         <tr>
             <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size:14px;">
                 You can also leave it as is, but other moderators may decide to have it hidden by default (users will get a warning prior to seeing the content).
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="padding-top:16px;font-size: 14px;">
+                <a href="{{linkViewModerationGuidelines}}">Learn more about the Citizen OS moderation process
+                    here.</a>
             </td>
         </tr>
     </tbody>
