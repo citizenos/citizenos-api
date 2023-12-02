@@ -4823,7 +4823,10 @@ module.exports = function (app) {
                 });
             });
         } catch (err) {
+            console.log('DEBUG UPLOAD ERROR',err);
+            console.log('ERR TYPE', err.type)
             if (err.type && (err.type === 'fileSize' || err.type === 'fileType')) {
+                console.log(err.type);
                 return res.forbidden(err.message)
             }
             next(err);
