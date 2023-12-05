@@ -1662,7 +1662,7 @@ module.exports = function (app) {
             images.push(
                 {
                     name: 'icon_vote.png',
-                    file: path.join(templateRoot, 'images/Vote.png')
+                    file: path.join(templateRoot, 'images/Voting.png')
                 });
             const emailOptions = {
                 // from: from, - comes from emailClient.js configuration
