@@ -2416,6 +2416,7 @@ module.exports = function (app) {
                     LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                     ${join}
                 WHERE ${where}
+                GROUP BY t.id, tmup.level, tmgp.level, tj.token, tj.level, tf."topicId", c.id, muc.count, mgc.count, tv."voteId", tc.count, com."createdAt"
                 ORDER BY "favourite" DESC, "order" ASC, t."updatedAt" DESC
                 OFFSET :offset LIMIT :limit
             ;`;
