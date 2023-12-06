@@ -2587,6 +2587,7 @@ module.exports = function (app) {
 
             let where = ` t.visibility = '${Topic.VISIBILITY.public}'
                 AND t.title IS NOT NULL
+                AND t.status !='${Topic.STATUSES.draft}'
                 AND t."deletedAt" IS NULL `;
 
             if (categories && categories.length) {
