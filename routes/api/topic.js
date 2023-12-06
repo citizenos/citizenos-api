@@ -1376,6 +1376,7 @@ module.exports = function (app) {
             let topic = Topic.build({
                 title: req.body.title,
                 visibility: req.body.visibility || Topic.VISIBILITY.private,
+                status: Topic.STATUSES.draft,
                 creatorId: req.user.userId,
                 categories: req.body.categories,
                 imageUrl: req.body.imageUrl,
@@ -1800,8 +1801,7 @@ module.exports = function (app) {
 
             const statuses = _.values(Topic.STATUSES);
             const vote = topic.Votes[0];
-
-            if (statusNew && statusNew !== topic.status) {
+            if (statusNew && statusNew !== topic.status && topic.status !== Topic.STATUSES.draft) {
                 // The only flow that allows going back in status flow is reopening for voting
                 if (statusNew === Topic.STATUSES.voting && topic.status === Topic.STATUSES.followUp) {
                     if (!vote) {
@@ -1945,7 +1945,7 @@ module.exports = function (app) {
     /**
      * Update Topic info
      */
-    app.put('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         try {
             await _topicUpdate(req, res, next);
 
@@ -1955,7 +1955,7 @@ module.exports = function (app) {
         }
     });
 
-    app.patch('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.patch('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         try {
             await _topicUpdate(req, res, next);
 
@@ -2145,6 +2145,7 @@ module.exports = function (app) {
 
         let voteResults = false;
         let join = '';
+        let groupBy = '';
         let returncolumns = '';
 
         if (!Array.isArray(include)) {
@@ -2192,6 +2193,7 @@ module.exports = function (app) {
             returncolumns += `
             , COALESCE(te.count, 0) AS "events.count"
             `;
+            groupBy += `, te."topicId `;
         }
 
         let where = ` t."deletedAt" IS NULL
@@ -2248,6 +2250,7 @@ module.exports = function (app) {
             ,tr."moderatedReasonType" AS "report.moderatedReasonType"
             ,tr."moderatedReasonText" AS "report.moderatedReasonText"
             `;
+            groupBy += `, tr.id, tr."moderatedReasonType", tr."moderatedReasonText" `;
         }
 
         if (creatorId) {
@@ -2417,6 +2420,7 @@ module.exports = function (app) {
                     ${join}
                 WHERE ${where}
                 GROUP BY t.id, tmup.level, tmgp.level, tj.token, tj.level, tf."topicId", c.id, muc.count, mgc.count, tv."voteId", tc.count, com."createdAt"
+                ${groupBy}
                 ORDER BY "favourite" DESC, "order" ASC, t."updatedAt" DESC
                 OFFSET :offset LIMIT :limit
             ;`;
@@ -6461,7 +6465,8 @@ module.exports = function (app) {
     /**
      * Create a Vote
      */
-    app.post('/api/users/:userId/topics/:topicId/votes', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress]), asyncMiddleware(async function (req, res) {
+    app.post('/api/users/:userId/topics/:topicId/votes', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress]), asyncMiddleware(async function (req, res) {
+        console.log('create vote');
         const voteOptions = req.body.options;
 
         if (!voteOptions || !Array.isArray(voteOptions) || voteOptions.length < 2) {
@@ -6582,7 +6587,8 @@ module.exports = function (app) {
                         req.method + ' ' + req.path,
                         t
                     );
-                topic.status = Topic.STATUSES.voting;
+                if (topic.status !== Topic.STATUSES.draft)
+                    topic.status = Topic.STATUSES.voting;
 
                 await cosActivities
                     .updateActivity(
@@ -8391,6 +8397,7 @@ module.exports = function (app) {
     }));
 
     return {
-        hasPermission: hasPermission
+        hasPermission: hasPermission,
+        getVoteResults: getVoteResults
     };
 };

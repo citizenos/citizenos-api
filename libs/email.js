@@ -1631,11 +1631,37 @@ module.exports = function (app) {
     };
 
     const _sendVoteReminder = async (users, vote, topicId) => {
-        let topic = vote.Topic;
-        if (!topic) {
-            topic = await Topic
-                .findOne({ where: { id: topicId } });
-        }
+        let topicRes = await db.query(`
+                SELECT id, title, muc.count as "members.users.count" FROM "Topics" t
+                LEFT JOIN (
+                    SELECT tmu."topicId", COUNT(tmu."memberId") AS "count" FROM (
+                        SELECT
+                            tmuu."topicId",
+                            tmuu."userId" AS "memberId"
+                        FROM "TopicMemberUsers" tmuu
+                        WHERE tmuu."deletedAt" IS NULL
+                        UNION
+                        SELECT
+                            tmg."topicId",
+                            gm."userId" AS "memberId"
+                        FROM "TopicMemberGroups" tmg
+                            LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
+                            JOIN "Groups" gr on gr.id = tmg."groupId"
+                        WHERE tmg."deletedAt" IS NULL
+                        AND gm."deletedAt" IS NULL
+                        AND gr."deletedAt" IS NULL
+                    ) AS tmu GROUP BY "topicId"
+                ) AS muc ON (muc."topicId" = t.id)
+                WHERE t.id = :topicId
+            ;`, {
+            replacements: {
+                topicId: topicId
+            },
+            type: db.QueryTypes.SELECT,
+            raw: true,
+            nest: true
+        });
+        const topic = topicRes[0];
         const linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: topicId });
         const linkToApplication = urlLib.getFe();
         let templateName = 'voteReminder';
@@ -1664,15 +1690,23 @@ module.exports = function (app) {
                     name: 'icon_vote.png',
                     file: path.join(templateRoot, 'images/Voting.png')
                 });
+            let daysLeft;
+            let voteEndsAt;
+            if (vote.endsAt) {
+                daysLeft = moment(vote.endsAt).diff(moment(), 'days'),
+                    voteEndsAt = moment(vote.endsAt).format('YYYY-MM-dd HH:mm')
+            }
             const emailOptions = {
                 // from: from, - comes from emailClient.js configuration
                 subject: subject,
                 to: toUser.email,
                 images: images,
                 toUser: toUser,
+                voteCount: (vote.votersCount || 0),
+                votesCountRequired: (topic.members.users.count || 0),
                 topic: topic,
-                daysLeft: moment(vote.endsAt).diff(moment(), 'days'),
-                voteEndsAt: moment(vote.endsAt).locale(toUser.language).format('LLL'),
+                daysLeft: daysLeft,
+                voteEndsAt: voteEndsAt,
                 linkViewTopic: linkViewTopic,
                 linkToApplication: linkToApplication,
                 provider: EMAIL_OPTIONS_DEFAULT.provider,
