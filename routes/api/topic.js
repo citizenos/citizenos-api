@@ -1902,7 +1902,7 @@ module.exports = function (app) {
         }
     };
 
-    app.post('/api/users/:userId/topics/:topicId/upload', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
+    app.post('/api/users/:userId/topics/:topicId/upload', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         let topic = await Topic.findOne({
             where: {
@@ -6467,7 +6467,6 @@ module.exports = function (app) {
      * Create a Vote
      */
     app.post('/api/users/:userId/topics/:topicId/votes', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress]), asyncMiddleware(async function (req, res) {
-        console.log('create vote');
         const voteOptions = req.body.options;
 
         if (!voteOptions || !Array.isArray(voteOptions) || voteOptions.length < 2) {
@@ -6720,7 +6719,7 @@ module.exports = function (app) {
         const voteId = req.params.voteId;
 
         // Make sure the Vote is actually related to the Topic through which the permission was granted.
-        const fields = ['endsAt', 'reminderTime'];
+        let fields = ['endsAt', 'reminderTime'];
 
         const topic = await Topic.findOne({
             where: {
@@ -6739,8 +6738,16 @@ module.exports = function (app) {
         if (!topic || !topic.Votes || !topic.Votes.length) {
             return res.notFound();
         }
+        if (topic.status === Topic.STATUSES.draft) {
+            fields = fields.concat(['minChoices', 'maxChoices', 'description', 'type', 'authType', 'autoClose'])
+        }
+        const voteOptions = req.body.options;
 
+        if (Array.isArray(voteOptions) && voteOptions.length < 2) {
+            return res.badRequest('At least 2 vote options are required', 1);
+        }
         const vote = topic.Votes[0];
+
 
         await db.transaction(async function (t) {
             fields.forEach(function (field) {
@@ -6759,6 +6766,84 @@ module.exports = function (app) {
                     req.method + ' ' + req.path,
                     t
                 );
+
+
+            const createPromises = [];
+            const updatePromises = []
+            console.log(voteOptions);
+            if (voteOptions.length) {
+                if (vote.authType === Vote.AUTH_TYPES.hard) {
+                    const voteOptionValues = _.map(voteOptions, 'value').map(function (value) {
+                        return sanitizeFilename(value).toLowerCase();
+                    });
+
+                    const uniqueValues = _.uniq(voteOptionValues);
+                    if (uniqueValues.length !== voteOptions.length) {
+                        return res.badRequest('Vote options are too similar', 2);
+                    }
+
+                    const reservedPrefix = VoteOption.RESERVED_PREFIX;
+                    uniqueValues.forEach(function (value) {
+                        if (value.substr(0, 2) === reservedPrefix) {
+                            return res.badRequest('Vote option not allowed due to usage of reserved prefix "' + reservedPrefix + '"', 4);
+                        }
+                    });
+                }
+
+                _(voteOptions).forEach(function (o) {
+                    if (!o.id) {
+                        o.voteId = vote.id;
+                        const vopt = VoteOption.build(o);
+                        createPromises.push(vopt.validate());
+                    } else {
+                        o.voteId = vote.id;
+                        console.log(o);
+                        updatePromises.push(VoteOption.update(o, {transaction: t}));
+                    }
+                });
+
+            }
+            if (createPromises.length) {
+                await Promise.all(createPromises);
+                const voteOptionsCreated = await VoteOption
+                    .bulkCreate(
+                        createPromises,
+                        {
+                            fields: ['id', 'voteId', 'value'], // Deny updating other fields like "updatedAt", "createdAt"...
+                            returning: true,
+                            transaction: t
+                        }
+                    );
+                await cosActivities
+                    .createActivity(
+                        voteOptionsCreated,
+                        null,
+                        {
+                            type: 'User',
+                            id: req.user.userId,
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
+            }
+            if (updatePromises.length) {
+                const voteOptionsUpdated = await Promise.all(updatePromises);
+
+                await cosActivities
+                    .updateActivity(
+                        voteOptionsUpdated,
+                        null,
+                        {
+                            type: 'User',
+                            id: req.user.userId,
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
+            }
+
 
             await vote.save({
                 transaction: t

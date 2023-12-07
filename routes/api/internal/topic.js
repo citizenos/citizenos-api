@@ -64,7 +64,7 @@ module.exports = function (app) {
                     const permissions = results[0];
 
                     // If it's a public topic, allow anyone to read.
-                    if ((permissions.level === TopicMemberUser.LEVELS.none && permissions.isPublic) || permissions.status !== Topic.STATUSES.inProgress) {
+                    if ((permissions.level === TopicMemberUser.LEVELS.none && permissions.isPublic) || permissions.status !== Topic.STATUSES.inProgress && permissions.status !== Topic.STATUSES.draft) {
                         permissions.level = TopicMemberUser.LEVELS.read;
                     }
 
