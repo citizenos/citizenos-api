@@ -174,7 +174,7 @@ suite('Internal', function () {
                     ];
 
                     const voteCreated = (await topicLib.topicVoteCreate(agent, user.id, topic.id, options, 1, 1, false, null, null, Vote.TYPES.regular, Vote.AUTH_TYPES.soft)).body.data;
-
+                    await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.voting);
                     const voteList = [
                         {
                             optionId: voteCreated.options.rows[0].id
@@ -207,7 +207,7 @@ suite('Internal', function () {
                 assert.property(topic, 'id');
                 assert.equal(topic.creator.id, user.id);
                 assert.equal(topic.visibility, Topic.VISIBILITY.private);
-                assert.equal(topic.status, Topic.STATUSES.inProgress);
+                assert.equal(topic.status, Topic.STATUSES.draft);
                 assert.property(topic, 'padUrl');
                 const activities = (await activityLib.activitiesRead(agent, user.id)).body.data;
                 const text = notifications.buildActivityString(activities[0]);

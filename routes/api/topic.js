@@ -1376,7 +1376,7 @@ module.exports = function (app) {
             let topic = Topic.build({
                 title: req.body.title,
                 visibility: req.body.visibility || Topic.VISIBILITY.private,
-                status: Topic.STATUSES.draft,
+                status: req.body.status || Topic.STATUSES.draft,
                 creatorId: req.user.userId,
                 categories: req.body.categories,
                 imageUrl: req.body.imageUrl,
@@ -1842,7 +1842,7 @@ module.exports = function (app) {
             await db
                 .transaction(async function (t) {
                     if (req.body.description) {
-                        if (topic.status === Topic.STATUSES.inProgress) {
+                        if (topic.status === Topic.STATUSES.inProgress || topic.status === Topic.STATUSES.draft) {
                             promisesList.push(cosEtherpad
                                 .updateTopic(
                                     topicId,
@@ -1883,7 +1883,7 @@ module.exports = function (app) {
                     await Promise.all(promisesList);
                 });
 
-            if (req.body.description && topic.status === Topic.STATUSES.inProgress) {
+            if (req.body.description && (topic.status === Topic.STATUSES.inProgress || topic.status === Topic.STATUSES.draft)) {
                 await cosEtherpad
                     .syncTopicWithPad(
                         topicId,
@@ -1972,7 +1972,7 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/311
      */
-    app.put('/api/users/:userId/topics/:topicId/join', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
+    app.put('/api/users/:userId/topics/:topicId/join', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const level = req.body.level;
         if (!Object.values(TopicJoin.LEVELS).includes(level)) {
@@ -2014,7 +2014,7 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/311
      */
-    app.put('/api/users/:userId/topics/:topicId/join/:token', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
+    app.put('/api/users/:userId/topics/:topicId/join/:token', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const token = req.params.token;
         const level = req.body.level;
@@ -3415,7 +3415,7 @@ module.exports = function (app) {
     /**
      * Create new member Groups to a Topic
      */
-    app.post('/api/users/:userId/topics/:topicId/members/groups', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/members/groups', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         let members = req.body;
         const topicId = req.params.topicId;
 
@@ -3519,7 +3519,7 @@ module.exports = function (app) {
     /**
      * Update User membership information
      */
-    app.put('/api/users/:userId/topics/:topicId/members/users/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/members/users/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const newLevel = req.body.level;
         const memberId = req.params.memberId;
         const topicId = req.params.topicId;
@@ -3587,7 +3587,7 @@ module.exports = function (app) {
     /**
      * Update Group membership information
      */
-    app.put('/api/users/:userId/topics/:topicId/members/groups/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/members/groups/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const newLevel = req.body.level;
         const memberId = req.params.memberId;
         const topicId = req.params.topicId;
@@ -3905,7 +3905,7 @@ module.exports = function (app) {
      *
      * @see /api/users/:userId/topics/:topicId/members/users "Auto accept" - Adds a Member to the Topic instantly and sends a notification to the User.
      */
-    app.post('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin, false, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), rateLimiter(5, false), speedLimiter(1, false), asyncMiddleware(async function (req, res) {
+    app.post('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin, false, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), rateLimiter(5, false), speedLimiter(1, false), asyncMiddleware(async function (req, res) {
         //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
         const topicId = req.params.topicId;
         const userId = req.user.userId;
@@ -4691,7 +4691,7 @@ module.exports = function (app) {
             return res.ok({ title: topic.title });
         }
         topic = topic.toJSON();
-        if (topicMember.length) {
+        if (topicMember && topicMember.length) {
             topic.permission = { level: topicMember[0].level };
         }
 
@@ -4778,7 +4778,7 @@ module.exports = function (app) {
     /**
      * Add Topic Attachment
      */
-    app.post('/api/users/:userId/topics/:topicId/attachments/upload', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/attachments/upload', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const attachmentLimit = config.attachments.limit || 5;
         const topicId = req.params.topicId;
         try {
@@ -4836,7 +4836,7 @@ module.exports = function (app) {
         }
     });
 
-    app.post('/api/users/:userId/topics/:topicId/attachments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/attachments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const topicId = req.params.topicId;
         const name = req.body.name;
         const type = req.body.type;
@@ -4936,7 +4936,7 @@ module.exports = function (app) {
         }
     });
 
-    app.put('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const newName = req.body.name;
 
         if (!newName) {
@@ -4987,7 +4987,7 @@ module.exports = function (app) {
     /**
      * Delete Topic Attachment
      */
-    app.delete('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp], true), async function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp], true), async function (req, res, next) {
         try {
             const attachment = await Attachment.findOne({
                 where: {

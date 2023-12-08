@@ -1,6 +1,6 @@
 'use strict';
 
-const _topicCreate = async function (agent, userId, title, description, visibility, categories, endsAt, hashtag, contact, country, language, intro, expectedHttpCode) {
+const _topicCreate = async function (agent, userId, title, status, description, visibility, categories, endsAt, hashtag, contact, country, language, intro, expectedHttpCode) {
     const path = '/api/users/:userId/topics'
         .replace(':userId', userId);
 
@@ -10,6 +10,7 @@ const _topicCreate = async function (agent, userId, title, description, visibili
         .set('Origin', 'https://citizenos.com')
         .send({
             visibility: visibility,
+            status: status,
             categories: categories,
             description: description,
             intro: intro,
@@ -24,8 +25,8 @@ const _topicCreate = async function (agent, userId, title, description, visibili
         .expect('Content-Type', /json/)
 };
 
-const topicCreate = async function (agent, userId, title, description, visibility, categories, endsAt, hashtag, contact, country, language, intro) {
-    return _topicCreate(agent, userId, title, description, visibility, categories, endsAt, hashtag, contact, country, language, intro, 201);
+const topicCreate = async function (agent, userId, title, status, description, visibility, categories, endsAt, hashtag, contact, country, language, intro) {
+    return _topicCreate(agent, userId, title, status, description, visibility, categories, endsAt, hashtag, contact, country, language, intro, 201);
 };
 
 const _topicRead = async function (agent, userId, topicId, include, expectedHttpCode) {
@@ -1504,6 +1505,7 @@ const uploadAttachmentFile = async function (agent, userId, topicId, attachment)
 };
 
 module.exports.topicCreate = topicCreate;
+module.exports.topicUpdate = topicUpdate;
 module.exports.topicFavouriteCreate = topicFavouriteCreate;
 module.exports.topicDelete = topicDelete;
 module.exports.topicMemberGroupsCreate = topicMemberGroupsCreate;
@@ -1593,19 +1595,19 @@ suite('Users', function () {
                 assert.property(topic, 'id');
                 assert.equal(topic.creator.id, user.id);
                 assert.equal(topic.visibility, Topic.VISIBILITY.private);
-                assert.equal(topic.status, Topic.STATUSES.inProgress);
+                assert.equal(topic.status, Topic.STATUSES.draft);
                 assert.property(topic, 'padUrl');
             });
 
             test('Success - non-default visibility', async function () {
-                const topic = (await topicCreate(agent, user.id, null, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health])).body.data;
+                const topic = (await topicCreate(agent, user.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health])).body.data;
                 assert.equal(topic.visibility, Topic.VISIBILITY.public);
             });
 
             test('Success - description', async function () {
                 const description = '<!DOCTYPE HTML><html><body><h1>H1</h1><br><h2>h2</h2><br><h3>h3</h3><br><script>alert("owned!");</script><br><br>script<br><br></body></html>';
 
-                const topic = (await topicCreate(agent, user.id, 'H1', description, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health])).body.data;
+                const topic = (await topicCreate(agent, user.id, 'H1', Topic.STATUSES.inProgress, description, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health])).body.data;
                 const getHtmlResult = await etherpadClient.getHTMLAsync({padID: topic.id});
                 assert.equal(getHtmlResult.html, '<!DOCTYPE HTML><html><body><h1>H1</h1><br><h2>h2</h2><br><h3>h3</h3><br><br><br>script<br><br><br></body></html>');
                 const topicR = (await topicRead(agent, user.id, topic.id, null)).body.data;
@@ -1615,24 +1617,24 @@ suite('Users', function () {
 
             test('Success - create with categories', async function () {
                 const categories = [Topic.CATEGORIES.work, Topic.CATEGORIES.varia, Topic.CATEGORIES.transport];
-                const topic = (await topicCreate(agent, user.id, null, null, Topic.VISIBILITY.public, categories)).body.data;
+                const topic = (await topicCreate(agent, user.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public, categories)).body.data;
                 assert.deepEqual(topic.categories, categories);
             });
 
             test('Success - valid hashtag', async function () {
                 const hashtag = 'abcdefghijklmnopqrstuvxyzabcdefghijklmnopqrstuvxyzabcdefghi';
-                const topic = (await topicCreate(agent, user.id, null, null, null, null, null, hashtag)).body.data;
+                const topic = (await topicCreate(agent, user.id, null, null, null, null, null, null, hashtag)).body.data;
                 assert.equal(topic.hashtag, hashtag);
             });
 
             test('Success - empty hashtag', async function () {
-                const topic = (await topicCreate(agent, user.id, null, null, null, null, null, '')).body.data;
+                const topic = (await topicCreate(agent, user.id, null, null, null, null, null, null, '')).body.data;
                 assert.equal(topic.hashtag, null);
             });
 
             test('Success - Replace invalid characters in hashtag', async function () {
                 const hashtag = '      #abc   defgh ijk.lmn,opqrstuvxyzabcdefghij:klmnopqrstuvxyzabcdefghi        ';
-                const topic = (await topicCreate(agent, user.id, null, null, null, null, null, hashtag)).body.data;
+                const topic = (await topicCreate(agent, user.id, null, null, null, null, null, null, hashtag)).body.data;
                 assert.equal(topic.hashtag, 'abcdefghijklmnopqrstuvxyzabcdefghijklmnopqrstuvxyzabcdefghi');
             });
 
@@ -1640,7 +1642,7 @@ suite('Users', function () {
                 const contact = 'creator@topicauthor.eu';
                 const country = 'Estonia';
                 const language = 'Estonian';
-                const topic = (await topicCreate(agent, user.id, null, null, null, null, null, null, contact, country, language)).body.data;
+                const topic = (await topicCreate(agent, user.id, null, null, null, null, null, null, null, contact, country, language)).body.data;
                 assert.equal(topic.contact, contact);
                 assert.equal(topic.country, country);
                 assert.equal(topic.language, language);
@@ -1651,7 +1653,7 @@ suite('Users', function () {
                 const country = 'Estonia';
                 const language = 'Estonian';
                 const intro = 'This is an introduction text to the topic that will be displayed before the main content of the document in the final read view';
-                const topic = (await topicCreate(agent, user.id, null, null, null, null, null, null, contact, country, language, intro)).body.data;
+                const topic = (await topicCreate(agent, user.id, null, null, null, null, null, null, null, contact, country, language, intro)).body.data;
                 assert.equal(topic.contact, contact);
                 assert.equal(topic.country, country);
                 assert.equal(topic.language, language);
@@ -1659,11 +1661,11 @@ suite('Users', function () {
             });
 
             test('Fail - 40100', async function () {
-                await _topicCreate(request.agent(app), user.id, Topic.VISIBILITY.public, null, null, null, null, null, null, null, null, null, 401);
+                await _topicCreate(request.agent(app), user.id, Topic.VISIBILITY.public, Topic.STATUSES.inProgress, null, null, null, null, null, null, null, null, null, 401);
             });
 
             test('Fail - 40000 - invalid hashtag', async function () {
-                const res = await _topicCreate(agent, user.id, null, null, null, null, null, 'üüüüüüüüüüüüüüüüüüüüüüüüüüüüüüü', null, null, null, null, 400)
+                const res = await _topicCreate(agent, user.id, null, null, null, null, null, null, 'üüüüüüüüüüüüüüüüüüüüüüüüüüüüüüü', null, null, null, null, 400)
                 const expectedBody = {
                     status: {
                         code: 40000
@@ -1691,7 +1693,7 @@ suite('Users', function () {
             suiteSetup(async function () {
                 user = await userLib.createUserAndLogin(agent, email, password, null);
 
-                topic = (await topicCreate(agent, user.id, null, null, Topic.VISIBILITY.private, topicCategories)).body.data;
+                topic = (await topicCreate(agent, user.id, null, null, null, null, Topic.VISIBILITY.private, topicCategories)).body.data;
                 //FIXME: This is a hack. Actually we should have topicCreate that enables setting the Partner headers and sourcePartnerObjectId but not sure what the interface should look like
                 partner = await Partner.create({
                     website: 'notimportant',
@@ -1863,7 +1865,7 @@ suite('Users', function () {
 
                     suiteSetup(async function () {
                         creator = await userLib.createUserAndLogin(voteAgent, voteEmail, votePassword, null);
-                        voteTopic = (await topicCreate(voteAgent, creator.id, null, null, Topic.VISIBILITY.private, voteTopicCategories)).body.data;
+                        voteTopic = (await topicCreate(voteAgent, creator.id, null, Topic.STATUSES.voting, null, Topic.VISIBILITY.private, voteTopicCategories)).body.data;
                         vote = (await topicVoteCreate(voteAgent, creator.id, voteTopic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
                         vote = (await topicVoteRead(voteAgent, creator.id, voteTopic.id, vote.id)).body.data;
                     });
@@ -1938,7 +1940,7 @@ suite('Users', function () {
                         ]);
 
                         group = (await groupLib.create(agentCreator, creator.id, 'Group', null, null)).body.data;
-                        topic = (await topicCreate(agentCreator, creator.id, null, null, Topic.VISIBILITY.private)).body.data;
+                        topic = (await topicCreate(agentCreator, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.private)).body.data;
 
                         // Add Group to Topic members and User to that Group
                         const memberGroup = {
@@ -2087,7 +2089,7 @@ suite('Users', function () {
                         creator = await userLib.createUserAndLogin(agentCreator, null, null, null);
                         user = await userLib.createUserAndLogin(agentUser, null, null, null);
 
-                        topic = (await topicCreate(agentCreator, creator.id, null, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.taxes, Topic.CATEGORIES.transport])).body.data;
+                        topic = (await topicCreate(agentCreator, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.taxes, Topic.CATEGORIES.transport])).body.data;
                     });
 
                     test('Success - User can read public Topic', async function () {
@@ -2137,7 +2139,7 @@ suite('Users', function () {
             });
 
             setup(async function () {
-                topic = (await topicCreate(agent, user.id, null, null, null, null, null, 'testtag')).body.data;
+                topic = (await topicCreate(agent, user.id, null, Topic.STATUSES.inProgress, null, null, null, null, 'testtag')).body.data;
                 const topicMemberUser = {
                     userId: user2.id,
                     level: TopicMemberUser.LEVELS.edit
@@ -2351,7 +2353,7 @@ suite('Users', function () {
                 creator = await userLib.createUserAndLogin(agentCreator, null, null, null);
                 user = await userLib.createUserAndLogin(agentUser, null, null, null);
                 group = (await groupLib.create(agentCreator, creator.id, 'Group', null, null)).body.data;
-                const topicRes = (await topicCreate(agentCreator, creator.id, null, null, Topic.VISIBILITY.private)).body.data;
+                const topicRes = (await topicCreate(agentCreator, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.private)).body.data;
                 const title = 'T title';
                 const description = 'T desc';
                 topic = (await Topic.update(
@@ -2432,7 +2434,7 @@ suite('Users', function () {
             });
 
             test('Success - without deleted topics', async function () {
-                let deletedTopic = (await topicCreate(agentUser, user.id, null, null, Topic.VISIBILITY.public)).body.data;
+                let deletedTopic = (await topicCreate(agentUser, user.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public)).body.data;
 
                 // Add title & description in DB. NULL title topics are not to be returned.
                 const title = 'Deleted Topic';
@@ -2475,7 +2477,7 @@ suite('Users', function () {
                 await Moderator.create({
                     userId: userModerator.id
                 });
-                const moderatedTopic = (await topicCreate(agentUser, user.id, null, null, Topic.VISIBILITY.public)).body.data;
+                const moderatedTopic = (await topicCreate(agentUser, user.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public)).body.data;
                 await Topic.update(
                     {
                         title: "Moderated TOPIC",
@@ -2519,7 +2521,7 @@ suite('Users', function () {
                 await Moderator.create({
                     userId: userModerator.id
                 });
-                const moderatedTopic = (await topicCreate(agentUser, user.id, null, null, Topic.VISIBILITY.public)).body.data;
+                const moderatedTopic = (await topicCreate(agentUser, user.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public)).body.data;
                 await Topic.update(
                     {
                         title: "Moderated TOPIC",
@@ -2551,7 +2553,7 @@ suite('Users', function () {
             });
 
             test('Success - visibility private', async function () {
-                const publicTopic = (await topicCreate(agentUser, user.id, null, null, Topic.VISIBILITY.public)).body.data;
+                const publicTopic = (await topicCreate(agentUser, user.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public)).body.data;
 
                 // Add title & description in DB. NULL title topics are not to be returned.
                 const title = 'Public Topic';
@@ -2579,7 +2581,7 @@ suite('Users', function () {
             });
 
             test('Success - visibility public', async function () {
-                const publicTopic = (await topicCreate(agentUser, user.id, null, null, Topic.VISIBILITY.public)).body.data;
+                const publicTopic = (await topicCreate(agentUser, user.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public)).body.data;
 
                 // Add title & description in DB. NULL title topics are not to be returned.
                 const title = 'Public Topic';
@@ -2606,7 +2608,7 @@ suite('Users', function () {
             });
 
             test('Success - only users topics', async function () {
-                const publicTopic = (await topicCreate(agentUser, user.id, null, null, Topic.VISIBILITY.public)).body.data;
+                const publicTopic = (await topicCreate(agentUser, user.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public)).body.data;
 
                 // Add title & description in DB. NULL title topics are not to be returned.
                 const title = 'Public Topic';
@@ -2635,7 +2637,7 @@ suite('Users', function () {
             });
 
             test('Success - status inProgress', async function () {
-                const publicTopic = (await topicCreate(agentUser, user.id)).body.data;
+                const publicTopic = (await topicCreate(agentUser, user.id, '', Topic.STATUSES.inProgress)).body.data;
                 // Add title & description in DB. NULL title topics are not to be returned.
                 const title = 'Public Topic';
                 const description = 'Public topic desc';
@@ -2754,8 +2756,8 @@ suite('Users', function () {
             test('Success - list only topics that User has voted on - voted=true', async function () {
                 this.timeout(10000);
                 // Create 2 topics 1 in voting, but not voted, 1 voted. Topic list should return only 1 that User has voted on
-                const topicWithVoteNotVoted = (await topicCreate(agentCreator, creator.id, 'TEST User HAS NOT VOTED on this topic', '<html><head></head><body><h2>TEST User HAS NOT VOTED on this topic</h2></body></html>', Topic.VISIBILITY.private)).body.data;
-                const topicWithVoteAndVoted = (await topicCreate(agentCreator, creator.id, 'TEST User HAS VOTED on this topic', '<html><head></head><body><h2>TEST User HAS VOTED on this topic</h2></body></html>', Topic.VISIBILITY.private)).body.data;
+                const topicWithVoteNotVoted = (await topicCreate(agentCreator, creator.id, 'TEST User HAS NOT VOTED on this topic', Topic.STATUSES.voting, '<html><head></head><body><h2>TEST User HAS NOT VOTED on this topic</h2></body></html>', Topic.VISIBILITY.private)).body.data;
+                const topicWithVoteAndVoted = (await topicCreate(agentCreator, creator.id, 'TEST User HAS VOTED on this topic', Topic.STATUSES.voting, '<html><head></head><body><h2>TEST User HAS VOTED on this topic</h2></body></html>', Topic.VISIBILITY.private)).body.data;
                 const options = [
                     {
                         value: 'Option 1'
@@ -2797,8 +2799,8 @@ suite('Users', function () {
             test('Success - list only topics that User has NOT voted on - voted=false ', async function () {
                 this.timeout(10000);
                 // Create 2 topics 1 in voting, but not voted, 1 voted. Topic list should return only 1 that User has NOT voted on
-                const topicWithVoteNotVoted = (await topicCreate(agentCreator, creator.id, 'TEST User HAS NOT VOTED on this topic', '<html><head></head><body><h2>TEST User HAS NOT VOTED on this topic</h2></body></html>', Topic.VISIBILITY.private)).body.data;
-                const topicWithVoteAndVoted = (await topicCreate(agentCreator, creator.id, 'TEST User HAS VOTED on this topic', '<html><head></head><body><h2>TEST User HAS VOTED on this topic</h2></body></html>', Topic.VISIBILITY.private)).body.data;
+                const topicWithVoteNotVoted = (await topicCreate(agentCreator, creator.id, 'TEST User HAS NOT VOTED on this topic', Topic.STATUSES.voting, '<html><head></head><body><h2>TEST User HAS NOT VOTED on this topic</h2></body></html>', Topic.VISIBILITY.private)).body.data;
+                const topicWithVoteAndVoted = (await topicCreate(agentCreator, creator.id, 'TEST User HAS VOTED on this topic', Topic.STATUSES.voting, '<html><head></head><body><h2>TEST User HAS VOTED on this topic</h2></body></html>', Topic.VISIBILITY.private)).body.data;
                 const options = [
                     {
                         value: 'Option 1'
@@ -3547,7 +3549,7 @@ suite('Users', function () {
                         const groupMemberUser = await userLib.createUserAndLogin(request.agent(app), null, null, null);
                         const user2 = await userLib.createUserAndLogin(agent2, null, null, null);
 
-                        topic = (await topicCreate(agent, user.id, null, null, Topic.VISIBILITY.public)).body.data;
+                        topic = (await topicCreate(agent, user.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public)).body.data;
                         group2 = (await groupLib.create(agent2, user2.id, groupName + ' MUGRUPP', null, null)).body.data;
                         member2 = {
                             groupId: group2.id,
@@ -3732,7 +3734,7 @@ suite('Users', function () {
                     setup(async function () {
                         userToInvite = await userLib.createUser(request.agent(app), null, null, null);
                         userCreator = await userLib.createUserAndLogin(agentCreator, null, null, null);
-                        topic = (await topicCreate(agentCreator, userCreator.id, 'TOPIC TITLE FOR INVITE TEST', '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>')).body.data;
+                        topic = (await topicCreate(agentCreator, userCreator.id, 'TOPIC TITLE FOR INVITE TEST', Topic.STATUSES.inProgress, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>')).body.data;
                     });
 
                     test('Success - 20100 - invite a single User', async function () {
@@ -4092,7 +4094,7 @@ suite('Users', function () {
                     });
 
                     setup(async function () {
-                        topic = (await topicCreate(agentCreator, userCreator.id, 'TOPIC TITLE FOR INVITE TEST', '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>')).body.data;
+                        topic = (await topicCreate(agentCreator, userCreator.id, 'TOPIC TITLE FOR INVITE TEST', Topic.STATUSES.inProgress, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>')).body.data;
                     });
 
                     test('Success - 20000 - existing User by user ID', async function () {
@@ -4356,7 +4358,7 @@ suite('Users', function () {
                     });
 
                     setup(async function () {
-                        topic = (await topicCreate(agentCreator, userCreator.id, 'TOPIC TITLE FOR INVITE TEST', '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>')).body.data;
+                        topic = (await topicCreate(agentCreator, userCreator.id, 'TOPIC TITLE FOR INVITE TEST', Topic.STATUSES.inProgress, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>')).body.data;
 
                         const invitation = {
                             userId: userToInvite.id,
@@ -4450,7 +4452,7 @@ suite('Users', function () {
                         userToInvite1 = await userLib.createUserAndLogin(userToInvite1Agent, null, null, null);
                         userToInvite2 = await userLib.createUser(request.agent(app), null, null, null);
 
-                        topic = (await topicCreate(agentCreator, userCreator.id, 'TOPIC TITLE FOR INVITE TEST', '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>')).body.data;
+                        topic = (await topicCreate(agentCreator, userCreator.id, 'TOPIC TITLE FOR INVITE TEST', Topic.STATUSES.inProgress, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>')).body.data;
 
                         const topicInvite11 = {
                             userId: userToInvite1.id,
@@ -4559,7 +4561,7 @@ suite('Users', function () {
                     suiteSetup(async function () {
                         userToInvite = await userLib.createUser(request.agent(app), null, null, null);
                         userCreator = await userLib.createUserAndLogin(agentCreator, null, null, null);
-                        topic = (await topicCreate(agentCreator, userCreator.id, 'TOPIC TITLE FOR INVITE TEST', '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>')).body.data;
+                        topic = (await topicCreate(agentCreator, userCreator.id, 'TOPIC TITLE FOR INVITE TEST', Topic.STATUSES.inProgress, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST</h2></body></html>')).body.data;
 
                         const invitation = {
                             userId: userToInvite.id,
@@ -4632,7 +4634,7 @@ suite('Users', function () {
                     setup(async function () {
                         userToInvite = await userLib.createUserAndLogin(agentUserToInvite, null, null, null);
                         userCreator = await userLib.createUserAndLogin(agentCreator, null, null, null);
-                        topic = (await topicCreate(agentCreator, userCreator.id, 'TOPIC TITLE FOR INVITE TEST ACCEPT', '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST ACCEPT</h2></body></html>')).body.data;
+                        topic = (await topicCreate(agentCreator, userCreator.id, 'TOPIC TITLE FOR INVITE TEST ACCEPT', Topic.STATUSES.inProgress, '<html><head></head><body><h2>TOPIC TITLE FOR INVITE TEST ACCEPT</h2></body></html>')).body.data;
 
                         const invitation = {
                             userId: userToInvite.id,
@@ -4723,7 +4725,7 @@ suite('Users', function () {
             });
 
             setup(async function () {
-                topic = (await topicCreate(agentCreator, creator.id, null, null, Topic.VISIBILITY.private)).body.data;
+                topic = (await topicCreate(agentCreator, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.private)).body.data;
             });
 
             test('Success - 20000 - default level (read)', async function () {
@@ -4844,7 +4846,7 @@ suite('Users', function () {
                 suite('Read', function () {
 
                     test('Success - 20000', async function () {
-                        const topic = (await topicCreate(agentCreator, creator.id, null, null, Topic.VISIBILITY.public)).body.data;
+                        const topic = (await topicCreate(agentCreator, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public)).body.data;
 
                         const topicJoinReadActual = (await topicJoinReadUnauth(request.agent(app), topic.join.token)).body.data;
                         const topicReadExpected = (await topicReadUnauth(request.agent(app), topic.id)).body.data;
@@ -6090,7 +6092,7 @@ suite('Users', function () {
                     user = await userLib.createUserAndLogin(agent, null, null, null);
                     user2 = await userLib.createUserAndLogin(agent2, null, null, 'et');
                     topic = (await topicCreate(agent, user.id)).body.data;
-                    topicPublic = (await topicCreate(agent, user.id, null, null, Topic.VISIBILITY.public)).body.data;
+                    topicPublic = (await topicCreate(agent, user.id, null, Topic.STATUSES.inProgress. null, Topic.VISIBILITY.public)).body.data;
                 });
 
                 suite('authType === soft', function () {
@@ -6909,7 +6911,7 @@ suite('Users', function () {
                                 }
                             ];
 
-                            const topic = (await topicCreate(agent, user.id, 'TEST VOTE AND RE-VOTE', '<html><head></head><body><h2>TEST VOTE AND RE-VOTE</h2></body></html>')).body.data;
+                            const topic = (await topicCreate(agent, user.id, 'TEST VOTE AND RE-VOTE', Topic.STATUSES.voting, '<html><head></head><body><h2>TEST VOTE AND RE-VOTE</h2></body></html>')).body.data;
                             const voteCreated = (await topicVoteCreate(agent, user.id, topic.id, options, 1, 2, false, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
                             const voteRead = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
 
@@ -7012,7 +7014,7 @@ suite('Users', function () {
                                 }
                             ];
 
-                            const topic = (await topicCreate(agent, user.id, 'TEST VOTE AND RE-VOTE', '<html><head></head><body><h2>TEST VOTE AND RE-VOTE</h2></body></html>', Topic.VISIBILITY.public)).body.data;
+                            const topic = (await topicCreate(agent, user.id, 'TEST VOTE AND RE-VOTE', Topic.STATUSES.voting, '<html><head></head><body><h2>TEST VOTE AND RE-VOTE</h2></body></html>', Topic.VISIBILITY.public)).body.data;
                             const voteCreated = (await topicVoteCreate(agent, user.id, topic.id, options, 1, 2, false, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
                             const voteRead = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
 
@@ -7137,7 +7139,7 @@ suite('Users', function () {
                                 }
                             ];
 
-                            const topic = (await topicCreate(agent, user.id, 'TEST VOTE AND RE-VOTE', '<html><head></head><body><h2>TEST VOTE AND RE-VOTE</h2></body></html>', Topic.VISIBILITY.public)).body.data;
+                            const topic = (await topicCreate(agent, user.id, 'TEST VOTE AND RE-VOTE', Topic.STATUSES.voting, '<html><head></head><body><h2>TEST VOTE AND RE-VOTE</h2></body></html>', Topic.VISIBILITY.public)).body.data;
                             const voteCreated = (await topicVoteCreate(agent, user.id, topic.id, options, 1, 2, false, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
                             const voteRead = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
 
@@ -7214,7 +7216,7 @@ suite('Users', function () {
                                 }
                             ];
 
-                            const topic = (await topicCreate(agent, user.id, 'TEST VOTE AND RE-VOTE', '<html><head></head><body><h2>TEST VOTE AND RE-VOTE</h2></body></html>', Topic.VISIBILITY.public)).body.data;
+                            const topic = (await topicCreate(agent, user.id, 'TEST VOTE AND RE-VOTE', Topic.STATUSES.voting, '<html><head></head><body><h2>TEST VOTE AND RE-VOTE</h2></body></html>', Topic.VISIBILITY.public)).body.data;
                             const voteCreated = (await topicVoteCreate(agent, user.id, topic.id, options, 1, 2, false, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
                             const voteRead = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
 
@@ -7765,7 +7767,7 @@ suite('Users', function () {
                                 test('Success - Vote, delete account, re-vote & count, delete account re-count', async () => {
                                     const pid = 30303039914;
                                     const countryCode = 'EE';
-                                    const topic = (await topicCreate(agent, user.id, 'TEST VOTE AND DELETE ACCOUNT AND RE-VOTE', '<html><head></head><body><h2>TEST VOTE AND DELETE ACCOUNT AND RE-VOTE</h2></body></html>', Topic.VISIBILITY.public)).body.data;
+                                    const topic = (await topicCreate(agent, user.id, 'TEST VOTE AND DELETE ACCOUNT AND RE-VOTE', Topic.STATUSES.voting, '<html><head></head><body><h2>TEST VOTE AND DELETE ACCOUNT AND RE-VOTE</h2></body></html>', Topic.VISIBILITY.public)).body.data;
                                     const agentUser1 = request.agent(app);
                                     const agentUser2 = request.agent(app);
                                     const user1 = await userLib.createUserAndLogin(agentUser1, null, null, null);
@@ -8434,7 +8436,7 @@ suite('Users', function () {
                 suiteSetup(async function () {
                     user2 = await userLib.createUserAndLogin(agent2, null, null, null);
                     user3 = await userLib.createUserAndLogin(agent3, null, null, null);
-                    topic = (await topicCreate(agent2, user2.id, null, null, Topic.VISIBILITY.public)).body.data;
+                    topic = (await topicCreate(agent2, user2.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public)).body.data;
                 });
 
                 test('Success - edit comment by user', async function () {
@@ -8818,7 +8820,7 @@ suite('Users', function () {
                 suiteSetup(async function () {
                     user = await userLib.createUserAndLogin(agent, null, null, null);
 
-                    topic = (await topicCreate(agent, user.id, null, null, Topic.VISIBILITY.public)).body.data;
+                    topic = (await topicCreate(agent, user.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public)).body.data;
 
                     comment = (await topicCommentCreate(agent, user.id, topic.id, null, null, commentType, commentSubject, commentText)).body.data;
                 });
@@ -8863,7 +8865,7 @@ suite('Users', function () {
 
                 suiteSetup(async function () {
                     user = await userLib.createUserAndLogin(agent, null, null, null);
-                    topic = (await topicCreate(agent, user.id, null, null, null, null, 'banana')).body.data;
+                    topic = (await topicCreate(agent, user.id, null, Topic.STATUSES.inProgress, null, null, null, 'banana')).body.data;
                     mention1 = (await topicMentionList(agent, user.id, topic.id)).body.data.rows[0];
                 });
 
@@ -8894,8 +8896,8 @@ suite('Users', function () {
             setup(async function () {
                 creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);
                 user = await userLib.createUserAndLogin(agent);
-                topic = (await topicCreate(creatorAgent, creator.id, null, null, Topic.VISIBILITY.public)).body.data;
-                topic2 = (await topicCreate(creatorAgent, creator.id, null, null, Topic.VISIBILITY.private)).body.data;
+                topic = (await topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public)).body.data;
+                topic2 = (await topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.private)).body.data;
             });
 
             suite('Create', async function () {
@@ -9249,7 +9251,7 @@ suite('Users', function () {
                     userCreator = await userLib.createUserAndLogin(agentCreator, emailCreator, null, null);
                     userModerator = await userLib.createUserAndLogin(agentModerator, emailModerator, null, null);
                     userReporter = await userLib.createUserAndLogin(agentReporter, emailReporter, null, null);
-                    topic = (await topicCreate(agentCreator, userCreator.id, 'TOPIC TITLE FOR SPAM REPORTING', '<html><head></head><body><h2>TOPIC TITLE FOR SPAM REPORTING</h2></body></html>', Topic.VISIBILITY.public)).body.data;
+                    topic = (await topicCreate(agentCreator, userCreator.id, 'TOPIC TITLE FOR SPAM REPORTING', Topic.STATUSES.inProgress, '<html><head></head><body><h2>TOPIC TITLE FOR SPAM REPORTING</h2></body></html>', Topic.VISIBILITY.public)).body.data;
 
                     return Moderator.create({
                         userId: userModerator.id
@@ -9285,7 +9287,7 @@ suite('Users', function () {
                     const reportType = Report.TYPES.hate;
                     const reportText = 'Topic hate speech report for private Topic test';
 
-                    const topic = (await topicCreate(agentCreator, userCreator.id, null, null, Topic.VISIBILITY.private)).body.data;
+                    const topic = (await topicCreate(agentCreator, userCreator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.private)).body.data;
                     return _topicReportCreate(agentReporter, topic.id, reportType, reportText, 404);
                 });
 
@@ -9294,7 +9296,7 @@ suite('Users', function () {
                     const reportType = Report.TYPES.hate;
                     const reportText = 'Topic hate speech report for private Topic test';
 
-                    const topic = (await topicCreate(agentCreator, userCreator.id, null, null, Topic.VISIBILITY.private)).body.data;
+                    const topic = (await topicCreate(agentCreator, userCreator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.private)).body.data;
                     return _topicReportCreate(request.agent(app), topic.id, reportType, reportText, 401);
                 });
 
@@ -9326,7 +9328,7 @@ suite('Users', function () {
                     userCreator = await userLib.createUserAndLogin(agentCreator, emailCreator, null, null);
                     userModerator = await userLib.createUserAndLogin(agentModerator, emailModerator, null, null);
                     await userLib.createUserAndLogin(agentReporter, emailReporter, null, null);
-                    topic = (await topicCreate(agentCreator, userCreator.id, topicTitle, topicDescription, Topic.VISIBILITY.public)).body.data;
+                    topic = (await topicCreate(agentCreator, userCreator.id, topicTitle, Topic.STATUSES.inProgress, topicDescription, Topic.VISIBILITY.public)).body.data;
                     report = (await topicReportCreate(agentReporter, topic.id, reportType, reportText)).body.data;
                     // Create a moderator in DB so that the Moderation email flow is executed
 
@@ -9394,7 +9396,7 @@ suite('Users', function () {
                 });
 
                 setup(async function () {
-                    topic = (await topicCreate(agentCreator, userCreator.id, topicTitle, topicDescription, Topic.VISIBILITY.public)).body.data;
+                    topic = (await topicCreate(agentCreator, userCreator.id, topicTitle, Topic.STATUSES.inProgress, topicDescription, Topic.VISIBILITY.public)).body.data;
                     report = (await topicReportCreate(agentReporter, topic.id, reportType, reportText)).body.data;
                 });
 
@@ -9488,7 +9490,7 @@ suite('Users', function () {
                     userModerator = await userLib.createUserAndLogin(agentModerator, emailModerator, null, null);
                     userReporter = await userLib.createUserAndLogin(agentReporter, emailReporter, null, null);
 
-                    topic = (await topicCreate(agentCreator, userCreator.id, topicTitle, topicDescription, Topic.VISIBILITY.public)).body.data;
+                    topic = (await topicCreate(agentCreator, userCreator.id, topicTitle, Topic.STATUSES.inProgress, topicDescription, Topic.VISIBILITY.public)).body.data;
 
                     report = (await topicReportCreate(agentReporter, topic.id, reportType, reportText)).body.data;
 
@@ -9581,7 +9583,7 @@ suite('Users', function () {
                     userModerator = await userLib.createUserAndLogin(agentModerator, emailModerator, null, null);
                     await userLib.createUserAndLogin(agentReporter, emailReporter, null, null);
 
-                    topic = (await topicCreate(agentCreator, userCreator.id, topicTitle, topicDescription, Topic.VISIBILITY.public)).body.data;
+                    topic = (await topicCreate(agentCreator, userCreator.id, topicTitle, Topic.STATUSES.inProgress, topicDescription, Topic.VISIBILITY.public)).body.data;
 
                     report = (await topicReportCreate(agentReporter, topic.id, reportType, reportText)).body.data;
 
@@ -9624,7 +9626,7 @@ suite('Topics', function () {
         });
 
         setup(async function () {
-            topic = (await topicCreate(creatorAgent, creator.id, null, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business])).body.data;
+            topic = (await topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business])).body.data;
         });
 
         test('Success', async function () {
@@ -9761,7 +9763,7 @@ suite('Topics', function () {
         });
 
         setup(async function () {
-            topic = (await topicCreate(creatorAgent, creator.id, null, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health])).body.data;
+            topic = (await topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health])).body.data;
             // Set "title" to Topic, otherwise there will be no results because of the "title NOT NULL" in the query
             return Topic.update(
                 {
@@ -9879,7 +9881,7 @@ suite('Topics', function () {
 
         test('Success - non-authenticated User - don\'t show deleted "public" Topics', async function () {
 
-            const deletedTopic = (await topicCreate(creatorAgent, creator.id, null, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health])).body.data;
+            const deletedTopic = (await topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health])).body.data;
             // Set "title" to Topic, otherwise there will be no results because of the "title NOT NULL" in the query
             await Topic.update(
                 {
@@ -9943,7 +9945,7 @@ suite('Topics', function () {
                     }
                 );
 
-            const partnerTopic = (await topicCreate(creatorAgent, creator.id, null, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health])).body.data;
+            const partnerTopic = (await topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health])).body.data;
 
             // Set "title" to Topic, otherwise there will be no results because of the "title NOT NULL" in the query
             await Topic.update(
@@ -9991,7 +9993,7 @@ suite('Topics', function () {
             });
 
             setup(async function () {
-                topic = (await topicCreate(creatorAgent, creator.id, null, null, Topic.VISIBILITY.public)).body.data;
+                topic = (await topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.voting, null, Topic.VISIBILITY.public)).body.data;
                 await Topic.update(
                     {
                         title: 'TEST PUBLIC'
@@ -10003,6 +10005,7 @@ suite('Topics', function () {
                     }
                 );
                 const vote = (await topicVoteCreate(creatorAgent, creator.id, topic.id, options, 1, 1, false, null, null, Vote.TYPES.regular, null)).body.data;
+                await topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.voting);
                 const voteRead = (await topicVoteRead(creatorAgent, creator.id, topic.id, vote.id)).body.data;
                 const voteReadUnauth = (await topicVoteReadUnauth(userAgent, topic.id, vote.id)).body.data;
 
@@ -10134,7 +10137,7 @@ suite('Topics', function () {
 
             suiteSetup(async function () {
                 creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);
-                topic = (await topicCreate(creatorAgent, creator.id, null, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.communities, Topic.CATEGORIES.culture])).body.data;
+                topic = (await topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.communities, Topic.CATEGORIES.culture])).body.data;
                 comment1 = (await topicCommentCreate(creatorAgent, creator.id, topic.id, null, null, commentType1, commentSubj1, commentText1)).body.data;
                 comment2 = (await topicCommentCreate(creatorAgent, creator.id, topic.id, null, null, commentType2, commentSubj2, commentText2)).body.data;
                 comment3 = (await topicCommentCreate(creatorAgent, creator.id, topic.id, null, null, commentType1, commentSubj3, commentText3)).body.data;
@@ -10237,7 +10240,7 @@ suite('Topics', function () {
             });
 
             test('Success', async function () {
-                const topic = (await topicCreate(creatorAgent, creator.id, null, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.communities, Topic.CATEGORIES.culture])).body.data;
+                const topic = (await topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.communities, Topic.CATEGORIES.culture])).body.data;
 
                 await topicCommentCreate(creatorAgent, creator.id, topic.id, null, null, Comment.TYPES.pro, 'Subject', 'WOHOO! This is my comment.');
                 // Verify that the comments output is the same for unauthenticated and authenticated comment list API
@@ -10248,7 +10251,7 @@ suite('Topics', function () {
             });
 
             test('Success - public Topic without comments', async function () {
-                const topic = (await topicCreate(creatorAgent, creator.id, null, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.defense, Topic.CATEGORIES.education])).body.data;
+                const topic = (await topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.defense, Topic.CATEGORIES.education])).body.data;
                 // Verify that the comments output is the same for unauthenticated and authenticated comment list API
                 const creatorCommentList = (await topicCommentList(creatorAgent, creator.id, topic.id, null)).body;
                 const userCommentList = (await topicCommentListUnauth(userAgent, topic.id, null)).body;
@@ -10533,7 +10536,7 @@ suite('Topics', function () {
             });
 
             test('Fail - 404 - trying to fetch comments of non-public Topic', async function () {
-                const topic = (await topicCreate(creatorAgent, creator.id, null, null, Topic.VISIBILITY.private)).body.data;
+                const topic = (await topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.private)).body.data;
 
                 return _topicCommentListUnauth(userAgent, topic.id, null, 404);
             });
@@ -10559,7 +10562,7 @@ suite('Topics', function () {
                 });
 
                 setup(async function () {
-                    topic = (await topicCreate(creatorAgent, creator.id, null, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business])).body.data;
+                    topic = (await topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business])).body.data;
                     comment = (await topicCommentCreate(creatorAgent, creator.id, topic.id, null, null, Comment.TYPES.pro, 'Subj', 'Text')).body.data;
                 });
 
@@ -10691,7 +10694,7 @@ suite('Topics', function () {
                 });
 
                 setup(async function () {
-                    topic = (await topicCreate(creatorAgent, creator.id, null, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business])).body.data;
+                    topic = (await topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business])).body.data;
                     comment = (await topicCommentCreate(creatorAgent, creator.id, topic.id, null, null, Comment.TYPES.pro, 'Subj', 'Text')).body.data
                 });
 
@@ -10744,7 +10747,7 @@ suite('Topics', function () {
                     userCreator = await userLib.createUserAndLogin(agentCreator, emailCreator, null, null);
                     userModerator = await userLib.createUser(agentModerator, emailModerator, null, null);
                     userReporter = await userLib.createUserAndLogin(agentReporter, emailReporter, null, null);
-                    topic = (await topicCreate(agentCreator, userCreator.id, null, null, Topic.VISIBILITY.public)).body.data;
+                    topic = (await topicCreate(agentCreator, userCreator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public)).body.data;
                     comment = (await topicCommentCreate(agentCreator, userCreator.id, topic.id, null, null, Comment.TYPES.pro, 'test abuse report', 'test abuse report')).body.data;
                     partner = await Partner.create({
                         website: 'notimportant',
@@ -10802,7 +10805,7 @@ suite('Topics', function () {
                     userCreator = await userLib.createUserAndLogin(agentCreator, emailCreator, null, null);
                     userModerator = await userLib.createUser(agentModerator, emailModerator, null, null);
                     await userLib.createUserAndLogin(agentReporter, emailReporter, null, null);
-                    topic = (await topicCreate(agentCreator, userCreator.id, null, null, Topic.VISIBILITY.public)).body.data;
+                    topic = (await topicCreate(agentCreator, userCreator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public)).body.data;
                     partner = await Partner.create({
                         website: 'notimportant',
                         redirectUriRegexp: 'notimportant'
@@ -10902,7 +10905,7 @@ suite('Topics', function () {
                     userCreator = await userLib.createUserAndLogin(agentCreator, emailCreator, null, null);
                     userModerator = await userLib.createUser(agentModerator, emailModerator, null, null);
                     await userLib.createUserAndLogin(agentReporter, emailReporter, null, null);
-                    topic = (await topicCreate(agentCreator, userCreator.id, null, null, Topic.VISIBILITY.private)).body.data;
+                    topic = (await topicCreate(agentCreator, userCreator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.private)).body.data;
 
                     partner = await Partner.create({
                         website: 'notimportant',
@@ -11055,7 +11058,7 @@ suite('Topics', function () {
             });
 
             test('Success', async function () {
-                const topic = (await topicCreate(creatorAgent, creator.id, null, null, Topic.VISIBILITY.public)).body.data;
+                const topic = (await topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public)).body.data;
 
                 const options = [
                     {
@@ -11075,7 +11078,7 @@ suite('Topics', function () {
             });
 
             test('Fail - 404 - trying to fetch Vote of non-public Topic', async function () {
-                const topic = (await topicCreate(creatorAgent, creator.id, null, null, Topic.VISIBILITY.private)).body.data;
+                const topic = (await topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.private)).body.data;
 
                 const options = [
                     {
@@ -11414,7 +11417,7 @@ suite('Topics', function () {
 
             setup(async function () {
                 user = await userLib.createUserAndLogin(agent, null, null, null);
-                topic = (await topicCreate(agent, user.id, null, null, Topic.VISIBILITY.public, null, null, 'banana')).body.data;
+                topic = (await topicCreate(agent, user.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public, null, null, 'banana')).body.data;
             });
 
             test('Success - non-authenticated User', async function () {
@@ -11457,7 +11460,7 @@ suite('Topics', function () {
 
                 setup(async function () {
                     user = await userLib.createUserAndLogin(agent, null, null, null);
-                    topic = (await topicCreate(agent, user.id, null, null, Topic.VISIBILITY.public)).body.data;
+                    topic = (await topicCreate(agent, user.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public)).body.data;
                 });
 
                 test('Non-authenticated User', async function () {
@@ -11481,7 +11484,7 @@ suite('Topics', function () {
 
                 const user = await userLib.createUserAndLogin(agent, null, null, null);
 
-                const topic = (await topicCreate(agent, user.id, null, null, Topic.VISIBILITY.public, null, null, cosUtil.randomString(40))).body.data;
+                const topic = (await topicCreate(agent, user.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public, null, null, cosUtil.randomString(40))).body.data;
 
                 const resBody = (await _topicMentionListTestUnauth(request.agent(app), topic.id, 500)).body;
                 const expectedBody = {
@@ -11506,7 +11509,7 @@ suite('Topics', function () {
 
         setup(async function () {
             user = await userLib.createUserAndLogin(agent, null, null, null);
-            topic = (await topicCreate(agent, user.id, null, null, Topic.VISIBILITY.public)).body.data;
+            topic = (await topicCreate(agent, user.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public)).body.data;
         });
 
         suite('Create', function () {
@@ -11559,7 +11562,7 @@ suite('Topics', function () {
         setup(async function () {
             user = await userLib.createUserAndLogin(agent, null, null, null);
             user2 = await userLib.createUserAndLogin(agent2, null, null, null);
-            topic = (await topicCreate(agent, user.id, null, description, Topic.VISIBILITY.public)).body.data;
+            topic = (await topicCreate(agent, user.id, null, Topic.STATUSES.inProgress, description, Topic.VISIBILITY.public)).body.data;
             const members = [
                 {
                     userId: user2.id,

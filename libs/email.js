@@ -1471,7 +1471,7 @@ module.exports = function (app) {
         const to = config.features.sendToParliament.to;
         const subject = template.translations.TO_PARLIAMENT.SUBJECT.replace('{{topic.title}}', util.escapeHtml(topic.title));
         const linkViewTopic = linkToApplication + '/initiatives/:topicId'.replace(':topicId', topic.id);
-        const logoFile = templateRoot + '/images/logo-email_rahvaalgatus.ee.png';
+        //const logoFile = templateRoot + '/images/logo-email_rahvaalgatus.ee.png';
 
         const promisesToResolve = [];
         const customStyles = {
@@ -1491,12 +1491,6 @@ module.exports = function (app) {
                     from: from,
                     subject: subject,
                     to: to,
-                    images: [
-                        {
-                            name: emailHeaderLogoName,
-                            file: logoFile
-                        }
-                    ],
                     //Placeholders..
                     linkViewTopic: linkViewTopic,
                     linkDownloadBdocFinal: linkDownloadBdocFinal,
