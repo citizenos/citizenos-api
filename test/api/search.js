@@ -37,6 +37,7 @@ const app = require('../../app');
 const models = app.get('models');
 
 const User = models.User;
+const Topic = models.Topic;
 
 const shared = require('../utils/shared');
 const userLib = require('./lib/user')(app);
@@ -52,7 +53,7 @@ suite('Search', function () {
             const agent = request.agent(app);
             const user = await userLib.createUserAndLogin(agent, null, null, null);
             const description = '<!DOCTYPE HTML><html><body><h1>SEARCH TEST 1</h1><br><h2>SEARCH TEST H2</h2></body></html>';
-            await topicLib.topicCreate(agent, user.id, 'SEARCH TEST 1', description);
+            await topicLib.topicCreate(agent, user.id, 'SEARCH TEST 1', Topic.STATUSES.inProgress, description);
         });
 
         test('Success', async function () {

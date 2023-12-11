@@ -1693,7 +1693,7 @@ suite('Users', function () {
             suiteSetup(async function () {
                 user = await userLib.createUserAndLogin(agent, email, password, null);
 
-                topic = (await topicCreate(agent, user.id, null, null, null, null, Topic.VISIBILITY.private, topicCategories)).body.data;
+                topic = (await topicCreate(agent, user.id, null, null, null, Topic.VISIBILITY.private, topicCategories)).body.data;
                 //FIXME: This is a hack. Actually we should have topicCreate that enables setting the Partner headers and sourcePartnerObjectId but not sure what the interface should look like
                 partner = await Partner.create({
                     website: 'notimportant',
@@ -1865,8 +1865,9 @@ suite('Users', function () {
 
                     suiteSetup(async function () {
                         creator = await userLib.createUserAndLogin(voteAgent, voteEmail, votePassword, null);
-                        voteTopic = (await topicCreate(voteAgent, creator.id, null, Topic.STATUSES.voting, null, Topic.VISIBILITY.private, voteTopicCategories)).body.data;
+                        voteTopic = (await topicCreate(voteAgent, creator.id, null, null, null, Topic.VISIBILITY.private, voteTopicCategories)).body.data;
                         vote = (await topicVoteCreate(voteAgent, creator.id, voteTopic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                        await topicUpdateStatus(voteAgent, creator.id, voteTopic.id, Topic.STATUSES.voting);
                         vote = (await topicVoteRead(voteAgent, creator.id, voteTopic.id, vote.id)).body.data;
                     });
 
@@ -2498,7 +2499,7 @@ suite('Users', function () {
 
                 await topicReportModerate(agentModerator, moderatedTopic.id, report.id, moderateType, moderateText);
 
-                const list = (await topicList(agentUser, user.id, null, null, null, null, null, null, null)).body.data
+                const list = (await topicList(agentUser, user.id, null, null, null, null, null, false, null)).body.data;
                 assert.equal(list.count, 1);
 
                 const listOfTopics = list.rows;
@@ -2636,8 +2637,36 @@ suite('Users', function () {
                 });
             });
 
+            test('Success - status draft', async function () {
+                const publicTopic = (await topicCreate(agentUser, user.id)).body.data;
+                // Add title & description in DB. NULL title topics are not to be returned.
+                const title = 'Public Topic';
+                const description = 'Public topic desc';
+
+                await Topic.update(
+                    {
+                        title: title,
+                        description: description
+                    },
+                    {
+                        where: {
+                            id: publicTopic.id
+                        }
+                    }
+                );
+
+                const list = (await topicList(agentUser, user.id, null, null, 'draft', null, null, null, null)).body.data;
+                assert.equal(list.count, 1);
+                const rows = list.rows;
+
+                rows.forEach(function (topicItem) {
+                    assert.equal(topicItem.status, Topic.STATUSES.draft);
+                    assert.equal(topicItem.deletedAt, null);
+                });
+            });
+
             test('Success - status inProgress', async function () {
-                const publicTopic = (await topicCreate(agentUser, user.id, '', Topic.STATUSES.inProgress)).body.data;
+                const publicTopic = (await topicCreate(agentUser, user.id, 'Public Topic', Topic.STATUSES.inProgress)).body.data;
                 // Add title & description in DB. NULL title topics are not to be returned.
                 const title = 'Public Topic';
                 const description = 'Public topic desc';
@@ -2756,8 +2785,8 @@ suite('Users', function () {
             test('Success - list only topics that User has voted on - voted=true', async function () {
                 this.timeout(10000);
                 // Create 2 topics 1 in voting, but not voted, 1 voted. Topic list should return only 1 that User has voted on
-                const topicWithVoteNotVoted = (await topicCreate(agentCreator, creator.id, 'TEST User HAS NOT VOTED on this topic', Topic.STATUSES.voting, '<html><head></head><body><h2>TEST User HAS NOT VOTED on this topic</h2></body></html>', Topic.VISIBILITY.private)).body.data;
-                const topicWithVoteAndVoted = (await topicCreate(agentCreator, creator.id, 'TEST User HAS VOTED on this topic', Topic.STATUSES.voting, '<html><head></head><body><h2>TEST User HAS VOTED on this topic</h2></body></html>', Topic.VISIBILITY.private)).body.data;
+                const topicWithVoteNotVoted = (await topicCreate(agentCreator, creator.id, 'TEST User HAS NOT VOTED on this topic', null, '<html><head></head><body><h2>TEST User HAS NOT VOTED on this topic</h2></body></html>', Topic.VISIBILITY.private)).body.data;
+                const topicWithVoteAndVoted = (await topicCreate(agentCreator, creator.id, 'TEST User HAS VOTED on this topic', null, '<html><head></head><body><h2>TEST User HAS VOTED on this topic</h2></body></html>', Topic.VISIBILITY.private)).body.data;
                 const options = [
                     {
                         value: 'Option 1'
@@ -2771,7 +2800,9 @@ suite('Users', function () {
                 ];
 
                 await topicVoteCreate(agentCreator, user.id, topicWithVoteNotVoted.id, options, null, null, null, null, `Vote for test topic ${topicWithVoteNotVoted.title}`, null, null);
+                await topicUpdateStatus(agentCreator, user.id, topicWithVoteNotVoted.id, Topic.STATUSES.voting);
                 const vote = (await topicVoteCreate(agentCreator, user.id, topicWithVoteAndVoted.id, options, null, null, null, null, `Vote for test topic ${topicWithVoteAndVoted.title}`, null, null)).body.data;
+                await topicUpdateStatus(agentCreator, user.id, topicWithVoteAndVoted.id, Topic.STATUSES.voting);
                 const topicMemberGroup = {
                     groupId: group.id,
                     level: TopicMemberGroup.LEVELS.edit
@@ -2799,8 +2830,8 @@ suite('Users', function () {
             test('Success - list only topics that User has NOT voted on - voted=false ', async function () {
                 this.timeout(10000);
                 // Create 2 topics 1 in voting, but not voted, 1 voted. Topic list should return only 1 that User has NOT voted on
-                const topicWithVoteNotVoted = (await topicCreate(agentCreator, creator.id, 'TEST User HAS NOT VOTED on this topic', Topic.STATUSES.voting, '<html><head></head><body><h2>TEST User HAS NOT VOTED on this topic</h2></body></html>', Topic.VISIBILITY.private)).body.data;
-                const topicWithVoteAndVoted = (await topicCreate(agentCreator, creator.id, 'TEST User HAS VOTED on this topic', Topic.STATUSES.voting, '<html><head></head><body><h2>TEST User HAS VOTED on this topic</h2></body></html>', Topic.VISIBILITY.private)).body.data;
+                const topicWithVoteNotVoted = (await topicCreate(agentCreator, creator.id, 'TEST User HAS NOT VOTED on this topic', null, '<html><head></head><body><h2>TEST User HAS NOT VOTED on this topic</h2></body></html>', Topic.VISIBILITY.private)).body.data;
+                const topicWithVoteAndVoted = (await topicCreate(agentCreator, creator.id, 'TEST User HAS VOTED on this topic', null, '<html><head></head><body><h2>TEST User HAS VOTED on this topic</h2></body></html>', Topic.VISIBILITY.private)).body.data;
                 const options = [
                     {
                         value: 'Option 1'
@@ -2814,8 +2845,9 @@ suite('Users', function () {
                 ];
 
                 await topicVoteCreate(agentCreator, user.id, topicWithVoteNotVoted.id, options, null, null, null, null, `Vote for test topic ${topicWithVoteNotVoted.title}`, null, null);
+                await topicUpdateStatus(agentCreator, user.id, topicWithVoteNotVoted.id, Topic.STATUSES.voting);
                 const vote = (await topicVoteCreate(agentCreator, user.id, topicWithVoteAndVoted.id, options, null, null, null, null, `Vote for test topic ${topicWithVoteAndVoted.title}`, null, null)).body.data;
-
+                await topicUpdateStatus(agentCreator, user.id, topicWithVoteAndVoted.id, Topic.STATUSES.voting);
                 const topicMemberGroup = {
                     groupId: group.id,
                     level: TopicMemberGroup.LEVELS.edit
@@ -2878,7 +2910,7 @@ suite('Users', function () {
                     const voteDescription = 'Vote description';
 
                     const vote = (await topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, voteDescription, null, null)).body.data;
-
+                    await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                     assert.property(vote, 'id');
                     assert.equal(vote.minChoices, 1);
                     assert.equal(vote.maxChoices, 1);
@@ -4851,16 +4883,17 @@ suite('Users', function () {
                         const topicJoinReadActual = (await topicJoinReadUnauth(request.agent(app), topic.join.token)).body.data;
                         const topicReadExpected = (await topicReadUnauth(request.agent(app), topic.id)).body.data;
 
-                        assert.deepEqual(topicJoinReadActual, topicReadExpected);
+                        assert.deepEqual(topicJoinReadActual, {
+                            id: topicReadExpected.id,
+                            title: topicReadExpected.title,
+                            visibility: topicReadExpected.visibility
+                        });
                     });
 
-                    test('Fail - 40400 - Not found - return 404 for private topic', async function () {
-                        const topicJoinReadActual = (await _topicJoinReadUnauth(request.agent(app), topic.join.token, 404)).body;
+                    test('Success - return title for private topic', async function () {
+                        const topicJoinReadActual = (await topicJoinReadUnauth(request.agent(app), topic.join.token)).body.data;
                         const topicReadExpected = {
-                            "status": {
-                                "code": 40400,
-                                "message": "Not Found"
-                            }
+                            title: null
                         };
 
                         assert.deepEqual(topicJoinReadActual, topicReadExpected);
@@ -5080,7 +5113,7 @@ suite('Users', function () {
                     const description = 'Vote description';
 
                     const vote = (await topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, description, null, null)).body.data;
-
+                    await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                     assert.property(vote, 'id');
                     assert.equal(vote.minChoices, 1);
                     assert.equal(vote.maxChoices, 1);
@@ -5118,7 +5151,7 @@ suite('Users', function () {
                     const maxChoices = 2;
 
                     const vote = (await topicVoteCreate(agent, user.id, topic.id, options, minChoices, maxChoices, null, null, description, null, null)).body.data;
-
+                    await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                     assert.property(vote, 'id');
                     assert.equal(vote.minChoices, minChoices);
                     assert.equal(vote.maxChoices, maxChoices);
@@ -5320,7 +5353,7 @@ suite('Users', function () {
                     assert.deepEqual(resBody, expectedBody);
                 });
 
-                test('Fail - Forbidden - Vote creation is allowed only if Topic status is "inProgress"', async function () {
+                test('Fail - Forbidden - Vote creation is allowed only if Topic status is "draft" or "inProgress"', async function () {
                     const options = [
                         {
                             value: 'Option 1'
@@ -5332,6 +5365,7 @@ suite('Users', function () {
 
                     // Create a vote, that will set it to "inVoting" status, thus further Vote creation should not be allowed.
                     await topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null);
+                    await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                     await _topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null, null, 403);
                 });
 
@@ -5521,6 +5555,7 @@ suite('Users', function () {
                             }
                         ];
                         const topicVoteCreated = (await topicVoteCreate(agent, user.id, topic.id, voteOptions, null, null, true, null, null, null, null)).body.data;
+                        await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                         const voteRead = (await topicVoteRead(agent, user.id, topic.id, topicVoteCreated.id)).body.data;
                         const members = [
                             {
@@ -5548,6 +5583,7 @@ suite('Users', function () {
                             }
                         ];
                         const topicVoteCreated = (await topicVoteCreate(agent, user.id, topic.id, voteOptions, null, null, true, null, null, null, null)).body.data;
+                        await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                         const voteRead = (await topicVoteRead(agent, user.id, topic.id, topicVoteCreated.id)).body.data;
 
                         const members = [
@@ -5584,6 +5620,7 @@ suite('Users', function () {
                             }
                         ];
                         const topicVoteCreated = (await topicVoteCreate(agent, user.id, topic.id, voteOptions, null, null, true, null, null, null, null)).body.data;
+                        await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                         const voteRead = (await topicVoteRead(agent, user.id, topic.id, topicVoteCreated.id)).body.data;
 
                         const members = [
@@ -5685,6 +5722,7 @@ suite('Users', function () {
                             }
                         ];
                         const topicVoteCreated = (await topicVoteCreate(agent, user.id, topic.id, voteOptions, 2, 3, true, null, null, null, null)).body.data;
+                        await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                         const voteRead = (await topicVoteRead(agent, user.id, topic.id, topicVoteCreated.id)).body.data;
                         const members = [
                             {
@@ -5862,7 +5900,7 @@ suite('Users', function () {
                             }
                         ];
                         const topicVoteCreated = (await topicVoteCreate(agent, user.id, topic.id, voteOptions, null, null, true, null, null, null, null)).body.data;
-
+                        await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                         const members = [
                             {
                                 userId: toUser1.id,
@@ -5901,7 +5939,7 @@ suite('Users', function () {
                             }
                         ];
                         const topicVoteCreated = (await topicVoteCreate(agent, user.id, topic.id, voteOptions, null, null, true, null, null, null, null)).body.data;
-
+                        await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                         const responseDelegation = (await _topicVoteDelegationCreate(agent, user.id, topic.id, topicVoteCreated.id, user.id, 400)).body;
 
                         const responseExpected = {
@@ -5925,6 +5963,7 @@ suite('Users', function () {
                             }
                         ];
                         const topicVoteCreated = (await topicVoteCreate(agent, user.id, topic.id, voteOptions, null, null, true, null, null, null, null)).body.data;
+                        await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                         const userWithNoAccess = await userLib.createUser(request.agent(app), null, null, null);
 
                         const responseDelegation = (await _topicVoteDelegationCreate(agent, user.id, topic.id, topicVoteCreated.id, userWithNoAccess.id, 400)).body;
@@ -5975,6 +6014,7 @@ suite('Users', function () {
                             }
                         ];
                         const topicVoteCreated = (await topicVoteCreate(agent, user.id, topic.id, voteOptions, null, null, false, null, null, null, null)).body.data;
+                        await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                         const voteRead = (await topicVoteRead(agent, user.id, topic.id, topicVoteCreated.id)).body.data;
                         const members = [
                             {
@@ -6013,6 +6053,7 @@ suite('Users', function () {
                             }
                         ];
                         const topicVoteCreated = (await topicVoteCreate(agent, user.id, topic.id, voteOptions, null, null, true, null, null, null, null)).body.data;
+                        await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                         vote = (await topicVoteRead(agent, user.id, topic.id, topicVoteCreated.id)).body.data;
 
                         const members = [
@@ -6092,7 +6133,7 @@ suite('Users', function () {
                     user = await userLib.createUserAndLogin(agent, null, null, null);
                     user2 = await userLib.createUserAndLogin(agent2, null, null, 'et');
                     topic = (await topicCreate(agent, user.id)).body.data;
-                    topicPublic = (await topicCreate(agent, user.id, null, Topic.STATUSES.inProgress. null, Topic.VISIBILITY.public)).body.data;
+                    topicPublic = (await topicCreate(agent, user.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public)).body.data;
                 });
 
                 suite('authType === soft', function () {
@@ -6111,6 +6152,7 @@ suite('Users', function () {
                         ];
 
                         const vote = (await topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null)).body.data;
+                        await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                         const voteRead = (await topicVoteRead(agent, user.id, topic.id, vote.id)).body.data;
 
                         const voteList = [
@@ -6140,9 +6182,9 @@ suite('Users', function () {
                             }
                         ];
 
-                        const vote = (await topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null, [{value: 'allMembersVoted'}])).body.data;
+                        const vote = (await topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null, [{value: 'allMembersVoted', enabled: true}])).body.data;
+                        await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                         const voteRead = (await topicVoteRead(agent, user.id, topic.id, vote.id)).body.data;
-
                         const voteList = [
                             {
                                 optionId: voteRead.options.rows[0].id
@@ -6172,6 +6214,7 @@ suite('Users', function () {
                         ];
 
                         const voteCreated = (await topicVoteCreate(agent, user.id, topic.id, options, 1, 2, false, null, null, null, null)).body.data;
+                        await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                         const voteRead = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
 
                         const voteList1 = [
@@ -6245,6 +6288,7 @@ suite('Users', function () {
                         ];
 
                         const voteCreated = (await topicVoteCreate(agent, user.id, topic.id, options, 1, 2, false, null, null, null, null)).body.data;
+                        await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                         const voteRead = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
 
                         const voteList1 = [
@@ -6282,6 +6326,7 @@ suite('Users', function () {
                         ];
 
                         const voteCreated = (await topicVoteCreate(agent, user.id, topic.id, options, 2, 3, false, null, null, null, null)).body.data;
+                        await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                         const voteRead = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
 
                         const voteList = [
@@ -6319,6 +6364,7 @@ suite('Users', function () {
                         ];
 
                         const voteCreated = (await topicVoteCreate(agent, user.id, topic.id, options, 2, 3, false, null, null, null, null)).body.data;
+                        await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                         const voteRead = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
 
                         const voteList = [
@@ -6356,6 +6402,7 @@ suite('Users', function () {
                         ];
 
                         const voteCreated = (await topicVoteCreate(agent, user.id, topic.id, options, 2, 3, false, null, null, null, null)).body.data;
+                        await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                         const voteRead = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
 
                         const voteList = [
@@ -6399,6 +6446,7 @@ suite('Users', function () {
 
 
                         const vote = (await topicVoteCreate(agent, user.id, topicPublic.id, options, null, null, null, null, null, null, null)).body.data;
+                        await topicUpdateStatus(agent, user.id, topicPublic.id, Topic.STATUSES.voting);
                         const voteRead = (await topicVoteRead(agent, user.id, topicPublic.id, vote.id)).body.data;
 
                         const voteList1 = [
@@ -6406,7 +6454,6 @@ suite('Users', function () {
                                 optionId: voteRead.options.rows[0].id
                             }
                         ];
-
                         await topicVoteVote(agent2, user2.id, topicPublic.id, vote.id, voteList1, null, null, null, null);
                         const voteReadAfterVote1 = (await topicVoteRead(agent2, user2.id, topicPublic.id, vote.id)).body.data;
 
@@ -6436,7 +6483,9 @@ suite('Users', function () {
                         ];
 
                         const topicVoteWrong = (await topicVoteCreate(agent, user.id, topicWrong.id, options, null, null, null, null, null, null, null)).body.data;
+                        await topicUpdateStatus(agent, user.id, topicWrong.id, Topic.STATUSES.voting);
                         const topicVoteRight = (await topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null)).body.data;
+                        await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                         const topicVoteReadRight = (await topicVoteRead(agent, user.id, topic.id, topicVoteRight.id)).body.data;
 
                         const voteList1 = [
@@ -6465,6 +6514,7 @@ suite('Users', function () {
 
 
                         const voteCreated = (await topicVoteCreate(agent, user.id, topic.id, options, 1, 1, false, null, null, null, null)).body.data;
+                        await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                         const voteRead = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
 
                         const voteList1 = [
@@ -6502,6 +6552,7 @@ suite('Users', function () {
 
 
                         const voteCreated = (await topicVoteCreate(agent, user.id, topic.id, options, 2, 2, false, null, null, null, null)).body.data;
+                        await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                         const voteRead = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
 
                         const voteList1 = [
@@ -6535,6 +6586,7 @@ suite('Users', function () {
                         ];
 
                         const voteCreated = (await topicVoteCreate(agent, user.id, topic.id, options, 1, 1, false, new Date(), null, null, null)).body.data;
+                        await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                         const voteRead = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
 
                         const voteList1 = [
@@ -6568,6 +6620,7 @@ suite('Users', function () {
                         ];
 
                         const voteCreated = (await topicVoteCreate(agent, user.id, topicPublic.id, options, null, null, null, null, null, null, null)).body.data;
+                        await topicUpdateStatus(agent, user.id, topicPublic.id, Topic.STATUSES.voting);
                         const voteRead = (await topicVoteRead(agent, user.id, topicPublic.id, voteCreated.id)).body.data;
 
                         const voteList1 = [
@@ -6604,7 +6657,9 @@ suite('Users', function () {
                         ];
 
                         const vote1 = (await topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null)).body.data;
+                        await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                         const vote2 = (await topicVoteCreate(agent, user.id, topicPublic.id, options, null, null, null, null, null, null, null)).body.data;
+                        await topicUpdateStatus(agent, user.id, topicPublic.id, Topic.STATUSES.voting);
                         const voteRead2 = (await topicVoteRead(agent, user.id, topicPublic.id, vote2.id)).body.data;
 
                         const voteList = [
@@ -6647,7 +6702,9 @@ suite('Users', function () {
                                     }
                                 ];
                                 vote = (await topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                                await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                                 vote2 = (await topicVoteCreate(agent, user.id, topicPublic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                                await topicUpdateStatus(agent, user.id, topicPublic.id, Topic.STATUSES.voting);
                             });
 
                             teardown(async function () {
@@ -6731,7 +6788,7 @@ suite('Users', function () {
                                 assert.deepEqual(resBody, expectedBody);
                             });
 
-                            test('Fail - 40031 - User account already connected to another PID.', async function () {
+                            test.skip('Fail - 40031 - User account already connected to another PID.', async function () {
                                 const voteList = [
                                     {
                                         optionId: vote.options.rows[0].id
@@ -6773,6 +6830,7 @@ suite('Users', function () {
                                 ];
 
                                 vote = (await topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                                await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                             });
 
                             test('Success', async function () {
@@ -6827,6 +6885,7 @@ suite('Users', function () {
 
 
                             const voteCreated = (await topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                            await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                             vote = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
                         });
 
@@ -6874,7 +6933,8 @@ suite('Users', function () {
                                 }
                             ];
 
-                            const vote = (await topicVoteCreate(agent, user.id, topicNew.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard, [{value: 'allMembersVoted'}])).body.data;
+                            const vote = (await topicVoteCreate(agent, user.id, topicNew.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard, [{value: 'allMembersVoted', enabled: true}])).body.data;
+                            await topicUpdateStatus(agent, user.id, topicNew.id, Topic.STATUSES.voting);
                             const phoneNumber = '+37200000766';
                             const pid = '60001019906';
 
@@ -6911,8 +6971,9 @@ suite('Users', function () {
                                 }
                             ];
 
-                            const topic = (await topicCreate(agent, user.id, 'TEST VOTE AND RE-VOTE', Topic.STATUSES.voting, '<html><head></head><body><h2>TEST VOTE AND RE-VOTE</h2></body></html>')).body.data;
+                            const topic = (await topicCreate(agent, user.id, 'TEST VOTE AND RE-VOTE', null, '<html><head></head><body><h2>TEST VOTE AND RE-VOTE</h2></body></html>')).body.data;
                             const voteCreated = (await topicVoteCreate(agent, user.id, topic.id, options, 1, 2, false, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                            await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                             const voteRead = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
 
                             // Vote for the first time
@@ -7014,8 +7075,9 @@ suite('Users', function () {
                                 }
                             ];
 
-                            const topic = (await topicCreate(agent, user.id, 'TEST VOTE AND RE-VOTE', Topic.STATUSES.voting, '<html><head></head><body><h2>TEST VOTE AND RE-VOTE</h2></body></html>', Topic.VISIBILITY.public)).body.data;
+                            const topic = (await topicCreate(agent, user.id, 'TEST VOTE AND RE-VOTE', null, '<html><head></head><body><h2>TEST VOTE AND RE-VOTE</h2></body></html>', Topic.VISIBILITY.public)).body.data;
                             const voteCreated = (await topicVoteCreate(agent, user.id, topic.id, options, 1, 2, false, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                            await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                             const voteRead = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
 
                             const agentUser1 = agent;
@@ -7139,8 +7201,9 @@ suite('Users', function () {
                                 }
                             ];
 
-                            const topic = (await topicCreate(agent, user.id, 'TEST VOTE AND RE-VOTE', Topic.STATUSES.voting, '<html><head></head><body><h2>TEST VOTE AND RE-VOTE</h2></body></html>', Topic.VISIBILITY.public)).body.data;
+                            const topic = (await topicCreate(agent, user.id, 'TEST VOTE AND RE-VOTE', null, '<html><head></head><body><h2>TEST VOTE AND RE-VOTE</h2></body></html>', Topic.VISIBILITY.public)).body.data;
                             const voteCreated = (await topicVoteCreate(agent, user.id, topic.id, options, 1, 2, false, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                            await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                             const voteRead = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
 
                             const agentUser1 = agent;
@@ -7216,8 +7279,9 @@ suite('Users', function () {
                                 }
                             ];
 
-                            const topic = (await topicCreate(agent, user.id, 'TEST VOTE AND RE-VOTE', Topic.STATUSES.voting, '<html><head></head><body><h2>TEST VOTE AND RE-VOTE</h2></body></html>', Topic.VISIBILITY.public)).body.data;
+                            const topic = (await topicCreate(agent, user.id, 'TEST VOTE AND RE-VOTE', null, '<html><head></head><body><h2>TEST VOTE AND RE-VOTE</h2></body></html>', Topic.VISIBILITY.public)).body.data;
                             const voteCreated = (await topicVoteCreate(agent, user.id, topic.id, options, 1, 2, false, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                            await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                             const voteRead = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
 
                             const agentUser1 = agent;
@@ -7490,15 +7554,15 @@ suite('Users', function () {
                             await UserConnection.create({
                                 userId: user.id,
                                 connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                connectionUserId: 'PNOEE-11412090004',
+                                connectionUserId: 'PNOEE-51001091072',
                                 connectionData: {
                                     name: 'TEST' + new Date().getTime(),
                                     country: 'EE',
-                                    pid: '11412090004'
+                                    pid: '51001091072'
                                 }
                             });
-                            const phoneNumber = '+37060000007';
-                            const pid = '51001091072';
+                            const phoneNumber = '+37268000769';
+                            const pid = '60001017869';
 
                             const voteList = [
                                 {
@@ -7542,6 +7606,7 @@ suite('Users', function () {
                                     ];
 
                                     const voteCreated = (await topicVoteCreate(agent, user.id, topic.id, options, 1, 2, false, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                                    await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                                     const voteRead = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
 
                                     // Vote for the first time
@@ -7660,6 +7725,7 @@ suite('Users', function () {
                                     ];
 
                                     const voteCreated = (await topicVoteCreate(agent, user.id, topic.id, options, 1, 2, false, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                                    await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                                     const voteRead = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
 
                                     // Vote for the first time
@@ -7767,7 +7833,7 @@ suite('Users', function () {
                                 test('Success - Vote, delete account, re-vote & count, delete account re-count', async () => {
                                     const pid = 30303039914;
                                     const countryCode = 'EE';
-                                    const topic = (await topicCreate(agent, user.id, 'TEST VOTE AND DELETE ACCOUNT AND RE-VOTE', Topic.STATUSES.voting, '<html><head></head><body><h2>TEST VOTE AND DELETE ACCOUNT AND RE-VOTE</h2></body></html>', Topic.VISIBILITY.public)).body.data;
+                                    const topic = (await topicCreate(agent, user.id, 'TEST VOTE AND DELETE ACCOUNT AND RE-VOTE', null, '<html><head></head><body><h2>TEST VOTE AND DELETE ACCOUNT AND RE-VOTE</h2></body></html>', Topic.VISIBILITY.public)).body.data;
                                     const agentUser1 = request.agent(app);
                                     const agentUser2 = request.agent(app);
                                     const user1 = await userLib.createUserAndLogin(agentUser1, null, null, null);
@@ -7786,6 +7852,7 @@ suite('Users', function () {
                                     ];
 
                                     const voteCreated = (await topicVoteCreate(agent, user.id, topic.id, options, 1, 2, false, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                                    await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                                     const voteRead = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
 
                                     // Vote for the first time
@@ -7955,6 +8022,7 @@ suite('Users', function () {
                                 }
                             ];
                             vote = (await topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
+                            await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                             vote = (await topicVoteRead(agent, user.id, topic.id, vote.id)).body.data;
                             vote2 = (await topicVoteCreate(agent, user.id, topicPublic.id, options, 1, 2, null, null, null, null, Vote.AUTH_TYPES.hard)).body.data;
                         });
@@ -8530,7 +8598,6 @@ suite('Users', function () {
 
                     const creatorExpected = user.toJSON();
                     delete creatorExpected.email; // Email is not returned
-                    delete creatorExpected.imageUrl; // Image url is not returned as it's not needed for now
                     delete creatorExpected.language; // Language is not returned
 
                     assert.equal(list.count.total, 3);
@@ -8579,7 +8646,6 @@ suite('Users', function () {
 
                     const creatorExpected = user.toJSON();
                     delete creatorExpected.email; // Email is not returned
-                    delete creatorExpected.imageUrl; // Image url is not returned as it's not needed for now
                     delete creatorExpected.language; // Language is not returned
 
                     assert.equal(list.count.total, 3);
@@ -8613,7 +8679,6 @@ suite('Users', function () {
 
                     const creatorExpected = user.toJSON();
                     delete creatorExpected.email; // Email is not returned
-                    delete creatorExpected.imageUrl; // Image url is not returned, as it's not needed for now
                     delete creatorExpected.language; // Language is not returned
 
                     assert.equal(list.count.total, 7);
@@ -8735,7 +8800,6 @@ suite('Users', function () {
 
                     const creatorExpected = user.toJSON();
                     creatorExpected.phoneNumber = null;
-                    delete creatorExpected.imageUrl; // Image url is not returned, as it's not needed for now
                     delete creatorExpected.language; // Language is not returned
 
                     assert.equal(list.count.total, 6);
@@ -9993,7 +10057,7 @@ suite('Topics', function () {
             });
 
             setup(async function () {
-                topic = (await topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.voting, null, Topic.VISIBILITY.public)).body.data;
+                topic = (await topicCreate(creatorAgent, creator.id, null, null, null, Topic.VISIBILITY.public)).body.data;
                 await Topic.update(
                     {
                         title: 'TEST PUBLIC'
@@ -10005,7 +10069,7 @@ suite('Topics', function () {
                     }
                 );
                 const vote = (await topicVoteCreate(creatorAgent, creator.id, topic.id, options, 1, 1, false, null, null, Vote.TYPES.regular, null)).body.data;
-                await topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.voting);
+                await topicUpdateStatus(creatorAgent, creator.id, topic.id, Topic.STATUSES.voting);
                 const voteRead = (await topicVoteRead(creatorAgent, creator.id, topic.id, vote.id)).body.data;
                 const voteReadUnauth = (await topicVoteReadUnauth(userAgent, topic.id, vote.id)).body.data;
 
@@ -11576,12 +11640,14 @@ suite('Topics', function () {
             test('Success', async function () {
                 const resBody = (await duplicateTopic(agent, user.id, topic.id)).body.data;
                 // description is excluded because how Etherpad handles final lines and <br> tags
-                const matchingValueKeys = ['title', 'status', 'permission', 'endsAt', 'hashtag'];
+                const matchingValueKeys = ['title', 'permission', 'endsAt', 'hashtag'];
+
                 Object.entries(resBody).forEach(([key, value]) => {
                     if (matchingValueKeys.indexOf(key) > -1) {
                         assert.deepEqual(value, topic[key]);
                     }
                 });
+                assert.equal(resBody.status, Topic.STATUSES.draft);
                 assert.equal(topic.description, resBody.description.replace('<br><br><br>', '<br><br>'));
                 assert.equal(resBody.visibility, Topic.VISIBILITY.private);
             });

@@ -1523,12 +1523,6 @@ module.exports = function (app) {
                     from: from,
                     subject: subject,
                     to: contact.email,
-                    images: [
-                        {
-                            name: emailHeaderLogoName,
-                            file: logoFile
-                        }
-                    ],
                     //Placeholders..
                     linkViewTopic: linkViewTopic,
                     linkDownloadBdocFinal: config.features.sendToParliament.sendContainerDownloadLinkToCreator ? linkDownloadBdocFinal : null,

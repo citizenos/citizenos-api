@@ -674,7 +674,7 @@ suite('Users', function () {
                     }
                 ];
                 await memberLib.groupMemberUsersCreate(group.id, members);
-                topic = (await topicLib.topicCreate(agentCreator, user.id, '', Topic.STATUSES.inProgress)).body.data;
+                topic = (await topicLib.topicCreate(agentCreator, user.id, null, Topic.STATUSES.inProgress)).body.data;
 
                 const memberGroup = {
                     groupId: group.id,
@@ -2097,9 +2097,9 @@ suite('Users', function () {
 
                         await memberLib.groupMemberUsersCreate(group.id, members);
                         topicCreated = (await topicLib.topicCreate(agent, creator.id, 'H1', Topic.STATUSES.inProgress, '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>')).body.data;
-                        topicCreated2 = (await topicLib.topicCreate(agent, creator.id, 'H1', Topic.STATUSES.inProgress,  '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>')).body.data;
-                        topicCreatedPublic = (await topicLib.topicCreate(agent, creator.id, 'H1', Topic.STATUSES.inProgress,  '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>', Topic.VISIBILITY.public)).body.data;
-                        topicCreatedPrivate = (await topicLib.topicCreate(agent, creator.id, 'H1', Topic.STATUSES.inProgress,  '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>')).body.data;
+                        topicCreated2 = (await topicLib.topicCreate(agent, creator.id, 'H1', Topic.STATUSES.inProgress, '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>')).body.data;
+                        topicCreatedPublic = (await topicLib.topicCreate(agent, creator.id, 'H1', Topic.STATUSES.inProgress, '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>', Topic.VISIBILITY.public)).body.data;
+                        topicCreatedPrivate = (await topicLib.topicCreate(agent, creator.id, 'H1', Topic.STATUSES.inProgress, '<!DOCTYPE HTML><html><body><h1>H1</h1></body></html>')).body.data;
                         const memberGroup = {
                             groupId: group.id,
                             level: TopicMemberGroup.LEVELS.edit
@@ -2270,7 +2270,7 @@ suite('Users', function () {
                     });
 
                     test('Success - Remove Topic from Group after Topic delete', async function () {
-                        const topic = (await topicLib.topicCreate(agent, member.id)).body.data;
+                        const topic = (await topicLib.topicCreate(agent, member.id, null, Topic.STATUSES.inProgress)).body.data;
                         const memberGroup = {
                             groupId: group.id,
                             level: TopicMemberGroup.LEVELS.read

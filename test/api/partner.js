@@ -108,7 +108,7 @@ suite('Partners', function () {
                     })
                     .then(async function (resultPartner) {
                         partner = resultPartner[0];
-                        topic = (await topicLib.topicCreate(agent, user.id)).body.data;
+                        topic = (await topicLib.topicCreate(agent, user.id, null, Topic.STATUSES.inProgress)).body.data;
 
                         return Topic
                             .update(

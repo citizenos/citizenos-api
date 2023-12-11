@@ -2145,7 +2145,6 @@ module.exports = function (app) {
 
         let voteResults = false;
         let join = '';
-        let groupBy = '';
         let returncolumns = '';
 
         if (!Array.isArray(include)) {
@@ -2193,7 +2192,6 @@ module.exports = function (app) {
             returncolumns += `
             , COALESCE(te.count, 0) AS "events.count"
             `;
-            groupBy += `, te."topicId `;
         }
 
         let where = ` t."deletedAt" IS NULL
@@ -2250,7 +2248,6 @@ module.exports = function (app) {
             ,tr."moderatedReasonType" AS "report.moderatedReasonType"
             ,tr."moderatedReasonText" AS "report.moderatedReasonText"
             `;
-            groupBy += `, tr.id, tr."moderatedReasonType", tr."moderatedReasonText" `;
         }
 
         if (creatorId) {
@@ -2419,8 +2416,6 @@ module.exports = function (app) {
                     LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                     ${join}
                 WHERE ${where}
-                GROUP BY t.id, tmup.level, tmgp.level, tj.token, tj.level, tf."topicId", c.id, muc.count, mgc.count, tv."voteId", tc.count, com."createdAt"
-                ${groupBy}
                 ORDER BY "favourite" DESC, "order" ASC, t."updatedAt" DESC
                 OFFSET :offset LIMIT :limit
             ;`;
@@ -4694,6 +4689,7 @@ module.exports = function (app) {
         if (topicMember && topicMember.length) {
             topic.permission = { level: topicMember[0].level };
         }
+        delete topic.creator;
 
         return res.ok(topic);
     });
@@ -6739,7 +6735,7 @@ module.exports = function (app) {
             return res.notFound();
         }
         if (topic.status === Topic.STATUSES.draft) {
-            fields = fields.concat(['minChoices', 'maxChoices', 'description', 'type', 'authType', 'autoClose'])
+            fields = fields.concat(['minChoices', 'maxChoices', 'description', 'type', 'authType', 'autoClose']);
         }
         const voteOptions = req.body.options;
 
@@ -6770,8 +6766,7 @@ module.exports = function (app) {
 
             const createPromises = [];
             const updatePromises = []
-            console.log(voteOptions);
-            if (voteOptions.length) {
+            if (voteOptions && voteOptions.length) {
                 if (vote.authType === Vote.AUTH_TYPES.hard) {
                     const voteOptionValues = _.map(voteOptions, 'value').map(function (value) {
                         return sanitizeFilename(value).toLowerCase();
@@ -6797,7 +6792,6 @@ module.exports = function (app) {
                         createPromises.push(vopt.validate());
                     } else {
                         o.voteId = vote.id;
-                        console.log(o);
                         updatePromises.push(VoteOption.update(o, {transaction: t}));
                     }
                 });
@@ -7588,7 +7582,6 @@ module.exports = function (app) {
                 }
                 t.afterCommit(async () => {
                     const isClosed = await _handleVoteAutoCloseConditions(voteId, topicId, userId);
-
                     const resBody = {
                         bdocUri: getBdocURL({
                             userId: userId,

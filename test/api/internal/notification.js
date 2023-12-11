@@ -61,7 +61,7 @@ suite('Internal', function () {
                 setup( async() => {
                     user = await userLib.createUserAndLogin(agent);
                     user2 = await userLib.createUserAndLogin(agent2);
-                    topic = (await topicLib.topicCreate(agent, user.id)).body.data;
+                    topic = (await topicLib.topicCreate(agent, user.id, null, Topic.STATUSES.inProgress)).body.data;
                 });
 
                 test('Success', async () => {
@@ -200,14 +200,14 @@ suite('Internal', function () {
             let topic;
             suiteSetup( async() => {
                 user = await userLib.createUserAndLogin(agent);
-                topic = (await topicLib.topicCreate(agent, user.id)).body.data;
+                topic = (await topicLib.topicCreate(agent, user.id, null, Topic.STATUSES.inProgress)).body.data;
             });
 
             test('Success', async () => {
                 assert.property(topic, 'id');
                 assert.equal(topic.creator.id, user.id);
                 assert.equal(topic.visibility, Topic.VISIBILITY.private);
-                assert.equal(topic.status, Topic.STATUSES.draft);
+                assert.equal(topic.status, Topic.STATUSES.inProgress);
                 assert.property(topic, 'padUrl');
                 const activities = (await activityLib.activitiesRead(agent, user.id)).body.data;
                 const text = notifications.buildActivityString(activities[0]);
