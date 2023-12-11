@@ -6765,8 +6765,18 @@ module.exports = function (app) {
 
 
             const createPromises = [];
-            const updatePromises = []
             if (voteOptions && voteOptions.length) {
+                try {
+
+                    await VoteOption.destroy({
+                        where: {
+                            voteId: vote.id
+                        },
+                        force: true
+                    });
+                } catch (e) {
+                    console.error('Vote Option delete fail', e);
+                }
                 if (vote.authType === Vote.AUTH_TYPES.hard) {
                     const voteOptionValues = _.map(voteOptions, 'value').map(function (value) {
                         return sanitizeFilename(value).toLowerCase();
@@ -6786,14 +6796,9 @@ module.exports = function (app) {
                 }
 
                 _(voteOptions).forEach(function (o) {
-                    if (!o.id) {
-                        o.voteId = vote.id;
-                        const vopt = VoteOption.build(o);
-                        createPromises.push(vopt.validate());
-                    } else {
-                        o.voteId = vote.id;
-                        updatePromises.push(VoteOption.update(o, {transaction: t}));
-                    }
+                    o.voteId = vote.id;
+                    const vopt = VoteOption.build(o);
+                    createPromises.push(vopt.validate());
                 });
 
             }
@@ -6801,7 +6806,7 @@ module.exports = function (app) {
                 await Promise.all(createPromises);
                 const voteOptionsCreated = await VoteOption
                     .bulkCreate(
-                        createPromises,
+                        voteOptions,
                         {
                             fields: ['id', 'voteId', 'value'], // Deny updating other fields like "updatedAt", "createdAt"...
                             returning: true,
@@ -6821,23 +6826,6 @@ module.exports = function (app) {
                         t
                     );
             }
-            if (updatePromises.length) {
-                const voteOptionsUpdated = await Promise.all(updatePromises);
-
-                await cosActivities
-                    .updateActivity(
-                        voteOptionsUpdated,
-                        null,
-                        {
-                            type: 'User',
-                            id: req.user.userId,
-                            ip: req.ip
-                        },
-                        req.method + ' ' + req.path,
-                        t
-                    );
-            }
-
 
             await vote.save({
                 transaction: t
