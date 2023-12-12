@@ -2264,6 +2264,31 @@ module.exports = function (app) {
             where += ` AND t.title ILIKE :title `;
         }
 
+        const orderBy = req.query.orderBy;
+        let order = (req.query.order?.toLowerCase() === 'desc') ? 'DESC' : 'ASC';
+        let orderSql = ` ORDER BY `;
+        //  ORDER BY "favourite" DESC, "order" ASC, t."updatedAt" DESC
+        if (orderBy) {
+            switch (orderBy) {
+                case 'activity_time':
+                    orderSql += ` ta.latest  ${order} `;
+                    break;
+                case 'activity_count':
+                    orderSql += ` ta.count  ${order} `;
+                    break;
+                case 'members_count':
+                    orderSql += ` muc.count ${order} `;
+                    break;
+                case 'created':
+                    orderSql += ` t."createdAt" ${order} `;
+                    break;
+                default:
+                    orderSql += ` "order" ASC, t."updatedAt" DESC `;
+            }
+        } else {
+            orderSql += ` "order" ASC, t."updatedAt" DESC `;
+        }
+
         // TODO: NOT THE MOST EFFICIENT QUERY IN THE WORLD, tune it when time.
         // TODO: That casting to "enum_TopicMemberUsers_level". Sequelize does not support naming enums, through inheritance I have 2 enums that are the same but with different name thus different type in PG. Feature request - https://github.com/sequelize/sequelize/issues/2577
         const query = `
@@ -2412,11 +2437,19 @@ module.exports = function (app) {
                                 ) AS tcc
                             GROUP BY tcc."topicId"
                     ) AS com ON (com."topicId" = t.id)
+                    LEFT JOIN (
+                        SELECT
+                            unnest("topicIds") as "topicId",
+                            COUNT("topicIds") as count,
+                            MAX("updatedAt") AS latest
+                            FROM "Activities"
+                        GROUP BY "topicIds"
+                    ) AS ta ON ta."topicId" = t.id::text
                     LEFT JOIN "TopicFavourites" tf ON (tf."topicId" = t.id AND tf."userId" = :userId)
                     LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                     ${join}
                 WHERE ${where}
-                ORDER BY "favourite" DESC, "order" ASC, t."updatedAt" DESC
+                ${orderSql}
                 OFFSET :offset LIMIT :limit
             ;`;
 
