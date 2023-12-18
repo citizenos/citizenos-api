@@ -178,7 +178,7 @@ module.exports = function (app) {
         await fsExtra
             .mkdirsAsync(destinationDir, FILE_CREATE_MODE);
         const filePath = destinationDir + '/' + TOPIC_FILE.name;
-        const doc = new CosHtmlToDocx(topic.description, topic.title, filePath);
+        const doc = new CosHtmlToDocx(topic.description, topic.title, topic.intro, filePath);
 
         const docxBuffer = await doc.processHTML();
 

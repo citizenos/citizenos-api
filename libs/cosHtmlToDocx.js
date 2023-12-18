@@ -15,7 +15,7 @@ const https = require('https');
 const path = require('path');
 const sizeOf = require('image-size');
 const mime = require('mime-types');
-const {AlignmentType, Document, HeadingLevel, Packer, Paragraph, TextRun, ImageRun, ExternalHyperlink, LevelFormat} = docx;
+const { AlignmentType, Document, HeadingLevel, Packer, Paragraph, TextRun, ImageRun, ExternalHyperlink, LevelFormat } = docx;
 
 const _addStyles = function (params) {
     params.styles = {
@@ -167,14 +167,14 @@ const getImageFile = async function (url, dirpath) {
     const fileDirPath = getFilesPath(dirpath);
 
     return new Promise(function (resolve, reject) {
-        return fsExtra.ensureDir(fileDirPath, {mode: '0760'}, function () {
+        return fsExtra.ensureDir(fileDirPath, { mode: '0760' }, function () {
             const filename = getFileNameFromPath(url);
             const filepath = path.join(fileDirPath, filename);
             try {
                 if (validateFilename(filename)) {
                     if (url.indexOf('data') === 0) {
                         const imageData = url.split(';base64,').pop();
-                        fs.writeFile(filepath, imageData, {encoding: 'base64'}, function (err) {
+                        fs.writeFile(filepath, imageData, { encoding: 'base64' }, function (err) {
                             if (err) {
                                 console.log(err);
                                 fs.unlink(filepath, function () {
@@ -243,13 +243,21 @@ const findItemByClass = function (item, className) {
  * @param {string} resPath Path where to save the docx
  * @returns {object} Html to docx object
  */
-function CosHtmlToDocx (html, title, resPath) {
+function CosHtmlToDocx(html, title, intro, resPath) {
     this.html = html;
     this.path = resPath;
     const finalParagraphs = [
         new Paragraph({
             text: title,
             heading: HeadingLevel.HEADING_1
+        }),
+        new Paragraph({
+            children: [
+                new TextRun({
+                    text: intro,
+                    bold: true
+                })
+            ]
         })
     ];
     let params = {
@@ -418,7 +426,7 @@ function CosHtmlToDocx (html, title, resPath) {
         } else if (_isIndentListElement(element)) {
             depth = _getItemDepth(element, null, true);
             if (!attribs.bullet)
-                attribs.indent = {level: depth};
+                attribs.indent = { level: depth };
         }
     }
 
@@ -654,7 +662,7 @@ function CosHtmlToDocx (html, title, resPath) {
                     return reject(err);
                 }
                 await _handleParserResult(result);
-                params.sections = [{children: finalParagraphs}];
+                params.sections = [{ children: finalParagraphs }];
 
                 const finalDoc = new Document(params);
                 const b64string = await Packer.toBase64String(finalDoc);

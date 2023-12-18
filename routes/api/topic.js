@@ -1744,7 +1744,7 @@ module.exports = function (app) {
 
             const filePath = `${destinationDir} / ${topicId}.docx`;
 
-            const doc = new CosHtmlToDocx(topic.description, topic.title, filePath);
+            const doc = new CosHtmlToDocx(topic.description, topic.title, topic.intro, filePath);
 
             const docxBuffer = await doc.processHTML();
             var readStream = new stream.PassThrough();
@@ -6798,7 +6798,7 @@ module.exports = function (app) {
 
 
             const createPromises = [];
-            if (voteOptions && voteOptions.length) {
+            if (voteOptions && voteOptions.length && topic.status === Topic.STATUSES.draft) {
                 try {
 
                     await VoteOption.destroy({
