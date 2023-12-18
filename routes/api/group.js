@@ -2116,6 +2116,7 @@ module.exports = function (app) {
                         t.title,
                         t.visibility,
                         t.status,
+                        t."imageUrl",
                         t.categories,
                         t.country,
                         t.language,

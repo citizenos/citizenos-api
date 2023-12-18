@@ -6833,7 +6833,6 @@ module.exports = function (app) {
                     const vopt = VoteOption.build(o);
                     createPromises.push(vopt.validate());
                 });
-
             }
             if (createPromises.length) {
                 await Promise.all(createPromises);

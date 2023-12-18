@@ -71,6 +71,7 @@
     "prerender-node": "3.7.0",
     "rate-limit-redis": "2.1.0",
     "rate-limiter-flexible": "2.4.1",
+    "rss-parser": "^3.13.0",
     "sanitize-filename": "1.6.3",
     "sequelize": "6.33.0",
     "sequelize-cli": "6.6.1",

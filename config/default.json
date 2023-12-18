@@ -298,5 +298,8 @@
     "allowedMimeTypes": [
       "application\/vnd\\.etsi\\.asic-e\\+zip"
     ]
+  },
+  "news": {
+    "url": "https://citizenos.com/feed/atom/?post_type=news"
   }
 }
