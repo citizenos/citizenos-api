@@ -3001,7 +3001,11 @@ module.exports = function (app) {
     /**
      * Get all member Users of the Topic
      */
-    app.get('/api/users/:userId/topics/:topicId/members/users', loginCheck(['partner']), isModerator(), hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
+
+    /**
+     * Get all member Users of the Topic
+     */
+    const _topicMemberUsers = async (req, res, next) => {
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
@@ -3037,11 +3041,15 @@ module.exports = function (app) {
         }
 
         let dataForModeratorAndAdmin = '';
-        if ((req.user && req.user.moderator) || req.locals.topic.permissions.level === TopicMemberUser.LEVELS.admin) {
+        let joinForAdmin = '';
+        let groupForAdmin = '';
+        if ((req.user && req.user.moderator) || req.locals?.topic.permissions.level === TopicMemberUser.LEVELS.admin) {
             dataForModeratorAndAdmin = `
             tm.email,
             uc."connectionData"::jsonb->>'phoneNumber' AS "phoneNumber",
             `;
+            joinForAdmin = ` LEFT JOIN "UserConnections" uc ON (uc."userId" = tm.id AND uc."connectionId" = 'esteid') `;
+            groupForAdmin = `, uc."connectionData"::jsonb `;
         }
 
         try {
@@ -3103,10 +3111,9 @@ module.exports = function (app) {
                     WHERE gm."deletedAt" IS NULL
                     AND tmg."deletedAt" IS NULL
                 ) tmg ON tmg."topicId" = :topicId AND (tmg."userId" = tm.id)
-                LEFT JOIN "GroupMemberUsers" gmu ON (gmu."groupId" = tmg."groupId" AND gmu."userId" = :userId)
-                LEFT JOIN "UserConnections" uc ON (uc."userId" = tm.id AND uc."connectionId" = 'esteid')
+                ${joinForAdmin}
                 ${where}
-                GROUP BY tm.id, tm.level, tmu.level, tm.name, tm.company, tm."imageUrl", tm.email, uc."connectionData"::jsonb
+                GROUP BY tm.id, tm.level, tmu.level, tm.name, tm.company, tm."imageUrl", tm.email ${groupForAdmin}
                 ${sortSql}
                 LIMIT :limit
                 OFFSET :offset
@@ -3114,7 +3121,7 @@ module.exports = function (app) {
                     {
                         replacements: {
                             topicId: req.params.topicId,
-                            userId: req.user.userId,
+                            userId: req.user?.userId,
                             search: '%' + search + '%',
                             limit,
                             offset
@@ -3149,6 +3156,22 @@ module.exports = function (app) {
         } catch (err) {
             return next(err);
         }
+    }
+    app.get('/api/topics/:topicId/members/users', async function (req, res, next) {
+        const topic = await Topic.findOne({
+            where: {
+                id: req.params.topicId,
+                visibility: Topic.VISIBILITY.public
+            }
+        })
+        if (topic) {
+            return _topicMemberUsers(req, res, next);
+        }
+        return res.notFound();
+    });
+
+    app.get('/api/users/:userId/topics/:topicId/members/users', loginCheck(['partner']), isModerator(), hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
+        return _topicMemberUsers(req, res, next);
     });
 
     /**
