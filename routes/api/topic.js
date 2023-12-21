@@ -2321,6 +2321,7 @@ module.exports = function (app) {
                      t."sourcePartnerObjectId",
                      t."endsAt",
                      t."createdAt",
+                     t."updatedAt",
                      c.id as "creator.id",
                      c.name as "creator.name",
                      c.company as "creator.company",
@@ -2329,6 +2330,7 @@ module.exports = function (app) {
                      COALESCE(mgc.count, 0) as "members.groups.count",
                      tv."voteId" as "voteId",
                      tv."voteId" as "vote.id",
+                     COALESCE(MAX(a."updatedAt"), t."updatedAt") as "lastActivity",
                      CASE WHEN t.status = 'voting' THEN 1
                         WHEN t.status = 'inProgress' THEN 2
                         WHEN t.status = 'followUp' THEN 3
@@ -2445,10 +2447,13 @@ module.exports = function (app) {
                             FROM "Activities"
                         GROUP BY "topicIds"
                     ) AS ta ON ta."topicId" = t.id::text
+                    LEFT JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds"
                     LEFT JOIN "TopicFavourites" tf ON (tf."topicId" = t.id AND tf."userId" = :userId)
                     LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                     ${join}
                 WHERE ${where}
+                GROUP BY t.id, tr.id, tr."moderatedReasonType", tr."moderatedReasonText", tj."token", tj.level, c.id, muc.count, mgc.count, tv."voteId", tc.count, com."createdAt", tmup.level, tmgp.level, tf."topicId"
+
                 ${orderSql}
                 OFFSET :offset LIMIT :limit
             ;`;
@@ -2677,6 +2682,7 @@ module.exports = function (app) {
                         t.intro,
                         t."imageUrl",
                         t."createdAt",
+                        t."updatedAt",
                         t."sourcePartnerId",
                         t."sourcePartnerObjectId",
                         c.id as "creator.id",
