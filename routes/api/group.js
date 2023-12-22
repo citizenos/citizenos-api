@@ -2282,6 +2282,7 @@ module.exports = function (app) {
         let memberJoin = '';
         let memberLevel = '';
         if (userId) {
+
             memberLevel = ` gmu.level AS "userLevel",
             CASE
             WHEN gf."groupId" = g.id THEN true
@@ -2289,6 +2290,9 @@ module.exports = function (app) {
             END as "favourite", `;
             memberJoin = ` LEFT JOIN "GroupMemberUsers" gmu ON gmu."groupId" = g.id AND gmu."userId" = :userId
             LEFT JOIN "GroupFavourites" gf ON (gf."groupId" = g.id AND gf."userId" = :userId) `
+            const favourite = req.query.favourite;
+            if(favourite)
+                where += ` AND gf."groupId" = g.id AND gf."userId" = :userId `;
         }
         if (country) {
             where += ` AND g.country=:country `;
