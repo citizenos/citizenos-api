@@ -3016,15 +3016,14 @@ module.exports = function (app) {
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
         const search = req.query.search;
-        const order = req.query.order;
-        let sortOrder = req.query.sortOrder || 'ASC';
+        const order = req.query.orderBy;
+        let sortOrder = req.query.order || 'ASC';
 
-        if (sortOrder && ['asc', 'desc'].indexOf(sortOrder.toLowerCase()) === -1) {
+        if (sortOrder && ['asc', 'desc'].indexOf(sortOrder.trim().toLowerCase()) === -1) {
             sortOrder = 'ASC';
         }
 
         let sortSql = ` ORDER BY `;
-
 
         if (order) {
             switch (order) {
