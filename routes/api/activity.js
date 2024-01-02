@@ -359,6 +359,13 @@ module.exports = function (app) {
                         });
                         object.groupName = group.name;
                     }
+
+                    if (object && object.userId) {
+                        const user = returnActivity.users.find(function (el) {
+                            return el.id === object.userId;
+                        });
+                        object.userName = user.name;
+                    }
                 } else if (activity.data.object && activity.data.object.object) {
                     if (activity.data.object.object['@type'] === 'Topic') {
                         delete returnActivity.data.object.object.creator;
