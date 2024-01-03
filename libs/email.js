@@ -1573,11 +1573,16 @@ module.exports = function (app) {
     }
     const _sendTopicNotification = async (notification, users) => {
         const promisesToResolve = [];
+        let isVisible = true;
         let linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: notification.topicIds[0] });
         const linkGeneralNotificationSettings = `${urlLib.getFe('/myaccount')}?tab=notifications`;
         const linkTopicNotificationSettings = `${linkViewTopic}?notificationSettings`;
         if (['Comment', 'CommentVote'].indexOf(notification.data.object['@type']) > -1) {
             linkViewTopic += `?commentId=${notification.data.object.commentId || notification.data.object.id}`;
+        }
+
+        if (notification.data.type === 'Delete' && notification.data.object['@type'] === 'Topic') {
+            isVisible = false;
         }
         users.forEach((user) => {
             const template = resolveTemplate('topicNotification', user.language || 'en');
@@ -1603,6 +1608,7 @@ module.exports = function (app) {
                     toUser: user,
                     userName: user.name,
                     linkViewTopic,
+                    isVisible: isVisible,
                     linkTopicNotificationSettings,
                     linkGeneralNotificationSettings,
                     notificationText,
