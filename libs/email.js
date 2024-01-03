@@ -12,7 +12,6 @@ module.exports = function (app) {
     const urlLib = app.get('urlLib');
     const _ = app.get('lodash');
     const config = app.get('config');
-    const util = app.get('util');
     const fs = app.get('fs');
     const path = require('path');
     const moment = app.get('moment');
@@ -503,7 +502,7 @@ module.exports = function (app) {
             // Handle Partner links
             // TODO: could use Mu here...
             const subject = template.translations.INVITE_TOPIC.SUBJECT
-                .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
+                .replace('{{fromUser.name}}', fromUser.name)
                 .replace('{{topicTitle}}', topic.title ? topic.title : topic.id);
             const invite = invites.find((i) => { return i.userId === toUser.id });
             const linkViewInvite = urlLib.getFe('/topics/:topicId/invites/users/:inviteId', { // FIXME: Do we want to go through /api/invite/view?
@@ -616,7 +615,7 @@ module.exports = function (app) {
                     const template = resolveTemplate('inviteTopic', user.language);
                     // TODO: Could use Mu here....
                     const subject = template.translations.INVITE_TOPIC.SUBJECT
-                        .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name));
+                        .replace('{{fromUser.name}}', fromUser.name);
 
                     const linkViewTopic = urlLib.getApi('/api/invite/view', null, {
                         email: user.email,
@@ -733,7 +732,7 @@ module.exports = function (app) {
             const template = resolveTemplate(templateName, toUser.language);
             // TODO: could use Mu here...
             const subject = template.translations.INVITE_GROUP.SUBJECT
-                .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
+                .replace('{{fromUser.name}}', fromUser.name)
                 .replace('{{group.name}}', group.name);
             const invite = invites.find((i) => { return i.userId === toUser.id });
             const linkViewInvite = urlLib.getFe('/groups/:groupId/invites/users/:inviteId', {
@@ -834,8 +833,8 @@ module.exports = function (app) {
 
                     // TODO: could use Mu here...
                     const subject = template.translations.INVITE_GROUP.SUBJECT
-                        .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
-                        .replace('{{group.name}}', util.escapeHtml(group.name));
+                        .replace('{{fromUser.name}}', fromUser.name)
+                        .replace('{{group.name}}',group.name);
 
                     const emailOptions = Object.assign(
                         _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
@@ -1469,7 +1468,7 @@ module.exports = function (app) {
 
         const from = config.features.sendToParliament.from;
         const to = config.features.sendToParliament.to;
-        const subject = template.translations.TO_PARLIAMENT.SUBJECT.replace('{{topic.title}}', util.escapeHtml(topic.title));
+        const subject = template.translations.TO_PARLIAMENT.SUBJECT.replace('{{topic.title}}', topic.title);
         const linkViewTopic = linkToApplication + '/initiatives/:topicId'.replace(':topicId', topic.id);
         //const logoFile = templateRoot + '/images/logo-email_rahvaalgatus.ee.png';
 
