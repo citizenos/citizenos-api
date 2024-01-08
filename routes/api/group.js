@@ -2369,7 +2369,9 @@ module.exports = function (app) {
                         LEFT JOIN "Topics" t ON (t.id = tmg."topicId")
                     WHERE tmg."deletedAt" IS NULL
                     AND t.visibility = 'public'
-                    ORDER BY t."updatedAt" ASC
+                    AND t.title IS NOT NULL
+                    ORDER BY t."updatedAt" DESC
+                    LIMIT 1
                 ) AS gt ON (gt."groupId" = g.id)
                 ${memberJoin}
                 WHERE ${where}
