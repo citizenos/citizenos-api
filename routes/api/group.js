@@ -511,6 +511,8 @@ module.exports = function (app) {
         const search = req.query.search;
         const favourite = req.query.favourite;
 
+        const country = req.query.country;
+        const language = req.query.language;
         let joinText = '';
         let returnFields = '';
         if (include && !Array.isArray(include)) {
@@ -530,6 +532,14 @@ module.exports = function (app) {
         const orderBy = req.query.orderBy || 'updatedAt';
         const order = (req.query.order && req.query.order.toLowerCase() === 'asc') ? 'ASC' : 'DESC';
         let orderBySql = ` ORDER BY`;
+
+        if (country) {
+            where += ` AND g.country ILIKE :country `;
+        }
+
+        if (language) {
+            where += ` AND g.language ILIKE :language `;
+        }
 
         switch (orderBy) {
             case 'name':
@@ -711,6 +721,8 @@ module.exports = function (app) {
                 `,
                 {
                     replacements: {
+                        country: country,
+                        language: language,
                         userId: req.user.userId,
                         visibility: visibility,
                         offset: offset,
@@ -2297,11 +2309,11 @@ module.exports = function (app) {
                 where += ` AND gf."groupId" = g.id AND gf."userId" = :userId `;
         }
         if (country) {
-            where += ` AND g.country=:country `;
+            where += ` AND g.country ILIKE :country `;
         }
 
         if (language) {
-            where += ` AND g.language=:language `;
+            where += ` AND g.language ILIKE :language `;
         }
         const groups = await db
             .query(`

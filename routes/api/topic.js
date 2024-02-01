@@ -2151,6 +2151,7 @@ module.exports = function (app) {
             include = [include];
         }
 
+        let groupBy = '';
         if (include.indexOf('vote') > -1) {
             returncolumns += `
             , (
@@ -2224,11 +2225,11 @@ module.exports = function (app) {
         }
 
         if (country) {
-            where += ` AND t.country=:country `;
+            where += ` AND t.country ILIKE :country `;
         }
 
         if (language) {
-            where += ` AND t.language=:language `;
+            where += ` AND t.language ILIKE :language `;
         }
 
         if (['true', '1'].includes(hasVoted)) {
@@ -2272,9 +2273,11 @@ module.exports = function (app) {
             switch (orderBy) {
                 case 'activity_time':
                     orderSql += ` ta.latest  ${order} `;
+                    groupBy += `, ta.latest`;
                     break;
                 case 'activity_count':
                     orderSql += ` ta.count  ${order} `;
+                    groupBy += `, ta.count`;
                     break;
                 case 'members_count':
                     orderSql += ` muc.count ${order} `;
@@ -2453,7 +2456,7 @@ module.exports = function (app) {
                     ${join}
                 WHERE ${where}
                 GROUP BY t.id, tr.id, tr."moderatedReasonType", tr."moderatedReasonText", tj."token", tj.level, c.id, muc.count, mgc.count, tv."voteId", tc.count, com."createdAt", tmup.level, tmgp.level, tf."topicId"
-
+                ${groupBy}
                 ${orderSql}
                 OFFSET :offset LIMIT :limit
             ;`;
@@ -2643,11 +2646,11 @@ module.exports = function (app) {
             }
 
             if (country) {
-                where += ` AND t.country=:country `;
+                where += ` AND t.country ILIKE :country `;
             }
 
             if (language) {
-                where += ` AND t.language=:language `;
+                where += ` AND t.language ILIKE :language `;
             }
 
             let sourcePartnerId = req.query.sourcePartnerId;
