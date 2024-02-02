@@ -2005,16 +2005,18 @@ module.exports = function (app) {
         const favourite = req.query.favourite;
         const hasVoted = req.query.hasVoted; // Filter out Topics where User has participated in the voting process.
         const showModerated = req.query.showModerated || false;
-        const order = req.query.order;
-        let sortOrder = req.query.sortOrder || 'ASC';
+        const orderBy = req.query.orderBy;
+        let sortOrder = req.query.order || 'ASC';
         if (sortOrder && ['asc', 'desc'].indexOf(sortOrder.toLowerCase()) === -1) {
             sortOrder = 'ASC';
         }
 
         let sortSql = ` ORDER BY `;
 
-        if (order) {
-            switch (order) {
+        let groupBy = ``;
+
+        if (orderBy) {
+            switch (orderBy) {
                 case 'title':
                     sortSql += ` t.title ${sortOrder}`;
                     break;
@@ -2027,8 +2029,22 @@ module.exports = function (app) {
                 case 'lastActivity':
                     sortSql += ` "lastActivity" ${sortOrder}`;
                     break;
+                case 'activityTime':
+                    sortSql += ` ta.latest  ${sortOrder} `;
+                    groupBy += `ta.latest,`;
+                    break;
+                case 'activityCount':
+                    sortSql += ` ta.count  ${sortOrder} `;
+                    groupBy += `ta.count,`;
+                    break;
+                case 'membersCount':
+                    sortSql += ` muc.count ${sortOrder} `;
+                    break;
+                case 'created':
+                    sortSql += ` t."createdAt" ${sortOrder} `;
+                    break;
                 default:
-                    sortSql = '';
+                    sortSql += ` "order" ASC, t."updatedAt" DESC `;
             }
         } else {
             if (userId) {
@@ -2080,7 +2096,6 @@ module.exports = function (app) {
         };
         let userSql = ``;
         let fields = ``;
-        let groupBy = ``;
         if (userId) {
             if (favourite) {
                 where += ` AND tf."topicId" = t.id AND tf."userId" = :userId `;
@@ -2137,6 +2152,11 @@ module.exports = function (app) {
                         ${fields}
                         t.hashtag,
                         t."updatedAt",
+                        CASE WHEN t.status = 'voting' THEN 1
+                            WHEN t.status = 'inProgress' THEN 2
+                            WHEN t.status = 'followUp' THEN 3
+                        ELSE 4
+                        END AS "order",
                         t."createdAt",
                         COALESCE(MAX(a."updatedAt"), t."updatedAt") as "lastActivity",
                         u.id as "creator.id",
@@ -2198,6 +2218,14 @@ module.exports = function (app) {
                             LEFT JOIN "Votes" v
                                     ON v.id = tv."voteId"
                         ) AS tv ON (tv."topicId" = t.id)
+                        LEFT JOIN (
+                            SELECT
+                                unnest("topicIds") as "topicId",
+                                COUNT("topicIds") as count,
+                                MAX("updatedAt") AS latest
+                                FROM "Activities"
+                            GROUP BY "topicIds"
+                        ) AS ta ON ta."topicId" = t.id::text
                         LEFT JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds"
                     WHERE gt."groupId" = :groupId
                         AND gt."deletedAt" IS NULL
@@ -2305,7 +2333,7 @@ module.exports = function (app) {
             memberJoin = ` LEFT JOIN "GroupMemberUsers" gmu ON gmu."groupId" = g.id AND gmu."userId" = :userId
             LEFT JOIN "GroupFavourites" gf ON (gf."groupId" = g.id AND gf."userId" = :userId) `
             const favourite = req.query.favourite;
-            if(favourite)
+            if (favourite)
                 where += ` AND gf."groupId" = g.id AND gf."userId" = :userId `;
         }
         if (country) {

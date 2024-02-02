@@ -2271,15 +2271,15 @@ module.exports = function (app) {
         //  ORDER BY "favourite" DESC, "order" ASC, t."updatedAt" DESC
         if (orderBy) {
             switch (orderBy) {
-                case 'activity_time':
+                case 'activityTime':
                     orderSql += ` ta.latest  ${order} `;
                     groupBy += `, ta.latest`;
                     break;
-                case 'activity_count':
+                case 'activityCount':
                     orderSql += ` ta.count  ${order} `;
                     groupBy += `, ta.count`;
                     break;
-                case 'members_count':
+                case 'membersCount':
                     orderSql += ` muc.count ${order} `;
                     break;
                 case 'created':
