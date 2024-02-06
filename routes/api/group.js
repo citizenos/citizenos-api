@@ -239,6 +239,8 @@ module.exports = function (app) {
                  g.language,
                  g.contact,
                  g."imageUrl",
+                 g."createdAt",
+                 g."updatedAt",
                  c.id as "creator.id",
                  c.email as "creator.email",
                  c.name as "creator.name",
@@ -295,6 +297,8 @@ module.exports = function (app) {
                      g.contact,
                      g.visibility,
                      g."imageUrl",
+                     g."createdAt",
+                     g."updatedAt",
                      CASE
                     WHEN gf."groupId" = g.id THEN true
                         ELSE false
@@ -684,16 +688,26 @@ module.exports = function (app) {
                         GROUP BY tmg."groupId"
                     ) AS gtc ON (gtc."groupId" = g.id)
                     LEFT JOIN (
-                        SELECT
-                            tmg."groupId",
+                        SELECT tmg."groupId",
                             tmg."topicId",
-                            t.title
-                        FROM "TopicMemberGroups" tmg
-                        JOIN "Topics" t ON (t.id = tmg."topicId")
-                        WHERE tmg."deletedAt" IS NULL
-                        AND t.title IS NOT NULL
-                        ORDER BY t."updatedAt" DESC
-                        LIMIT 1
+                            t.title,
+                            t."updatedAt"
+                            FROM "TopicMemberGroups" tmg
+                            JOIN "Topics" t ON (t.id = tmg."topicId")
+                            JOIN (
+                            SELECT g.id, MAX(tmg."updatedAt") as "updatedAt" FROM "Groups" g JOIN (
+                                SELECT
+                                    tmg."groupId",
+                                    tmg."topicId",
+                                    t.title,
+                                    t."updatedAt"
+                                FROM "TopicMemberGroups" tmg
+                                JOIN "Topics" t ON (t.id = tmg."topicId")
+                                WHERE tmg."deletedAt" IS NULL
+                                    AND t.title IS NOT NULL
+                                ORDER BY t."updatedAt" DESC
+                            ) as tmg ON g.id=tmg."groupId" GROUP BY g.id
+                        ) tmgtm ON tmgtm."updatedAt" = t."updatedAt" GROUP BY "groupId", "topicId", t.title, t."updatedAt"
                     ) AS gt ON (gt."groupId" = g.id)
                     LEFT JOIN (
                         SELECT
@@ -741,7 +755,6 @@ module.exports = function (app) {
             rows: []
         };
         const memberGroupIds = [];
-
         rows.forEach(function (groupRow) {
             results.countTotal = groupRow.countTotal;
             delete groupRow.countTotal;
@@ -2403,17 +2416,26 @@ module.exports = function (app) {
                     GROUP BY tmg."groupId"
                 ) AS gtc ON (gtc."groupId" = g.id)
                 LEFT JOIN (
-                    SELECT
-                        tmg."groupId",
+                    SELECT tmg."groupId",
                         tmg."topicId",
-                        t.title
-                    FROM "TopicMemberGroups" tmg
-                        LEFT JOIN "Topics" t ON (t.id = tmg."topicId")
-                    WHERE tmg."deletedAt" IS NULL
-                    AND t.visibility = 'public'
-                    AND t.title IS NOT NULL
-                    ORDER BY t."updatedAt" DESC
-                    LIMIT 1
+                        t.title,
+                        t."updatedAt"
+                        FROM "TopicMemberGroups" tmg
+                        JOIN "Topics" t ON (t.id = tmg."topicId")
+                        JOIN (
+                        SELECT g.id, MAX(tmg."updatedAt") as "updatedAt" FROM "Groups" g JOIN (
+                            SELECT
+                                tmg."groupId",
+                                tmg."topicId",
+                                t.title,
+                                t."updatedAt"
+                            FROM "TopicMemberGroups" tmg
+                            JOIN "Topics" t ON (t.id = tmg."topicId")
+                            WHERE tmg."deletedAt" IS NULL
+                                AND t.title IS NOT NULL
+                            ORDER BY t."updatedAt" DESC
+                        ) as tmg ON g.id=tmg."groupId" GROUP BY g.id
+                    ) tmgtm ON tmgtm."updatedAt" = t."updatedAt" GROUP BY "groupId", "topicId", t.title, t."updatedAt"
                 ) AS gt ON (gt."groupId" = g.id)
                 ${memberJoin}
                 WHERE ${where}

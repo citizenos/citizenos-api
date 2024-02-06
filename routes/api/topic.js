@@ -3235,6 +3235,8 @@ module.exports = function (app) {
                         SELECT
                             g.id,
                             g.name,
+                            g."createdAt",
+                            g."updatedAt",
                             tmg.level,
                             ${userLevelField}
                             g.visibility,
@@ -3342,6 +3344,8 @@ module.exports = function (app) {
                                 WHEN gmu.level IS NOT NULL THEN g.name
                                 ELSE NULL
                             END as "name",
+                            g."createdAt",
+                            g."updatedAt",
                             tmg.level,
                             gmu.level as "permission.level",
                             g.visibility,
