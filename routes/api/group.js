@@ -665,7 +665,7 @@ module.exports = function (app) {
                     gj.level as "join.level",
                     gmu.level as "permission.level",
                     mc.count as "members.users.count",
-                    COALESCE(gtc.count, 0) as "members.topics.count",
+                    gtc.count as "members.topics.count",
                     gt."topicId" as "members.topics.latest.id",
                     count(*) OVER()::integer AS "countTotal",
                     ${returnFields}
@@ -680,12 +680,37 @@ module.exports = function (app) {
                         GROUP BY "groupId"
                     ) AS mc ON (mc."groupId" = g.id)
                     LEFT JOIN (
-                        SELECT
-                            tmg."groupId",
-                            count(tmg."topicId") AS "count"
-                        FROM "TopicMemberGroups" tmg
-                        WHERE tmg."deletedAt" IS NULL
-                        GROUP BY tmg."groupId"
+                        SELECT tmgtc."groupId", tmgtc.count::jsonb || tmc.count::jsonb as count
+                        FROM (
+                            SELECT
+                                "groupId",
+                                jsonb_object_agg('total', total) as count
+                            FROM (
+                                SELECT
+                                    tmg."groupId",
+                                    COUNT(tmg."groupId") AS total
+                                FROM "TopicMemberGroups" tmg
+                                GROUP BY tmg."groupId"
+                            ) as tmgtc
+                            GROUP BY "groupId"
+                        ) as tmgtc
+                        LEFT JOIN (
+                            SELECT
+                                tmc."groupId",
+                                jsonb_object_agg(tmc.status, tmc.count) as count
+                            FROM
+                            (
+                                SELECT
+                                    tmg."groupId",
+                                    t."status",
+                                    count(tmg."topicId") AS "count"
+                                FROM "TopicMemberGroups" tmg
+                                JOIN "Topics" t ON t.id = tmg."topicId"
+                                WHERE tmg."deletedAt" IS NULL
+                                GROUP BY tmg."groupId", t.status
+                            ) as tmc
+                            GROUP BY "groupId"
+                        ) tmc ON tmgtc."groupId" = tmc."groupId"
                     ) AS gtc ON (gtc."groupId" = g.id)
                     LEFT JOIN (
                         SELECT tmg."groupId",
@@ -2377,7 +2402,7 @@ module.exports = function (app) {
                     c.name as "creator.name",
                     c.company as "creator.company",
                     mc.count as "members.users.count",
-                    COALESCE(gtc.count, 0) as "members.topics.count",
+                    gtc.count as "members.topics.count",
                     gt."topicId" as "members.topics.latest.id",
                     gt.title as "members.topics.latest.title",
                     count(*) OVER()::integer AS "countTotal"
@@ -2408,12 +2433,37 @@ module.exports = function (app) {
                     GROUP BY "groupId"
                 ) AS mc ON (mc."groupId" = g.id)
                 LEFT JOIN (
-                    SELECT
-                        tmg."groupId",
-                        count(tmg."topicId") AS "count"
-                    FROM "TopicMemberGroups" tmg
-                    WHERE tmg."deletedAt" IS NULL
-                    GROUP BY tmg."groupId"
+                    SELECT tmgtc."groupId", tmgtc.count::jsonb || tmc.count::jsonb as count
+                    FROM (
+                        SELECT
+                            "groupId",
+                            jsonb_object_agg('total', total) as count
+                        FROM (
+                            SELECT
+                                tmg."groupId",
+                                COUNT(tmg."groupId") AS total
+                            FROM "TopicMemberGroups" tmg
+                            GROUP BY tmg."groupId"
+                        ) as tmgtc
+                        GROUP BY "groupId"
+                    ) as tmgtc
+                    LEFT JOIN (
+                        SELECT
+                            tmc."groupId",
+                            jsonb_object_agg(tmc.status, tmc.count) as count
+                        FROM
+                        (
+                            SELECT
+                                tmg."groupId",
+                                t."status",
+                                count(tmg."topicId") AS "count"
+                            FROM "TopicMemberGroups" tmg
+                            JOIN "Topics" t ON t.id = tmg."topicId"
+                            WHERE tmg."deletedAt" IS NULL
+                            GROUP BY tmg."groupId", t.status
+                        ) as tmc
+                        GROUP BY "groupId"
+                    ) tmc ON tmgtc."groupId" = tmc."groupId"
                 ) AS gtc ON (gtc."groupId" = g.id)
                 LEFT JOIN (
                     SELECT tmg."groupId",
