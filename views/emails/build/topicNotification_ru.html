@@ -21,6 +21,7 @@
                 {{{notificationText}}}
             </td>
         </tr>
+        {{#isVisible}}
         <tr>
             <td style="padding-bottom: 32px;">
                 <p class="submit_button">
@@ -29,6 +30,7 @@
                 </p>
             </td>
         </tr>
+        {{/isVisible}}
         <tr>
             <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size:14px;">
                 Обратите внимание: для доступа к этой теме необходимо войти в систему, используя тот же адрес эл. почты ({{toUser.email}}).
