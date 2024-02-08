@@ -1703,6 +1703,7 @@ module.exports = function (app) {
                 daysLeft = moment(vote.endsAt).diff(moment(), 'days'),
                     voteEndsAt = moment(vote.endsAt).format('YYYY-MM-dd HH:mm')
             }
+            // votesCountRequired - add when vote settings support required vote count
             const emailOptions = {
                 // from: from, - comes from emailClient.js configuration
                 subject: subject,
@@ -1710,7 +1711,6 @@ module.exports = function (app) {
                 images: images,
                 toUser: toUser,
                 voteCount: (vote.votersCount || 0),
-                votesCountRequired: (topic.members.users.count || 0),
                 topic: topic,
                 daysLeft: daysLeft,
                 voteEndsAt: voteEndsAt,
