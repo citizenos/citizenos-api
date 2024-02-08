@@ -114,6 +114,16 @@
             text-align: center;
         }
 
+        .platform_button {
+            font-size: 14px;
+            line-height: 16px;
+            border-radius: 16px;
+            padding: 10px;
+            background-color: #EBF4FB;
+            color: #1168A8;
+            text-align: center;
+        }
+
         .info_heading {
             width: 100%;
             font-size: 13px;
@@ -243,41 +253,43 @@
                     <table id="footer" style="width: 600px;text-align: center;">
                         <tbody>
                             <tr style="width: 600px;">
-                                <td style="display: inline-block;margin-left: 12px; margin-right: 12px;">
-                                    <a href="https://twitter.com/Citizen_OS" target="_blank">
-                                        <img src="cid:Twitter.png" />
-                                    </a>
+                                <td>
+                                    <a class="platform_button" href="{{linkedData.footerLinks.linkToPlatform}}"
+                                        target="_blank"
+                                        style="text-decoration: none; font-weight: 600;">{{{linkedData.translations.LAYOUT.VISIT_OUR_WEBSITE}}}</a>
+
                                 </td>
-                                <td style="display: inline-block;margin-left: 12px; margin-right: 12px;">
-                                    <a href="https://www.linkedin.com/company/citizenos" target="_blank">
-                                        <img src="cid:LinkedIn.png" />
-                                    </a>
-                                </td>
-                                <td style="display: inline-block;margin-left: 12px; margin-right: 12px;">
+                            </tr>
+                            <tr style="width: 600px;">
+                                <td style="display: inline-block;margin-left: 8px; margin-right: 8px;">
                                     <a href="https://www.facebook.com/citizenos.web" target="_blank">
                                         <img src="cid:Facebook.png" />
                                     </a>
                                 </td>
-                                <td style="display: inline-block;margin-left: 12px; margin-right: 12px;">
+                                <td style="display: inline-block;margin-left: 8px; margin-right: 8px;">
                                     <a href="https://www.instagram.com/citizen_os_foundation/" target="_blank">
                                         <img src="cid:Instagram.png" />
                                     </a>
                                 </td>
-                                <td style="display: inline-block;margin-left: 12px; margin-right: 12px;">
+                                <td style="display: inline-block;margin-left: 8px; margin-right: 8px;">
+                                    <a href="https://www.linkedin.com/company/citizenos" target="_blank">
+                                        <img src="cid:LinkedIn.png" />
+                                    </a>
+                                </td>
+                                <td style="display: inline-block;margin-left: 8px; margin-right: 8px;">
+                                    <a href="https://twitter.com/Citizen_OS" target="_blank">
+                                        <img src="cid:Twitter.png" />
+                                    </a>
+                                </td>
+                                <td style="display: inline-block;margin-left: 8px; margin-right: 8px;">
                                     <a href="https://www.youtube.com/@citizenos9026" target="_blank">
                                         <img src="cid:YouTube.png" />
                                     </a>
                                 </td>
-                                <td style="display: inline-block;margin-left: 12px; margin-right: 12px;">
+                                <td style="display: inline-block;margin-left: 8px; margin-right: 8px;">
                                     <a href="http://github.com/citizenos" target="_blank">
                                         <img src="cid:GitHub.png" />
                                     </a>
-                                </td>
-                            </tr>
-                            <tr style="width: 600px;">
-                                <td>{{{linkedData.translations.LAYOUT.FOR_MORE_INFORMATION}}} <a
-                                        href="{{linkedData.footerLinks.linkToPlatform}}"
-                                        target="_blank">{{{linkedData.translations.LAYOUT.LINK_PRIVACY_POLICY}}}</a>
                                 </td>
                             </tr>
                             <tr style="width: 600px;">
