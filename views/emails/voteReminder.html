@@ -18,9 +18,14 @@
 
         <tr>
             <td valign="middle">
+                {{#voteEndsAt}}
                 <p width="100%">
                     The vote deadline is coming close! {{#daysLeft}}<b>You have only {{daysLeft}} left to cast your vote</b>{{/daysLeft}}
                 </p>
+                {{/voteEndsAt}}
+                {{^voteEndsAt}}
+                    Please cast your vote!
+                {{/voteEndsAt}}
             </td>
         </tr>
 
@@ -33,7 +38,7 @@
                                 <img src="cid:Voting.png" />
                             </td>
                             <td style="font-size: 16px;line-height:24px;">
-                                <b>Votes collected: {{voteCount}}</b>/{{votesCountRequired}}
+                                <b>Votes collected: {{voteCount}}</b>{{#votesCountRequired}}/{{votesCountRequired}}{{/votesCountRequired}}
                             </td>
                             {{#voteEndsAt}}
                             <td style="font-size: 16px;line-height:24px;">
