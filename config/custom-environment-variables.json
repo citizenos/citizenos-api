@@ -58,5 +58,8 @@
         "__format": "json"
       }
     }
+  },
+  "news": {
+    "url": "CITIZENOS_NEWS_URL"
   }
 }

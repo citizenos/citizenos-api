@@ -61,7 +61,7 @@ suite('Internal', function () {
                 setup( async() => {
                     user = await userLib.createUserAndLogin(agent);
                     user2 = await userLib.createUserAndLogin(agent2);
-                    topic = (await topicLib.topicCreate(agent, user.id)).body.data;
+                    topic = (await topicLib.topicCreate(agent, user.id, null, Topic.STATUSES.inProgress)).body.data;
                 });
 
                 test('Success', async () => {
@@ -174,7 +174,7 @@ suite('Internal', function () {
                     ];
 
                     const voteCreated = (await topicLib.topicVoteCreate(agent, user.id, topic.id, options, 1, 1, false, null, null, Vote.TYPES.regular, Vote.AUTH_TYPES.soft)).body.data;
-
+                    await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.voting);
                     const voteList = [
                         {
                             optionId: voteCreated.options.rows[0].id
@@ -200,7 +200,7 @@ suite('Internal', function () {
             let topic;
             suiteSetup( async() => {
                 user = await userLib.createUserAndLogin(agent);
-                topic = (await topicLib.topicCreate(agent, user.id)).body.data;
+                topic = (await topicLib.topicCreate(agent, user.id, null, Topic.STATUSES.inProgress)).body.data;
             });
 
             test('Success', async () => {

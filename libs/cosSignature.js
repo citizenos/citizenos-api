@@ -178,7 +178,7 @@ module.exports = function (app) {
         await fsExtra
             .mkdirsAsync(destinationDir, FILE_CREATE_MODE);
         const filePath = destinationDir + '/' + TOPIC_FILE.name;
-        const doc = new CosHtmlToDocx(topic.description, topic.title, filePath);
+        const doc = new CosHtmlToDocx(topic.description, topic.title, topic.intro, filePath);
 
         const docxBuffer = await doc.processHTML();
 
@@ -328,7 +328,7 @@ module.exports = function (app) {
         return new Promise(function (resolve) {
             let finalData = '';
             const mufileStream = mu
-                .compileAndRender(USERINFO_FILE.template, {user: {id: userId}});
+                .compileAndRender(USERINFO_FILE.template, { user: { id: userId } });
             mufileStream
                 .on('data', function (data) {
                     finalData += data.toString();
@@ -379,10 +379,10 @@ module.exports = function (app) {
                 });
             })
 
-            const files= await new Promise(function (resolve) {
+            const files = await new Promise(function (resolve) {
                 let finalData = '';
                 const mufileStream = mu
-                    .compileAndRender(USERINFO_FILE.template, {user: {id: userId}});
+                    .compileAndRender(USERINFO_FILE.template, { user: { id: userId } });
                 mufileStream
                     .on('data', function (data) {
                         finalData += data.toString();
@@ -399,8 +399,8 @@ module.exports = function (app) {
                     });
             });
 
-            return hades.new(certificate, files, {policy: "bdoc"});
-        } catch(e) {
+            return hades.new(certificate, files, { policy: "bdoc" });
+        } catch (e) {
             logger.error(e)
         }
     };
@@ -429,7 +429,7 @@ module.exports = function (app) {
 
         const xadesString = xades.toString();
 
-        const signatureData = await Signature.create({data: xadesString});
+        const signatureData = await Signature.create({ data: xadesString });
 
         return {
             statusCode: 0,
@@ -461,7 +461,7 @@ module.exports = function (app) {
 
         const personalInfo = await mobileId.getCertUserData(certificate, 'base64');
         const response = await mobileId.signature(pid, phoneNumber, signableData.toString('base64'));
-        const signatureData = await Signature.create({data: xades.toString()});
+        const signatureData = await Signature.create({ data: xades.toString() });
         response.signatureId = signatureData.id
         response.personalInfo = personalInfo;
 
@@ -489,7 +489,7 @@ module.exports = function (app) {
         const signableData = xades.signableHash;
         const personalInfo = await smartId.getCertUserData(certificate);
         const response = await smartId.signature(pid, countryCode, signableData.toString('base64'))
-        const signatureData = await Signature.create({data: xades.toString()});
+        const signatureData = await Signature.create({ data: xades.toString() });
         response.signatureId = signatureData.id
         response.personalInfo = personalInfo;
 
@@ -497,7 +497,7 @@ module.exports = function (app) {
     };
 
     const _handleSigningResult = async function (voteId, userId, voteOptions, signableHash, signatureId, signature) {
-        const signatureData= await Signature
+        const signatureData = await Signature
             .findOne({
                 where: {
                     id: signatureId
@@ -706,8 +706,8 @@ module.exports = function (app) {
         stream.on('data', function (voteResult) {
             voteResult.optionFileName = [];
 
-            for(const optionValue of voteResult.optionValues) {
-                voteResult.optionFileName.push(_getVoteOptionFileName({value: optionValue}));
+            for (const optionValue of voteResult.optionValues) {
+                voteResult.optionFileName.push(_getVoteOptionFileName({ value: optionValue }));
 
             }
 
@@ -885,9 +885,14 @@ module.exports = function (app) {
             }
         );
 
-        return new Promise (function (resolve) {
+        const vote = await Vote.findOne({
+            where: {
+                id: voteId
+            },
+            attribute: ['description']
+        });
+        return new Promise(function (resolve) {
             let rows = '';
-            let longText = '';
             let totalVotes = 0;
             let winner;
             voteResult.forEach(function (row) {
@@ -899,37 +904,34 @@ module.exports = function (app) {
                 totalVotes += row.voteCount;
             });
 
-            voteResult.forEach(function (row, index) {
+            voteResult.forEach(function (row) {
                 let activeClass = '';
                 if (row.voteCount === winner) {
                     activeClass = 'active';
                 }
-                const letter = String.fromCharCode(65 + index);
-                const percentage = ((row.voteCount/totalVotes)*100);
+                const percentage = ((row.voteCount / totalVotes) * 100);
 
                 rows += `
-                    <div class="graph_row ${activeClass}">
-                        <div class="graph_row_fill" style="width: ${percentage}%;">
-                            <div class="graph_row_text_wrap">
-                                <div class="table_cell">
-                                    <div class="graph_row_text">
-                                        <span>${row.value}</span><br>
-                                        <span class="bold">${row.voteCount}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>`;
-
-                longText += `
-                    <div class="long_text ${activeClass}">
-                        <span class="bold">${letter}.</span> <span>${row.value}</span>
-                    </div>`;
+                <div class="graph_item">
+                    <div class="graph_bar ${activeClass}" style="width: ${percentage}%;" >
+                    </div>
+                    <div class="grap_item_info">
+                        <span class="bold">${row.voteCount}</span>
+                        <span>•</span>
+                        <span>${row.value}</span>
+                    </div>
+                </div>
+                `;
             })
 
             let finalData = '';
+            let title = vote.description;
+
+            if (!title) {
+                title = topic[0].title;
+            }
             const mufileStream = mu
-                .compileAndRender(VOTE_RESULTS_GRAPH_FILE.template, {rows: rows, title: topic[0].title, longText: longText})
+                .compileAndRender(VOTE_RESULTS_GRAPH_FILE.template, { rows: rows, title: title })
 
             mufileStream
                 .on('data', function (data) {
@@ -1076,7 +1078,7 @@ module.exports = function (app) {
                 logger.debug('_generateFinalContainer', 'Final BDOC generated successfully', docPath);
 
                 return fs.createReadStream(docPath);
-            } catch(err) {
+            } catch (err) {
                 logger.error('Failed to generate final BDOC', err);
 
                 // Clean up zip file that was created as it may be corrupted, best effort removing the file
@@ -1131,7 +1133,7 @@ module.exports = function (app) {
     const _deleteFinalBdoc = async function (topicId, voteId) {
         const voteFileDir = _getVoteFileDir(topicId, voteId);
         const voteFileDirCsv = _getVoteFileDir(topicId, voteFileDir, ['csv']);
-        [voteFileDir, voteFileDirCsv].forEach( async (dir) => {
+        [voteFileDir, voteFileDirCsv].forEach(async (dir) => {
             const finalBdocPath = dir + '/final.bdoc';
 
             try {

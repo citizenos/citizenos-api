@@ -33,6 +33,7 @@ module.exports = function (app) {
     const crypto = require('crypto');
     const path = require('path');
     const stream = require('stream');
+    const fs = require('fs');
 
     const loginCheck = app.get('middleware.loginCheck');
     const asyncMiddleware = app.get('middleware.asyncMiddleware');
@@ -691,6 +692,7 @@ module.exports = function (app) {
                      t.categories,
                      t.contact,
                      t.country,
+                     t."imageUrl",
                      t.language,
                      t."endsAt",
                      t."padUrl",
@@ -923,6 +925,7 @@ module.exports = function (app) {
                     t.intro,
                     t.status,
                     t.visibility,
+                    t."imageUrl",
                     t.hashtag,
                     t.country,
                     t.contact,
@@ -1073,7 +1076,7 @@ module.exports = function (app) {
         topic.padUrl = cosEtherpad.getUserAccessUrl(topic, topic.user.id, topic.user.name, topic.user.language, partner);
         topic.url = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
 
-        if (topic.visibility === Topic.VISIBILITY.private && topic.permission.level !== TopicMemberUser.LEVELS.admin) {
+        if (topic.permission.level !== TopicMemberUser.LEVELS.admin) {
             topic.join.token = null;
             topic.join.level = null;
         }
@@ -1373,8 +1376,10 @@ module.exports = function (app) {
             let topic = Topic.build({
                 title: req.body.title,
                 visibility: req.body.visibility || Topic.VISIBILITY.private,
+                status: req.body.status || Topic.STATUSES.draft,
                 creatorId: req.user.userId,
                 categories: req.body.categories,
+                imageUrl: req.body.imageUrl,
                 hashtag: req.body.hashtag,
                 intro: req.body.intro,
                 country: req.body.country,
@@ -1618,6 +1623,71 @@ module.exports = function (app) {
         }
 
     });
+    app.get('/api/users/:userId/topics/count', loginCheck(['partner']), async function (req, res, next) {
+        try {
+            const userId = req.user.userId;
+            const partnerId = req.user.partnerId;
+            let where = ` t."deletedAt" IS NULL
+                    AND t.title IS NOT NULL
+                    AND COALESCE(tmup.level, tmgp.level, 'none')::"enum_TopicMemberUsers_level" > 'none' `;
+
+            // All partners should see only Topics created by their site, but our own app sees all.
+            if (partnerId) {
+                where += ` AND t."sourcePartnerId" = :partnerId `;
+            }
+            const query = `
+                SELECT
+                    COUNT(t.id),
+                    t.status
+                FROM "Topics" t
+                    LEFT JOIN (
+                        SELECT
+                            tmu."topicId",
+                            tmu."userId",
+                            tmu.level::text AS level
+                        FROM "TopicMemberUsers" tmu
+                        WHERE tmu."deletedAt" IS NULL
+                    ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId)
+                    LEFT JOIN (
+                        SELECT
+                            tmg."topicId",
+                            gm."userId",
+                            MAX(tmg.level)::text AS level
+                        FROM "TopicMemberGroups" tmg
+                            LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
+                        WHERE tmg."deletedAt" IS NULL
+                        AND gm."deletedAt" IS NULL
+                        GROUP BY "topicId", "userId"
+                    ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
+                WHERE ${where}
+                GROUP BY t.status
+            ;`;
+
+            const rows = await db
+                .query(
+                    query,
+                    {
+                        replacements: {
+                            userId: userId,
+                            partnerId: partnerId
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true,
+                        nest: true
+                    }
+                );
+            const finalResults = {}
+            Object.keys(Topic.STATUSES).forEach((status) => {
+                const item = rows.find(i => i.status === status);
+                finalResults[status] = item?.count || 0;
+            });
+
+            return res.ok(finalResults);
+        } catch (err) {
+            next(err);
+        }
+    });
+
     /**
      * Read a Topic
      */
@@ -1663,9 +1733,9 @@ module.exports = function (app) {
     app.get('/api/topics/:topicId/download', async (req, res, next) => {
         try {
             const topicId = req.params.topicId;
-       //     const FILE_CREATE_MODE = '0760';
+            //     const FILE_CREATE_MODE = '0760';
             const destinationDir = `/tmp/${topicId}`;
-         //  await fs.mkdir(destinationDir, FILE_CREATE_MODE);
+            //  await fs.mkdir(destinationDir, FILE_CREATE_MODE);
             const topic = await Topic.findOne({
                 where: {
                     id: topicId
@@ -1674,13 +1744,13 @@ module.exports = function (app) {
 
             const filePath = `${destinationDir} / ${topicId}.docx`;
 
-            const doc = new CosHtmlToDocx(topic.description, topic.title, filePath);
+            const doc = new CosHtmlToDocx(topic.description, topic.title, topic.intro, filePath);
 
             const docxBuffer = await doc.processHTML();
             var readStream = new stream.PassThrough();
             readStream.end(docxBuffer);
 
-            res.set('Content-disposition', `attachment; filename=${topicId}.docx` );
+            res.set('Content-disposition', `attachment; filename=${topicId}.docx`);
             res.set('Content-Type', 'text/plain');
 
             readStream.pipe(res);
@@ -1731,8 +1801,7 @@ module.exports = function (app) {
 
             const statuses = _.values(Topic.STATUSES);
             const vote = topic.Votes[0];
-
-            if (statusNew && statusNew !== topic.status) {
+            if (statusNew && statusNew !== topic.status && topic.status !== Topic.STATUSES.draft) {
                 // The only flow that allows going back in status flow is reopening for voting
                 if (statusNew === Topic.STATUSES.voting && topic.status === Topic.STATUSES.followUp) {
                     if (!vote) {
@@ -1744,8 +1813,21 @@ module.exports = function (app) {
                 }
             }
 
+            if (Object.keys(req.body).indexOf('imageUrl') > -1 && !req.body.imageUrl && topic.imageUrl) {
+                const currentImageURL = new URL(topic.imageUrl);
+                //FIXME: No delete from DB?
+                if (config.storage?.type.toLowerCase() === 's3' && currentImageURL.href.indexOf(`https://${config.storage.bucket}.s3.${config.storage.region}.amazonaws.com/users/${req.user.id}`) === 0) {
+                    await cosUpload.delete(currentImageURL.pathname)
+                } else if (config.storage?.type.toLowerCase() === 'local' && currentImageURL.hostname === (new URL(config.url.api)).hostname) {
+                    const appDir = __dirname.replace('/routes/api', '/public/uploads/topics');
+                    const baseFolder = config.storage.baseFolder || appDir;
+
+                    fs.unlinkSync(`${baseFolder}/${path.parse(currentImageURL.pathname).base}`);
+                }
+            }
+
             // NOTE: Description is handled separately below
-            const fieldsAllowedToUpdate = ['title', 'categories', 'endsAt', 'hashtag', 'contact', 'country', 'language', 'intro', 'sourcePartnerObjectId'];
+            const fieldsAllowedToUpdate = ['title', 'categories', 'endsAt', 'hashtag', 'imageUrl', 'contact', 'country', 'language', 'intro', 'sourcePartnerObjectId'];
             if (req.locals.topic.permissions.level === TopicMemberUser.LEVELS.admin) {
                 fieldsAllowedToUpdate.push('visibility');
                 fieldsAllowedToUpdate.push('status');
@@ -1760,7 +1842,7 @@ module.exports = function (app) {
             await db
                 .transaction(async function (t) {
                     if (req.body.description) {
-                        if (topic.status === Topic.STATUSES.inProgress) {
+                        if (topic.status === Topic.STATUSES.inProgress || topic.status === Topic.STATUSES.draft) {
                             promisesList.push(cosEtherpad
                                 .updateTopic(
                                     topicId,
@@ -1801,7 +1883,7 @@ module.exports = function (app) {
                     await Promise.all(promisesList);
                 });
 
-            if (req.body.description && topic.status === Topic.STATUSES.inProgress) {
+            if (req.body.description && (topic.status === Topic.STATUSES.inProgress || topic.status === Topic.STATUSES.draft)) {
                 await cosEtherpad
                     .syncTopicWithPad(
                         topicId,
@@ -1820,10 +1902,50 @@ module.exports = function (app) {
         }
     };
 
+    app.post('/api/users/:userId/topics/:topicId/upload', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
+        const topicId = req.params.topicId;
+        let topic = await Topic.findOne({
+            where: {
+                id: topicId
+            }
+        });
+
+        if (topic) {
+            let imageUrl;
+
+            try {
+                imageUrl = await cosUpload.upload(req, 'topics', topicId);
+            } catch (err) {
+                if (err.type && (err.type === 'fileSize' || err.type === 'fileType')) {
+                    return res.forbidden(err.message);
+                } else {
+                    throw err;
+                }
+            }
+
+            await Topic.update(
+                {
+                    imageUrl: imageUrl.link
+                },
+                {
+                    where: {
+                        id: topicId
+                    },
+                    limit: 1,
+                    returning: true
+                }
+            );
+
+            return res.created(imageUrl);
+        } else {
+            res.forbidden();
+        }
+    }));
+
     /**
      * Update Topic info
      */
-    app.put('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         try {
             await _topicUpdate(req, res, next);
 
@@ -1833,7 +1955,7 @@ module.exports = function (app) {
         }
     });
 
-    app.patch('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.patch('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         try {
             await _topicUpdate(req, res, next);
 
@@ -1850,7 +1972,7 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/311
      */
-    app.put('/api/users/:userId/topics/:topicId/join', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
+    app.put('/api/users/:userId/topics/:topicId/join', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const level = req.body.level;
         if (!Object.values(TopicJoin.LEVELS).includes(level)) {
@@ -1892,7 +2014,7 @@ module.exports = function (app) {
      *
      * @see https://github.com/citizenos/citizenos-fe/issues/311
      */
-    app.put('/api/users/:userId/topics/:topicId/join/:token', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
+    app.put('/api/users/:userId/topics/:topicId/join/:token', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const token = req.params.token;
         const level = req.body.level;
@@ -1999,6 +2121,13 @@ module.exports = function (app) {
     app.get('/api/users/:userId/topics', loginCheck(['partner']), async function (req, res, next) {
         const userId = req.user.userId;
         const partnerId = req.user.partnerId;
+        const limitDefault = 26;
+        const limitMax = 500;
+        const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
+        let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+
+        if (limit > limitMax) limit = limitDefault;
+
 
         let include = req.query.include;
 
@@ -2006,6 +2135,8 @@ module.exports = function (app) {
         const creatorId = req.query.creatorId;
         let statuses = req.query.statuses;
         const favourite = req.query.favourite;
+        const country = req.query.country;
+        const language = req.query.language;
         const hasVoted = req.query.hasVoted; // Filter out Topics where User has participated in the voting process.
         const showModerated = req.query.showModerated || false;
         if (statuses && !Array.isArray(statuses)) {
@@ -2020,6 +2151,7 @@ module.exports = function (app) {
             include = [include];
         }
 
+        let groupBy = '';
         if (include.indexOf('vote') > -1) {
             returncolumns += `
             , (
@@ -2067,6 +2199,14 @@ module.exports = function (app) {
                     AND t.title IS NOT NULL
                     AND COALESCE(tmup.level, tmgp.level, 'none')::"enum_TopicMemberUsers_level" > 'none' `;
 
+        let categories = req.query.categories;
+        if (categories && !Array.isArray(categories)) {
+            categories = [categories];
+        }
+
+        if (categories && categories.length) {
+            where += `AND t."categories" @> ARRAY[:categories]::VARCHAR(255)[] `;
+        }
         // All partners should see only Topics created by their site, but our own app sees all.
         if (partnerId) {
             where += ` AND t."sourcePartnerId" = :partnerId `;
@@ -2084,6 +2224,14 @@ module.exports = function (app) {
             where += ` AND tf."topicId" = t.id AND tf."userId" = :userId`;
         }
 
+        if (country) {
+            where += ` AND t.country ILIKE :country `;
+        }
+
+        if (language) {
+            where += ` AND t.language ILIKE :language `;
+        }
+
         if (['true', '1'].includes(hasVoted)) {
             where += ` AND EXISTS (SELECT TRUE FROM "VoteLists" vl WHERE vl."voteId" = tv."voteId" AND vl."userId" = :userId LIMIT 1)`;
         } else if (['false', '0'].includes(hasVoted)) {
@@ -2096,6 +2244,11 @@ module.exports = function (app) {
             where += ` AND (tr."moderatedAt" IS NULL OR tr."resolvedAt" IS NOT NULL) `;
         } else {
             where += ` AND (tr."moderatedAt" IS NOT NULL AND tr."resolvedAt" IS NULL) `;
+            returncolumns += `
+            ,tr.id AS "report.id"
+            ,tr."moderatedReasonType" AS "report.moderatedReasonType"
+            ,tr."moderatedReasonText" AS "report.moderatedReasonText"
+            `;
         }
 
         if (creatorId) {
@@ -2104,6 +2257,39 @@ module.exports = function (app) {
             } else {
                 return res.badRequest('No rights!');
             }
+        }
+
+        let title = req.query.title || req.query.search;
+        if (title) {
+            title = `%${title}%`;
+            where += ` AND t.title ILIKE :title `;
+        }
+
+        const orderBy = req.query.orderBy;
+        let order = (req.query.order?.toLowerCase() === 'desc') ? 'DESC' : 'ASC';
+        let orderSql = ` ORDER BY `;
+        //  ORDER BY "favourite" DESC, "order" ASC, t."updatedAt" DESC
+        if (orderBy) {
+            switch (orderBy) {
+                case 'activityTime':
+                    orderSql += ` ta.latest  ${order} `;
+                    groupBy += `, ta.latest`;
+                    break;
+                case 'activityCount':
+                    orderSql += ` ta.count  ${order} `;
+                    groupBy += `, ta.count`;
+                    break;
+                case 'membersCount':
+                    orderSql += ` muc.count ${order} `;
+                    break;
+                case 'created':
+                    orderSql += ` t."createdAt" ${order} `;
+                    break;
+                default:
+                    orderSql += ` "order" ASC, t."updatedAt" DESC `;
+            }
+        } else {
+            orderSql += ` "order" ASC, t."updatedAt" DESC `;
         }
 
         // TODO: NOT THE MOST EFFICIENT QUERY IN THE WORLD, tune it when time.
@@ -2116,6 +2302,7 @@ module.exports = function (app) {
                      t.status,
                      t.visibility,
                      t.hashtag,
+                     t."imageUrl",
                      t.contact,
                      t.intro,
                      t.country,
@@ -2137,6 +2324,7 @@ module.exports = function (app) {
                      t."sourcePartnerObjectId",
                      t."endsAt",
                      t."createdAt",
+                     t."updatedAt",
                      c.id as "creator.id",
                      c.name as "creator.name",
                      c.company as "creator.company",
@@ -2145,12 +2333,14 @@ module.exports = function (app) {
                      COALESCE(mgc.count, 0) as "members.groups.count",
                      tv."voteId" as "voteId",
                      tv."voteId" as "vote.id",
+                     COALESCE(MAX(a."updatedAt"), t."updatedAt") as "lastActivity",
                      CASE WHEN t.status = 'voting' THEN 1
                         WHEN t.status = 'inProgress' THEN 2
                         WHEN t.status = 'followUp' THEN 3
                      ELSE 4
                      END AS "order",
                      COALESCE(tc.count, 0) AS "comments.count",
+                     count(*) OVER()::integer AS "countTotal",
                      com."createdAt" AS "comments.lastCreatedAt"
                     ${returncolumns}
                 FROM "Topics" t
@@ -2252,11 +2442,23 @@ module.exports = function (app) {
                                 ) AS tcc
                             GROUP BY tcc."topicId"
                     ) AS com ON (com."topicId" = t.id)
+                    LEFT JOIN (
+                        SELECT
+                            unnest("topicIds") as "topicId",
+                            COUNT("topicIds") as count,
+                            MAX("updatedAt") AS latest
+                            FROM "Activities"
+                        GROUP BY "topicIds"
+                    ) AS ta ON ta."topicId" = t.id::text
+                    LEFT JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds"
                     LEFT JOIN "TopicFavourites" tf ON (tf."topicId" = t.id AND tf."userId" = :userId)
                     LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                     ${join}
                 WHERE ${where}
-                ORDER BY "favourite" DESC, "order" ASC, t."updatedAt" DESC
+                GROUP BY t.id, tr.id, tr."moderatedReasonType", tr."moderatedReasonText", tj."token", tj.level, c.id, muc.count, mgc.count, tv."voteId", tc.count, com."createdAt", tmup.level, tmgp.level, tf."topicId"
+                ${groupBy}
+                ${orderSql}
+                OFFSET :offset LIMIT :limit
             ;`;
 
         try {
@@ -2266,11 +2468,17 @@ module.exports = function (app) {
                     query,
                     {
                         replacements: {
+                            categories: categories,
                             userId: userId,
                             partnerId: partnerId,
                             visibility: visibility,
                             statuses: statuses,
-                            creatorId: creatorId
+                            creatorId: creatorId,
+                            title: title,
+                            language: language,
+                            country: country,
+                            offset: offset,
+                            limit: limit
                         },
                         type: db.QueryTypes.SELECT,
                         raw: true,
@@ -2283,11 +2491,14 @@ module.exports = function (app) {
             // Sequelize returns empty array for no results.
             const result = {
                 count: rowCount,
+                countTotal: rowCount,
                 rows: []
             };
 
             if (rowCount > 0) {
                 rows.forEach((topic) => {
+                    result.countTotal = topic.countTotal;
+                    delete topic.countTotal;
                     topic.url = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
 
                     if (include.indexOf('vote') > -1) {
@@ -2332,7 +2543,6 @@ module.exports = function (app) {
         }
     });
 
-
     /**
      * Topic list
      */
@@ -2345,6 +2555,8 @@ module.exports = function (app) {
             let returncolumns = '';
             let voteResults = false;
             let showModerated = req.query.showModerated || false;
+            let country = req.query.country;
+            let language = req.query.language;
 
             const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
             let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
@@ -2411,6 +2623,7 @@ module.exports = function (app) {
 
             let where = ` t.visibility = '${Topic.VISIBILITY.public}'
                 AND t.title IS NOT NULL
+                AND t.status !='${Topic.STATUSES.draft}'
                 AND t."deletedAt" IS NULL `;
 
             if (categories && categories.length) {
@@ -2421,10 +2634,23 @@ module.exports = function (app) {
                 where += 'AND (tr."moderatedAt" IS NULL OR tr."resolvedAt" IS NOT NULL OR tr."deletedAt" IS NOT NULL) ';
             } else {
                 where += 'AND tr."moderatedAt" IS NOT NULL AND tr."resolvedAt" IS NULL AND tr."deletedAt" IS NULL ';
+                returncolumns += `
+                ,tr.id AS "report.id"
+                ,tr."moderatedReasonType" AS "report.moderatedReasonType"
+                ,tr."moderatedReasonText" AS "report.moderatedReasonText"
+                `;
             }
 
             if (statuses && statuses.length) {
                 where += ' AND t.status IN (:statuses)';
+            }
+
+            if (country) {
+                where += ` AND t.country ILIKE :country `;
+            }
+
+            if (language) {
+                where += ` AND t.language ILIKE :language `;
             }
 
             let sourcePartnerId = req.query.sourcePartnerId;
@@ -2435,9 +2661,10 @@ module.exports = function (app) {
                 where += ' AND t."sourcePartnerId" IN (:partnerId)';
             }
 
-            const title = req.query.title;
+            let title = req.query.title || req.query.search;
             if (title) {
-                where += ` AND t.title LIKE '%:title%' `;
+                title = `%${title}%`;
+                where += ` AND t.title ILIKE :title `;
             }
 
             const query = `
@@ -2456,7 +2683,9 @@ module.exports = function (app) {
                         t.country,
                         t.language,
                         t.intro,
+                        t."imageUrl",
                         t."createdAt",
+                        t."updatedAt",
                         t."sourcePartnerId",
                         t."sourcePartnerObjectId",
                         c.id as "creator.id",
@@ -2556,7 +2785,7 @@ module.exports = function (app) {
                         LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                         ${join}
                     WHERE ${where}
-                    GROUP BY t.id, tj."token", tj.level, c.id, muc.count, mgc.count, tv."voteId", tc.count, com."createdAt"
+                    GROUP BY t.id, tr.id, tr."moderatedReasonType", tr."moderatedReasonText", tj."token", tj.level, c.id, muc.count, mgc.count, tv."voteId", tc.count, com."createdAt"
                     ${groupBy}
                     ORDER BY "lastActivity" DESC
                     LIMIT :limit OFFSET :offset
@@ -2571,7 +2800,10 @@ module.exports = function (app) {
                             categories: categories,
                             statuses: statuses,
                             limit: limit,
-                            offset: offset
+                            title: title,
+                            offset: offset,
+                            country: country,
+                            language: language
                         },
                         type: db.QueryTypes.SELECT,
                         raw: true,
@@ -2778,20 +3010,23 @@ module.exports = function (app) {
     /**
      * Get all member Users of the Topic
      */
-    app.get('/api/users/:userId/topics/:topicId/members/users', loginCheck(['partner']), isModerator(), hasPermission(TopicMemberUser.LEVELS.read), async function (req, res, next) {
+
+    /**
+     * Get all member Users of the Topic
+     */
+    const _topicMemberUsers = async (req, res, next) => {
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
         const search = req.query.search;
-        const order = req.query.order;
-        let sortOrder = req.query.sortOrder || 'ASC';
+        const order = req.query.orderBy;
+        let sortOrder = req.query.order || 'ASC';
 
-        if (sortOrder && ['asc', 'desc'].indexOf(sortOrder.toLowerCase()) === -1) {
+        if (sortOrder && ['asc', 'desc'].indexOf(sortOrder.trim().toLowerCase()) === -1) {
             sortOrder = 'ASC';
         }
 
         let sortSql = ` ORDER BY `;
-
 
         if (order) {
             switch (order) {
@@ -2814,11 +3049,15 @@ module.exports = function (app) {
         }
 
         let dataForModeratorAndAdmin = '';
-        if ((req.user && req.user.moderator) || req.locals.topic.permissions.level === TopicMemberUser.LEVELS.admin) {
+        let joinForAdmin = '';
+        let groupForAdmin = '';
+        if ((req.user && req.user.moderator) || req.locals?.topic.permissions.level === TopicMemberUser.LEVELS.admin) {
             dataForModeratorAndAdmin = `
             tm.email,
             uc."connectionData"::jsonb->>'phoneNumber' AS "phoneNumber",
             `;
+            joinForAdmin = ` LEFT JOIN "UserConnections" uc ON (uc."userId" = tm.id AND uc."connectionId" = 'esteid') `;
+            groupForAdmin = `, uc."connectionData"::jsonb `;
         }
 
         try {
@@ -2880,10 +3119,9 @@ module.exports = function (app) {
                     WHERE gm."deletedAt" IS NULL
                     AND tmg."deletedAt" IS NULL
                 ) tmg ON tmg."topicId" = :topicId AND (tmg."userId" = tm.id)
-                LEFT JOIN "GroupMemberUsers" gmu ON (gmu."groupId" = tmg."groupId" AND gmu."userId" = :userId)
-                LEFT JOIN "UserConnections" uc ON (uc."userId" = tm.id AND uc."connectionId" = 'esteid')
+                ${joinForAdmin}
                 ${where}
-                GROUP BY tm.id, tm.level, tmu.level, tm.name, tm.company, tm."imageUrl", tm.email, uc."connectionData"::jsonb
+                GROUP BY tm.id, tm.level, tmu.level, tm.name, tm.company, tm."imageUrl", tm.email ${groupForAdmin}
                 ${sortSql}
                 LIMIT :limit
                 OFFSET :offset
@@ -2891,7 +3129,7 @@ module.exports = function (app) {
                     {
                         replacements: {
                             topicId: req.params.topicId,
-                            userId: req.user.userId,
+                            userId: req.user?.userId,
                             search: '%' + search + '%',
                             limit,
                             offset
@@ -2926,12 +3164,139 @@ module.exports = function (app) {
         } catch (err) {
             return next(err);
         }
+    }
+    app.get('/api/topics/:topicId/members/users', async function (req, res, next) {
+        const topic = await Topic.findOne({
+            where: {
+                id: req.params.topicId,
+                visibility: Topic.VISIBILITY.public
+            }
+        })
+        if (topic) {
+            return _topicMemberUsers(req, res, next);
+        }
+        return res.notFound();
+    });
+
+    app.get('/api/users/:userId/topics/:topicId/members/users', loginCheck(['partner']), isModerator(), hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
+        return _topicMemberUsers(req, res, next);
     });
 
     /**
      * Get all member Groups of the Topic
      */
-    app.get('/api/users/:userId/topics/:topicId/members/groups', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read), async function (req, res, next) {
+    app.get('/api/topics/:topicId/members/groups', async function (req, res, next) {
+        const limitDefault = 10;
+        const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
+        let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+        const search = req.query.search;
+        const order = req.query.order;
+        let sortOrder = req.query.sortOrder || 'ASC';
+
+        if (sortOrder && ['asc', 'desc'].indexOf(sortOrder.toLowerCase()) === -1) {
+            sortOrder = 'ASC';
+        }
+
+        let sortSql = ` ORDER BY `;
+
+        if (order) {
+            switch (order) {
+                case 'name':
+                    sortSql += ` mg.name ${sortOrder} `;
+                    break;
+                case 'level':
+                    sortSql += ` mg."level"::"enum_TopicMemberGroups_level" ${sortOrder} `;
+                    break;
+                case 'members.users.count':
+                    sortSql += ` mg."members.users.count" ${sortOrder} `;
+                    break;
+                default:
+                    sortSql = ` `
+            }
+        } else {
+            sortSql = ` `;
+        }
+
+        let where = '';
+        if (search) {
+            where = `WHERE mg.name ILIKE :search`
+        }
+        let userLevelField = '';
+        let userLevelJoin = '';
+        if (req.user?.id) {
+            userLevelField = ` gmu.level as "permission.level", `,
+                userLevelJoin = ` LEFT JOIN "GroupMemberUsers" gmu ON (gmu."groupId" = g.id AND gmu."userId" = :userId AND gmu."deletedAt" IS NULL) `;
+        }
+        try {
+            const groups = await db
+                .query(
+                    `
+                    SELECT mg.*,count(*) OVER()::integer AS "countTotal" FROM (
+                        SELECT
+                            g.id,
+                            g.name,
+                            g."createdAt",
+                            g."updatedAt",
+                            tmg.level,
+                            ${userLevelField}
+                            g.visibility,
+                            gmuc.count as "members.users.count"
+                        FROM "TopicMemberGroups" tmg
+                            JOIN "Groups" g ON (tmg."groupId" = g.id)
+                            JOIN (
+                                SELECT
+                                    "groupId",
+                                    COUNT(*) as count
+                                FROM "GroupMemberUsers"
+                                WHERE "deletedAt" IS NULL
+                                GROUP BY 1
+                            ) as gmuc ON (gmuc."groupId" = g.id)
+                            ${userLevelJoin}
+                        WHERE tmg."topicId" = :topicId AND g."visibility" = 'public'
+                        AND tmg."deletedAt" IS NULL
+                        AND g."deletedAt" IS NULL
+                        ORDER BY level DESC
+                    ) mg
+                    ${where}
+                    ${sortSql}
+                    LIMIT :limit
+                    OFFSET :offset;`,
+                    {
+                        replacements: {
+                            topicId: req.params.topicId,
+                            userId: req.user?.userId,
+                            search: `%${search}%`,
+                            limit,
+                            offset
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true,
+                        nest: true
+                    }
+                );
+
+            let countTotal = 0;
+            if (groups && groups.length) {
+                countTotal = groups[0].countTotal;
+            }
+            groups.forEach(function (group) {
+                delete group.countTotal;
+            });
+
+            return res.ok({
+                countTotal,
+                count: groups.length,
+                rows: groups
+            });
+        } catch (err) {
+            return next(err);
+        }
+    });
+
+    /**
+     * Get all member Groups of the Topic
+     */
+    app.get('/api/users/:userId/topics/:topicId/members/groups', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
@@ -2979,6 +3344,8 @@ module.exports = function (app) {
                                 WHEN gmu.level IS NOT NULL THEN g.name
                                 ELSE NULL
                             END as "name",
+                            g."createdAt",
+                            g."updatedAt",
                             tmg.level,
                             gmu.level as "permission.level",
                             g.visibility,
@@ -3111,7 +3478,7 @@ module.exports = function (app) {
     /**
      * Create new member Groups to a Topic
      */
-    app.post('/api/users/:userId/topics/:topicId/members/groups', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/members/groups', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         let members = req.body;
         const topicId = req.params.topicId;
 
@@ -3215,7 +3582,7 @@ module.exports = function (app) {
     /**
      * Update User membership information
      */
-    app.put('/api/users/:userId/topics/:topicId/members/users/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/members/users/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const newLevel = req.body.level;
         const memberId = req.params.memberId;
         const topicId = req.params.topicId;
@@ -3283,7 +3650,7 @@ module.exports = function (app) {
     /**
      * Update Group membership information
      */
-    app.put('/api/users/:userId/topics/:topicId/members/groups/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/members/groups/:memberId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const newLevel = req.body.level;
         const memberId = req.params.memberId;
         const topicId = req.params.topicId;
@@ -3601,7 +3968,7 @@ module.exports = function (app) {
      *
      * @see /api/users/:userId/topics/:topicId/members/users "Auto accept" - Adds a Member to the Topic instantly and sends a notification to the User.
      */
-    app.post('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin, false, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), rateLimiter(5, false), speedLimiter(1, false), asyncMiddleware(async function (req, res) {
+    app.post('/api/users/:userId/topics/:topicId/invites/users', loginCheck(), hasPermission(TopicMemberUser.LEVELS.admin, false, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), rateLimiter(5, false), speedLimiter(1, false), asyncMiddleware(async function (req, res) {
         //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
         const topicId = req.params.topicId;
         const userId = req.user.userId;
@@ -3624,12 +3991,11 @@ module.exports = function (app) {
         _(members).forEach(function (m) {
             if (m.userId) {
                 m.userId = m.userId.trim();
-
                 // Is it an e-mail?
                 if (validator.isEmail(m.userId)) {
                     m.userId = m.userId.toLowerCase(); // https://github.com/citizenos/citizenos-api/issues/234
                     validEmailMembers.push(m); // The whole member object with level
-                } else if (validator.isUUID(m.userId, 4)) {
+                } else if (validator.isUUID(m.userId)) {
                     validUserIdMembers.push(m);
                 } else {
                     logger.warn('Invalid member ID, is not UUID or email thus ignoring', req.method, req.path, m, req.body);
@@ -3821,10 +4187,9 @@ module.exports = function (app) {
                 invite.inviteMessage = inviteMessage;
             }
 
-            await emailLib.sendTopicMemberUserInviteCreate(createdInvites);
-
-            t.afterCommit(() => {
+            t.afterCommit(async () => {
                 if (createdInvites.length) {
+                    await emailLib.sendTopicMemberUserInviteCreate(createdInvites);
                     return res.created({
                         count: createdInvites.length,
                         rows: createdInvites
@@ -4326,7 +4691,7 @@ module.exports = function (app) {
      */
     app.get('/api/topics/join/:token', async function (req, res) {
         const token = req.params.token;
-
+        const user = req.user;
         const topicJoin = await TopicJoin.findOne({
             where: {
                 token: token
@@ -4336,11 +4701,63 @@ module.exports = function (app) {
         if (!topicJoin) {
             return res.notFound();
         }
-        const topic = await _topicReadUnauth(topicJoin.topicId, null);
+        let topicMember;
+        if (user) {
+            topicMember = await db.query(`
+            SELECT
+            COALESCE(
+                tmup.level,
+                tmgp.level,
+                    'none'
+            ) as "level"
+            FROM "Topics" t
+                LEFT JOIN (
+                SELECT
+                    tmu."topicId",
+                    tmu."userId",
+                    tmu.level::text AS level
+                FROM "TopicMemberUsers" tmu
+                WHERE tmu."deletedAt" IS NULL
+            ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId)
+            LEFT JOIN (
+                SELECT
+                    tmg."topicId",
+                    gm."userId",
+                    MAX(tmg.level)::text AS level
+                FROM "TopicMemberGroups" tmg
+                    LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
+                WHERE tmg."deletedAt" IS NULL
+                AND gm."deletedAt" IS NULL
+                GROUP BY "topicId", "userId"
+            ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
+            WHERE t.id = :topicId
+            `, {
+                replacements: {
+                    topicId: topicJoin.topicId,
+                    userId: user.id
+                },
+                type: db.QueryTypes.SELECT,
+                raw: true,
+                nest: true
+            });
+        }
+        let topic = await Topic.findOne({
+            where: {
+                id: topicJoin.topicId
+            },
+            attributes: ['id', 'visibility', 'title']
+        });
 
         if (!topic) {
             return res.notFound();
+        } else if (topic.visibility === Topic.VISIBILITY.private && !topicMember) {
+            return res.ok({ title: topic.title });
         }
+        topic = topic.toJSON();
+        if (topicMember && topicMember.length) {
+            topic.permission = { level: topicMember[0].level };
+        }
+        delete topic.creator;
 
         return res.ok(topic);
     });
@@ -4421,11 +4838,81 @@ module.exports = function (app) {
         });
     }));
 
+    /**
+     * Join authenticated User to Topic with a given token.
+     *
+     * Allows sharing of private join urls for example in forums, on conference screen...
+     */
+    app.post('/api/users/:userId/topics/:topicId/join', loginCheck(['partner']), asyncMiddleware(async function (req, res) {
+        const userId = req.user.userId;
+
+        const topic = await Topic.findOne({
+            where: {
+                id: req.params.topicId,
+                visibility: Topic.VISIBILITY.public
+            }
+        });
+
+        if (!topic) {
+            return res.badRequest('Topic not found', 1);
+        }
+
+
+
+        await db.transaction(async function (t) {
+            const [memberUser, created] = await TopicMemberUser.findOrCreate({ // eslint-disable-line
+                where: {
+                    topicId: topic.id,
+                    userId: userId
+                },
+                defaults: {
+                    level: TopicMemberUser.LEVELS.read
+                },
+                transaction: t
+            });
+
+            if (created) {
+                const user = await User.findOne({
+                    where: {
+                        id: userId
+                    }
+                });
+
+                await cosActivities.joinActivity(
+                    topic,
+                    {
+                        type: 'User',
+                        id: user.id,
+                        ip: req.ip,
+                        level: TopicMemberUser.LEVELS.read
+                    },
+                    req.method + ' ' + req.path,
+                    t
+                );
+            }
+            const authorIds = topic.authorIds;
+            const authors = await User.findAll({
+                where: {
+                    id: authorIds
+                },
+                attributes: ['id', 'name'],
+                raw: true
+            });
+
+            const resObject = topic.toJSON();
+
+            resObject.authors = authors;
+            resObject.url = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
+            t.afterCommit(() => {
+                return res.ok(resObject);
+            });
+        });
+    }));
 
     /**
      * Add Topic Attachment
      */
-    app.post('/api/users/:userId/topics/:topicId/attachments/upload', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/attachments/upload', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const attachmentLimit = config.attachments.limit || 5;
         const topicId = req.params.topicId;
         try {
@@ -4483,7 +4970,7 @@ module.exports = function (app) {
         }
     });
 
-    app.post('/api/users/:userId/topics/:topicId/attachments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/attachments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const topicId = req.params.topicId;
         const name = req.body.name;
         const type = req.body.type;
@@ -4583,7 +5070,7 @@ module.exports = function (app) {
         }
     });
 
-    app.put('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         const newName = req.body.name;
 
         if (!newName) {
@@ -4634,7 +5121,7 @@ module.exports = function (app) {
     /**
      * Delete Topic Attachment
      */
-    app.delete('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp], true), async function (req, res, next) {
+    app.delete('/api/users/:userId/topics/:topicId/attachments/:attachmentId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, false, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp], true), async function (req, res, next) {
         try {
             const attachment = await Attachment.findOne({
                 where: {
@@ -5124,6 +5611,17 @@ module.exports = function (app) {
         let orderByComments = '"createdAt" DESC';
         let orderByReplies = '"createdAt" ASC';
         let dataForModerator = '';
+        let where = '';
+        let types = req.query.types;
+        if (types && !Array.isArray(types)) {
+            types = [types];
+            types = types.filter((type) => Comment.TYPES[type]);
+        }
+
+        if (types && types.length) {
+            where += ` AND ct.type IN (:types) `
+        }
+
         if (req.user) {
             userId = req.user.userId;
 
@@ -5156,7 +5654,7 @@ module.exports = function (app) {
                     c.subject,
                     c.text,
                     pg_temp.editCreatedAtToJson(c.edits) as edits,
-                    jsonb_build_object('id', u.id,'name',u.name, 'company', u.company ${dataForModerator}) as creator,
+                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl", 'company', u.company ${dataForModerator}) as creator,
                     CASE
                         WHEN c."deletedById" IS NOT NULL THEN jsonb_build_object('id', c."deletedById", 'name', dbu.name )
                         ELSE jsonb_build_object('id', c."deletedById")
@@ -5194,7 +5692,7 @@ module.exports = function (app) {
                     c.subject,
                     c.text,
                     pg_temp.editCreatedAtToJson(c.edits) as edits,
-                    jsonb_build_object('id', u.id,'name',u.name, 'company', u.company ${dataForModerator}) as creator,
+                    jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl", 'company', u.company ${dataForModerator}) as creator,
                     CASE
                         WHEN c."deletedById" IS NOT NULL THEN jsonb_build_object('id', c."deletedById", 'name', dbu.name )
                         ELSE jsonb_build_object('id', c."deletedById")
@@ -5410,11 +5908,13 @@ module.exports = function (app) {
             JOIN "Comments" c ON c.id = tc."commentId" AND c.id = c."parentId"
             JOIN pg_temp.getCommentTree(tc."commentId") ct ON ct.id = ct.id
             WHERE tc."topicId" = :topicId
+            ${where}
             ORDER BY ${orderByComments}
             LIMIT :limit
             OFFSET :offset
         `, db.dialect,
             {
+                types: types,
                 topicId: req.params.topicId,
                 limit: parseInt(req.query.limit, 10) || 15,
                 offset: parseInt(req.query.offset, 10) || 0
@@ -5989,7 +6489,7 @@ module.exports = function (app) {
                 });
 
             if (!comment) {
-                return comment;
+                return res.notFound();
             }
 
             await db
@@ -6100,7 +6600,7 @@ module.exports = function (app) {
     /**
      * Create a Vote
      */
-    app.post('/api/users/:userId/topics/:topicId/votes', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.inProgress]), asyncMiddleware(async function (req, res) {
+    app.post('/api/users/:userId/topics/:topicId/votes', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress]), asyncMiddleware(async function (req, res) {
         const voteOptions = req.body.options;
 
         if (!voteOptions || !Array.isArray(voteOptions) || voteOptions.length < 2) {
@@ -6221,7 +6721,8 @@ module.exports = function (app) {
                         req.method + ' ' + req.path,
                         t
                     );
-                topic.status = Topic.STATUSES.voting;
+                if (topic.status !== Topic.STATUSES.draft)
+                    topic.status = Topic.STATUSES.voting;
 
                 await cosActivities
                     .updateActivity(
@@ -6352,7 +6853,7 @@ module.exports = function (app) {
         const voteId = req.params.voteId;
 
         // Make sure the Vote is actually related to the Topic through which the permission was granted.
-        const fields = ['endsAt', 'reminderTime'];
+        let fields = ['endsAt', 'reminderTime'];
 
         const topic = await Topic.findOne({
             where: {
@@ -6371,8 +6872,16 @@ module.exports = function (app) {
         if (!topic || !topic.Votes || !topic.Votes.length) {
             return res.notFound();
         }
+        if (topic.status === Topic.STATUSES.draft) {
+            fields = fields.concat(['minChoices', 'maxChoices', 'description', 'type', 'authType', 'autoClose']);
+        }
+        const voteOptions = req.body.options;
 
+        if (Array.isArray(voteOptions) && voteOptions.length < 2) {
+            return res.badRequest('At least 2 vote options are required', 1);
+        }
         const vote = topic.Votes[0];
+
 
         await db.transaction(async function (t) {
             fields.forEach(function (field) {
@@ -6391,6 +6900,69 @@ module.exports = function (app) {
                     req.method + ' ' + req.path,
                     t
                 );
+
+
+            const createPromises = [];
+            if (voteOptions && voteOptions.length && topic.status === Topic.STATUSES.draft) {
+                try {
+
+                    await VoteOption.destroy({
+                        where: {
+                            voteId: vote.id
+                        },
+                        force: true
+                    });
+                } catch (e) {
+                    console.error('Vote Option delete fail', e);
+                }
+                if (vote.authType === Vote.AUTH_TYPES.hard) {
+                    const voteOptionValues = _.map(voteOptions, 'value').map(function (value) {
+                        return sanitizeFilename(value).toLowerCase();
+                    });
+
+                    const uniqueValues = _.uniq(voteOptionValues);
+                    if (uniqueValues.length !== voteOptions.length) {
+                        return res.badRequest('Vote options are too similar', 2);
+                    }
+
+                    const reservedPrefix = VoteOption.RESERVED_PREFIX;
+                    uniqueValues.forEach(function (value) {
+                        if (value.substr(0, 2) === reservedPrefix) {
+                            return res.badRequest('Vote option not allowed due to usage of reserved prefix "' + reservedPrefix + '"', 4);
+                        }
+                    });
+                }
+
+                _(voteOptions).forEach(function (o) {
+                    o.voteId = vote.id;
+                    const vopt = VoteOption.build(o);
+                    createPromises.push(vopt.validate());
+                });
+            }
+            if (createPromises.length) {
+                await Promise.all(createPromises);
+                const voteOptionsCreated = await VoteOption
+                    .bulkCreate(
+                        voteOptions,
+                        {
+                            fields: ['id', 'voteId', 'value'], // Deny updating other fields like "updatedAt", "createdAt"...
+                            returning: true,
+                            transaction: t
+                        }
+                    );
+                await cosActivities
+                    .createActivity(
+                        voteOptionsCreated,
+                        null,
+                        {
+                            type: 'User',
+                            id: req.user.userId,
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
+            }
 
             await vote.save({
                 transaction: t
@@ -7135,7 +7707,6 @@ module.exports = function (app) {
                 }
                 t.afterCommit(async () => {
                     const isClosed = await _handleVoteAutoCloseConditions(voteId, topicId, userId);
-
                     const resBody = {
                         bdocUri: getBdocURL({
                             userId: userId,
@@ -8030,6 +8601,7 @@ module.exports = function (app) {
     }));
 
     return {
-        hasPermission: hasPermission
+        hasPermission: hasPermission,
+        getVoteResults: getVoteResults
     };
 };

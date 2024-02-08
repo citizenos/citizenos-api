@@ -427,9 +427,9 @@ module.exports = function (app) {
     try {
         if (!userIds.length || (!topicIds?.length && !groupIds?.length)) return [];
         let where = `usn."topicId" IN (:topicIds) `;
-        if (groupIds.length) {
+     /*   if (groupIds.length) {
             where = `usn."groupId" IN (:groupIds) `
-        }
+        }*/
         const users = await db
             .query(`
                 SELECT
@@ -490,7 +490,6 @@ module.exports = function (app) {
     if (users.length) {
         users = await filterUsersBySettings(users, activity.topicIds, activity.groupIds, activityType);
     }
-
     users = users.filter((user) => {
         return user.id !== activity.actorId;
     });

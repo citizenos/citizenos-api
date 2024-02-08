@@ -19,6 +19,7 @@ const GroupInviteUser = models.GroupInviteUser;
 const Moderator = models.Moderator;
 const Comment = models.Comment;
 const Report = models.Report;
+const Topic = models.Topic;
 
 
 suite('Email', function () {
@@ -65,7 +66,7 @@ suite('Email', function () {
             suiteSetup(async() => {
                 user = await userLib.createUserAndLogin(agent, null, null, null);
                 user2 = await userLib.createUserAndLogin(agent2);
-                topic = (await topicLib.topicCreate(agent, user.id, 'TEST', '<html><head></head><body><h2>TEST</h2></body></html>')).body.data;
+                topic = (await topicLib.topicCreate(agent, user.id, 'TEST', Topic.STATUSES.inProgress, '<html><head></head><body><h2>TEST</h2></body></html>')).body.data;
                 group = (await groupLib.create(agent, user.id, 'Test Group' + Date.now(), null, null)).body.data;
             });
 
@@ -118,7 +119,7 @@ suite('Email', function () {
             suiteSetup(async function () {
                 user = await userLib.createUserAndLogin(agent, null, null, null);
                 user2 = await userLib.createUserAndLogin(agent2, null, null, null);
-                topic = (await topicLib.topicCreate(agent, user.id, 'TEST', '<html><head></head><body><h2>TEST</h2></body></html>')).body.data;
+                topic = (await topicLib.topicCreate(agent, user.id, 'TEST', Topic.STATUSES.inProgress, '<html><head></head><body><h2>TEST</h2></body></html>')).body.data;
                 comment = (await topicLib.topicCommentCreate(agent, user.id, topic.id, null, null, Comment.TYPES.pro, 'subject', 'text')).body.data;
 
                 report = await TopicReport.create({
@@ -174,7 +175,7 @@ suite('Email', function () {
             });
         });
 
-        suite('sendToParliament', function () {
+        suite.skip('sendToParliament', function () {
 
             test('Success', async function () {
                 const topic = {

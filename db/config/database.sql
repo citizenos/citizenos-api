@@ -1365,7 +1365,8 @@ CREATE TABLE public."Topics" (
     "authorIds" uuid[] DEFAULT ARRAY[]::uuid[],
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone
+    "deletedAt" timestamp with time zone,
+    "imageUrl" character varying(255)
 );
 
 
@@ -1465,6 +1466,13 @@ COMMENT ON COLUMN public."Topics".contact IS 'Topic contact address or phone';
 --
 
 COMMENT ON COLUMN public."Topics".hashtag IS 'Hashtag to search related content from external sources.';
+
+
+--
+-- Name: COLUMN "Topics"."imageUrl"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics"."imageUrl" IS 'Topic header image url.';
 
 
 --
@@ -3072,4 +3080,5 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 20231020154400-alter-topic-add-location.js
 20231025094913-alter-topic-add-intro.js
 20231027115040-rename-topic-pin-group-pin.js
+20231117225849-alter_topic_add_imageurl.js
 \.

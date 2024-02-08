@@ -223,7 +223,15 @@ module.exports = function (app) {
         let userLevelJoin = '';
 
         if (userId) {
-            userLevelSql = ` COALESCE(gmu.level, null) AS "userLevel", `;
+            userLevelSql = ` COALESCE(gmu.level, null) AS "userLevel",
+                CASE
+                   WHEN gmu.level = 'admin' THEN gj.token
+                   ELSE NULL
+                END as "join.token",
+                CASE
+                   WHEN gmu.level = 'admin' THEN gj.level
+                   ELSE NULL
+                   END as "join.level",`;
             userLevelJoin = ` LEFT JOIN "GroupMemberUsers" gmu ON gmu."userId"=:userId AND gmu."groupId" = g.id `;
         }
         const [group] = await db
@@ -239,12 +247,12 @@ module.exports = function (app) {
                  g.language,
                  g.contact,
                  g."imageUrl",
+                 g."createdAt",
+                 g."updatedAt",
                  c.id as "creator.id",
                  c.email as "creator.email",
                  c.name as "creator.name",
                  c."createdAt" as "creator.createdAt",
-                 gj.token as "join.token",
-                 gj.level as "join.level",
                  ${userLevelSql}
                  mc.count as "members.users.count",
                  COALESCE(mtc.count, 0) as "members.topics.count"
@@ -278,6 +286,12 @@ module.exports = function (app) {
                 }
             );
 
+        if (group && !group.join) {
+            group.join = {
+                token: null,
+                level: null
+            }
+        }
         return group;
     };
 
@@ -295,6 +309,8 @@ module.exports = function (app) {
                      g.contact,
                      g.visibility,
                      g."imageUrl",
+                     g."createdAt",
+                     g."updatedAt",
                      CASE
                     WHEN gf."groupId" = g.id THEN true
                         ELSE false
@@ -304,11 +320,14 @@ module.exports = function (app) {
                      c.name as "creator.name",
                      c."createdAt" as "creator.createdAt",
                      CASE
-                        WHEN gmu.level = 'admin' OR g.visibility = 'public' THEN gj.token
+                        WHEN gmu.level = 'admin' THEN gj.token
                      ELSE NULL
                      END as "join.token",
+                     CASE
+                        WHEN gmu.level = 'admin' THEN gj.level
+                     ELSE NULL
+                     END as "join.level",
                      COALESCE (gmu.level, null) AS "userLevel",
-                     gj.level as "join.level",
                      mc.count as "members.users.count",
                      COALESCE(mtc.count, 0) as "members.topics.count"
                 FROM "Groups" g
@@ -495,6 +514,12 @@ module.exports = function (app) {
      * Get all Groups User belongs to
      */
     app.get('/api/users/:userId/groups', loginCheck(['partner']), asyncMiddleware(async function (req, res) {
+        const limitMax = 100;
+        const limitDefault = 26;
+        const offset = req.query.offset || 0;
+        let limit = req.query.limit || limitDefault;
+        if (limit > limitMax) limit = limitDefault;
+
         let include = req.query.include;
         // Sequelize and associations are giving too eager results + not being the most effective. https://github.com/sequelize/sequelize/issues/2458
         // Falling back to raw SQL
@@ -505,6 +530,8 @@ module.exports = function (app) {
         const search = req.query.search;
         const favourite = req.query.favourite;
 
+        const country = req.query.country;
+        const language = req.query.language;
         let joinText = '';
         let returnFields = '';
         if (include && !Array.isArray(include)) {
@@ -521,7 +548,42 @@ module.exports = function (app) {
         if (favourite) {
             where += ` AND gf."groupId" = g.id AND gf."userId" = :userId`;
         }
+        const orderBy = req.query.orderBy || 'updatedAt';
+        const order = (req.query.order && req.query.order.toLowerCase() === 'asc') ? 'ASC' : 'DESC';
+        let orderBySql = ` ORDER BY`;
 
+        if (country) {
+            where += ` AND g.country ILIKE :country `;
+        }
+
+        if (language) {
+            where += ` AND g.language ILIKE :language `;
+        }
+
+        switch (orderBy) {
+            case 'name':
+                orderBySql += ` g.name `
+                break;
+            case 'activityCount':
+                orderBySql += ` ga.count `
+                break;
+            case 'memberCount':
+                orderBySql += ` "members.users.count" `
+                break;
+            case 'topicCount':
+                orderBySql += ` "members.topics.count" `
+                break;
+            case 'createdAt':
+                orderBySql += ` g."createdAt" `
+                break;
+            case 'activity':
+                orderBySql += ` ga."updatedAt" `
+                break;
+            default:
+                orderBySql += ` g."updatedAt" `
+        }
+
+        orderBySql += order;
         if (include) {
             let union = false;
             joinText = 'LEFT JOIN (';
@@ -618,8 +680,9 @@ module.exports = function (app) {
                     gj.level as "join.level",
                     gmu.level as "permission.level",
                     mc.count as "members.users.count",
-                    COALESCE(gtc.count, 0) as "members.topics.count",
+                    gtc.count as "members.topics.count",
                     gt."topicId" as "members.topics.latest.id",
+                    count(*) OVER()::integer AS "countTotal",
                     ${returnFields}
                     gt.title as "members.topics.latest.title"
                 FROM "Groups" g
@@ -632,33 +695,92 @@ module.exports = function (app) {
                         GROUP BY "groupId"
                     ) AS mc ON (mc."groupId" = g.id)
                     LEFT JOIN (
-                        SELECT
-                            tmg."groupId",
-                            count(tmg."topicId") AS "count"
-                        FROM "TopicMemberGroups" tmg
-                        WHERE tmg."deletedAt" IS NULL
-                        GROUP BY tmg."groupId"
+                        SELECT tmgtc."groupId", tmgtc.count::jsonb || tmc.count::jsonb as count
+                        FROM (
+                            SELECT
+                                "groupId",
+                                jsonb_object_agg('total', total) as count
+                            FROM (
+                                SELECT
+                                    tmg."groupId",
+                                    COUNT(tmg."groupId") AS total
+                                FROM "TopicMemberGroups" tmg
+                                GROUP BY tmg."groupId"
+                            ) as tmgtc
+                            GROUP BY "groupId"
+                        ) as tmgtc
+                        LEFT JOIN (
+                            SELECT
+                                tmc."groupId",
+                                jsonb_object_agg(tmc.status, tmc.count) as count
+                            FROM
+                            (
+                                SELECT
+                                    tmg."groupId",
+                                    t."status",
+                                    count(tmg."topicId") AS "count"
+                                FROM "TopicMemberGroups" tmg
+                                JOIN "Topics" t ON t.id = tmg."topicId"
+                                WHERE tmg."deletedAt" IS NULL
+                                GROUP BY tmg."groupId", t.status
+                            ) as tmc
+                            GROUP BY "groupId"
+                        ) tmc ON tmgtc."groupId" = tmc."groupId"
                     ) AS gtc ON (gtc."groupId" = g.id)
                     LEFT JOIN (
-                        SELECT
-                            tmg."groupId",
+                        SELECT tmg."groupId",
                             tmg."topicId",
-                            t.title
-                        FROM "TopicMemberGroups" tmg
-                            LEFT JOIN "Topics" t ON (t.id = tmg."topicId")
-                        WHERE tmg."deletedAt" IS NULL
-                        ORDER BY t."updatedAt" ASC
+                            t.title,
+                            t."updatedAt"
+                            FROM "TopicMemberGroups" tmg
+                            JOIN "Topics" t ON (t.id = tmg."topicId")
+                            JOIN (
+                            SELECT g.id, MAX(tmg."updatedAt") as "updatedAt" FROM "Groups" g JOIN (
+                                SELECT
+                                    tmg."groupId",
+                                    tmg."topicId",
+                                    t.title,
+                                    t."updatedAt"
+                                FROM "TopicMemberGroups" tmg
+                                JOIN "Topics" t ON (t.id = tmg."topicId")
+                                WHERE tmg."deletedAt" IS NULL
+                                    AND t.title IS NOT NULL
+                                ORDER BY t."updatedAt" DESC
+                            ) as tmg ON g.id=tmg."groupId" GROUP BY g.id
+                        ) tmgtm ON tmgtm."updatedAt" = t."updatedAt" GROUP BY "groupId", "topicId", t.title, t."updatedAt"
                     ) AS gt ON (gt."groupId" = g.id)
+                    LEFT JOIN (
+                        SELECT
+                            MAX(a."updatedAt") as "updatedAt",
+                            ag.count,
+                            a."groupIds"
+                        FROM
+                        "Activities" a
+                        LEFT JOIN (
+                            SELECT COUNT(*) as "count",
+                            "groupIds"
+                            FROM "Activities"
+                            WHERE array_length("groupIds", 1) > 0
+                            GROUP BY "groupIds"
+                        ) ag ON a."groupIds" = ag."groupIds"
+                        WHERE array_length(a."groupIds", 1) > 0
+                        GROUP BY a."groupIds", ag.count ORDER BY a."groupIds"
+                    ) ga ON g.id::text = ANY(ga."groupIds")
                     LEFT JOIN "GroupFavourites" gf ON (gf."groupId" = g.id AND gf."userId" = :userId)
                     LEFT JOIN "GroupJoins" gj ON (gj."groupId" = g.id)
                     ${joinText}
                     ${where}
-                ORDER BY g."updatedAt" DESC, g.id;
+                ${orderBySql}
+                OFFSET :offset LIMIT :limit;
                 `,
                 {
                     replacements: {
+                        country: country,
+                        language: language,
                         userId: req.user.userId,
                         visibility: visibility,
+                        offset: offset,
+                        limit: limit,
                         search: '%' + search + '%'
                     },
                     type: db.QueryTypes.SELECT,
@@ -668,12 +790,14 @@ module.exports = function (app) {
             );
 
         const results = {
+            countTotal: 0,
             count: 0,
             rows: []
         };
         const memberGroupIds = [];
-
         rows.forEach(function (groupRow) {
+            results.countTotal = groupRow.countTotal;
+            delete groupRow.countTotal;
             const group = _.cloneDeep(groupRow);
             const member = _.clone(group.member);
 
@@ -1236,6 +1360,70 @@ module.exports = function (app) {
     }));
 
     /**
+     * Join authenticated User to publci Group without token.
+     *
+     */
+    app.post('/api/users/:userId/groups/:groupId/join', loginCheck(), asyncMiddleware(async function (req, res) {
+        const userId = req.user.userId;
+
+        const group = await Group.findOne({
+            where: {
+                id: req.params.groupId,
+                visibility: Group.VISIBILITY.public
+            }
+        });
+
+        if (!group) {
+            return res.badRequest('Group not found', 1);
+        }
+
+
+
+        await db.transaction(async function (t) {
+            const [memberUser, created] = await GroupMemberUser.findOrCreate({ // eslint-disable-line
+                where: {
+                    groupId: group.id,
+                    userId: userId
+                },
+                defaults: {
+                    level: GroupMemberUser.LEVELS.read
+                },
+                transaction: t
+            });
+
+            if (created) {
+                const user = await User.findOne({
+                    where: {
+                        id: userId
+                    }
+                });
+
+                await cosActivities.joinActivity(
+                    group,
+                    {
+                        type: 'User',
+                        id: user.id,
+                        ip: req.ip,
+                        level: GroupMemberUser.LEVELS.read
+                    },
+                    req.method + ' ' + req.path,
+                    t
+                );
+            }
+
+            t.afterCommit(() => {
+                const resObject = group.toJSON();
+                resObject.join = GroupJoin.build({
+                    groupId: group.id
+                });
+                resObject.userLevel = GroupMemberUser.LEVELS.read;
+
+                return res.ok(resObject);
+            });
+        });
+    }));
+
+    /**
      * Invite new Members to the Group
      *
      * Does NOT add a Member automatically, but will send an invite, which has to accept in order to become a Member of the Group
@@ -1281,7 +1469,7 @@ module.exports = function (app) {
                 if (validator.isEmail(m.userId)) {
                     m.userId = m.userId.toLowerCase(); // https://github.com/citizenos/citizenos-api/issues/234
                     validEmailMembers.push(m); // The whole member object with level
-                } else if (validator.isUUID(m.userId, 4)) {
+                } else if (validator.isUUID(m.userId)) {
                     validUserIdMembers.push(m);
                 } else {
                     logger.warn('Invalid member ID, is not UUID or email thus ignoring', req.method, req.path, m, req.body);
@@ -1461,10 +1649,10 @@ module.exports = function (app) {
                 invite.inviteMessage = inviteMessage;
             }
 
-            await emailLib.sendGroupMemberUserInviteCreate(createdInvites);
-
-            t.afterCommit(() => {
+            t.afterCommit(async () => {
                 if (createdInvites.length) {
+
+                    await emailLib.sendGroupMemberUserInviteCreate(createdInvites);
                     return res.created({
                         count: createdInvites.length,
                         rows: createdInvites
@@ -1918,7 +2106,7 @@ module.exports = function (app) {
      */
 
     const _getGroupMemberTopics = async (req, res, visibility) => {
-        const group = await Group.findOne({ where: { id: req.params.groupId } });
+        //const group = await Group.findOne({ where: { id: req.params.groupId } });
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         let search = req.query.search;
@@ -1934,16 +2122,18 @@ module.exports = function (app) {
         const favourite = req.query.favourite;
         const hasVoted = req.query.hasVoted; // Filter out Topics where User has participated in the voting process.
         const showModerated = req.query.showModerated || false;
-        const order = req.query.order;
-        let sortOrder = req.query.sortOrder || 'ASC';
+        const orderBy = req.query.orderBy;
+        let sortOrder = req.query.order || 'ASC';
         if (sortOrder && ['asc', 'desc'].indexOf(sortOrder.toLowerCase()) === -1) {
             sortOrder = 'ASC';
         }
 
         let sortSql = ` ORDER BY `;
 
-        if (order) {
-            switch (order) {
+        let groupBy = ``;
+
+        if (orderBy) {
+            switch (orderBy) {
                 case 'title':
                     sortSql += ` t.title ${sortOrder}`;
                     break;
@@ -1956,8 +2146,22 @@ module.exports = function (app) {
                 case 'lastActivity':
                     sortSql += ` "lastActivity" ${sortOrder}`;
                     break;
+                case 'activityTime':
+                    sortSql += ` ta.latest  ${sortOrder} `;
+                    groupBy += `ta.latest,`;
+                    break;
+                case 'activityCount':
+                    sortSql += ` ta.count  ${sortOrder} `;
+                    groupBy += `ta.count,`;
+                    break;
+                case 'membersCount':
+                    sortSql += ` muc.count ${sortOrder} `;
+                    break;
+                case 'created':
+                    sortSql += ` t."createdAt" ${sortOrder} `;
+                    break;
                 default:
-                    sortSql = '';
+                    sortSql += ` "order" ASC, t."updatedAt" DESC `;
             }
         } else {
             if (userId) {
@@ -1983,9 +2187,7 @@ module.exports = function (app) {
             where += ` AND t.visibility=:visibility `;
         }
         let defaultPermission = TopicMemberGroup.LEVELS.none;
-        if (visibility === 'public' || group.visibility === 'public') {
-            defaultPermission = TopicMemberGroup.LEVELS.read;
-        }
+
         if (userId && ['true', '1'].includes(hasVoted)) {
             where += ` AND EXISTS (SELECT TRUE FROM "VoteLists" vl WHERE vl."voteId" = tv."voteId" AND vl."userId" = :userId LIMIT 1)`;
         } else if (userId && ['false', '0'].includes(hasVoted)) {
@@ -2011,7 +2213,6 @@ module.exports = function (app) {
         };
         let userSql = ``;
         let fields = ``;
-        let groupBy = ``;
         if (userId) {
             if (favourite) {
                 where += ` AND tf."topicId" = t.id AND tf."userId" = :userId `;
@@ -2059,6 +2260,7 @@ module.exports = function (app) {
                         t.title,
                         t.visibility,
                         t.status,
+                        t."imageUrl",
                         t.categories,
                         t.country,
                         t.language,
@@ -2067,6 +2269,11 @@ module.exports = function (app) {
                         ${fields}
                         t.hashtag,
                         t."updatedAt",
+                        CASE WHEN t.status = 'voting' THEN 1
+                            WHEN t.status = 'inProgress' THEN 2
+                            WHEN t.status = 'followUp' THEN 3
+                        ELSE 4
+                        END AS "order",
                         t."createdAt",
                         COALESCE(MAX(a."updatedAt"), t."updatedAt") as "lastActivity",
                         u.id as "creator.id",
@@ -2128,6 +2335,14 @@ module.exports = function (app) {
                             LEFT JOIN "Votes" v
                                     ON v.id = tv."voteId"
                         ) AS tv ON (tv."topicId" = t.id)
+                        LEFT JOIN (
+                            SELECT
+                                unnest("topicIds") as "topicId",
+                                COUNT("topicIds") as count,
+                                MAX("updatedAt") AS latest
+                                FROM "Activities"
+                            GROUP BY "topicIds"
+                        ) AS ta ON ta."topicId" = t.id::text
                         LEFT JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds"
                     WHERE gt."groupId" = :groupId
                         AND gt."deletedAt" IS NULL
@@ -2177,17 +2392,35 @@ module.exports = function (app) {
         const limitMax = 100;
         const limitDefault = 26;
         const userId = req.user?.userId;
+        const country = req.query.country;
+        const language = req.query.language;
         const orderBy = req.query.orderBy || 'updatedAt';
         const order = (req.query.order && req.query.order.toLowerCase() === 'asc') ? 'ASC' : 'DESC';
         let orderBySql = ` ORDER BY`;
+
         switch (orderBy) {
             case 'name':
                 orderBySql += ` g.name `
                 break;
+            case 'activityCount':
+                orderBySql += ` ga.count `
+                break;
+            case 'memberCount':
+                orderBySql += ` "members.users.count" `
+                break;
+            case 'topicCount':
+                orderBySql += ` "members.topics.count" `
+                break;
+            case 'createdAt':
+                orderBySql += ` g."createdAt" `
+                break;
+            case 'activity':
+                orderBySql += ` ga."updatedAt" `
+                break;
             default:
                 orderBySql += ` g."updatedAt" `
-
         }
+
         orderBySql += order;
         const offset = req.query.offset || 0;
         let limit = req.query.limit || limitDefault;
@@ -2198,7 +2431,7 @@ module.exports = function (app) {
         AND g."deletedAt" IS NULL `;
         const name = req.query.name;
         if (name) {
-            where += ` AND g.name ILIKE %:name% `;
+            where += ` AND g.name ILIKE :search `;
         }
 
         const sourcePartnerId = req.query.sourcePartnerId;
@@ -2208,8 +2441,24 @@ module.exports = function (app) {
         let memberJoin = '';
         let memberLevel = '';
         if (userId) {
-            memberLevel = ` gmu.level AS "userLevel", `;
-            memberJoin = ` LEFT JOIN "GroupMemberUsers" gmu ON gmu."groupId" = g.id AND gmu."userId" = :userId `
+
+            memberLevel = ` gmu.level AS "userLevel",
+            CASE
+            WHEN gf."groupId" = g.id THEN true
+                ELSE false
+            END as "favourite", `;
+            memberJoin = ` LEFT JOIN "GroupMemberUsers" gmu ON gmu."groupId" = g.id AND gmu."userId" = :userId
+            LEFT JOIN "GroupFavourites" gf ON (gf."groupId" = g.id AND gf."userId" = :userId) `
+            const favourite = req.query.favourite;
+            if (favourite)
+                where += ` AND gf."groupId" = g.id AND gf."userId" = :userId `;
+        }
+        if (country) {
+            where += ` AND g.country ILIKE :country `;
+        }
+
+        if (language) {
+            where += ` AND g.language ILIKE :language `;
         }
         const groups = await db
             .query(`
@@ -2223,6 +2472,7 @@ module.exports = function (app) {
                     g.country,
                     g.language,
                     g.contact,
+                    ga."updatedAt" AS "latestActivity",
                     g.visibility,
                     gj.token as "join.token",
                     gj.level as "join.level",
@@ -2230,10 +2480,92 @@ module.exports = function (app) {
                     c.id as "creator.id",
                     c.name as "creator.name",
                     c.company as "creator.company",
+                    mc.count as "members.users.count",
+                    gtc.count as "members.topics.count",
+                    gt."topicId" as "members.topics.latest.id",
+                    gt.title as "members.topics.latest.title",
                     count(*) OVER()::integer AS "countTotal"
                 FROM "Groups" g
                 JOIN "Users" c ON c.id = g."creatorId"
+                LEFT JOIN (
+                    SELECT
+                        MAX(a."updatedAt") as "updatedAt",
+                        ag.count,
+                        a."groupIds"
+                    FROM
+                    "Activities" a
+                    LEFT JOIN (
+                        SELECT COUNT(*) as "count",
+                        "groupIds"
+                        FROM "Activities"
+                        WHERE array_length("groupIds", 1) > 0
+                        GROUP BY "groupIds"
+                    ) ag ON a."groupIds" = ag."groupIds"
+                    WHERE array_length(a."groupIds", 1) > 0
+                    GROUP BY a."groupIds", ag.count ORDER BY a."groupIds"
+                ) ga ON g.id::text = ANY(ga."groupIds")
                 LEFT JOIN "GroupJoins" gj ON gj."groupId" = g.id
+                JOIN (
+                    SELECT "groupId", count("userId") AS "count"
+                    FROM "GroupMemberUsers"
+                    WHERE "deletedAt" IS NULL
+                    GROUP BY "groupId"
+                ) AS mc ON (mc."groupId" = g.id)
+                LEFT JOIN (
+                    SELECT tmgtc."groupId", tmgtc.count::jsonb || tmc.count::jsonb as count
+                    FROM (
+                        SELECT
+                            "groupId",
+                            jsonb_object_agg('total', total) as count
+                        FROM (
+                            SELECT
+                                tmg."groupId",
+                                COUNT(tmg."groupId") AS total
+                            FROM "TopicMemberGroups" tmg
+                            GROUP BY tmg."groupId"
+                        ) as tmgtc
+                        GROUP BY "groupId"
+                    ) as tmgtc
+                    LEFT JOIN (
+                        SELECT
+                            tmc."groupId",
+                            jsonb_object_agg(tmc.status, tmc.count) as count
+                        FROM
+                        (
+                            SELECT
+                                tmg."groupId",
+                                t."status",
+                                count(tmg."topicId") AS "count"
+                            FROM "TopicMemberGroups" tmg
+                            JOIN "Topics" t ON t.id = tmg."topicId"
+                            WHERE tmg."deletedAt" IS NULL
+                            GROUP BY tmg."groupId", t.status
+                        ) as tmc
+                        GROUP BY "groupId"
+                    ) tmc ON tmgtc."groupId" = tmc."groupId"
+                ) AS gtc ON (gtc."groupId" = g.id)
+                LEFT JOIN (
+                    SELECT tmg."groupId",
+                        tmg."topicId",
+                        t.title,
+                        t."updatedAt"
+                        FROM "TopicMemberGroups" tmg
+                        JOIN "Topics" t ON (t.id = tmg."topicId")
+                        JOIN (
+                        SELECT g.id, MAX(tmg."updatedAt") as "updatedAt" FROM "Groups" g JOIN (
+                            SELECT
+                                tmg."groupId",
+                                tmg."topicId",
+                                t.title,
+                                t."updatedAt"
+                            FROM "TopicMemberGroups" tmg
+                            JOIN "Topics" t ON (t.id = tmg."topicId")
+                            WHERE tmg."deletedAt" IS NULL
+                                AND t.title IS NOT NULL
+                            ORDER BY t."updatedAt" DESC
+                        ) as tmg ON g.id=tmg."groupId" GROUP BY g.id
+                    ) tmgtm ON tmgtm."updatedAt" = t."updatedAt" GROUP BY "groupId", "topicId", t.title, t."updatedAt"
+                ) AS gt ON (gt."groupId" = g.id)
                 ${memberJoin}
                 WHERE ${where}
                 ${orderBySql}
@@ -2247,6 +2579,9 @@ module.exports = function (app) {
                         sourcePartnerId,
                         orderBy,
                         order,
+                        country,
+                        language,
+                        search: `%${name}%`,
                         offset
                     },
                     type: db.QueryTypes.SELECT,

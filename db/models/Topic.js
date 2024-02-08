@@ -20,6 +20,7 @@ module.exports = function (sequelize, DataTypes) {
 
     // The order of the status properties is important - you can move from top down (inProgress->voting->followUp..)
     const STATUSES = {
+        draft: 'draft',
         inProgress: 'inProgress', // Being worked on
         voting: 'voting', // Is being voted which means the Topic is locked and cannot be edited.
         followUp: 'followUp', // Done editing Topic and executing on the follow up plan.
@@ -108,7 +109,12 @@ module.exports = function (sequelize, DataTypes) {
                 values: _.values(STATUSES),
                 comment: 'Topic statuses.',
                 allowNull: false,
-                defaultValue: STATUSES.inProgress
+                defaultValue: STATUSES.draft
+            },
+            imageUrl: {
+                type: DataTypes.STRING,
+                allowNull: true,
+                comment: 'Topic header image url.'
             },
             visibility: {
                 type: DataTypes.ENUM,
@@ -313,6 +319,7 @@ module.exports = function (sequelize, DataTypes) {
             description: this.dataValues.description,
             status: this.dataValues.status,
             visibility: this.dataValues.visibility,
+            imageUrl: this.dataValues.imageUrl,
             categories: this.dataValues.categories,
             country: this.dataValues.country,
             language: this.dataValues.language,

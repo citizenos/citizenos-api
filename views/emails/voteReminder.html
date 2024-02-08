@@ -19,7 +19,7 @@
         <tr>
             <td valign="middle">
                 <p width="100%">
-                    The vote deadline is coming close! <b>You have only {{daysLeft}} left to cast your vote</b>
+                    The vote deadline is coming close! {{#daysLeft}}<b>You have only {{daysLeft}} left to cast your vote</b>{{/daysLeft}}
                 </p>
             </td>
         </tr>
@@ -30,14 +30,16 @@
                     <tbody>
                         <tr>
                             <td>
-                                <img src="cid:icon_vote.png" />
+                                <img src="cid:Voting.png" />
                             </td>
                             <td style="font-size: 16px;line-height:24px;">
                                 <b>Votes collected: {{voteCount}}</b>/{{votesCountRequired}}
                             </td>
+                            {{#voteEndsAt}}
                             <td style="font-size: 16px;line-height:24px;">
                                 Deadline: {{voteEndsAt}}
                             </td>
+                            {{/voteEndsAt}}
                         </tr>
                     </tbody>
                 </table>

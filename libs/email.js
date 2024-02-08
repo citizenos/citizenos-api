@@ -12,7 +12,6 @@ module.exports = function (app) {
     const urlLib = app.get('urlLib');
     const _ = app.get('lodash');
     const config = app.get('config');
-    const util = app.get('util');
     const fs = app.get('fs');
     const path = require('path');
     const moment = app.get('moment');
@@ -503,7 +502,7 @@ module.exports = function (app) {
             // Handle Partner links
             // TODO: could use Mu here...
             const subject = template.translations.INVITE_TOPIC.SUBJECT
-                .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
+                .replace('{{fromUser.name}}', fromUser.name)
                 .replace('{{topicTitle}}', topic.title ? topic.title : topic.id);
             const invite = invites.find((i) => { return i.userId === toUser.id });
             const linkViewInvite = urlLib.getFe('/topics/:topicId/invites/users/:inviteId', { // FIXME: Do we want to go through /api/invite/view?
@@ -616,7 +615,8 @@ module.exports = function (app) {
                     const template = resolveTemplate('inviteTopic', user.language);
                     // TODO: Could use Mu here....
                     const subject = template.translations.INVITE_TOPIC.SUBJECT
-                        .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name));
+                        .replace('{{fromUser.name}}', fromUser.name)
+                        .replace('{{topicTitle}}', topic.title);
 
                     const linkViewTopic = urlLib.getApi('/api/invite/view', null, {
                         email: user.email,
@@ -634,6 +634,7 @@ module.exports = function (app) {
                             toUser: user,
                             fromUser: fromUser,
                             topic: topic,
+                            topicTitle: topic.title,
                             linkViewTopic: linkViewTopic
                         }
                     );
@@ -733,7 +734,7 @@ module.exports = function (app) {
             const template = resolveTemplate(templateName, toUser.language);
             // TODO: could use Mu here...
             const subject = template.translations.INVITE_GROUP.SUBJECT
-                .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
+                .replace('{{fromUser.name}}', fromUser.name)
                 .replace('{{group.name}}', group.name);
             const invite = invites.find((i) => { return i.userId === toUser.id });
             const linkViewInvite = urlLib.getFe('/groups/:groupId/invites/users/:inviteId', {
@@ -834,8 +835,8 @@ module.exports = function (app) {
 
                     // TODO: could use Mu here...
                     const subject = template.translations.INVITE_GROUP.SUBJECT
-                        .replace('{{fromUser.name}}', util.escapeHtml(fromUser.name))
-                        .replace('{{group.name}}', util.escapeHtml(group.name));
+                        .replace('{{fromUser.name}}', fromUser.name)
+                        .replace('{{group.name}}', group.name);
 
                     const emailOptions = Object.assign(
                         _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
@@ -1469,9 +1470,9 @@ module.exports = function (app) {
 
         const from = config.features.sendToParliament.from;
         const to = config.features.sendToParliament.to;
-        const subject = template.translations.TO_PARLIAMENT.SUBJECT.replace('{{topic.title}}', util.escapeHtml(topic.title));
+        const subject = template.translations.TO_PARLIAMENT.SUBJECT.replace('{{topic.title}}', topic.title);
         const linkViewTopic = linkToApplication + '/initiatives/:topicId'.replace(':topicId', topic.id);
-        const logoFile = templateRoot + '/images/logo-email_rahvaalgatus.ee.png';
+        //const logoFile = templateRoot + '/images/logo-email_rahvaalgatus.ee.png';
 
         const promisesToResolve = [];
         const customStyles = {
@@ -1491,12 +1492,6 @@ module.exports = function (app) {
                     from: from,
                     subject: subject,
                     to: to,
-                    images: [
-                        {
-                            name: emailHeaderLogoName,
-                            file: logoFile
-                        }
-                    ],
                     //Placeholders..
                     linkViewTopic: linkViewTopic,
                     linkDownloadBdocFinal: linkDownloadBdocFinal,
@@ -1529,12 +1524,6 @@ module.exports = function (app) {
                     from: from,
                     subject: subject,
                     to: contact.email,
-                    images: [
-                        {
-                            name: emailHeaderLogoName,
-                            file: logoFile
-                        }
-                    ],
                     //Placeholders..
                     linkViewTopic: linkViewTopic,
                     linkDownloadBdocFinal: config.features.sendToParliament.sendContainerDownloadLinkToCreator ? linkDownloadBdocFinal : null,
@@ -1585,11 +1574,27 @@ module.exports = function (app) {
     }
     const _sendTopicNotification = async (notification, users) => {
         const promisesToResolve = [];
+        let isVisible = true;
         let linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: notification.topicIds[0] });
+        let groupLink;
+        if (notification.groupIds?.length) {
+            const group = await Group.findOne({
+                where: {
+                    id: notification.groupIds[0]
+                }
+            })
+            groupLink = urlLib.getFe('/groups/:groupId', { groupId: notification.groupIds[0] });
+            notification.values.groupLink = groupLink;
+            notification.values.groupName = group.name;
+        }
         const linkGeneralNotificationSettings = `${urlLib.getFe('/myaccount')}?tab=notifications`;
         const linkTopicNotificationSettings = `${linkViewTopic}?notificationSettings`;
         if (['Comment', 'CommentVote'].indexOf(notification.data.object['@type']) > -1) {
             linkViewTopic += `?commentId=${notification.data.object.commentId || notification.data.object.id}`;
+        }
+
+        if (notification.data.type === 'Delete' && notification.data.object['@type'] === 'Topic') {
+            isVisible = false;
         }
         users.forEach((user) => {
             const template = resolveTemplate('topicNotification', user.language || 'en');
@@ -1615,6 +1620,8 @@ module.exports = function (app) {
                     toUser: user,
                     userName: user.name,
                     linkViewTopic,
+                    groupLink,
+                    isVisible: isVisible,
                     linkTopicNotificationSettings,
                     linkGeneralNotificationSettings,
                     notificationText,
@@ -1631,11 +1638,37 @@ module.exports = function (app) {
     };
 
     const _sendVoteReminder = async (users, vote, topicId) => {
-        let topic = vote.Topic;
-        if (!topic) {
-            topic = await Topic
-                .findOne({ where: { id: topicId } });
-        }
+        let topicRes = await db.query(`
+                SELECT id, title, muc.count as "members.users.count" FROM "Topics" t
+                LEFT JOIN (
+                    SELECT tmu."topicId", COUNT(tmu."memberId") AS "count" FROM (
+                        SELECT
+                            tmuu."topicId",
+                            tmuu."userId" AS "memberId"
+                        FROM "TopicMemberUsers" tmuu
+                        WHERE tmuu."deletedAt" IS NULL
+                        UNION
+                        SELECT
+                            tmg."topicId",
+                            gm."userId" AS "memberId"
+                        FROM "TopicMemberGroups" tmg
+                            LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
+                            JOIN "Groups" gr on gr.id = tmg."groupId"
+                        WHERE tmg."deletedAt" IS NULL
+                        AND gm."deletedAt" IS NULL
+                        AND gr."deletedAt" IS NULL
+                    ) AS tmu GROUP BY "topicId"
+                ) AS muc ON (muc."topicId" = t.id)
+                WHERE t.id = :topicId
+            ;`, {
+            replacements: {
+                topicId: topicId
+            },
+            type: db.QueryTypes.SELECT,
+            raw: true,
+            nest: true
+        });
+        const topic = topicRes[0];
         const linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: topicId });
         const linkToApplication = urlLib.getFe();
         let templateName = 'voteReminder';
@@ -1658,21 +1691,29 @@ module.exports = function (app) {
 
             let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
             linkedData.translations = template.translations;
-            const images = EMAIL_OPTIONS_DEFAULT.images;
+            const images = [].concat(EMAIL_OPTIONS_DEFAULT.images);
             images.push(
                 {
-                    name: 'icon_vote.png',
-                    file: path.join(templateRoot, 'images/Vote.png')
+                    name: 'Voting.png',
+                    file: path.join(templateRoot, 'images/Voting.png')
                 });
+            let daysLeft;
+            let voteEndsAt;
+            if (vote.endsAt) {
+                daysLeft = moment(vote.endsAt).diff(moment(), 'days'),
+                    voteEndsAt = moment(vote.endsAt).format('YYYY-MM-dd HH:mm')
+            }
             const emailOptions = {
                 // from: from, - comes from emailClient.js configuration
                 subject: subject,
                 to: toUser.email,
                 images: images,
                 toUser: toUser,
+                voteCount: (vote.votersCount || 0),
+                votesCountRequired: (topic.members.users.count || 0),
                 topic: topic,
-                daysLeft: moment(vote.endsAt).diff(moment(), 'days'),
-                voteEndsAt: moment(vote.endsAt).locale(toUser.language).format('LLL'),
+                daysLeft: daysLeft,
+                voteEndsAt: voteEndsAt,
                 linkViewTopic: linkViewTopic,
                 linkToApplication: linkToApplication,
                 provider: EMAIL_OPTIONS_DEFAULT.provider,

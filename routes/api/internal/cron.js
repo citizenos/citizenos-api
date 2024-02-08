@@ -7,6 +7,7 @@ module.exports = function (app) {
     const Vote = models.Vote;
     const TopicVote = models.TopicVote;
     const emailLib = app.get('email');
+    const topicLib = require('../topic')(app);
     const moment = require('moment');
 
     const getTopicMembers = async (voteId) => {
@@ -89,9 +90,13 @@ module.exports = function (app) {
                     reminderSent: null
                 }
             });
-
             votes.forEach(async vote => {
                 const users = await getTopicMembers(vote.id);
+                const voteResult = await topicLib.getVoteResults(vote.id);
+                vote.votersCount = 0;
+                if (voteResult.length) {
+                    vote.votersCount = voteResult[0].votersCount;
+                }
                 if (users && users.length) {
                     const topicVote = await TopicVote.findOne({ where: { voteId: vote.id } });
                     emailLib.sendVoteReminder(users, vote, topicVote.topicId);

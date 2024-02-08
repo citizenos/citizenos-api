@@ -74,6 +74,7 @@ module.exports = function (app) {
                         if (!errors) {
                             uploader.deletePartials();
                             const error = new Error('File too large');
+                            console.log('ERROR', error);
                             error.type = 'fileSize';
                             error.statusCode = 403;
                             busboy.emit('error', error)
