@@ -32,8 +32,19 @@
         </tr>
         {{/isVisible}}
         <tr>
-            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size:14px;">
-                Remarque : vous devez vous connecter en utilisant la même adresse e-mail ({{toUser.email}}) pour accéder à ce sujet.
+            <td valign="bottom" height="30" style="border-top: 1px solid #E1E7EE;padding-top:16px;">
+                <table style="background-color:#FFF1E1;border-radius: 8px;padding:16px;width: 100%;">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <img src="cid:Warning.png" />
+                            </td>
+                            <td style="font-size:14px;">
+                                You must log in with {{toUser.email}} to access this topic.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </td>
         </tr>
         <tr>
