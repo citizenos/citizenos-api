@@ -1,0 +1,90 @@
+<!-- E-mail sent to moderators when a Topic is reported -->
+<table id="bodyHeader" width="600">
+    <tbody>
+        <tr width="100%">
+            <td valign="middle" style="padding:22px 22px 22px 0;">
+                <p id="header_title_description">A topic has been reported</p>
+                <p id="header_title">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0"  width="600">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 32px;">
+                Hi {{userModerator.name}}!
+            </td>
+        </tr>
+
+        <tr>
+            <td width="100%">
+                A topic has been reported as inappropriate, and requires review by a moderator. Please see the reasons below, review the content, and decide on the necessary course of action.
+            </td>
+        </tr>
+        <tr>
+            <td><p class="info_heading">Report details</p></td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table"  width="600">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <p class="info_row_heading">
+                                Téma
+                                </p>
+                            </td>
+                        <tr>
+                        <tr>
+                            <td style="font-size:14px;font-weight:600;color:#1168a8;line-height:16px;">
+                                <a href="{{linkViewTopic}}" target="_blank" >{{topic.title}}</a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-top: 16px">
+                                <p class="info_row_heading">
+                                Type of violation
+                                </p>
+                            </td>
+                        <tr>
+                        <tr>
+                            <td style="font-size:14px;font-weight:600;color:#2C3B47;line-height:16px;">
+                                {{report.type}}
+                            </td>
+                        </tr>
+
+                        {{#report.text}}
+                        <tr>
+                            <td style="padding-top: 16px">
+                                <p class="info_row_heading">
+                                Odůvodnění
+                                </p>
+                            </td>
+                        <tr>
+                        <tr>
+                            <td style="font-size:14px;font-weight:600;color:#2C3B47;line-height:16px;">
+                                {{report.text}}
+                            </td>
+                        </tr>
+                        {{/report.text}}
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 32px;">
+                <p class="submit_button">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 60px;">Review topic</a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size: 14px;">
+                <a href="{{linkViewModerationGuidelines}}">Learn more about the Citizen OS moderation process
+                    here.</a>
+            </td>
+        </tr>
+    </tbody>
+</table>

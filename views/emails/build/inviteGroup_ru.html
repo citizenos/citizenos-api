@@ -1,0 +1,97 @@
+<table id="bodyHeader" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding:22px 22px 22px 0;">
+                <p id="header_title_description">Приглашение присоединиться к группе</p>
+                <p id="header_title">{{group.name}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 16px;">
+                Здравствуйте, {{toUser.name}}!
+            </td>
+        </tr>
+
+        <tr>
+            <td valign="middle">
+                Пользователь {{fromUser.name}} из группы <b>{{group.name}}</b> приглашает вас присоединиться к этой группе.
+            </td>
+        </tr>
+
+        {{#message}}
+        <tr>
+            <td><p class="info_heading">Сообщение</p></td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="message_table">
+                    <tbody>
+                        <tr>
+                            <td style="font-size: 14px;font-weight: 400;line-height: 20px;">
+                            {{message}}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        {{/message}}
+        <tr>
+            <td><p class="info_heading">Сведения о группе</p></td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <p class="info_row_heading">Название группы</p>
+                                <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
+                                    {{group.name}}</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                {{group.description}}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-top: 16px">
+                                <p class="info_row_heading">Участников:</p>
+                                <p style="font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
+                                    {{memberCount}}
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-top: 16px">
+                                <p class="info_row_heading">Последние обновления</p>
+                                <p style="font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
+                                    {{latestActivity}}
+                                </p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 32px;padding-top: 16px">
+                <p class="submit_button">
+                    <a href="{{linkViewGroup}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 60px;">Присоединиться к группе</a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size:14px;color:#4D5C6A;">
+                Обратите внимание: для доступа к этой группе необходимо войти в систему, используя тот же адрес эл. почты ({{toUser.email}}).
+            </td>
+        </tr>
+
+    </tbody>
+</table>

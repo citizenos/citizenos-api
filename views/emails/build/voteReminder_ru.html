@@ -1,0 +1,65 @@
+<table id="bodyHeader" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding:22px 22px 22px 0;">
+                <p id="header_title_description">Напоминание о голосовании по</p>
+                <p id="header_title">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" width="100%" style="padding-bottom: 16px;">
+                Здравствуйте, {{toUser.name}}!
+            </td>
+        </tr>
+
+        <tr>
+            <td valign="middle">
+                <p width="100%">
+                    Срок голосования заканчивается! <b>У вас осталось только {{daysLeft}} для голосования</b>
+                </p>
+            </td>
+        </tr>
+
+        <tr>
+            <td valign="middle">
+                <table class="info_table" style="background-color: #F1FAF3;">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <img src="cid:icon_vote.png" />
+                            </td>
+                            <td style="font-size: 16px;line-height:24px;">
+                                <b>Голосов собрано: {{voteCount}}</b>/{{votesCountRequired}}
+                            </td>
+                            <td style="font-size: 16px;line-height:24px;">
+                                Крайний срок: {{voteEndsAt}}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <p class="submit_button">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 60px;">
+                        Проголосуйте
+                    </a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" height="30" style="border-top: 1px solid #E1E7EE;padding-top:16px;">
+                <p style="font-size:14px;">
+                    Обратите внимание: для доступа к этой теме необходимо войти в систему, используя тот же адрес эл. почты ({{toUser.email}}).
+                </p>
+            </td>
+        </tr>
+
+    </tbody>
+</table>

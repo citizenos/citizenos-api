@@ -2,7 +2,7 @@
   "LAYOUT": {
     "FOR_MORE_INFORMATION": "For more information, please see our",
     "LINK_TO_PLATFORM": "Odkaz na platformu",
-    "LINK_PRIVACY_POLICY": "privacy policy",
+    "LINK_PRIVACY_POLICY": "zásady ochrany osobních údajů",
     "EMPOWERED_BY": "Běží na"
   },
   "ACCOUNT_VERIFICATION": {
@@ -18,28 +18,28 @@
     "SUBJECT_rahvaalgatus_test": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Obnovit heslo k účtu Citizen OS"
+    "SUBJECT": "Reset your password"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
     "SUBJECT": "Děkujeme za nahlášení tématu"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Téma vašeho Občanského OS bylo nahlášeno moderátorům"
+    "SUBJECT": "Your topic has been reported to moderators"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "Prosím moderujte toto nahlášené téma Citizen OS"
+    "SUBJECT": "Please moderate this reported topic"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Téma Citizen OS které jste nahlásili, bylo zkontrolováno"
+    "SUBJECT": "The topic you reported has been reviewed"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Téma vašeho Citizen OS bylo přezkoumáno moderátorem"
+    "SUBJECT": "Your topic has been reviewed by a moderator"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "Nahlášené téma Citizen OS bylo revidováno, prosím zkontrolujte"
+    "SUBJECT": "A reported topic has been revised, please review"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Access to your reported Citizen OS topic has been restored"
+    "SUBJECT": "Access to your reported topic has been restored"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
     "SUBJECT": "The issue you reported has been resolved"
@@ -68,19 +68,19 @@
     "SUBJECT": "Your discussion contribution has been reported as inappropriate"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "Some discussion content has been reported as inappropriate"
+    "SUBJECT": "Please moderate this reported discussion content"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
   "NOTIFICATIONS": {
-    "SUBJECT": "An update on topic “{{topicTitle}}”",
-    "NOTIFICATION_USER_CREATE_TOPIC": "User <em>{{userName}}</em> has created a new topic.",
-    "NOTIFICATION_USER_UPDATE_TOPIC": "User <em>{{userName}}</em> has updated the field <em>{{fieldName}}</em> in this topic.",
+    "SUBJECT": "Aktualizace tématu „{{topicTitle}}“",
+    "NOTIFICATION_USER_CREATE_TOPIC": "Uživatel <em>{{userName}}</em> vytvořil nové téma.",
+    "NOTIFICATION_USER_UPDATE_TOPIC": "Uživatel <em>{{userName}}</em> aktualizoval pole <em>{{fieldName}}</em> v tomto tématu.",
     "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "User <em>{{userName}}</em> has made <em>{{groupCount}}</em> updates to this topic.",
     "NOTIFICATION_PREVIOUS_VERSION": "Předchozí verze: {{previousValue}}",
     "NOTIFICATION_NEW_VERSION": "Nová verze: {{newValue}}",
-    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "The Citizen OS system has updated a field <em>{{fieldName}}</em> in this topic.",
+    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "Systém Citizen OS aktualizoval v tomto tématu pole <em>{{fieldName}}</em>.",
     "NOTIFICATION_USER_DELETE_TOPIC": "User <em>{{userName}}</em> has deleted this topic.",
     "NOTIFICATION_USER_ADD_USER_TOPIC": "User <em>{{userName}}</em> has invited user <em>{{userName2}}</em> to participate in this topic.",
     "NOTIFICATION_USER_INVITE_TOPIC_USER": "@:NOTIFICATIONS.NOTIFICATION_USER_ADD_USER_TOPIC",
@@ -99,7 +99,7 @@
     "NOTIFICATION_USER_ADD_TOPIC_TOPICPIN": "User <em>{{userName}}</em> has pinned this topic.",
     "NOTIFICATION_USER_CREATE_VOTE_TOPIC": "User <em>{{userName}}</em> has opened voting for this topic.",
     "NOTIFICATION_USER_UPDATE_VOTE_TOPIC": "User <em>{{userName}}</em> has updated the voting deadline for this topic.",
-    "NOTIFICATION_USER_CREATE_VOTELIST_TOPIC": "Someone has voted on this topic.",
+    "NOTIFICATION_USER_CREATE_VOTELIST_TOPIC": "Někdo o tomto tématu hlasoval.",
     "NOTIFICATION_USER_CREATE_VOTEDELEGATION_VOTE": "User <em>{{userName}}</em> has delegated their vote in this topic.",
     "NOTIFICATION_USER_DELETE_VOTEDELEGATION_VOTE": "User <em>{{userName}}</em> has revoked delegation of their vote in this topic.",
     "NOTIFICATION_USER_VIEW_VOTEUSERCONTAINER": "User <em>{{userName}}</em> has downloaded the voting results for this topic.",
@@ -178,7 +178,7 @@
     "FILTER_SELF": "Moje aktivity"
   },
   "VOTE_REMINDER": {
-    "SUBJECT": "A reminder to vote"
+    "SUBJECT": "Připomínka k hlasování"
   },
   "TXT_TOPIC_CATEGORY_ALL": "všechny kategorie",
   "TXT_TOPIC_CATEGORY_CITIZENOS": "Citizen OS",
@@ -194,9 +194,9 @@
   "TXT_TOPIC_CATEGORY_TRANSPORT": "Veřejná doprava a bezpečnost silničního provozu",
   "TXT_TOPIC_CATEGORY_TAXES": "Daně a rozpočty",
   "TXT_TOPIC_CATEGORY_AGRICULTURE": "Zemědělství",
-  "TXT_TOPIC_CATEGORY_ENVIRONMENT": "Environment and animal protection",
+  "TXT_TOPIC_CATEGORY_ENVIRONMENT": "Životní prostředí a ochrana zvířat",
   "TXT_TOPIC_CATEGORY_CULTURE": "Kultura, média a sporty",
-  "TXT_TOPIC_CATEGORY_HEALTH": "Health and social care",
+  "TXT_TOPIC_CATEGORY_HEALTH": "Zdravotní a sociální péče",
   "TXT_TOPIC_CATEGORY_WORK": "Práce a zaměstnání",
   "TXT_TOPIC_CATEGORY_EDUCATION": "Vzdělávání",
   "TXT_TOPIC_CATEGORY_POLITICS": "Politika a veřejná správa",
@@ -208,9 +208,9 @@
   "TXT_TOPIC_CATEGORY_SCIENCE": "Věda a technologie",
   "TXT_TOPIC_CATEGORY_SOCIETY": "Demokracie a občanská společnost",
   "TXT_TOPIC_CATEGORY_EUROCHANGEMAKERS": "EuroChangeMakers",
-  "TXT_TOPIC_STATUS_INPROGRESS": "in progress",
-  "TXT_TOPIC_STATUS_VOTING": "in voting",
-  "TXT_TOPIC_STATUS_FOLLOWUP": "in follow-up",
-  "TXT_TOPIC_STATUS_CLOSED": "closed",
-  "TXT_TOPIC_STATUS_MODERATED": "hidden by admin"
+  "TXT_TOPIC_STATUS_INPROGRESS": "probíhá",
+  "TXT_TOPIC_STATUS_VOTING": "hlasuje se",
+  "TXT_TOPIC_STATUS_FOLLOWUP": "v následných krocích",
+  "TXT_TOPIC_STATUS_CLOSED": "zavřeno",
+  "TXT_TOPIC_STATUS_MODERATED": "skryto administrátorem"
 }

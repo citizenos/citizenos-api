@@ -18,28 +18,28 @@
     "SUBJECT_rahvaalgatus_test": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Восстановить пароль учетной записи Citizen OS"
+    "SUBJECT": "Сбросить свой пароль"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
     "SUBJECT": "Благодарим за жалобу в отношении неуместной темы"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "В отношении вашей темы в Citizen OS была отправлена жалоба модераторам"
+    "SUBJECT": "В отношении вашей темы была отправлена жалоба модераторам"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "Пожалуйста, модерируйте эту тему в Citizen OS"
+    "SUBJECT": "Просим Вас модерировать эту тему, в отношении которой была составлена жалоба"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "Тема, в отношении которой была отправлена жалоба в Citizen OS, была проверена"
+    "SUBJECT": "Тема, в отношении которой Вами была составлена жалоба, теперь проверена"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Ваша тема в Citizen OS была просмотрена модератором"
+    "SUBJECT": "Ваша тема была просмотрена модератором"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "Содержание темы, в отношении которой была отправлена жалоба в Citizen OS, было корректировано."
+    "SUBJECT": "Содержание темы, в отношении которой была составлена жалоба, было корректировано"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Доступ к вашей теме Citizen OS был восстановлен"
+    "SUBJECT": "Доступ к вашей теме был восстановлен"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
     "SUBJECT": "Проблема, в отношении которой Вы отправляли жалобу, была решена"
@@ -68,7 +68,7 @@
     "SUBJECT": "Ваш вклад в обсуждение был отмечен, как неуместный"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "Некоторый вклад в обсуждение был отмечен, как неуместный"
+    "SUBJECT": "Просим Вас модерировать этот вклад, в отношении которого была составлена жалоба"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""

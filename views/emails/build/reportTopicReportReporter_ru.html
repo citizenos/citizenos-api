@@ -1,0 +1,131 @@
+<!-- E-mail sent to User who reports a Topic -->
+<table id="bodyHeader" width="600">
+    <tbody>
+        <tr width="100%">
+            <td valign="middle" style="padding:22px 22px 22px 0;" >
+                <p id="header_title_description">Вы пожаловались на тему</p>
+                <p id="header_title">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="600">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 32px;">
+                Здравствуйте, {{userReporter.name}}!
+            </td>
+        </tr>
+
+        <tr>
+            <td width="100%" >
+                Вы успешно отправили эту тему на проверку модераторам платформы Citizen OS.
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <p class="info_heading">Детали жалобы</p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="middle">
+
+                <table class="info_table" width="600">
+                    <tbody width="600">
+                        <tr>
+                            <td>
+                                <p class="info_row_heading">
+                                    Название темы
+                                </p>
+                                <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
+                                    <a href="{{linkViewTopic}}">{{topic.title}}</a>
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-top: 16px">
+                                <p class="info_row_heading">
+                                    Номер отчета
+                                </p>
+                                <p style="font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
+                                    {{report.id}}
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-top: 16px">
+                                <p class="info_row_heading">
+                                    Тип нарушения
+                                </p>
+                                <p style="font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
+                                    {{report.type}}
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-top: 16px">
+                                <p class="info_row_heading">
+                                    Ваше объяснение
+                                </p>
+                                <p style="font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
+                                    {{report.text}}
+                                </p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <p class="info_heading">Что будет дальше?</p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <ol>
+                                    <li class="li">
+                                        Модераторы изучат жалобу. Если они согласны с озвученной критикой, доступ к теме будет ограничен (пользователи получат предупреждение перед просмотром темы).
+                                    </li>
+                                    <li class="li">
+                                        Тем временем админам и редакторам темы будет предложено ее редактировать, чтобы решить проблему. В таком случае модераторы рассмотрят эту тему и устранят ограничения, когда все проблемы будут решены.
+                                    </li>
+                                    <li class="li">
+                                        Мы уведомим вас, если:
+                                        <ul>
+                                            <li>модераторы наложат ограничение на просмотр темы</li>
+                                            <li>все проблемы были решены и сняты ограничения.</li>
+                                        </ul>
+                                    </li>
+                                </ol>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 32px; padding-top: 16px;">
+                <p class="submit_button">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600; padding: 9px 60px;">Открыть тему</a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="middle" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size:14px;">
+                Можете оставить все как есть, но модераторы сообщества могут решить скрыть это по умолчанию от других пользователей (пользователи увидят предупреждение перед тем, как просмотреть эту тему).
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="padding-top:16px;font-size: 14px;">
+                <a href="{{linkViewModerationGuidelines}}">Узнайте подробнее о процессе модерирования Citizen OS здесь.</a>
+            </td>
+        </tr>
+    </tbody>
+</table>
