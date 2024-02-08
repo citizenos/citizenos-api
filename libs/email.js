@@ -615,7 +615,8 @@ module.exports = function (app) {
                     const template = resolveTemplate('inviteTopic', user.language);
                     // TODO: Could use Mu here....
                     const subject = template.translations.INVITE_TOPIC.SUBJECT
-                        .replace('{{fromUser.name}}', fromUser.name);
+                        .replace('{{fromUser.name}}', fromUser.name)
+                        .replace('{{topicTitle}}', topic.title);
 
                     const linkViewTopic = urlLib.getApi('/api/invite/view', null, {
                         email: user.email,
@@ -633,6 +634,7 @@ module.exports = function (app) {
                             toUser: user,
                             fromUser: fromUser,
                             topic: topic,
+                            topicTitle: topic.title,
                             linkViewTopic: linkViewTopic
                         }
                     );
@@ -1574,6 +1576,17 @@ module.exports = function (app) {
         const promisesToResolve = [];
         let isVisible = true;
         let linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: notification.topicIds[0] });
+        let groupLink;
+        if (notification.groupIds?.length) {
+            const group = await Group.findOne({
+                where: {
+                    id: notification.groupIds[0]
+                }
+            })
+            groupLink = urlLib.getFe('/groups/:groupId', { groupId: notification.groupIds[0] });
+            notification.values.groupLink = groupLink;
+            notification.values.groupName = group.name;
+        }
         const linkGeneralNotificationSettings = `${urlLib.getFe('/myaccount')}?tab=notifications`;
         const linkTopicNotificationSettings = `${linkViewTopic}?notificationSettings`;
         if (['Comment', 'CommentVote'].indexOf(notification.data.object['@type']) > -1) {
@@ -1607,6 +1620,7 @@ module.exports = function (app) {
                     toUser: user,
                     userName: user.name,
                     linkViewTopic,
+                    groupLink,
                     isVisible: isVisible,
                     linkTopicNotificationSettings,
                     linkGeneralNotificationSettings,
