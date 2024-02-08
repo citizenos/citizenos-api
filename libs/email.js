@@ -834,7 +834,7 @@ module.exports = function (app) {
                     // TODO: could use Mu here...
                     const subject = template.translations.INVITE_GROUP.SUBJECT
                         .replace('{{fromUser.name}}', fromUser.name)
-                        .replace('{{group.name}}',group.name);
+                        .replace('{{group.name}}', group.name);
 
                     const emailOptions = Object.assign(
                         _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
@@ -1677,10 +1677,10 @@ module.exports = function (app) {
 
             let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
             linkedData.translations = template.translations;
-            const images = EMAIL_OPTIONS_DEFAULT.images;
+            const images = [].concat(EMAIL_OPTIONS_DEFAULT.images);
             images.push(
                 {
-                    name: 'icon_vote.png',
+                    name: 'Voting.png',
                     file: path.join(templateRoot, 'images/Voting.png')
                 });
             let daysLeft;
