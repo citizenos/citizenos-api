@@ -18,9 +18,14 @@
 
         <tr>
             <td valign="middle">
+                {{#voteEndsAt}}
                 <p width="100%">
-                    Срок голосования заканчивается! <b>У вас осталось только {{daysLeft}} для голосования</b>
+                    Срок голосования заканчивается! {{#daysLeft}}<b>You have only {{daysLeft}} left to cast your vote</b>{{/daysLeft}}
                 </p>
+                {{/voteEndsAt}}
+                {{^voteEndsAt}}
+                    Please cast your vote!
+                {{/voteEndsAt}}
             </td>
         </tr>
 
@@ -30,14 +35,16 @@
                     <tbody>
                         <tr>
                             <td>
-                                <img src="cid:icon_vote.png" />
+                                <img src="cid:Voting.png" />
                             </td>
                             <td style="font-size: 16px;line-height:24px;">
-                                <b>Голосов собрано: {{voteCount}}</b>/{{votesCountRequired}}
+                                <b>Votes collected: {{voteCount}}</b>{{#votesCountRequired}}/{{votesCountRequired}}{{/votesCountRequired}}
                             </td>
+                            {{#voteEndsAt}}
                             <td style="font-size: 16px;line-height:24px;">
                                 Крайний срок: {{voteEndsAt}}
                             </td>
+                            {{/voteEndsAt}}
                         </tr>
                     </tbody>
                 </table>
