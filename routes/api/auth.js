@@ -135,24 +135,34 @@ module.exports = function (app) {
         const redirectSuccess = req.body.redirectSuccess || urlLib.getFe();
         const preferences = req.body.preferences;
         const termsVersion = req.body.termsVersion;
-
+        let termsAcceptedAt = null;
         let created = false;
+
+        if (termsVersion ) {
+            termsAcceptedAt = new Date();
+        }
 
         let user = await User
             .findOne({
                 where: db.where(db.fn('lower', db.col('email')), db.fn('lower', email)),
                 include: [UserConnection]
             });
-
         if (user) {
             // IF password is null, the User was created through an invite. We allow an User to claim the account.
             // Check the source so that User cannot claim accounts created with Google/FB etc - https://github.com/citizenos/citizenos-fe/issues/773
             if (!user.password && user.source === User.SOURCES.citizenos && !user.UserConnections.length) {
+                let fields = ['password', 'name', 'company', 'language', 'emailIsVerified'];
+                if (termsVersion && termsAcceptedAt) {
+                    user.termsVersion = termsVersion;
+                    user.termsAcceptedAt = termsAcceptedAt;
+                    fields = fields.concat(['termsVersion', 'termsAcceptedAt'])
+                }
+                user.emailIsVerified = true;
                 user.password = password;
                 user.name = name || user.name;
                 user.company = company || user.company;
                 user.language = language || user.language;
-                await user.save({fields: ['password', 'name', 'company', 'language']});
+                await user.save({fields});
             } else {
                 // Email address is already in use.
                 return res.ok(`Check your email ${email} to verify your account.`);
@@ -170,6 +180,7 @@ module.exports = function (app) {
                             source: User.SOURCES.citizenos,
                             language,
                             termsVersion,
+                            termsAcceptedAt,
                             preferences
                         },
                         transaction: t
@@ -228,8 +239,11 @@ module.exports = function (app) {
 
                 const token = jwt.sign(tokenData, config.session.privateKey, {algorithm: config.session.algorithm});
                 await emailLib.sendAccountVerification(user.email, user.emailVerificationCode, token);
-
-                return res.ok(`Check your email ${user.email} to verify your account.`, user.toJSON());
+                const userData = user.toJSON();
+                userData.termsVersion = user.dataValues.termsVersion;
+                userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
+                userData.preferences = user.dataValues.preferences;
+                return res.ok(`Check your email ${user.email} to verify your account.`, userData);
             }
         } else {
             return res.ok(`Check your email ${user.email} to verify your account.`);
@@ -465,7 +479,6 @@ module.exports = function (app) {
         userData.termsVersion = user.dataValues.termsVersion;
         userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
         userData.preferences = user.dataValues.preferences;
-
         return res.ok(userData);
     }));
 

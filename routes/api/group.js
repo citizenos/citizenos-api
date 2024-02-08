@@ -223,7 +223,15 @@ module.exports = function (app) {
         let userLevelJoin = '';
 
         if (userId) {
-            userLevelSql = ` COALESCE(gmu.level, null) AS "userLevel", `;
+            userLevelSql = ` COALESCE(gmu.level, null) AS "userLevel",
+                CASE
+                   WHEN gmu.level = 'admin' THEN gj.token
+                   ELSE NULL
+                END as "join.token",
+                CASE
+                   WHEN gmu.level = 'admin' THEN gj.level
+                   ELSE NULL
+                   END as "join.level",`;
             userLevelJoin = ` LEFT JOIN "GroupMemberUsers" gmu ON gmu."userId"=:userId AND gmu."groupId" = g.id `;
         }
         const [group] = await db
@@ -245,8 +253,6 @@ module.exports = function (app) {
                  c.email as "creator.email",
                  c.name as "creator.name",
                  c."createdAt" as "creator.createdAt",
-                 gj.token as "join.token",
-                 gj.level as "join.level",
                  ${userLevelSql}
                  mc.count as "members.users.count",
                  COALESCE(mtc.count, 0) as "members.topics.count"
@@ -280,6 +286,12 @@ module.exports = function (app) {
                 }
             );
 
+        if (group && !group.join) {
+            group.join = {
+                token: null,
+                level: null
+            }
+        }
         return group;
     };
 
@@ -308,11 +320,14 @@ module.exports = function (app) {
                      c.name as "creator.name",
                      c."createdAt" as "creator.createdAt",
                      CASE
-                        WHEN gmu.level = 'admin' OR g.visibility = 'public' THEN gj.token
+                        WHEN gmu.level = 'admin' THEN gj.token
                      ELSE NULL
                      END as "join.token",
+                     CASE
+                        WHEN gmu.level = 'admin' THEN gj.level
+                     ELSE NULL
+                     END as "join.level",
                      COALESCE (gmu.level, null) AS "userLevel",
-                     gj.level as "join.level",
                      mc.count as "members.users.count",
                      COALESCE(mtc.count, 0) as "members.topics.count"
                 FROM "Groups" g
@@ -1338,6 +1353,70 @@ module.exports = function (app) {
                 const resObject = group.toJSON();
                 resObject.join = groupJoin;
                 resObject.userLevel = groupJoin.level;
+
+                return res.ok(resObject);
+            });
+        });
+    }));
+
+    /**
+     * Join authenticated User to publci Group without token.
+     *
+     */
+    app.post('/api/users/:userId/groups/:groupId/join', loginCheck(), asyncMiddleware(async function (req, res) {
+        const userId = req.user.userId;
+
+        const group = await Group.findOne({
+            where: {
+                id: req.params.groupId,
+                visibility: Group.VISIBILITY.public
+            }
+        });
+
+        if (!group) {
+            return res.badRequest('Group not found', 1);
+        }
+
+
+
+        await db.transaction(async function (t) {
+            const [memberUser, created] = await GroupMemberUser.findOrCreate({ // eslint-disable-line
+                where: {
+                    groupId: group.id,
+                    userId: userId
+                },
+                defaults: {
+                    level: GroupMemberUser.LEVELS.read
+                },
+                transaction: t
+            });
+
+            if (created) {
+                const user = await User.findOne({
+                    where: {
+                        id: userId
+                    }
+                });
+
+                await cosActivities.joinActivity(
+                    group,
+                    {
+                        type: 'User',
+                        id: user.id,
+                        ip: req.ip,
+                        level: GroupMemberUser.LEVELS.read
+                    },
+                    req.method + ' ' + req.path,
+                    t
+                );
+            }
+
+            t.afterCommit(() => {
+                const resObject = group.toJSON();
+                resObject.join = GroupJoin.build({
+                    groupId: group.id
+                });
+                resObject.userLevel = GroupMemberUser.LEVELS.read;
 
                 return res.ok(resObject);
             });

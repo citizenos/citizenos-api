@@ -1076,7 +1076,7 @@ module.exports = function (app) {
         topic.padUrl = cosEtherpad.getUserAccessUrl(topic, topic.user.id, topic.user.name, topic.user.language, partner);
         topic.url = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
 
-        if (topic.visibility === Topic.VISIBILITY.private && topic.permission.level !== TopicMemberUser.LEVELS.admin) {
+        if (topic.permission.level !== TopicMemberUser.LEVELS.admin) {
             topic.join.token = null;
             topic.join.level = null;
         }
@@ -4838,6 +4838,76 @@ module.exports = function (app) {
         });
     }));
 
+    /**
+     * Join authenticated User to Topic with a given token.
+     *
+     * Allows sharing of private join urls for example in forums, on conference screen...
+     */
+    app.post('/api/users/:userId/topics/:topicId/join', loginCheck(['partner']), asyncMiddleware(async function (req, res) {
+        const userId = req.user.userId;
+
+        const topic = await Topic.findOne({
+            where: {
+                id: req.params.topicId,
+                visibility: Topic.VISIBILITY.public
+            }
+        });
+
+        if (!topic) {
+            return res.badRequest('Topic not found', 1);
+        }
+
+
+
+        await db.transaction(async function (t) {
+            const [memberUser, created] = await TopicMemberUser.findOrCreate({ // eslint-disable-line
+                where: {
+                    topicId: topic.id,
+                    userId: userId
+                },
+                defaults: {
+                    level: TopicMemberUser.LEVELS.read
+                },
+                transaction: t
+            });
+
+            if (created) {
+                const user = await User.findOne({
+                    where: {
+                        id: userId
+                    }
+                });
+
+                await cosActivities.joinActivity(
+                    topic,
+                    {
+                        type: 'User',
+                        id: user.id,
+                        ip: req.ip,
+                        level: TopicMemberUser.LEVELS.read
+                    },
+                    req.method + ' ' + req.path,
+                    t
+                );
+            }
+            const authorIds = topic.authorIds;
+            const authors = await User.findAll({
+                where: {
+                    id: authorIds
+                },
+                attributes: ['id', 'name'],
+                raw: true
+            });
+
+            const resObject = topic.toJSON();
+
+            resObject.authors = authors;
+            resObject.url = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
+            t.afterCommit(() => {
+                return res.ok(resObject);
+            });
+        });
+    }));
 
     /**
      * Add Topic Attachment
