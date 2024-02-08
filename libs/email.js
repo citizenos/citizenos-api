@@ -515,7 +515,11 @@ module.exports = function (app) {
             topic.status = template.translations[statusKey];
             let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
             linkedData.translations = template.translations;
-            const images = EMAIL_OPTIONS_DEFAULT.images;
+            const images = [
+                {
+                    name: 'Warning.png',
+                    file: path.join(templateRoot, 'images/Warning.png')
+                }].concat(EMAIL_OPTIONS_DEFAULT.images);
             const emailOptions = {
                 // from: from, - comes from emailClient.js configuration
                 subject: subject,
@@ -625,12 +629,17 @@ module.exports = function (app) {
 
                     // In case Topic has no title, just show the full url.
                     topic.title = topic.title ? topic.title : linkViewTopic;
-
+                    const images = [
+                        {
+                            name: 'Warning.png',
+                            file: path.join(templateRoot, 'images/Warning.png')
+                        }].concat(EMAIL_OPTIONS_DEFAULT.images);
                     const emailOptions = Object.assign(
                         _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
                         {
                             subject: subject,
                             to: user.email,
+                            images,
                             toUser: user,
                             fromUser: fromUser,
                             topic: topic,
@@ -747,7 +756,11 @@ module.exports = function (app) {
 
             let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
             linkedData.translations = template.translations;
-            const images = EMAIL_OPTIONS_DEFAULT.images;
+            const images = [
+                {
+                    name: 'Warning.png',
+                    file: path.join(templateRoot, 'images/Warning.png')
+                }].concat(EMAIL_OPTIONS_DEFAULT.images);
 
             const emailOptions = {
                 // from: from, - comes from emailClient.js configuration
@@ -837,12 +850,17 @@ module.exports = function (app) {
                     const subject = template.translations.INVITE_GROUP.SUBJECT
                         .replace('{{fromUser.name}}', fromUser.name)
                         .replace('{{group.name}}', group.name);
-
+                    const images = [
+                        {
+                            name: 'Warning.png',
+                            file: path.join(templateRoot, 'images/Warning.png')
+                        }].concat(EMAIL_OPTIONS_DEFAULT.images);
                     const emailOptions = Object.assign(
                         _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
                         {
                             subject: subject,
                             to: user.email,
+                            images,
                             //Placeholders..
                             toUser: user,
                             fromUser: fromUser,
@@ -1611,6 +1629,11 @@ module.exports = function (app) {
                     notificationText += '<p>' + Mustache.render(handleTranslation(template.translations, string), translateValues) + '</p>';
                 }
             }
+            const images = [
+                {
+                    name: 'Warning.png',
+                    file: path.join(templateRoot, 'images/Warning.png')
+                }].concat(EMAIL_OPTIONS_DEFAULT.images);
 
             const emailOptions = Object.assign(
                 _.cloneDeep(EMAIL_OPTIONS_DEFAULT), // Deep clone to guarantee no funky business messing with the class level defaults, cant use Object.assign({}.. as this is not a deep clone.
@@ -1618,6 +1641,7 @@ module.exports = function (app) {
                     subject: Mustache.render(handleTranslation(template.translations, 'NOTIFICATIONS.SUBJECT'), translateValues),
                     to: user.email,
                     toUser: user,
+                    images,
                     userName: user.name,
                     linkViewTopic,
                     groupLink,
@@ -1691,12 +1715,15 @@ module.exports = function (app) {
 
             let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
             linkedData.translations = template.translations;
-            const images = [].concat(EMAIL_OPTIONS_DEFAULT.images);
-            images.push(
+            const images = [
+                {
+                    name: 'Warning.png',
+                    file: path.join(templateRoot, 'images/Warning.png')
+                },
                 {
                     name: 'Voting.png',
                     file: path.join(templateRoot, 'images/Voting.png')
-                });
+                }].concat(EMAIL_OPTIONS_DEFAULT.images);
             let daysLeft;
             let voteEndsAt;
             if (vote.endsAt) {
