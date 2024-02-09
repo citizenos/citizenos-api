@@ -425,7 +425,7 @@ module.exports = function (app) {
   const filterUsersBySettings = async (userIds, topicIds, groupIds, activityType) => {
     userIds = userIds.filter((item) => {return item.length > 0});
     try {
-        if (!userIds.length || (!topicIds?.length && !groupIds?.length)) return [];
+        if (!userIds.length || !topicIds?.length) return []; //add with group notifications  && !groupIds?.length)
         let where = `usn."topicId" IN (:topicIds) `;
      /*   if (groupIds.length) {
             where = `usn."groupId" IN (:groupIds) `

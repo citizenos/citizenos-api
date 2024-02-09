@@ -1502,6 +1502,10 @@ module.exports = function (app) {
             }
 
             let topic = Topic.build({
+                title: sourceTopic.title,
+                intro: sourceTopic.intro,
+                language: sourceTopic.language,
+                country: sourceTopic.country,
                 visibility: Topic.VISIBILITY.private,
                 creatorId: req.user.userId,
                 authorIds: [req.user.userId]
