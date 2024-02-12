@@ -1728,7 +1728,7 @@ module.exports = function (app) {
             let voteEndsAt;
             if (vote.endsAt) {
                 daysLeft = moment(vote.endsAt).diff(moment(), 'days'),
-                    voteEndsAt = moment(vote.endsAt).format('YYYY-MM-DD HH:mm')
+                voteEndsAt = moment(vote.endsAt).format('YYYY-MM-DD HH:mm')
             }
             // votesCountRequired - add when vote settings support required vote count
             const emailOptions = {
