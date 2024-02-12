@@ -120,12 +120,14 @@ module.exports = function (app) {
                         SELECT
                             tmg."topicId",
                             gm."userId",
-                            MAX(tmg.level)::text AS level
+                            CASE WHEN t.status= 'draft' AND MAX(tmg.level)::text <> 'admin' THEN 'none'
+                            ELSE MAX(tmg.level)::text END AS level
                         FROM "TopicMemberGroups" tmg
                             JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
+                            JOIN "Topics" t ON t.id = tmg."topicId"
                         WHERE tmg."deletedAt" IS NULL
                         AND gm."deletedAt" IS NULL
-                        GROUP BY "topicId", "userId"
+                        GROUP BY "topicId", "userId", t.status
                     ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
                 WHERE t.id = :topicId
                 AND t."deletedAt" IS NULL;
@@ -796,7 +798,8 @@ module.exports = function (app) {
                 }
             );
 
-        if (!topic) {
+        console.log(topic);
+        if (!topic || topic.permission.level === Topic.LEVELS.none) {
             return;
         }
 
@@ -975,12 +978,14 @@ module.exports = function (app) {
                     SELECT
                         tmg."topicId",
                         gm."userId",
-                        MAX(tmg.level)::text AS level
+                        CASE WHEN t.status= 'draft' AND MAX(tmg.level)::text <> 'admin' THEN 'none'
+                        ELSE MAX(tmg.level)::text END AS level
                     FROM "TopicMemberGroups" tmg
                         LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
+                        JOIN "Topics" t ON t.id=tmg."topicId"
                     WHERE tmg."deletedAt" IS NULL
                     AND gm."deletedAt" IS NULL
-                    GROUP BY "topicId", "userId"
+                    GROUP BY "topicId", "userId", t.status
                 ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
                 LEFT JOIN "Users" c ON (c.id = t."creatorId")
                 LEFT JOIN "UserConnections" uc ON (uc."userId" = t."creatorId")
@@ -1067,7 +1072,7 @@ module.exports = function (app) {
             }
         );
         let topic;
-        if (result && result.length && result[0]) {
+        if (result && result.length && result[0] && result[0]?.permission?.level !== TopicMemberUser.LEVELS.none) {
             topic = result[0];
         } else {
             logger.warn('Topic not found', topicId);
@@ -3512,16 +3517,13 @@ module.exports = function (app) {
                         });
 
                         return TopicMemberGroup
-                            .findOrCreate({
-                                where: {
+                            .upsert({
                                     topicId: topicId,
-                                    groupId: member.groupId
-                                },
-                                defaults: {
+                                    groupId: member.groupId,
                                     level: member.level || TopicMemberUser.LEVELS.read
                                 },
-                                transaction: t
-                            });
+                                {transaction: t}
+                            );
                     });
 
                     const groupIdsToInvite = [];

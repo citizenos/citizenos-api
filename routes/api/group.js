@@ -745,6 +745,7 @@ module.exports = function (app) {
                                 JOIN "Topics" t ON (t.id = tmg."topicId")
                                 WHERE tmg."deletedAt" IS NULL
                                     AND t.title IS NOT NULL
+                                    AND t.status <> 'draft'
                                 ORDER BY t."updatedAt" DESC
                             ) as tmg ON g.id=tmg."groupId" GROUP BY g.id
                         ) tmgtm ON tmgtm."updatedAt" = t."updatedAt" GROUP BY "groupId", "topicId", t.title, t."updatedAt"
@@ -2291,12 +2292,14 @@ module.exports = function (app) {
                 SELECT
                     tmg."topicId",
                     gm."userId",
-                    MAX(tmg.level)::text AS level
+                    CASE WHEN t.status= 'draft' AND MAX(tmg.level)::text <> 'admin' THEN 'none'
+                    ELSE MAX(tmg.level)::text END AS level
                 FROM "TopicMemberGroups" tmg
                     LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
+                    JOIN "Topics" t ON t.id=tmg."topicId"
                 WHERE tmg."deletedAt" IS NULL
                 AND gm."deletedAt" IS NULL
-                GROUP BY "topicId", "userId"
+                GROUP BY "topicId", "userId", t.status
             ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
             LEFT JOIN "TopicFavourites" tf ON tf."topicId" = t.id AND tf."userId" = :userId `;
             groupBy = `tmup.level, tmgp.level, tf."topicId", `;
@@ -2610,6 +2613,7 @@ module.exports = function (app) {
                             JOIN "Topics" t ON (t.id = tmg."topicId")
                             WHERE tmg."deletedAt" IS NULL
                                 AND t.title IS NOT NULL
+                                AND t.status <> 'draft'
                             ORDER BY t."updatedAt" DESC
                         ) as tmg ON g.id=tmg."groupId" GROUP BY g.id
                     ) tmgtm ON tmgtm."updatedAt" = t."updatedAt" GROUP BY "groupId", "topicId", t.title, t."updatedAt"
