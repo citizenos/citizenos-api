@@ -1905,6 +1905,54 @@ module.exports = function (app) {
         return res.ok(finalInvites[0]);
     }));
 
+    app.put(['/api/groups/:groupId/invites/users/:inviteId', '/api/users/:userId/groups/:groupId/invites/users/:inviteId'], loginCheck(), hasPermission(GroupMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
+        const newLevel = req.body.level;
+        const groupId = req.params.groupId;
+        const inviteId = req.params.inviteId;
+
+        if (!(GroupMemberUser.LEVELS[newLevel])) {
+            return res.badRequest(`Invalid level "${newLevel}"`)
+        }
+
+        const groupInviteUser = await GroupInviteUser
+            .findOne(
+                {
+                    where: {
+                        id: inviteId,
+                        groupId: groupId
+                    }
+                }
+            );
+
+        if (groupInviteUser) {
+            await db.transaction(async function (t) {
+                groupInviteUser.level = newLevel;
+
+                await cosActivities.updateActivity(
+                    groupInviteUser,
+                    null,
+                    {
+                        type: 'User',
+                        id: req.user.userId,
+                        ip: req.ip
+                    },
+                    req.method + ' ' + req.path,
+                    t
+                );
+
+                await groupInviteUser.save({
+                    transaction: t
+                });
+
+                t.afterCommit(() => {
+                    return res.ok();
+                });
+            });
+        } else {
+            return res.notFound();
+        }
+    }));
+
     /**
      * Delete Group invite
      *

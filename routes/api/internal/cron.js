@@ -87,9 +87,14 @@ module.exports = function (app) {
                     reminderTime: {
                         [Sequelize.Op.lte]: new Date()
                     },
+                    [Sequelize.Op.or]: [
+                        {endsAt: {[Sequelize.Op.gt]: new Date()}},
+                        {endsAt: null},
+                    ],
                     reminderSent: null
                 }
             });
+
             votes.forEach(async vote => {
                 const users = await getTopicMembers(vote.id);
                 const voteResult = await topicLib.getVoteResults(vote.id);
