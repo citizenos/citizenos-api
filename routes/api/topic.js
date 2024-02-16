@@ -798,8 +798,7 @@ module.exports = function (app) {
                 }
             );
 
-        console.log(topic);
-        if (!topic || topic.permission.level === Topic.LEVELS.none) {
+        if (!topic || (topic.visibility !== 'public' && topic.permission.level === TopicMemberUser.LEVELS.none)) {
             return;
         }
 
