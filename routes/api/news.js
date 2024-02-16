@@ -1,7 +1,8 @@
 module.exports = function (app) {
     const config = app.get('config');
+    const logger = app.get('logger');
 
-    app.get('/api/news', async (req, res, next) => {
+    app.get('/api/news', async (req, res) => {
         try {
             let Parser = require('rss-parser');
             let parser = new Parser();
@@ -9,7 +10,9 @@ module.exports = function (app) {
 
             return res.ok(feed);
         } catch(err) {
-            next(err);
+            logger.error(err);
+            //We don't want error on the FE if news are not loaded
+            return res.ok([]);
         }
     });
 }
