@@ -1071,7 +1071,6 @@ module.exports = function (app) {
             }
         );
         let topic;
-        console.log()
         if (result && result.length && result[0] && (result[0].visibility === 'public' || result[0]?.permission?.level !== TopicMemberUser.LEVELS.none)) {
             topic = result[0];
         } else {
