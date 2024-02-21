@@ -6878,7 +6878,7 @@ module.exports = function (app) {
             return res.notFound();
         }
         if (topic.status === Topic.STATUSES.draft) {
-            fields = fields.concat(['minChoices', 'maxChoices', 'description', 'type', 'authType', 'autoClose']);
+            fields = fields.concat(['minChoices', 'maxChoices', 'description', 'type', 'authType', 'autoClose', 'delegationIsAllowed']);
         }
         const voteOptions = req.body.options;
 
