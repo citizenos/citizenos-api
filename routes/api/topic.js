@@ -2360,7 +2360,7 @@ module.exports = function (app) {
                         FROM "TopicMemberUsers" tmu
                         WHERE tmu."deletedAt" IS NULL
                     ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId)
-                    LEFT JOIN "TopicReports" tr ON  tr."topicId" = t.id
+                    LEFT JOIN "TopicReports" tr ON (tr."topicId" = t.id AND tr."resolvedById" IS NULL AND tr."deletedAt" IS NULL)
                     LEFT JOIN (
                         SELECT
                             tmg."topicId",
@@ -2714,7 +2714,7 @@ module.exports = function (app) {
                         ${returncolumns}
                     FROM "Topics" t
                         LEFT JOIN "Users" c ON (c.id = t."creatorId")
-                        LEFT JOIN "TopicReports" tr ON tr."topicId" = t.id
+                        LEFT JOIN "TopicReports" tr ON (tr."topicId" = t.id AND tr."resolvedById" IS NULL AND tr."deletedAt" IS NULL)
                         LEFT JOIN (
                             SELECT tmu."topicId", COUNT(tmu."memberId")::integer AS "count" FROM (
                                 SELECT
