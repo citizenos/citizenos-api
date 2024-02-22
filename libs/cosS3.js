@@ -47,9 +47,12 @@ module.exports = function (app) {
     const _deleteFile = async function (filename) {
         const s3 = new S3(credentials);
         const bucket = config.storage.bucket;
+        const region = config.storage.region;
 
+        console.log(bucket, region)
         const params = {
             Bucket: bucket,
+            region: region,
             Key: filename
         };
 
