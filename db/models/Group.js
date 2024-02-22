@@ -156,7 +156,9 @@ module.exports = function (sequelize, DataTypes) {
             rules: this.dataValues.rules,
             name: this.dataValues.name,
             creator: this.dataValues.creator,
-            visibility: this.dataValues.visibility
+            visibility: this.dataValues.visibility,
+            createdAt: this.dataValues.createdAt,
+            updatedAt: this.dataValues.updatedAt,
         };
 
         if (this.dataValues.creator) {

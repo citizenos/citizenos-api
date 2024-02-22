@@ -1186,11 +1186,10 @@ suite('Auth', function () {
             });
 
             const userSignedup = (await signup(agent, user.email, password, language, null, name, company)).body.data;
-
-            assert.equal(userSignedup.email, email);
-            assert.equal(userSignedup.language, language);
-            assert.equal(userSignedup.name, name);
-            assert.equal(userSignedup.company, company);
+            assert.equal(userSignedup.user.email, email);
+            assert.equal(userSignedup.user.language, language);
+            assert.equal(userSignedup.user.name, name);
+            assert.equal(userSignedup.user.company, company);
         });
 
         test('Success - invited user - User with NULL password and source != citizenos should NOT be able to change password', async function () {

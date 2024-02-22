@@ -541,7 +541,10 @@ suite('Users', function () {
                         }
                     }
                 };
-
+                assert.property(groupR, 'createdAt');
+                delete groupR.createdAt;
+                assert.property(groupR, 'updatedAt');
+                delete groupR.updatedAt;
                 assert.deepEqual(groupR, expected);
             });
 
@@ -707,7 +710,7 @@ suite('Users', function () {
                 assert.equal(members.users.count, 3);
 
                 const topics = group.members.topics;
-                assert.equal(topics.count, 1);
+                assert.equal(topics.count.total, 1);
                 assert.equal(topics.latest.id, topic.id);
                 assert.equal(topics.latest.title, topic.title);
             });
@@ -752,11 +755,11 @@ suite('Users', function () {
                     assert.isAbove(memberGroup.members.users.count, 0);
                     assert.equal(memberGroup.members.users.count, memberGroup.members.users.rows.length);
                     if (group.id === memberGroup.id) {
-                        assert.isAbove(memberGroup.members.topics.count, 0);
+                        assert.isAbove(memberGroup.members.topics.count.total, 0);
                     } else {
-                        assert.equal(memberGroup.members.topics.count, 0);
+                        assert.equal(memberGroup.members.topics.count.total, 0);
                     }
-                    assert.equal(memberGroup.members.topics.count, memberGroup.members.topics.rows.length);
+                    assert.equal(memberGroup.members.topics.count.total, memberGroup.members.topics.rows.length);
                 });
             });
 
@@ -776,11 +779,11 @@ suite('Users', function () {
                 assert.equal(list.rows.length, 2);
                 list.rows.forEach(function (memberGroup) {
                     if (group.id === memberGroup.id) {
-                        assert.isAbove(memberGroup.members.topics.count, 0);
+                        assert.isAbove(memberGroup.members.topics.count.total, 0);
                     } else {
-                        assert.equal(memberGroup.members.topics.count, 0);
+                        assert.equal(memberGroup.members.topics.count.total, 0);
                     }
-                    assert.equal(memberGroup.members.topics.count, memberGroup.members.topics.rows.length);
+                    assert.equal(memberGroup.members.topics.count.total, memberGroup.members.topics.rows.length);
                     assert.notProperty(memberGroup.members.users, 'rows');
                 });
             });
@@ -2277,10 +2280,10 @@ suite('Users', function () {
                         };
                         await topicLib.topicMemberGroupsCreate(agent, member.id, topic.id, memberGroup);
                         const groupData = (await groupList(agent, member.id, null)).body.data;
-                        assert.equal(groupData.rows[0].members.topics.count, 1);
+                        assert.equal(groupData.rows[0].members.topics.count.total, 1);
                         await topicLib.topicDelete(agent, member.id, topic.id);
                         const groupData2 = (await groupList(agent, member.id, null)).body.data;
-                        assert.equal(groupData2.rows[0].members.topics.count, 0);
+                        assert.equal(groupData2.rows[0].members.topics.count.total, 0);
                     });
 
                 });

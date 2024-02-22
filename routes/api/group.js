@@ -2292,7 +2292,7 @@ module.exports = function (app) {
                 SELECT
                     tmg."topicId",
                     gm."userId",
-                    CASE WHEN t.status= 'draft' AND MAX(tmg.level)::text <> 'admin' THEN 'none'
+                    CASE WHEN t.status = 'draft' AND MAX(tmg.level)::text <> 'admin' THEN 'none'
                     ELSE MAX(tmg.level)::text END AS level
                 FROM "TopicMemberGroups" tmg
                     LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")

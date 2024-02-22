@@ -25,10 +25,7 @@ module.exports = function (app) {
     const mobileId = app.get('mobileId');
     const jwt = app.get('jwt');
     const cosJwt = app.get('cosJwt');
-    const twitter = app.get('twitter');
-    const hashtagCache = app.get('hashtagCache');
     const CosHtmlToDocx = app.get('cosHtmlToDocx');
-    const decode = require('html-entities').decode;
     const https = require('https');
     const crypto = require('crypto');
     const path = require('path');
@@ -2183,9 +2180,9 @@ module.exports = function (app) {
             , tv."maxChoices" as "vote.maxChoices"
             , tv."minChoices" as "vote.minChoices"
             , tv."type" as "vote.type"
-            , tv."autoClose" as "vote.autoClose"
             `;
             voteResults = getAllVotesResults(userId);
+            groupBy += `, tv."authType", tv."createdAt", tv."delegationIsAllowed", tv."description", tv."endsAt", tv."reminderSent", tv."reminderTime", tv."maxChoices", tv."minChoices", tv."type"`;
         }
 
         if (include.indexOf('event') > -1) {
@@ -2201,6 +2198,7 @@ module.exports = function (app) {
             returncolumns += `
             , COALESCE(te.count, 0) AS "events.count"
             `;
+            groupBy += `, te.count`;
         }
 
         let where = ` t."deletedAt" IS NULL
@@ -2897,6 +2895,8 @@ module.exports = function (app) {
                     tmg.level,
                     gmu.level as "permission.level",
                     g.visibility,
+                    g."createdAt",
+                    g."updatedAt",
                     gmuc.count as "members.users.count"
                 FROM "TopicMemberGroups" tmg
                     JOIN "Groups" g ON (tmg."groupId" = g.id)
@@ -6329,8 +6329,9 @@ module.exports = function (app) {
             });
     }));
 
-    const topicMentionsList = async function (req, res, next) {
-        let hashtag = null;
+    const topicMentionsList = async function (req, res) {
+        return res.ok();
+      /*  let hashtag = null;
         let queryurl = 'search/tweets';
         let data;
 
@@ -6421,7 +6422,7 @@ module.exports = function (app) {
             }
 
             return next(err);
-        }
+        }*/
     };
 
 
@@ -6435,7 +6436,6 @@ module.exports = function (app) {
      * Read (List) public Topic Mentions
      */
     app.get('/api/topics/:topicId/mentions', hasVisibility(Topic.VISIBILITY.public), topicMentionsList);
-
     /*
      * Read (List) Topic Comment votes
      */

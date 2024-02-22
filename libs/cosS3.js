@@ -10,6 +10,8 @@ module.exports = function (app) {
 
     const {
         PutObjectCommand,
+        DeleteObjectCommand,
+        S3Client,
         S3
     } = require('@aws-sdk/client-s3');
 
@@ -45,18 +47,19 @@ module.exports = function (app) {
     };
 
     const _deleteFile = async function (filename) {
-        const s3 = new S3(credentials);
-        const bucket = config.storage.bucket;
-        const region = config.storage.region;
-
-        console.log(bucket, region)
-        const params = {
-            Bucket: bucket,
-            region: region,
-            Key: filename
+        const conf = {
+            credentials: credentials,
+            region: config.storage.region
         };
+        const s3Client = new S3Client(conf);
+        const bucket = config.storage.bucket;
 
-        return s3.deleteObject(params);
+        const command = new DeleteObjectCommand({
+            Bucket: bucket,
+            Key: filename
+        });
+
+        return s3Client.send(command);
     };
 
 

@@ -229,8 +229,12 @@ module.exports = function (app) {
         if (user) {
             if (user.emailIsVerified) {
                 setAuthCookie(req, res, user.id);
+                const userData = user.toJSON();
+                userData.termsVersion = user.dataValues.termsVersion;
+                userData.termsAcceptedAt = user.dataValues.termsAcceptedAt;
+                userData.preferences = user.dataValues.preferences;
 
-                return res.ok({redirectSuccess});
+                return res.ok({user: userData , redirectSuccess});
             } else {
                 // Store redirect url in the token so that /api/auth/verify/:code could redirect to the url late
                 const tokenData = {

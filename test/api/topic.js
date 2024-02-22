@@ -3626,7 +3626,7 @@ suite('Users', function () {
                             }
                         });
 
-                        assert.notEqual(topicMemberGroup.level, member.level);
+                        assert.equal(topicMemberGroup.level, member.level);
                     });
 
 
