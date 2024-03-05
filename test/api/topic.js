@@ -1380,6 +1380,27 @@ const topicEventCreateUnauth = async function (agent, topicId, token, subject, t
     return _topicEventCreateUnauth(agent, topicId, token, subject, text, 201);
 };
 
+const _topicEventUpdate = async function (agent, userId, topicId, eventId, subject, text, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/events/:eventId'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':eventId', eventId);
+
+    return agent
+        .put(path)
+        .set('Content-Type', 'application/json')
+        .send({
+            subject: subject,
+            text: text
+        })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+}
+
+const topicEventUpdate = async function (agent, userId, topicId, eventId, subject, text) {
+    return _topicEventUpdate(agent, userId, topicId, eventId, subject, text, 200);
+};
+
 const _topicEventList = async function (agent, userId, topicId, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/events'
         .replace(':userId', userId)
@@ -11296,7 +11317,7 @@ suite('Topics', function () {
 
     suite('Events', function () {
 
-        suite('Create, list, delete', function () {
+        suite('Create, update, list, delete', function () {
             const agent = request.agent(app);
 
             let user;
@@ -11374,6 +11395,60 @@ suite('Topics', function () {
                 assert.property(event, 'createdAt');
                 assert.equal(event.subject, subject);
                 assert.equal(event.text, text);
+            });
+
+            test('Update - Success', async function () {
+                const subject = 'Test Event title';
+                const text = 'Test Event description';
+
+                const resBody = (await topicEventCreate(agent, user.id, topic.id, subject, text)).body;
+
+                assert.equal(resBody.status.code, 20100);
+
+                const event = resBody.data;
+                assert.equal(event.subject, subject);
+                assert.equal(event.text, text);
+                assert.property(event, 'createdAt');
+                assert.property(event, 'id');
+
+                const eventList = (await topicEventList(agent, user.id, topic.id)).body;
+
+                const expectedBody = {
+                    status: {
+                        code: 20000
+                    },
+                    data: {
+                        count: 1,
+                        rows: [event]
+                    }
+                };
+
+                assert.deepEqual(eventList, expectedBody);
+                const subjectUpdate = 'Test Event title updated';
+                const textUpdate = 'Test Event description updated';
+                const resBodyUpdate = (await topicEventUpdate(agent, user.id, topic.id, event.id, subjectUpdate, textUpdate)).body;
+
+                assert.equal(resBodyUpdate.status.code, 20000);
+
+                const eventUpdated = resBodyUpdate.data;
+                assert.equal(eventUpdated.id, event.id);
+                assert.equal(eventUpdated.subject, subjectUpdate);
+                assert.equal(eventUpdated.text, textUpdate);
+                assert.equal(eventUpdated.createdAt, event.createdAt);
+                assert.notEqual(eventUpdated.updatedAt, event.updatedAt);
+
+                const eventList2 = (await topicEventList(agent, user.id, topic.id)).body;
+
+                const expectedBody2 = {
+                    status: {
+                        code: 20000
+                    },
+                    data: {
+                        count: 1,
+                        rows: [eventUpdated]
+                    }
+                };
+                assert.deepEqual(eventList2, expectedBody2);
             });
 
             test('Fail - Unauthorize - topic is closed', async function () {

@@ -66,7 +66,8 @@ module.exports = function (sequelize, DataTypes) {
             id: this.dataValues.id,
             subject: this.dataValues.subject,
             text: this.dataValues.text,
-            createdAt: this.dataValues.createdAt
+            createdAt: this.dataValues.createdAt,
+            updatedAt: this.dataValues.updatedAt
         };
 
         return data;
