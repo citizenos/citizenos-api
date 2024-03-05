@@ -100,7 +100,7 @@ module.exports = function (sequelize, DataTypes) {
                 defaultValue: AUTH_TYPES.soft
             },
             autoClose: {
-                type: DataTypes.ARRAY(DataTypes.JSON), // While Sequelize does not support ARRAY of ENUM I'll use ARRAY of Strings - https://github.com/sequelize/sequelize/issues/1498
+                type: DataTypes.ARRAY(DataTypes.JSONB), // While Sequelize does not support ARRAY of ENUM I'll use ARRAY of Strings - https://github.com/sequelize/sequelize/issues/1498
                 defaultValue: [],
                 validate: {
                     isArrayOfAutoCloseConditions: function (value) {

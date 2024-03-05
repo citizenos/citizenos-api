@@ -18,6 +18,8 @@ module.exports = function (app) {
     const validator = app.get('validator');
     const emailLib = app.get('email');
     const util = app.get('util');
+    const urlLib = app.get('urlLib');
+    const topicLib = require('./topic')(app);
 
     const loginCheck = app.get('middleware.loginCheck');
     const asyncMiddleware = app.get('middleware.asyncMiddleware');
@@ -695,37 +697,38 @@ module.exports = function (app) {
                         GROUP BY "groupId"
                     ) AS mc ON (mc."groupId" = g.id)
                     LEFT JOIN (
-                        SELECT tmgtc."groupId", tmgtc.count::jsonb || tmc.count::jsonb as count
+                        SELECT g.id as "groupId", COALESCE(tmgtc.count::jsonb || tmc.count::jsonb, '{"total": 0}'::jsonb) as count
+                    FROM "Groups" g
+                    LEFT JOIN (
+                        SELECT
+                            "groupId",
+                            jsonb_object_agg('total', total) as count
                         FROM (
                             SELECT
-                                "groupId",
-                                jsonb_object_agg('total', total) as count
-                            FROM (
-                                SELECT
-                                    tmg."groupId",
-                                    COUNT(tmg."groupId") AS total
-                                FROM "TopicMemberGroups" tmg
-                                GROUP BY tmg."groupId"
-                            ) as tmgtc
-                            GROUP BY "groupId"
+                                tmg."groupId",
+                                COUNT(tmg."groupId") AS total
+                            FROM "TopicMemberGroups" tmg
+                            GROUP BY tmg."groupId"
                         ) as tmgtc
-                        LEFT JOIN (
+                        GROUP BY "groupId"
+                    ) as tmgtc ON tmgtc."groupId" = g.id
+                    LEFT JOIN (
+                        SELECT
+                            tmc."groupId",
+                            jsonb_object_agg(tmc.status, tmc.count) as count
+                        FROM
+                        (
                             SELECT
-                                tmc."groupId",
-                                jsonb_object_agg(tmc.status, tmc.count) as count
-                            FROM
-                            (
-                                SELECT
-                                    tmg."groupId",
-                                    t."status",
-                                    count(tmg."topicId") AS "count"
-                                FROM "TopicMemberGroups" tmg
-                                JOIN "Topics" t ON t.id = tmg."topicId"
-                                WHERE tmg."deletedAt" IS NULL
-                                GROUP BY tmg."groupId", t.status
-                            ) as tmc
-                            GROUP BY "groupId"
-                        ) tmc ON tmgtc."groupId" = tmc."groupId"
+                                tmg."groupId",
+                                t."status",
+                                count(tmg."topicId") AS "count"
+                            FROM "TopicMemberGroups" tmg
+                            JOIN "Topics" t ON t.id = tmg."topicId"
+                            WHERE tmg."deletedAt" IS NULL
+                            GROUP BY tmg."groupId", t.status
+                        ) as tmc
+                        GROUP BY "groupId"
+                    ) tmc ON tmgtc."groupId" = g.id
                     ) AS gtc ON (gtc."groupId" = g.id)
                     LEFT JOIN (
                         SELECT tmg."groupId",
@@ -2156,13 +2159,22 @@ module.exports = function (app) {
 
     const _getGroupMemberTopics = async (req, res, visibility) => {
         //const group = await Group.findOne({ where: { id: req.params.groupId } });
-        const limitDefault = 10;
-        const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
+        const limitDefault = 8;
+        const groupId = req.params.groupId;
+        const group = await Group.findOne({
+            where: {
+                id: groupId
+            }
+        });
+        const offset = parseInt(req.query.offset, 8) ? parseInt(req.query.offset, 8) : 0;
         let search = req.query.search;
-        let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
+        let limit = parseInt(req.query.limit, 8) ? parseInt(req.query.limit, 8) : limitDefault;
         let where = '';
+        let join = '';
+        let returncolumns = '';
+        let voteResults = false;
         if (search) {
-            search = `%${search}%`;
+            search = `%${search || ''}%`;
             where = ` AND t.title ILIKE :search `
         }
         const userId = req.user?.userId;
@@ -2178,7 +2190,6 @@ module.exports = function (app) {
         }
 
         let sortSql = ` ORDER BY `;
-
         let groupBy = ``;
 
         if (orderBy) {
@@ -2229,6 +2240,53 @@ module.exports = function (app) {
             }
         }
 
+        let include = req.query.include;
+        if (!Array.isArray(include)) {
+            include = [include];
+        }
+        if (include) {
+            if (include.indexOf('vote') > -1) {
+                returncolumns += `
+                , (
+                    SELECT to_json(
+                        array (
+                            SELECT concat(id, ':', value)
+                            FROM   "VoteOptions"
+                            WHERE  "deletedAt" IS NULL
+                            AND    "voteId" = tv."voteId"
+                        )
+                    )
+                ) as "vote.options"
+                , tv."voteId" as "vote.id"
+                , tv."authType" as "vote.authType"
+                , tv."createdAt" as "vote.createdAt"
+                , tv."delegationIsAllowed" as "vote.delegationIsAllowed"
+                , tv."description" as "vote.description"
+                , tv."endsAt" as "vote.endsAt"
+                , tv."maxChoices" as "vote.maxChoices"
+                , tv."minChoices" as "vote.minChoices"
+                , tv."type" as "vote.type"
+                `;
+                groupBy += `tv."authType", tv."createdAt", tv."delegationIsAllowed", tv."description", tv."endsAt", tv."maxChoices", tv."minChoices", tv."type", `;
+                voteResults = topicLib.getAllVotesResults();
+            }
+            if (include.indexOf('event') > -1) {
+                join += `LEFT JOIN (
+                            SELECT
+                                COUNT(events.id) as count,
+                                events."topicId"
+                            FROM "TopicEvents" events
+                            WHERE events."deletedAt" IS NULL
+                            GROUP BY events."topicId"
+                        ) AS te ON te."topicId" = t.id
+                `;
+                returncolumns += `
+                , COALESCE(te.count, 0) AS "events.count"
+                `;
+                groupBy += `te."count", `;
+            }
+        }
+
         if (!userId && visibility) {
             visibility = Group.VISIBILITY.public;
         }
@@ -2237,6 +2295,9 @@ module.exports = function (app) {
         }
         let defaultPermission = TopicMemberGroup.LEVELS.none;
 
+        if (group.visibility === Group.VISIBILITY.public) {
+            defaultPermission = TopicMemberGroup.LEVELS.read;
+        }
         if (userId && ['true', '1'].includes(hasVoted)) {
             where += ` AND EXISTS (SELECT TRUE FROM "VoteLists" vl WHERE vl."voteId" = tv."voteId" AND vl."userId" = :userId LIMIT 1)`;
         } else if (userId && ['false', '0'].includes(hasVoted)) {
@@ -2252,10 +2313,10 @@ module.exports = function (app) {
         }
 
         const replacements = {
-            groupId: req.params.groupId,
+            groupId: groupId,
             limit,
             offset,
-            search: `%${search}%`,
+            search: `%${search || ''}%`,
             statuses,
             visibility,
             defaultPermission
@@ -2302,9 +2363,9 @@ module.exports = function (app) {
                 GROUP BY "topicId", "userId", t.status
             ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
             LEFT JOIN "TopicFavourites" tf ON tf."topicId" = t.id AND tf."userId" = :userId `;
-            groupBy = `tmup.level, tmgp.level, tf."topicId", `;
+            groupBy += `tmup.level, tmgp.level, tf."topicId", `;
         }
-        const topics = await db
+        const topicsquery = db
             .query(
                 `SELECT
                         t.id,
@@ -2312,6 +2373,7 @@ module.exports = function (app) {
                         t.visibility,
                         t.status,
                         t."imageUrl",
+                        t.intro,
                         t.categories,
                         t.country,
                         t.language,
@@ -2319,13 +2381,13 @@ module.exports = function (app) {
                         t."endsAt",
                         ${fields}
                         t.hashtag,
+                        t."createdAt",
                         t."updatedAt",
                         CASE WHEN t.status = 'voting' THEN 1
                             WHEN t.status = 'inProgress' THEN 2
                             WHEN t.status = 'followUp' THEN 3
                         ELSE 4
                         END AS "order",
-                        t."createdAt",
                         COALESCE(MAX(a."updatedAt"), t."updatedAt") as "lastActivity",
                         u.id as "creator.id",
                         u.name as "creator.name",
@@ -2333,7 +2395,9 @@ module.exports = function (app) {
                         u."imageUrl" as "creator.imageUrl",
                         muc.count as "members.users.count",
                         COALESCE(mgc.count, 0) as "members.groups.count",
+                        COALESCE(tc.count, 0) AS "comments.count",
                         count(*) OVER()::integer AS "countTotal"
+                        ${returncolumns}
                     FROM "TopicMemberGroups" gt
                         JOIN "Topics" t ON (t.id = gt."topicId")
                         LEFT JOIN "TopicReports" tr ON  tr."topicId" = t.id
@@ -2395,11 +2459,19 @@ module.exports = function (app) {
                             GROUP BY "topicIds"
                         ) AS ta ON ta."topicId" = t.id::text
                         LEFT JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds"
+                        LEFT JOIN (
+                            SELECT
+                                "topicId",
+                                COUNT(*) AS count
+                            FROM "TopicComments"
+                            GROUP BY "topicId"
+                        ) AS tc ON (tc."topicId" = t.id)
+                        ${join}
                     WHERE gt."groupId" = :groupId
                         AND gt."deletedAt" IS NULL
                         AND t."deletedAt" IS NULL
                         ${where}
-                    GROUP BY t.id, u.id, ${groupBy} muc.count, mgc.count
+                    GROUP BY t.id, u.id, tv."voteId", ${groupBy} muc.count, mgc.count, tc.count
                     ${sortSql}
                     LIMIT :limit
                     OFFSET :offset
@@ -2411,13 +2483,43 @@ module.exports = function (app) {
                     nest: true
                 }
             );
-
+        let topics;
+        [topics, voteResults] = await Promise.all([topicsquery, voteResults]);
         let countTotal = 0;
         if (topics && topics.length) {
             countTotal = topics[0].countTotal;
-            topics.forEach(function (member) {
-                delete member.countTotal;
+            topics.forEach(function (topic) {
+                topic.url = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
+
+                delete topic.countTotal;
+
+                if (include && include.indexOf('vote') > -1 && topic.vote.id) {
+                    const options = [];
+                    if (topic.vote.options) {
+                        topic.vote.options.forEach(function (voteOption) {
+                            const o = {};
+                            const optText = voteOption.split(':');
+                            o.id = optText[0];
+                            o.value = optText[1];
+                            if (voteResults && voteResults.length) {
+                                const result = _.find(voteResults, { 'optionId': optText[0] });
+                                if (result) {
+                                    o.voteCount = parseInt(result.voteCount, 10);
+                                }
+                                topic.vote.votersCount = voteResults[0].votersCount;
+                            }
+                            options.push(o);
+                        });
+                    }
+                    topic.vote.options = {
+                        count: options.length,
+                        rows: options
+                    };
+                } else {
+                    delete topic.vote;
+                }
             });
+
         }
 
         return res.ok({

@@ -2171,6 +2171,7 @@ module.exports = function (app) {
             ) as "vote.options"
             , tv."voteId" as "vote.id"
             , tv."authType" as "vote.authType"
+            , tv."autoClose" as "vote.autoClose"
             , tv."createdAt" as "vote.createdAt"
             , tv."delegationIsAllowed" as "vote.delegationIsAllowed"
             , tv."description" as "vote.description"
@@ -2182,7 +2183,7 @@ module.exports = function (app) {
             , tv."type" as "vote.type"
             `;
             voteResults = getAllVotesResults(userId);
-            groupBy += `, tv."authType", tv."createdAt", tv."delegationIsAllowed", tv."description", tv."endsAt", tv."reminderSent", tv."reminderTime", tv."maxChoices", tv."minChoices", tv."type"`;
+            groupBy += `, tv."authType", tv."createdAt", tv."delegationIsAllowed", tv."description", tv."endsAt", tv."reminderSent", tv."reminderTime", tv."maxChoices", tv."minChoices", tv."type", tv."autoClose"`;
         }
 
         if (include.indexOf('event') > -1) {
@@ -2241,7 +2242,7 @@ module.exports = function (app) {
         if (['true', '1'].includes(hasVoted)) {
             where += ` AND EXISTS (SELECT TRUE FROM "VoteLists" vl WHERE vl."voteId" = tv."voteId" AND vl."userId" = :userId LIMIT 1)`;
         } else if (['false', '0'].includes(hasVoted)) {
-            where += ` AND tv."voteId" IS NOT NULL AND t.status = 'voting'::"enum_Topics_status" AND tv."endsAt" > NOW() AND NOT EXISTS (SELECT TRUE FROM "VoteLists" vl WHERE vl."voteId" = tv."voteId" AND vl."userId" = :userId LIMIT 1)`;
+            where += ` AND tv."voteId" IS NOT NULL AND t.status = 'voting'::"enum_Topics_status" AND (tv."endsAt" IS NULL OR tv."endsAt" > NOW()) AND NOT EXISTS (SELECT TRUE FROM "VoteLists" vl WHERE vl."voteId" = tv."voteId" AND vl."userId" = :userId LIMIT 1)`;
         } else {
             logger.warn(`Ignored parameter "voted" as invalid value "${hasVoted}" was provided`);
         }
@@ -2595,6 +2596,7 @@ module.exports = function (app) {
                     , tv."voteId" as "vote.id"
                     , tv."authType" as "vote.authType"
                     , tv."createdAt" as "vote.createdAt"
+                    , tv."autoClose" as "vote.autoClose"
                     , tv."delegationIsAllowed" as "vote.delegationIsAllowed"
                     , tv."description" as "vote.description"
                     , tv."endsAt" as "vote.endsAt"
@@ -2602,7 +2604,7 @@ module.exports = function (app) {
                     , tv."minChoices" as "vote.minChoices"
                     , tv."type" as "vote.type"
                     `;
-                    groupBy += `,tv."authType", tv."createdAt", tv."delegationIsAllowed", tv."description", tv."endsAt", tv."maxChoices", tv."minChoices", tv."type" `;
+                    groupBy += `,tv."authType", tv."createdAt", tv."delegationIsAllowed", tv."description", tv."endsAt", tv."maxChoices", tv."minChoices", tv."type", tv."autoClose" `;
                     voteResults = getAllVotesResults();
                 }
                 if (include.indexOf('event') > -1) {
@@ -8607,6 +8609,7 @@ module.exports = function (app) {
 
     return {
         hasPermission: hasPermission,
-        getVoteResults: getVoteResults
+        getVoteResults: getVoteResults,
+        getAllVotesResults: getAllVotesResults
     };
 };

@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 14.9 (Ubuntu 14.9-0ubuntu0.22.04.1)
--- Dumped by pg_dump version 14.9 (Ubuntu 14.9-0ubuntu0.22.04.1)
+-- Dumped from database version 14.11 (Ubuntu 14.11-0ubuntu0.22.04.1)
+-- Dumped by pg_dump version 14.11 (Ubuntu 14.11-0ubuntu0.22.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -15,20 +15,6 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
-
---
--- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
---
-
-CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
-
-
---
--- Name: EXTENSION pgcrypto; Type: COMMENT; Schema: -; Owner: -
---
-
-COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
-
 
 --
 -- Name: enum_Attachments_source; Type: TYPE; Schema: public; Owner: -
@@ -202,6 +188,7 @@ CREATE TYPE public."enum_TopicReports_type" AS ENUM (
 --
 
 CREATE TYPE public."enum_Topics_status" AS ENUM (
+    'draft',
     'inProgress',
     'voting',
     'followUp',
@@ -766,40 +753,6 @@ COMMENT ON COLUMN public."Moderators"."partnerId" IS 'Which Partner moderator re
 
 
 --
--- Name: Notifications; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public."Notifications" (
-    id uuid NOT NULL,
-    data jsonb NOT NULL,
-    "actorType" text,
-    "creatorId" text,
-    "topicIds" text[] DEFAULT ARRAY[]::text[],
-    "groupIds" text[] DEFAULT ARRAY[]::text[],
-    "userIds" text[] DEFAULT ARRAY[]::text[],
-    "timestamp" timestamp with time zone,
-    sent boolean,
-    "createdAt" timestamp with time zone NOT NULL,
-    "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone
-);
-
-
---
--- Name: COLUMN "Notifications".id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public."Notifications".id IS 'Id of the Notification';
-
-
---
--- Name: COLUMN "Notifications".data; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public."Notifications".data IS 'Notification content';
-
-
---
 -- Name: Partners; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -880,15 +833,6 @@ COMMENT ON COLUMN public."Reports"."creatorIp" IS 'IP address of the reporter';
 
 
 --
--- Name: SequelizeMeta; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public."SequelizeMeta" (
-    name character varying(255) NOT NULL
-);
-
-
---
 -- Name: Signatures; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -940,6 +884,19 @@ COMMENT ON COLUMN public."TokenRevocations"."tokenId" IS 'Token Id that has been
 --
 
 COMMENT ON COLUMN public."TokenRevocations"."expiresAt" IS 'Token expiration time, after that this entry is not relevant anymore';
+
+
+--
+-- Name: TokenRevocations_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public."TokenRevocations_id_seq"
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
 
 
 --
@@ -1350,7 +1307,8 @@ CREATE TABLE public."Topics" (
     title character varying(500),
     intro character varying(255),
     description text,
-    status public."enum_Topics_status" DEFAULT 'inProgress'::public."enum_Topics_status" NOT NULL,
+    status public."enum_Topics_status" DEFAULT 'draft'::public."enum_Topics_status" NOT NULL,
+    "imageUrl" character varying(255),
     visibility public."enum_Topics_visibility" DEFAULT 'private'::public."enum_Topics_visibility" NOT NULL,
     categories character varying(255)[] DEFAULT (ARRAY[]::character varying[])::character varying(255)[],
     "sourcePartnerId" uuid,
@@ -1365,8 +1323,7 @@ CREATE TABLE public."Topics" (
     "authorIds" uuid[] DEFAULT ARRAY[]::uuid[],
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone,
-    "imageUrl" character varying(255)
+    "deletedAt" timestamp with time zone
 );
 
 
@@ -1396,6 +1353,13 @@ COMMENT ON COLUMN public."Topics".description IS 'Short description of what the 
 --
 
 COMMENT ON COLUMN public."Topics".status IS 'Topic statuses.';
+
+
+--
+-- Name: COLUMN "Topics"."imageUrl"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Topics"."imageUrl" IS 'Topic header image url.';
 
 
 --
@@ -1466,13 +1430,6 @@ COMMENT ON COLUMN public."Topics".contact IS 'Topic contact address or phone';
 --
 
 COMMENT ON COLUMN public."Topics".hashtag IS 'Hashtag to search related content from external sources.';
-
-
---
--- Name: COLUMN "Topics"."imageUrl"; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public."Topics"."imageUrl" IS 'Topic header image url.';
 
 
 --
@@ -1977,7 +1934,7 @@ CREATE TABLE public."Votes" (
     description character varying(255) DEFAULT NULL::character varying,
     type public."enum_Votes_type" DEFAULT 'regular'::public."enum_Votes_type" NOT NULL,
     "authType" public."enum_Votes_authType" DEFAULT 'soft'::public."enum_Votes_authType" NOT NULL,
-    "autoClose" json[] DEFAULT ARRAY[]::json[],
+    "autoClose" jsonb[] DEFAULT ARRAY[]::jsonb[],
     "reminderSent" timestamp with time zone,
     "reminderTime" timestamp with time zone,
     "createdAt" timestamp with time zone NOT NULL,
@@ -2167,14 +2124,6 @@ ALTER TABLE ONLY public."Moderators"
 
 
 --
--- Name: Notifications Notifications_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."Notifications"
-    ADD CONSTRAINT "Notifications_pkey" PRIMARY KEY (id);
-
-
---
 -- Name: Partners Partners_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2188,14 +2137,6 @@ ALTER TABLE ONLY public."Partners"
 
 ALTER TABLE ONLY public."Reports"
     ADD CONSTRAINT "Reports_pkey" PRIMARY KEY (id);
-
-
---
--- Name: SequelizeMeta SequelizeMeta_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."SequelizeMeta"
-    ADD CONSTRAINT "SequelizeMeta_pkey" PRIMARY KEY (name);
 
 
 --
@@ -2461,34 +2402,6 @@ CREATE UNIQUE INDEX moderators_user_id ON public."Moderators" USING btree ("user
 --
 
 CREATE UNIQUE INDEX moderators_user_id_partner_id ON public."Moderators" USING btree ("userId", "partnerId") WHERE ("partnerId" IS NOT NULL);
-
-
---
--- Name: notifications_data; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX notifications_data ON public."Notifications" USING gin (data jsonb_path_ops);
-
-
---
--- Name: notifications_group_ids; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX notifications_group_ids ON public."Notifications" USING gin ("groupIds");
-
-
---
--- Name: notifications_topic_ids; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX notifications_topic_ids ON public."Notifications" USING gin ("topicIds");
-
-
---
--- Name: notifications_user_ids; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX notifications_user_ids ON public."Notifications" USING gin ("userIds");
 
 
 --
@@ -3046,39 +2959,3 @@ ALTER TABLE ONLY public."VoteUserContainers"
 -- PostgreSQL database dump complete
 --
 
-COPY public."SequelizeMeta" (name) FROM stdin;
-20181213213857-create-topic-favourite.js
-20190131123024-alter-topic-title-limit.js
-20190529193321-topic-report.js
-20190616115724-alter-user-accpet-terms.js
-20190627132611-alter-partner-terms-link.js
-20191119124917-create-topic-invite-user.js
-20191218091941-update-vote-option-max-value.js
-20200130121507-create-signature.js
-202002192021-alter-user-connection.js
-20200225152502-remove-vote-user-container-activity.js
-202010261616-alter-user-add-auhorID.js
-20210310104918-create-group-invite-user.js
-202103251231-alter-vote-lists-add-userhash.js
-20210329141948-alter-vote-user-containers.js
-20210510112610-groupmember_to_groupmemberusers.js
-202106111127-alter-relations-add-on-cascade.js
-20210722084618-alter-vote-add-auto-close.js
-20211008104906-create-topic-join.js
-20211008193321-alter-user-add-preferences.js
-20211028142538-create-group-join.js
-20211209091354-create-token-revocation.js
-20211217120934-comment-type-poi.js
-20220203120245-users-password-comment.js
-20220228174313-duplicate-email-users-issue-234.js
-20220405120631-create-user-notification-settings.js
-20220808083309-alter_group.js
-20220816103332-alter-topic-invite-user.js
-20220816103355-alter-group-invite-user.js
-20220520100104-add-vote-reminder.js
-20231020153809-alter-group-add-location.js
-20231020154400-alter-topic-add-location.js
-20231025094913-alter-topic-add-intro.js
-20231027115040-rename-topic-pin-group-pin.js
-20231117225849-alter_topic_add_imageurl.js
-\.

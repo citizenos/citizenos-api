@@ -677,8 +677,7 @@ suite('Users', function () {
                     }
                 ];
                 await memberLib.groupMemberUsersCreate(group.id, members);
-                topic = (await topicLib.topicCreate(agentCreator, user.id, null, Topic.STATUSES.inProgress)).body.data;
-
+                topic = (await topicLib.topicCreate(agentCreator, user.id, 'Member topic', Topic.STATUSES.inProgress, ' ', Topic.VISIBILITY.public)).body.data;
                 const memberGroup = {
                     groupId: group.id,
                     level: TopicMemberGroup.LEVELS.read
@@ -711,6 +710,7 @@ suite('Users', function () {
 
                 const topics = group.members.topics;
                 assert.equal(topics.count.total, 1);
+                assert.equal(topics.count.inProgress, 1);
                 assert.equal(topics.latest.id, topic.id);
                 assert.equal(topics.latest.title, topic.title);
             });
@@ -2351,6 +2351,8 @@ suite('Users', function () {
                         imageUrl: null,
                         language: null,
                         parentId: null,
+                        createdAt: groupJoinActivityActual.object.createdAt,
+                        updatedAt: groupJoinActivityActual.object.updatedAt,
                         rules: [],
                         visibility: Group.VISIBILITY.private
                     }
