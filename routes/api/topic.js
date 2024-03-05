@@ -3519,11 +3519,11 @@ module.exports = function (app) {
 
                         return TopicMemberGroup
                             .upsert({
-                                    topicId: topicId,
-                                    groupId: member.groupId,
-                                    level: member.level || TopicMemberUser.LEVELS.read
-                                },
-                                {transaction: t}
+                                topicId: topicId,
+                                groupId: member.groupId,
+                                level: member.level || TopicMemberUser.LEVELS.read
+                            },
+                                { transaction: t }
                             );
                     });
 
@@ -6333,98 +6333,98 @@ module.exports = function (app) {
 
     const topicMentionsList = async function (req, res) {
         return res.ok();
-      /*  let hashtag = null;
-        let queryurl = 'search/tweets';
-        let data;
+        /*  let hashtag = null;
+          let queryurl = 'search/tweets';
+          let data;
 
-        if (req.query && req.query.test === 'error') { // For testing purposes
-            queryurl = 'serch/tweets';
-        }
-        try {
-            const results = await db.query(
-                `
-                SELECT
-                    t.hashtag
-                FROM "Topics" t
-                WHERE t."id" = :topicId
-                AND t."deletedAt" IS NULL
-                AND t.hashtag IS NOT NULL
-                `,
-                {
-                    replacements: {
-                        topicId: req.params.topicId
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true,
-                    nest: true
-                }
-            )
-            if (!results.length) {
-                return res.badRequest('Topic has no hashtag defined', 1);
-            }
+          if (req.query && req.query.test === 'error') { // For testing purposes
+              queryurl = 'serch/tweets';
+          }
+          try {
+              const results = await db.query(
+                  `
+                  SELECT
+                      t.hashtag
+                  FROM "Topics" t
+                  WHERE t."id" = :topicId
+                  AND t."deletedAt" IS NULL
+                  AND t.hashtag IS NOT NULL
+                  `,
+                  {
+                      replacements: {
+                          topicId: req.params.topicId
+                      },
+                      type: db.QueryTypes.SELECT,
+                      raw: true,
+                      nest: true
+                  }
+              )
+              if (!results.length) {
+                  return res.badRequest('Topic has no hashtag defined', 1);
+              }
 
-            hashtag = results[0].hashtag;
+              hashtag = results[0].hashtag;
 
-            const mentions = await hashtagCache.get(hashtag);
-            if (!mentions || (mentions.createdAt && (Math.floor(new Date() - new Date(mentions.createdAt)) / (1000 * 60) >= 15))) {
-                data = await twitter.getAsync(queryurl, {
-                    q: '"#' + hashtag + '"',
-                    count: 20
-                });
-            } else {
-                logger.info('Serving mentions from cache', req.method, req.path, req.user);
+              const mentions = await hashtagCache.get(hashtag);
+              if (!mentions || (mentions.createdAt && (Math.floor(new Date() - new Date(mentions.createdAt)) / (1000 * 60) >= 15))) {
+                  data = await twitter.getAsync(queryurl, {
+                      q: '"#' + hashtag + '"',
+                      count: 20
+                  });
+              } else {
+                  logger.info('Serving mentions from cache', req.method, req.path, req.user);
 
-                return res.ok(mentions);
-            }
+                  return res.ok(mentions);
+              }
 
-            const allMentions = [];
-            if (data && data.statuses) {
-                logger.info('Twitter response', req.method, req.path, req.user, data.statuses.length);
-                _.forEach(data.statuses, function (m) {
-                    let mTimeStamp = new Date(Date.parse(m.created_at)).toISOString();
+              const allMentions = [];
+              if (data && data.statuses) {
+                  logger.info('Twitter response', req.method, req.path, req.user, data.statuses.length);
+                  _.forEach(data.statuses, function (m) {
+                      let mTimeStamp = new Date(Date.parse(m.created_at)).toISOString();
 
-                    const status = {
-                        id: m.id,
-                        text: decode(m.text),
-                        creator: {
-                            name: m.user.name || m.user.screen_name,
-                            profileUrl: 'https://twitter.com/' + m.user.screen_name,
-                            profilePictureUrl: m.user.profile_image_url_https
-                        },
-                        createdAt: mTimeStamp,
-                        sourceId: 'TWITTER',
-                        sourceUrl: 'https://twitter.com/' + m.user.screen_name + '/status/' + m.id
-                    };
+                      const status = {
+                          id: m.id,
+                          text: decode(m.text),
+                          creator: {
+                              name: m.user.name || m.user.screen_name,
+                              profileUrl: 'https://twitter.com/' + m.user.screen_name,
+                              profilePictureUrl: m.user.profile_image_url_https
+                          },
+                          createdAt: mTimeStamp,
+                          sourceId: 'TWITTER',
+                          sourceUrl: 'https://twitter.com/' + m.user.screen_name + '/status/' + m.id
+                      };
 
-                    allMentions.push(status);
-                });
+                      allMentions.push(status);
+                  });
 
-                const cachedMentions = {
-                    count: allMentions.length,
-                    rows: allMentions,
-                    createdAt: (new Date()).toISOString(),
-                    hashtag: hashtag
-                };
+                  const cachedMentions = {
+                      count: allMentions.length,
+                      rows: allMentions,
+                      createdAt: (new Date()).toISOString(),
+                      hashtag: hashtag
+                  };
 
-                await hashtagCache.set(hashtag, cachedMentions);
+                  await hashtagCache.set(hashtag, cachedMentions);
 
-                return res.ok(cachedMentions);
-            } else {
-                return res.internalServerError();
-            }
-        } catch (err) {
-            if (err.twitterReply) {
-                logger.error('Twitter error', req.method, req.path, req.user, err);
-                const cachedMentions = await hashtagCache.get(hashtag);
-                if (!cachedMentions) {
-                    return res.internalServerError();
-                }
+                  return res.ok(cachedMentions);
+              } else {
+                  return res.internalServerError();
+              }
+          } catch (err) {
+              if (err.twitterReply) {
+                  logger.error('Twitter error', req.method, req.path, req.user, err);
+                  const cachedMentions = await hashtagCache.get(hashtag);
+                  if (!cachedMentions) {
+                      return res.internalServerError();
+                  }
 
-                return res.ok(cachedMentions);
-            }
+                  return res.ok(cachedMentions);
+              }
 
-            return next(err);
-        }*/
+              return next(err);
+          }*/
     };
 
 
@@ -8242,6 +8242,55 @@ module.exports = function (app) {
     /** Create an Event **/
     app.post('/api/users/:userId/topics/:topicId/events', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.followUp]), topicEventsCreate);
 
+
+    /** Update an Event*/
+
+    app.put('/api/users/:userId/topics/:topicId/events/:eventId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.followUp]), async (req, res, next) => {
+        const topicId = req.params.topicId;
+        const eventId = req.params.eventId;
+        try {
+            const topic = await Topic
+                .findOne({
+                    where: {
+                        id: topicId
+                    }
+                });
+            if (topic.status === Topic.STATUSES.closed) {
+                return res.forbidden();
+            }
+            const event = await TopicEvent.findOne({
+                where: {
+                    id: eventId,
+                    topicId: topicId,
+                }
+            });
+            if (!event) {
+                return res.notFound();
+            }
+            await db
+                .transaction(async function (t) {
+                    event.set({
+                        subject: req.body.subject,
+                        text: req.body.text
+                    });
+
+                    await cosActivities
+                        .updateActivity(event, topic, {
+                            type: 'User',
+                            id: req.user.userId,
+                            ip: req.ip
+                        }, req.method + ' ' + req.path, t);
+
+                    await event.save({ transaction: t });
+
+                    t.afterCommit(() => {
+                        return res.ok(event.toJSON());
+                    });
+                });
+        } catch (err) {
+            return next(err);
+        }
+    });
 
     /**
      * Create an Event with a token issued to a 3rd party
