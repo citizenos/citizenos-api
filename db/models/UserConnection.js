@@ -52,7 +52,7 @@ module.exports = function (sequelize, DataTypes) {
                 comment: 'User id in the connected system. For Facebook their user id, for Google their user id and so on, PID for Estonian ID infra etc.'
             },
             connectionData: {
-                type: DataTypes.JSON,
+                type: DataTypes.JSONB,
                 allowNull: true,
                 comment: 'Connection specific data you want to store.'
             }

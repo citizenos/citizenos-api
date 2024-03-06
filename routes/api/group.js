@@ -882,44 +882,83 @@ module.exports = function (app) {
             sortOrder = 'ASC';
         }
 
+        let include = req.query.include;
+        if (include && !Array.isArray(include)) {
+            include = [include];
+        }
+        let join = '';
+        if (include) {
+            if (include.indexOf('invite') > -1) {
+                join += `
+                UNION
+                SELECT
+                    u.id,
+                    u.name,
+                    u.company,
+                    u."imageUrl",
+                    giu.level::text,
+                    to_jsonb(giu) as invite
+                FROM "GroupInviteUsers" giu
+                JOIN "Users" u ON u.id = giu."userId"
+                LEFT JOIN "UserConnections" uc ON (uc."userId" = giu."userId" AND uc."connectionId" = 'esteid')
+                WHERE giu."groupId" = :groupId AND giu."deletedAt" IS NULL AND giu."expiresAt" > NOW()
+                GROUP BY giu.id, giu."creatorId", giu.level, giu."groupId", u.id
+                `;
+
+            }
+        }
+
         let sortSql = ` ORDER BY `;
         let where = '';
         if (search) {
-            where = ` AND u.name ILIKE :search `
+            where = ` AND member.name ILIKE :search `
         }
         if (order) {
             switch (order) {
                 case 'name':
-                    sortSql += ` u.name ${sortOrder} `;
+                    sortSql += ` member.name ${sortOrder} `;
                     break;
                 case 'level':
-                    sortSql += ` gm."level"::"enum_GroupMemberUsers_level" ${sortOrder} `;
+                    sortSql += ` member."level"::"enum_GroupMemberUsers_level" ${sortOrder} `;
                     break;
                 default:
-                    sortSql += ` u.name ASC `
+                    sortSql += ` member.name ASC `
             }
         } else {
-            sortSql += ` u.name ASC `;
+            sortSql += ` member.name ASC `;
         }
 
         const members = await db
             .query(
-                `SELECT
-                        u.id,
-                        u.name,
-                        u.company,
-                        u."imageUrl",
-                        gm.level,
-                        MAX(a."updatedAt") AS "latestActivity",
-                        count(*) OVER()::integer AS "countTotal"
-                    FROM "GroupMemberUsers" gm
-                    JOIN "Users" u ON (u.id = gm."userId")
-                    LEFT JOIN "Activities" a ON u.id::text = a."actorId" AND ARRAY[:groupId] <@  a."groupIds"
-                    WHERE gm."groupId" = :groupId
-                    AND gm."deletedAt" IS NULL
-                    ${where}
-                    GROUP BY u.id, gm.level
-                    ${sortSql}
+                `
+                SELECT
+                    member.id,
+                    member.name,
+                    member.company,
+                    member."imageUrl",
+                    member.level,
+                    member.invite,
+                    MAX(a."updatedAt") AS "latestActivity",
+                    count(*) OVER()::integer AS "countTotal"
+                FROM (
+                    SELECT
+                            u.id,
+                            u.name,
+                            u.company,
+                            u."imageUrl",
+                            gm.level::text,
+                            '{}' as invite
+                        FROM "GroupMemberUsers" gm
+                        JOIN "Users" u ON (u.id = gm."userId")
+                        WHERE gm."groupId" = :groupId
+                        AND gm."deletedAt" IS NULL
+                        GROUP BY u.id, gm.level
+                    ${join}
+                ) as member
+                LEFT JOIN "Activities" a ON member.id::text = a."actorId" AND ARRAY[:groupId] <@  a."groupIds"
+                ${where}
+                GROUP BY member.id, member.name, member.company, member."imageUrl", member.invite, member.level
+                ${sortSql}
                     LIMIT :limit
                     OFFSET :offset
                     ;`,
@@ -938,6 +977,9 @@ module.exports = function (app) {
         if (members && members.length) {
             countTotal = members[0].countTotal;
             members.forEach(function (member) {
+                if (!member.invite) {
+                    delete member.invite;
+                }
                 delete member.countTotal;
             });
         }
@@ -965,53 +1007,96 @@ module.exports = function (app) {
                 id: groupId
             }
         });
-        let sortSql = ` ORDER BY `;
 
+        let include = req.query.include;
+        if (include && !Array.isArray(include)) {
+            include = [include];
+        }
+        let join = '';
+        if (include) {
+            if (include.indexOf('invite') > -1) {
+                join += `
+                UNION
+                SELECT
+                    u.id,
+                    u.name,
+                    u.company,
+                    u.email,
+                    u."imageUrl",
+                    giu.level::text,
+                    to_jsonb(giu) as invite
+                FROM "GroupInviteUsers" giu
+                JOIN "Users" u ON u.id = giu."userId"
+                LEFT JOIN "UserConnections" uc ON (uc."userId" = giu."userId" AND uc."connectionId" = 'esteid')
+                WHERE giu."groupId" = :groupId AND giu."deletedAt" IS NULL AND giu."expiresAt" > NOW()
+                GROUP BY giu.id, giu."creatorId", giu.level, giu."groupId", u.id
+                `;
+
+            }
+        }
+
+        let sortSql = ` ORDER BY `;
+        let where = '';
+        if (search) {
+            where = ` AND member.name ILIKE :search `
+        }
         if (order) {
             switch (order) {
                 case 'name':
-                    sortSql += ` u.name ${sortOrder} `;
+                    sortSql += ` member.name ${sortOrder} `;
                     break;
                 case 'level':
-                    sortSql += ` gm."level"::"enum_GroupMemberUsers_level" ${sortOrder} `;
+                    sortSql += ` member."level"::"enum_GroupMemberUsers_level" ${sortOrder} `;
                     break;
                 default:
-                    sortSql += ` u.name ASC `
+                    sortSql += ` member.name ASC `
             }
         } else {
-            sortSql += ` u.name ASC `;
-        }
-
-        let where = '';
-        if (search) {
-            where = ` AND u.name ILIKE :search `
+            sortSql += ` member.name ASC `;
         }
 
         let dataForAdmin = '';
         if (req.locals && req.locals.group && req.locals.group.level === GroupMemberUser.LEVELS.admin && group.visibility !== Group.VISIBILITY.public) {
             dataForAdmin = `
-            u.email,
+            member.email,
             uc."connectionData"::jsonb->>'phoneNumber' AS "phoneNumber",
             `;
         }
 
         const members = await db
             .query(
-                `SELECT
-                        u.id,
-                        u.name,
-                        u.company,
-                        u."imageUrl",
-                        ${dataForAdmin}
-                        gm.level,
-                        count(*) OVER()::integer AS "countTotal"
-                    FROM "GroupMemberUsers" gm
+                `
+                SELECT
+                    member.id,
+                    member.name,
+                    member.company,
+                    member."imageUrl",
+                    member.level,
+                    member.invite,
+                    MAX(a."updatedAt") AS "latestActivity",
+                    ${dataForAdmin}
+                    count(*) OVER()::integer AS "countTotal"
+                FROM (
+                    SELECT
+                            u.id,
+                            u.name,
+                            u.company,
+                            u.email,
+                            u."imageUrl",
+                            gm.level::text,
+                            '{}' as invite
+                        FROM "GroupMemberUsers" gm
                         JOIN "Users" u ON (u.id = gm."userId")
-                        LEFT JOIN "UserConnections" uc ON (uc."userId" = u.id AND uc."connectionId" = 'esteid')
-                    WHERE gm."groupId" = :groupId
-                    AND gm."deletedAt" IS NULL
-                    ${where}
-                    ${sortSql}
+                        WHERE gm."groupId" = :groupId
+                        AND gm."deletedAt" IS NULL
+                        GROUP BY u.id, gm.level
+                    ${join}
+                ) as member
+                LEFT JOIN "Activities" a ON member.id::text = a."actorId" AND ARRAY[:groupId] <@  a."groupIds"
+                LEFT JOIN "UserConnections" uc ON (uc."userId" = member.id AND uc."connectionId" = 'esteid')
+                ${where}
+                GROUP BY member.id, member.name, member.company, member.email, member."imageUrl", member.invite, member.level, uc."connectionData"
+                ${sortSql}
                     LIMIT :limit
                     OFFSET :offset
                     ;`,
@@ -1031,6 +1116,9 @@ module.exports = function (app) {
         if (members && members.length) {
             countTotal = members[0].countTotal;
             members.forEach(function (member) {
+                if (!member.invite) {
+                    delete member.invite;
+                }
                 delete member.countTotal;
             });
         }
@@ -1040,6 +1128,7 @@ module.exports = function (app) {
             count: members.length,
             rows: members
         });
+
     }));
 
     /**
