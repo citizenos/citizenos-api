@@ -1002,11 +1002,6 @@ module.exports = function (app) {
         if (sortOrder && ['asc', 'desc'].indexOf(sortOrder.toLowerCase()) === -1) {
             sortOrder = 'ASC';
         }
-        const group = await Group.findOne({
-            where: {
-                id: groupId
-            }
-        });
 
         let include = req.query.include;
         if (include && !Array.isArray(include)) {
