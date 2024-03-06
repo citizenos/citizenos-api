@@ -1056,7 +1056,7 @@ module.exports = function (app) {
         }
 
         let dataForAdmin = '';
-        if (req.locals && req.locals.group && req.locals.group.level === GroupMemberUser.LEVELS.admin && group.visibility !== Group.VISIBILITY.public) {
+        if (req.locals && req.locals.group && req.locals.group.level === GroupMemberUser.LEVELS.admin) {
             dataForAdmin = `
             member.email,
             uc."connectionData"::jsonb->>'phoneNumber' AS "phoneNumber",
