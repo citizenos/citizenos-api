@@ -80,7 +80,7 @@
     "superagent": "8.0.9",
     "swagger-ui-express": "4.6.2",
     "twit": "2.2.11",
-    "undersign": "git+https://github.com/citizenos/js-undersign.git#06e5690c8a5c19f290b6a73839f946b96acf911b",
+    "undersign": "^0.1.337",
     "uuid": "9.0.0",
     "validator": "13.9.0"
   },
