@@ -17,18 +17,23 @@ module.exports = function (app) {
 
     app.put('/api/internal/users/:userId', authApiKey, async function (req, res) {
         var authorData = req.body;
+        console.log('EP SYNC', req.body, authorData)
         if (authorData.userId && authorData.authorID) {
-            await User
-                .update(
-                    {authorId: authorData.authorID},
-                    {
-                        where: {
-                            id: authorData.userId
-                        },
-                        limit: 1,
-                        returning: true
-                    }
-                );
+            try {
+                await User
+                    .update(
+                        { authorId: authorData.authorID },
+                        {
+                            where: {
+                                id: authorData.userId
+                            },
+                            limit: 1,
+                            returning: true
+                        }
+                    );
+            } catch (err) {
+                console.log('ERROR /api/internal/users', err);
+            }
 
             return res.ok();
         }
