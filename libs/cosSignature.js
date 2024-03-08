@@ -44,8 +44,7 @@ module.exports = function (app) {
 
     const hades = new Hades({
         certificates: tslCertificates,
-        timemarkUrl: config.services.signature.timemarkUrl,
-        timestampUrl: config.services.signature.timestampUrl
+        timemarkUrl: config.services.signature.timemarkUrl
     });
 
 
@@ -506,8 +505,7 @@ module.exports = function (app) {
 
         const xades = Xades.parse(signatureData.data);
         xades.setSignature(Buffer.from(signature, 'base64'));
-        const timemark = await hades.timemark(xades);
-        xades.setOcspResponse(timemark);
+        xades.setOcspResponse(await hades.timemark(xades));
 
         const container = await _getUserContainer(voteId, userId, voteOptions)
 
