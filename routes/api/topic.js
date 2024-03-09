@@ -3055,7 +3055,7 @@ module.exports = function (app) {
 
         let where = '';
         if (search) {
-            where = ` WHERE tm.name ILIKE :search `
+            where = ` WHERE tm.name ILIKE :search OR tm.email ILIKE :search `
         }
 
         let dataForModeratorAndAdmin = '';
