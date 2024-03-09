@@ -905,7 +905,7 @@ module.exports = function (app) {
         let sortSql = ` ORDER BY `;
         let where = '';
         if (search) {
-            where = ` AND member.name ILIKE :search `
+            where = ` WHERE member.name ILIKE :search `
         }
         if (order) {
             switch (order) {
@@ -1025,9 +1025,9 @@ module.exports = function (app) {
         }
 
         let sortSql = ` ORDER BY `;
-        let where = 'WHERE ';
+        let where = '';
         if (search) {
-            where += ` member.name ILIKE :search `
+            where += ` WHERE member.name ILIKE :search `
         }
         if (order) {
             switch (order) {
