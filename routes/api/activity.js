@@ -952,11 +952,11 @@ module.exports = function (app) {
                         FROM "Topics" t
                             LEFT JOIN (
                                 SELECT
-                                    tmu."topicId",
-                                    tmu."userId",
-                                    tmu.level::text AS level
-                                FROM "TopicMemberUsers" tmu
-                                WHERE tmu."deletedAt" IS NULL
+                                    "topicId",
+                                    "userId",
+                                    level::text AS level
+                                FROM "TopicMemberUsers"
+                                WHERE "deletedAt" IS NULL
                             ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = $1)
                             LEFT JOIN (
                                 SELECT
@@ -974,7 +974,8 @@ module.exports = function (app) {
                             t.title IS NOT NULL
                             ${wherePartnerTopics}
                             AND COALESCE(tmup.level, tmgp.level, 'none')::"enum_TopicMemberUsers_level" > 'none'
-                        ORDER BY t."updatedAt" DESC
+                        UNION
+                        SELECT id FROM "Topics" WHERE "creatorId"=$1
                     ; $$
                 LANGUAGE SQL IMMUTABLE;
 
@@ -1010,10 +1011,12 @@ module.exports = function (app) {
                                 WHERE tmg."deletedAt" IS NULL
                                 ORDER BY t."updatedAt" ASC
                             ) AS gt ON (gt."groupId" = g.id)
-                        WHERE gm."deletedAt" is NULL
+                        WHERE gm."userId" = $1
                             ${wherePartnerGroups}
-                            AND gm."userId" = $1
                         GROUP BY g.id
+                        UNION
+                        SELECT id
+                        FROM "Groups" WHERE "creatorId"= $1
                     ; $$
                 LANGUAGE SQL IMMUTABLE;
 
@@ -1167,7 +1170,7 @@ module.exports = function (app) {
                             }
                         });
                     }
-
+                    //              console.log(`${query} ${selectSql}`)
                     const results = await db
                         .query(`${query} ${selectSql}`,
                             {
@@ -1191,6 +1194,7 @@ module.exports = function (app) {
                                 t
                             );
                     }
+                    //          console.log(results);
                     const finalResults = parseActivitiesResults(results);
 
                     t.afterCommit(() => {
