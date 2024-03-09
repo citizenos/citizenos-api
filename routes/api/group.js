@@ -995,7 +995,7 @@ module.exports = function (app) {
         const limitDefault = 10;
         const offset = parseInt(req.query.offset, 10) ? parseInt(req.query.offset, 10) : 0;
         let limit = parseInt(req.query.limit, 10) ? parseInt(req.query.limit, 10) : limitDefault;
-        const search = req.query.search;
+        let search = req.query.search;
 
         const order = req.query.orderBy;
         let sortOrder = req.query.order || 'ASC';
@@ -1031,9 +1031,9 @@ module.exports = function (app) {
         }
 
         let sortSql = ` ORDER BY `;
-        let where = '';
+        let where = 'WHERE ';
         if (search) {
-            where = ` AND member.name ILIKE :search `
+            where += ` member.name ILIKE :search `
         }
         if (order) {
             switch (order) {
