@@ -3,32 +3,32 @@
     "FOR_MORE_INFORMATION": "Viac informácií nájdete v našej",
     "LINK_TO_PLATFORM": "Odkaz na platformu",
     "LINK_PRIVACY_POLICY": "zásady ochrany osobných údajov",
-    "VISIT_OUR_WEBSITE": "Visit our website",
+    "VISIT_OUR_WEBSITE": "Navštívte našu stránku",
     "EMPOWERED_BY": "Splnomocnenie od"
   },
   "ACCOUNT_VERIFICATION": {
     "SUBJECT": "Aktivujte si účet Citizen OS"
   },
   "INVITE_GROUP": {
-    "SUBJECT": "User {{fromUser.name}} is inviting you to join the group “{{group.name}}”"
+    "SUBJECT": "Užívateľ/ka {{fromUser.name}} Vás pozýva pridať sa k skupine \"{{group.name}}\""
   },
   "INVITE_TOPIC": {
-    "SUBJECT": "User {{fromUser.name}} is inviting you to join the topic “{{topicTitle}}”",
+    "SUBJECT": "Užívateľ/ka {{fromUser.name}} Vás pozýva pridať sa k téme ”{{topicTitle}}”",
     "SUBJECT_rahvaalgatus_ee": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust",
     "SUBJECT_rahvaalgatus_test": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Reset your password"
+    "SUBJECT": "Obnovte si heslo"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Thank you for reporting a topic"
+    "SUBJECT": "Ďakujeme za nahlásenie témy"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Your topic has been reported to moderators"
+    "SUBJECT": "Vaša téma bola nahlásená moderátorom"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "Please moderate this reported topic"
+    "SUBJECT": "Prosíme o moderovanie tejto nahlásenej témy"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
     "SUBJECT": "The topic you reported has been reviewed"
