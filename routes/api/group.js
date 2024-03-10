@@ -2252,7 +2252,6 @@ module.exports = function (app) {
         let returncolumns = '';
         let voteResults = false;
         if (search) {
-            search = `%${search || ''}%`;
             where = ` AND t.title ILIKE :search `
         }
         const userId = req.user?.userId;
@@ -2415,33 +2414,51 @@ module.exports = function (app) {
                 WHEN tf."topicId" = t.id THEN true
                 ELSE false
             END as "favourite",
-            COALESCE(tmup.level, tmgp.level, :defaultPermission) as "permission.level",
-            COALESCE(tmgp.level, :defaultPermission) as "permission.levelGroup",`;
-            where += `AND COALESCE(tmup.level, tmgp.level, :defaultPermission)::"enum_TopicMemberUsers_level" > 'none'`;
+                lvl."permission.level",
+                lvl."permission.levelGroup",`;
+            where += `AND COALESCE(lvl."permission.level", lvl."permission.levelGroup", :defaultPermission)::"enum_TopicMemberUsers_level" > 'none'`;
             userSql = `
             LEFT JOIN (
                 SELECT
-                    tmu."topicId",
-                    tmu."userId",
-                    tmu.level::text AS level
-                FROM "TopicMemberUsers" tmu
-                WHERE tmu."deletedAt" IS NULL
-            ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId)
-            LEFT JOIN (
-                SELECT
-                    tmg."topicId",
-                    gm."userId",
-                    CASE WHEN t.status = 'draft' AND MAX(tmg.level)::text <> 'admin' THEN 'none'
-                    ELSE MAX(tmg.level)::text END AS level
-                FROM "TopicMemberGroups" tmg
-                    LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
-                    JOIN "Topics" t ON t.id=tmg."topicId"
-                WHERE tmg."deletedAt" IS NULL
-                AND gm."deletedAt" IS NULL
-                GROUP BY "topicId", "userId", t.status
-            ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
+                    t.id as "topicId",
+                    CASE WHEN t.status = 'draft' AND COALESCE(tmup.level, tmgp.level, 'read')::text <> 'admin' THEN 'none'
+                    ELSE COALESCE(tmup.level, tmgp.level, 'read')::text
+                    END AS "permission.level",
+                    CASE WHEN t.status = 'draft' AND COALESCE(tmgp.level, 'read')::text <> 'admin' THEN 'none'
+                    ELSE COALESCE(tmgp.level, 'read')::text
+                    END AS "permission.levelGroup"
+                FROM "TopicMemberGroups" gt
+                JOIN "Topics" t ON (t.id = gt."topicId")
+                LEFT JOIN (
+                    SELECT
+                        tmu."topicId",
+                        tmu."userId",
+                        CASE WHEN t.status = 'draft' AND MAX(tmu.level)::text <> 'admin' THEN 'none'
+                        ELSE MAX(tmu.level)::text END AS level
+                    FROM "TopicMemberUsers" tmu
+                    JOIN "Topics" t ON t.id=tmu."topicId"
+                    WHERE tmu."deletedAt" IS NULL
+                    GROUP BY "topicId", "userId", t.status
+                 ) AS tmup ON (tmup."topicId" = t.id AND tmup."userId" = :userId)
+                LEFT JOIN (
+                     SELECT
+                         tmg."topicId",
+                         gm."userId",
+                         CASE WHEN t.status = 'draft' AND MAX(tmg.level)::text <> 'admin' THEN 'none'
+                         ELSE MAX(tmg.level)::text END AS level
+                     FROM "TopicMemberGroups" tmg
+                         LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
+                         JOIN "Topics" t ON t.id=tmg."topicId"
+                     WHERE tmg."deletedAt" IS NULL
+                     AND gm."deletedAt" IS NULL
+                     GROUP BY "topicId", "userId", t.status
+                ) AS tmgp ON (tmgp."topicId" = t.id AND tmgp."userId" = :userId)
+                WHERE gt."groupId" = :groupId
+                    AND gt."deletedAt" IS NULL
+                    AND t."deletedAt" IS NULL
+                ) lvl ON lvl."topicId" = gt."topicId"
             LEFT JOIN "TopicFavourites" tf ON tf."topicId" = t.id AND tf."userId" = :userId `;
-            groupBy += `tmup.level, tmgp.level, tf."topicId", `;
+            groupBy += `lvl."permission.level", lvl."permission.levelGroup", tf."topicId", `;
         }
         const topicsquery = db
             .query(
