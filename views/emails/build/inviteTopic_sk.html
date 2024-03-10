@@ -2,7 +2,7 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding:22px 22px 22px 0;">
-                <p id="header_title_description">An invitation to join topic</p>
+                <p id="header_title_description">Pozvánka pridať sa k téme</p>
                 <p id="header_title">{{topic.title}}</p>
             </td>
         </tr>
@@ -18,13 +18,13 @@
 
         <tr>
             <td valign="middle">
-                User <b>{{fromUser.name}}</b> is inviting you to join this topic.
+                Užívateľ/ka <b>{{fromUser.name}}</b> Vás pozýva pridať sa k tejto téme.
             </td>
         </tr>
 
         {{#message}}
         <tr>
-            <td><p class="info_heading">Message</p></td>
+            <td><p class="info_heading">Správa</p></td>
         </tr>
         <tr>
             <td valign="middle">
@@ -41,7 +41,7 @@
         </tr>
         {{/message}}
         <tr>
-            <td><p class="info_heading">Topic details</p></td>
+            <td><p class="info_heading">Podrobnosti témy</p></td>
         </tr>
         <tr>
             <td valign="middle">
@@ -86,7 +86,7 @@
             <td style="padding-bottom: 32px;padding-top: 16px">
                 <p class="submit_button">
                     <a href="{{linkViewTopic}}" target="_blank"
-                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 60px;">Join topic</a>
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 60px;">Pridať sa k téme</a>
                 </p>
             </td>
         </tr>
@@ -99,7 +99,7 @@
                                 <img src="cid:Warning.png" />
                             </td>
                             <td style="font-size:14px;">
-                                You must log in with {{toUser.email}} to access this topic.
+                                Pre prístup k tejto téme sa musíte prihlásiť pomocou {{toUser.email}}.
                             </td>
                         </tr>
                     </tbody>
