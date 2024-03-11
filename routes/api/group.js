@@ -2422,6 +2422,7 @@ module.exports = function (app) {
                 SELECT
                     t.id as "topicId",
                     CASE WHEN t.status = 'draft' AND COALESCE(tmup.level, tmgp.level, 'read')::text <> 'admin' THEN 'none'
+                    WHEN t.visibility = 'private' THEN COALESCE(tmup.level, tmgp.level, 'none')::text
                     ELSE COALESCE(tmup.level, tmgp.level, 'read')::text
                     END AS "permission.level",
                     CASE WHEN t.status = 'draft' AND COALESCE(tmgp.level, 'read')::text <> 'admin' THEN 'none'
