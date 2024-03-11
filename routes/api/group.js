@@ -530,6 +530,8 @@ module.exports = function (app) {
 
         const visibility = req.query.visibility;
         const search = req.query.search;
+        const userId = req.user.id;
+        const creatorId = req.query.creatorId;
         const favourite = req.query.favourite;
 
         const country = req.query.country;
@@ -545,6 +547,14 @@ module.exports = function (app) {
 
         if (search) {
             where += ` AND g.name ILIKE :search `
+        }
+
+        if (creatorId) {
+            if (creatorId === userId) {
+                where += ` AND c.id =:creatorId `;
+            } else {
+                return res.badRequest('No rights!');
+            }
         }
 
         if (favourite) {
@@ -777,6 +787,7 @@ module.exports = function (app) {
                         language: language,
                         userId: req.user.userId,
                         visibility: visibility,
+                        creatorId: creatorId,
                         offset: offset,
                         limit: limit,
                         search: '%' + search + '%'
