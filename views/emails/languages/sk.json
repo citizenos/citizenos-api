@@ -31,19 +31,19 @@
     "SUBJECT": "Prosíme o moderovanie tejto nahlásenej témy"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "The topic you reported has been reviewed"
+    "SUBJECT": "Téma, ktorú ste nahlásili, bola preskúmaná"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Your topic has been reviewed by a moderator"
+    "SUBJECT": "Vašu tému preskúmal moderátor"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "A reported topic has been revised, please review"
+    "SUBJECT": "Nahlásená téma bola upravená, prosíme o preskúmanie"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Access to your reported topic has been restored"
+    "SUBJECT": "Prístup k vašej nahlásenej téme bol obnovený"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
-    "SUBJECT": "The issue you reported has been resolved"
+    "SUBJECT": "Problém, ktorý ste nahlásili, bol vyriešený"
   },
   "REPORT": {
     "REPORT_TYPE": {
@@ -66,22 +66,22 @@
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Your discussion contribution has been reported as inappropriate"
+    "SUBJECT": "Váš diskusný príspevok bol nahlásený ako nevhodný"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "Please moderate this reported discussion content"
+    "SUBJECT": "Prosíme o moderáciu tohto nahláseného obsahu diskusie"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
   "NOTIFICATIONS": {
-    "SUBJECT": "An update on topic “{{topicTitle}}”",
-    "NOTIFICATION_USER_CREATE_TOPIC": "User <b>{{userName}}</b> has created a new topic.",
-    "NOTIFICATION_USER_UPDATE_TOPIC": "User <b>{{userName}}</b> has updated the field <b>{{fieldName}}</b> in this topic.",
-    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "User <b>{{userName}}</b> has made <b>{{groupCount}}</b> updates to this topic.",
+    "SUBJECT": "Aktualizácia témy \"{{topicTitle}}\"",
+    "NOTIFICATION_USER_CREATE_TOPIC": "Užívateľ/ka <b>{{userName}}</b> vytvoril/a novú tému.",
+    "NOTIFICATION_USER_UPDATE_TOPIC": "Užívateľ/ka <b>{{userName}}</b> aktualizoval/a pole <b>{{fieldName}}</b> v tejto téme.",
+    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "Užívateľ/ka <b>{{userName}}</b> vykonal/a <b>{{groupCount}}</b> aktualizácií tejto témy.",
     "NOTIFICATION_PREVIOUS_VERSION": "Predošlá verzia: {{previousValue}}",
     "NOTIFICATION_NEW_VERSION": "Nová verzia: {{newValue}}",
-    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "The Citizen OS system has updated a field <b>{{fieldName}}</b> in this topic.",
+    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "Systém Citizen OS aktualizoval pole <b>{{fieldName}}</b> v tejto téme.",
     "NOTIFICATION_USER_DELETE_TOPIC": "User <b>{{userName}}</b> has deleted this topic.",
     "NOTIFICATION_USER_ADD_USER_TOPIC": "User <b>{{userName}}</b> has invited user <b>{{userName2}}</b> to participate in this topic.",
     "NOTIFICATION_USER_INVITE_TOPIC_USER": "@:NOTIFICATIONS.NOTIFICATION_USER_ADD_USER_TOPIC",
