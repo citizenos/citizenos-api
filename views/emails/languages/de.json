@@ -2,8 +2,8 @@
   "LAYOUT": {
     "FOR_MORE_INFORMATION": "For more information, please see our",
     "LINK_TO_PLATFORM": "Link zu der Plattform",
-    "LINK_PRIVACY_POLICY": "privacy policy",
-    "VISIT_OUR_WEBSITE": "Visit our website",
+    "LINK_PRIVACY_POLICY": "Datenschutzerklärung",
+    "VISIT_OUR_WEBSITE": "Besuchen Sie unsere Website",
     "EMPOWERED_BY": "Empowered by"
   },
   "ACCOUNT_VERIFICATION": {
@@ -19,31 +19,31 @@
     "SUBJECT_rahvaalgatus_test": "{{fromUser.name}}, user of rahvaalgatus.ee invites you to co-create a discussion/initiative"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Reset your password"
+    "SUBJECT": "Ihr Passwort zurücksetzen"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Thank you for reporting a topic"
+    "SUBJECT": "Vielen Dank für die Meldung eines Themas"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Your topic has been reported to moderators"
+    "SUBJECT": "Ihr Thema wurde den Moderatoren gemeldet"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "Please moderate this reported topic"
+    "SUBJECT": "Bitte moderieren Sie dieses gemeldete Thema"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "The topic you reported has been reviewed"
+    "SUBJECT": "Das von Ihnen gemeldete Thema wurde überprüft"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Your topic has been reviewed by a moderator"
+    "SUBJECT": "Ihr Thema wurde von einem Moderator geprüft"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "A reported topic has been revised, please review"
+    "SUBJECT": "Ein gemeldetes Thema wurde überarbeitet, bitte prüfen"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Access to your reported topic has been restored"
+    "SUBJECT": "Der Zugriff auf Ihr gemeldetes Thema wurde wiederhergestellt"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
-    "SUBJECT": "The issue you reported has been resolved"
+    "SUBJECT": "Das von Ihnen gemeldete Problem wurde behoben"
   },
   "REPORT": {
     "REPORT_TYPE": {
@@ -66,32 +66,32 @@
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Your discussion contribution has been reported as inappropriate"
+    "SUBJECT": "Ihr Diskussionsbeitrag wurde als unangemessen gemeldet"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "Please moderate this reported discussion content"
+    "SUBJECT": "Bitte moderieren Sie diesesn gemeldeten Diskussionsinhalt"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
   "NOTIFICATIONS": {
-    "SUBJECT": "An update on topic “{{topicTitle}}”",
-    "NOTIFICATION_USER_CREATE_TOPIC": "User <b>{{userName}}</b> has created a new topic.",
-    "NOTIFICATION_USER_UPDATE_TOPIC": "User <b>{{userName}}</b> has updated the field <b>{{fieldName}}</b> in this topic.",
-    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "User <b>{{userName}}</b> has made <b>{{groupCount}}</b> updates to this topic.",
+    "SUBJECT": "Ein Update zum Thema “{{topicTitle}}”",
+    "NOTIFICATION_USER_CREATE_TOPIC": "Benutzer <b>{{userName}}</b> hat ein neues Thema erstellt.",
+    "NOTIFICATION_USER_UPDATE_TOPIC": "Benutzer <b>{{userName}}</b> hat das Feld <b>{{fieldName}}</b> in diesem Thema aktualisiert.",
+    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "Benutzer <b>{{userName}}</b> hat an diesem Thema <b>{{groupCount}}</b> Aktualisierungen vorgenommen.",
     "NOTIFICATION_PREVIOUS_VERSION": "Vorherige Version: {{previousValue}}",
     "NOTIFICATION_NEW_VERSION": "Neue Version: {{newValue}}",
-    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "The Citizen OS system has updated a field <b>{{fieldName}}</b> in this topic.",
-    "NOTIFICATION_USER_DELETE_TOPIC": "User <b>{{userName}}</b> has deleted this topic.",
-    "NOTIFICATION_USER_ADD_USER_TOPIC": "User <b>{{userName}}</b> has invited user <b>{{userName2}}</b> to participate in this topic.",
+    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "Das Citizen OS-System hat das Feld <b>{{fieldName}}</b> in diesem Thema aktualisiert.",
+    "NOTIFICATION_USER_DELETE_TOPIC": "Benutzer <b>{{userName}}</b> hat dieses Thema gelöscht.",
+    "NOTIFICATION_USER_ADD_USER_TOPIC": "Benutzer <b>{{userName}}</b> hat den Benutzer <b>{{userName2}}</b> eingeladen, an diesem Thema teilzunehmen.",
     "NOTIFICATION_USER_INVITE_TOPIC_USER": "@:NOTIFICATIONS.NOTIFICATION_USER_ADD_USER_TOPIC",
-    "NOTIFICATION_USER_ACCEPT_INVITE_TOPIC": "User <b>{{userName}}</b> has accepted an invite to this topic.",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER": "User <b>{{userName}}</b> has changed the access level of user <b>{{userName2}}</b> for this topic.",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE": "User <b>{{userName}}</b> has revoked access from user <b>{{userName2}}</b> to this topic.",
+    "NOTIFICATION_USER_ACCEPT_INVITE_TOPIC": "Benutzer <b>{{userName}}</b> hat die Einladung zu diesem Thema angenommen.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER": "Benutzer <b>{{userName}}</b> hat die Zugriffsrechte des Benutzers <b>{{userName2}}</b> für dieses Thema widerrufen.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE": "Benutzer <b>{{userName}}</b> hat den Zugriff des Benutzers <b>{{userName2}}</b> auf dieses Thema widerrufen.",
     "NOTIFICATION_USER_UPDATE_TOPICINVITEUSER": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER",
     "NOTIFICATION_USER_UPDATE_TOPICINVITEUSER_NONE": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE",
-    "NOTIFICATION_USER_UPDATE_TOPICJOIN": "User <b>{{userName}}</b> has edited the share link settings for this topic.",
-    "NOTIFICATION_USER_UPDATE_GROUPJOIN": "User <b>{{userName}}</b> has edited the share link settings for this group.",
+    "NOTIFICATION_USER_UPDATE_TOPICJOIN": "Benutzer <b>{{userName}}</b> hat die Einstellungen für das Teilen von Links für dieses Thema bearbeitet.",
+    "NOTIFICATION_USER_UPDATE_GROUPJOIN": "Benutzer <b>{{userName}}</b> hat die Einstellungen für das Teilen von Links für diese Gruppe bearbeitet.",
     "NOTIFICATION_USER_DELETE_USER_TOPIC": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE",
     "NOTIFICATION_USER_JOIN_TOPIC": "User <b>{{userName}}</b> has joined this topic with access level: {{accessLevel}}",
     "NOTIFICATION_USER_JOIN_GROUP": "User <b>{{userName}}</b> has joined this group with access level: {{accessLevel}}",
@@ -112,7 +112,7 @@
     "NOTIFICATION_MODERATOR_DELETE_COMMENT_TOPIC": "User <b>{{userName}}</b> (moderator) has deleted an argument in this topic.",
     "NOTIFICATION_USER_ADD_REPORT_COMMENT": "User <b>{{userName}}</b> has reported an argument in this topic.",
     "NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_UP": "User <b>{{userName}}</b> has left a reaction <b>{{reaction}}</b> on an argument in this topic.",
-    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_UP": "User <b>{{userName}}</b> has updated their reaction to an argument in this topic.",
+    "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_UP": "Benutzer <b>{{userName}}</b> hat seine/ihre Reaktion auf ein Argument in diesem Thema aktualisiert.",
     "NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_DOWN": "@:NOTIFICATIONS.NOTIFICATION_USER_CREATE_COMMENTVOTE_COMMENT_UP",
     "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_DOWN": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_UP",
     "NOTIFICATION_USER_UPDATE_COMMENTVOTE_COMMENT_REMOVE": "User <b>{{userName}}</b> has removed their reaction to an argument in this topic.",
@@ -121,7 +121,7 @@
     "NOTIFICATION_COMMENTVOTE_FIELD_VALUE_REMOVE": "entfernen",
     "NOTIFICATION_USER_CREATE_COMMENT_TOPIC_IN_REPLY_TO_COMMENT": "User <b>{{userName}}</b> has left a reply to an argument in this topic.",
     "NOTIFICATION_USER_ADD_TOPIC_GROUP": "User <b>{{userName}}</b> has added this topic to group <a href=\"{{groupLink}}\"><b>{{groupName}}</b></a>",
-    "NOTIFICATION_USER_DELETE_GROUP_TOPIC": "User <b>{{userName}}</b> has removed this topic from group <a href=\"{{groupLink}}\"><b>{{groupName}}</b></a>",
+    "NOTIFICATION_USER_DELETE_GROUP_TOPIC": "Benutzer <b>{{userName}}</b> hat dieses Thema von der Gruppe <a href=\"{{groupLink}}\"><b>{{groupName}}</b></a> entfernt",
     "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP": "User <b>{{userName}}</b> has changed the access level of group <a href=\"{{groupLink}}\"><b>{{groupName}}</b></a> to this topic.",
     "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP_NONE": "User <b>{{userName}}</b> has revoked access from group <a href=\"{{groupLink}}\"><b>{{groupName}}</b></a> to this topic.",
     "NOTIFICATION_USER_CREATE_TOPICEVENT_TOPIC": "User <b>{{userName}}</b> has posted an update for this topic.",
@@ -137,7 +137,7 @@
     "NOTIFICATION_TOPIC_FIELD_STATUS_CLOSED": "geschlossen",
     "NOTIFICATION_TOPIC_FIELD_HASHTAG": "Hashtag",
     "NOTIFICATION_TOPIC_FIELD_TITLE": "Titel",
-    "NOTIFICATION_TOPIC_FIELD_INTRO": "intro",
+    "NOTIFICATION_TOPIC_FIELD_INTRO": "Einführung",
     "NOTIFICATION_TOPIC_FIELD_CATEGORIES": "Kategorien",
     "NOTIFICATION_TOPIC_FIELD_TOKENJOIN": "Einladungs-Link",
     "NOTIFICATION_TOPIC_FIELD_VISIBILITY": "Sichtbarkeit",
