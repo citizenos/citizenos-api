@@ -2,7 +2,7 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding:22px 22px 22px 0;">
-                <p id="header_title_description">An invitation to join group</p>
+                <p id="header_title_description">Pozvánka pridať sa ku skupine</p>
                 <p id="header_title">{{group.name}}</p>
             </td>
         </tr>
@@ -18,13 +18,13 @@
 
         <tr>
             <td valign="middle">
-                User {{fromUser.name}} from group <b>{{group.name}}</b> is inviting you to join this group.
+                Užívateľ/ka {{fromUser.name}} zo skupiny <b>{{group.name}}</b> Vás pozýva pridať sa do tejto skupiny.
             </td>
         </tr>
 
         {{#message}}
         <tr>
-            <td><p class="info_heading">Message</p></td>
+            <td><p class="info_heading">Správa</p></td>
         </tr>
         <tr>
             <td valign="middle">
@@ -41,7 +41,7 @@
         </tr>
         {{/message}}
         <tr>
-            <td><p class="info_heading">Group details</p></td>
+            <td><p class="info_heading">Podrobnosti o skupine</p></td>
         </tr>
         <tr>
             <td valign="middle">
@@ -49,7 +49,7 @@
                     <tbody>
                         <tr>
                             <td>
-                                <p class="info_row_heading">Group name</p>
+                                <p class="info_row_heading">Meno skupiny</p>
                                 <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
                                     {{group.name}}</p>
                             </td>
@@ -96,7 +96,7 @@
                                 <img src="cid:Warning.png" />
                             </td>
                             <td style="font-size:14px;">
-                                You must log in with {{toUser.email}} to access this topic.
+                                Pre prístup k tejto téme sa musíte prihlásiť pomocou {{toUser.email}}.
                             </td>
                         </tr>
                     </tbody>

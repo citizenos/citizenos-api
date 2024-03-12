@@ -1,49 +1,49 @@
 {
   "LAYOUT": {
-    "FOR_MORE_INFORMATION": "For more information, please see our",
+    "FOR_MORE_INFORMATION": "Lisateavet leiad meie",
     "LINK_TO_PLATFORM": "Ava platvorm",
-    "LINK_PRIVACY_POLICY": "privacy policy",
-    "VISIT_OUR_WEBSITE": "Visit our website",
+    "LINK_PRIVACY_POLICY": "privaatsuspoliitikast",
+    "VISIT_OUR_WEBSITE": "Külasta meie veebilehte",
     "EMPOWERED_BY": "Head arutelu hoiab"
   },
   "ACCOUNT_VERIFICATION": {
     "SUBJECT": "Aktiveeri oma Citizen OS konto"
   },
   "INVITE_GROUP": {
-    "SUBJECT": "User {{fromUser.name}} is inviting you to join the group “{{group.name}}”"
+    "SUBJECT": "Kasutaja {{fromUser.name}} kutsub sind liituma grupiga „{{group.name}}“"
   },
   "INVITE_TOPIC": {
-    "SUBJECT": "User {{fromUser.name}} is inviting you to join the topic “{{topicTitle}}”",
+    "SUBJECT": "Kasutaja {{fromUser.name}} kutsub sind liituma teemaga „{{topicTitle}}”",
     "SUBJECT_rahvaalgatus_ee": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust",
     "SUBJECT_uuseakus_rahvaalgatus_ee": "Uue eakuse rahvakogus osaleja {{fromUser.name}} kutsub Sind kooslooma algatust",
     "SUBJECT_rahvaalgatus_test": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Reset your password"
+    "SUBJECT": "Lähtesta oma parool"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
-    "SUBJECT": "Thank you for reporting a topic"
+    "SUBJECT": "Täname sind teemast teatamise eest"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Your topic has been reported to moderators"
+    "SUBJECT": "Sinu teemast teatati moderaatoritele"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "Please moderate this reported topic"
+    "SUBJECT": "Palun modereeri seda teemat, mille kohta teavitus tehti"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "The topic you reported has been reviewed"
+    "SUBJECT": "Teema, millest teatasid, on üle vaadatud"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Your topic has been reviewed by a moderator"
+    "SUBJECT": "Moderaator vaatas sinu teema üle"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "A reported topic has been revised, please review"
+    "SUBJECT": "Teavituse aluseks olnud teemat redigeeriti, palun vaadake see üle"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Access to your reported topic has been restored"
+    "SUBJECT": "Taastati juurdepääs sinu teemale, mille kohta esitati kaebus"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
-    "SUBJECT": "The issue you reported has been resolved"
+    "SUBJECT": "Probleem, millest teatasid, on lahendatud"
   },
   "REPORT": {
     "REPORT_TYPE": {
@@ -66,45 +66,45 @@
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Your discussion contribution has been reported as inappropriate"
+    "SUBJECT": "Teatati, et sinu postitus arutellu oli sobimatu"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "Please moderate this reported discussion content"
+    "SUBJECT": "Palun modereeri seda sisu, mille kohta teavitus tehti"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
   "NOTIFICATIONS": {
-    "SUBJECT": "An update on topic “{{topicTitle}}”",
-    "NOTIFICATION_USER_CREATE_TOPIC": "User <b>{{userName}}</b> has created a new topic.",
-    "NOTIFICATION_USER_UPDATE_TOPIC": "User <b>{{userName}}</b> has updated the field <b>{{fieldName}}</b> in this topic.",
-    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "User <b>{{userName}}</b> has made <b>{{groupCount}}</b> updates to this topic.",
+    "SUBJECT": "Teemat „{{topicTitle}}” värskendati",
+    "NOTIFICATION_USER_CREATE_TOPIC": "Kasutaja <b>{{userName}}</b> lõi uue teema.",
+    "NOTIFICATION_USER_UPDATE_TOPIC": "Kasutaja <b>{{userName}}</b> värskendas selle teema välja <b>{{fieldName}}</b>.",
+    "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "Kasutaja <b>{{userName}}</b> on teinud sellesse teemasse <b>{{groupCount}}</b> värskendust.",
     "NOTIFICATION_PREVIOUS_VERSION": "Eelmine versioon: {{previousValue}}",
     "NOTIFICATION_NEW_VERSION": "Uus versioon: {{newValue}}",
-    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "The Citizen OS system has updated a field <b>{{fieldName}}</b> in this topic.",
-    "NOTIFICATION_USER_DELETE_TOPIC": "User <b>{{userName}}</b> has deleted this topic.",
-    "NOTIFICATION_USER_ADD_USER_TOPIC": "User <b>{{userName}}</b> has invited user <b>{{userName2}}</b> to participate in this topic.",
+    "NOTIFICATION_SYSTEM_UPDATE_TOPIC": "Citizen Os-i süsteem värskendas selle teema välja <b>{{fieldName}}</b>.",
+    "NOTIFICATION_USER_DELETE_TOPIC": "<b>{{userName}}</b> kustutas selle teema.",
+    "NOTIFICATION_USER_ADD_USER_TOPIC": "<b>{{userName}}</b> kutsus kasutaja <b>{{userName2}}</b> selles teemas osalema.",
     "NOTIFICATION_USER_INVITE_TOPIC_USER": "@:NOTIFICATIONS.NOTIFICATION_USER_ADD_USER_TOPIC",
-    "NOTIFICATION_USER_ACCEPT_INVITE_TOPIC": "User <b>{{userName}}</b> has accepted an invite to this topic.",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER": "User <b>{{userName}}</b> has changed the access level of user <b>{{userName2}}</b> for this topic.",
-    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE": "User <b>{{userName}}</b> has revoked access from user <b>{{userName2}}</b> to this topic.",
+    "NOTIFICATION_USER_ACCEPT_INVITE_TOPIC": "Kasutaja <b>{{userName}}</b> võttis selle teema kutse vastu.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER": "Kasutaja <b>{{userName}}</b> muutis kasutaja <b>{{userName2}}</b>.juurdepääsutaset sellele teemale.",
+    "NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE": "<b>{{userName}}</b> tühistas kasutaja <b>{{userName2}}</b> juurdepääsu sellele teemale.",
     "NOTIFICATION_USER_UPDATE_TOPICINVITEUSER": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER",
     "NOTIFICATION_USER_UPDATE_TOPICINVITEUSER_NONE": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE",
-    "NOTIFICATION_USER_UPDATE_TOPICJOIN": "User <b>{{userName}}</b> has edited the share link settings for this topic.",
-    "NOTIFICATION_USER_UPDATE_GROUPJOIN": "User <b>{{userName}}</b> has edited the share link settings for this group.",
+    "NOTIFICATION_USER_UPDATE_TOPICJOIN": "<b>{{userName}}</b> muutis selle teema ühiskasutuslingi sätteid.",
+    "NOTIFICATION_USER_UPDATE_GROUPJOIN": "<b>{{userName}}</b> redigeeris selle grupi ühiskasutuslingi sätteid.",
     "NOTIFICATION_USER_DELETE_USER_TOPIC": "@:NOTIFICATIONS.NOTIFICATION_USER_UPDATE_TOPICMEMBERUSER_NONE",
-    "NOTIFICATION_USER_JOIN_TOPIC": "User <b>{{userName}}</b> has joined this topic with access level: {{accessLevel}}",
-    "NOTIFICATION_USER_JOIN_GROUP": "User <b>{{userName}}</b> has joined this group with access level: {{accessLevel}}",
-    "NOTIFICATION_USER_LEAVE_TOPIC": "User <b>{{userName}}</b> has left this topic.",
-    "NOTIFICATION_USER_DELETE_TOPICPIN_TOPIC": "User <b>{{userName}}</b> has removed a pin from this topic.",
-    "NOTIFICATION_USER_ADD_TOPIC_TOPICPIN": "User <b>{{userName}}</b> has pinned this topic.",
-    "NOTIFICATION_USER_CREATE_VOTE_TOPIC": "User <b>{{userName}}</b> has opened voting for this topic.",
-    "NOTIFICATION_USER_UPDATE_VOTE_TOPIC": "User <b>{{userName}}</b> has updated the voting deadline for this topic.",
-    "NOTIFICATION_USER_CREATE_VOTELIST_TOPIC": "Someone has voted on this topic.",
-    "NOTIFICATION_USER_CREATE_VOTEDELEGATION_VOTE": "User <b>{{userName}}</b> has delegated their vote in this topic.",
-    "NOTIFICATION_USER_DELETE_VOTEDELEGATION_VOTE": "User <b>{{userName}}</b> has revoked delegation of their vote in this topic.",
-    "NOTIFICATION_USER_VIEW_VOTEUSERCONTAINER": "User <b>{{userName}}</b> has downloaded the voting results for this topic.",
-    "NOTIFICATION_USER_VIEW_VOTEFINALCONTAINER": "User <b>{{userName}}</b> has downloaded the voting results for this topic.",
+    "NOTIFICATION_USER_JOIN_TOPIC": "<b>{{userName}}</b> liitus selle teemaga. Tema juurdepääsutase on: {{accessLevel}}",
+    "NOTIFICATION_USER_JOIN_GROUP": "<b>{{userName}}</b> liitus selle grupiga. Tema juurdepääsutase on: {{accessLevel}}",
+    "NOTIFICATION_USER_LEAVE_TOPIC": "Kasutaja <b>{{userName}}</b> lahkus sellest teemast.",
+    "NOTIFICATION_USER_DELETE_TOPICPIN_TOPIC": "<b>{{userName}}</b> tühistas selle teema kinnitamise.",
+    "NOTIFICATION_USER_ADD_TOPIC_TOPICPIN": "<b>{{userName}}</b> kinnitas selle teema.",
+    "NOTIFICATION_USER_CREATE_VOTE_TOPIC": "<b>{{userName}}</b> avas selle teema hääletuse.",
+    "NOTIFICATION_USER_UPDATE_VOTE_TOPIC": "<b>{{userName}}</b> värskendas selle teema hääletustähtaega.",
+    "NOTIFICATION_USER_CREATE_VOTELIST_TOPIC": "Keegi hääletas selle teema üle.",
+    "NOTIFICATION_USER_CREATE_VOTEDELEGATION_VOTE": "Kasutaja <b>{{userName}}</b> delegeeris oma hääle selle teema üle hääletamisel..",
+    "NOTIFICATION_USER_DELETE_VOTEDELEGATION_VOTE": "Kasutaja <b>{{userName}}</b> tühistas oma hääle delegeerimise selle teema üle hääletamisel.",
+    "NOTIFICATION_USER_VIEW_VOTEUSERCONTAINER": "<b>{{userName}}</b> laadis alla selle teema hääletustulemused.",
+    "NOTIFICATION_USER_VIEW_VOTEFINALCONTAINER": "<b>{{userName}}</b> laadis alla selle teema hääletustulemused.",
     "NOTIFICATION_USER_CREATE_COMMENT_TOPIC": "User <b>{{userName}}</b> has added a new argument in this topic.",
     "NOTIFICATION_USER_UPDATE_COMMENT_TOPIC": "User <b>{{userName}}</b> has edited their argument in this topic.",
     "NOTIFICATION_MODERATOR_UPDATE_COMMENT_TOPIC": "User <b>{{userName}}</b> (moderator) has updated the argument field <b>{{fieldName}}</b> in this topic.",
@@ -137,12 +137,12 @@
     "NOTIFICATION_TOPIC_FIELD_STATUS_CLOSED": "suletud",
     "NOTIFICATION_TOPIC_FIELD_HASHTAG": "teemaviide",
     "NOTIFICATION_TOPIC_FIELD_TITLE": "pealkiri",
-    "NOTIFICATION_TOPIC_FIELD_INTRO": "intro",
+    "NOTIFICATION_TOPIC_FIELD_INTRO": "tutvustus",
     "NOTIFICATION_TOPIC_FIELD_CATEGORIES": "kategooriad",
     "NOTIFICATION_TOPIC_FIELD_TOKENJOIN": "liitumislink",
     "NOTIFICATION_TOPIC_FIELD_VISIBILITY": "nähtavus",
-    "NOTIFICATION_TOPIC_FIELD_COUNTRY": "country",
-    "NOTIFICATION_TOPIC_FIELD_LANGUAGE": "language",
+    "NOTIFICATION_TOPIC_FIELD_COUNTRY": "riik",
+    "NOTIFICATION_TOPIC_FIELD_LANGUAGE": "keel",
     "NOTIFICATION_TOPIC_FIELD_VISIBILITY_PRIVATE": "privaatne",
     "NOTIFICATION_TOPIC_FIELD_VISIBILITY_PUBLIC": "avalik",
     "NOTIFICATION_GROUP_FIELD_NAME": "nimetus",
@@ -155,9 +155,9 @@
     "NOTIFICATION_TOPIC_LEVELS_EDIT": "muutmine",
     "NOTIFICATION_TOPIC_LEVELS_READ": "lugemine",
     "NOTIFICATION_TOPIC_LEVELS_NONE": "puudub",
-    "NOTIFICATION_USER_CREATE_GROUP": "User <b>{{userName}}</b> has created a group: <b>{{groupName}}</b>",
-    "NOTIFICATION_USER_UPDATE_GROUP": "User <b>{{userName}}</b> has updated a field <b>{{fieldName}}</b> in group <b>{{groupName}}</b>",
-    "NOTIFICATION_USER_DELETE_GROUP": "User <b>{{userName}}</b> has deleted the group <b>{{groupName}}</b>",
+    "NOTIFICATION_USER_CREATE_GROUP": "<em>{{userName}}</em> lõi grupi <em>{{groupName}}</em>",
+    "NOTIFICATION_USER_UPDATE_GROUP": "<b>{{userName}}</b> värskendas selle grupi välja <b>{{fieldName}}</b>.",
+    "NOTIFICATION_USER_DELETE_GROUP": "Kasutaja <b>{{userName}}</b> kustutas grupi <b>{{groupName}}</b>.",
     "NOTIFICATION_USER_ADD_USER_GROUP": "User <b>{{userName}}</b> has invited user <b>{{userName2}}</b> to group <b>{{groupName}}</b>",
     "NOTIFICATION_USER_INVITE_GROUP_USER": "@:NOTIFICATIONS.NOTIFICATION_USER_ADD_USER_GROUP",
     "NOTIFICATION_USER_ACCEPT_INVITE_GROUP": "User <b>{{userName}}</b> has accepted an invite to group <b>{{groupName}}</b>",
@@ -212,9 +212,9 @@
   "TXT_TOPIC_CATEGORY_SCIENCE": "Teadus ja tehnoloogia",
   "TXT_TOPIC_CATEGORY_SOCIETY": "Demokraatia ja kodanikuühiskond",
   "TXT_TOPIC_CATEGORY_EUROCHANGEMAKERS": "EuroChangeMakers",
-  "TXT_TOPIC_STATUS_INPROGRESS": "in progress",
-  "TXT_TOPIC_STATUS_VOTING": "in voting",
-  "TXT_TOPIC_STATUS_FOLLOWUP": "in follow-up",
-  "TXT_TOPIC_STATUS_CLOSED": "closed",
+  "TXT_TOPIC_STATUS_INPROGRESS": "ühisloomes",
+  "TXT_TOPIC_STATUS_VOTING": "hääletamisel",
+  "TXT_TOPIC_STATUS_FOLLOWUP": "elluviimisel",
+  "TXT_TOPIC_STATUS_CLOSED": "suletud",
   "TXT_TOPIC_STATUS_MODERATED": "hidden by admin"
 }
