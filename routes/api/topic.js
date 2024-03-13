@@ -6858,7 +6858,6 @@ module.exports = function (app) {
     app.put('/api/users/:userId/topics/:topicId/votes/:voteId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin), asyncMiddleware(async function (req, res) {
         const topicId = req.params.topicId;
         const voteId = req.params.voteId;
-
         // Make sure the Vote is actually related to the Topic through which the permission was granted.
         let fields = ['endsAt', 'reminderTime'];
 
@@ -6946,9 +6945,10 @@ module.exports = function (app) {
                     createPromises.push(vopt.validate());
                 });
             }
+            let voteOptionsCreated;
             if (createPromises.length) {
                 await Promise.all(createPromises);
-                const voteOptionsCreated = await VoteOption
+                voteOptionsCreated = await VoteOption
                     .bulkCreate(
                         voteOptions,
                         {
@@ -6974,8 +6974,20 @@ module.exports = function (app) {
             await vote.save({
                 transaction: t
             });
-            t.afterCommit(() => {
-                return res.ok(vote.toJSON());
+            t.afterCommit(async () => {
+                const voteInfo = await Vote
+                    .findOne({
+                        where: { id: voteId },
+                        include: [
+                            {
+                                model: Topic,
+                                where: { id: topicId }
+                            },
+                            VoteOption
+                        ]
+                    });
+
+                return res.ok(voteInfo);
             })
         });
     }));
