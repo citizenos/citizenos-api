@@ -2,7 +2,7 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding:22px 22px 22px 0;">
-                <p id="header_title_description">An invitation to join topic</p>
+                <p id="header_title_description">Eine Einladung zum Thema</p>
                 <p id="header_title">{{topic.title}}</p>
             </td>
         </tr>
@@ -12,19 +12,19 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding-bottom: 16px;">
-                Hi {{toUser.name}}!
+                Hallo, {{toUser.name}}!
             </td>
         </tr>
 
         <tr>
             <td valign="middle">
-                User <b>{{fromUser.name}}</b> is inviting you to join this topic.
+                Der Benutzer <b>{{fromUser.name}}</b> lädt Sie ein, diesem Thema beizutreten.
             </td>
         </tr>
 
         {{#message}}
         <tr>
-            <td><p class="info_heading">Message</p></td>
+            <td><p class="info_heading">Nachricht</p></td>
         </tr>
         <tr>
             <td valign="middle">
@@ -41,7 +41,7 @@
         </tr>
         {{/message}}
         <tr>
-            <td><p class="info_heading">Topic details</p></td>
+            <td><p class="info_heading">Themendetails</p></td>
         </tr>
         <tr>
             <td valign="middle">
@@ -49,7 +49,7 @@
                     <tbody>
                         <tr>
                             <td>
-                                <p class="info_row_heading">Topic title</p>
+                                <p class="info_row_heading">Thementitel</p>
                                 <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
                                     {{topic.title}}</p>
                             </td>
@@ -64,7 +64,7 @@
                         </tr>
                         <tr>
                             <td style="padding-top: 16px">
-                                <p class="info_row_heading">Participants</p>
+                                <p class="info_row_heading">Teilnehmer</p>
                                 <p style="font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
                                     {{memberCount}}
                                 </p>
@@ -72,7 +72,7 @@
                         </tr>
                         <tr>
                             <td style="padding-top: 16px">
-                                <p class="info_row_heading">Latest activity</p>
+                                <p class="info_row_heading">Neueste Aktivitäten</p>
                                 <p style="font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
                                     {{latestActivity}}
                                 </p>
@@ -86,7 +86,7 @@
             <td style="padding-bottom: 32px;padding-top: 16px">
                 <p class="submit_button">
                     <a href="{{linkViewTopic}}" target="_blank"
-                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 60px;">Join topic</a>
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 60px;">Thema beitreten</a>
                 </p>
             </td>
         </tr>
@@ -99,7 +99,7 @@
                                 <img src="cid:Warning.png" />
                             </td>
                             <td style="font-size:14px;">
-                                You must log in with {{toUser.email}} to access this topic.
+                                Sie müssen sich mit der E-Mail-Adresse {{toUser.email}} anmelden, um auf dieses Thema zuzugreifen.
                             </td>
                         </tr>
                     </tbody>

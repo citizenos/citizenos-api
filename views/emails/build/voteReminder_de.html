@@ -2,7 +2,7 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding:22px 22px 22px 0;">
-                <p id="header_title_description">A vote reminder for</p>
+                <p id="header_title_description">Eine Erinnerung zur Abstimmung für</p>
                 <p id="header_title">{{topic.title}}</p>
             </td>
         </tr>
@@ -12,7 +12,7 @@
     <tbody>
         <tr>
             <td valign="middle" width="100%" style="padding-bottom: 16px;">
-                Hi {{toUser.name}}!
+                Hallo, {{toUser.name}}!
             </td>
         </tr>
 
@@ -20,11 +20,11 @@
             <td valign="middle">
                 {{#voteEndsAt}}
                 <p width="100%">
-                    The vote deadline is coming close! {{#daysLeft}}<b>You have only {{daysLeft}} days left to cast your vote</b>{{/daysLeft}}
+                    Die Abstimmungsfrist kommt näher! {{#daysLeft}}<b>Sie haben nur noch {{daysLeft}} Tage Zeit, um Ihre Stimme</b>{{/daysLeft}} abzugeben
                 </p>
                 {{/voteEndsAt}}
                 {{^voteEndsAt}}
-                    Please cast your vote!
+                    Bitte geben Sie Ihre Stimme ab!
                 {{/voteEndsAt}}
             </td>
         </tr>
@@ -38,11 +38,11 @@
                                 <img src="cid:Voting.png" />
                             </td>
                             <td style="font-size: 16px;line-height:24px;">
-                                <b>Votes collected: {{voteCount}}</b>{{#votesCountRequired}}/{{votesCountRequired}}{{/votesCountRequired}}
+                                <b>Stimmen gesammelt: {{voteCount}}</b>{{#votesCountRequired}}/{{votesCountRequired}}{{/votesCountRequired}}
                             </td>
                             {{#voteEndsAt}}
                             <td style="font-size: 16px;line-height:24px;">
-                                Deadline: {{voteEndsAt}}
+                                Frist: {{voteEndsAt}}
                             </td>
                             {{/voteEndsAt}}
                         </tr>
@@ -55,7 +55,7 @@
                 <p class="submit_button" style="margin-bottom: 32px;">
                     <a href="{{linkViewTopic}}" target="_blank"
                         style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 60px;">
-                        Cast your vote
+                        Stimmen Sie ab
                     </a>
                 </p>
             </td>
@@ -69,7 +69,7 @@
                                 <img src="cid:Warning.png" />
                             </td>
                             <td style="font-size:14px;">
-                                You must log in with {{toUser.email}} to access this topic.
+                                Sie müssen sich mit der E-Mail-Adresse {{toUser.email}} anmelden, um auf dieses Thema zuzugreifen.
                             </td>
                         </tr>
                     </tbody>

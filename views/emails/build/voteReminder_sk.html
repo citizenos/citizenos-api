@@ -2,7 +2,7 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding:22px 22px 22px 0;">
-                <p id="header_title_description">A vote reminder for</p>
+                <p id="header_title_description">Pripomienka hlasovania za</p>
                 <p id="header_title">{{topic.title}}</p>
             </td>
         </tr>
@@ -12,7 +12,7 @@
     <tbody>
         <tr>
             <td valign="middle" width="100%" style="padding-bottom: 16px;">
-                Hi {{toUser.name}}!
+                Ahoj {{toUser.name}}!
             </td>
         </tr>
 
@@ -20,11 +20,11 @@
             <td valign="middle">
                 {{#voteEndsAt}}
                 <p width="100%">
-                    Termín hlasovania sa blíži! {{#daysLeft}}<b>You have only {{daysLeft}} days left to cast your vote</b>{{/daysLeft}}
+                    Termín hlasovania sa blíži! {{#daysLeft}}<b>Zostáva vám len {{daysLeft}} dní na to, aby ste zahlasovali</b>{{/daysLeft}}
                 </p>
                 {{/voteEndsAt}}
                 {{^voteEndsAt}}
-                    Please cast your vote!
+                    Zahlasujte prosím!
                 {{/voteEndsAt}}
             </td>
         </tr>
@@ -38,11 +38,12 @@
                                 <img src="cid:Voting.png" />
                             </td>
                             <td style="font-size: 16px;line-height:24px;">
-                                <b>Votes collected: {{voteCount}}</b>{{#votesCountRequired}}/{{votesCountRequired}}{{/votesCountRequired}}
+                                <b>Zozbierané hlasy:
+{{voteCount}}</b>{{#votesCountRequired}}/{{votesCountRequired}}{{/votesCountRequired}}
                             </td>
                             {{#voteEndsAt}}
                             <td style="font-size: 16px;line-height:24px;">
-                                Deadline: {{voteEndsAt}}
+                                Uzávierka: {{voteEndsAt}}
                             </td>
                             {{/voteEndsAt}}
                         </tr>
@@ -69,7 +70,7 @@
                                 <img src="cid:Warning.png" />
                             </td>
                             <td style="font-size:14px;">
-                                You must log in with {{toUser.email}} to access this topic.
+                                Pre prístup k tejto téme sa musíte prihlásiť pomocou {{toUser.email}}.
                             </td>
                         </tr>
                     </tbody>
