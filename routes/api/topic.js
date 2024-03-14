@@ -3511,7 +3511,14 @@ module.exports = function (app) {
                         },
                         transaction: t
                     });
-
+                    const excisitingMembers = await TopicMemberGroup.findAll({
+                        where: {
+                            topicId: topicId,
+                            groupId: {
+                                [Op.in]:groupIds
+                            }
+                        }
+                    });
                     const findOrCreateTopicMemberGroups = allowedGroups.map(function (group) {
                         const member = _.find(members, function (o) {
                             return o.groupId === group.id;
@@ -3531,28 +3538,33 @@ module.exports = function (app) {
                     const memberGroupActivities = [];
                     const results = await Promise.allSettled(findOrCreateTopicMemberGroups);
                     results.forEach((inspection) => {
+                        const member = inspection.value[0];
                         if (inspection.status === 'fulfilled') {
-                            var memberGroup = inspection.value[0].toJSON();
-                            groupIdsToInvite.push(memberGroup.groupId);
-                            const groupData = _.find(allowedGroups, function (item) {
-                                return item.id === memberGroup.groupId;
+                            const exists = excisitingMembers.find((item) => {
+                                return item.groupId === member.groupId
                             });
-                            const group = Group.build(groupData);
+                            const memberGroup = member.toJSON();
+                            if (!exists) {
+                                groupIdsToInvite.push(memberGroup.groupId);
+                                const groupData = _.find(allowedGroups, function (item) {
+                                    return item.id === memberGroup.groupId;
+                                });
+                                const group = Group.build(groupData);
 
-                            const addActivity = cosActivities.addActivity(
-                                topic,
-                                {
-                                    type: 'User',
-                                    id: req.user.userId,
-                                    ip: req.ip
-                                },
-                                null,
-                                group,
-                                req.method + ' ' + req.path,
-                                t
-                            );
-                            memberGroupActivities.push(addActivity);
-
+                                const addActivity = cosActivities.addActivity(
+                                    topic,
+                                    {
+                                        type: 'User',
+                                        id: req.user.userId,
+                                        ip: req.ip
+                                    },
+                                    null,
+                                    group,
+                                    req.method + ' ' + req.path,
+                                    t
+                                );
+                                memberGroupActivities.push(addActivity);
+                            }
                         } else {
                             logger.error('Adding Group failed', inspection.reason());
                         }

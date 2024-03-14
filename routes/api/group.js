@@ -1744,7 +1744,6 @@ module.exports = function (app) {
 
             t.afterCommit(async () => {
                 if (createdInvites.length) {
-
                     await emailLib.sendGroupMemberUserInviteCreate(createdInvites);
                     return res.created({
                         count: createdInvites.length,
