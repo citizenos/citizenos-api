@@ -613,7 +613,28 @@ module.exports = function (app) {
 
         if (toUsers && toUsers.length) {
             const promisesToResolve = [];
-
+            const memberCount = await TopicMemberUser.count({
+                where: {
+                    topicId: topicId
+                }
+            });
+            const lastActivity = await db
+                .query(`
+                     SELECT "createdAt"
+                     FROM "Activities"
+                     WHERE :topicId =ANY("topicIds")
+                     ORDER BY "createdAt" DESC
+                     LIMIT 1;
+                ;`,
+                    {
+                        replacements: {
+                            topicId: topicId,
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true,
+                        nest: true
+                    }
+                );
             toUsers.forEach((user) => {
                 if (user.email) {
                     const template = resolveTemplate('inviteTopic', user.language);
@@ -644,7 +665,9 @@ module.exports = function (app) {
                             fromUser: fromUser,
                             topic: topic,
                             topicTitle: topic.title,
-                            linkViewTopic: linkViewTopic
+                            linkViewTopic: linkViewTopic,
+                            memberCount: memberCount,
+                            latestActivity: moment(lastActivity[0].createdAt).format('YYYY-MM-DD hh:mm')
                         }
                     );
                     emailOptions.linkedData.translations = template.translations;
