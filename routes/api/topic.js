@@ -1504,6 +1504,7 @@ module.exports = function (app) {
 
             let topic = Topic.build({
                 title: sourceTopic.title,
+                imageUrl: sourceTopic.imageUrl,
                 intro: sourceTopic.intro,
                 language: sourceTopic.language,
                 country: sourceTopic.country,
