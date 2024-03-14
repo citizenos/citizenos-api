@@ -905,8 +905,9 @@ module.exports = function (app) {
                     to_jsonb(giu) as invite
                 FROM "GroupInviteUsers" giu
                 JOIN "Users" u ON u.id = giu."userId"
+                LEFT JOIN "GroupMemberUsers" gmu ON gmu."userId" = giu."userId"
                 LEFT JOIN "UserConnections" uc ON (uc."userId" = giu."userId" AND uc."connectionId" = 'esteid')
-                WHERE giu."groupId" = :groupId AND giu."deletedAt" IS NULL AND giu."expiresAt" > NOW()
+                WHERE giu."groupId" = :groupId AND giu."deletedAt" IS NULL AND giu."expiresAt" > NOW() AND gmu."userId" IS NULL
                 GROUP BY giu.id, giu."creatorId", giu.level, giu."groupId", u.id
                 `;
 
