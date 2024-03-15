@@ -137,7 +137,7 @@
     "NOTIFICATION_TOPIC_FIELD_STATUS_CLOSED": "suletud",
     "NOTIFICATION_TOPIC_FIELD_HASHTAG": "teemaviide",
     "NOTIFICATION_TOPIC_FIELD_TITLE": "pealkiri",
-    "NOTIFICATION_TOPIC_FIELD_INTRO": "tutvustus",
+    "NOTIFICATION_TOPIC_FIELD_INTRO": "sissejuhatus",
     "NOTIFICATION_TOPIC_FIELD_CATEGORIES": "kategooriad",
     "NOTIFICATION_TOPIC_FIELD_TOKENJOIN": "liitumislink",
     "NOTIFICATION_TOPIC_FIELD_VISIBILITY": "nähtavus",
@@ -212,9 +212,9 @@
   "TXT_TOPIC_CATEGORY_SCIENCE": "Teadus ja tehnoloogia",
   "TXT_TOPIC_CATEGORY_SOCIETY": "Demokraatia ja kodanikuühiskond",
   "TXT_TOPIC_CATEGORY_EUROCHANGEMAKERS": "EuroChangeMakers",
-  "TXT_TOPIC_STATUS_INPROGRESS": "pooleli",
+  "TXT_TOPIC_STATUS_INPROGRESS": "ühisloomes",
   "TXT_TOPIC_STATUS_VOTING": "hääletamisel",
-  "TXT_TOPIC_STATUS_FOLLOWUP": "järeltegevustes",
+  "TXT_TOPIC_STATUS_FOLLOWUP": "elluviimisel",
   "TXT_TOPIC_STATUS_CLOSED": "suletud",
   "TXT_TOPIC_STATUS_MODERATED": "administraatori poolt peidetud"
 }
