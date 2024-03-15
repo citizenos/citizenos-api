@@ -2327,6 +2327,8 @@ module.exports = function (app) {
         const creatorId = req.query.creatorId;
         let statuses = req.query.statuses;
         const favourite = req.query.favourite;
+        const country = req.query.country;
+        const language = req.query.language;
         const hasVoted = req.query.hasVoted; // Filter out Topics where User has participated in the voting process.
         const showModerated = req.query.showModerated || false;
         const orderBy = req.query.orderBy;
@@ -2439,6 +2441,12 @@ module.exports = function (app) {
         if (visibility) {
             where += ` AND t.visibility=:visibility `;
         }
+        if (country) {
+            where += ` AND t.country=:country `;
+        }
+        if (language) {
+            where += ` AND t.language=:language `;
+        }
         let defaultPermission = TopicMemberGroup.LEVELS.none;
 
         if (group.visibility === Group.VISIBILITY.public) {
@@ -2462,6 +2470,8 @@ module.exports = function (app) {
             groupId: groupId,
             limit,
             offset,
+            country,
+            language,
             search: `%${search || ''}%`,
             statuses,
             visibility,

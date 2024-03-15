@@ -5,19 +5,18 @@
  */
 
 module.exports = function (app) {
-    var models = app.get('models');
+    const models = app.get('models');
 
-    var authApiKey = app.get('middleware.authApiKey');
+    const authApiKey = app.get('middleware.authApiKey');
 
-    var User = models.User;
+    const User = models.User;
 
     /**
      * Get update user etherpad authorID
      */
 
     app.put('/api/internal/users/:userId', authApiKey, async function (req, res) {
-        var authorData = req.body;
-        console.log('EP SYNC', req.body, authorData)
+        const authorData = req.body;
         if (authorData.userId && authorData.authorID) {
             try {
                 await User

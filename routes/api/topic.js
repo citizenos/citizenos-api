@@ -1715,6 +1715,22 @@ module.exports = function (app) {
         }
     });
 
+    app.get('/api/users/self/topics/:topicId/description', loginCheck(['partner']), partnerParser, hasPermission(TopicMemberUser.LEVELS.edit, true), async (req, res, next ) => {
+        try {
+            const topicId = req.params.topicId;
+            const rev = req.query.rev;
+            const description = await cosEtherpad.readPadTopic(topicId, rev);
+
+            res.ok({
+                id: topicId,
+                description
+            });
+
+        } catch (err) {
+            next(err);
+        }
+    });
+
     app.get('/api/topics/:topicId', async function (req, res, next) {
         let include = req.query.include;
         const topicId = req.params.topicId;
@@ -1753,7 +1769,7 @@ module.exports = function (app) {
             const doc = new CosHtmlToDocx(topic.description, topic.title, topic.intro, filePath);
 
             const docxBuffer = await doc.processHTML();
-            var readStream = new stream.PassThrough();
+            const readStream = new stream.PassThrough();
             readStream.end(docxBuffer);
 
             res.set('Content-disposition', `attachment; filename=${topicId}.docx`);

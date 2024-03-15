@@ -319,10 +319,22 @@ module.exports = function (app) {
         }
     };
 
+    const _readPadTopic = async (topicId, rev) => {
+        const params = {padID: topicId};
+        if (rev) {
+            params.rev = rev;
+        }
+
+        let html = (await etherpadClient.getHTMLAsync(params)).html;
+
+        return _inlineToClasses(html);
+    }
+
     return {
         createTopic: _createTopic,
         updateTopic: _updateTopic,
         deleteTopic: _deleteTopic,
+        readPadTopic:_readPadTopic,
         getUserAccessUrl: _getUserAccessUrl,
         getTopicPadUrl: _getTopicPadUrl,
         syncTopicWithPad: _syncTopicWithPad,
