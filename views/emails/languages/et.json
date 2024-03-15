@@ -214,7 +214,7 @@
   "TXT_TOPIC_CATEGORY_EUROCHANGEMAKERS": "EuroChangeMakers",
   "TXT_TOPIC_STATUS_INPROGRESS": "pooleli",
   "TXT_TOPIC_STATUS_VOTING": "hääletamisel",
-  "TXT_TOPIC_STATUS_FOLLOWUP": "järeltegevustes",
+  "TXT_TOPIC_STATUS_FOLLOWUP": "elluviimisel",
   "TXT_TOPIC_STATUS_CLOSED": "suletud",
   "TXT_TOPIC_STATUS_MODERATED": "administraatori poolt peidetud"
 }
