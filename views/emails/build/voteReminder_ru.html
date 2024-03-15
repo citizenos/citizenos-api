@@ -24,7 +24,7 @@
                 </p>
                 {{/voteEndsAt}}
                 {{^voteEndsAt}}
-                    Please cast your vote!
+                    Пожалуйста, проголосуйте!
                 {{/voteEndsAt}}
             </td>
         </tr>
@@ -38,7 +38,8 @@
                                 <img src="cid:Voting.png" />
                             </td>
                             <td style="font-size: 16px;line-height:24px;">
-                                <b>Votes collected: {{voteCount}}</b>{{#votesCountRequired}}/{{votesCountRequired}}{{/votesCountRequired}}
+                                <b>Собрано голосов:
+{{voteCount}}</b>{{#votesCountRequired}}/{{votesCountRequired}}{{/votesCountRequired}}
                             </td>
                             {{#voteEndsAt}}
                             <td style="font-size: 16px;line-height:24px;">
@@ -69,7 +70,7 @@
                                 <img src="cid:Warning.png" />
                             </td>
                             <td style="font-size:14px;">
-                                You must log in with {{toUser.email}} to access this topic.
+                                Для доступа к этой теме необходимо войти под пользователем {{toUser.email}}.
                             </td>
                         </tr>
                     </tbody>
