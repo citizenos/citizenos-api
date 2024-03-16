@@ -69,13 +69,13 @@
     "SUBJECT": "Ihr Diskussionsbeitrag wurde als unangemessen gemeldet"
   },
   "REPORT_COMMENT_MODERATOR": {
-    "SUBJECT": "Bitte moderieren Sie diesesn gemeldeten Diskussionsinhalt"
+    "SUBJECT": "Bitte moderieren Sie diesen gemeldeten Diskussionsinhalt"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
   "NOTIFICATIONS": {
-    "SUBJECT": "Ein Update zum Thema “{{topicTitle}}”",
+    "SUBJECT": "Eine Aktualisierung zum Thema “{{topicTitle}}”",
     "NOTIFICATION_USER_CREATE_TOPIC": "Benutzer <b>{{userName}}</b> hat ein neues Thema erstellt.",
     "NOTIFICATION_USER_UPDATE_TOPIC": "Benutzer <b>{{userName}}</b> hat das Feld <b>{{fieldName}}</b> in diesem Thema aktualisiert.",
     "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "Benutzer <b>{{userName}}</b> hat an diesem Thema <b>{{groupCount}}</b> Aktualisierungen vorgenommen.",
@@ -126,9 +126,9 @@
     "NOTIFICATION_USER_UPDATE_TOPICMEMBERGROUP_NONE": "Benutzer <b>{{userName}}</b> hat den Zugriff von Gruppe <a href=\"{{groupLink}}\"><b>{{groupName}}</b></a> zu diesem Thema widerrufen.",
     "NOTIFICATION_USER_CREATE_TOPICEVENT_TOPIC": "Benutzer <b>{{userName}}</b> hat eine Aktualisierung für dieses Thema veröffentlicht.",
     "NOTIFICATION_USER_DELETE_TOPICEVENT_TOPIC": "Benutzer <b>{{userName}}</b> hat eine Aktualisierung für dieses Thema gelöscht.",
-    "NOTIFICATION_USER_ADD_ATTACHMENT_TOPIC": "Benutzer <b>{{userName}}</b> hat die Anlage <b>{{attachmentName}}</b> diesem Thema hinzugefügt.",
+    "NOTIFICATION_USER_ADD_ATTACHMENT_TOPIC": "Benutzer <b>{{userName}}</b> hat deb Anhang <b>{{attachmentName}}</b> diesem Thema hinzugefügt.",
     "NOTIFICATION_USER_DELETE_ATTACHMENT_TOPIC": "Benutzer <b>{{userName}}</b> hat die Anlage <b>{{attachmentName}}</b> in diesem Thema gelöscht.",
-    "NOTIFICATION_USER_UPDATE_ATTACHMENT_TOPIC": "Benutzer <b>{{userName}}</b> hat eine Anlage in diesem Thema aktualisiert.",
+    "NOTIFICATION_USER_UPDATE_ATTACHMENT_TOPIC": "Benutzer <b>{{userName}}</b> hat einen Anhang in diesem Thema aktualisiert.",
     "NOTIFICATION_TOPIC_FIELD_DESCRIPTION": "Beschreibung",
     "NOTIFICATION_TOPIC_FIELD_STATUS": "Status",
     "NOTIFICATION_TOPIC_FIELD_STATUS_INPROGRESS": "in Bearbeitung",
