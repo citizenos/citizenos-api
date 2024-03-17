@@ -1778,6 +1778,53 @@ module.exports = function (app) {
         return handleAllPromises(emailsSendPromises);
     };
 
+    const _sendNewsletter = async () => {
+        const linkToApplication = urlLib.getFe();
+        let templateName = 'newsletterRedesign';
+        let customStyles = EMAIL_OPTIONS_DEFAULT.styles;
+
+        const users = [await User.findOne()];
+        const emailsSendPromises = users.map((toUser) => {
+            if (!toUser.email) {
+                logger.info('Skipping invite e-mail to user as there is no email on the profile', toUser.email);
+                return Promise.resolve();
+            }
+
+            const template = resolveTemplate(templateName, toUser.language);
+
+            // Handle Partner links
+            // TODO: could use Mu here...
+            const subject = template.translations.NEWSLETTER?.SUBJECT || 'Changes in the Citizen OS Platform User Experience'
+            let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
+            linkedData.translations = template.translations;
+            const images = [
+                {
+                    name: 'dashboard.png',
+                    file: path.join(templateRoot, 'images/newsletter/dashboard.png')
+                },
+                {
+                    name: 'topic.png',
+                    file: path.join(templateRoot, 'images/newsletter/topic.png')
+                }].concat(EMAIL_OPTIONS_DEFAULT.images);
+            const emailOptions = {
+                // from: from, - comes from emailClient.js configuration
+                subject: subject,
+                to: toUser.email,
+                images: images,
+                toUser: toUser,
+                linkToApplication: linkToApplication,
+                provider: EMAIL_OPTIONS_DEFAULT.provider,
+                styles: customStyles,
+                linkToPlatformText: template.translations.LAYOUT.LINK_TO_PLATFORM,
+                linkedData
+            };
+
+            return emailClient.sendString(template.body, emailOptions);
+        });
+
+        return handleAllPromises(emailsSendPromises);
+    }
+
     return {
         sendAccountVerification: _sendAccountVerification,
         sendPasswordReset: _sendPasswordReset,
@@ -1794,6 +1841,7 @@ module.exports = function (app) {
         sendHelpRequest: _sendHelpRequest,
         sendVoteReminder: _sendVoteReminder,
         sendTopicNotification: _sendTopicNotification,
-        sendFeedback: _sendFeedback
+        sendFeedback: _sendFeedback,
+        sendNewsletter: _sendNewsletter
     };
 };
