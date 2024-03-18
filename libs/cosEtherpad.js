@@ -340,6 +340,7 @@ module.exports = function (app) {
     const _restoreRevision = async (topicId, rev) => {
         const params = {padID: topicId, rev: rev};
         const res = await etherpadClient.restoreRevisionAsync(params);
+        await _syncTopicWithPad(topicId);
 
         return res;
     };
