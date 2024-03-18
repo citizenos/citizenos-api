@@ -328,7 +328,21 @@ module.exports = function (app) {
         let html = (await etherpadClient.getHTMLAsync(params)).html;
 
         return _inlineToClasses(html);
+    };
+
+    const _topicPadRevisions = async (topicId) => {
+        const params = {padID: topicId};
+        const res = await etherpadClient.getRevisionsCountAsync(params);
+
+        return res;
     }
+
+    const _restoreRevision = async (topicId, rev) => {
+        const params = {padID: topicId, rev: rev};
+        const res = await etherpadClient.restoreRevisionAsync(params);
+
+        return res;
+    };
 
     return {
         createTopic: _createTopic,
@@ -342,6 +356,8 @@ module.exports = function (app) {
         getTopicPadAuthors: _getTopicPadAuthors,
         getTopicInlineComments: _getTopicInlineComments,
         getTopicInlineCommentReplies: _getTopicInlineCommentReplies,
-        createPadCopy: _createPadCopy
+        createPadCopy: _createPadCopy,
+        topicPadRevisions : _topicPadRevisions,
+        restoreRevision: _restoreRevision
     };
 };

@@ -1704,7 +1704,8 @@ module.exports = function (app) {
             const user = req.user;
             const partner = req.locals.partner;
             const topic = await _topicReadAuth(topicId, include, user, partner);
-
+            const revision = await cosEtherpad.topicPadRevisions(topicId);
+            topic.revision = revision.revisions;
             if (!topic) {
                 return res.notFound();
             }
@@ -1720,16 +1721,29 @@ module.exports = function (app) {
             const topicId = req.params.topicId;
             const rev = req.query.rev;
             const description = await cosEtherpad.readPadTopic(topicId, rev);
-
+            const revision = await cosEtherpad.topicPadRevisions(topicId);
             res.ok({
                 id: topicId,
-                description
+                description,
+                revision: revision.revisions
             });
 
         } catch (err) {
             next(err);
         }
     });
+
+    app.post('/api/users/self/topics/:topicId/revert', partnerParser, hasPermission(TopicMemberUser.LEVELS.edit, true), async (req, res, next ) => {
+        try {
+            const topicId = req.params.topicId;
+            const rev = req.body.rev;
+            const result = await cosEtherpad.restoreRevision(topicId, rev);
+            res.ok(result);
+
+        } catch (err) {
+            next(err);
+        }
+    })
 
     app.get('/api/topics/:topicId', async function (req, res, next) {
         let include = req.query.include;
