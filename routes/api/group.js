@@ -2397,14 +2397,14 @@ module.exports = function (app) {
                 case 'lastActivity':
                     sortSql += ` "lastActivity" ${sortOrder}`;
                     break;
-                case 'activityTime':
+            /*    case 'activityTime':
                     sortSql += ` ta.latest  ${sortOrder} `;
                     groupBy += `ta.latest,`;
                     break;
                 case 'activityCount':
                     sortSql += ` ta.count  ${sortOrder} `;
                     groupBy += `ta.count,`;
-                    break;
+                    break;*/
                 case 'membersCount':
                     sortSql += ` muc.count ${sortOrder} `;
                     break;
@@ -2668,14 +2668,6 @@ module.exports = function (app) {
                             LEFT JOIN "Votes" v
                                     ON v.id = tv."voteId"
                         ) AS tv ON (tv."topicId" = t.id)
-                        LEFT JOIN (
-                            SELECT
-                                unnest("topicIds") as "topicId",
-                                COUNT("topicIds") as count,
-                                MAX("updatedAt") AS latest
-                                FROM "Activities"
-                            GROUP BY "topicIds"
-                        ) AS ta ON ta."topicId" = t.id::text
                         LEFT JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds"
                         LEFT JOIN (
                             SELECT
