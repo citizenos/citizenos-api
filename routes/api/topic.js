@@ -2309,14 +2309,14 @@ module.exports = function (app) {
         //  ORDER BY "favourite" DESC, "order" ASC, t."updatedAt" DESC
         if (orderBy) {
             switch (orderBy) {
-                case 'activityTime':
+               /* case 'activityTime':
                     orderSql += ` ta.latest  ${order} `;
                     groupBy += `, ta.latest`;
                     break;
                 case 'activityCount':
                     orderSql += ` ta.count  ${order} `;
                     groupBy += `, ta.count`;
-                    break;
+                    break;*/
                 case 'membersCount':
                     orderSql += ` muc.count ${order} `;
                     break;
@@ -2480,14 +2480,6 @@ module.exports = function (app) {
                                 ) AS tcc
                             GROUP BY tcc."topicId"
                     ) AS com ON (com."topicId" = t.id)
-                    LEFT JOIN (
-                        SELECT
-                            unnest("topicIds") as "topicId",
-                            COUNT("topicIds") as count,
-                            MAX("updatedAt") AS latest
-                            FROM "Activities"
-                        GROUP BY "topicIds"
-                    ) AS ta ON ta."topicId" = t.id::text
                     LEFT JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds"
                     LEFT JOIN "TopicFavourites" tf ON (tf."topicId" = t.id AND tf."userId" = :userId)
                     LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
