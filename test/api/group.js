@@ -537,7 +537,9 @@ suite('Users', function () {
                             count: 1
                         },
                         topics: {
-                            count: 0
+                            count: {
+                                total: 0
+                            }
                         }
                     }
                 };

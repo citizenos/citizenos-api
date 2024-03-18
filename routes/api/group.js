@@ -511,12 +511,55 @@ module.exports = function (app) {
                     },
                     transaction: t
                 });
-                const memberTopicsCount = await TopicMemberGroup.count({
-                    where: {
-                        groupId: group.id
-                    },
-                    transaction: t
-                });
+                const memberTopicsCount = await db.query(`
+                    SELECT COALESCE(gtc.count, '{"total": 0}') as "count"
+                    FROM "Groups" g LEFT JOIN (
+                    SELECT tmgtc."groupId", tmgtc.count::jsonb || tmc.count::jsonb as count
+                    FROM (
+                        SELECT
+                            "groupId",
+                            jsonb_object_agg('total', total) as count
+                        FROM (
+                            SELECT
+                                tmg."groupId",
+                                COUNT(tmg."groupId") AS total
+                            FROM "TopicMemberGroups" tmg
+                            WHERE tmg."groupId" = :groupId
+                            GROUP BY tmg."groupId"
+                        ) as tmgtc
+                        GROUP BY "groupId"
+                    ) as tmgtc
+                    LEFT JOIN (
+                        SELECT
+                            tmc."groupId",
+                            jsonb_object_agg(tmc.status, tmc.count) as count
+                        FROM
+                        (
+                            SELECT
+                                tmg."groupId",
+                                t."status",
+                                count(tmg."topicId") AS "count"
+                            FROM "TopicMemberGroups" tmg
+                            JOIN "Topics" t ON t.id = tmg."topicId"
+                            WHERE tmg."deletedAt" IS NULL AND
+                            tmg."groupId" = :groupId
+                            GROUP BY tmg."groupId", t.status
+                        ) as tmc
+                        GROUP BY "groupId"
+                    ) tmc ON tmgtc."groupId" = tmc."groupId"
+                    ) gtc ON gtc."groupId" = g.id
+                    WHERE g.id = :groupId;`
+                    ,{
+                        replacements: {
+                            groupId: group.id
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true,
+                        transaction: t,
+                        nest: true
+                    }
+                );
+
                 const creator = await User.findOne({
                     where: {
                         id: group.creatorId
@@ -530,7 +573,7 @@ module.exports = function (app) {
                 groupUpdated.parent = { id: group.parentId };
                 delete groupUpdated.parentId;
                 groupUpdated.creator = creator.dataValues;
-                groupUpdated.members = { users: { count: memberUsersCount }, topics: { count: memberTopicsCount } };
+                groupUpdated.members = { users: { count: memberUsersCount }, topics: memberTopicsCount[0] };
                 t.afterCommit(() => {
                     if (!groupUpdated) {
                         return res.badRequest();
@@ -2500,11 +2543,11 @@ module.exports = function (app) {
             LEFT JOIN (
                 SELECT
                     t.id as "topicId",
-                    CASE WHEN t.status = 'draft' AND COALESCE(tmup.level, tmgp.level, 'read')::text <> 'admin' THEN 'none'
+                    CASE WHEN t.status = 'draft' AND COALESCE(tmup.level, tmgp.level, 'read')::"enum_TopicMemberUsers_level" < 'edit' THEN 'none'
                     WHEN t.visibility = 'private' THEN COALESCE(tmup.level, tmgp.level, 'none')::text
                     ELSE COALESCE(tmup.level, tmgp.level, 'read')::text
                     END AS "permission.level",
-                    CASE WHEN t.status = 'draft' AND COALESCE(tmgp.level, 'read')::text <> 'admin' THEN 'none'
+                    CASE WHEN t.status = 'draft' AND COALESCE(tmgp.level, 'read')::"enum_TopicMemberUsers_level" < 'edit' THEN 'none'
                     ELSE COALESCE(tmgp.level, 'read')::text
                     END AS "permission.levelGroup"
                 FROM "TopicMemberGroups" gt
@@ -2513,7 +2556,7 @@ module.exports = function (app) {
                     SELECT
                         tmu."topicId",
                         tmu."userId",
-                        CASE WHEN t.status = 'draft' AND MAX(tmu.level)::text <> 'admin' THEN 'none'
+                        CASE WHEN t.status = 'draft' AND MAX(tmu.level)::"enum_TopicMemberUsers_level" < 'edit' THEN 'none'
                         ELSE MAX(tmu.level)::text END AS level
                     FROM "TopicMemberUsers" tmu
                     JOIN "Topics" t ON t.id=tmu."topicId"
@@ -2524,7 +2567,7 @@ module.exports = function (app) {
                      SELECT
                          tmg."topicId",
                          gm."userId",
-                         CASE WHEN t.status = 'draft' AND MAX(tmg.level)::text <> 'admin' THEN 'none'
+                         CASE WHEN t.status = 'draft' AND MAX(tmg.level) < 'edit' THEN 'none'
                          ELSE MAX(tmg.level)::text END AS level
                      FROM "TopicMemberGroups" tmg
                          LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
