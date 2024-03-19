@@ -74,6 +74,9 @@
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
+  "NEWSLETTER": {
+    "Subject": "Changes in the Citizen OS Platform User Experience"
+  },
   "NOTIFICATIONS": {
     "SUBJECT": "Обновление по теме “{{topicTitle}}”",
     "NOTIFICATION_USER_CREATE_TOPIC": "Пользователь <b>{{userName}}</b> создал новую тему.",
