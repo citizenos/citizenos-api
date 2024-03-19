@@ -117,7 +117,7 @@ module.exports = function (app) {
                         SELECT
                             tmg."topicId",
                             gm."userId",
-                            CASE WHEN t.status= 'draft' AND MAX(tmg.level)::text <> 'admin' THEN 'none'
+                            CASE WHEN t.status= 'draft' AND MAX(tmg.level) < 'edit' THEN 'none'
                             ELSE MAX(tmg.level)::text END AS level
                         FROM "TopicMemberGroups" tmg
                             JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
@@ -974,7 +974,7 @@ module.exports = function (app) {
                     SELECT
                         tmg."topicId",
                         gm."userId",
-                        CASE WHEN t.status= 'draft' AND MAX(tmg.level)::text <> 'admin' THEN 'none'
+                        CASE WHEN t.status= 'draft' AND MAX(tmg.level) < 'edit' THEN 'none'
                         ELSE MAX(tmg.level)::text END AS level
                     FROM "TopicMemberGroups" tmg
                         LEFT JOIN "GroupMemberUsers" gm ON (tmg."groupId" = gm."groupId")
@@ -1704,7 +1704,8 @@ module.exports = function (app) {
             const user = req.user;
             const partner = req.locals.partner;
             const topic = await _topicReadAuth(topicId, include, user, partner);
-
+            const revision = await cosEtherpad.topicPadRevisions(topicId);
+            topic.revision = revision.revisions;
             if (!topic) {
                 return res.notFound();
             }
@@ -1720,16 +1721,29 @@ module.exports = function (app) {
             const topicId = req.params.topicId;
             const rev = req.query.rev;
             const description = await cosEtherpad.readPadTopic(topicId, rev);
-
+            const revision = await cosEtherpad.topicPadRevisions(topicId);
             res.ok({
                 id: topicId,
-                description
+                description,
+                revision: revision.revisions
             });
 
         } catch (err) {
             next(err);
         }
     });
+
+    app.post('/api/users/self/topics/:topicId/revert', partnerParser, hasPermission(TopicMemberUser.LEVELS.edit, true), async (req, res, next ) => {
+        try {
+            const topicId = req.params.topicId;
+            const rev = req.body.rev;
+            const result = await cosEtherpad.restoreRevision(topicId, rev);
+            res.ok(result);
+
+        } catch (err) {
+            next(err);
+        }
+    })
 
     app.get('/api/topics/:topicId', async function (req, res, next) {
         let include = req.query.include;
@@ -2295,14 +2309,14 @@ module.exports = function (app) {
         //  ORDER BY "favourite" DESC, "order" ASC, t."updatedAt" DESC
         if (orderBy) {
             switch (orderBy) {
-                case 'activityTime':
+               /* case 'activityTime':
                     orderSql += ` ta.latest  ${order} `;
                     groupBy += `, ta.latest`;
                     break;
                 case 'activityCount':
                     orderSql += ` ta.count  ${order} `;
                     groupBy += `, ta.count`;
-                    break;
+                    break;*/
                 case 'membersCount':
                     orderSql += ` muc.count ${order} `;
                     break;
@@ -2466,14 +2480,6 @@ module.exports = function (app) {
                                 ) AS tcc
                             GROUP BY tcc."topicId"
                     ) AS com ON (com."topicId" = t.id)
-                    LEFT JOIN (
-                        SELECT
-                            unnest("topicIds") as "topicId",
-                            COUNT("topicIds") as count,
-                            MAX("updatedAt") AS latest
-                            FROM "Activities"
-                        GROUP BY "topicIds"
-                    ) AS ta ON ta."topicId" = t.id::text
                     LEFT JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds"
                     LEFT JOIN "TopicFavourites" tf ON (tf."topicId" = t.id AND tf."userId" = :userId)
                     LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
