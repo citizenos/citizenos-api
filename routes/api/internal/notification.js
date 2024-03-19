@@ -8,7 +8,7 @@ module.exports = function (app) {
     const logger = app.get('logger');
     const cosEtherpad = app.get('cosEtherpad');
     const authApiKey = app.get('middleware.authApiKey');
-
+    const emailLib = app.get('email');
     /**
      * Callback API for Pad change events
      */
@@ -51,4 +51,11 @@ module.exports = function (app) {
             })
             .catch(next);
     });
+
+
+    app.get('/api/newsletter', (req, res) => {
+        emailLib.sendNewsletter();
+
+        return res.ok();
+    })
 };
