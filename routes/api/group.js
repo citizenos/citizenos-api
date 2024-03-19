@@ -2460,7 +2460,10 @@ module.exports = function (app) {
                 `;
                 groupBy += `tv."authType", tv."createdAt", tv."delegationIsAllowed", tv."description", tv."endsAt", tv."maxChoices", tv."minChoices", tv."type", `;
                 voteResults = topicLib.getAllVotesResults();
+            } else {
+                returncolumns += `, tv."voteId"`;
             }
+
             if (include.indexOf('event') > -1) {
                 join += `LEFT JOIN (
                             SELECT
