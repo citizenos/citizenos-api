@@ -75,7 +75,7 @@
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
   "NEWSLETTER": {
-    "Subject": "Changes in the Citizen OS Platform User Experience"
+    "Subject": "Изменения в пользовательском опыте на платформе Citizen OS"
   },
   "NOTIFICATIONS": {
     "SUBJECT": "Обновление по теме “{{topicTitle}}”",
