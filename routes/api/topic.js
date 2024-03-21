@@ -1357,7 +1357,14 @@ module.exports = function (app) {
 
     const _syncTopicAuthors = async function (topicId) {
         const authorIds = await cosEtherpad.getTopicPadAuthors(topicId);
-        if (authorIds && authorIds.length) {
+        const topicData = await Topic.findOne({
+            where: {
+                id: topicId
+            },
+            attributes: ['authorIds']
+        })
+        const compareArrays = (a, b) => a.length === b.length && a.every((element, index) => element === b[index]);
+        if (!compareArrays(authorIds.sort(), topicData.authorIds.sort())) {
             await Topic.update({
                 authorIds
             }, {
