@@ -64,6 +64,7 @@ module.exports = function (app) {
                           AND tmg."deletedAt" IS NULL
                       ) tmg ON tmg."topicId" = tv."topicId" AND (tmg."userId" = tm.id)
                       JOIN "Users" u ON u.id = tm.id
+                      WHERE u.id NOT IN (SELECT "userId" FROM "VoteLists" WHERE "voteId" = :voteId)
                       GROUP BY tm.id, u.id, tm.level, tmu.level, tm.name, tm.company, tm."imageUrl", tm.email, tm."topicId"
                    ;`,
                     {
