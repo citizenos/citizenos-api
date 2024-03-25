@@ -17,6 +17,20 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
+-- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION pgcrypto; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
+
+
+--
 -- Name: enum_Attachments_source; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -833,6 +847,15 @@ COMMENT ON COLUMN public."Reports"."creatorIp" IS 'IP address of the reporter';
 
 
 --
+-- Name: SequelizeMeta; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."SequelizeMeta" (
+    name character varying(255) NOT NULL
+);
+
+
+--
 -- Name: Signatures; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1172,6 +1195,30 @@ COMMENT ON COLUMN public."TopicMemberUsers".level IS 'User membership level.';
 
 
 --
+-- Name: TopicPins; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."TopicPins" (
+    "topicId" uuid NOT NULL,
+    "userId" uuid NOT NULL
+);
+
+
+--
+-- Name: COLUMN "TopicPins"."topicId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicPins"."topicId" IS 'To what Topic this Pin belongs to.';
+
+
+--
+-- Name: COLUMN "TopicPins"."userId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicPins"."userId" IS 'Which User this Pin belongs to.';
+
+
+--
 -- Name: TopicReports; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1440,7 +1487,7 @@ CREATE TABLE public."UserConnections" (
     "userId" uuid NOT NULL,
     "connectionId" public."enum_UserConnections_connectionId" NOT NULL,
     "connectionUserId" character varying(255) NOT NULL,
-    "connectionData" json,
+    "connectionData" jsonb,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
     "deletedAt" timestamp with time zone
@@ -1500,6 +1547,33 @@ COMMENT ON COLUMN public."UserConsents"."userId" IS 'Id of the User whom the con
 --
 
 COMMENT ON COLUMN public."UserConsents"."partnerId" IS 'Partner id (client_id).';
+
+
+--
+-- Name: UserNewsletters; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."UserNewsletters" (
+    "userId" uuid NOT NULL,
+    "newsletterName" character varying(255) NOT NULL,
+    "createdAt" timestamp with time zone NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL,
+    "deletedAt" timestamp with time zone
+);
+
+
+--
+-- Name: COLUMN "UserNewsletters"."userId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."UserNewsletters"."userId" IS 'User whom the newsletter was sent.';
+
+
+--
+-- Name: COLUMN "UserNewsletters"."newsletterName"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."UserNewsletters"."newsletterName" IS 'Name of the template for the newsletter';
 
 
 --
@@ -2140,6 +2214,14 @@ ALTER TABLE ONLY public."Reports"
 
 
 --
+-- Name: SequelizeMeta SequelizeMeta_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."SequelizeMeta"
+    ADD CONSTRAINT "SequelizeMeta_pkey" PRIMARY KEY (name);
+
+
+--
 -- Name: Signatures Signatures_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2228,6 +2310,14 @@ ALTER TABLE ONLY public."TopicMemberUsers"
 
 
 --
+-- Name: TopicPins TopicPins_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicPins"
+    ADD CONSTRAINT "TopicPins_pkey" PRIMARY KEY ("topicId", "userId");
+
+
+--
 -- Name: TopicReports TopicReports_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2265,6 +2355,14 @@ ALTER TABLE ONLY public."UserConnections"
 
 ALTER TABLE ONLY public."UserConsents"
     ADD CONSTRAINT "UserConsents_pkey" PRIMARY KEY ("userId", "partnerId");
+
+
+--
+-- Name: UserNewsletters UserNewsletters_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."UserNewsletters"
+    ADD CONSTRAINT "UserNewsletters_pkey" PRIMARY KEY ("userId", "newsletterName");
 
 
 --
@@ -2852,6 +2950,14 @@ ALTER TABLE ONLY public."UserConsents"
 
 
 --
+-- Name: UserNewsletters UserNewsletters_userId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."UserNewsletters"
+    ADD CONSTRAINT "UserNewsletters_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: UserNotificationSettings UserNotificationSettings_groupId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2959,3 +3065,43 @@ ALTER TABLE ONLY public."VoteUserContainers"
 -- PostgreSQL database dump complete
 --
 
+COPY public."SequelizeMeta" (name) FROM stdin;
+20181213213857-create-topic-favourite.js
+20190131123024-alter-topic-title-limit.js
+20190529193321-topic-report.js
+20190616115724-alter-user-accpet-terms.js
+20190627132611-alter-partner-terms-link.js
+20191119124917-create-topic-invite-user.js
+20191218091941-update-vote-option-max-value.js
+20200130121507-create-signature.js
+202002192021-alter-user-connection.js
+20200225152502-remove-vote-user-container-activity.js
+202010261616-alter-user-add-auhorID.js
+20210310104918-create-group-invite-user.js
+202103251231-alter-vote-lists-add-userhash.js
+20210329141948-alter-vote-user-containers.js
+20210510112610-groupmember_to_groupmemberusers.js
+202106111127-alter-relations-add-on-cascade.js
+20210722084618-alter-vote-add-auto-close.js
+20211008104906-create-topic-join.js
+20211008193321-alter-user-add-preferences.js
+20211028142538-create-group-join.js
+20211209091354-create-token-revocation.js
+20211217120934-comment-type-poi.js
+20220203120245-users-password-comment.js
+20220228174313-duplicate-email-users-issue-234.js
+20220405120631-create-user-notification-settings.js
+20220520100104-add-vote-reminder.js
+20220808083309-alter_group.js
+20220816103332-alter-topic-invite-user.js
+20220816103355-alter-group-invite-user.js
+20231020153809-alter-group-add-location.js
+20231020154400-alter-topic-add-location.js
+20231025094913-alter-topic-add-intro.js
+20231027115040-rename-topic-pin-group-pin.js
+20231117225849-alter_topic_add_imageurl.js
+20231206200052-topic_status_draft.js
+20240306104617-alter-user-connection.js
+20240306104859-alter-vote-autoclose.js
+20240325115611-user-newsletter.js
+\.
