@@ -1751,7 +1751,7 @@ module.exports = function (app) {
             let voteEndsAt;
             if (vote.endsAt) {
                 daysLeft = moment(vote.endsAt).diff(moment(), 'days'),
-                voteEndsAt = `${ moment(vote.endsAt).format('YYYY-MM-DD HH:mm')} GMT+00:00`;
+                    voteEndsAt = `${moment(vote.endsAt).format('YYYY-MM-DD HH:mm')} GMT+00:00`;
             }
             // votesCountRequired - add when vote settings support required vote count
             const emailOptions = {
@@ -1777,52 +1777,98 @@ module.exports = function (app) {
 
         return handleAllPromises(emailsSendPromises);
     };
+    const _sendNewsletter = async (templateName) => {
+        const timer = ms => new Promise(res => setTimeout(res, ms));
 
-    const _sendNewsletter = async () => {
-        const linkToApplication = urlLib.getFe();
-        let templateName = 'newsletterRedesign';
-        let customStyles = EMAIL_OPTIONS_DEFAULT.styles;
+        try {
+            const linkToApplication = urlLib.getFe();
+            let customStyles = EMAIL_OPTIONS_DEFAULT.styles;
 
-        const users = [await User.findOne()];
-        const emailsSendPromises = users.map((toUser) => {
-            if (!toUser.email) {
-                logger.info('Skipping invite e-mail to user as there is no email on the profile', toUser.email);
-                return Promise.resolve();
-            }
-
-            const template = resolveTemplate(templateName, toUser.language);
-
-            // Handle Partner links
-            // TODO: could use Mu here...
-            const subject = template.translations.NEWSLETTER?.SUBJECT || 'Changes in the Citizen OS Platform User Experience'
-            let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
-            linkedData.translations = template.translations;
-            const images = [
-                {
-                    name: 'dashboard.png',
-                    file: path.join(templateRoot, 'images/newsletter/dashboard.png')
+            const usersCount = (await db.query(`
+            SELECT COUNT(u.id)
+            FROM "Users" u
+            WHERE u.id NOT IN (SELECT "userId" FROM "UserNewsletters" WHERE "newsletterName" = :templateName);
+        `, {
+                replacements: {
+                    templateName
                 },
-                {
-                    name: 'topic.png',
-                    file: path.join(templateRoot, 'images/newsletter/topic.png')
-                }].concat(EMAIL_OPTIONS_DEFAULT.images);
-            const emailOptions = {
-                // from: from, - comes from emailClient.js configuration
-                subject: subject,
-                to: toUser.email,
-                images: images,
-                toUser: toUser,
-                linkToApplication: linkToApplication,
-                provider: EMAIL_OPTIONS_DEFAULT.provider,
-                styles: customStyles,
-                linkToPlatformText: template.translations.LAYOUT.LINK_TO_PLATFORM,
-                linkedData
-            };
+                type: db.QueryTypes.SELECT,
+                raw: true,
+                nested: true
+            }))[0].count
 
-            return emailClient.sendString(template.body, emailOptions);
-        });
+            const loops = Math.ceil(usersCount / 50);
+            let loop = 0;
 
-        return handleAllPromises(emailsSendPromises);
+            console.log(usersCount, loops);
+
+            while (loop < loops) {
+                const users = (await db.query(`
+                    SELECT u.id, u.name, u.language, u.email
+                    FROM "Users" u
+                    WHERE u.id NOT IN (SELECT "userId" FROM "UserNewsletters" WHERE "newsletterName" = :templateName)
+                    AND u."deletedAt" IS NULL
+                    OFFSET :offset
+                    LIMIT 50;
+                `, {
+                    replacements: {
+                        templateName,
+                        offset: loop * 50
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nested: true
+                }));
+                const emailsSendPromises = users.map(async (toUser) => {
+                    if (!toUser.email) {
+                        logger.info('Skipping invite e-mail to user as there is no email on the profile', toUser.email);
+                        return Promise.resolve();
+                    }
+
+                    await models.UserNewsletter.create({
+                        userId: toUser.id,
+                        newsletterName: templateName
+                    });
+
+                    const template = resolveTemplate(templateName, toUser.language);
+
+                    // Handle Partner links
+                    // TODO: could use Mu here...
+                    const subject = template.translations.NEWSLETTER?.SUBJECT || 'Changes in the Citizen OS Platform User Experience'
+                    let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
+                    linkedData.translations = template.translations;
+                    const images = [
+                        {
+                            name: 'dashboard.png',
+                            file: path.join(templateRoot, 'images/newsletter/dashboard.png')
+                        },
+                        {
+                            name: 'topic.png',
+                            file: path.join(templateRoot, 'images/newsletter/topic.png')
+                        }].concat(EMAIL_OPTIONS_DEFAULT.images);
+                    const emailOptions = {
+                        // from: from, - comes from emailClient.js configuration
+                        subject: subject,
+                        to: toUser.email,
+                        images: images,
+                        toUser: toUser,
+                        linkToApplication: linkToApplication,
+                        provider: EMAIL_OPTIONS_DEFAULT.provider,
+                        styles: customStyles,
+                        linkToPlatformText: template.translations.LAYOUT.LINK_TO_PLATFORM,
+                        linkedData
+                    };
+
+                    return emailClient.sendString(template.body, emailOptions);
+                });
+
+                await handleAllPromises(emailsSendPromises);
+                await timer(2000); //Delay between sending e-mails
+                loop++;
+            }
+        } catch (err) {
+            console.log('NEWSLETTER ERROR', err)
+        }
     }
 
     return {
