@@ -1787,7 +1787,9 @@ module.exports = function (app) {
             const usersCount = (await db.query(`
             SELECT COUNT(u.id)
             FROM "Users" u
-            WHERE u.id NOT IN (SELECT "userId" FROM "UserNewsletters" WHERE "newsletterName" = :templateName);
+            WHERE u.id NOT IN (SELECT "userId" FROM "UserNewsletters" WHERE "newsletterName" = :templateName)
+            AND u.email IS NOT NULL
+            AND u."deletedAt" IS NULL;
         `, {
                 replacements: {
                     templateName
@@ -1807,6 +1809,7 @@ module.exports = function (app) {
                     SELECT u.id, u.name, u.language, u.email
                     FROM "Users" u
                     WHERE u.id NOT IN (SELECT "userId" FROM "UserNewsletters" WHERE "newsletterName" = :templateName)
+                    AND u.email IS NOT NULL
                     AND u."deletedAt" IS NULL
                     OFFSET :offset
                     LIMIT 50;
