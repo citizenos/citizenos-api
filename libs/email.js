@@ -1834,7 +1834,7 @@ module.exports = function (app) {
 
                     // Handle Partner links
                     // TODO: could use Mu here...
-                    const subject = template.translations.NEWSLETTER?.SUBJECT || 'Changes in the Citizen OS Platform User Experience'
+                    const subject = template.translations.NEWSLETTER?.Subject || 'Changes in the Citizen OS Platform User Experience'
                     let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
                     linkedData.translations = template.translations;
                     const images = [
