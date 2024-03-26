@@ -130,6 +130,10 @@ module.exports = function (sequelize, DataTypes) {
             as: 'creator'
         });
 
+        Group.belongsToMany(models.Request, {
+            foreignKey: 'groupId'
+        });
+
         Group.belongsToMany(models.Topic, {
             through: models.TopicMemberGroup,
             foreignKey: 'groupId',

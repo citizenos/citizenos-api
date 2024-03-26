@@ -203,6 +203,14 @@ module.exports = function (sequelize, DataTypes) {
         User.hasMany(models.UserNewsletter, {
             foreignKey: 'userId'
         });
+
+        User.hasMany(models.Request, {
+            foreignKey: 'creatorId'
+        });
+
+        User.hasMany(models.Request, {
+            foreignKey: 'actorId'
+        });
     };
 
     // Overrides the default toJSON() to avoid sensitive data from ending up in the output.

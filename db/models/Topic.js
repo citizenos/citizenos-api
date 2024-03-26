@@ -301,6 +301,10 @@ module.exports = function (sequelize, DataTypes) {
             foreignKey: 'topicId'
         });
 
+        Topic.belongsToMany(models.Request, {
+            foreignKey: 'topicId'
+        });
+
         // Topic can have many Votes - that is Topic Vote, mini-Vote..
         Topic.belongsToMany(models.Vote, {
             through: models.TopicVote,
