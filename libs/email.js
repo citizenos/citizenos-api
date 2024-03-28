@@ -213,6 +213,51 @@ module.exports = function (app) {
 
 
     /**
+     * Get Group Member Users, be it directly or through Groups
+     *
+     * @param {string} groupId Topic Id
+     * @param {string} [levelMin=TopicMember.LEVELS.admin] One of TopicMember.LEVELS
+     *
+     * @returns {Promise<Array>} Array of topic members
+     *
+     * @private
+     */
+    const _getGroupMemberUsers = (groupId, levelMin) => {
+        let levelMinimum = GroupMemberUser.LEVELS.admin;
+
+        if (levelMin && GroupMemberUser.LEVELS[levelMin]) {
+            levelMinimum = levelMin;
+        }
+
+        return db
+            .query(
+                `SELECT
+                    u.id,
+                    u.name,
+                    u.email,
+                    gm."level" AS level
+                FROM "Groups" g
+                JOIN "GroupMemberUsers" gm
+                    ON(gm."groupId" = g.id
+                    AND gm."deletedAt" IS NULL)
+                JOIN "Users" u ON u.id = gm."userId"
+                WHERE g.id = :groupId
+                    AND g."deletedAt" IS NULL
+                GROUP BY g.id, gm.level, u.id;
+                `,
+                {
+                    replacements: {
+                        groupId: groupId,
+                        level: levelMinimum
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
+    };
+
+    /**
      * Get Moderator list
      *
      * @param {String} [sourcePartnerId] Source partner id - UUID
@@ -1874,6 +1919,67 @@ module.exports = function (app) {
         }
     }
 
+    const _sendRequestAddTopicGroup = async (request) => {
+        const group = await Group.findOne({
+            where: {
+                id: request.groupId
+            }
+        });
+
+        const topic = await Topic.findOne({
+            where: {
+                id: request.topicId
+            }
+        });
+        const groupAdmins = await _getGroupMemberUsers(request.groupId, 'admin');
+
+        const linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
+        const linkToApplication = urlLib.getFe();
+        let templateName = 'addTopicGroup';
+        let customStyles = EMAIL_OPTIONS_DEFAULT.styles;
+
+        const emailsSendPromises = groupAdmins.map((toUser) => {
+            if (!toUser.email) {
+                logger.info('Skipping invite e-mail to user as there is no email on the profile', toUser.email);
+                return Promise.resolve();
+            }
+
+            const template = resolveTemplate(templateName, toUser.language);
+
+            // Handle Partner links
+            // TODO: could use Mu here...
+            const subject = template.translations.REQUEST_ADD_TOPIC_TO_GROUP.SUBJECT
+
+            // In case Topic has no title, just show the full url.
+            topic.title = topic.title ? topic.title : linkViewTopic;
+
+            let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
+            linkedData.translations = template.translations;
+
+            // votesCountRequired - add when vote settings support required vote count
+            const emailOptions = {
+                // from: from, - comes from emailClient.js configuration
+                subject: subject,
+                to: toUser.email,
+                images: EMAIL_OPTIONS_DEFAULT.images,
+                toUser: toUser,
+                group: group,
+                topic: topic,
+                linkViewTopic: linkViewTopic,
+                linkToApplication: linkToApplication,
+                provider: EMAIL_OPTIONS_DEFAULT.provider,
+                styles: customStyles,
+                linkToPlatformText: template.translations.LAYOUT.LINK_TO_PLATFORM,
+                linkedData
+            };
+
+            return emailClient.sendString(template.body, emailOptions);
+        });
+
+        return handleAllPromises(emailsSendPromises);
+
+    };
+
     return {
         sendAccountVerification: _sendAccountVerification,
         sendPasswordReset: _sendPasswordReset,
@@ -1891,6 +1997,7 @@ module.exports = function (app) {
         sendVoteReminder: _sendVoteReminder,
         sendTopicNotification: _sendTopicNotification,
         sendFeedback: _sendFeedback,
-        sendNewsletter: _sendNewsletter
+        sendNewsletter: _sendNewsletter,
+        sendRequestAddTopicGroup: _sendRequestAddTopicGroup
     };
 };

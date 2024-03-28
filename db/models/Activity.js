@@ -18,7 +18,8 @@ module.exports = function (sequelize, DataTypes) {
         join: 'Join',
         leave: 'Leave',
         accept: 'Accept',
-        view: 'View'
+        view: 'View',
+        offer: 'Offer' //Used for request to add
     };
 
     var Activity = sequelize.define(

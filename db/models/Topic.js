@@ -301,7 +301,7 @@ module.exports = function (sequelize, DataTypes) {
             foreignKey: 'topicId'
         });
 
-        Topic.belongsToMany(models.Request, {
+        Topic.hasMany(models.Request, {
             foreignKey: 'topicId'
         });
 

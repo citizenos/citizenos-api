@@ -25,6 +25,7 @@ module.exports = function (app) {
     const asyncMiddleware = app.get('middleware.asyncMiddleware');
 
     const Group = models.Group;
+    const Topic = models.Topic;
     const TopicMemberGroup = models.TopicMemberGroup;
     const GroupInviteUser = models.GroupInviteUser;
     const GroupMemberUser = models.GroupMemberUser;
@@ -32,32 +33,33 @@ module.exports = function (app) {
     const GroupFavourite = models.GroupFavourite;
     const User = models.User;
     const UserConnection = models.UserConnection;
+    const Request = models.Request;
 
     const _hasPermission = async function (groupId, userId, level, allowPublic, allowSelf) {
         try {
 
             const result = await db.query(`
-        SELECT
-            g.visibility = 'public' AS "isPublic",
-            gm.level::"enum_GroupMemberUsers_level" >= :level AS "allowed",
-            gm."userId" AS uid,
-            gm."level" AS level,
-            CASE
-                WHEN m."userId" IS NOT NULL THEN TRUE
-                ELSE FALSE
-            END as "isModerator",
-            g.id
-        FROM "Groups" g
-        LEFT JOIN "GroupMemberUsers" gm
-            ON(gm."groupId" = g.id
-            AND gm."userId" = :userId
-            AND gm."deletedAt" IS NULL)
-        LEFT JOIN "Moderators" m
-            ON (m."partnerId" IS NULL AND m."deletedAt" IS NULL)
-            AND m."userId" = gm."userId"
-        WHERE g.id = :groupId
-            AND g."deletedAt" IS NULL
-        GROUP BY g.id, uid, gm.level, m."userId";`,
+                SELECT
+                    g.visibility = 'public' AS "isPublic",
+                    gm.level::"enum_GroupMemberUsers_level" >= :level AS "allowed",
+                    gm."userId" AS uid,
+                    gm."level" AS level,
+                    CASE
+                        WHEN m."userId" IS NOT NULL THEN TRUE
+                        ELSE FALSE
+                    END as "isModerator",
+                    g.id
+                FROM "Groups" g
+                LEFT JOIN "GroupMemberUsers" gm
+                    ON(gm."groupId" = g.id
+                    AND gm."userId" = :userId
+                    AND gm."deletedAt" IS NULL)
+                LEFT JOIN "Moderators" m
+                    ON (m."partnerId" IS NULL AND m."deletedAt" IS NULL)
+                    AND m."userId" = gm."userId"
+                WHERE g.id = :groupId
+                    AND g."deletedAt" IS NULL
+                GROUP BY g.id, uid, gm.level, m."userId";`,
                 {
                     replacements: {
                         groupId: groupId,
@@ -549,7 +551,7 @@ module.exports = function (app) {
                     ) tmc ON tmgtc."groupId" = tmc."groupId"
                     ) gtc ON gtc."groupId" = g.id
                     WHERE g.id = :groupId;`
-                    ,{
+                    , {
                         replacements: {
                             groupId: group.id
                         },
@@ -2397,14 +2399,14 @@ module.exports = function (app) {
                 case 'lastActivity':
                     sortSql += ` "lastActivity" ${sortOrder}`;
                     break;
-            /*    case 'activityTime':
-                    sortSql += ` ta.latest  ${sortOrder} `;
-                    groupBy += `ta.latest,`;
-                    break;
-                case 'activityCount':
-                    sortSql += ` ta.count  ${sortOrder} `;
-                    groupBy += `ta.count,`;
-                    break;*/
+                /*    case 'activityTime':
+                        sortSql += ` ta.latest  ${sortOrder} `;
+                        groupBy += `ta.latest,`;
+                        break;
+                    case 'activityCount':
+                        sortSql += ` ta.count  ${sortOrder} `;
+                        groupBy += `ta.count,`;
+                        break;*/
                 case 'membersCount':
                     sortSql += ` muc.count ${sortOrder} `;
                     break;
@@ -3021,6 +3023,305 @@ module.exports = function (app) {
                     });
             }
         } catch (err) {
+            return next(err);
+        }
+    });
+
+    app.post('/api/users/:userId/groups/:groupId/requests/topics', loginCheck(['partner']), async (req, res, next) => {
+        try {
+            //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
+            const groupId = req.params.groupId;
+            const userId = req.user.userId;
+            let topics = req.body;
+            const type = 'addTopicGroup';
+            if (!Array.isArray(topics)) {
+                topics = [topics];
+            }
+            if (!topics.length) {
+                return res.badRequest();
+            }
+            const message = topics[0].text; // IF future holds personalized invite messages, every invite has its own message. Also, easiest solution without rewriting a lot of code.
+
+            // Need the Group just for the activity
+            const group = await Group.findOne({
+                where: {
+                    id: groupId
+                }
+            });
+            await db.transaction(async (t) => {
+                let createRequestPromises = topics.map(async (request) => {
+                    const hasAccess = await topicLib._hasPermission(request.topicId, userId, TopicMemberGroup.LEVELS.admin);
+                    if (hasAccess && hasAccess.topic.permissions.level === TopicMemberGroup.LEVELS.admin) {
+                        const data = {
+                            type,
+                            creatorId: userId,
+                            topicId: request.topicId,
+                            groupId: groupId,
+                            text: message,
+                            level: request.level
+                        };
+                        const existing = await Request.findOne({
+                            where: {
+                                creatorId: userId,
+                                topicId: request.topicId,
+                                groupId: groupId
+                            },
+                            transaction: t
+                        });
+                        if (existing) {
+                            data.id = existing.id;
+                        }
+                        const newRequest = await Request.upsert(data);
+                        const topic = await Topic.findOne({where: {id: request.topicId}});
+                        await cosActivities.offerActivity(
+                            topic,
+                            group,
+                            {
+                                type: 'User',
+                                id: req.user.userId,
+                                ip: req.ip
+                            },
+                            req.method + ' ' + req.path,
+                            t
+                        );
+
+                        return newRequest[0].toJSON();
+                    }
+                })
+                /*const createInvitePromises = validUserIdMembers.map(async function (member) {
+                    const existingMember = currentMembers.find(function (cmember) {
+                        return cmember.userId === member.userId;
+                    });
+                    if (existingMember) {
+                        const levelsArray = Object.keys(GroupMemberUser.LEVELS);
+                        if (existingMember.level !== member.level) {
+                            if (levelsArray.indexOf(member.level) > levelsArray.indexOf(existingMember.level)) {
+                                await existingMember.update({
+                                    level: member.level
+                                });
+
+                                cosActivities
+                                    .updateActivity(
+                                        existingMember,
+                                        null,
+                                        {
+                                            type: 'User',
+                                            id: req.user.userId,
+                                            ip: req.ip
+                                        },
+                                        req.method + ' ' + req.path,
+                                        t
+                                    );
+
+                                return;
+                            }
+
+                            return;
+                        } else {
+                            return;
+                        }
+                    } else {
+                        const deletedCount = await GroupInviteUser
+                            .destroy(
+                                {
+                                    where: {
+                                        userId: member.userId,
+                                        groupId: groupId
+                                    }
+                                }
+                            );
+                        logger.info(`Removed ${deletedCount} invites`);
+                        const groupInvite = await GroupInviteUser.create(
+                            {
+                                groupId: groupId,
+                                creatorId: userId,
+                                userId: member.userId,
+                                level: member.level
+                            },
+                            {
+                                transaction: t
+                            }
+                        );
+
+                        const userInvited = User.build({ id: groupInvite.userId });
+                        userInvited.dataValues.level = groupInvite.level; // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
+                        userInvited.dataValues.inviteId = groupInvite.id;
+
+                        await cosActivities.inviteActivity(
+                            group,
+                            userInvited,
+                            {
+                                type: 'User',
+                                id: req.user.userId,
+                                ip: req.ip
+                            },
+                            req.method + ' ' + req.path,
+                            t
+                        );
+
+                        return groupInvite;
+                    }
+                });
+
+                let createdInvites = await Promise.all(createInvitePromises);
+                createdInvites = createdInvites.filter(function (invite) {
+                    return !!invite;
+                });
+
+                for (let invite of createdInvites) { // IF future holds personalized invite messages, every invite has its own message and this code can be removed.
+                    invite.inviteMessage = inviteMessage;
+                }*/
+                let createdRequests = await Promise.all(createRequestPromises);
+                createdRequests = createdRequests.filter((res) => !!res);
+                t.afterCommit(async () => {
+                    if (createdRequests.length) {
+                        //await emailLib.sendGroupMemberUserInviteCreate(createdRequests);
+                        return res.created({
+                            count: createdRequests.length,
+                            rows: createdRequests
+                        });
+                    } else {
+                        return res.badRequest('No requests were created. Possibly because no valid topicId-s were provided.', 1);
+                    }
+                });
+            });
+        } catch (err) {
+            return next(err);
+        }
+    });
+
+    /* List topic requests*/
+    app.get('/api/users/:userId/groups/:groupId/requests/topics', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.admin, null, null), async (req, res, next) => {
+        try {
+            const groupId = req.params.groupId;
+            const results = await Request.findAndCountAll({
+                where: {
+                    groupId: groupId,
+                    topicId: {
+                        [Op.ne]: null
+                    },
+                    acceptedAt: {
+                        [Op.eq]: null
+                    },
+                    rejectedAt: {
+                        [Op.eq]: null
+                    }
+                }
+            });
+
+            res.ok(results);
+        } catch (err) {
+            return next(err);
+        }
+    });
+
+    /*Accept request*/
+
+    app.post('/api/users/:userId/groups/:groupId/requests/topics/:requestId/accept', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.admin, null, null), async (req, res, next) => {
+        const requestId = req.params.requestId;
+        try {
+            await db.transaction(async (t) => {
+                const request = await Request.findOne({
+                    where: {
+                        id: requestId
+                    },
+                    transaction: t
+                });
+                if (request) {
+                    const group = await Group.findOne({
+                        where: {
+                            id: request.groupId
+                        }
+                    });
+                    await TopicMemberGroup.create({
+                        groupId: request.groupId,
+                        topicId: request.topicId,
+                        level: request.level
+                    }, { transaction: t })
+                    request.acceptedAt = new Date();
+                    await request.save({
+                        transaction: t
+                    });
+
+                    await cosActivities.acceptActivity(
+                        request,
+                        {
+                            type: 'User',
+                            id: req.user.userId,
+                            ip: req.ip
+                        },
+                        {
+                            type: 'User',
+                            id: request.creatorId
+                        },
+                        group,
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
+                    t.afterCommit(() => {
+                        res.ok();
+                    });
+                } else {
+                    t.afterCommit(() => {
+                        res.notFound();
+                    });
+                }
+            });
+        } catch (err) {
+            console.log(err);
+            return next(err);
+        }
+    });
+    /*Reject recuest*/
+    app.post('/api/users/:userId/groups/:groupId/requests/topics/:requestId/reject', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.admin, null, null), async (req, res, next) => {
+        const requestId = req.params.requestId;
+        try {
+            await db.transaction(async (t) => {
+                const request = await Request.findOne({
+                    where: {
+                        id: requestId
+                    },
+                    transaction: t
+                });
+                if (request) {
+                    const group = await Group.findOne({
+                        where: {
+                            id: request.groupId
+                        }
+                    });
+                    request.rejectedAt = new Date();
+                    await request.save({
+                        transaction: t
+                    });
+
+                    await cosActivities.rejectActivity(
+                        request,
+                        {
+                            type: 'User',
+                            id: req.user.userId,
+                            ip: req.ip
+                        },
+                        {
+                            type: 'User',
+                            id: request.creatorId
+                        },
+                        group,
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
+                    t.afterCommit(() => {
+                        res.ok();
+                    });
+                } else {
+                    t.afterCommit(() => {
+                        res.notFound();
+                    });
+                }
+            });
+        } catch (err) {
+            console.log(err);
             return next(err);
         }
     });

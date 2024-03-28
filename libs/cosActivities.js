@@ -619,9 +619,11 @@ module.exports = function (app) {
         //        }
         //    }
         //}
+        let instanceType = 'Invite';
 
+        if (instance.constructor.name === 'Request') instanceType = 'Request';
         const object = {
-            type: 'Invite',
+            type: instanceType,
             id: instance.id,
             actor: inviteActor,
             object: inviteObject.toJSON()
@@ -630,6 +632,49 @@ module.exports = function (app) {
 
         const activity = {
             type: 'Accept',
+            actor: actor,
+            context: context,
+            object
+        };
+
+        activity.object.object['@type'] = inviteObject.constructor.name;
+
+        return _saveActivity(activity, transaction);
+    };
+
+    const _rejectActivity = function (instance, actor, inviteActor, inviteObject, context, transaction) {
+        //https://www.w3.org/ns/activitystreams#Reject
+        //{
+        //    "@context": "https://www.w3.org/ns/activitystreams",
+        //    "summary": "Sally rejected an invitation to a party",
+        //    "type": "Reject",
+        //    "actor": {
+        //        "type": "Person",
+        //       "name": "Sally"
+        //    },
+        //    "object": {
+        //        "type": "Invite",
+        //        "actor": "http://john.example.org",
+        //        "object": {
+        //       "type": "Event",
+        //        "name": "Going-Away Party for Jim"
+        //        }
+        //    }
+        //  }
+
+        let instanceType = 'Invite';
+
+        if (instance.constructor.name === 'Request') instanceType = 'Request';
+        const object = {
+            type: instanceType,
+            id: instance.id,
+            actor: inviteActor,
+            object: inviteObject.toJSON()
+        };
+        _setExtraProperties(instance, object);
+
+        const activity = {
+            type: 'Reject',
             actor: actor,
             context: context,
             object
@@ -928,6 +973,60 @@ module.exports = function (app) {
         return _saveActivity(activity, transaction);
     };
 
+    const _offerActivity = (instance, target, actor, context, transaction) => {
+
+        /*  https://www.w3.org/ns/activitystreams#Offer
+         {
+            "@context": "https://www.w3.org/ns/activitystreams",
+            "summary": "Sally offered 50% off to Lewis",
+            "type": "Offer",
+            "actor": {
+                "type": "Person",
+                "name": "Sally"
+            },
+            "object": {
+                "type": "http://www.types.example/ProductOffer",
+                "name": "50% Off!"
+            },
+            "target": {
+                "type": "Person",
+                "name": "Lewis"
+            }
+            }
+         */
+
+         const _object = instance.toJSON();
+
+         _setExtraProperties(instance, _object);
+
+         _object['@type'] = instance.constructor.name;
+
+         var activity = {
+             type: Activity.TYPES.offer,
+             object: _object,
+             actor: actor
+         };
+
+         if (target) {
+             const targetObject = target.toJSON();
+             _setExtraProperties(target, targetObject);
+             targetObject['@type'] = target.constructor.name;
+             if (target.dataValues.level) {
+                 targetObject.level = target.dataValues.level;
+             }
+             if (target.dataValues.inviteId) {
+                 targetObject.inviteId = target.dataValues.inviteId;
+             }
+             activity.target = targetObject;
+         }
+
+         if (context) {
+             activity.context = context;
+         }
+
+         return _saveActivity(activity, transaction);
+    }
+
     return {
         getInstanceChangeSet: _getInstanceChangeSet,
         createActivity: _createActivity,
@@ -943,5 +1042,7 @@ module.exports = function (app) {
         joinActivity: _joinActivity,
         replyActivity: _replyActivity,
         downloadFinalContainerActivity: _downloadFinalContainerActivity,
+        offerActivity: _offerActivity,
+        rejectActivity: _rejectActivity
     };
 };

@@ -8711,6 +8711,7 @@ module.exports = function (app) {
     }));
 
     return {
+        _hasPermission: _hasPermission,
         hasPermission: hasPermission,
         getVoteResults: getVoteResults,
         getAllVotesResults: getAllVotesResults

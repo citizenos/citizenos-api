@@ -80,7 +80,7 @@ const _groupList = async function (agent, userId, include, expectedHttpCode) {
 
     return agent
         .get(path)
-        .query({include: include})
+        .query({ include: include })
         .set('Content-Type', 'application/json')
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
@@ -218,7 +218,7 @@ const _groupMemberUsersUpdate = async function (agent, userId, groupId, memberId
     return agent
         .put(path)
         .set('Content-Type', 'application/json')
-        .send({level: level})
+        .send({ level: level })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
@@ -376,6 +376,74 @@ const groupFavouriteDelete = async function (agent, userId, groupId) {
     return _groupFavouriteDelete(agent, userId, groupId, 200);
 };
 
+const _groupRequestAddTopicCreate = async function (agent, userId, groupId, topicId, level, text, expectedHttpCode) {
+    const path = '/api/users/:userId/groups/:groupId/requests/topics'
+        .replace(':userId', userId)
+        .replace(':groupId', groupId);
+
+    return agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .send([{
+            topicId: topicId,
+            level: level,
+            text: text
+        }])
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const groupRequestAddTopicCreate = async function (agent, userId, groupId, topicId, level, text) {
+    return _groupRequestAddTopicCreate(agent, userId, groupId, topicId, level, text, 201);
+};
+
+const _groupRequesAddTopicList = async function (agent, userId, groupId, expectedHttpCode) {
+    const path = '/api/users/:userId/groups/:groupId/requests/topics'
+        .replace(':userId', userId)
+        .replace(':groupId', groupId);
+
+    return agent
+        .get(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const groupRequesAddTopicList = async function (agent, userId, groupId) {
+    return _groupRequesAddTopicList(agent, userId, groupId, 200);
+};
+
+const _groupRequestAddTopicAccept = async function (agent, userId, groupId, requestId, expectedHttpCode) {
+    const path = '/api/users/:userId/groups/:groupId/requests/topics/:requestId/accept'
+        .replace(':userId', userId)
+        .replace(':groupId', groupId)
+        .replace(':requestId', requestId);
+
+    return agent
+        .post(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const groupRequestAddTopicAccept = async function (agent, userId, groupId, requestId) {
+    return _groupRequestAddTopicAccept(agent, userId, groupId, requestId, 200);
+};
+
+const _groupRequestAddTopicReject = async function (agent, userId, groupId, requestId, expectedHttpCode) {
+    const path = '/api/users/:userId/groups/:groupId/requests/topics/:requestId/reject'
+        .replace(':userId', userId)
+        .replace(':groupId', groupId)
+        .replace(':requestId', requestId);
+
+    return agent
+        .post(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const groupRequestAddTopicReject = async function (agent, userId, groupId, requestId) {
+    return _groupRequestAddTopicReject(agent, userId, groupId, requestId, 200);
+};
+
 module.exports.create = groupCreate;
 module.exports.delete = groupDelete;
 module.exports.memberUsersUpdate = groupMemberUsersUpdate;
@@ -471,7 +539,7 @@ suite('Users', function () {
             });
 
             test('Fail - Bad Request - name is empty', async function () {
-                const errors = (await _groupCreate(agent, user.id, '   ', null, null, null, null,null, null, 400)).body.errors;
+                const errors = (await _groupCreate(agent, user.id, '   ', null, null, null, null, null, null, 400)).body.errors;
                 assert.property(errors, 'name');
                 assert.equal(errors.name, 'Group name can be 2 to 255 characters long.');
             });
@@ -596,8 +664,8 @@ suite('Users', function () {
 
             test('Fail - Group name cannot be null', async function () {
                 const expectedError = {
-                    status: {code: 40000},
-                    errors: {name: 'Group.name cannot be null'}
+                    status: { code: 40000 },
+                    errors: { name: 'Group.name cannot be null' }
                 };
                 const res = await _groupUpdate(agent, user.id, group.id, null, null, 400);
 
@@ -634,12 +702,12 @@ suite('Users', function () {
             test('Success', async function () {
                 await groupDelete(agent, user.id, group.id);
 
-                const gcount = await Group.count({where: {id: group.id}});
+                const gcount = await Group.count({ where: { id: group.id } });
                 // Group table should not have any lines for this Group
                 assert.equal(gcount, 0);
 
                 // Also if Group is gone so should GroupMembers
-                const gmCount = await GroupMemberUser.count({where: {groupId: group.id}});
+                const gmCount = await GroupMemberUser.count({ where: { groupId: group.id } });
                 assert.equal(gmCount, 0);
             });
 
@@ -2295,7 +2363,6 @@ suite('Users', function () {
         });
 
         suite('Join', function () {
-
             const agentCreator = request.agent(app);
             const agentUser = request.agent(app);
 
@@ -2623,6 +2690,258 @@ suite('Users', function () {
                     };
 
                     assert.deepEqual(resBody2, expectedBody2);
+                });
+            });
+        });
+
+        suite('Request', function () {
+
+            suite('Topics', function () {
+                const agentGroupCreator = request.agent(app);
+                const agentTopicCreator = request.agent(app);
+                const agent = request.agent(app);
+
+                let groupCreator;
+                let topicCreator;
+
+                let group;
+                let topic;
+                suiteSetup(async function () {
+                    groupCreator = await userLib.createUserAndLogin(agentGroupCreator, null, null, null);
+                    topicCreator = await userLib.createUserAndLogin(agentTopicCreator, null, null, null);
+                });
+
+                setup(async function () {
+                    group = (await groupCreate(agentGroupCreator, groupCreator.id, `REQUEST TEST GROUP ${new Date().getTime()}`, null, Group.VISIBILITY.private)).body.data;
+                    topic = (await topicLib.topicCreate(agentTopicCreator, topicCreator.id, 'Test topic to group request', Topic.STATUSES.inProgress, 'content')).body.data;
+                });
+
+                suite('Create', function () {
+                    test('Success', async function () {
+                        const result = (await groupRequestAddTopicCreate(agentTopicCreator, topicCreator.id, group.id, topic.id, TopicMemberGroup.LEVELS.edit, 'Please accept this topic')).body.data;
+
+                        assert.equal(result.count, 1);
+                        assert.equal(result.rows.length, 1);
+                        const request = result.rows[0];
+                        assert.property(request, 'id');
+                        assert.property(request, 'createdAt');
+
+                        const expectedResult = {
+                            id: request.id,
+                            type: 'addTopicGroup',
+                            creatorId: topicCreator.id,
+                            topicId: topic.id,
+                            groupId: group.id,
+                            text: 'Please accept this topic',
+                            level: TopicMemberGroup.LEVELS.edit,
+                            createdAt: request.createdAt,
+                            acceptedAt: null,
+                            rejectedAt: null,
+                            actorId: null
+                        };
+
+                        assert.deepEqual(request, expectedResult);
+                    });
+
+                    test('Success - duplicate', async function () {
+                        const result = (await groupRequestAddTopicCreate(agentTopicCreator, topicCreator.id, group.id, topic.id, TopicMemberGroup.LEVELS.edit, 'Please accept this topic')).body.data;
+
+                        assert.equal(result.count, 1);
+                        assert.equal(result.rows.length, 1);
+                        const request = result.rows[0];
+                        assert.property(request, 'id');
+                        assert.property(request, 'createdAt');
+
+                        const expectedResult = {
+                            id: request.id,
+                            type: 'addTopicGroup',
+                            creatorId: topicCreator.id,
+                            topicId: topic.id,
+                            groupId: group.id,
+                            text: 'Please accept this topic',
+                            level: TopicMemberGroup.LEVELS.edit,
+                            createdAt: request.createdAt,
+                            acceptedAt: null,
+                            rejectedAt: null,
+                            actorId: null
+                        };
+
+                        assert.deepEqual(request, expectedResult);
+
+                        const result2 = (await groupRequestAddTopicCreate(agentTopicCreator, topicCreator.id, group.id, topic.id, TopicMemberGroup.LEVELS.admin, 'Please now accept this topic')).body.data;
+                        assert.equal(result2.count, 1);
+                        assert.equal(result2.rows.length, 1);
+                        const request2 = result2.rows[0];
+                        assert.property(request2, 'id');
+                        assert.property(request2, 'createdAt');
+
+                        const expectedResult2 = {
+                            id: request.id,
+                            type: 'addTopicGroup',
+                            creatorId: topicCreator.id,
+                            topicId: topic.id,
+                            groupId: group.id,
+                            text: 'Please now accept this topic',
+                            level: TopicMemberGroup.LEVELS.admin,
+                            createdAt: request2.createdAt,
+                            acceptedAt: null,
+                            rejectedAt: null,
+                            actorId: null
+                        };
+                        assert.deepEqual(request2, expectedResult2);
+                    });
+
+                    test('Fail - invalid topicId', async function () {
+                        const result = (await _groupRequestAddTopicCreate(agentTopicCreator, topicCreator.id, group.id, null, TopicMemberGroup.LEVELS.edit, 'Please accept this topic', 400)).body;
+
+                        const expectedResult = {
+                            status:
+                            {
+                                code: 40001,
+                                message: "No requests were created. Possibly because no valid topicId-s were provided."
+                            }
+                        };
+
+                        assert.deepEqual(result, expectedResult);
+                    });
+
+                    test('Fail - invalid permission level', async function () {
+                        const result = (await _groupRequestAddTopicCreate(agentTopicCreator, topicCreator.id, group.id, topic.id, null, 'Please accept this topic', 400)).body;
+
+                        const expectedResult = {
+                            errors:
+                            {
+                                level: "Request.level cannot be null"
+                            },
+                            status: {
+                                code: 40000
+                            }
+                        };
+
+                        assert.deepEqual(result, expectedResult);
+                    });
+                });
+
+                suite('List', function () {
+                    test('Success', async function () {
+                        const result = (await groupRequestAddTopicCreate(agentTopicCreator, topicCreator.id, group.id, topic.id, TopicMemberGroup.LEVELS.edit, 'Please accept this topic')).body.data;
+
+                        assert.equal(result.count, 1);
+                        assert.equal(result.rows.length, 1);
+                        const list = (await groupRequesAddTopicList(agentGroupCreator, groupCreator.id, group.id)).body.data;
+
+                        assert.deepEqual(list, result);
+                    });
+
+                    test('Fail - missing groupId', async function () {
+                        const create = (await groupRequestAddTopicCreate(agentTopicCreator, topicCreator.id, group.id, topic.id, TopicMemberGroup.LEVELS.edit, 'Please accept this topic')).body.data;
+
+                        assert.equal(create.count, 1);
+                        assert.equal(create.rows.length, 1);
+                        const result = (await _groupRequesAddTopicList(agentGroupCreator, groupCreator.id, null, 404)).body;
+
+                        const expectedResult = {
+                            status: {
+                                code: 40400,
+                                message: "Not Found"
+                            }
+                        };
+                        assert.deepEqual(result, expectedResult);
+                    });
+
+                    test('Fail - unauth', async function () {
+                        const create = (await groupRequestAddTopicCreate(agentTopicCreator, topicCreator.id, group.id, topic.id, TopicMemberGroup.LEVELS.edit, 'Please accept this topic')).body.data;
+
+                        assert.equal(create.count, 1);
+                        assert.equal(create.rows.length, 1);
+                        const result = (await _groupRequesAddTopicList(agent, groupCreator.id, null, 404)).body;
+
+                        const expectedResult = {
+                            status: {
+                                code: 40400,
+                                message: "Not Found"
+                            }
+                        };
+                        assert.deepEqual(result, expectedResult);
+                    });
+                });
+
+                suite('Accept', async function () {
+                    test('Success', async function () {
+                        let groupMembers = (await groupMembersTopicsList(agentGroupCreator, groupCreator.id, group.id)).body.data;
+                        assert.equal(groupMembers.rows.length, 0);
+
+                        const request = (await groupRequestAddTopicCreate(agentTopicCreator, topicCreator.id, group.id, topic.id, TopicMemberGroup.LEVELS.edit, 'Please accept this topic')).body.data;
+                        assert.equal(request.count, 1);
+                        assert.equal(request.rows.length, 1);
+                        const acceptResult = (await groupRequestAddTopicAccept(agentGroupCreator, groupCreator.id, group.id, request.rows[0].id)).body;
+                        assert.deepEqual(acceptResult, { status: { code: 20000 } });
+
+                        const list = (await groupRequesAddTopicList(agentGroupCreator, groupCreator.id, group.id)).body.data;
+                        assert.deepEqual(list, { count: 0, rows: [] });
+                        groupMembers = (await groupMembersTopicsList(agentGroupCreator, groupCreator.id, group.id)).body.data;
+                        assert.equal(groupMembers.rows.length, 1);
+                        assert.equal(groupMembers.rows[0].id, topic.id);
+                        assert.equal(groupMembers.rows[0].permission.levelGroup, TopicMemberGroup.LEVELS.edit);
+                        assert.equal(groupMembers.rows[0].members.groups.count, 1);
+                    });
+
+                    test('Fail - wrong id', async function () {
+                        const request = (await groupRequestAddTopicCreate(agentTopicCreator, topicCreator.id, group.id, topic.id, TopicMemberGroup.LEVELS.edit, 'Please accept this topic')).body.data;
+                        assert.equal(request.count, 1);
+                        assert.equal(request.rows.length, 1);
+                        const acceptResult = (await _groupRequestAddTopicAccept(agentGroupCreator, groupCreator.id, group.id, group.id, 404)).body;
+                        assert.deepEqual(acceptResult, { status: { code: 40400, message: "Not Found" } });
+
+                        const list = (await groupRequesAddTopicList(agentGroupCreator, groupCreator.id, group.id)).body.data;
+                        assert.deepEqual(list, request);
+                    });
+
+                    test('Fail - unauth', async function () {
+                        const request = (await groupRequestAddTopicCreate(agentTopicCreator, topicCreator.id, group.id, topic.id, TopicMemberGroup.LEVELS.edit, 'Please accept this topic')).body.data;
+                        assert.equal(request.count, 1);
+                        assert.equal(request.rows.length, 1);
+                        const acceptResult = (await _groupRequestAddTopicAccept(agent, groupCreator.id, group.id, request.rows[0].id, 401)).body;
+                        assert.deepEqual(acceptResult, { status: { code: 40100, message: "Unauthorized" } });
+
+                        const list = (await groupRequesAddTopicList(agentGroupCreator, groupCreator.id, group.id)).body.data;
+                        assert.deepEqual(list, request);
+                    });
+                });
+
+                suite('Reject', async function () {
+                    test('Success', async function () {
+                        const request = (await groupRequestAddTopicCreate(agentTopicCreator, topicCreator.id, group.id, topic.id, TopicMemberGroup.LEVELS.edit, 'Please accept this topic')).body.data;
+                        assert.equal(request.count, 1);
+                        assert.equal(request.rows.length, 1);
+                        const rejectResult = (await groupRequestAddTopicReject(agentGroupCreator, groupCreator.id, group.id, request.rows[0].id)).body;
+                        assert.deepEqual(rejectResult, { status: { code: 20000 } });
+
+                        const list = (await groupRequesAddTopicList(agentGroupCreator, groupCreator.id, group.id)).body.data;
+                        assert.deepEqual(list, { count: 0, rows: [] });
+                    });
+
+                    test('Fail - wrong id', async function () {
+                        const request = (await groupRequestAddTopicCreate(agentTopicCreator, topicCreator.id, group.id, topic.id, TopicMemberGroup.LEVELS.edit, 'Please accept this topic')).body.data;
+                        assert.equal(request.count, 1);
+                        assert.equal(request.rows.length, 1);
+                        const rejectResult = (await _groupRequestAddTopicReject(agentGroupCreator, groupCreator.id, group.id, group.id, 404)).body;
+                        assert.deepEqual(rejectResult, { status: { code: 40400, message: "Not Found" } });
+
+                        const list = (await groupRequesAddTopicList(agentGroupCreator, groupCreator.id, group.id)).body.data;
+                        assert.deepEqual(list, request);
+                    });
+
+                    test('Fail - unauth', async function () {
+                        const request = (await groupRequestAddTopicCreate(agentTopicCreator, topicCreator.id, group.id, topic.id, TopicMemberGroup.LEVELS.edit, 'Please accept this topic')).body.data;
+                        assert.equal(request.count, 1);
+                        assert.equal(request.rows.length, 1);
+                        const rejectResult = (await _groupRequestAddTopicReject(agent, groupCreator.id, group.id, request.rows[0].id, 401)).body;
+                        assert.deepEqual(rejectResult, { status: { code: 40100, message: "Unauthorized" } });
+
+                        const list = (await groupRequesAddTopicList(agentGroupCreator, groupCreator.id, group.id)).body.data;
+                        assert.deepEqual(list, request);
+                    });
                 });
             });
         });

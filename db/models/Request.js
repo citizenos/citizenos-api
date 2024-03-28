@@ -99,27 +99,42 @@ module.exports = function (sequelize, DataTypes) {
         }
     );
 
+    Request.prototype.toJSON = function () {
+        // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
+        const data = {
+            id: this.dataValues.id,
+            type: this.dataValues.type,
+            creatorId: this.dataValues.creatorId,
+            topicId: this.dataValues.topicId,
+            groupId: this.dataValues.groupId,
+            text: this.dataValues.text,
+            level: this.dataValues.level,
+            createdAt: this.dataValues.createdAt,
+            acceptedAt: this.dataValues.acceptedAt,
+            rejectedAt: this.dataValues.rejectedAt,
+            actorId: this.dataValues.actorId
+        };
+
+        return data;
+    };
+
     Request.associate = function (models) {
-        Request.hasOne(models.User, {
-            through: models.User,
+        Request.belongsTo(models.User, {
             foreignKey: 'creatorId',
             constraints: true
         });
 
-        Request.hasOne(models.User, {
-            through: models.User,
+        Request.belongsTo(models.User, {
             foreignKey: 'actorId',
             constraints: true
         });
 
-        Request.hasOne(models.Topic, {
-            through: models.Topic,
+        Request.belongsTo(models.Topic, {
             foreignKey: 'topicId',
             constraints: true
         });
 
-        Request.hasOne(models.Group, {
-            through: models.Group,
+        Request.belongsTo(models.Group, {
             foreignKey: 'groupId',
             constraints: true
         });
