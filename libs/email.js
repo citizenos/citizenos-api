@@ -243,6 +243,7 @@ module.exports = function (app) {
                 JOIN "Users" u ON u.id = gm."userId"
                 WHERE g.id = :groupId
                     AND g."deletedAt" IS NULL
+                    AND gm.level::"enum_GroupMemberUsers_level" >= :level
                 GROUP BY g.id, gm.level, u.id;
                 `,
                 {
@@ -1882,7 +1883,7 @@ module.exports = function (app) {
 
                     // Handle Partner links
                     // TODO: could use Mu here...
-                    const subject = template.translations.NEWSLETTER?.Subject || 'Changes in the Citizen OS Platform User Experience'
+                    const subject = template.translations.NEWSLETTER?.SUBJECT || 'Changes in the Citizen OS Platform User Experience'
                     let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
                     linkedData.translations = template.translations;
                     const images = [
@@ -1925,18 +1926,19 @@ module.exports = function (app) {
                 id: request.groupId
             }
         });
-
         const topic = await Topic.findOne({
             where: {
                 id: request.topicId
             }
         });
         const groupAdmins = await _getGroupMemberUsers(request.groupId, 'admin');
-
         const linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
         const linkToApplication = urlLib.getFe();
         let templateName = 'addTopicGroup';
         let customStyles = EMAIL_OPTIONS_DEFAULT.styles;
+
+        const linkAcceptTopic = urlLib.getApi('/api/users/self/groups/:groupId/requests/topics/:requestId/accept', { groupId: group.id, requestId: request.id });
+        const linkRejectTopic = urlLib.getApi('/api/users/self/groups/:groupId/requests/topics/:requestId/reject', { groupId: group.id, requestId: request.id });
 
         const emailsSendPromises = groupAdmins.map((toUser) => {
             if (!toUser.email) {
@@ -1946,15 +1948,28 @@ module.exports = function (app) {
 
             const template = resolveTemplate(templateName, toUser.language);
 
-            // Handle Partner links
-            // TODO: could use Mu here...
-            const subject = template.translations.REQUEST_ADD_TOPIC_TO_GROUP.SUBJECT
-
+            const subject = Mustache.render(handleTranslation(template.translations, 'REQUEST_ADD_TOPIC_TO_GROUP.SUBJECT'), { group });
             // In case Topic has no title, just show the full url.
             topic.title = topic.title ? topic.title : linkViewTopic;
 
             let linkedData = EMAIL_OPTIONS_DEFAULT.linkedData;
             linkedData.translations = template.translations;
+
+            const token = cosJwt.getTokenRestrictedUse(
+                {
+                    userId: toUser.id
+                },
+                [
+                    'GET /api/users/self/groups/:groupId/requests/topics/:requestId/accept'
+                        .replace(':groupId', group.id)
+                        .replace(':topicId', topic.id)
+                        .replace(':requestId', request.id),
+                    'GET /api/users/self/groups/:groupId/requests/topics/:requestId/reject'
+                        .replace(':groupId', group.id)
+                        .replace(':topicId', topic.id)
+                        .replace(':requestId', request.id)
+                ]
+            );
 
             // votesCountRequired - add when vote settings support required vote count
             const emailOptions = {
@@ -1964,7 +1979,11 @@ module.exports = function (app) {
                 images: EMAIL_OPTIONS_DEFAULT.images,
                 toUser: toUser,
                 group: group,
+                level: template.translations['TXT_TOPIC_LEVELS_' + request.level.toUpperCase()],
                 topic: topic,
+                message: request.text,
+                linkAcceptTopic: linkAcceptTopic+ '?token=' + encodeURIComponent(token),
+                linkRejectTopic: linkRejectTopic+ '?token=' + encodeURIComponent(token),
                 linkViewTopic: linkViewTopic,
                 linkToApplication: linkToApplication,
                 provider: EMAIL_OPTIONS_DEFAULT.provider,

@@ -20,6 +20,8 @@ module.exports = function (app) {
     const util = app.get('util');
     const urlLib = app.get('urlLib');
     const topicLib = require('./topic')(app);
+    const jwt = app.get('jwt');
+    const authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
 
     const loginCheck = app.get('middleware.loginCheck');
     const asyncMiddleware = app.get('middleware.asyncMiddleware');
@@ -3029,18 +3031,18 @@ module.exports = function (app) {
 
     app.post('/api/users/:userId/groups/:groupId/requests/topics', loginCheck(['partner']), async (req, res, next) => {
         try {
-            //NOTE: userId can be actual UUID or e-mail - it is comfort for the API user, but confusing in the BE code.
             const groupId = req.params.groupId;
             const userId = req.user.userId;
             let topics = req.body;
             const type = 'addTopicGroup';
+
             if (!Array.isArray(topics)) {
                 topics = [topics];
             }
             if (!topics.length) {
                 return res.badRequest();
             }
-            const message = topics[0].text; // IF future holds personalized invite messages, every invite has its own message. Also, easiest solution without rewriting a lot of code.
+            const message = topics[0].text;
 
             // Need the Group just for the activity
             const group = await Group.findOne({
@@ -3048,129 +3050,63 @@ module.exports = function (app) {
                     id: groupId
                 }
             });
+
             await db.transaction(async (t) => {
                 let createRequestPromises = topics.map(async (request) => {
                     const hasAccess = await topicLib._hasPermission(request.topicId, userId, TopicMemberGroup.LEVELS.admin);
                     if (hasAccess && hasAccess.topic.permissions.level === TopicMemberGroup.LEVELS.admin) {
-                        const data = {
-                            type,
-                            creatorId: userId,
-                            topicId: request.topicId,
-                            groupId: groupId,
-                            text: message,
-                            level: request.level
-                        };
-                        const existing = await Request.findOne({
+                        const topicMember = await TopicMemberGroup.findOne({
                             where: {
+                                topicId: request.topicId
+                            }
+                        })
+                        if (!topicMember) {
+                            const data = {
+                                type,
                                 creatorId: userId,
                                 topicId: request.topicId,
-                                groupId: groupId
-                            },
-                            transaction: t
-                        });
-                        if (existing) {
-                            data.id = existing.id;
-                        }
-                        const newRequest = await Request.upsert(data);
-                        const topic = await Topic.findOne({where: {id: request.topicId}});
-                        await cosActivities.offerActivity(
-                            topic,
-                            group,
-                            {
-                                type: 'User',
-                                id: req.user.userId,
-                                ip: req.ip
-                            },
-                            req.method + ' ' + req.path,
-                            t
-                        );
+                                groupId: groupId,
+                                text: message,
+                                level: request.level
+                            };
+                            const existing = await Request.findOne({
+                                where: {
+                                    creatorId: userId,
+                                    topicId: request.topicId,
+                                    groupId: groupId,
+                                    acceptedAt: {
+                                        [Op.eq]: null
+                                    },
+                                    rejectedAt: {
+                                        [Op.eq]: null
+                                    }
+                                },
+                                transaction: t
+                            });
+                            if (existing) {
+                                data.id = existing.id;
+                            }
+                            const newRequest = await Request.upsert(data);
+                            const topic = await Topic.findOne({ where: { id: request.topicId } });
+                            await cosActivities.offerActivity(
+                                topic,
+                                group,
+                                {
+                                    type: 'User',
+                                    id: req.user.userId,
+                                    ip: req.ip
+                                },
+                                req.method + ' ' + req.path,
+                                t
+                            );
 
-                        return newRequest[0].toJSON();
+                            await emailLib.sendRequestAddTopicGroup(newRequest[0]);
+
+                            return newRequest[0].toJSON();
+                        }
                     }
                 })
-                /*const createInvitePromises = validUserIdMembers.map(async function (member) {
-                    const existingMember = currentMembers.find(function (cmember) {
-                        return cmember.userId === member.userId;
-                    });
-                    if (existingMember) {
-                        const levelsArray = Object.keys(GroupMemberUser.LEVELS);
-                        if (existingMember.level !== member.level) {
-                            if (levelsArray.indexOf(member.level) > levelsArray.indexOf(existingMember.level)) {
-                                await existingMember.update({
-                                    level: member.level
-                                });
 
-                                cosActivities
-                                    .updateActivity(
-                                        existingMember,
-                                        null,
-                                        {
-                                            type: 'User',
-                                            id: req.user.userId,
-                                            ip: req.ip
-                                        },
-                                        req.method + ' ' + req.path,
-                                        t
-                                    );
-
-                                return;
-                            }
-
-                            return;
-                        } else {
-                            return;
-                        }
-                    } else {
-                        const deletedCount = await GroupInviteUser
-                            .destroy(
-                                {
-                                    where: {
-                                        userId: member.userId,
-                                        groupId: groupId
-                                    }
-                                }
-                            );
-                        logger.info(`Removed ${deletedCount} invites`);
-                        const groupInvite = await GroupInviteUser.create(
-                            {
-                                groupId: groupId,
-                                creatorId: userId,
-                                userId: member.userId,
-                                level: member.level
-                            },
-                            {
-                                transaction: t
-                            }
-                        );
-
-                        const userInvited = User.build({ id: groupInvite.userId });
-                        userInvited.dataValues.level = groupInvite.level; // FIXME: HACK? Invite event, putting level here, not sure it belongs here, but.... https://github.com/citizenos/citizenos-fe/issues/112 https://github.com/w3c/activitystreams/issues/506
-                        userInvited.dataValues.inviteId = groupInvite.id;
-
-                        await cosActivities.inviteActivity(
-                            group,
-                            userInvited,
-                            {
-                                type: 'User',
-                                id: req.user.userId,
-                                ip: req.ip
-                            },
-                            req.method + ' ' + req.path,
-                            t
-                        );
-
-                        return groupInvite;
-                    }
-                });
-
-                let createdInvites = await Promise.all(createInvitePromises);
-                createdInvites = createdInvites.filter(function (invite) {
-                    return !!invite;
-                });
-
-                for (let invite of createdInvites) { // IF future holds personalized invite messages, every invite has its own message and this code can be removed.
-                    invite.inviteMessage = inviteMessage;
-                }*/
                 let createdRequests = await Promise.all(createRequestPromises);
                 createdRequests = createdRequests.filter((res) => !!res);
                 t.afterCommit(async () => {
@@ -3215,111 +3151,227 @@ module.exports = function (app) {
         }
     });
 
-    /*Accept request*/
-
-    app.post('/api/users/:userId/groups/:groupId/requests/topics/:requestId/accept', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.admin, null, null), async (req, res, next) => {
-        const requestId = req.params.requestId;
+    /* Get topic request*/
+    app.get('/api/users/:userId/groups/:groupId/requests/topics/:requestId', loginCheck(['partner']), async (req, res, next) => {
         try {
-            await db.transaction(async (t) => {
-                const request = await Request.findOne({
-                    where: {
-                        id: requestId
-                    },
-                    transaction: t
-                });
-                if (request) {
-                    const group = await Group.findOne({
-                        where: {
-                            id: request.groupId
-                        }
-                    });
-                    await TopicMemberGroup.create({
-                        groupId: request.groupId,
-                        topicId: request.topicId,
-                        level: request.level
-                    }, { transaction: t })
-                    request.acceptedAt = new Date();
-                    await request.save({
-                        transaction: t
-                    });
-
-                    await cosActivities.acceptActivity(
-                        request,
-                        {
-                            type: 'User',
-                            id: req.user.userId,
-                            ip: req.ip
-                        },
-                        {
-                            type: 'User',
-                            id: request.creatorId
-                        },
-                        group,
-                        req.method + ' ' + req.path,
-                        t
-                    );
-
-                    t.afterCommit(() => {
-                        res.ok();
-                    });
-                } else {
-                    t.afterCommit(() => {
-                        res.notFound();
-                    });
+            const groupId = req.params.groupId;
+            const isGroupAdmin = await _hasPermission(groupId, req.user.id, GroupMemberUser.LEVELS.admin);
+            const request = await Request.findOne({
+                where: {
+                    id: req.params.requestId
                 }
             });
+
+            if (request.creatorId === req.user.id || isGroupAdmin) {
+                return res.ok(request.toJSON());
+            }
+        } catch (err) {
+            next(err);
+        }
+    });
+
+    /* Update topic request*/
+    app.put('/api/users/:userId/groups/:groupId/requests/topics/:requestId', loginCheck(['partner']), async (req, res, next) => {
+        try {
+            const groupId = req.params.groupId;
+            const level = req.body.level;
+            const isGroupAdmin = await _hasPermission(groupId, req.user.id, GroupMemberUser.LEVELS.admin);
+            const request = await Request.findOne({
+                where: {
+                    id: req.params.requestId
+                }
+            });
+
+            if (request.creatorId === req.user.id || isGroupAdmin) {
+                request.level = level;
+                await request.update();
+                return res.ok(request);
+            }
+        } catch (err) {
+            next(err);
+        }
+    });
+
+    /* Delete topic request*/
+    app.delete('/api/users/:userId/groups/:groupId/requests/topics/:requestId', loginCheck(['partner']), async (req, res, next) => {
+        try {
+            const groupId = req.params.groupId;
+            const isGroupAdmin = await _hasPermission(groupId, req.user.id, GroupMemberUser.LEVELS.admin);
+            const request = await Request.findOne({
+                where: {
+                    id: req.params.requestId
+                }
+            });
+
+            if (request.creatorId === req.user.id || isGroupAdmin) {
+                await request.destroy();
+                return res.ok();
+            }
+        } catch (err) {
+            next(err);
+        }
+    });
+
+    /*Accept request*/
+    const _acceptTopicToGroupRequest = async (req, res, redirect) => {
+        const requestId = req.params.requestId;
+        await db.transaction(async (t) => {
+            const request = await Request.findOne({
+                where: {
+                    id: requestId
+                },
+                transaction: t
+            });
+            if (request && request.acceptedAt === null && request.rejectedAt === null) {
+                const group = await Group.findOne({
+                    where: {
+                        id: request.groupId
+                    }
+                });
+                await TopicMemberGroup.create({
+                    groupId: request.groupId,
+                    topicId: request.topicId,
+                    level: request.level
+                }, { transaction: t })
+                request.acceptedAt = new Date();
+                await request.save({
+                    transaction: t
+                });
+
+                await cosActivities.acceptActivity(
+                    request,
+                    {
+                        type: 'User',
+                        id: req.user.userId,
+                        ip: req.ip
+                    },
+                    {
+                        type: 'User',
+                        id: request.creatorId
+                    },
+                    group,
+                    req.method + ' ' + req.path,
+                    t
+                );
+
+                t.afterCommit(() => {
+                    if (redirect) {
+                        return res.redirect(redirect);
+                    }
+
+                    return res.ok();
+                });
+            } else {
+                t.afterCommit(() => {
+                    if (!request)
+                        return res.notFound();
+                    if (redirect) {
+                        return res.redirect(redirect)
+                    } else {
+                        return res.ok();
+                    }
+                });
+            }
+        });
+    };
+
+    app.get('/api/users/:userId/groups/:groupId/requests/topics/:requestId/accept', authTokenRestrictedUse, async (req, res, next) => {
+        try {
+            const request = await Request.findOne({
+                where: {
+                    id: req.params.requestId
+                }
+            });
+            await _acceptTopicToGroupRequest(req, res, urlLib.getFe('/groups/:groupId/requests/topics/:requestId/accept', { groupId: request.groupId, requestId: request.id }));
+        } catch (err) {
+            next(err);
+        }
+    });
+
+    app.post('/api/users/:userId/groups/:groupId/requests/topics/:requestId/accept', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.admin, null, null), async (req, res, next) => {
+        try {
+            _acceptTopicToGroupRequest(req, res)
         } catch (err) {
             console.log(err);
             return next(err);
         }
     });
-    /*Reject recuest*/
-    app.post('/api/users/:userId/groups/:groupId/requests/topics/:requestId/reject', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.admin, null, null), async (req, res, next) => {
+    /*Reject request*/
+
+    const _rejectTopicToGroupRequest = async (req, res, redirect) => {
         const requestId = req.params.requestId;
-        try {
-            await db.transaction(async (t) => {
-                const request = await Request.findOne({
+        await db.transaction(async (t) => {
+            const request = await Request.findOne({
+                where: {
+                    id: requestId
+                },
+                transaction: t
+            });
+            if (request.acceptedAt === null && request.rejectedAt === null) {
+                const group = await Group.findOne({
                     where: {
-                        id: requestId
-                    },
+                        id: request.groupId
+                    }
+                });
+                request.rejectedAt = new Date();
+                await request.save({
                     transaction: t
                 });
-                if (request) {
-                    const group = await Group.findOne({
-                        where: {
-                            id: request.groupId
-                        }
-                    });
-                    request.rejectedAt = new Date();
-                    await request.save({
-                        transaction: t
-                    });
 
-                    await cosActivities.rejectActivity(
-                        request,
-                        {
-                            type: 'User',
-                            id: req.user.userId,
-                            ip: req.ip
-                        },
-                        {
-                            type: 'User',
-                            id: request.creatorId
-                        },
-                        group,
-                        req.method + ' ' + req.path,
-                        t
-                    );
+                await cosActivities.rejectActivity(
+                    request,
+                    {
+                        type: 'User',
+                        id: req.user.userId,
+                        ip: req.ip
+                    },
+                    {
+                        type: 'User',
+                        id: request.creatorId
+                    },
+                    group,
+                    req.method + ' ' + req.path,
+                    t
+                );
 
-                    t.afterCommit(() => {
-                        res.ok();
-                    });
-                } else {
-                    t.afterCommit(() => {
-                        res.notFound();
-                    });
+                t.afterCommit(() => {
+                    if (redirect) {
+                        return res.redirect(redirect);
+                    }
+
+                    return res.ok();
+                });
+            } else {
+                t.afterCommit(() => {
+                    if (!request)
+                        return res.notFound();
+
+                    if (redirect) {
+                        return res.redirect(redirect)
+                    } else {
+                        return res.ok();
+                    }
+                });
+            }
+        });
+    }
+    app.get('/api/users/:userId/groups/:groupId/requests/topics/:requestId/reject', authTokenRestrictedUse, async (req, res, next) => {
+        try {
+            const request = await Request.findOne({
+                where: {
+                    id: req.params.requestId
                 }
             });
+
+            await _rejectTopicToGroupRequest(req, res, urlLib.getFe('/groups/:groupId/requests/topics/:requestId/reject', { groupId: request.groupId, requestId: request.id }));
+        } catch (err) {
+            next(err);
+        }
+    });
+
+    app.post('/api/users/:userId/groups/:groupId/requests/topics/:requestId/reject', loginCheck(['partner']), hasPermission(GroupMemberUser.LEVELS.admin, null, null), async (req, res, next) => {
+        try {
+            await _rejectTopicToGroupRequest(req, res);
         } catch (err) {
             console.log(err);
             return next(err);
