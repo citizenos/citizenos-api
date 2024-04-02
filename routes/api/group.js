@@ -20,7 +20,6 @@ module.exports = function (app) {
     const util = app.get('util');
     const urlLib = app.get('urlLib');
     const topicLib = require('./topic')(app);
-    const jwt = app.get('jwt');
     const authTokenRestrictedUse = app.get('middleware.authTokenRestrictedUse');
 
     const loginCheck = app.get('middleware.loginCheck');
@@ -3142,9 +3141,15 @@ module.exports = function (app) {
                     rejectedAt: {
                         [Op.eq]: null
                     }
-                }
+                },
+                include: [
+                    {
+                        model: Topic,
+                        attributes: ['id', 'title'],
+                        required: true
+                    }
+                ]
             });
-
             res.ok(results);
         } catch (err) {
             return next(err);
@@ -3159,7 +3164,14 @@ module.exports = function (app) {
             const request = await Request.findOne({
                 where: {
                     id: req.params.requestId
-                }
+                },
+                include: [
+                    {
+                        model: Topic,
+                        attributes: ['id', 'title'],
+                        required: true
+                    }
+                ]
             });
 
             if (request.creatorId === req.user.id || isGroupAdmin) {

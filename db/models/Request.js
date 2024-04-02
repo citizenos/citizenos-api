@@ -112,8 +112,12 @@ module.exports = function (sequelize, DataTypes) {
             createdAt: this.dataValues.createdAt,
             acceptedAt: this.dataValues.acceptedAt,
             rejectedAt: this.dataValues.rejectedAt,
-            actorId: this.dataValues.actorId
+            actorId: this.dataValues.actorId,
         };
+
+        if (this.dataValues.Topic) {
+            data.topic = this.dataValues.Topic;
+        }
 
         return data;
     };
