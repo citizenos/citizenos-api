@@ -1,0 +1,132 @@
+<table id="bodyHeader" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding:22px 22px 22px 0;">
+                <p id="header_title_description">A request to add topic to group</p>
+                <p id="header_title">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 16px;">
+                Hi {{toUser.name}}!
+            </td>
+        </tr>
+
+        <tr>
+            <td valign="middle">
+                Member <b>{{fromUser.name}}</b> is requesting to add topic to group.
+            </td>
+        </tr>
+
+        <tr>
+            <td>
+                <p class="info_heading">Topic details</p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <p class="info_row_heading">Topic title</p>
+                                <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
+                                    {{topic.title}}</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <p class="info_row_heading">Permission level</p>
+                                <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
+                                    {{level}}</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+
+        <tr>
+            <td>
+                <p class="info_heading">Group details</p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <p class="info_row_heading">Group name</p>
+                                <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
+                                    {{group.name}}</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+
+        {{#message}}
+        <tr>
+            <td>
+                <p class="info_heading">Reason</p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="message_table">
+                    <tbody>
+                        <tr>
+                            <td style="font-size: 14px;font-weight: 400;line-height: 20px;">
+                                {{message}}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        {{/message}}
+        <tr>
+            <td width="100%">
+                <table width="100%">
+                    <tbody>
+                        <tr>
+                            <td style="padding-bottom: 32px;padding-top: 16px; padding-right: 12px;">
+                                <p class="accept_button">
+                                    <a href="{{linkAcceptTopic}}" target="_blank" style="color: #5AB467;">Accept</a>
+                                </p>
+                            </td>
+                            <td style="padding-bottom: 32px;padding-top: 16px; padding-left: 12px;">
+                                <p class="reject_button">
+                                    <a href="{{linkRejectTopic}}" target="_blank" style="color: #E79427;">Reject</a>
+                                </p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" height="30" style="border-top: 1px solid #E1E7EE;padding-top:16px;">
+                <table style="background-color:#FFF1E1;border-radius: 8px;padding:16px;width: 100%;">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <img src="cid:Warning.png" />
+                            </td>
+                            <td style="font-size:14px;">
+                                You must log in with {{toUser.email}} to access this topic.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+
+    </tbody>
+</table>
