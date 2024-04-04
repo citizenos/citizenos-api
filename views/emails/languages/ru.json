@@ -75,7 +75,10 @@
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
   "NEWSLETTER": {
-    "Subject": "Изменения в пользовательском опыте на платформе Citizen OS"
+    "SUBJECT": "Changes in the Citizen OS Platform User Experience"
+  },
+  "REQUEST_ADD_TOPIC_TO_GROUP": {
+    "SUBJECT": "Request to add topic to group {{group.name}}"
   },
   "NOTIFICATIONS": {
     "SUBJECT": "Обновление по теме “{{topicTitle}}”",
@@ -187,6 +190,9 @@
   "VOTE_REMINDER": {
     "SUBJECT": "Напоминание для голосования"
   },
+  "TXT_TOPIC_LEVELS_ADMIN": "admin",
+  "TXT_TOPIC_LEVELS_EDIT": "editor",
+  "TXT_TOPIC_LEVELS_READ": "participant",
   "TXT_TOPIC_CATEGORY_ALL": "все категории",
   "TXT_TOPIC_CATEGORY_CITIZENOS": "Citizen OS",
   "TXT_TOPIC_CATEGORY_BIOTOOPIA": "Биотопия",
