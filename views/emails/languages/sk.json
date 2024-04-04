@@ -82,6 +82,8 @@
   },
   "NOTIFICATIONS": {
     "SUBJECT": "Aktualizácia témy \"{{topicTitle}}\"",
+    "NOTIFICATION_USER_ACCEPT_REQUEST_TOPIC_GROUP": "User <em>{{userName}}</em> has accepted a request to add <em>{{topicTitle}}</em> to group <em>{{groupName}}</em>",
+    "NOTIFICATION_USER_REJECT_REQUEST_TOPIC_GROUP": "User <em>{{userName}}</em> has rejected a request to add <em>{{topicTitle}}</em> to group <em>{{groupName}}</em>",
     "NOTIFICATION_USER_CREATE_TOPIC": "Užívateľ/ka <b>{{userName}}</b> vytvoril/a novú tému.",
     "NOTIFICATION_USER_UPDATE_TOPIC": "Užívateľ/ka <b>{{userName}}</b> aktualizoval/a pole <b>{{fieldName}}</b> v tejto téme.",
     "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "Užívateľ/ka <b>{{userName}}</b> vykonal/a <b>{{groupCount}}</b> aktualizácií tejto témy.",
