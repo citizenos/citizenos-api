@@ -82,6 +82,8 @@
   },
   "NOTIFICATIONS": {
     "SUBJECT": "Eine Aktualisierung zum Thema “{{topicTitle}}”",
+    "NOTIFICATION_USER_ACCEPT_REQUEST_TOPIC_GROUP": "User <em>{{userName}}</em> has accepted a request to add <em>{{topicTitle}}</em> to group <em>{{groupName}}</em>",
+    "NOTIFICATION_USER_REJECT_REQUEST_TOPIC_GROUP": "User <em>{{userName}}</em> has rejected a request to add <em>{{topicTitle}}</em> to group <em>{{groupName}}</em>",
     "NOTIFICATION_USER_CREATE_TOPIC": "Benutzer <b>{{userName}}</b> hat ein neues Thema erstellt.",
     "NOTIFICATION_USER_UPDATE_TOPIC": "Benutzer <b>{{userName}}</b> hat das Feld <b>{{fieldName}}</b> in diesem Thema aktualisiert.",
     "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "Benutzer <b>{{userName}}</b> hat an diesem Thema <b>{{groupCount}}</b> Aktualisierungen vorgenommen.",
