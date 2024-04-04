@@ -82,6 +82,8 @@
   },
   "NOTIFICATIONS": {
     "SUBJECT": "Обновление по теме “{{topicTitle}}”",
+    "NOTIFICATION_USER_ACCEPT_REQUEST_TOPIC_GROUP": "User <em>{{userName}}</em> has accepted a request to add <em>{{topicTitle}}</em> to group <em>{{groupName}}</em>",
+    "NOTIFICATION_USER_REJECT_REQUEST_TOPIC_GROUP": "User <em>{{userName}}</em> has rejected a request to add <em>{{topicTitle}}</em> to group <em>{{groupName}}</em>",
     "NOTIFICATION_USER_CREATE_TOPIC": "Пользователь <b>{{userName}}</b> создал новую тему.",
     "NOTIFICATION_USER_UPDATE_TOPIC": "Пользователь <b>{{userName}}</b> обновил поле <b>{{fieldName}}</b> в этой теме.",
     "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "Пользователь <b>{{userName}}</b> создал <b>{{groupCount}}</b> обновлений в этой теме.",
