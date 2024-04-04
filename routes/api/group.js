@@ -3226,6 +3226,12 @@ module.exports = function (app) {
 
     /*Accept request*/
     const _acceptTopicToGroupRequest = async (req, res, redirect) => {
+        let userId;
+        if (req.locals.tokenDecoded) {
+            userId = req.locals.tokenDecoded.userId
+        } else if (req.user) {
+            userId = req.user.id;
+        }
         const requestId = req.params.requestId;
         await db.transaction(async (t) => {
             const request = await Request.findOne({
@@ -3262,7 +3268,7 @@ module.exports = function (app) {
                     topic,
                     {
                         type: 'User',
-                        id: req.user.userId,
+                        id: userId,
                         ip: req.ip
                     },
                     group,
@@ -3315,6 +3321,12 @@ module.exports = function (app) {
     /*Reject request*/
 
     const _rejectTopicToGroupRequest = async (req, res, redirect) => {
+        let userId;
+        if (req.locals.tokenDecoded) {
+            userId = req.locals.tokenDecoded.userId
+        } else if (req.user) {
+            userId = req.user.id;
+        }
         const requestId = req.params.requestId;
         await db.transaction(async (t) => {
             const request = await Request.findOne({
@@ -3345,7 +3357,7 @@ module.exports = function (app) {
                     topic,
                     {
                         type: 'User',
-                        id: req.user.userId,
+                        id: userId,
                         ip: req.ip
                     },
                     group,
