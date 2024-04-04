@@ -685,6 +685,109 @@ module.exports = function (app) {
         return _saveActivity(activity, transaction);
     };
 
+    const _acceptRequestActivity = function (instance, object, actor, target, context, transaction) {
+        //https://www.w3.org/TR/activitystreams-vocabulary/#dfn-accept
+        //{
+        //    "@context": "https://www.w3.org/ns/activitystreams",
+        //    "summary": "Sally accepted Joe into the club",
+        //    "type": "Accept",
+        //    "actor": {
+        //        "type": "Person",
+        //        "name": "Sally"
+        //    },
+        //    "object": {
+        //        "type": "Person",
+        //        "name": "Joe"
+        //    },
+        //    "target": {
+        //        "type": "Group",
+        //        "name": "The Club"
+        //    }
+        //}
+        let instanceObject = instance.toJSON();
+
+        instanceObject.actor = actor;
+        instanceObject['@type'] = instance.constructor.name;
+        instanceObject.object = object.toJSON();
+        instanceObject.object['@type'] = object.constructor.name;
+
+        const activity = {
+            type: 'Accept',
+            object: instanceObject,
+            actor: actor
+        };
+
+        if (target) {
+            const targetObject = target.toJSON();
+            _setExtraProperties(target, targetObject);
+            targetObject['@type'] = target.constructor.name;
+            if (target.dataValues.level) {
+                targetObject.level = target.dataValues.level;
+            }
+            if (target.dataValues.inviteId) {
+                targetObject.inviteId = target.dataValues.inviteId;
+            }
+            activity.target = targetObject;
+        }
+
+        if (context) {
+            activity.context = context;
+        }
+
+        return _saveActivity(activity, transaction);
+    };
+
+    const _rejectRequestActivity = function (instance, object, actor, target, context, transaction) {
+        //https://www.w3.org/TR/activitystreams-vocabulary/#dfn-accept
+        //{
+        //    "@context": "https://www.w3.org/ns/activitystreams",
+        //    "summary": "Sally rejected Joe into the club",
+        //    "type": "reject",
+        //    "actor": {
+        //        "type": "Person",
+        //        "name": "Sally"
+        //    },
+        //    "object": {
+        //        "type": "Person",
+        //        "name": "Joe"
+        //    },
+        //    "target": {
+        //        "type": "Group",
+        //        "name": "The Club"
+        //    }
+        //}
+        let instanceObject = instance.toJSON();
+        instanceObject.actor = actor;
+        instanceObject['@type'] = instance.constructor.name;
+        instanceObject.object = object.toJSON();
+        instanceObject.object['@type'] = object.constructor.name;
+
+        const activity = {
+            type: 'Reject',
+            object: instanceObject,
+            actor: actor
+        };
+
+        if (target) {
+            const targetObject = target.toJSON();
+            _setExtraProperties(target, targetObject);
+            targetObject['@type'] = target.constructor.name;
+            if (target.dataValues.level) {
+                targetObject.level = target.dataValues.level;
+            }
+            if (target.dataValues.inviteId) {
+                targetObject.inviteId = target.dataValues.inviteId;
+            }
+            activity.target = targetObject;
+        }
+
+        if (context) {
+            activity.context = context;
+        }
+
+        return _saveActivity(activity, transaction);
+    };
+
     const _leaveActivity = function (instance, actor, context, transaction) {
 
         // {
@@ -1043,6 +1146,8 @@ module.exports = function (app) {
         replyActivity: _replyActivity,
         downloadFinalContainerActivity: _downloadFinalContainerActivity,
         offerActivity: _offerActivity,
-        rejectActivity: _rejectActivity
+        rejectActivity: _rejectActivity,
+        acceptRequestActivity: _acceptRequestActivity,
+        rejectRequestActivity: _rejectRequestActivity,
     };
 };

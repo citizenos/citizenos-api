@@ -3240,6 +3240,13 @@ module.exports = function (app) {
                         id: request.groupId
                     }
                 });
+                const topic = await Topic.findOne({
+                    where: {
+                        id: request.topicId,
+                    },
+                    attributes: ['id', 'title']
+                });
+
                 await TopicMemberGroup.create({
                     groupId: request.groupId,
                     topicId: request.topicId,
@@ -3250,16 +3257,13 @@ module.exports = function (app) {
                     transaction: t
                 });
 
-                await cosActivities.acceptActivity(
+                await cosActivities.acceptRequestActivity(
                     request,
+                    topic,
                     {
                         type: 'User',
                         id: req.user.userId,
                         ip: req.ip
-                    },
-                    {
-                        type: 'User',
-                        id: request.creatorId
                     },
                     group,
                     req.method + ' ' + req.path,
@@ -3325,21 +3329,24 @@ module.exports = function (app) {
                         id: request.groupId
                     }
                 });
+                const topic = await Topic.findOne({
+                    where: {
+                        id: request.topicId,
+                    },
+                    attributes: ['id', 'title']
+                });
+
                 request.rejectedAt = new Date();
                 await request.save({
                     transaction: t
                 });
-
-                await cosActivities.rejectActivity(
+                await cosActivities.rejectRequestActivity(
                     request,
+                    topic,
                     {
                         type: 'User',
                         id: req.user.userId,
                         ip: req.ip
-                    },
-                    {
-                        type: 'User',
-                        id: request.creatorId
                     },
                     group,
                     req.method + ' ' + req.path,

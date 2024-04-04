@@ -8,6 +8,7 @@ module.exports = function (app) {
     const db = models.sequelize;
     const Topic = models.Topic;
     const User = models.User;
+    const Request = models.Request;
     const logger = app.get('logger');
 
     const parseActivity = async function (activity) {
@@ -20,7 +21,7 @@ module.exports = function (app) {
             activity.data.resultObject = jsonpatch.applyPatch(resultObject, activity.data.result).newDocument;
             activity.data.result.forEach(function (item) {
                 const field = item.path.split('/')[1];
-                if (['deletedById', 'deletedByReportId', 'edits'].indexOf(field) > -1 ) {
+                if (['deletedById', 'deletedByReportId', 'edits'].indexOf(field) > -1) {
                     item = null;
                 } else {
                     const change = _.find(resultItems, function (resItem) {
@@ -48,11 +49,11 @@ module.exports = function (app) {
         if (data.actor) {
             values.userName = data.actor.name;
             if (!data.actor.name) {
-                const actor = await User.findOne({where: {id: data.actor.id}});
+                const actor = await User.findOne({ where: { id: data.actor.id } });
                 values.userName = actor.name;
             }
         }
-        Object.values(data).forEach( (value) => {
+        Object.values(data).forEach((value) => {
             values.userName2 = value.userName || value[0]?.userName;
             if (value['@type'] === 'User') {
                 return values.userName2 = value.name
@@ -67,6 +68,9 @@ module.exports = function (app) {
         const origin = data.origin;
         if (['Topic', 'VoteFinalContainer'].indexOf(dataobject['@type']) > -1) {
             return dataobject.title;
+        }
+        if (dataobject.object['@type'] === 'Topic') {
+            return dataobject.object.title;
         }
         if (dataobject['@type'] === 'CommentVote') {
             const topic = await Topic.findOne({
@@ -220,110 +224,110 @@ module.exports = function (app) {
     };
 
     const getActivityValues = async function (activity) {
-      const values = {};
+        const values = {};
 
-      if (activity.data.object) {
-          let dataobject = activity.data.object;
-          if (Array.isArray(dataobject)) {
-              dataobject = dataobject[0];
-          }
-          await getActivityUsers(activity.data, values);
-          values.topicTitle = await getActivityTopicTitle(dataobject, activity.data);
-          values.description = getActivityDescription(dataobject, activity.data);
-          values.groupName = getActivityGroupName(activity.data);
-          values.attachmentName = getActivityAttachmentName(dataobject, activity.data);
-          values.connectionName = getAactivityUserConnectionName(dataobject);
-          getActivityUserLevel(activity.data, values);
+        if (activity.data.object) {
+            let dataobject = activity.data.object;
+            if (Array.isArray(dataobject)) {
+                dataobject = dataobject[0];
+            }
+            await getActivityUsers(activity.data, values);
+            values.topicTitle = await getActivityTopicTitle(dataobject, activity.data);
+            values.description = getActivityDescription(dataobject, activity.data);
+            values.groupName = getActivityGroupName(activity.data);
+            values.attachmentName = getActivityAttachmentName(dataobject, activity.data);
+            values.connectionName = getAactivityUserConnectionName(dataobject);
+            getActivityUserLevel(activity.data, values);
 
-          if (dataobject['@type'] === 'CommentVote' && activity.data.type === 'Create') {
-              let str = 'NOTIFICATIONS.NOTIFICATION_COMMENTVOTE_FIELD_VALUE_';
-              let val = 'UP';
-              if (dataobject.value === -1) {
-                  val = 'DOWN';
-              } else if (dataobject.value === 0) {
-                  val = 'REMOVE';
-              }
-              values.reaction = str + val;
-          }
-      }
-      activity.values = values;
-      if (activity.data.type === 'Update') {
-          getUpdatedTranslations(activity);
-      }
-
-      return activity;
-  };
-
-  const buildActivityString = function (activity) {
-    const keys = Object.keys(activity.data);
-    const stringparts = ['NOTIFICATION'];
-    if (keys.indexOf('actor') > -1) {
-        stringparts.push(activity.data.actor.type);
-    }
-
-    if (keys.indexOf('type') > -1) {
-        stringparts.push(activity.data.type);
-    }
-
-    // TODO: Maybe should implement recursive checking of "object", "origin", "target"  right now hardcoded to 2 levels because of Invite/Accept - https://github.com/citizenos/citizenos-fe/issues/112
-    if (keys.indexOf('object') > -1) {
-        if (Array.isArray(activity.data.object)) {
-            stringparts.push(activity.data.object[0]['@type']);
-        } else if (activity.data.object['@type']) {
-            stringparts.push(activity.data.object['@type']);
-        } else {
-            stringparts.push(activity.data.object.type);
+            if (dataobject['@type'] === 'CommentVote' && activity.data.type === 'Create') {
+                let str = 'NOTIFICATIONS.NOTIFICATION_COMMENTVOTE_FIELD_VALUE_';
+                let val = 'UP';
+                if (dataobject.value === -1) {
+                    val = 'DOWN';
+                } else if (dataobject.value === 0) {
+                    val = 'REMOVE';
+                }
+                values.reaction = str + val;
+            }
+        }
+        activity.values = values;
+        if (activity.data.type === 'Update') {
+            getUpdatedTranslations(activity);
         }
 
-        if (activity.data.object.object) { // Originally created to support Accept activity - https://www.w3.org/TR/activitystreams-vocabulary/#dfn-accept
-            stringparts.push(activity.data.object.object['@type']);
-        }
-    }
+        return activity;
+    };
 
-    if (keys.indexOf('origin') > -1) {
-        if (keys.indexOf('object') > -1 && (Array.isArray(activity.data.object) && activity.data.object[0]['@type'] === activity.data.origin['@type']
-            || activity.data.object['@type'] === activity.data.origin['@type'])) { //ignore duplicate stringparts
-        } else if (Array.isArray(activity.data.origin)) {
-            stringparts.push(activity.data.origin[0]['@type']);
-        } else {
-            stringparts.push(activity.data.origin['@type']);
+    const buildActivityString = function (activity) {
+        const keys = Object.keys(activity.data);
+        const stringparts = ['NOTIFICATION'];
+        if (keys.indexOf('actor') > -1) {
+            stringparts.push(activity.data.actor.type);
         }
-        if (activity.data.object && activity.data.object['@type'] && activity.data.result && activity.data.result[0].path.indexOf('level') > -1 && activity.data.result[0].value === 'none') {
-            stringparts.push('none');
+
+        if (keys.indexOf('type') > -1) {
+            stringparts.push(activity.data.type);
         }
-    }
 
-    if (keys.indexOf('target') > -1) {
-        stringparts.push(activity.data.target['@type']);
-    }
+        // TODO: Maybe should implement recursive checking of "object", "origin", "target"  right now hardcoded to 2 levels because of Invite/Accept - https://github.com/citizenos/citizenos-fe/issues/112
+        if (keys.indexOf('object') > -1) {
+            if (Array.isArray(activity.data.object)) {
+                stringparts.push(activity.data.object[0]['@type']);
+            } else if (activity.data.object['@type']) {
+                stringparts.push(activity.data.object['@type']);
+            } else {
+                stringparts.push(activity.data.object.type);
+            }
 
-    if (keys.indexOf('inReplyTo') > -1) {
-        stringparts.push('IN_REPLY_TO');
-        stringparts.push(activity.data.inReplyTo['@type'])
-    }
-
-    if (activity.data.object && activity.data.object['@type'] && activity.data.object['@type'] === 'CommentVote' && activity.data.type !== 'Delete') {
-        let val = 'up';
-        if ((activity.data.resultObject && activity.data.resultObject.value === -1) || (!activity.data.resultObject && activity.data.object.value === -1)) {
-            val = 'down';
+            if (activity.data.object.object) { // Originally created to support Accept activity - https://www.w3.org/TR/activitystreams-vocabulary/#dfn-accept
+                stringparts.push(activity.data.object.object['@type']);
+            }
         }
-        if (activity.data.resultObject && activity.data.resultObject.value === 0) {
-            val = 'remove';
-        }
-        stringparts.push(val);
-    }
-    activity.string = `NOTIFICATIONS.${stringparts.join('_').toUpperCase()}`;
- /*   if (Object.keys(activity.values?.groupItems).length > 1) {
-        activity.string += '_USERACTIVITYGROUP';
-    }*/
-    return activity.string;
-  };
 
-  const getGroupMemberUsers = async (groupIds, activityType) => {
-      try {
-        const members = await db
-            .query(
-                `
+        if (keys.indexOf('origin') > -1) {
+            if (keys.indexOf('object') > -1 && (Array.isArray(activity.data.object) && activity.data.object[0]['@type'] === activity.data.origin['@type']
+                || activity.data.object['@type'] === activity.data.origin['@type'])) { //ignore duplicate stringparts
+            } else if (Array.isArray(activity.data.origin)) {
+                stringparts.push(activity.data.origin[0]['@type']);
+            } else {
+                stringparts.push(activity.data.origin['@type']);
+            }
+            if (activity.data.object && activity.data.object['@type'] && activity.data.result && activity.data.result[0].path.indexOf('level') > -1 && activity.data.result[0].value === 'none') {
+                stringparts.push('none');
+            }
+        }
+
+        if (keys.indexOf('target') > -1) {
+            stringparts.push(activity.data.target['@type']);
+        }
+
+        if (keys.indexOf('inReplyTo') > -1) {
+            stringparts.push('IN_REPLY_TO');
+            stringparts.push(activity.data.inReplyTo['@type'])
+        }
+
+        if (activity.data.object && activity.data.object['@type'] && activity.data.object['@type'] === 'CommentVote' && activity.data.type !== 'Delete') {
+            let val = 'up';
+            if ((activity.data.resultObject && activity.data.resultObject.value === -1) || (!activity.data.resultObject && activity.data.object.value === -1)) {
+                val = 'down';
+            }
+            if (activity.data.resultObject && activity.data.resultObject.value === 0) {
+                val = 'remove';
+            }
+            stringparts.push(val);
+        }
+        activity.string = `NOTIFICATIONS.${stringparts.join('_').toUpperCase()}`;
+        /*   if (Object.keys(activity.values?.groupItems).length > 1) {
+               activity.string += '_USERACTIVITYGROUP';
+           }*/
+        return activity.string;
+    };
+
+    const getGroupMemberUsers = async (groupIds, activityType) => {
+        try {
+            const members = await db
+                .query(
+                    `
                     SELECT
                         array_agg(u.id) as users
                     FROM "GroupMemberUsers" gm
@@ -332,27 +336,27 @@ module.exports = function (app) {
                     WHERE gm."groupId" IN (:groupIds)
                     AND gm."deletedAt" IS NULL
                     ;`,
-                {
-                    replacements: {
-                        groupIds: groupIds,
-                        activityType
-                    },
-                    type: db.QueryTypes.SELECT,
-                    raw: true
-                }
-            );
+                    {
+                        replacements: {
+                            groupIds: groupIds,
+                            activityType
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true
+                    }
+                );
 
-        return members[0].users || [];
-      } catch (err) {
-          console.log(err);
-      }
+            return members[0].users || [];
+        } catch (err) {
+            console.log(err);
+        }
 
-  }
-  const getTopicMemberUsers = async (topicIds, activityType) => {
-    try {
-      const users = await db
-          .query(
-              `
+    }
+    const getTopicMemberUsers = async (topicIds, activityType) => {
+        try {
+            const users = await db
+                .query(
+                    `
               SELECT
                 array_agg(tmu.id) as users
               FROM (
@@ -405,33 +409,33 @@ module.exports = function (app) {
                 ) tmu
                 JOIN "UserNotificationSettings" usn ON usn."userId" = tmu.id AND usn."deletedAt" IS NULL AND usn."topicId" = tmu."topicId" AND usn.preferences->> :activityType = 'true' AND usn."allowNotifications" = true
              ;`,
-              {
-                  replacements: {
-                      topicIds: topicIds,
-                      activityType
-                  },
-                  type: db.QueryTypes.SELECT,
-                  raw: true,
-                  nest: true
-              }
-          );
+                    {
+                        replacements: {
+                            topicIds: topicIds,
+                            activityType
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true,
+                        nest: true
+                    }
+                );
 
-      return users[0].users || [];
-    } catch (err) {
-        console.log(err);
+            return users[0].users || [];
+        } catch (err) {
+            console.log(err);
+        }
     }
-  }
 
-  const filterUsersBySettings = async (userIds, topicIds, groupIds, activityType) => {
-    userIds = userIds.filter((item) => {return item.length > 0});
-    try {
-        if (!userIds.length || !topicIds?.length) return []; //add with group notifications  && !groupIds?.length)
-        let where = `usn."topicId" IN (:topicIds) `;
-     /*   if (groupIds.length) {
-            where = `usn."groupId" IN (:groupIds) `
-        }*/
-        const users = await db
-            .query(`
+    const filterUsersBySettings = async (userIds, topicIds, groupIds, activityType) => {
+        userIds = userIds.filter((item) => { return item.length > 0 });
+        try {
+            if (!userIds.length || !topicIds?.length) return []; //add with group notifications  && !groupIds?.length)
+            let where = `usn."topicId" IN (:topicIds) `;
+            /*   if (groupIds.length) {
+                   where = `usn."groupId" IN (:groupIds) `
+               }*/
+            const users = await db
+                .query(`
                 SELECT
                     u.id,
                     u.name,
@@ -445,91 +449,110 @@ module.exports = function (app) {
                 AND usn.preferences->> :activityType = 'true' AND usn."allowNotifications" = true AND usn."deletedAt" IS NULL
                 AND u.id IN (:userIds)
             ;`,
-            {
-                replacements: {
-                    userIds,
-                    topicIds,
-                    groupIds,
-                    activityType
+                    {
+                        replacements: {
+                            userIds,
+                            topicIds,
+                            groupIds,
+                            activityType
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true,
+                        nest: true
+                    });
+
+            return users;
+        } catch (err) {
+            console.log(err);
+        }
+    };
+
+    const getActivityType = (activity) => {
+        let target = activity.data.target?.['@type'] || '';
+        const object = activity.data.object['@type'] || (activity.data.object[0] && activity.data.object[0]['@type']) || (activity.data.object.object && activity.data.object.object['@type']);
+
+        if (object.indexOf(target) > -1) {
+            return object;
+        }
+
+        return (`${target}${object}`);
+    }
+
+    const getRelatedUsers = async (activity) => {
+        const activityType = getActivityType(activity);
+        getRelatedItemIds(activity);
+        let users = activity.userIds || [];
+        if (activity.topicIds?.length) {
+            const topicusers = await getTopicMemberUsers(activity.topicIds, activityType);
+            users = users.concat(topicusers);
+        }
+        if (activity.groupIds?.length) {
+            const groupUsers = await getGroupMemberUsers(activity.groupIds, activityType);
+            users = users.concat(groupUsers);
+        }
+
+        if (users.length) {
+            users = await filterUsersBySettings(users, activity.topicIds, activity.groupIds, activityType);
+        }
+
+        if (activity.data.object['@type'] === 'Request' && ['Accept', 'Reject'].indexOf(activity.data.type) > -1) {
+            const request = await Request.findOne({
+                where: {
+                    id: activity.data.object.id
                 },
-                type: db.QueryTypes.SELECT,
-                raw: true,
-                nest: true
+                include: [
+                    {
+                        model: User,
+                        attributes: ['id', 'name', 'email', 'imageUrl'],
+                        as: 'creator',
+                        required: true
+                    }
+                ]
             });
+            if (request) {
+                users.push(request.creator);
+            }
+        }
+
+        users = users.filter((user) => {
+            return user.id !== activity.actorId;
+        });
 
         return users;
-    } catch (err) {
-        console.log(err);
-    }
-  };
-
-  const getActivityType = (activity) => {
-    let target = activity.data.target?.['@type'] || '';
-    const object = activity.data.object['@type'] || (activity.data.object[0] && activity.data.object[0]['@type']) || (activity.data.object.object && activity.data.object.object['@type']);
-
-    if (object.indexOf(target) > -1) {
-        return object;
     }
 
-    return (`${target}${object}`);
-  }
+    const getRelatedItemIds = (activity) => {
+        if (activity.topicIds?.length || activity.groupIds?.length) return;
+        if (!activity.topicIds) activity.topicIds = [];
+        if (!activity.groupIds) activity.groupIds = [];
+        Object.values(activity.data).forEach((value) => {
+            if (value.topicId) activity.topicIds.push(value.topicId);
+            if (value.groupId) activity.groupIds.push(value.groupId);
+            if (value['@type'] === 'Topic' && value.id) activity.topicIds.push(value.id);
+            if (value['@type'] === 'Group' && value.id) activity.groupIds.push(value.id);
+        });
+    };
 
-  const getRelatedUsers = async (activity) => {
-    const activityType = getActivityType(activity);
-    getRelatedItemIds(activity);
-    let users = activity.userIds || [];
-    if (activity.topicIds?.length) {
-        const topicusers = await getTopicMemberUsers(activity.topicIds, activityType);
-        users = users.concat(topicusers);
+    const sendActivityNotifications = async (activity) => {
+        try {
+            if (!activity || ((['Accept', 'Join', 'Leave'].indexOf(activity.data.type) > -1 && activity.data.object && activity.data.object['@type'] !== 'Request'))) return;
+            getRelatedItemIds(activity);
+            const users = await getRelatedUsers(activity);
+            if (!users?.length) return;
+            const activityRes = await parseActivity(activity);
+
+            const emailLib = app.get('email');
+            return emailLib.sendTopicNotification(activityRes, users);
+        } catch (err) {
+            logger.error('Notification sending failed: ', err);
+        }
+
+    };
+
+    return {
+        buildActivityString,
+        getActivityValues,
+        sendActivityNotifications,
+        getRelatedUsers
     }
-    if (activity.groupIds?.length) {
-        const groupUsers = await getGroupMemberUsers(activity.groupIds, activityType);
-        users = users.concat(groupUsers);
-    }
-
-    if (users.length) {
-        users = await filterUsersBySettings(users, activity.topicIds, activity.groupIds, activityType);
-    }
-    users = users.filter((user) => {
-        return user.id !== activity.actorId;
-    });
-
-    return users;
-  }
-
-  const getRelatedItemIds = (activity) => {
-      if (activity.topicIds?.length || activity.groupIds?.length) return;
-      if (!activity.topicIds) activity.topicIds = [];
-      if (!activity.groupIds) activity.groupIds = [];
-      Object.values(activity.data).forEach((value) => {
-          if (value.topicId) activity.topicIds.push(value.topicId);
-          if (value.groupId) activity.groupIds.push(value.groupId);
-          if (value['@type'] === 'Topic' && value.id) activity.topicIds.push(value.id);
-          if (value['@type'] === 'Group' && value.id) activity.groupIds.push(value.id);
-      });
-  };
-
-  const sendActivityNotifications = async (activity) => {
-    try {
-        if (!activity || (['Accept', 'Join', 'Leave'].indexOf(activity.data.type) > -1)) return;
-        getRelatedItemIds(activity);
-        const users = await getRelatedUsers(activity);
-        if (!users?.length) return;
-        const activityRes = await parseActivity(activity);
-
-        const emailLib = app.get('email');
-
-        return emailLib.sendTopicNotification(activityRes, users);
-    } catch (err) {
-        logger.error('Notification sending failed: ', err);
-    }
-
-  };
-
-  return {
-    buildActivityString,
-    getActivityValues,
-    sendActivityNotifications,
-    getRelatedUsers
-  }
 }

@@ -1674,7 +1674,7 @@ module.exports = function (app) {
             notification.values.groupLink = groupLink;
             notification.values.groupName = group.name;
         }
-        const linkGeneralNotificationSettings = `${urlLib.getFe('/myaccount')}?tab=notifications`;
+        const linkGeneralNotificationSettings = `${urlLib.getFe('/account')}#notifications`;
         const linkTopicNotificationSettings = `${linkViewTopic}?notificationSettings`;
         if (['Comment', 'CommentVote'].indexOf(notification.data.object['@type']) > -1) {
             linkViewTopic += `?commentId=${notification.data.object.commentId || notification.data.object.id}`;

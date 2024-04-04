@@ -125,11 +125,13 @@ module.exports = function (sequelize, DataTypes) {
     Request.associate = function (models) {
         Request.belongsTo(models.User, {
             foreignKey: 'creatorId',
+            as: 'creator',
             constraints: true
         });
 
         Request.belongsTo(models.User, {
             foreignKey: 'actorId',
+            as: 'actor',
             constraints: true
         });
 
