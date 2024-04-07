@@ -2,7 +2,7 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding:22px 22px 22px 0;">
-                <p id="header_title_description">A request to add topic to group</p>
+                <p id="header_title_description">Žiadosť o pridanie témy do skupiny</p>
                 <p id="header_title">{{topic.title}}</p>
             </td>
         </tr>
@@ -12,19 +12,19 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding-bottom: 16px;">
-                Hi {{toUser.name}}!
+                Ahoj {{toUser.name}}!
             </td>
         </tr>
 
         <tr>
             <td valign="middle">
-                Member <b>{{fromUser.name}}</b> is requesting to add topic to group.
+                Člen/ka <b>{{fromUser.name}}</b> žiada o pridanie témy do skupiny.
             </td>
         </tr>
 
         <tr>
             <td>
-                <p class="info_heading">Topic details</p>
+                <p class="info_heading">Podrobnosti témy</p>
             </td>
         </tr>
         <tr>
@@ -33,14 +33,14 @@
                     <tbody>
                         <tr>
                             <td>
-                                <p class="info_row_heading">Topic title</p>
+                                <p class="info_row_heading">Názov témy</p>
                                 <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
                                     {{topic.title}}</p>
                             </td>
                         </tr>
                         <tr>
-                            <td>
-                                <p class="info_row_heading">Permission level</p>
+                            <td style="padding-top: 16px">
+                                <p class="info_row_heading">Úroveň oprávnenia</p>
                                 <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
                                     {{level}}</p>
                             </td>
@@ -52,7 +52,7 @@
 
         <tr>
             <td>
-                <p class="info_heading">Group details</p>
+                <p class="info_heading">Podrobnosti o skupine</p>
             </td>
         </tr>
         <tr>
@@ -61,7 +61,7 @@
                     <tbody>
                         <tr>
                             <td>
-                                <p class="info_row_heading">Group name</p>
+                                <p class="info_row_heading">Názov skupiny</p>
                                 <p style="color:#1168A8; font-size: 16px;font-weight: 600;line-height:24px;padding: 0;">
                                     {{group.name}}</p>
                             </td>
@@ -74,7 +74,7 @@
         {{#message}}
         <tr>
             <td>
-                <p class="info_heading">Reason</p>
+                <p class="info_heading">Dôvod</p>
             </td>
         </tr>
         <tr>
@@ -98,12 +98,12 @@
                         <tr>
                             <td style="padding-bottom: 32px;padding-top: 16px; padding-right: 12px;">
                                 <p class="accept_button">
-                                    <a href="{{linkAcceptTopic}}" target="_blank" style="color: #5AB467;">Accept</a>
+                                    <a href="{{linkAcceptTopic}}" target="_blank" style="color: #5AB467;">Prijať</a>
                                 </p>
                             </td>
                             <td style="padding-bottom: 32px;padding-top: 16px; padding-left: 12px;">
                                 <p class="reject_button">
-                                    <a href="{{linkRejectTopic}}" target="_blank" style="color: #E79427;">Reject</a>
+                                    <a href="{{linkRejectTopic}}" target="_blank" style="color: #E79427;">Zamietnuť</a>
                                 </p>
                             </td>
                         </tr>
@@ -120,7 +120,7 @@
                                 <img src="cid:Warning.png" />
                             </td>
                             <td style="font-size:14px;">
-                                You must log in with {{toUser.email}} to access this topic.
+                                Aby ste mali prístup k tejto téme, musíte sa prihlásiť s {{toUser.email}}.
                             </td>
                         </tr>
                     </tbody>
