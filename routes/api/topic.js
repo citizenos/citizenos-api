@@ -202,7 +202,7 @@ module.exports = function (app) {
      */
     const hasPermission = function (level, allowPublic, topicStatusesAllowed, allowSelf) {
         return async function (req, res, next) {
-            const userId = req.user.userId;
+            const userId = req.user.id || req.user.userId;
             const partnerId = req.user.partnerId;
             const topicId = req.params.topicId;
 
