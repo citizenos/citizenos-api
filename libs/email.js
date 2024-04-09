@@ -1987,6 +1987,7 @@ module.exports = function (app) {
                 fromUser,
                 group: group,
                 level: template.translations['TXT_TOPIC_LEVELS_' + request.level.toUpperCase()],
+                visibility: handleTranslation(template.translations, 'TXT_TOPIC_VISIBILITY_' + topic.visibility.toUpperCase()),
                 topic: topic,
                 message: request.text,
                 linkAcceptTopic: linkAcceptTopic+ '?token=' + encodeURIComponent(token),
