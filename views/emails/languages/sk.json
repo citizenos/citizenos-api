@@ -75,15 +75,15 @@
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
   "NEWSLETTER": {
-    "SUBJECT": "Changes in the Citizen OS Platform User Experience"
+    "SUBJECT": "Zmeny v používateľskom prostredí platformy Citizen OS"
   },
   "REQUEST_ADD_TOPIC_TO_GROUP": {
-    "SUBJECT": "Request to add topic to group {{group.name}}"
+    "SUBJECT": "Žiadosť o pridanie témy do skupiny {{group.name}}"
   },
   "NOTIFICATIONS": {
     "SUBJECT": "Aktualizácia témy \"{{topicTitle}}\"",
-    "NOTIFICATION_USER_ACCEPT_REQUEST_TOPIC_GROUP": "User <em>{{userName}}</em> has accepted a request to add <em>{{topicTitle}}</em> to group <em>{{groupName}}</em>",
-    "NOTIFICATION_USER_REJECT_REQUEST_TOPIC_GROUP": "User <em>{{userName}}</em> has rejected a request to add <em>{{topicTitle}}</em> to group <em>{{groupName}}</em>",
+    "NOTIFICATION_USER_ACCEPT_REQUEST_TOPIC_GROUP": "Užívateľ/ka <b>{{userName}}</b> prijal/a žiadosť pridať <b>{{topicTitle}}</b> do skupiny <b>{{groupName}}</b>",
+    "NOTIFICATION_USER_REJECT_REQUEST_TOPIC_GROUP": "Užívateľ/ka <b>{{userName}}</b> odmietol/a žiadosť o pridanie <b>{{topicTitle}}</b> do skupiny <b>{{groupName}}</b>",
     "NOTIFICATION_USER_CREATE_TOPIC": "Užívateľ/ka <b>{{userName}}</b> vytvoril/a novú tému.",
     "NOTIFICATION_USER_UPDATE_TOPIC": "Užívateľ/ka <b>{{userName}}</b> aktualizoval/a pole <b>{{fieldName}}</b> v tejto téme.",
     "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "Užívateľ/ka <b>{{userName}}</b> vykonal/a <b>{{groupCount}}</b> aktualizácií tejto témy.",
@@ -195,6 +195,8 @@
   "TXT_TOPIC_LEVELS_ADMIN": "admin",
   "TXT_TOPIC_LEVELS_EDIT": "editor",
   "TXT_TOPIC_LEVELS_READ": "participant",
+  "TXT_TOPIC_VISIBILITY_PRIVATE": "@:NOTIFICATIONS.NOTIFICATION_TOPIC_FIELD_VISIBILITY_PRIVATE",
+  "TXT_TOPIC_VISIBILITY_PUBLIC": "@:NOTIFICATIONS.NOTIFICATION_TOPIC_FIELD_VISIBILITY_PUBLIC",
   "TXT_TOPIC_CATEGORY_ALL": "všetky kategórie",
   "TXT_TOPIC_CATEGORY_CITIZENOS": "Citizen OS",
   "TXT_TOPIC_CATEGORY_BIOTOOPIA": "Biotoopia",

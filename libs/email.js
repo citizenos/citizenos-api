@@ -1931,6 +1931,12 @@ module.exports = function (app) {
                 id: request.topicId
             }
         });
+
+        const fromUser = await User.findOne({
+            where: {
+                id: request.creatorId
+            }
+        })
         const groupAdmins = await _getGroupMemberUsers(request.groupId, 'admin');
         const linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
         const linkToApplication = urlLib.getFe();
@@ -1978,8 +1984,10 @@ module.exports = function (app) {
                 to: toUser.email,
                 images: EMAIL_OPTIONS_DEFAULT.images,
                 toUser: toUser,
+                fromUser,
                 group: group,
                 level: template.translations['TXT_TOPIC_LEVELS_' + request.level.toUpperCase()],
+                visibility: handleTranslation(template.translations, 'TXT_TOPIC_VISIBILITY_' + topic.visibility.toUpperCase()),
                 topic: topic,
                 message: request.text,
                 linkAcceptTopic: linkAcceptTopic+ '?token=' + encodeURIComponent(token),

@@ -3145,7 +3145,7 @@ module.exports = function (app) {
                 include: [
                     {
                         model: Topic,
-                        attributes: ['id', 'title'],
+                        attributes: ['id', 'title', 'visibility'],
                         required: true
                     }
                 ]
