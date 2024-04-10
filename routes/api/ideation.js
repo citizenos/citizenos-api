@@ -1,11 +1,5 @@
 'use strict';
 
-const TopicIdeation = require('../../db/models/TopicIdeation');
-
-/**
- * Topic API-s (/api/../topics/..)
- */
-
 module.exports = function (app) {
     const loginCheck = app.get('middleware.loginCheck');
     const models = app.get('models');
@@ -17,7 +11,7 @@ module.exports = function (app) {
     const TopicMemberUser = models.TopicMemberUser;
     const Topic = models.Topic;
     const Idea = models.Idea;
-
+    const TopicIdeation = models.TopicIdeation;
 
     const topicLib = require('./topic')(app);
 
@@ -119,30 +113,41 @@ module.exports = function (app) {
      * Read an Ideation
      */
     app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
-        const topicId = req.params.topicId;
         const ideationId = req.params.ideationId;
         try {
-            const ideationInfo = await Ideation.findOne({
-                where: { id: ideationId },
-                attributes: {
-                    include: [[db.fn("COUNT", db.col("Ideas.id")), "ideas.count"]]
+            const ideationInfo = await db.query(`
+                SELECT
+                    i.id,
+                    i.question,
+                    i.deadline,
+                    i."creatorId",
+                    i."createdAt",
+                    i."updatedAt",
+                    COALESCE(ii.count, 0) as "ideas.count"
+                FROM "Ideations" i
+                LEFT JOIN (
+                    SELECT
+                        "ideationId",
+                        COUNT("ideationId") as count
+                    FROM "IdeationIdeas"
+                    GROUP BY "ideationId"
+                ) AS ii ON ii."ideationId" = i.id
+                WHERE i.id = :ideationId AND i."deletedAt" IS NULL
+                ;
+            `,{
+                replacements: {
+                    ideationId
                 },
-                include: [
-                    {
-                        model: Topic,
-                        where: { id: topicId }
-                    },
-                    {
-                        model: Idea, attributes: []
-                    }
-                ]
+                type: db.QueryTypes.SELECT,
+                raw: true,
+                nest: true
             });
 
             if (!ideationInfo) {
                 return res.notFound();
             }
 
-            return res.ok(ideationInfo);
+            return res.ok(ideationInfo[0]);
 
         } catch (err) {
             next(err);
@@ -156,6 +161,7 @@ module.exports = function (app) {
         try {
             const topicId = req.params.topicId;
             const ideationId = req.params.ideationId;
+            console.log(ideationId)
             // Make sure the Vote is actually related to the Topic through which the permission was granted.
             let fields = ['deadline'];
 
@@ -172,15 +178,13 @@ module.exports = function (app) {
                     }
                 ]
             });
-
-            if (!topic || !topic.Ideation || !topic.Ideation.length) {
+            if (!topic || !topic.Ideations || !topic.Ideations.length) {
                 return res.notFound();
             }
             if (topic.status === Topic.STATUSES.draft) {
                 fields = fields.concat(['question']);
             }
-            const ideation = topic.Ideation[0];
-
+            const ideation = topic.Ideations[0];
 
             await db.transaction(async function (t) {
                 fields.forEach(function (field) {

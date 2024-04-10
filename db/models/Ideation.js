@@ -35,10 +35,17 @@ module.exports = function (sequelize, Sequelize) {
                 allowNull: true,
                 comment: 'Question the ideation is gathering ideas for'
             },
+
             deadline: {
                 type: Sequelize.DATE,
                 allowNull: true,
-                comment: 'Deadline for the ideation'
+                comment: 'Deadline for the ideation. If NULL then no deadline at all.',
+                validate: {
+                    isAfter: {
+                        args: [new Date().toString()],
+                        msg: 'Ideation deadline must be in the future.'
+                    }
+                }
             },
             createdAt: {
                 allowNull: false,
@@ -56,7 +63,7 @@ module.exports = function (sequelize, Sequelize) {
     );
 
     Ideation.associate = function (models) {
-        Ideation.hasMany(models.Idea, {
+        Ideation.belongsToMany(models.Idea, {
             through: models.IdeationIdea,
             foreignKey: 'ideationId',
             constraints: true
@@ -74,9 +81,9 @@ module.exports = function (sequelize, Sequelize) {
         // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
         const data = {
             id: this.dataValues.id,
-            question: this.dataValues.type,
+            question: this.dataValues.question,
             creatorId: this.dataValues.creatorId,
-            deadline: this.dataValues.text,
+            deadline: this.dataValues.deadline,
             createdAt: this.dataValues.createdAt,
             updatedAt: this.dataValues.updatedAt
         };

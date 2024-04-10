@@ -213,10 +213,10 @@ module.exports = function (sequelize, DataTypes) {
         });
 
         User.hasMany(models.Ideation, {
-            foreignKey: 'cretorId'
+            foreignKey: 'creatorId'
         });
 
-        User.hasMany(models.Idea, {
+        User.belongsToMany(models.Idea, {
             through: models.IdeaFavourite,
             foreignKey: 'userId',
             constraints: true
