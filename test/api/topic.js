@@ -36,7 +36,7 @@ const _topicRead = async function (agent, userId, topicId, include, expectedHttp
 
     return agent
         .get(path)
-        .query({include: include})
+        .query({ include: include })
         .set('Content-Type', 'application/json')
         .set('Origin', 'https://citizenos.com')
         .expect(expectedHttpCode)
@@ -53,7 +53,7 @@ const _topicReadUnauth = async function (agent, topicId, include, expectedHttpCo
 
     return agent
         .get(path)
-        .query({include: include})
+        .query({ include: include })
         .set('Content-Type', 'application/json')
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
@@ -73,9 +73,15 @@ const _topicUpdate = async function (agent, userId, topicId, status, visibility,
     // IF I it's undefined, it should not change the value and not pass to server
 
     const payload = {
-        visibility: visibility,
-        status: status
     };
+
+    if (status) {
+        payload.status = status;
+    }
+
+    if (visibility) {
+        payload.visibility = visibility;
+    }
 
     if (categories) {
         payload.categories = categories;
@@ -248,7 +254,7 @@ const _topicMemberUsersUpdate = async function (agent, userId, topicId, memberId
 
     return agent
         .put(path)
-        .send({level: level})
+        .send({ level: level })
         .set('Content-Type', 'application/json')
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
@@ -300,7 +306,7 @@ const _topicMemberGroupsUpdate = async function (agent, userId, topicId, memberI
 
     return agent
         .put(path)
-        .send({level: level})
+        .send({ level: level })
         .set('Content-Type', 'application/json')
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
@@ -472,7 +478,7 @@ const _topicInviteUsersUpdate = async function (agent, userId, topicId, inviteId
 
     return agent
         .put(path)
-        .send({level: level})
+        .send({ level: level })
         .set('Content-Type', 'application/json')
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
@@ -692,7 +698,7 @@ const _topicCommentList = async function (agent, userId, topicId, orderBy, expec
 
     return agent
         .get(path)
-        .query({orderBy: orderBy})
+        .query({ orderBy: orderBy })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
@@ -708,7 +714,7 @@ const _topicCommentListUnauth = async function (agent, topicId, orderBy, expecte
     return agent
         .get(path)
         .expect(expectedHttpCode)
-        .query({orderBy: orderBy})
+        .query({ orderBy: orderBy })
         .expect('Content-Type', /json/);
 };
 
@@ -823,7 +829,7 @@ const _topicAttachmentUpdate = async function (agent, userId, topicId, attachmen
     return agent
         .put(path)
         .set('Content-Type', 'application/json')
-        .send({name: name})
+        .send({ name: name })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
@@ -872,7 +878,7 @@ const _topicAttachmentDownload = async function (agent, userId, topicId, attachm
 
     return agent
         .get(path)
-        .query({download: true})
+        .query({ download: true })
         .expect(expectedHttpCode);
 
 };
@@ -961,7 +967,7 @@ const _topicMentionListTestUnauth = async function (agent, topicId, expectedHttp
 
     return agent
         .get(path)
-        .query({test: 'error'})
+        .query({ test: 'error' })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
@@ -1112,7 +1118,7 @@ const _topicVoteStatus = async function (agent, userId, topicId, voteId, token, 
     return agent
         .get(path)
         .set('Content-Type', 'application/json')
-        .query({token: token})
+        .query({ token: token })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
@@ -1129,7 +1135,7 @@ const _topicVoteStatusUnauth = async function (agent, topicId, voteId, token, ex
     return agent
         .get(path)
         .set('Content-Type', 'application/json')
-        .query({token: token})
+        .query({ token: token })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
@@ -1198,7 +1204,7 @@ const _topicVoteDownloadBdocFinalUnauth = async function (agent, topicId, voteId
 
     return agent
         .get(path)
-        .query({token: token})
+        .query({ token: token })
         .send()
         .expect(expectedHttpCode);
 };
@@ -1215,7 +1221,7 @@ const _topicVoteDownloadBdocUserUnauth = async function (agent, topicId, voteId,
 
     return agent
         .get(path)
-        .query({token: token})
+        .query({ token: token })
         .send()
         .expect(expectedHttpCode);
 };
@@ -1233,7 +1239,7 @@ const _topicVoteDownloadBdocUser = async function (agent, topicId, voteId, token
 
     return agent
         .get(path)
-        .query({token: token})
+        .query({ token: token })
         .send()
         .expect(expectedHttpCode)
         .expect('Content-Type', 'application/vnd.etsi.asic-e+zip')
@@ -1280,7 +1286,7 @@ const _topicVoteDelegationCreate = async function (agent, userId, topicId, voteI
     return agent
         .post(path)
         .set('Content-Type', 'application/json')
-        .send({userId: toUserId})
+        .send({ userId: toUserId })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
@@ -1314,7 +1320,7 @@ const _topicCommentVotesCreate = async function (agent, topicId, commentId, valu
     return agent
         .post(path)
         .set('Content-Type', 'application/json')
-        .send({value: value})
+        .send({ value: value })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
@@ -1629,7 +1635,7 @@ suite('Users', function () {
                 const description = '<!DOCTYPE HTML><html><body><h1>H1</h1><br><h2>h2</h2><br><h3>h3</h3><br><script>alert("owned!");</script><br><br>script<br><br></body></html>';
 
                 const topic = (await topicCreate(agent, user.id, 'H1', Topic.STATUSES.inProgress, description, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health])).body.data;
-                const getHtmlResult = await etherpadClient.getHTMLAsync({padID: topic.id});
+                const getHtmlResult = await etherpadClient.getHTMLAsync({ padID: topic.id });
                 assert.equal(getHtmlResult.html, '<!DOCTYPE HTML><html><body><h1>H1</h1><br><h2>h2</h2><br><h3>h3</h3><br><br><br>script<br><br><br></body></html>');
                 const topicR = (await topicRead(agent, user.id, topic.id, null)).body.data;
                 assert.equal(topicR.title, 'H1');
@@ -1925,7 +1931,7 @@ suite('Users', function () {
                         const bdocUri = statusresponse.data.bdocUri;
 
                         const token = bdocUri.slice(bdocUri.indexOf('token=') + 6);
-                        const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                        const tokenData = jwt.verify(token, config.session.publicKey, { algorithms: [config.session.algorithm] });
                         assert.equal(tokenData.userId, creator.id);
                         assert.equal(tokenData.aud[0], 'GET ' + bdocpathExpected);
 
@@ -2066,7 +2072,7 @@ suite('Users', function () {
                         await _topicRead(agentUser, user.id, topic.id, null, 403);
 
                         const topicData = await Topic.findOne({
-                            where: {id: topic.id}
+                            where: { id: topic.id }
                         });
 
                         const padUrl = cosEtherpad.getUserAccessUrl(topicData, user.id, user.name, user.language);
@@ -2078,7 +2084,7 @@ suite('Users', function () {
                         await _topicRead(agentUser, user.id, topic.id, null, 403);
 
                         const topicData = await Topic.findOne({
-                            where: {id: topic.id}
+                            where: { id: topic.id }
                         });
                         const padUrl = cosEtherpad.getUserAccessUrl(topicData, user.id, user.name, user.language);
                         await _padRead(padUrl, 403);
@@ -2179,7 +2185,7 @@ suite('Users', function () {
             });
 
             test('Success - update field', async function () {
-                const resBody = (await topicUpdateField(agent, user.id, topic.id, {visibility: Topic.VISIBILITY.public})).body;
+                const resBody = (await topicUpdateField(agent, user.id, topic.id, { visibility: Topic.VISIBILITY.public })).body;
 
                 assert.isObject(resBody);
                 assert.deepEqual(resBody, {});
@@ -2244,7 +2250,7 @@ suite('Users', function () {
             });
 
             test('Fail - Bad Request - update field - status is null - should not modify existing value', async function () {
-                await _topicUpdateField(agent, user.id, topic.id, {status: null}, 400);
+                await _topicUpdateField(agent, user.id, topic.id, { status: null }, 400);
 
                 const topicNew = (await topicRead(agent, user.id, topic.id, null)).body.data
 
@@ -2303,7 +2309,7 @@ suite('Users', function () {
 
             test('Fail - Cannot update content when status is not inProgress', async function () {
                 await topicUpdate(agent, user.id, topic.id, Topic.STATUSES.followUp, Topic.VISIBILITY.private, null, null, null);
-                await _topicUpdateField(agent, user.id, topic.id, {description: '<html><body><h1>New content</h1></body></html>'}, 400);
+                await _topicUpdateField(agent, user.id, topic.id, { description: '<html><body><h1>New content</h1></body></html>' }, 400);
             });
         });
 
@@ -2341,7 +2347,7 @@ suite('Users', function () {
                 assert.equal(tmCount, 0);
 
                 try {
-                    await etherpadClient.getRevisionsCountAsync({padID: topic.id});
+                    await etherpadClient.getRevisionsCountAsync({ padID: topic.id });
                 } catch (err) {
                     const expectedResult = {
                         code: 1,
@@ -3266,12 +3272,12 @@ suite('Users', function () {
                     assert.equal(groups.count, 2);
                     assert.equal(groups.rows.length, 2);
 
-                    const groupRes = groups.rows.find((g) => {return g.id === group.id});
+                    const groupRes = groups.rows.find((g) => { return g.id === group.id });
                     assert.equal(groupRes.name, group.name);
                     assert.equal(groupRes.level, topicMemberGroupLevel);
                     assert.equal(groupRes.permission.level, TopicMemberGroup.LEVELS.admin);
 
-                    const group2Res = groups.rows.find((g) => {return g.id === group2.id});
+                    const group2Res = groups.rows.find((g) => { return g.id === group2.id });
                     assert.isNull(group2Res.name);
                     assert.equal(group2Res.level, topicMemberGroupLevel);
                     assert.isNull(group2Res.permission.level);
@@ -3993,7 +3999,7 @@ suite('Users', function () {
                         assert.isArray(createdInvites);
                         assert.equal(createdInvites.length, 2);
 
-                        const createdInviteUser1 = createdInvites.find((i) => {return i.level === invitation[0].level}); // find by level, not by id to keep the code simpler
+                        const createdInviteUser1 = createdInvites.find((i) => { return i.level === invitation[0].level }); // find by level, not by id to keep the code simpler
                         assert.uuid(createdInviteUser1.id, 'v4');
                         assert.equal(createdInviteUser1.topicId, topic.id);
                         assert.equal(createdInviteUser1.creatorId, userCreator.id);
@@ -4011,7 +4017,7 @@ suite('Users', function () {
 
                         assert.equal(userInvited1.email, invitation[0].userId.toLowerCase());
 
-                        const createdInviteUser2 = createdInvites.find((i) => {return i.level === invitation[1].level}); // find by level, not by id to keep the code simpler
+                        const createdInviteUser2 = createdInvites.find((i) => { return i.level === invitation[1].level }); // find by level, not by id to keep the code simpler
                         assert.uuid(createdInviteUser2.id, 'v4');
                         assert.equal(createdInviteUser2.topicId, topic.id);
                         assert.equal(createdInviteUser2.creatorId, userCreator.id);
@@ -5014,7 +5020,7 @@ suite('Users', function () {
 
                             const resBody = (await topicUpdateTokenJoinLevel(agentCreator, creator.id, topic.id, token, TopicJoin.LEVELS.admin)).body;
                             const resBodyExpected = {
-                                status: {code: 20000},
+                                status: { code: 20000 },
                                 data: {
                                     token: token,
                                     level: TopicJoin.LEVELS.admin
@@ -5677,7 +5683,7 @@ suite('Users', function () {
 
                         await memberLib.topicMemberUsersCreate(topic.id, members);
 
-                        await topicVoteVote(agent, user.id, topic.id, voteRead.id, [{optionId: voteRead.options.rows[0].id}], null, null, null, null);
+                        await topicVoteVote(agent, user.id, topic.id, voteRead.id, [{ optionId: voteRead.options.rows[0].id }], null, null, null, null);
 
                         const delegationPromises = [
                             topicVoteDelegationCreate(agent, user.id, topic.id, voteRead.id, toUser1.id),
@@ -5689,15 +5695,15 @@ suite('Users', function () {
                         await Promise.all(delegationPromises);
 
                         const votePromises = [
-                            topicVoteVote(agentToUser3, toUser3.id, topic.id, voteRead.id, [{optionId: voteRead.options.rows[0].id}], null, null, null, null),
-                            topicVoteVote(agentToUser6, toUser6.id, topic.id, voteRead.id, [{optionId: voteRead.options.rows[1].id}], null, null, null, null)
+                            topicVoteVote(agentToUser3, toUser3.id, topic.id, voteRead.id, [{ optionId: voteRead.options.rows[0].id }], null, null, null, null),
+                            topicVoteVote(agentToUser6, toUser6.id, topic.id, voteRead.id, [{ optionId: voteRead.options.rows[1].id }], null, null, null, null)
                         ];
                         await Promise.all(votePromises);
 
                         const voteReadAfterVote = (await topicVoteRead(agentToUser6, toUser6.id, topic.id, voteRead.id)).body.data;
                         assert.equal(voteReadAfterVote.votersCount, 5);
 
-                        await topicVoteVote(agentToUser5, toUser5.id, topic.id, voteRead.id, [{optionId: voteRead.options.rows[1].id}], null, null, null, null);
+                        await topicVoteVote(agentToUser5, toUser5.id, topic.id, voteRead.id, [{ optionId: voteRead.options.rows[1].id }], null, null, null, null);
 
                         const voteReadAfterVote2 = (await topicVoteRead(agentToUser6, toUser6.id, topic.id, voteRead.id)).body.data;
                         assert.equal(voteReadAfterVote2.votersCount, 8);
@@ -6185,7 +6191,7 @@ suite('Users', function () {
                         const voteReadAfterVote = (await topicVoteRead(agent, user.id, topic.id, vote.id)).body.data;
 
                         _(voteList).forEach(function (voteOption) {
-                            const option = voteReadAfterVote.options.rows.find((o) => {return o.id === voteOption.optionId});
+                            const option = voteReadAfterVote.options.rows.find((o) => { return o.id === voteOption.optionId });
                             assert.equal(option.voteCount, 1);
                         });
                     });
@@ -6203,7 +6209,7 @@ suite('Users', function () {
                             }
                         ];
 
-                        const vote = (await topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null, [{value: 'allMembersVoted', enabled: true}])).body.data;
+                        const vote = (await topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null, [{ value: 'allMembersVoted', enabled: true }])).body.data;
                         await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                         const voteRead = (await topicVoteRead(agent, user.id, topic.id, vote.id)).body.data;
                         const voteList = [
@@ -6215,7 +6221,7 @@ suite('Users', function () {
                         const voteReadAfterVote = (await topicVoteRead(agent, user.id, topic.id, vote.id)).body.data;
 
                         voteList.forEach((voteOption) => {
-                            const option = voteReadAfterVote.options.rows.find((vo) => { return vo.id === voteOption.optionId});
+                            const option = voteReadAfterVote.options.rows.find((vo) => { return vo.id === voteOption.optionId });
                             assert.equal(option.voteCount, 1);
                         });
                         assert.closeTo(new Date(voteReadAfterVote.endsAt).getTime(), new Date().getTime(), 1000);
@@ -6240,10 +6246,10 @@ suite('Users', function () {
 
                         const voteList1 = [
                             {
-                                optionId: voteRead.options.rows.find((o) => {return o.value === options[0].value}).id
+                                optionId: voteRead.options.rows.find((o) => { return o.value === options[0].value }).id
                             },
                             {
-                                optionId: voteRead.options.rows.find((o) => {return o.value === options[1].value}).id
+                                optionId: voteRead.options.rows.find((o) => { return o.value === options[1].value }).id
                             }
                         ];
 
@@ -6251,17 +6257,17 @@ suite('Users', function () {
                         const voteReadAfterVote1 = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
 
                         _(voteList1).forEach(function (voteOption) {
-                            const option = voteReadAfterVote1.options.rows.find((o) => {return o.id === voteOption.optionId});
+                            const option = voteReadAfterVote1.options.rows.find((o) => { return o.id === voteOption.optionId });
                             assert.equal(option.voteCount, 1);
                         });
 
                         // Vote for the 2nd time, change your vote, by choosing 1
                         const voteList2 = [
                             {
-                                optionId: voteCreated.options.rows.find((o) => {return o.value === options[1].value}).id
+                                optionId: voteCreated.options.rows.find((o) => { return o.value === options[1].value }).id
                             },
                             {
-                                optionId: voteCreated.options.rows.find((o) => {return o.value === options[2].value}).id
+                                optionId: voteCreated.options.rows.find((o) => { return o.value === options[2].value }).id
                             }
                         ];
 
@@ -6286,7 +6292,7 @@ suite('Users', function () {
                         });
 
                         // Check that the 1st vote was overwritten
-                        const optionOverwritten = voteReadAfterVote2.options.rows.find((o) => {return o.id === voteList1[0].optionId});
+                        const optionOverwritten = voteReadAfterVote2.options.rows.find((o) => { return o.id === voteList1[0].optionId });
                         assert.notProperty(optionOverwritten, 'voteCount');
                         assert.notProperty(optionOverwritten, 'selected');
 
@@ -6314,10 +6320,10 @@ suite('Users', function () {
 
                         const voteList1 = [
                             {
-                                optionId: voteRead.options.rows.find((o) => {return o.value === options[0].value}).id
+                                optionId: voteRead.options.rows.find((o) => { return o.value === options[0].value }).id
                             },
                             {
-                                optionId: voteRead.options.rows.find((o) => {return o.value === options[0].value}).id
+                                optionId: voteRead.options.rows.find((o) => { return o.value === options[0].value }).id
                             }
                         ];
 
@@ -6325,7 +6331,7 @@ suite('Users', function () {
 
                         const voteReadAfterVote1 = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
                         _(voteList1).forEach(function (voteOption) {
-                            const option = voteReadAfterVote1.options.rows.find((o) => {return o.id === voteOption.optionId});
+                            const option = voteReadAfterVote1.options.rows.find((o) => { return o.id === voteOption.optionId });
                             assert.equal(option.voteCount, 1);
                         });
                     });
@@ -6352,17 +6358,17 @@ suite('Users', function () {
 
                         const voteList = [
                             {
-                                optionId: _.find(voteRead.options.rows, {value: options[0].value}).id
+                                optionId: _.find(voteRead.options.rows, { value: options[0].value }).id
                             },
                             {
-                                optionId: _.find(voteRead.options.rows, {value: options[3].value}).id
+                                optionId: _.find(voteRead.options.rows, { value: options[3].value }).id
                             }
                         ];
 
                         await topicVoteVote(agent, user.id, topic.id, voteCreated.id, voteList, null, null, null, null);
                         const voteReadAfterVote1 = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
-                        const option1 = _.find(voteReadAfterVote1.options.rows, {id: voteList[0].optionId});
-                        const option2 = _.find(voteReadAfterVote1.options.rows, {id: voteList[1].optionId});
+                        const option1 = _.find(voteReadAfterVote1.options.rows, { id: voteList[0].optionId });
+                        const option2 = _.find(voteReadAfterVote1.options.rows, { id: voteList[1].optionId });
                         assert.notProperty(option1, 'voteCount');
                         assert.equal(option2.voteCount, 1);
                         assert.equal(option2.value, 'Veto');
@@ -6390,17 +6396,17 @@ suite('Users', function () {
 
                         const voteList = [
                             {
-                                optionId: _.find(voteRead.options.rows, {value: options[0].value}).id
+                                optionId: _.find(voteRead.options.rows, { value: options[0].value }).id
                             },
                             {
-                                optionId: _.find(voteRead.options.rows, {value: options[3].value}).id
+                                optionId: _.find(voteRead.options.rows, { value: options[3].value }).id
                             }
                         ];
 
                         await topicVoteVote(agent, user.id, topic.id, voteCreated.id, voteList, null, null, null, null);
                         const voteReadAfterVote1 = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
-                        const option1 = _.find(voteReadAfterVote1.options.rows, {id: voteList[0].optionId});
-                        const option2 = _.find(voteReadAfterVote1.options.rows, {id: voteList[1].optionId});
+                        const option1 = _.find(voteReadAfterVote1.options.rows, { id: voteList[0].optionId });
+                        const option2 = _.find(voteReadAfterVote1.options.rows, { id: voteList[1].optionId });
                         assert.notProperty(option1, 'voteCount');
                         assert.equal(option2.voteCount, 1);
                         assert.equal(option2.value, 'Neutral');
@@ -6428,17 +6434,17 @@ suite('Users', function () {
 
                         const voteList = [
                             {
-                                optionId: _.find(voteRead.options.rows, {value: options[2].value}).id
+                                optionId: _.find(voteRead.options.rows, { value: options[2].value }).id
                             },
                             {
-                                optionId: _.find(voteRead.options.rows, {value: options[3].value}).id
+                                optionId: _.find(voteRead.options.rows, { value: options[3].value }).id
                             }
                         ];
 
                         await topicVoteVote(agent, user.id, topic.id, voteCreated.id, voteList, null, null, null, null);
                         const voteReadAfterVote1 = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
-                        const option1 = _.find(voteReadAfterVote1.options.rows, {id: voteList[0].optionId});
-                        const option2 = _.find(voteReadAfterVote1.options.rows, {id: voteList[1].optionId});
+                        const option1 = _.find(voteReadAfterVote1.options.rows, { id: voteList[0].optionId });
+                        const option2 = _.find(voteReadAfterVote1.options.rows, { id: voteList[1].optionId });
 
                         assert.equal(option1.value, 'Veto');
                         assert.equal(option2.value, 'Neutral');
@@ -6751,7 +6757,7 @@ suite('Users', function () {
                                 const status = res.body.status;
                                 const data = res.body.data;
 
-                                assert.deepEqual(status, {code: 20001});
+                                assert.deepEqual(status, { code: 20001 });
                                 assert.property(data, 'signedInfoDigest');
                                 assert.isTrue(data.signedInfoDigest.length > 0);
                             });
@@ -6769,7 +6775,7 @@ suite('Users', function () {
                                 const status = res.body.status;
                                 const data = res.body.data;
 
-                                assert.deepEqual(status, {code: 20001});
+                                assert.deepEqual(status, { code: 20001 });
                                 assert.property(data, 'signedInfoDigest');
                                 assert.isTrue(data.signedInfoDigest.length > 0);
                             });
@@ -6817,9 +6823,9 @@ suite('Users', function () {
                                 ];
                                 await UserConnection
                                     .create({
-                                            userId: user.id,
-                                            connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                            connectionUserId: 'PNOEE-19101010021'
+                                        userId: user.id,
+                                        connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                        connectionUserId: 'PNOEE-19101010021'
                                     });
                                 const certificate = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
                                 const resBody = (await _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, certificate, null, null, null, 400)).body;
@@ -6870,7 +6876,7 @@ suite('Users', function () {
 
                                 const status = resBody.status;
                                 const data = resBody.data;
-                                assert.deepEqual(status, {code: 20001});
+                                assert.deepEqual(status, { code: 20001 });
                                 assert.property(data, 'signedInfoDigest');
                                 assert.isTrue(data.signedInfoDigest.length > 0);
 
@@ -6954,7 +6960,7 @@ suite('Users', function () {
                                 }
                             ];
 
-                            const vote = (await topicVoteCreate(agent, user.id, topicNew.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard, [{value: 'allMembersVoted', enabled: true}])).body.data;
+                            const vote = (await topicVoteCreate(agent, user.id, topicNew.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard, [{ value: 'allMembersVoted', enabled: true }])).body.data;
                             await topicUpdateStatus(agent, user.id, topicNew.id, Topic.STATUSES.voting);
                             const phoneNumber = '+37200000766';
                             const pid = '60001019906';
@@ -7000,10 +7006,10 @@ suite('Users', function () {
                             // Vote for the first time
                             const voteList1 = [
                                 {
-                                    optionId: _.find(voteRead.options.rows, {value: options[0].value}).id
+                                    optionId: _.find(voteRead.options.rows, { value: options[0].value }).id
                                 },
                                 {
-                                    optionId: _.find(voteRead.options.rows, {value: options[1].value}).id
+                                    optionId: _.find(voteRead.options.rows, { value: options[1].value }).id
                                 }
                             ];
 
@@ -7017,17 +7023,17 @@ suite('Users', function () {
                             const voteReadAfterVote1 = (await topicVoteRead(agent, user.id, topic.id, voteRead.id)).body.data;
 
                             _(voteList1).forEach(function (voteOption) {
-                                const option = _.find(voteReadAfterVote1.options.rows, {id: voteOption.optionId});
+                                const option = _.find(voteReadAfterVote1.options.rows, { id: voteOption.optionId });
                                 assert.equal(option.voteCount, 1);
                             });
 
                             // Vote for the 2nd time, change your vote, by choosing 1
                             const voteList2 = [
                                 {
-                                    optionId: _.find(voteRead.options.rows, {value: options[1].value}).id
+                                    optionId: _.find(voteRead.options.rows, { value: options[1].value }).id
                                 },
                                 {
-                                    optionId: _.find(voteRead.options.rows, {value: options[2].value}).id
+                                    optionId: _.find(voteRead.options.rows, { value: options[2].value }).id
                                 }
                             ];
 
@@ -7041,13 +7047,13 @@ suite('Users', function () {
                             const voteReadAfterVote2 = (await topicVoteRead(agent, user.id, topic.id, voteRead.id)).body.data;
                             // Check that the 2nd vote was counted
                             _(voteList2).forEach(function (voteOption) {
-                                const option = _.find(voteReadAfterVote2.options.rows, {id: voteOption.optionId});
+                                const option = _.find(voteReadAfterVote2.options.rows, { id: voteOption.optionId });
                                 assert.equal(option.voteCount, 1);
                                 assert.isTrue(option.selected);
                             });
 
                             // Check that the 1st vote was overwritten
-                            const optionOverwritten = _.find(voteReadAfterVote2.options.rows, {id: voteList1[0].optionId});
+                            const optionOverwritten = _.find(voteReadAfterVote2.options.rows, { id: voteList1[0].optionId });
                             assert.notProperty(optionOverwritten, 'voteCount');
                             assert.notProperty(optionOverwritten, 'selected');
 
@@ -7067,7 +7073,7 @@ suite('Users', function () {
 
                             // Make sure the results match with the result read with Topic list (/api/users/:userId/topics)
                             const listOfTopics = (await topicList(agent, user.id, ['vote'], null, null, null, null, null, null)).body.data;
-                            const topicVotedOn = _.find(listOfTopics.rows, {id: topic.id});
+                            const topicVotedOn = _.find(listOfTopics.rows, { id: topic.id });
 
                             // Topic list included votes dont have downloads
                             delete voteReadAfterVote2.downloads;
@@ -7201,7 +7207,7 @@ suite('Users', function () {
                             ];
                             await memberLib.topicMemberUsersCreate(topic.id, members);
                             const listOfTopics = (await topicList(agentUser2, user2.id, ['vote'], null, null, null, true, null, null)).body.data;
-                            const topicVotedOn = _.find(listOfTopics.rows, {id: topic.id});
+                            const topicVotedOn = _.find(listOfTopics.rows, { id: topic.id });
 
                             assert.deepEqual(topicVotedOn.vote, voteReadAfterVote2);
                         });
@@ -7406,7 +7412,7 @@ suite('Users', function () {
                             ];
                             await memberLib.topicMemberUsersCreate(topic.id, members);
                             const listOfTopics = (await topicList(agentUser2, user2.id, ['vote'], null, null, null, true, null, null)).body.data;
-                            const topicVotedOn = _.find(listOfTopics.rows, {id: topic.id});
+                            const topicVotedOn = _.find(listOfTopics.rows, { id: topic.id });
                             assert.deepEqual(topicVotedOn.vote, voteReadAfterVote2);
                         });
 
@@ -7633,10 +7639,10 @@ suite('Users', function () {
                                     // Vote for the first time
                                     const voteList1 = [
                                         {
-                                            optionId: _.find(voteRead.options.rows, {value: options[0].value}).id
+                                            optionId: _.find(voteRead.options.rows, { value: options[0].value }).id
                                         },
                                         {
-                                            optionId: _.find(voteRead.options.rows, {value: options[1].value}).id
+                                            optionId: _.find(voteRead.options.rows, { value: options[1].value }).id
                                         }
                                     ];
 
@@ -7646,10 +7652,10 @@ suite('Users', function () {
                                     // Vote for the 2nd time, change your vote, by choosing 1
                                     const voteList2 = [
                                         {
-                                            optionId: _.find(voteRead.options.rows, {value: options[1].value}).id
+                                            optionId: _.find(voteRead.options.rows, { value: options[1].value }).id
                                         },
                                         {
-                                            optionId: _.find(voteRead.options.rows, {value: options[2].value}).id
+                                            optionId: _.find(voteRead.options.rows, { value: options[2].value }).id
                                         }
                                     ];
 
@@ -7672,7 +7678,7 @@ suite('Users', function () {
 
                                     request('')
                                         .get(voteReadAfterVote2.downloads.bdocVote.split('?')[0])
-                                        .query({token: userBdocDownloadToken})
+                                        .query({ token: userBdocDownloadToken })
                                         .pipe(fileWriteStream);
 
                                     await fileWriteStreamPromised;
@@ -7753,10 +7759,10 @@ suite('Users', function () {
                                     // Vote for the first time
                                     const voteList1 = [
                                         {
-                                            optionId: voteRead.options.rows.find((o) => {return o.value === options[0].value}).id
+                                            optionId: voteRead.options.rows.find((o) => { return o.value === options[0].value }).id
                                         },
                                         {
-                                            optionId: voteRead.options.rows.find((o) => {return o.value === options[1].value}).id
+                                            optionId: voteRead.options.rows.find((o) => { return o.value === options[1].value }).id
                                         }
                                     ];
 
@@ -7766,10 +7772,10 @@ suite('Users', function () {
                                     // Vote for the 2nd time, change your vote, by choosing 1
                                     const voteList2 = [
                                         {
-                                            optionId: voteRead.options.rows.find((o) => {return o.value === options[1].value}).id
+                                            optionId: voteRead.options.rows.find((o) => { return o.value === options[1].value }).id
                                         },
                                         {
-                                            optionId: voteRead.options.rows.find((o) => {return o.value === options[2].value}).id
+                                            optionId: voteRead.options.rows.find((o) => { return o.value === options[2].value }).id
                                         }
                                     ];
 
@@ -7880,10 +7886,10 @@ suite('Users', function () {
                                     // Vote for the first time
                                     const voteList1 = [
                                         {
-                                            optionId: _.find(voteRead.options.rows, {value: options[0].value}).id
+                                            optionId: _.find(voteRead.options.rows, { value: options[0].value }).id
                                         },
                                         {
-                                            optionId: _.find(voteRead.options.rows, {value: options[1].value}).id
+                                            optionId: _.find(voteRead.options.rows, { value: options[1].value }).id
                                         }
                                     ];
 
@@ -7891,10 +7897,10 @@ suite('Users', function () {
                                     // Vote for the first time
                                     const voteList2 = [
                                         {
-                                            optionId: _.find(voteRead.options.rows, {value: options[0].value}).id
+                                            optionId: _.find(voteRead.options.rows, { value: options[0].value }).id
                                         },
                                         {
-                                            optionId: _.find(voteRead.options.rows, {value: options[2].value}).id
+                                            optionId: _.find(voteRead.options.rows, { value: options[2].value }).id
                                         }
                                     ];
 
@@ -7963,7 +7969,7 @@ suite('Users', function () {
                                     const fileWriteStreamPromised = cosUtil.streamToPromise(fileWriteStream);
                                     request('')
                                         .get(voteReadAfterVoteClosed.downloads.bdocFinal.split('?')[0])
-                                        .query({token: finalBdocDownloadToken})
+                                        .query({ token: finalBdocDownloadToken })
                                         .pipe(fileWriteStream);
 
                                     await fileWriteStreamPromised;
@@ -8287,10 +8293,10 @@ suite('Users', function () {
                             const topicVoteStatusResponse = await _topicVoteStatus(agent, user.id, topic.id, vote.id, response.data.token, 400);
                             const expectedResponse = {
                                 status:
-                                    {
-                                        code: 40010,
-                                        message: 'User has cancelled the signing process'
-                                    }
+                                {
+                                    code: 40010,
+                                    message: 'User has cancelled the signing process'
+                                }
                             }
                             assert.equal(topicVoteStatusResponse.body.status.code, 40010);
                             assert.deepEqual(topicVoteStatusResponse.body, expectedResponse);
@@ -8316,10 +8322,10 @@ suite('Users', function () {
                             const topicVoteStatusResponse = await _topicVoteStatus(agent, user.id, topic.id, vote.id, response.data.token, 400);
                             const expectedResponse = {
                                 status:
-                                    {
-                                        code: 40010,
-                                        message: 'User has cancelled the signing process'
-                                    }
+                                {
+                                    code: 40010,
+                                    message: 'User has cancelled the signing process'
+                                }
                             }
                             assert.equal(topicVoteStatusResponse.body.status.code, 40010);
                             assert.deepEqual(topicVoteStatusResponse.body, expectedResponse);
@@ -8469,8 +8475,8 @@ suite('Users', function () {
                     const resBody = (await _topicCommentCreate(agent, user.id, topic.id, null, null, type, subject, text, 400)).body;
 
                     const resBodyExpected = {
-                        status: {code: 40000},
-                        errors: {text: `Text can be 1 to ${maxLength} characters long.`}
+                        status: { code: 40000 },
+                        errors: { text: `Text can be 1 to ${maxLength} characters long.` }
                     };
 
                     assert.deepEqual(resBody, resBodyExpected);
@@ -8485,8 +8491,8 @@ suite('Users', function () {
                     const resBody = (await _topicCommentCreate(agent, user.id, topic.id, null, null, type, subject, text, 400)).body;
 
                     const resBodyExpected = {
-                        status: {code: 40000},
-                        errors: {text: `Text can be 1 to ${maxLength} characters long.`}
+                        status: { code: 40000 },
+                        errors: { text: `Text can be 1 to ${maxLength} characters long.` }
                     };
 
                     assert.deepEqual(resBody, resBodyExpected);
@@ -8573,8 +8579,8 @@ suite('Users', function () {
                     const resBodyEdit = (await _topicCommentEdit(agent3, user3.id, topic.id, comment.id, subject + 'a', 'a'.repeat(maxLength + 1), type, 400)).body;
 
                     const resBodyEditExpected = {
-                        status: {code: 40000},
-                        errors: {text: `Text can be 1 to ${maxLength} characters long.`}
+                        status: { code: 40000 },
+                        errors: { text: `Text can be 1 to ${maxLength} characters long.` }
                     };
 
                     assert.deepEqual(resBodyEdit, resBodyEditExpected);
@@ -8625,7 +8631,7 @@ suite('Users', function () {
                     assert.equal(comments.length, 3);
 
                     // Comment 1
-                    const c1 = _.find(comments, {id: comment1.id});
+                    const c1 = _.find(comments, { id: comment1.id });
 
                     assert.equal(c1.id, comment1.id);
                     assert.equal(c1.type, comment1.type);
@@ -8637,7 +8643,7 @@ suite('Users', function () {
                     assert.deepEqual(c1.creator, creatorExpected);
 
                     // Comment 2
-                    const c2 = _.find(comments, {id: comment2.id});
+                    const c2 = _.find(comments, { id: comment2.id });
 
                     assert.equal(c2.id, comment2.id);
                     assert.equal(c2.type, comment2.type);
@@ -8649,7 +8655,7 @@ suite('Users', function () {
                     assert.deepEqual(c2.creator, creatorExpected);
 
                     // Comment 3
-                    const c3 = _.find(comments, {id: comment3.id});
+                    const c3 = _.find(comments, { id: comment3.id });
 
                     assert.equal(c3.id, comment3.id);
                     assert.equal(c3.type, comment3.type);
@@ -8673,7 +8679,7 @@ suite('Users', function () {
                     assert.equal(comments.length, 3);
 
                     // Comment 1
-                    const c1 = _.find(comments, {id: comment1.id});
+                    const c1 = _.find(comments, { id: comment1.id });
 
                     assert.equal(c1.id, comment1.id);
                     assert.equal(c1.type, comment1.type);
@@ -8706,7 +8712,7 @@ suite('Users', function () {
                     assert.equal(comments.length, 3);
 
                     // Comment 1
-                    const c1 = _.find(comments, {id: comment1.id});
+                    const c1 = _.find(comments, { id: comment1.id });
 
                     assert.equal(c1.id, comment1.id);
                     assert.equal(c1.type, comment1.type);
@@ -8732,7 +8738,7 @@ suite('Users', function () {
                     assert.deepEqual(c1r1.creator, creatorExpected);
 
                     // Comment 2
-                    const c2 = _.find(comments, {id: comment2.id});
+                    const c2 = _.find(comments, { id: comment2.id });
 
                     assert.equal(c2.id, comment2.id);
                     assert.equal(c2.type, comment2.type);
@@ -8768,7 +8774,7 @@ suite('Users', function () {
                     assert.deepEqual(c2r2.creator, creatorExpected);
 
                     // Comment 3
-                    const c3 = _.find(comments, {id: comment3.id});
+                    const c3 = _.find(comments, { id: comment3.id });
 
                     assert.equal(c3.id, comment3.id);
                     assert.equal(c3.type, comment3.type);
@@ -8827,7 +8833,7 @@ suite('Users', function () {
                     assert.equal(comments.length, 3);
 
                     // Comment 1
-                    const c1 = _.find(comments, {id: comment1.id});
+                    const c1 = _.find(comments, { id: comment1.id });
 
                     assert.equal(c1.id, comment1.id);
                     assert.equal(c1.type, comment1.type);
@@ -8853,7 +8859,7 @@ suite('Users', function () {
                     assert.deepEqual(c1r1.creator, creatorExpected);
 
                     // Comment 2
-                    const c2 = _.find(comments, {id: comment2.id});
+                    const c2 = _.find(comments, { id: comment2.id });
 
                     assert.equal(c2.id, comment2.id);
                     assert.equal(c2.type, comment2.type);
@@ -8962,7 +8968,7 @@ suite('Users', function () {
                     assert.equal(list.count, mentions.length);
 
                     // Mention
-                    const m1 = _.find(mentions, {id: mention1.id});
+                    const m1 = _.find(mentions, { id: mention1.id });
                     assert.deepEqual(m1, mention1);
                 });
 
@@ -9217,7 +9223,7 @@ suite('Users', function () {
                     });
 
                     const res = await request
-                        .attach("name", attachment.file, {contentType: 'text/plain'})
+                        .attach("name", attachment.file, { contentType: 'text/plain' })
                         .set('Content-Type', 'multipart/form-data')
                         .expect(403);
 
@@ -9240,7 +9246,7 @@ suite('Users', function () {
                     request.field('folder', 'test');
 
                     const res = await request
-                        .attach("name", file, {contentType: 'text/plain'})
+                        .attach("name", file, { contentType: 'text/plain' })
                         .set('Content-Type', 'multipart/form-data')
                         .expect(403);
 
@@ -9263,7 +9269,7 @@ suite('Users', function () {
                     request.field('folder', 'test');
 
                     return request
-                        .attach("name", file, {contentType: 'text/plain'})
+                        .attach("name", file, { contentType: 'text/plain' })
                         .set('Content-Type', 'multipart/form-data')
                         .expect(403);
                 });
@@ -9517,7 +9523,7 @@ suite('Users', function () {
 
                     const resBody = (await _topicReportModerate(agentModerator, topic.id, report.id, type, text, 400)).body;
                     const expectedBody = {
-                        status: {code: 40000},
+                        status: { code: 40000 },
                         errors: {
                             moderatedReasonType: 'TopicReport.moderatedReasonType cannot be null when moderator is set'
                         }
@@ -9531,7 +9537,7 @@ suite('Users', function () {
 
                     const resBody = (await _topicReportModerate(agentModerator, topic.id, report.id, type, text, 400)).body;
                     const expectedBody = {
-                        status: {code: 40000},
+                        status: { code: 40000 },
                         errors: {
                             moderatedReasonText: 'Text can be 1 to 2048 characters long.'
                         }
@@ -9583,7 +9589,7 @@ suite('Users', function () {
                     const text = 'Test: contains spam.';
 
                     // Create a moderator in DB so that the Moderation email flow is executed
-                    await Moderator.create({userId: userModerator.id});
+                    await Moderator.create({ userId: userModerator.id });
                     await topicReportModerate(agentModerator, topic.id, report.id, type, text);
                 });
 
@@ -9602,7 +9608,7 @@ suite('Users', function () {
                             code: 40001,
                             message: 'Bad request'
                         },
-                        errors: {text: 'Parameter "text" has to be between 10 and 4000 characters'}
+                        errors: { text: 'Parameter "text" has to be between 10 and 4000 characters' }
                     };
 
                     assert.deepEqual(resBody, expectedBody);
@@ -9615,7 +9621,7 @@ suite('Users', function () {
                             code: 40001,
                             message: 'Bad request'
                         },
-                        errors: {text: 'Parameter "text" has to be between 10 and 4000 characters'}
+                        errors: { text: 'Parameter "text" has to be between 10 and 4000 characters' }
                     };
 
                     assert.deepEqual(resBody, expectedBody);
@@ -9630,7 +9636,7 @@ suite('Users', function () {
                             code: 40001,
                             message: 'Bad request'
                         },
-                        errors: {text: 'Parameter "text" has to be between 10 and 4000 characters'}
+                        errors: { text: 'Parameter "text" has to be between 10 and 4000 characters' }
                     };
 
                     assert.deepEqual(resBody, expectedBody);
@@ -9676,7 +9682,7 @@ suite('Users', function () {
                     const text = 'Test: contains spam.';
 
                     // Create a moderator in DB so that the Moderation email flow is executed
-                    await Moderator.create({userId: userModerator.id});
+                    await Moderator.create({ userId: userModerator.id });
                     await topicReportModerate(agentModerator, topic.id, report.id, type, text);
                 });
 
@@ -10246,75 +10252,75 @@ suite('Topics', function () {
 
                 reply11111 = (await topicCommentCreate(creatorAgent, creator.id, topic.id, reply1111.id, null, null, null, replyText11111)).body.data;
                 reply11111.votes = {
-                    up: {count: 0},
-                    down: {count: 0},
+                    up: { count: 0 },
+                    down: { count: 0 },
                     count: 0
                 };
                 reply11111.deletedAt = null;
                 reply1111.deletedAt = null;
                 reply1111.votes = {
-                    up: {count: 0},
-                    down: {count: 0},
+                    up: { count: 0 },
+                    down: { count: 0 },
                     count: 0
                 };
                 reply111.deletedAt = null;
                 reply111.votes = {
-                    up: {count: 0},
-                    down: {count: 0},
+                    up: { count: 0 },
+                    down: { count: 0 },
                     count: 0
                 };
                 reply11.deletedAt = null;
                 reply11.votes = {
-                    up: {count: 0},
-                    down: {count: 0},
+                    up: { count: 0 },
+                    down: { count: 0 },
                     count: 0
                 };
                 reply1.deletedAt = null;
                 reply1.votes = {
-                    up: {count: 0},
-                    down: {count: 0},
+                    up: { count: 0 },
+                    down: { count: 0 },
                     count: 0
                 };
                 reply2121.deletedAt = null;
                 reply2121.votes = {
-                    up: {count: 0},
-                    down: {count: 0},
+                    up: { count: 0 },
+                    down: { count: 0 },
                     count: 0
                 };
                 reply211.deletedAt = null;
                 reply211.votes = {
-                    up: {count: 0},
-                    down: {count: 0},
+                    up: { count: 0 },
+                    down: { count: 0 },
                     count: 0
                 };
                 reply212.deletedAt = null;
                 reply212.votes = {
-                    up: {count: 1},
-                    down: {count: 0},
+                    up: { count: 1 },
+                    down: { count: 0 },
                     count: 1
                 };
                 reply21.deletedAt = null;
                 reply21.votes = {
-                    up: {count: 0},
-                    down: {count: 0},
+                    up: { count: 0 },
+                    down: { count: 0 },
                     count: 0
                 };
                 reply2.deletedAt = null;
                 reply2.votes = {
-                    up: {count: 0},
-                    down: {count: 1},
+                    up: { count: 0 },
+                    down: { count: 1 },
                     count: 1
                 };
                 reply3.deletedAt = null;
                 reply3.votes = {
-                    up: {count: 1},
-                    down: {count: 0},
+                    up: { count: 1 },
+                    down: { count: 0 },
                     count: 1
                 };
                 comment3.deletedAt = null;
                 comment3.votes = {
-                    up: {count: 0},
-                    down: {count: 0},
+                    up: { count: 0 },
+                    down: { count: 0 },
                     count: 0
                 };
                 await topicCommentVotesCreate(creatorAgent, topic.id, comment2.id, 1);
@@ -10527,7 +10533,7 @@ suite('Topics', function () {
                         pro: 2,
                         con: 1,
                         poi: 0,
-                        reply:  11
+                        reply: 11
                     }
                 };
                 assert.shallowDeepEqual(data, expectedResult);
@@ -10758,8 +10764,8 @@ suite('Topics', function () {
                 test('Fail - 40000 - invalid vote value', async function () {
                     const resBody = (await _topicCommentVotesCreate(creatorAgent, topic.id, comment.id, 666, 400)).body;
                     const expectedBody = {
-                        status: {code: 40000},
-                        errors: {value: 'Vote value must be 1 (up-vote), -1 (down-vote) OR 0 to clear vote.'}
+                        status: { code: 40000 },
+                        errors: { value: 'Vote value must be 1 (up-vote), -1 (down-vote) OR 0 to clear vote.' }
                     };
                     assert.deepEqual(resBody, expectedBody);
                 });
@@ -10928,7 +10934,7 @@ suite('Topics', function () {
 
                     const resBody = (await topicCommentReportRead(request.agent(app), topic.id, comment.id, report.id, token)).body;
                     const expectedResult = {
-                        status: {code: 20000},
+                        status: { code: 20000 },
                         data: {
                             id: report.id,
                             type: report.type,
@@ -11236,7 +11242,7 @@ suite('Topics', function () {
                     suite('Final', function () {
 
                         test('Fail - Unauthorized - JWT token expired', async function () {
-                            const token = jwt.sign({path: '/not/important'}, config.session.privateKey, {
+                            const token = jwt.sign({ path: '/not/important' }, config.session.privateKey, {
                                 expiresIn: '.1ms',
                                 algorithm: config.session.algorithm
                             });
@@ -11251,7 +11257,7 @@ suite('Topics', function () {
                         });
 
                         test('Fail - Bad Request - Invalid JWT token - invalid path', async function () {
-                            const token = jwt.sign({path: '/this/is/wrong'}, config.session.privateKey, {
+                            const token = jwt.sign({ path: '/this/is/wrong' }, config.session.privateKey, {
                                 expiresIn: '1m',
                                 algorithm: config.session.algorithm
                             });
@@ -11290,7 +11296,7 @@ suite('Topics', function () {
                         });
 
                         test('Fail - Bad Request - Invalid JWT token - invalid path', async function () {
-                            const token = jwt.sign({path: '/this/is/wrong'}, config.session.privateKey, {
+                            const token = jwt.sign({ path: '/this/is/wrong' }, config.session.privateKey, {
                                 expiresIn: '1m',
                                 algorithm: config.session.algorithm
                             });
@@ -11497,7 +11503,7 @@ suite('Topics', function () {
 
             test('Fail - Unauthorized - Invalid JWT token - invalid path', async function () {
                 const agent = request.agent(app);
-                const token = jwt.sign({path: '/this/is/wrong'}, config.session.privateKey, {
+                const token = jwt.sign({ path: '/this/is/wrong' }, config.session.privateKey, {
                     expiresIn: '1m',
                     algorithm: config.session.algorithm
                 });
@@ -11514,7 +11520,7 @@ suite('Topics', function () {
 
             test('Fail - Unauthorized - JWT token expired', async function () {
                 const agent = request.agent(app);
-                const token = jwt.sign({path: '/not/important'}, config.session.privateKey, {
+                const token = jwt.sign({ path: '/not/important' }, config.session.privateKey, {
                     expiresIn: '.1ms',
                     algorithm: config.session.algorithm
                 });

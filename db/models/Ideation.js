@@ -63,8 +63,7 @@ module.exports = function (sequelize, Sequelize) {
     );
 
     Ideation.associate = function (models) {
-        Ideation.belongsToMany(models.Idea, {
-            through: models.IdeationIdea,
+        Ideation.hasMany(models.Idea, {
             foreignKey: 'ideationId',
             constraints: true
         });

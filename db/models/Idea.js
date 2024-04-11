@@ -19,6 +19,17 @@ module.exports = function (sequelize, DataTypes) {
                 allowNull: false,
                 defaultValue: DataTypes.UUIDV4
             },
+            ideationId: {
+                type: DataTypes.UUID,
+                allowNull: false,
+                comment: 'To what ideation the idea belongs to',
+                references: {
+                  model: 'Ideations',
+                  key: 'id'
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
+            },
             authorId: {
                 type: DataTypes.UUID,
                 allowNull: false,
@@ -32,12 +43,12 @@ module.exports = function (sequelize, DataTypes) {
             },
             statement: {
                 type: DataTypes.STRING(2048),
-                allowNull: true,
+                allowNull: false,
                 comment: 'Main idea statement'
             },
             description: {
                 type: DataTypes.STRING,
-                allowNull: true,
+                allowNull: false,
                 comment: 'Idea description'
             },
             imageUrl: {
@@ -61,21 +72,21 @@ module.exports = function (sequelize, DataTypes) {
     );
 
     Idea.associate = function (models) {
-        Idea.belongsTo(models.Ideation, {
-            through: models.IdeationIdea,
-            foreignKey: 'ideaId',
-            constraints: true
-        });
         Idea.belongsTo(models.User, {
             foreignKey: 'authorId',
             constraints: true
         });
 
-        Idea.hasMany(models.IdeaVote, {
+        Idea.belongsTo(models.Ideation, {
+            foreignKey: 'ideationId',
+            constraints: true
+        });
+
+        Idea.belongsTo(models.IdeaVote, {
             foreignKey: 'ideaId'
         });
 
-        Idea.belongsTo(models.User, {
+        Idea.belongsToMany(models.User, {
             through: models.IdeaFavourite,
             foreignKey: 'ideaId',
             constraints: true

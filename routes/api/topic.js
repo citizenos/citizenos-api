@@ -1723,7 +1723,7 @@ module.exports = function (app) {
         }
     });
 
-    app.get('/api/users/self/topics/:topicId/description', loginCheck(['partner']), partnerParser, hasPermission(TopicMemberUser.LEVELS.edit, true), async (req, res, next ) => {
+    app.get('/api/users/self/topics/:topicId/description', loginCheck(['partner']), partnerParser, hasPermission(TopicMemberUser.LEVELS.edit, true), async (req, res, next) => {
         try {
             const topicId = req.params.topicId;
             const rev = req.query.rev;
@@ -1740,7 +1740,7 @@ module.exports = function (app) {
         }
     });
 
-    app.post('/api/users/self/topics/:topicId/revert', partnerParser, hasPermission(TopicMemberUser.LEVELS.edit, true), async (req, res, next ) => {
+    app.post('/api/users/self/topics/:topicId/revert', partnerParser, hasPermission(TopicMemberUser.LEVELS.edit, true), async (req, res, next) => {
         try {
             const topicId = req.params.topicId;
             const rev = req.body.rev;
@@ -1885,7 +1885,7 @@ module.exports = function (app) {
             await db
                 .transaction(async function (t) {
                     if (req.body.description) {
-                        if (topic.status === Topic.STATUSES.inProgress || topic.status === Topic.STATUSES.draft) {
+                        if (topic.status === Topic.STATUSES.inProgress || topic.status === Topic.STATUSES.draft || topic.status === Topic.STATUSES.ideation) {
                             promisesList.push(cosEtherpad
                                 .updateTopic(
                                     topicId,
@@ -1925,8 +1925,7 @@ module.exports = function (app) {
                     }
                     await Promise.all(promisesList);
                 });
-
-            if (req.body.description && (topic.status === Topic.STATUSES.inProgress || topic.status === Topic.STATUSES.draft)) {
+            if (req.body.description && (topic.status === Topic.STATUSES.inProgress || topic.status === Topic.STATUSES.draft || topic.status === Topic.STATUSES.ideation)) {
                 await cosEtherpad
                     .syncTopicWithPad(
                         topicId,
@@ -1988,7 +1987,7 @@ module.exports = function (app) {
     /**
      * Update Topic info
      */
-    app.put('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.put('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         try {
             await _topicUpdate(req, res, next);
 
@@ -1998,7 +1997,7 @@ module.exports = function (app) {
         }
     });
 
-    app.patch('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
+    app.patch('/api/users/:userId/topics/:topicId', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.edit, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), async function (req, res, next) {
         try {
             await _topicUpdate(req, res, next);
 
@@ -2316,14 +2315,14 @@ module.exports = function (app) {
         //  ORDER BY "favourite" DESC, "order" ASC, t."updatedAt" DESC
         if (orderBy) {
             switch (orderBy) {
-               /* case 'activityTime':
-                    orderSql += ` ta.latest  ${order} `;
-                    groupBy += `, ta.latest`;
-                    break;
-                case 'activityCount':
-                    orderSql += ` ta.count  ${order} `;
-                    groupBy += `, ta.count`;
-                    break;*/
+                /* case 'activityTime':
+                     orderSql += ` ta.latest  ${order} `;
+                     groupBy += `, ta.latest`;
+                     break;
+                 case 'activityCount':
+                     orderSql += ` ta.count  ${order} `;
+                     groupBy += `, ta.count`;
+                     break;*/
                 case 'membersCount':
                     orderSql += ` muc.count ${order} `;
                     break;
@@ -3545,7 +3544,7 @@ module.exports = function (app) {
                         where: {
                             topicId: topicId,
                             groupId: {
-                                [Op.in]:groupIds
+                                [Op.in]: groupIds
                             }
                         }
                     });

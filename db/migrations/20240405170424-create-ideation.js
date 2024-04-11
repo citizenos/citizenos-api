@@ -57,6 +57,18 @@ module.exports = {
               allowNull: false,
               defaultValue: Sequelize.UUIDV4
             },
+            ideationId: {
+              type: Sequelize.UUID,
+              allowNull: false,
+              comment: 'Ideation id.',
+              references: {
+                model: 'Ideations',
+                key: 'id'
+              },
+              onUpdate: 'CASCADE',
+              onDelete: 'CASCADE',
+              primaryKey: true
+            },
             authorId: {
               type: Sequelize.UUID,
               allowNull: false,
@@ -139,46 +151,7 @@ module.exports = {
           }, {
           transaction: t
         }),
-        queryInterface.createTable('IdeationIdeas',
-          {
-            ideationId: {
-              type: Sequelize.UUID,
-              allowNull: false,
-              comment: 'To what ideation the idea belongs to',
-              references: {
-                model: 'Ideations',
-                key: 'id'
-              },
-              onUpdate: 'CASCADE',
-              onDelete: 'CASCADE',
-              primaryKey: true
-            },
-            ideaId: {
-              type: Sequelize.UUID,
-              allowNull: false,
-              references: {
-                model: 'Ideas',
-                key: 'id'
-              },
-              onUpdate: 'CASCADE',
-              onDelete: 'CASCADE',
-              primaryKey: true
-            },
-            createdAt: {
-              allowNull: false,
-              type: Sequelize.DATE
-            },
-            updatedAt: {
-              allowNull: false,
-              type: Sequelize.DATE
-            },
-            deletedAt: {
-              allowNull: true,
-              type: Sequelize.DATE
-            },
-          }, {
-          transaction: t
-        }),
+
         queryInterface.createTable('IdeaVotes',
           {
             ideaId: {
@@ -367,7 +340,6 @@ module.exports = {
         queryInterface.dropTable('Ideation', { transaction: t }),
         queryInterface.dropTable('Ideas', { transaction: t }),
         queryInterface.dropTable('TopicIdeations', { transaction: t }),
-        queryInterface.dropTable('IdeationIdeas', { transaction: t }),
         queryInterface.dropTable('IdeaVotes', { transaction: t }),
         queryInterface.dropTable('IdeaFavorites', { transaction: t }),
         queryInterface.dropTable('Folders', { transaction: t }),
