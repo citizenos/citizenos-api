@@ -35,19 +35,7 @@ module.exports = function (sequelize, DataTypes) {
                 primaryKey: true,
                 onUpdate: 'CASCADE',
                 onDelete: 'CASCADE'
-            },
-            createdAt: {
-                allowNull: false,
-                type: DataTypes.DATE
-            },
-            updatedAt: {
-                allowNull: false,
-                type: DataTypes.DATE
-            },
-            deletedAt: {
-                allowNull: true,
-                type: DataTypes.DATE
-            },
+            }
         }
     );
 

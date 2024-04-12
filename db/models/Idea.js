@@ -91,6 +91,12 @@ module.exports = function (sequelize, DataTypes) {
             foreignKey: 'ideaId',
             constraints: true
         });
+
+        Idea.belongsToMany(models.Folder, {
+            through: models.FolderIdea,
+            foreignKey: 'ideaId',
+            constraints: true
+        });
     }
 
     return Idea;

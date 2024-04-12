@@ -310,19 +310,7 @@ module.exports = {
               primaryKey: true,
               onUpdate: 'CASCADE',
               onDelete: 'CASCADE'
-            },
-            createdAt: {
-              allowNull: false,
-              type: Sequelize.DATE
-            },
-            updatedAt: {
-              allowNull: false,
-              type: Sequelize.DATE
-            },
-            deletedAt: {
-              allowNull: true,
-              type: Sequelize.DATE
-            },
+            }
           }, {
           transaction: t
         }),
