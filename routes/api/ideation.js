@@ -1,5 +1,7 @@
 'use strict';
 
+
+
 module.exports = function (app) {
     const logger = app.get('logger');
     const loginCheck = app.get('middleware.loginCheck');
@@ -15,6 +17,7 @@ module.exports = function (app) {
     const TopicIdeation = models.TopicIdeation;
     const Folder = models.Folder;
     const FolderIdea = models.FolderIdea;
+    const IdeaVote = models.IdeaVote;
     const topicLib = require('./topic')(app);
 
     /**
@@ -1096,5 +1099,169 @@ module.exports = function (app) {
 
     app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         return _readIdeationFolders(req, res, next);
+    });
+
+    /*
+     * Read (List) Idea votes
+     */
+
+    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/votes', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
+        try {
+            const results = await db.query(
+                `
+                SELECT
+                    u.name,
+                    u.company,
+                    u."imageUrl",
+                    CAST(CASE
+                        WHEN iv.value=1 Then 'up'
+                        ELSE 'down' END
+                    AS VARCHAR(5)) AS vote,
+                    iv."createdAt",
+                    iv."updatedAt"
+                    FROM "IdeaVotes" iv
+                    LEFT JOIN "Users" u
+                    ON
+                        u.id = iv."creatorId"
+                    WHERE iv."ideaId" = :ideaId
+                    AND iv.value <> 0
+                    ;
+                `,
+                {
+                    replacements: {
+                        ideaId: req.params.ideaId
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                });
+
+            return res.ok({
+                rows: results,
+                count: results.length
+            });
+        } catch (err) {
+            return next(err);
+        }
+    });
+
+    /**
+     * Create a Comment Vote
+     */
+    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/votes', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
+        const value = parseInt(req.body.value, 10);
+        try {
+            const idea = await Idea
+                .findOne({
+                    where: {
+                        id: req.params.ideaId
+                    }
+                });
+
+            if (!idea) {
+                return res.notFound();
+            }
+
+            await db
+                .transaction(async function (t) {
+                    const vote = await IdeaVote
+                        .findOne({
+                            where: {
+                                ideaId: req.params.ideaId,
+                                creatorId: req.user.id || req.user.userId
+                            },
+                            transaction: t
+                        });
+                    if (vote) {
+                        //User already voted
+                        if (vote.value === value) { // Same value will 0 the vote...
+                            vote.value = 0;
+                        } else {
+                            vote.value = value;
+                        }
+                        vote.topicId = req.params.topicId;
+
+                        await cosActivities
+                            .updateActivity(
+                                vote,
+                                idea,
+                                {
+                                    type: 'User',
+                                    id: req.user.userId,
+                                    ip: req.ip
+                                },
+                                req.method + ' ' + req.path,
+                                t
+                            );
+
+                        await vote.save({ transaction: t });
+                    } else {
+                        //User has not voted...
+                        const iv = await IdeaVote
+                            .create({
+                                ideaId: req.params.ideaId,
+                                creatorId: req.user.userId,
+                                value: req.body.value
+                            }, {
+                                transaction: t
+                            });
+                        const i = Idea.build(Object.assign({}, idea));
+
+                        await cosActivities
+                            .createActivity(iv, i, {
+                                type: 'User',
+                                id: req.user.userId,
+                                ip: req.ip
+                            }, req.method + ' ' + req.path, t);
+                    }
+
+                    const results = await db
+                        .query(
+                            `
+                            SELECT
+                            ii."up.count",
+                            ii."down.count",
+                                COALESCE(cvus.selected, false) as "up.selected",
+                                COALESCE(cvds.selected, false) as "down.selected"
+                                FROM (
+                                    SELECT
+                                    i.id AS "ideaId",
+                                        COALESCE(cvu.count, 0) as "up.count",
+                                        COALESCE(cvd.count, 0) as "down.count"
+                                    FROM "Ideas" i
+                                        LEFT JOIN ( SELECT "ideaId", COUNT(value) as count FROM "IdeaVotes" WHERE value > 0 GROUP BY "ideaId") cvu ON i.id = cvu."ideaId"
+                                        LEFT JOIN ( SELECT "ideaId", COUNT(value) as count FROM "IdeaVotes"  WHERE value < 0 GROUP BY "ideaId") cvd ON i.id = cvd."ideaId"
+                                    WHERE i."ideationId" = :ideationId
+                                    AND i.id = :ideaId
+                                    GROUP BY i.id, cvu.count, cvd.count
+                                ) ii
+                                LEFT JOIN (SELECT "ideaId", "creatorId", value, true AS selected FROM "IdeaVotes" WHERE value > 0 AND "creatorId" = :userId) cvus ON (ii."ideaId" = cvus."ideaId")
+                                LEFT JOIN (SELECT "ideaId", "creatorId", value, true AS selected FROM "IdeaVotes" WHERE value < 0 AND "creatorId" = :userId) cvds ON (ii."ideaId" = cvds."ideaId");
+                            `,
+                            {
+                                replacements: {
+                                    ideationId: req.params.ideationId,
+                                    ideaId: req.params.ideaId,
+                                    userId: req.user.userId
+                                },
+                                type: db.QueryTypes.SELECT,
+                                raw: true,
+                                nest: true,
+                                transaction: t
+                            }
+                        );
+
+                    t.afterCommit(() => {
+                        if (!results) {
+                            return res.notFound();
+                        }
+
+                        return res.ok(results[0]);
+                    });
+                });
+
+        } catch (err) {
+            next(err);
+        }
     });
 }

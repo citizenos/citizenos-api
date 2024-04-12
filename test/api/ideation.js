@@ -410,7 +410,44 @@ const ideationFolderListUnauth = async function (agent, topicId, ideationId) {
     return _ideationFolderListUnauth(agent, topicId, ideationId, 200);
 };
 
+/*Vote*/
 
+const _ideationIdeaVotesCreate = async function (agent, userId, topicId, ideationId, ideaId, value, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/votes'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':ideationId', ideationId)
+        .replace(':ideaId', ideaId);
+
+    return agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .send({ value: value })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const ideationIdeaVotesCreate = async function (agent, userId, topicId, ideationId, ideaId, value) {
+    return _ideationIdeaVotesCreate(agent, userId, topicId, ideationId, ideaId, value, 200);
+};
+
+const _ideationIdeaVotesList = async function (agent, userId, topicId, ideationId, ideaId, expectedHttpCode) {
+    let path = '/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/votes'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':ideationId', ideationId)
+        .replace(':ideaId', ideaId);
+
+    return agent
+        .get(path)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+
+const ideationIdeaVotesList = async function (agent, userId, topicId, ideationId, ideaId) {
+    return _ideationIdeaVotesList(agent, userId, topicId, ideationId, ideaId, 200);
+};
 
 module.exports.ideationCreate = ideationCreate;
 
@@ -637,6 +674,7 @@ suite('Users', function () {
                 const agent = request.agent(app);
                 const agent2 = request.agent(app);
                 const email = 'test_topicr_' + new Date().getTime() + '@test.ee';
+                const email2 = 'test_topicr_' + new Date().getTime() + 2 + '@test.ee';
                 const password = 'testPassword123';
 
                 let user;
@@ -646,7 +684,7 @@ suite('Users', function () {
 
                 suiteSetup(async function () {
                     user = await userLib.createUserAndLogin(agent, email, password, null);
-                    user2 = await userLib.createUserAndLogin(agent2, email, password, null);
+                    user2 = await userLib.createUserAndLogin(agent2, email2, password, null);
                     topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
                     ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation')).body.data;
                     await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
@@ -706,6 +744,7 @@ suite('Users', function () {
                 const agent = request.agent(app);
                 const agent2 = request.agent(app);
                 const email = 'test_topicr_' + new Date().getTime() + '@test.ee';
+                const email2 = 'test_topicr_' + new Date().getTime() + '@test.ee';
                 const password = 'testPassword123';
 
                 let user;
@@ -715,7 +754,7 @@ suite('Users', function () {
 
                 suiteSetup(async function () {
                     user = await userLib.createUserAndLogin(agent, email, password, null);
-                    user2 = await userLib.createUserAndLogin(agent2, email, password, null);
+                    user2 = await userLib.createUserAndLogin(agent2, email2, password, null);
                     topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
                     ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation')).body.data;
                     await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
@@ -765,6 +804,7 @@ suite('Users', function () {
                 const agent = request.agent(app);
                 const agent2 = request.agent(app);
                 const email = 'test_topicr_' + new Date().getTime() + '@test.ee';
+                const email2 = 'test_topicr_' + new Date().getTime() + 2 + '@test.ee';
                 const password = 'testPassword123';
 
                 let user;
@@ -774,7 +814,7 @@ suite('Users', function () {
 
                 suiteSetup(async function () {
                     user = await userLib.createUserAndLogin(agent, email, password, null);
-                    user2 = await userLib.createUserAndLogin(agent2, email, password, null);
+                    user2 = await userLib.createUserAndLogin(agent2, email2, password, null);
                 });
 
                 setup(async function () {
@@ -816,7 +856,7 @@ suite('Users', function () {
                 test('Fail - topic status not ideation', async function () {
                     const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
                     await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.inProgress);
-                    await _ideationIdeaUpdate(agent, user.id, topic.id, ideation.id, idea.id, 'TEST idea', 'description', null, 401);
+                    await _ideationIdeaUpdate(agent, user.id, topic.id, ideation.id, idea.id, 'TEST idea', 'description', null, 403);
                 });
 
                 test('Fail - Unauthorized', async function () {
@@ -919,6 +959,194 @@ suite('Users', function () {
                     await _ideationIdeaList(request.agent(app), user.id, topic.id, ideation.id, 401);
                 });
             });
+
+            suite('Votes', function () {
+                suite('Create', function () {
+                    const creatorAgent = request.agent(app);
+                    const userAgent = request.agent(app);
+                    const user2Agent = request.agent(app);
+
+                    let creator;
+                    let user;
+                    let user2;
+                    let topic;
+                    let ideation;
+                    let idea;
+
+                    suiteSetup(async function () {
+                        creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);
+                        user = await userLib.createUserAndLogin(userAgent, null, null, null);
+                        user2 = await userLib.createUserAndLogin(user2Agent, null, null, null);
+                    });
+
+                    setup(async function () {
+                        topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business])).body.data;
+                        ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation')).body.data;
+                        await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    });
+
+                    test('Success - 20100 - Upvote', async function () {
+                        const resBody = (await ideationIdeaVotesCreate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, 1)).body;
+
+                        const expected = {
+                            status: {
+                                code: 20000
+                            },
+                            data: {
+                                up: {
+                                    count: 1,
+                                    selected: true
+                                },
+                                down: {
+                                    count: 0,
+                                    selected: false
+                                }
+                            }
+                        };
+                        assert.deepEqual(resBody, expected);
+                    });
+
+
+                    test('Success - 20100 - Downvote', async function () {
+                        const resBody = (await ideationIdeaVotesCreate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, -1)).body;
+                        const expected = {
+                            status: {
+                                code: 20000
+                            },
+                            data: {
+                                up: {
+                                    count: 0,
+                                    selected: false
+                                },
+                                down: {
+                                    count: 1,
+                                    selected: true
+                                }
+                            }
+                        };
+                        assert.deepEqual(resBody, expected);
+                    });
+
+                    test('Success - 20100 - clear vote', async function () {
+                        const resBody = (await ideationIdeaVotesCreate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, 0)).body;
+                        const expected = {
+                            status: {
+                                code: 20000
+                            },
+                            data: {
+                                up: {
+                                    count: 0,
+                                    selected: false
+                                },
+                                down: {
+                                    count: 0,
+                                    selected: false
+                                }
+                            }
+                        };
+                        assert.deepEqual(resBody, expected);
+                    });
+
+                    test('Success - 20100 - change vote from upvote to downvote', async function () {
+                        await ideationIdeaVotesCreate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, 1);
+                        const resBody = (await ideationIdeaVotesCreate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, -1)).body;
+                        const expected = {
+                            status: {
+                                code: 20000
+                            },
+                            data: {
+                                up: {
+                                    count: 0,
+                                    selected: false
+                                },
+                                down: {
+                                    count: 1,
+                                    selected: true
+                                }
+                            }
+                        };
+                        assert.deepEqual(resBody, expected);
+                    });
+
+                    test('Success - Multiple users voting', async function () {
+                        await ideationIdeaVotesCreate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, 1);
+                        await ideationIdeaVotesCreate(userAgent, user.id, topic.id, ideation.id, idea.id, 1);
+                        const resBody = (await ideationIdeaVotesCreate(user2Agent, user2.id, topic.id, ideation.id, idea.id, -1)).body;
+                        const expected = {
+                            status: {
+                                code: 20000
+                            },
+                            data: {
+                                up: {
+                                    count: 2,
+                                    selected: false
+                                },
+                                down: {
+                                    count: 1,
+                                    selected: true
+                                }
+                            }
+                        };
+                        assert.deepEqual(resBody, expected);
+                    });
+
+                    test('Fail - 40000 - invalid vote value', async function () {
+                        const resBody = (await _ideationIdeaVotesCreate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, 666, 400)).body;
+                        const expectedBody = {
+                            status: { code: 40000 },
+                            errors: { value: 'Vote value must be 1 (up-vote), -1 (down-vote) OR 0 to clear vote.' }
+                        };
+                        assert.deepEqual(resBody, expectedBody);
+                    });
+                });
+
+                suite('List', function () {
+                    const creatorAgent = request.agent(app);
+                    const creatorAgent2 = request.agent(app);
+
+                    let creator;
+                    let creator2;
+                    let topic;
+                    let ideation;
+                    let idea;
+
+                    suiteSetup(async function () {
+                        creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);
+                        creator2 = await userLib.createUserAndLogin(creatorAgent2, null, null, null);
+                    });
+
+                    setup(async function () {
+                        topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business])).body.data;
+                        ideation = (await ideationCreate(creatorAgent, creator.id, topic.id, 'TEST ideation')).body.data;
+                        await topicLib.topicUpdate(creatorAgent, creator.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(creatorAgent, creator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    });
+
+                    test('Success', async function () {
+                        await ideationIdeaVotesCreate(creatorAgent, creator.id, topic.id, ideation.id, idea.id, 1);
+                        await ideationIdeaVotesCreate(creatorAgent2, creator2.id, topic.id, ideation.id, idea.id, 0); //Add cleared vote that should not be returned;
+                        const commentVotesList = (await ideationIdeaVotesList(creatorAgent, creator.id, topic.id, ideation.id, idea.id)).body.data;
+                        const commentVote = commentVotesList.rows[0];
+                        const expected = {
+                            rows: [
+                                {
+                                    company: null,
+                                    imageUrl: null,
+                                    createdAt: commentVote.createdAt,
+                                    updatedAt: commentVote.updatedAt,
+                                    name: creator.name,
+                                    vote: "up"
+                                }
+                            ],
+                            count: 1
+                        };
+
+                        assert.deepEqual(commentVotesList, expected);
+                    });
+                });
+
+            });
         });
 
         suite('Folder', function () {
@@ -926,6 +1154,7 @@ suite('Users', function () {
                 const agent = request.agent(app);
                 const agent2 = request.agent(app);
                 const email = 'test_topicr_' + new Date().getTime() + '@test.ee';
+                const email2 = 'test_topicr_' + new Date().getTime() + 2 + '@test.ee';
                 const password = 'testPassword123';
 
                 let user;
@@ -935,7 +1164,7 @@ suite('Users', function () {
 
                 suiteSetup(async function () {
                     user = await userLib.createUserAndLogin(agent, email, password, null);
-                    user2 = await userLib.createUserAndLogin(agent2, email, password, null);
+                    user2 = await userLib.createUserAndLogin(agent2, email2, password, null);
                     topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
                     ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation')).body.data;
                     await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
@@ -998,6 +1227,7 @@ suite('Users', function () {
                     const agent = request.agent(app);
                     const agent2 = request.agent(app);
                     const email = 'test_topicr_' + new Date().getTime() + '@test.ee';
+                    const email2 = 'test_topicr_' + new Date().getTime() + 2 + '@test.ee';
                     const password = 'testPassword123';
 
                     let user;
@@ -1008,7 +1238,7 @@ suite('Users', function () {
                     let idea2;
                     suiteSetup(async function () {
                         user = await userLib.createUserAndLogin(agent, email, password, null);
-                        user2 = await userLib.createUserAndLogin(agent2, email, password, null);
+                        user2 = await userLib.createUserAndLogin(agent2, email2, password, null);
                         topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
                         ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation')).body.data;
                         await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
@@ -1049,6 +1279,7 @@ suite('Users', function () {
                     const agent = request.agent(app);
                     const agent2 = request.agent(app);
                     const email = 'test_topicr_' + new Date().getTime() + '@test.ee';
+                    const email2 = 'test_topicr_' + new Date().getTime() + '@test.ee';
                     const password = 'testPassword123';
 
                     let user;
@@ -1059,7 +1290,7 @@ suite('Users', function () {
                     let idea2;
                     suiteSetup(async function () {
                         user = await userLib.createUserAndLogin(agent, email, password, null);
-                        user2 = await userLib.createUserAndLogin(agent2, email, password, null);
+                        user2 = await userLib.createUserAndLogin(agent2, email2, password, null);
                         topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
                         ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation')).body.data;
                         await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
@@ -1135,6 +1366,7 @@ suite('Users', function () {
                     const agent = request.agent(app);
                     const agent2 = request.agent(app);
                     const email = 'test_topicr_' + new Date().getTime() + '@test.ee';
+                    const email2 = 'test_topicr_' + new Date().getTime() + '@test.ee';
                     const password = 'testPassword123';
 
                     let user;
@@ -1145,7 +1377,7 @@ suite('Users', function () {
                     let idea2;
                     suiteSetup(async function () {
                         user = await userLib.createUserAndLogin(agent, email, password, null);
-                        user2 = await userLib.createUserAndLogin(agent2, email, password, null);
+                        user2 = await userLib.createUserAndLogin(agent2, email2, password, null);
                         topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
                         ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation')).body.data;
                         await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
@@ -1193,6 +1425,7 @@ suite('Users', function () {
                 const agent = request.agent(app);
                 const agent2 = request.agent(app);
                 const email = 'test_topicr_' + new Date().getTime() + '@test.ee';
+                const email2 = 'test_topicr_' + new Date().getTime() + '@test.ee';
                 const password = 'testPassword123';
 
                 let user;
@@ -1202,7 +1435,7 @@ suite('Users', function () {
 
                 suiteSetup(async function () {
                     user = await userLib.createUserAndLogin(agent, email, password, null);
-                    user2 = await userLib.createUserAndLogin(agent2, email, password, null);
+                    user2 = await userLib.createUserAndLogin(agent2, email2, password, null);
                 });
 
                 setup(async function () {
