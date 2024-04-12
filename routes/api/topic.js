@@ -8713,6 +8713,9 @@ module.exports = function (app) {
         _hasPermission: _hasPermission,
         hasPermission: hasPermission,
         getVoteResults: getVoteResults,
-        getAllVotesResults: getAllVotesResults
+        getAllVotesResults: getAllVotesResults,
+        isModerator: isModerator,
+        hasVisibility: hasVisibility,
+        isCommentCreator: isCommentCreator
     };
 };

@@ -1,0 +1,99 @@
+<table id="bodyHeader" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding:22px 22px 22px 0;">
+                <p id="header_title_description">Your idea discussion contribution has been reported in</p>
+                <p id="header_title">{{topic.title}}</p>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table id="bodyContent" border="0" cellpadding="10" cellspacing="0" width="100%">
+    <tbody>
+        <tr>
+            <td valign="middle" style="padding-bottom: 32px;">
+                Hi {{toUser.name}}!
+            </td>
+        </tr>
+        <tr>
+            <td width="100%">
+                Your contribution to the above discussion has been reported as inappropriate. Please see the reasons below.
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <p class="info_heading">Contribution</p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="middle">
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td width="54">
+                                <img src="cid:icon_argument.png" />
+                            </td>
+                            <td>
+                                {{#comment.subject}}
+                                <p
+                                    style="font-size:16px;font-weight:600;color:#1168A8;line-height:24px;padding-bottom:0;">
+                                    {{comment.subject}}
+                                </p>
+                                {{/comment.subject}}
+                                <p style="font-size:14px; color:#2C3B47;line-height:16px;padding-bottom:0;">
+                                    {{comment.text}}
+                                </p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <p class="info_heading">Reason</p>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <table class="info_table">
+                    <tbody>
+                        <tr>
+                            <td
+                                style="font-size:14px;font-weight:600;color:#2C3B47;line-height:16px;padding-bottom: 16px;">
+                                {{report.type}}
+                            </td>
+                        </tr>
+                        {{#report.text}}
+                        <tr>
+                            <td style="font-size:14px;line-height:20px; color:#2C3B47;">
+                                {{report.text}}
+                            </td>
+                        </tr>
+                        {{/report.text}}
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 32px; padding-top: 16px;">
+                <p class="submit_button">
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 60px;">Edit or
+                        delete</a>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size:14px;">
+                You can also leave it as is, but moderators may decide to have it hidden by default (users will get a warning prior to seeing your contribution).
+            </td>
+        </tr>
+        <tr>
+            <td valign="bottom" style="padding-top:16px;font-size: 14px;">
+                <a href="{{linkViewModerationGuidelines}}">Learn more about the Citizen OS moderation process
+                    here.</a>
+            </td>
+        </tr>
+    </tbody>
+</table>

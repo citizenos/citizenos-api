@@ -24,7 +24,7 @@ module.exports = function (sequelize, DataTypes) {
                 onUpdate: 'CASCADE',
                 onDelete: 'CASCADE'
             },
-            creatorId: {
+            userId: {
                 type: DataTypes.UUID,
                 comment: 'User ID who favourited the idea',
                 allowNull: false,

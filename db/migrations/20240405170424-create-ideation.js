@@ -216,7 +216,7 @@ module.exports = {
               onUpdate: 'CASCADE',
               onDelete: 'CASCADE'
             },
-            creatorId: {
+            userId: {
               type: Sequelize.UUID,
               comment: 'User ID who favourited the idea',
               allowNull: false,
@@ -314,6 +314,35 @@ module.exports = {
           }, {
           transaction: t
         }),
+        queryInterface.createTable('IdeaComments',
+          {
+            commentId: {
+              type: Sequelize.UUID,
+              comment: 'Which Comment belongs to this Idea.',
+              allowNull: false,
+              references: {
+                model: 'Folders',
+                key: 'id'
+              },
+              onUpdate: 'CASCADE',
+              onDelete: 'CASCADE',
+              primaryKey: true
+            },
+            ideaId: {
+              type: Sequelize.UUID,
+              comment: 'To what Idea this Comment belongs to.',
+              allowNull: false,
+              references: {
+                model: 'Ideas',
+                key: 'id'
+              },
+              primaryKey: true,
+              onUpdate: 'CASCADE',
+              onDelete: 'CASCADE'
+            }
+          }, {
+          transaction: t
+        }),
         queryInterface.sequelize.query(
           `ALTER TYPE "enum_Topics_status" ADD VALUE 'ideation' BEFORE 'inProgress'`
         , {transaction: t})
@@ -332,6 +361,7 @@ module.exports = {
         queryInterface.dropTable('IdeaFavorites', { transaction: t }),
         queryInterface.dropTable('Folders', { transaction: t }),
         queryInterface.dropTable('FolderIdeas', { transaction: t }),
+        queryInterface.dropTable('IdeaComments', { transaction: t }),
       ]);
     });
     /**

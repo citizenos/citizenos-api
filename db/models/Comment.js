@@ -163,6 +163,13 @@ module.exports = function (sequelize, DataTypes) {
             foreignKey: 'commentId',
             constraints: true
         });
+
+
+        Comment.belongsToMany(models.Idea, {
+            through: models.IdeaComment,
+            foreignKey: 'commentId',
+            constraints: true
+        });
     };
 
     // Overrides the default toJSON() to avoid sensitive data from ending up in the output.

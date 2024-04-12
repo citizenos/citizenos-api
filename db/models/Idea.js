@@ -97,6 +97,12 @@ module.exports = function (sequelize, DataTypes) {
             foreignKey: 'ideaId',
             constraints: true
         });
+
+        Idea.belongsToMany(models.Comment, {
+            through: models.IdeaComment,
+            foreignKey: 'ideaId',
+            constraints: true
+        });
     }
 
     return Idea;
