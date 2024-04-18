@@ -409,18 +409,6 @@ module.exports = function (app) {
                                 }
                             ]
                         });
-                        ideaR.dataValues.favourite = false;
-                        ideaR.dataValues.replies = { count: 0 };
-                        ideaR.dataValues.votes = {
-                            down: {
-                                count: 0,
-                                selected: false
-                            },
-                            up: {
-                                count: 0,
-                                selected: false
-                            }
-                        };
 
                         return res.created(ideaR);
                     });
@@ -440,7 +428,15 @@ module.exports = function (app) {
             const idea = await Idea.findOne({
                 where: {
                     id: ideaId
-                }
+                },
+                attributes: ['id', 'statement', 'description', 'createdAt', 'updatedAt', 'imageUrl', 'ideationId'],
+                include: [
+                    {
+                        model: User,
+                        as:'creator',
+                        attributes: ['id', 'name', 'imageUrl', 'email']
+                    }
+                ]
             })
 
             if (!idea) {
@@ -498,6 +494,11 @@ module.exports = function (app) {
                     id: ideaId
                 },
                 include: [
+                    {
+                        model: User,
+                        as: 'creator',
+                        attributes: ['id', 'name', 'imageUrl', 'email']
+                    },
                     {
                         model: Ideation,
                         where: {
@@ -620,7 +621,26 @@ module.exports = function (app) {
         const order = (req.query.order?.toLowerCase() === 'asc') ? 'ASC' : 'DESC';
         const authorId = req.query.authorId;
         const showModerated = req.query.showModerated || false;
-
+        let groupBySql = ``;
+        let joinSql = `
+        LEFT JOIN (
+            SELECT
+                ii."ideaId",
+                ii."up.count",
+                ii."down.count"
+                FROM (
+                    SELECT
+                    i.id AS "ideaId",
+                        COALESCE(cvu.count, 0) as "up.count",
+                        COALESCE(cvd.count, 0) as "down.count"
+                    FROM "Ideas" i
+                        LEFT JOIN ( SELECT "ideaId", COUNT(value) as count FROM "IdeaVotes" WHERE value > 0 GROUP BY "ideaId") cvu ON i.id = cvu."ideaId"
+                        LEFT JOIN ( SELECT "ideaId", COUNT(value) as count FROM "IdeaVotes"  WHERE value < 0 GROUP BY "ideaId") cvd ON i.id = cvd."ideaId"
+                    WHERE i."ideationId" = :ideationId
+                    GROUP BY i.id, cvu.count, cvd.count
+                ) ii
+        ) iv ON iv."ideaId" = "Idea".id
+        `;
         let where = ` WHERE "Idea"."ideationId" = :ideationId AND "Idea"."deletedAt" IS NULL `;
         let returncolumns = ``;
         if (authorId) {
@@ -651,7 +671,42 @@ module.exports = function (app) {
                     break;
             }
         }
+        if (req.user?.id || req.user?.userId) {
+            joinSql = `
+            LEFT JOIN "IdeaFavourites" if ON (if."ideaId" = "Idea".id AND if."userId" = :userId)
+            LEFT JOIN (
+                SELECT
+                    ii."ideaId",
+                    ii."up.count",
+                    ii."down.count",
+                    COALESCE(cvus.selected, false) as "up.selected",
+                    COALESCE(cvds.selected, false) as "down.selected"
+                    FROM (
+                        SELECT
+                        i.id AS "ideaId",
+                            COALESCE(cvu.count, 0) as "up.count",
+                            COALESCE(cvd.count, 0) as "down.count"
+                        FROM "Ideas" i
+                            LEFT JOIN ( SELECT "ideaId", COUNT(value) as count FROM "IdeaVotes" WHERE value > 0 GROUP BY "ideaId") cvu ON i.id = cvu."ideaId"
+                            LEFT JOIN ( SELECT "ideaId", COUNT(value) as count FROM "IdeaVotes"  WHERE value < 0 GROUP BY "ideaId") cvd ON i.id = cvd."ideaId"
+                        WHERE i."ideationId" = :ideationId
+                        GROUP BY i.id, cvu.count, cvd.count
+                    ) ii
+                    LEFT JOIN (SELECT "ideaId", "creatorId", value, true AS selected FROM "IdeaVotes" WHERE value > 0 AND "creatorId" = :userId) cvus ON (ii."ideaId" = cvus."ideaId")
+                    LEFT JOIN (SELECT "ideaId", "creatorId", value, true AS selected FROM "IdeaVotes" WHERE value < 0 AND "creatorId" = :userId) cvds ON (ii."ideaId" = cvds."ideaId")
+            ) iv ON iv."ideaId" = "Idea".id
+            `;
+            returncolumns += `
 
+            iv."up.selected" as "votes.up.selected",
+            iv."down.selected" as "votes.down.selected",
+            CASE
+                WHEN if."ideaId" = "Idea".id THEN true
+                ELSE false
+            END as "favourite",
+            `;
+            groupBySql = `, if."ideaId" , iv."up.selected", iv."down.selected"`;
+        }
         try {
 
             const ideas = await db.query(`
@@ -670,37 +725,10 @@ module.exports = function (app) {
                 count(*) OVER()::integer AS "countTotal",
                 iv."up.count" as "votes.up.count",
                 iv."down.count" as "votes.down.count",
-                iv."up.selected" as "votes.up.selected",
-                iv."down.selected" as "votes.down.selected",
-                CASE
-                    WHEN if."ideaId" = "Idea".id THEN true
-                    ELSE false
-                END as "favourite",
                 ${returncolumns}
                 COALESCE(ic.count, 0) AS "replies.count"
                 FROM "Ideas" AS "Idea"
                 INNER JOIN "Users" AS "creator" ON "Idea"."authorId" = "creator"."id"
-                LEFT JOIN (
-                    SELECT
-                        ii."ideaId",
-                        ii."up.count",
-                        ii."down.count",
-                        COALESCE(cvus.selected, false) as "up.selected",
-                        COALESCE(cvds.selected, false) as "down.selected"
-                        FROM (
-                            SELECT
-                            i.id AS "ideaId",
-                                COALESCE(cvu.count, 0) as "up.count",
-                                COALESCE(cvd.count, 0) as "down.count"
-                            FROM "Ideas" i
-                                LEFT JOIN ( SELECT "ideaId", COUNT(value) as count FROM "IdeaVotes" WHERE value > 0 GROUP BY "ideaId") cvu ON i.id = cvu."ideaId"
-                                LEFT JOIN ( SELECT "ideaId", COUNT(value) as count FROM "IdeaVotes"  WHERE value < 0 GROUP BY "ideaId") cvd ON i.id = cvd."ideaId"
-                            WHERE i."ideationId" = :ideationId
-                            GROUP BY i.id, cvu.count, cvd.count
-                        ) ii
-                        LEFT JOIN (SELECT "ideaId", "creatorId", value, true AS selected FROM "IdeaVotes" WHERE value > 0 AND "creatorId" = :userId) cvus ON (ii."ideaId" = cvus."ideaId")
-                        LEFT JOIN (SELECT "ideaId", "creatorId", value, true AS selected FROM "IdeaVotes" WHERE value < 0 AND "creatorId" = :userId) cvds ON (ii."ideaId" = cvds."ideaId")
-                ) iv ON iv."ideaId" = "Idea".id
                 LEFT JOIN (
                     SELECT
                         "ideaId",
@@ -708,17 +736,17 @@ module.exports = function (app) {
                     FROM "IdeaComments"
                     GROUP BY "ideaId"
                 ) AS ic ON (ic."ideaId" = "Idea".id)
-                LEFT JOIN "IdeaFavourites" if ON (if."ideaId" = "Idea".id AND if."userId" = :userId)
                 LEFT JOIN "IdeaReports" ir ON (ir."ideaId" = "Idea".id AND ir."resolvedById" IS NULL AND ir."deletedAt" IS NULL)
+                ${joinSql}
                 ${where}
-                GROUP BY "Idea"."id", creator.id, iv."up.count", iv."down.count", iv."up.selected", iv."down.selected", ic."count", if."ideaId"
+                GROUP BY "Idea"."id", creator.id, iv."up.count", iv."down.count", ic."count" ${groupBySql}
                 ORDER BY ${orderSql}
                 OFFSET :offset
                 LIMIT :limit
                 ;
             `, {
                 replacements: {
-                    userId: req.user.id,
+                    userId: req.user?.id || req.user?.userId,
                     ideationId,
                     authorId,
                     limit,
@@ -866,7 +894,13 @@ module.exports = function (app) {
                 where: {
                     ideationId: req.params.ideationId
                 },
+                attributes: ['id', 'statement', 'description', 'imageUrl', 'ideationId', 'createdAt', 'updatedAt'],
                 include: [
+                    {
+                        model: User,
+                        as: 'creator',
+                        attributes: ['id', 'name', 'email', 'imageUrl']
+                    },
                     {
                         model: Folder,
                         where: { id: folderId },

@@ -1137,7 +1137,7 @@ module.exports = function (app) {
                         u."language" as "comment.creator.language",
                         t."id" as "topic.id",
                         i."ideationId" as "ideation.id",
-                        i."ideaId" as "idea.id",
+                        i."id" as "idea.id",
                         t."title" as "topic.title",
                         t."sourcePartnerId" as "topic.sourcePartnerId",
                         t."visibility" as "topic.visibility"
