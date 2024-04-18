@@ -198,7 +198,7 @@ const ideationIdeaDelete = async function (agent, userId, topicId, ideationId, i
     return _ideationIdeaDelete(agent, userId, topicId, ideationId, ideaId, 200);
 };
 
-const _ideationIdeaList = async function (agent, userId, topicId, ideationId, expectedHttpCode) {
+const _ideationIdeaList = async function (agent, userId, topicId, ideationId, queryParams, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas'
         .replace(':userId', userId)
         .replace(':topicId', topicId)
@@ -206,13 +206,14 @@ const _ideationIdeaList = async function (agent, userId, topicId, ideationId, ex
 
     return agent
         .get(path)
+        .query(queryParams)
         .set('Content-Type', 'application/json')
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/)
 };
 
-const ideationIdeaList = async function (agent, userId, topicId, ideationId) {
-    return _ideationIdeaList(agent, userId, topicId, ideationId, 200);
+const ideationIdeaList = async function (agent, userId, topicId, ideationId, queryParams) {
+    return _ideationIdeaList(agent, userId, topicId, ideationId, queryParams, 200);
 };
 
 const _ideationIdeaListUnauth = async function (agent, topicId, ideationId, expectedHttpCode) {
@@ -1207,7 +1208,7 @@ suite('Users', function () {
 
                 test('Fail - Unauthorized', async function () {
                     await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST');
-                    await _ideationIdeaList(request.agent(app), user.id, topic.id, ideation.id, 401);
+                    await _ideationIdeaList(request.agent(app), user.id, topic.id, ideation.id, null, 401);
                 });
             });
 

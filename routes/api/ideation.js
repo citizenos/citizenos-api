@@ -18,6 +18,7 @@ module.exports = function (app) {
     const TopicMemberUser = models.TopicMemberUser;
     const Topic = models.Topic;
     const Idea = models.Idea;
+    const User = models.User;
     const TopicIdeation = models.TopicIdeation;
     const Folder = models.Folder;
     const FolderIdea = models.FolderIdea;
@@ -28,6 +29,7 @@ module.exports = function (app) {
     const Report = models.Report;
     const CommentReport = models.CommentReport;
     const CommentVote = models.CommentVote;
+    const IdeaReport = models.IdeaReport;
 
     const topicLib = require('./topic')(app);
 
@@ -392,8 +394,35 @@ module.exports = function (app) {
                             t
                         );
 
-                    t.afterCommit(() => {
-                        return res.created(idea.toJSON());
+                    t.afterCommit(async () => {
+                        const ideaR = await Idea.findOne({
+                            where: {
+                                id: idea.id
+                            },
+                            attributes: ['id', 'ideationId', 'statement', 'description', 'createdAt', 'updatedAt', 'imageUrl'],
+                            include: [
+                                {
+                                    model: User,
+                                    attributes: ['id', 'name', 'email', 'imageUrl'],
+                                    as: 'creator',
+                                    required: true
+                                }
+                            ]
+                        });
+                        ideaR.dataValues.favourite = false;
+                        ideaR.dataValues.replies = { count: 0 };
+                        ideaR.dataValues.votes = {
+                            down: {
+                                count: 0,
+                                selected: false
+                            },
+                            up: {
+                                count: 0,
+                                selected: false
+                            }
+                        };
+
+                        return res.created(ideaR);
                     });
                 });
         } catch (err) {
@@ -587,17 +616,126 @@ module.exports = function (app) {
         const ideationId = req.params.ideationId;
         const limit = req.query.limit || 8;
         const offset = req.query.offset || 0;
+        const orderBy = req.query.orderBy;
+        const order = (req.query.order?.toLowerCase() === 'asc') ? 'ASC' : 'DESC';
+        const authorId = req.query.authorId;
+        const showModerated = req.query.showModerated || false;
+
+        let where = ` WHERE "Idea"."ideationId" = :ideationId AND "Idea"."deletedAt" IS NULL `;
+        let returncolumns = ``;
+        if (authorId) {
+            where += ` AND "Idea"."authorId" = :authorId `
+            where.authorId = authorId;
+        }
+        let orderSql = ' "Idea"."createdAt" DESC';
+        if (!showModerated || showModerated == "false") {
+            where += ` AND (ir."moderatedAt" IS NULL OR ir."resolvedAt" IS NOT NULL) `;
+        } else {
+            where += ` AND (ir."moderatedAt" IS NOT NULL AND ir."resolvedAt" IS NULL) `;
+            returncolumns += `
+            ,ir.id AS "report.id"
+            ,ir."moderatedReasonType" AS "report.moderatedReasonType"
+            ,ir."moderatedReasonText" AS "report.moderatedReasonText"
+            `;
+        }
+        if (orderBy) {
+            switch (orderBy) {
+                case 'recent':
+                    orderSql = ` "Idea"."createdAt" ${order}`
+                    break;
+                case 'likes':
+                    orderSql = ` iv."up.count" ${order}`
+                    break;
+                case 'replies':
+                    orderSql = ` "replies.count" ${order}`
+                    break;
+            }
+        }
 
         try {
-            const ideas = await Idea.findAndCountAll({
-                where: {
-                    ideationId: ideationId
+
+            const ideas = await db.query(`
+            SELECT
+                "Idea"."id",
+                "Idea"."ideationId",
+                "Idea"."statement",
+                "Idea"."description",
+                "Idea"."createdAt",
+                "Idea"."imageUrl",
+                "Idea"."updatedAt",
+                "creator"."id" AS "creator.id",
+                "creator"."name" AS "creator.name",
+                "creator"."email" AS "creator.email",
+                "creator"."imageUrl" AS "creator.imageUrl",
+                count(*) OVER()::integer AS "countTotal",
+                iv."up.count" as "votes.up.count",
+                iv."down.count" as "votes.down.count",
+                iv."up.selected" as "votes.up.selected",
+                iv."down.selected" as "votes.down.selected",
+                CASE
+                    WHEN if."ideaId" = "Idea".id THEN true
+                    ELSE false
+                END as "favourite",
+                ${returncolumns}
+                COALESCE(ic.count, 0) AS "replies.count"
+                FROM "Ideas" AS "Idea"
+                INNER JOIN "Users" AS "creator" ON "Idea"."authorId" = "creator"."id"
+                LEFT JOIN (
+                    SELECT
+                        ii."ideaId",
+                        ii."up.count",
+                        ii."down.count",
+                        COALESCE(cvus.selected, false) as "up.selected",
+                        COALESCE(cvds.selected, false) as "down.selected"
+                        FROM (
+                            SELECT
+                            i.id AS "ideaId",
+                                COALESCE(cvu.count, 0) as "up.count",
+                                COALESCE(cvd.count, 0) as "down.count"
+                            FROM "Ideas" i
+                                LEFT JOIN ( SELECT "ideaId", COUNT(value) as count FROM "IdeaVotes" WHERE value > 0 GROUP BY "ideaId") cvu ON i.id = cvu."ideaId"
+                                LEFT JOIN ( SELECT "ideaId", COUNT(value) as count FROM "IdeaVotes"  WHERE value < 0 GROUP BY "ideaId") cvd ON i.id = cvd."ideaId"
+                            WHERE i."ideationId" = :ideationId
+                            GROUP BY i.id, cvu.count, cvd.count
+                        ) ii
+                        LEFT JOIN (SELECT "ideaId", "creatorId", value, true AS selected FROM "IdeaVotes" WHERE value > 0 AND "creatorId" = :userId) cvus ON (ii."ideaId" = cvus."ideaId")
+                        LEFT JOIN (SELECT "ideaId", "creatorId", value, true AS selected FROM "IdeaVotes" WHERE value < 0 AND "creatorId" = :userId) cvds ON (ii."ideaId" = cvds."ideaId")
+                ) iv ON iv."ideaId" = "Idea".id
+                LEFT JOIN (
+                    SELECT
+                        "ideaId",
+                        COUNT(*) AS count
+                    FROM "IdeaComments"
+                    GROUP BY "ideaId"
+                ) AS ic ON (ic."ideaId" = "Idea".id)
+                LEFT JOIN "IdeaFavourites" if ON (if."ideaId" = "Idea".id AND if."userId" = :userId)
+                LEFT JOIN "IdeaReports" ir ON (ir."ideaId" = "Idea".id AND ir."resolvedById" IS NULL AND ir."deletedAt" IS NULL)
+                ${where}
+                GROUP BY "Idea"."id", creator.id, iv."up.count", iv."down.count", iv."up.selected", iv."down.selected", ic."count", if."ideaId"
+                ORDER BY ${orderSql}
+                OFFSET :offset
+                LIMIT :limit
+                ;
+            `, {
+                replacements: {
+                    userId: req.user.id,
+                    ideationId,
+                    authorId,
+                    limit,
+                    offset
                 },
-                limit: limit,
-                offset: offset
+                type: db.QueryTypes.SELECT,
+                raw: true,
+                nest: true
             });
 
-            return res.ok(ideas);
+            const count = ideas[0].countTotal;
+            ideas.forEach((idea) => delete idea.countTotal);
+
+            return res.ok({
+                count,
+                rows: ideas
+            });
 
         } catch (err) {
             next(err);
@@ -616,6 +754,12 @@ module.exports = function (app) {
                             id: req.params.topicId
                         },
                         attributes: ['visibility']
+                    },
+                    {
+                        model: User,
+                        attributes: ['id', 'name', 'email', 'imageUrl'],
+                        as: 'creator',
+                        required: true
                     }
                 ]
             });
@@ -752,7 +896,7 @@ module.exports = function (app) {
                             id: req.params.topicId
                         },
                         attributes: ['visibility']
-                    }
+                    },
                 ]
             });
             if (!ideation || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
@@ -1324,6 +1468,7 @@ module.exports = function (app) {
                                 userId: userId,
                                 ideaId: ideaId
                             },
+                            force: true,
                             transaction: t
                         });
 
@@ -2051,7 +2196,7 @@ module.exports = function (app) {
     app.post(['/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId/reports', '/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId/reports'], loginCheck(['partner']), ideaCommentsReportsCreate);
 
     /**
-     * Read Report
+     * Read Idea reply Report
      */
     app.get(['/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId/reports/:reportId', '/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId/reports/:reportId'], authTokenRestrictedUse, async (req, res, next) => {
         try {
@@ -2209,6 +2354,228 @@ module.exports = function (app) {
         }
     });
 
+    const ideaReportsCreate = async function (req, res, next) {
+        const ideaId = req.params.ideaId;
+        try {
+            const idea = await Idea.findOne({
+                where: {
+                    id: ideaId
+                }
+            });
+
+            if (!idea) {
+                return idea;
+            }
+
+            await db
+                .transaction(async function (t) {
+                    const report = await Report
+                        .create(
+                            {
+                                type: req.body.type,
+                                text: req.body.text,
+                                creatorId: req.user.userId,
+                                creatorIp: req.ip
+                            },
+                            {
+                                transaction: t
+                            }
+                        );
+                    await cosActivities.addActivity(
+                        report,
+                        {
+                            type: 'User',
+                            id: req.user.userId,
+                            ip: req.ip
+                        },
+                        null,
+                        idea,
+                        req.method + ' ' + req.path,
+                        t
+                    );
+                    await IdeaReport
+                        .create(
+                            {
+                                ideaId: ideaId,
+                                reportId: report.id
+                            },
+                            {
+                                transaction: t
+                            }
+                        );
+                    if (!report) {
+                        return res.notFound();
+                    }
+
+                    await emailLib.sendIdeaReport(ideaId, report)
+
+                    t.afterCommit(() => {
+                        return res.ok(report);
+                    });
+                });
+        } catch (err) {
+            return next(err);
+        }
+    };
+
+    app.post(['/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/reports', '/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/reports'], loginCheck(['partner']), ideaReportsCreate);
+
+    /**
+     * Read Idea Report
+     */
+    app.get(['/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/reports/:reportId', '/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/reports/:reportId'], authTokenRestrictedUse, async (req, res, next) => {
+        try {
+            const results = await db
+                .query(
+                    `
+                        SELECT
+                            r."id",
+                            r."type",
+                            r."text",
+                            r."createdAt",
+                            i."id" as "idea.id",
+                            i.statement as "idea.subject",
+                            i."description" as "idea.description"
+                        FROM "Reports" r
+                        LEFT JOIN "IdeaReports" ir ON (ir."reportId" = r.id)
+                        LEFT JOIN "Ideas" i ON (i.id = ir."ideaId")
+                        WHERE r.id = :reportId
+                        AND c.id = :ideaId
+                        AND r."deletedAt" IS NULL
+                    ;`,
+                    {
+                        replacements: {
+                            ideaId: req.params.ideaId,
+                            reportId: req.params.reportId
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true,
+                        nest: true
+                    }
+                );
+
+            if (!results || !results.length) {
+                return res.notFound();
+            }
+
+            const ideaReport = results[0];
+
+            return res.ok(ideaReport);
+        } catch (err) {
+            next(err);
+        }
+    });
+
+    app.post('/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/reports/:reportId/moderate', authTokenRestrictedUse, async (req, res, next) => {
+        try {
+            const eventTokenData = req.locals.tokenDecoded;
+            const type = req.body.type;
+
+            if (!type) {
+                return res.badRequest({ type: 'Property type is required' });
+            }
+
+            const ideaReport = (await db
+                .query(
+                    `
+                        SELECT
+                            i."id" as "idea.id",
+                            i."updatedAt" as "idea.updatedAt",
+                            r."id" as "report.id",
+                            r."createdAt" as "report.createdAt"
+                        FROM "IdeaReports" ir
+                        LEFT JOIN "Reports" r ON (r.id = ir."reportId")
+                        LEFT JOIN "Ideas" i ON (i.id = ir."ideaId")
+                        WHERE ir."ideaId" = :ideaId AND ir."reportId" = :reportId
+                        AND i."deletedAt" IS NULL
+                        AND r."deletedAt" IS NULL
+                    ;`,
+                    {
+                        replacements: {
+                            ideaId: req.params.ideaId,
+                            reportId: req.params.reportId
+                        },
+                        type: db.QueryTypes.SELECT,
+                        raw: true,
+                        nest: true
+                    }
+                ))[0];
+
+            if (!ideaReport) {
+                return res.notFound();
+            }
+
+            let idea = ideaReport.idea;
+            const report = ideaReport.report;
+
+            // If Comment has been updated since the Report was made, deny moderation cause the text may have changed.
+            if (idea.updatedAt.getTime() > report.createdAt.getTime()) {
+                return res.badRequest('Report has become invalid cause comment has been updated after the report', 10);
+            }
+
+            idea = await Idea.findOne({
+                where: {
+                    id: idea.id
+                }
+            });
+
+            idea.deletedById = eventTokenData.userId;
+            idea.deletedAt = db.fn('NOW');
+            idea.deletedReasonType = req.body.type;
+            idea.deletedReasonText = req.body.text;
+            idea.deletedByReportId = report.id;
+
+            await db
+                .transaction(async function (t) {
+                    await cosActivities.updateActivity(
+                        idea,
+                        null,
+                        {
+                            type: 'Moderator',
+                            id: eventTokenData.userId,
+                            ip: req.ip
+                        },
+                        req.method + ' ' + req.path,
+                        t
+                    );
+
+                    let i = (await Idea.update(
+                        {
+                            deletedById: eventTokenData.userId,
+                            deletedAt: db.fn('NOW'),
+                            deletedReasonType: req.body.type,
+                            deletedReasonText: req.body.text,
+                            deletedByReportId: report.id
+                        },
+                        {
+                            where: {
+                                id: idea.id
+                            },
+                            returning: true
+                        },
+                        {
+                            transaction: t
+                        }
+                    ))[1];
+
+                    i = Idea.build(i.dataValues);
+
+                    await cosActivities
+                        .deleteActivity(i, idea, {
+                            type: 'Moderator',
+                            id: eventTokenData.userId,
+                            ip: req.ip
+                        }, req.method + ' ' + req.path, t);
+
+                    t.afterCommit(() => {
+                        return res.ok();
+                    });
+                });
+        } catch (err) {
+            next(err);
+        }
+    });
+
     app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId/votes', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
         try {
             const results = await db.query(
@@ -2309,7 +2676,7 @@ module.exports = function (app) {
                             }, {
                                 transaction: t
                             });
-                        const c = Comment.build(Object.assign({},comment));
+                        const c = Comment.build(Object.assign({}, comment));
                         c.topicId = req.params.topicId;
 
                         await cosActivities

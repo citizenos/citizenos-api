@@ -73,6 +73,7 @@ module.exports = function (sequelize, DataTypes) {
 
     Idea.associate = function (models) {
         Idea.belongsTo(models.User, {
+            as:'creator',
             foreignKey: 'authorId',
             constraints: true
         });
@@ -82,7 +83,7 @@ module.exports = function (sequelize, DataTypes) {
             constraints: true
         });
 
-        Idea.belongsTo(models.IdeaVote, {
+        Idea.hasMany(models.IdeaVote, {
             foreignKey: 'ideaId'
         });
 

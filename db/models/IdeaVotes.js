@@ -62,5 +62,16 @@ module.exports = function (sequelize, DataTypes) {
         }
     );
 
+    IdeaVote.associate = function (models) {
+        IdeaVote.belongsTo(models.User, {
+            foreignKey: 'creatorId',
+            constraints: true
+        });
+
+        IdeaVote.belongsTo(models.Idea, {
+            foreignKey: 'ideaId',
+            constraints: true
+        });
+    }
     return IdeaVote;
 }

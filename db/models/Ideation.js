@@ -68,6 +68,12 @@ module.exports = function (sequelize, Sequelize) {
             constraints: true
         });
 
+        Ideation.belongsTo(models.User, {
+            as:'creator',
+            foreignKey: 'creatorId',
+            constraints: true
+        });
+
         // TODO: funky association for cascade delete and right commentId reference
         Ideation.belongsToMany(models.Topic, {
             through: models.TopicIdeation,

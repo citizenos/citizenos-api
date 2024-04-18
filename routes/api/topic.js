@@ -633,6 +633,14 @@ module.exports = function (app) {
         let returncolumns = '';
 
         if (include) {
+            if (include.indexOf('ideation') > -1) {
+                returncolumns += `
+                    , ti."question" as "ideation.question"
+                    , ti."deadline" as "ideation.deadline"
+                    , ti."creatorId" as "ideation.creatorId"
+                    , ti."createdAt" as "ideation.createdAt"
+                `;
+            }
             if (include.indexOf('vote') > -1) {
                 join += `
                 LEFT JOIN (
@@ -707,6 +715,7 @@ module.exports = function (app) {
                      muc.count as "members.users.count",
                      COALESCE(mgc.count, 0) as "members.groups.count",
                      tv."voteId",
+                     ti."ideationId",
                      tr."id" AS "report.id",
                      tr."moderatedReasonType" AS "report.moderatedReasonType",
                      tr."moderatedReasonText" AS "report.moderatedReasonText",
@@ -779,6 +788,24 @@ module.exports = function (app) {
                         LEFT JOIN "Votes" v
                                 ON v.id = tv."voteId"
                     ) AS tv ON (tv."topicId" = t.id)
+                    LEFT JOIN (
+                        SELECT
+                            ti."topicId",
+                            ti."ideationId",
+                            i."createdAt",
+                            i."deadline",
+                            i."creatorId"
+                        FROM "TopicIdeations" ti INNER JOIN
+                            (
+                                SELECT
+                                    MAX("createdAt") as "createdAt",
+                                    "topicId"
+                                FROM "TopicIdeations"
+                                GROUP BY "topicId"
+                            ) AS _ti ON (_ti."topicId" = ti."topicId" AND _ti."createdAt" = ti."createdAt")
+                        LEFT JOIN "Ideations" i
+                                ON i.id = ti."ideationId"
+                    ) AS ti ON (ti."topicId" = t.id)
                     LEFT JOIN "TopicReports" tr ON (tr."topicId" = t.id AND tr."resolvedById" IS NULL AND tr."deletedAt" IS NULL)
                     ${join}
                 WHERE t.id = :topicId
@@ -855,6 +882,14 @@ module.exports = function (app) {
         }
 
         if (include) {
+            if (include.indexOf('ideation') > -1) {
+                returncolumns += `
+                    , ti."question" as "ideation.question"
+                    , ti."deadline" as "ideation.deadline"
+                    , ti."creatorId" as "ideation.creatorId"
+                    , ti."createdAt" as "ideation.createdAt"
+                `;
+            }
             if (include.indexOf('vote') > -1) {
                 join += `
                     LEFT JOIN (
@@ -953,6 +988,7 @@ module.exports = function (app) {
                     muc.count as "members.users.count",
                     COALESCE(mgc.count, 0) as "members.groups.count",
                     tv."voteId",
+                    ti."ideationId",
                     u.id as "user.id",
                     u.name as "user.name",
                     u.language as "user.language",
@@ -1050,6 +1086,24 @@ module.exports = function (app) {
                     LEFT JOIN "Votes" v
                             ON v.id = tv."voteId"
                 ) AS tv ON (tv."topicId" = t.id)
+                LEFT JOIN (
+                    SELECT
+                        ti."topicId",
+                        ti."ideationId",
+                        i."createdAt",
+                        i."deadline",
+                        i."creatorId"
+                    FROM "TopicIdeations" ti INNER JOIN
+                        (
+                            SELECT
+                                MAX("createdAt") as "createdAt",
+                                "topicId"
+                            FROM "TopicIdeations"
+                            GROUP BY "topicId"
+                        ) AS _ti ON (_ti."topicId" = ti."topicId" AND _ti."createdAt" = ti."createdAt")
+                    LEFT JOIN "Ideations" i
+                            ON i.id = ti."ideationId"
+                ) AS ti ON (ti."topicId" = t.id)
                 LEFT JOIN "TopicFavourites" tf ON tf."topicId" = t.id AND tf."userId" = :userId
                 LEFT JOIN "TopicReports" tr ON (tr."topicId" = t.id AND tr."resolvedById" IS NULL AND tr."deletedAt" IS NULL)
                 LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
