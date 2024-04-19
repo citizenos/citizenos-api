@@ -620,6 +620,7 @@ module.exports = function (app) {
         const orderBy = req.query.orderBy;
         const order = (req.query.order?.toLowerCase() === 'asc') ? 'ASC' : 'DESC';
         const authorId = req.query.authorId;
+        const favourite = req.query.favourite;
         const showModerated = req.query.showModerated || false;
         let groupBySql = ``;
         let joinSql = `
@@ -644,8 +645,7 @@ module.exports = function (app) {
         let where = ` WHERE "Idea"."ideationId" = :ideationId AND "Idea"."deletedAt" IS NULL `;
         let returncolumns = ``;
         if (authorId) {
-            where += ` AND "Idea"."authorId" = :authorId `
-            where.authorId = authorId;
+            where += ` AND "Idea"."authorId" = :authorId `;
         }
         let orderSql = ' "Idea"."createdAt" DESC';
         if (!showModerated || showModerated == "false") {
@@ -653,10 +653,11 @@ module.exports = function (app) {
         } else {
             where += ` AND (ir."moderatedAt" IS NOT NULL AND ir."resolvedAt" IS NULL) `;
             returncolumns += `
-            ,ir.id AS "report.id"
-            ,ir."moderatedReasonType" AS "report.moderatedReasonType"
-            ,ir."moderatedReasonText" AS "report.moderatedReasonText"
+             ir.id AS "report.id",
+             ir."moderatedReasonType" AS "report.moderatedReasonType",
+             ir."moderatedReasonText" AS "report.moderatedReasonText",
             `;
+            groupBySql += ` ,ir.id, ir."moderatedReasonType", ir."moderatedReasonText" `;
         }
         if (orderBy) {
             switch (orderBy) {
@@ -705,10 +706,12 @@ module.exports = function (app) {
                 ELSE false
             END as "favourite",
             `;
-            groupBySql = `, if."ideaId" , iv."up.selected", iv."down.selected"`;
+            groupBySql += `, if."ideaId" , iv."up.selected", iv."down.selected"`;
+            if (favourite) {
+                where += ` AND if."ideaId" IS NOT NULL `;
+            }
         }
         try {
-
             const ideas = await db.query(`
             SELECT
                 "Idea"."id",
@@ -749,6 +752,7 @@ module.exports = function (app) {
                     userId: req.user?.id || req.user?.userId,
                     ideationId,
                     authorId,
+                    favourite,
                     limit,
                     offset
                 },
@@ -756,8 +760,7 @@ module.exports = function (app) {
                 raw: true,
                 nest: true
             });
-
-            const count = ideas[0].countTotal;
+            const count = ideas[0]?.countTotal || 0;
             ideas.forEach((idea) => delete idea.countTotal);
 
             return res.ok({
