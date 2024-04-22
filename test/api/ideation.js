@@ -232,6 +232,71 @@ const ideationIdeaListUnauth = async function (agent, topicId, ideationId) {
     return _ideationIdeaListUnauth(agent, topicId, ideationId, 200);
 };
 
+/* Reports*/
+
+
+const _ideationIdeaReportCreate = async function (agent, topicId, ideationId, ideaId, type, text, expectedHttpCode) {
+    const path = '/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/reports'
+        .replace(':topicId', topicId)
+        .replace(':ideationId', ideationId)
+        .replace(':ideaId', ideaId);
+
+    return agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .send({
+            type: type,
+            text: text
+        })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const ideationIdeaReportCreate = async function (agent, topicId, ideationId, ideaId, type, text) {
+    return _ideationIdeaReportCreate(agent, topicId, ideationId, ideaId, type, text, 200);
+};
+
+const _ideationIdeaReportRead = async function (agent, topicId, ideationId, ideaId, reportId, token, expectedHttpCode) {
+    const path = '/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/reports/:reportId'
+        .replace(':topicId', topicId)
+        .replace(':ideationId', ideationId)
+        .replace(':ideaId', ideaId)
+        .replace(':reportId', reportId);
+
+    return agent
+        .get(path)
+        .set('Authorization', 'Bearer ' + token)
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const ideationIdeaReportRead = async function (agent, topicId, ideationId, ideaId, reportId, token) {
+    return _ideationIdeaReportRead(agent, topicId, ideationId, ideaId, reportId, token, 200);
+};
+
+const _ideationIdeaReportModerate = async function (agent, topicId, ideationId, ideaId, reportId, token, type, text, expectedHttpCode) {
+    const path = '/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/reports/:reportId/moderate'
+        .replace(':topicId', topicId)
+        .replace(':ideationId', ideationId)
+        .replace(':ideaId', ideaId)
+        .replace(':reportId', reportId);
+
+    return agent
+        .post(path)
+        .set('Content-Type', 'application/json')
+        .set('Authorization', 'Bearer ' + token)
+        .send({
+            type: type,
+            text: text
+        })
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/);
+};
+
+const ideationIdeaReportModerate = async function (agent, topicId, ideationId, ideaId, reportId, token, type, text) {
+    return _ideationIdeaReportModerate(agent, topicId, ideationId, ideaId, reportId, token, type, text, 200);
+};
+
 const _ideationFolderCreate = async function (agent, userId, topicId, ideationId, name, description, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/ideations/:ideationId/folders'
         .replace(':userId', userId)
@@ -720,6 +785,7 @@ const TopicMemberUser = models.TopicMemberUser;
 const Partner = models.Partner;
 const Moderator = models.Moderator;
 const Report = models.Report;
+const Idea = models.Idea;
 
 // API - /api/users*
 suite('Users', function () {
@@ -950,10 +1016,9 @@ suite('Users', function () {
                     const statement = 'TEST idea';
                     const description = 'This idea is just for testing';
                     const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
-
                     assert.equal(idea.statement, statement);
                     assert.equal(idea.description, description);
-                    assert.equal(idea.creator.id, user.id);
+                    assert.equal(idea.author.id, user.id);
                     assert.exists(idea, 'id');
                     assert.exists(idea, 'createdAt');
                     assert.exists(idea, 'updatedAt');
@@ -1089,7 +1154,7 @@ suite('Users', function () {
 
                     assert.equal(idea.statement, statement);
                     assert.equal(idea.description, description);
-                    assert.equal(idea.creator.id, user.id);
+                    assert.equal(idea.author.id, user.id);
                     assert.exists(idea, 'id');
                     assert.exists(idea, 'createdAt');
                     assert.exists(idea, 'updatedAt');
@@ -1098,7 +1163,7 @@ suite('Users', function () {
 
                     assert.equal(ideaUpdate.statement, updatedStatement);
                     assert.equal(ideaUpdate.description, updatedDescription);
-                    assert.equal(ideaUpdate.creator.id, idea.creator.id);
+                    assert.equal(ideaUpdate.author.id, idea.author.id);
                     assert.equal(ideaUpdate.id, idea.id);
                     assert.exists(ideaUpdate.createdAt, idea.createdAt);
                     assert.notEqual(ideaUpdate.updatedAt, idea.updatedAt);
@@ -1202,6 +1267,7 @@ suite('Users', function () {
                     delete ideas.rows[0].replies;
                     assert.deepEqual(ideas.rows[0].votes, { up: { count: 0, selected: false }, down: { count: 0, selected: false } });
                     delete ideas.rows[0].votes;
+
                     assert.deepEqual(ideas, { count: 1, rows: [idea] });
                 });
 
@@ -1222,6 +1288,338 @@ suite('Users', function () {
                     await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST');
                     await _ideationIdeaList(request.agent(app), user.id, topic.id, ideation.id, null, 401);
                 });
+            });
+
+            suite('Reports', function () {
+
+                suite('Create', function () {
+                    const agentCreator = request.agent(app);
+                    const agentReporter = request.agent(app);
+                    const agentModerator = request.agent(app);
+
+                    const emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportest.com';
+                    const emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportest.com';
+                    const emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportest.com';
+
+                    let userCreator;
+                    let userModerator;
+                    let userReporter;
+
+                    let partner;
+                    let topic;
+                    let ideation;
+                    let idea;
+
+                    suiteSetup(async function () {
+                        userCreator = await userLib.createUserAndLogin(agentCreator, emailCreator, null, null);
+                        userModerator = await userLib.createUser(agentModerator, emailModerator, null, null);
+                        userReporter = await userLib.createUserAndLogin(agentReporter, emailReporter, null, null);
+                        topic = (await topicLib.topicCreate(agentCreator, userCreator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
+                        ideation = (await ideationCreate(agentCreator, userCreator.id, topic.id, 'TEST ideation')).body.data;
+                        await topicLib.topicUpdate(agentCreator, userCreator.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(agentCreator, userCreator.id, topic.id, ideation.id, 'TEST abusive', 'TEST inapropriate')).body.data;
+                        partner = await Partner.create({
+                            website: 'notimportant',
+                            redirectUriRegexp: 'notimportant'
+                        });
+
+                        await Topic.update(
+                            {
+                                sourcePartnerId: partner.id
+                            },
+                            {
+                                where: {
+                                    id: topic.id
+                                }
+                            }
+                        );
+
+                        return Moderator.create({
+                            userId: userModerator.id,
+                            partnerId: partner.id
+                        });
+                    });
+
+                    test('Success', async function () {
+                        const reportText = 'Hate speech report test';
+
+                        const reportResult = (await ideationIdeaReportCreate(agentReporter, topic.id, ideation.id, idea.id, Report.TYPES.hate, reportText)).body.data;
+                        assert.isTrue(validator.isUUID(reportResult.id));
+                        assert.equal(reportResult.type, Report.TYPES.hate);
+                        assert.equal(reportResult.text, reportText);
+                        assert.property(reportResult, 'createdAt');
+                        assert.equal(reportResult.creator.id, userReporter.id);
+                    });
+
+                });
+
+                suite('Read', function () {
+                    const agentCreator = request.agent(app);
+                    const agentReporter = request.agent(app);
+                    const agentModerator = request.agent(app);
+
+                    const emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportreadtest.com';
+                    const emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportreadtest.com';
+                    const emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportreadtest.com';
+
+                    let userCreator;
+                    let userModerator;
+
+                    let partner;
+                    let topic;
+                    let ideation;
+                    let idea;
+                    let report;
+
+                    suiteSetup(async function () {
+                        userCreator = await userLib.createUserAndLogin(agentCreator, emailCreator, null, null);
+                        userModerator = await userLib.createUser(agentModerator, emailModerator, null, null);
+                        await userLib.createUserAndLogin(agentReporter, emailReporter, null, null);
+                        topic = (await topicLib.topicCreate(agentCreator, userCreator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public)).body.data;
+                        ideation = (await ideationCreate(agentCreator, userCreator.id, topic.id, 'TEST ideation')).body.data;
+                        await topicLib.topicUpdate(agentCreator, userCreator.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(agentCreator, userCreator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+
+                        partner = await Partner.create({
+                            website: 'notimportant',
+                            redirectUriRegexp: 'notimportant'
+                        });
+                        await Topic.update(
+                            {
+                                sourcePartnerId: partner.id
+                            },
+                            {
+                                where: {
+                                    id: topic.id
+                                }
+                            }
+                        );
+                        await Moderator.create({
+                            userId: userModerator.id,
+                            partnerId: partner.id
+                        });
+                        report = (await ideationIdeaReportCreate(agentReporter, topic.id, ideation.id, idea.id, Report.TYPES.hate, 'reported!')).body.data;
+                    });
+
+                    test('Success - token with audience', async function () {
+                        const token = cosJwt.getTokenRestrictedUse(
+                            {
+                                userId: userModerator.id
+                            },
+                            [
+                                'GET /api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/reports/:reportId'
+                                    .replace(':topicId', topic.id)
+                                    .replace(':ideationId', ideation.id)
+                                    .replace(':ideaId', idea.id)
+                                    .replace(':reportId', report.id)
+                            ]
+                        );
+
+                        const resBody = (await ideationIdeaReportRead(request.agent(app), topic.id, ideation.id, idea.id, report.id, token)).body;
+
+                        const expectedResult = {
+                            status: { code: 20000 },
+                            data: {
+                                id: report.id,
+                                type: report.type,
+                                text: report.text,
+                                createdAt: report.createdAt,
+                                idea: {
+                                    statement: idea.statement,
+                                    description: idea.description,
+                                    id: idea.id
+                                }
+                            }
+                        };
+                        assert.deepEqual(resBody, expectedResult);
+                    });
+
+                    test('Fail - 40100 - Invalid token', async function () {
+                        const token = {};
+                        return _ideationIdeaReportRead(request.agent(app), topic.id, ideation.id, idea.id, report.id, token, 401);
+                    });
+
+                    test('Fail - 40100 - invalid token - without audience', async function () {
+                        const token = jwt.sign(
+                            {},
+                            config.session.privateKey,
+                            {
+                                algorithm: config.session.algorithm
+                            }
+                        );
+
+                        return _ideationIdeaReportRead(request.agent(app), topic.id, ideation.id, idea.id, report.id, token, 401);
+                    });
+
+                    test('Fail - 40100 - invalid token - invalid audience', async function () {
+                        const token = cosJwt.getTokenRestrictedUse({}, 'GET /foo/bar');
+
+                        return _ideationIdeaReportRead(request.agent(app), topic.id, ideation.id, idea.id, report.id, token, 401);
+                    });
+
+                });
+
+                suite('Moderate', function () {
+                    const agentCreator = request.agent(app);
+                    const agentReporter = request.agent(app);
+                    const agentModerator = request.agent(app);
+
+                    const emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@repormoderationtest.com';
+                    const emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@repormoderationtest.com';
+                    const emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@repormoderationtest.com';
+
+                    let userCreator;
+                    let userModerator;
+
+                    let partner;
+                    let topic;
+                    let ideation;
+                    let idea;
+                    let report;
+
+                    suiteSetup(async function () {
+                        userCreator = await userLib.createUserAndLogin(agentCreator, emailCreator, null, null);
+                        userModerator = await userLib.createUser(agentModerator, emailModerator, null, null);
+                        await userLib.createUserAndLogin(agentReporter, emailReporter, null, null);
+                        topic = (await topicLib.topicCreate(agentCreator, userCreator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.private)).body.data;
+                        ideation = (await ideationCreate(agentCreator, userCreator.id, topic.id, 'TEST ideation')).body.data;
+                        await topicLib.topicUpdate(agentCreator, userCreator.id, topic.id, Topic.STATUSES.ideation);
+                        idea = (await ideationIdeaCreate(agentCreator, userCreator.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+
+                        partner = await Partner.create({
+                            website: 'notimportant',
+                            redirectUriRegexp: 'notimportant'
+                        });
+                        await Topic.update(
+                            {
+                                sourcePartnerId: partner.id
+                            },
+                            {
+                                where: {
+                                    id: topic.id
+                                }
+                            }
+                        );
+                        await Moderator.create({
+                            userId: userModerator.id,
+                            partnerId: partner.id
+                        });
+                        report = (await ideationIdeaReportCreate(agentReporter, topic.id, ideation.id, idea.id, Report.TYPES.hate, 'Report create test text')).body.data;
+
+                    });
+
+                    test('Success', async function () {
+                        const moderateType = Comment.DELETE_REASON_TYPES.duplicate;
+                        const moderateText = 'Report create moderation text';
+
+                        const token = cosJwt.getTokenRestrictedUse(
+                            {
+                                userId: userModerator.id
+                            },
+                            [
+                                'POST /api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/reports/:reportId/moderate'
+                                    .replace(':topicId', topic.id)
+                                    .replace(':ideationId', ideation.id)
+                                    .replace(':ideaId', idea.id)
+                                    .replace(':reportId', report.id)
+                            ]
+                        );
+
+                        await ideationIdeaReportModerate(request.agent(app), topic.id, ideation.id, idea.id, report.id, token, moderateType, moderateText);
+
+                        const ideaRead = (await Idea.findOne({
+                            where: {
+                                id: idea.id
+                            },
+                            paranoid: false
+                        })).toJSON();
+
+                        assert.equal(ideaRead.deletedBy.id, userModerator.id);
+                        assert.equal(ideaRead.report.id, report.id);
+                        assert.equal(ideaRead.deletedReasonType, moderateType);
+                        assert.equal(ideaRead.deletedReasonText, moderateText);
+                        assert.isNotNull(ideaRead.deletedAt);
+                    });
+
+                    test('Fail - 40100 - Invalid token - random stuff', async function () {
+                        return _ideationIdeaReportModerate(request.agent(app), topic.id, ideation.id, idea.id, report.id, 'TOKEN HERE', Comment.DELETE_REASON_TYPES.abuse, 'not important', 401);
+                    });
+
+                    test('Fail - 40100 - Invalid token - invalid path', async function () {
+                        const path = '/totally/foobar/path';
+
+                        const token = jwt.sign(
+                            {
+                                path: path
+                            },
+                            config.session.privateKey,
+                            {
+                                algorithm: config.session.algorithm
+                            }
+                        );
+
+                        return _ideationIdeaReportModerate(request.agent(app), topic.id, ideation.id, idea.id, report.id, token, Comment.DELETE_REASON_TYPES.abuse, 'not important', 401);
+                    });
+
+                    test('Fail - 40010 - Report has become invalid cause comment has been updated after the report', async function () {
+                        // Revive the Comment we deleted on report
+                        await Idea.update(
+                            {
+                                deletedById: null,
+                                deletedAt: null,
+                                deletedReasonType: null,
+                                deletedReasonText: null,
+                                deletedByReportId: null
+
+                            },
+                            {
+                                where: {
+                                    id: idea.id
+                                },
+                                paranoid: false
+                            }
+                        );
+
+                        report = (await ideationIdeaReportCreate(agentReporter, topic.id, ideation.id, idea.id, Report.TYPES.hate, 'Report create test text')).body.data;
+                        const moderateType = Idea.DELETE_REASON_TYPES.duplicate;
+                        const moderateText = 'Report create moderation text';
+
+                        const token = cosJwt.getTokenRestrictedUse(
+                            {
+                                userId: userModerator.id
+                            },
+                            [
+                                'POST /api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/reports/:reportId/moderate'
+                                    .replace(':topicId', topic.id)
+                                    .replace(':ideationId', ideation.id)
+                                    .replace(':ideaId', idea.id)
+                                    .replace(':reportId', report.id)
+                            ]
+                        );
+
+                        await Idea.update(
+                            {
+                                description: 'Update idea!'
+                            },
+                            {
+                                where: {
+                                    id: idea.id
+                                },
+                                paranoid: false
+                            }
+                        );
+                        const resBody = (await _ideationIdeaReportModerate(request.agent(app), topic.id, ideation.id, idea.id, report.id, token, moderateType, moderateText, 400)).body;
+                        const expectedResult = {
+                            status: {
+                                code: 40010,
+                                message: 'Report has become invalid cause idea has been updated after the report'
+                            }
+                        };
+
+                        assert.deepEqual(resBody, expectedResult);
+                    });
+                });
+
             });
 
             suite('Votes', function () {
@@ -3267,10 +3665,10 @@ suite('Users', function () {
                         const folder = (await ideationFolderCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
                         await ideationFolderIdeaCreate(agent, user.id, topic.id, ideation.id, folder.id, [idea, idea2]);
                         const folderR = (await ideationFolderRead(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
-                        assert.deepEqual(folderR, { count: 2, rows: [idea, idea2] });
+                        assert.deepEqual(folderR, { count: 2, rows: [idea2, idea] });
                         const folderR2 = (await ideationFolderRead(agent, user.id, topic.id, ideation.id, folder.id, 1, 1)).body.data;
 
-                        assert.deepEqual(folderR2, { count: 2, rows: [idea2] });
+                        assert.deepEqual(folderR2, { count: 2, rows: [idea] });
                     });
 
                     test('Fail - Unauthorized', async function () {

@@ -1,6 +1,5 @@
 'use strict';
 
-const _ = require('lodash');
 const hooks = require('../../libs/sequelize/hooks');
 
 /**
@@ -48,7 +47,7 @@ module.exports = function (sequelize, DataTypes) {
             },
             type: {
                 type: DataTypes.ENUM,
-                values: _.values(TYPES),
+                values: Object.values(TYPES),
                 allowNull: false
             },
             parentId: {
@@ -116,7 +115,7 @@ module.exports = function (sequelize, DataTypes) {
             },
             deletedReasonType: {
                 type: DataTypes.ENUM,
-                values: _.values(DELETE_REASON_TYPES),
+                values: Object.values(DELETE_REASON_TYPES),
                 allowNull: true,
                 comment: 'Delete reason type which is provided in case deleted by moderator due to a user report'
             },

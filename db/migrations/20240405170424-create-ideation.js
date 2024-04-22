@@ -4,7 +4,7 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     return queryInterface.sequelize.transaction((t) => {
-      const TYPES = {
+      const DELETE_REASON_TYPES = {
         abuse: 'abuse', // is abusive or insulting
         obscene: 'obscene', // contains obscene language
         spam: 'spam', // contains spam or is unrelated to topic
@@ -102,6 +102,50 @@ module.exports = {
               type: Sequelize.STRING,
               allowNull: true,
               comment: 'Image for the idea'
+            },
+            deletedById: {
+                type: Sequelize.UUID,
+                comment: 'User ID of the person who deleted the Comment',
+                allowNull: true,
+                references: {
+                    model: 'Users',
+                    key: 'id'
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
+            },
+            deletedReasonType: {
+                type: Sequelize.ENUM,
+                values: Object.values(DELETE_REASON_TYPES),
+                allowNull: true,
+                comment: 'Delete reason type which is provided in case deleted by moderator due to a user report'
+            },
+            deletedReasonText: {
+                type: Sequelize.STRING(2048),
+                allowNull: true,
+                validate: {
+                    len: {
+                        args: [1, 2048],
+                        msg: 'Text can be 1 to 2048 characters long.'
+                    }
+                },
+                comment: 'Free text with reason why the comment was deleted'
+            },
+            deletedByReportId: {
+                type: Sequelize.UUID,
+                comment: 'Report ID due to which comment was deleted',
+                allowNull: true,
+                references: {
+                    model: 'Reports',
+                    key: 'id'
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
+            },
+            edits: {
+                type: Sequelize.JSONB,
+                comment: 'Comment versions in JSONB array',
+                allowNull: true
             },
             createdAt: {
               allowNull: false,
@@ -362,7 +406,7 @@ module.exports = {
             },
             type: {
               type: Sequelize.ENUM,
-              values: Object.values(TYPES),
+              values: Object.values(DELETE_REASON_TYPES),
               allowNull: false,
               comment: 'Report reason - verbal abuse, obscene content, hate speech etc..'
             },
@@ -421,7 +465,7 @@ module.exports = {
             },
             moderatedReasonType: {
               type: Sequelize.ENUM,
-              values: Object.values(TYPES),
+              values: Object.values(DELETE_REASON_TYPES),
               allowNull: true,
               comment: 'Moderation reason - verbal abuse, obscene content, hate speech etc..'
             },
@@ -478,16 +522,15 @@ module.exports = {
         queryInterface.dropTable('Folders', { transaction: t }),
         queryInterface.dropTable('FolderIdeas', { transaction: t }),
         queryInterface.dropTable('IdeaComments', { transaction: t }),
-        queryInterface.dropTable('IdeaReports', { transaction: t }),
         queryInterface
-          .dropTable('TopicReports', { transaction: t })
+          .dropTable('IdeaReports', { transaction: t })
           .then(function () { // While Sequelize does not support naming ENUMS, it creates duplicates - https://github.com/sequelize/sequelize/issues/2577
             return queryInterface.sequelize
-              .query('DROP TYPE IF EXISTS "enum_TopicReports_moderatedReasonType";', { transaction: t });
+              .query('DROP TYPE IF EXISTS "enum_IdeaReports_moderatedReasonType";', { transaction: t });
           })
           .then(function () {
             return queryInterface.sequelize
-              .query('DROP TYPE IF EXISTS "enum_TopicReports_type";', { transaction: t });
+              .query('DROP TYPE IF EXISTS "enum_IdeaReports_type";', { transaction: t });
           }),
         queryInterface.sequelize.query(
           `ALTER TYPE "enum_Topics_status" REMOVE VALUE 'ideation' BEFORE 'inProgress'`

@@ -1277,6 +1277,165 @@ module.exports = function (app) {
     };
 
     /**
+     * Send idea report related e-mails
+     *
+     * @param {string} ideaId Idea id
+     * @param {object} report Report Sequelize instance
+     *
+     * @returns {Promise} Idea report result
+     *
+     * @private
+     */
+    const _sendIdeaReport = async (ideaId, report) => {
+        let moderators;
+        const [ideaInfo] = await db
+            .query(
+                `
+                    SELECT
+                        i."id" as "idea.id",
+                        i."statement" as "idea.subject",
+                        i."description" as "idea.text",
+                        i."updatedAt" as "idea.updatedAt",
+                        u."name" as "idea.author.name",
+                        u."email" as "idea.author.email",
+                        u."language" as "idea.author.language",
+                        t."id" as "topic.id",
+                        i."ideationId" as "ideation.id",
+                        t."title" as "topic.title",
+                        t."sourcePartnerId" as "topic.sourcePartnerId",
+                        t."visibility" as "topic.visibility"
+                    FROM "Ideas" i
+                        JOIN "TopicIdeations" ti ON ti."ideationId" = i."ideationId"
+                        JOIN "Topics" t ON (t.id = ti."topicId")
+                        JOIN "Users" u ON (u.id = i."authorId")
+                    WHERE i."id" = :ideaId
+                `,
+                {
+                    replacements: {
+                        ideaId: ideaId
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                }
+            );
+
+        if (ideaInfo.topic.visibility === Topic.VISIBILITY.public) {
+            logger.debug('Topic is public, sending e-mails to registered partner moderators', ideaInfo);
+
+            moderators = await _getModerators(ideaInfo.topic.sourcePartnerId);
+        } else {
+            logger.debug('Topic is NOT public, sending e-mails to Users with admin permissions', ideaInfo);
+            // Private Topics will have moderation by admin Users
+
+            moderators = await _getTopicMemberUsers(ideaInfo.topic.id, TopicMemberUser.LEVELS.admin);
+        }
+        const promisesToResolve = [];
+
+        // Comment creator e-mail - TODO: Comment back in when comment editing goes live!
+        let ideaAuthorInformed = true;
+        if (ideaInfo.idea.author.email) {
+            const template = resolveTemplate('reportIdeaCreator', ideaInfo.idea.author.language);
+            const linkViewTopic = urlLib.getFe('/topics/:topicId', { topicId: ideaInfo.topic.id });
+
+            const emailOptions = Object.assign(
+                _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                {
+                    subject: template.translations.REPORT_IDEA_CREATOR.SUBJECT,
+                    to: ideaInfo.idea.author.email,
+                    //Placeholders
+                    idea: ideaInfo.idea,
+                    topic: ideaInfo.topic,
+                    toUser: ideaInfo.idea.author,
+                    report: {
+                        type: template.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
+                        text: report.text
+                    },
+                    linkViewTopic: linkViewTopic
+                }
+            );
+            emailOptions.images.push(
+                {
+                    name: 'icon_argument.png',
+                    file: path.join(templateRoot, 'images/Discussions.png')
+                });
+            emailOptions.linkedData.translations = template.translations;
+            const promiseCreatorEmail = emailClient.sendString(template.body, emailOptions);
+
+            promisesToResolve.push(promiseCreatorEmail);
+        } else {
+            logger.info('Idea reported, but no e-mail could be sent to author as there is no e-mail in the profile', ideaInfo);
+            ideaAuthorInformed = false;
+        }
+
+        if (moderators) {
+            const linkModerate = urlLib.getFe(
+                '/topics/:topicId/ideations/:ideationId/ideas/:ideaId/reports/:reportId/moderate',
+                {
+                    topicId: ideaInfo.topic.id,
+                    ideationId: ideaInfo.ideation.id,
+                    ideaId: ideaInfo.idea.id,
+                    reportId: report.id
+                }
+            );
+
+            moderators.forEach((moderator) => {
+                if (moderator.email) {
+                    const template = resolveTemplate('reportIdeaModerator', moderator.language);
+
+                    const token = cosJwt.getTokenRestrictedUse(
+                        {
+                            userId: moderator.id
+                        },
+                        [
+                            'POST /api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/reports/:reportId/moderate'
+                                .replace(':topicId', ideaInfo.topic.id)
+                                .replace(':ideationId', ideaInfo.ideation.id)
+                                .replace(':ideaId', ideaInfo.idea.id)
+                                .replace(':reportId', report.id)
+                            ,
+                            'GET /api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/reports/:reportId'
+                                .replace(':topicId', ideaInfo.topic.id)
+                                .replace(':ideationId', ideaInfo.ideation.id)
+                                .replace(':ideaId', ideaInfo.idea.id)
+                                .replace(':reportId', report.id)
+                        ]
+                    );
+
+                    const emailOptions = Object.assign(
+                        _.cloneDeep(EMAIL_OPTIONS_DEFAULT),
+                        {
+                            subject: template.translations.REPORT_IDEA_MODERATOR.SUBJECT,
+                            to: moderator.email,
+                            userModerator: moderator,
+                            //Placeholders...
+                            idea: ideaInfo.idea,
+                            topic: ideaInfo.topic,
+                            report: {
+                                type: template.translations.REPORT_COMMENT.REPORT_TYPE[report.type.toUpperCase()],
+                                text: report.text
+                            },
+                            linkModerate: linkModerate + '?token=' + encodeURIComponent(token),
+                            isUserNotified: ideaAuthorInformed
+                        }
+                    );
+                    emailOptions.images.push(
+                        {
+                            name: 'icon_argument.png',
+                            file: path.join(templateRoot, 'images/Discussions.png')
+                        });
+                    emailOptions.linkedData.translations = template.translations;
+                    const promiseModeratorEmail = emailClient.sendString(template.body, emailOptions);
+
+                    promisesToResolve.push(promiseModeratorEmail);
+                }
+            });
+        }
+
+        return handleAllPromises(promisesToResolve);
+    };
+
+    /**
      * Send Topic report related e-mails
      *
      * @param {object} topicReport TopicReport Sequelize instance
@@ -2184,6 +2343,7 @@ module.exports = function (app) {
         sendGroupMemberUserCreate: _sendGroupMemberUserCreate,
         sendCommentReport: _sendCommentReport,
         sendIdeaCommentReport: _sendIdeaCommentReport,
+        sendIdeaReport: _sendIdeaReport,
         sendToParliament: _sendToParliament,
         sendHelpRequest: _sendHelpRequest,
         sendVoteReminder: _sendVoteReminder,

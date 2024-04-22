@@ -399,12 +399,11 @@ module.exports = function (app) {
                             where: {
                                 id: idea.id
                             },
-                            attributes: ['id', 'ideationId', 'statement', 'description', 'createdAt', 'updatedAt', 'imageUrl'],
                             include: [
                                 {
                                     model: User,
                                     attributes: ['id', 'name', 'email', 'imageUrl'],
-                                    as: 'creator',
+                                    as: 'author',
                                     required: true
                                 }
                             ]
@@ -429,11 +428,10 @@ module.exports = function (app) {
                 where: {
                     id: ideaId
                 },
-                attributes: ['id', 'statement', 'description', 'createdAt', 'updatedAt', 'imageUrl', 'ideationId'],
                 include: [
                     {
                         model: User,
-                        as:'creator',
+                        as: 'author',
                         attributes: ['id', 'name', 'imageUrl', 'email']
                     }
                 ]
@@ -496,7 +494,7 @@ module.exports = function (app) {
                 include: [
                     {
                         model: User,
-                        as: 'creator',
+                        as: 'author',
                         attributes: ['id', 'name', 'imageUrl', 'email']
                     },
                     {
@@ -649,15 +647,9 @@ module.exports = function (app) {
         }
         let orderSql = ' "Idea"."createdAt" DESC';
         if (!showModerated || showModerated == "false") {
-            where += ` AND (ir."moderatedAt" IS NULL OR ir."resolvedAt" IS NOT NULL) `;
+            where += ` AND ("Idea"."deletedAt" IS NULL) `;
         } else {
-            where += ` AND (ir."moderatedAt" IS NOT NULL AND ir."resolvedAt" IS NULL) `;
-            returncolumns += `
-             ir.id AS "report.id",
-             ir."moderatedReasonType" AS "report.moderatedReasonType",
-             ir."moderatedReasonText" AS "report.moderatedReasonText",
-            `;
-            groupBySql += ` ,ir.id, ir."moderatedReasonType", ir."moderatedReasonText" `;
+            where += ` AND ("Idea"."deletedAt" IS NOT NULL `;
         }
         if (orderBy) {
             switch (orderBy) {
@@ -721,17 +713,26 @@ module.exports = function (app) {
                 "Idea"."createdAt",
                 "Idea"."imageUrl",
                 "Idea"."updatedAt",
-                "creator"."id" AS "creator.id",
-                "creator"."name" AS "creator.name",
-                "creator"."email" AS "creator.email",
-                "creator"."imageUrl" AS "creator.imageUrl",
+                "Idea"."deletedAt",
+                "author"."id" AS "author.id",
+                "author"."name" AS "author.name",
+                "author"."email" AS "author.email",
+                "author"."imageUrl" AS "author.imageUrl",
                 count(*) OVER()::integer AS "countTotal",
                 iv."up.count" as "votes.up.count",
                 iv."down.count" as "votes.down.count",
+                CASE
+                    WHEN "Idea"."deletedById" IS NOT NULL THEN jsonb_build_object('id', "Idea"."deletedById", 'name', dbu.name )
+                    ELSE jsonb_build_object('id', "Idea"."deletedById")
+                END as "deletedBy",
+                "Idea"."deletedReasonType"::text,
+                "Idea"."deletedReasonText",
+                jsonb_build_object('id', "Idea"."deletedByReportId") as report,
                 ${returncolumns}
                 COALESCE(ic.count, 0) AS "replies.count"
                 FROM "Ideas" AS "Idea"
-                INNER JOIN "Users" AS "creator" ON "Idea"."authorId" = "creator"."id"
+                INNER JOIN "Users" AS "author" ON "Idea"."authorId" = "author"."id"
+                LEFT JOIN "Users" dbu ON (dbu.id = "Idea"."deletedById")
                 LEFT JOIN (
                     SELECT
                         "ideaId",
@@ -739,10 +740,9 @@ module.exports = function (app) {
                     FROM "IdeaComments"
                     GROUP BY "ideaId"
                 ) AS ic ON (ic."ideaId" = "Idea".id)
-                LEFT JOIN "IdeaReports" ir ON (ir."ideaId" = "Idea".id AND ir."resolvedById" IS NULL AND ir."deletedAt" IS NULL)
                 ${joinSql}
                 ${where}
-                GROUP BY "Idea"."id", creator.id, iv."up.count", iv."down.count", ic."count" ${groupBySql}
+                GROUP BY "Idea"."id", author.id, dbu.name, iv."up.count", iv."down.count", ic."count" ${groupBySql}
                 ORDER BY ${orderSql}
                 OFFSET :offset
                 LIMIT :limit
@@ -760,6 +760,7 @@ module.exports = function (app) {
                 raw: true,
                 nest: true
             });
+
             const count = ideas[0]?.countTotal || 0;
             ideas.forEach((idea) => delete idea.countTotal);
 
@@ -897,11 +898,10 @@ module.exports = function (app) {
                 where: {
                     ideationId: req.params.ideationId
                 },
-                attributes: ['id', 'statement', 'description', 'imageUrl', 'ideationId', 'createdAt', 'updatedAt'],
                 include: [
                     {
                         model: User,
-                        as: 'creator',
+                        as: 'author',
                         attributes: ['id', 'name', 'email', 'imageUrl']
                     },
                     {
@@ -2444,7 +2444,7 @@ module.exports = function (app) {
                         return res.notFound();
                     }
 
-                    await emailLib.sendIdeaReport(ideaId, report)
+                    await emailLib.sendIdeaReport(idea.id, report)
 
                     t.afterCommit(() => {
                         return res.ok(report);
@@ -2471,13 +2471,13 @@ module.exports = function (app) {
                             r."text",
                             r."createdAt",
                             i."id" as "idea.id",
-                            i.statement as "idea.subject",
+                            i."statement" as "idea.statement",
                             i."description" as "idea.description"
                         FROM "Reports" r
                         LEFT JOIN "IdeaReports" ir ON (ir."reportId" = r.id)
                         LEFT JOIN "Ideas" i ON (i.id = ir."ideaId")
                         WHERE r.id = :reportId
-                        AND c.id = :ideaId
+                        AND i.id = :ideaId
                         AND r."deletedAt" IS NULL
                     ;`,
                     {
@@ -2545,9 +2545,9 @@ module.exports = function (app) {
             let idea = ideaReport.idea;
             const report = ideaReport.report;
 
-            // If Comment has been updated since the Report was made, deny moderation cause the text may have changed.
+            // If Idea has been updated since the Report was made, deny moderation cause the text may have changed.
             if (idea.updatedAt.getTime() > report.createdAt.getTime()) {
-                return res.badRequest('Report has become invalid cause comment has been updated after the report', 10);
+                return res.badRequest('Report has become invalid cause idea has been updated after the report', 10);
             }
 
             idea = await Idea.findOne({

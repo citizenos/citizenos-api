@@ -10,6 +10,15 @@
  */
 
 module.exports = function (sequelize, DataTypes) {
+    const DELETE_REASON_TYPES = { // Copy of Report reason types until Sequelize supports ENUM reuse - https://github.com/sequelize/sequelize/issues/2577
+        abuse: 'abuse', // is abusive or insulting
+        obscene: 'obscene', // contains obscene language
+        spam: 'spam', // contains spam or is unrelated to topic
+        hate: 'hate', // contains hate speech
+        netiquette: 'netiquette', // infringes (n)etiquette
+        duplicate: 'duplicate' // duplicate
+    };
+
     const Idea = sequelize.define(
         'Idea',
         {
@@ -56,6 +65,45 @@ module.exports = function (sequelize, DataTypes) {
                 allowNull: true,
                 comment: 'Image for the idea'
             },
+            deletedById: {
+                type: DataTypes.UUID,
+                comment: 'User ID of the person who deleted the Comment',
+                allowNull: true,
+                references: {
+                    model: 'Users',
+                    key: 'id'
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
+            },
+            deletedReasonType: {
+                type: DataTypes.ENUM,
+                values: Object.values(DELETE_REASON_TYPES),
+                allowNull: true,
+                comment: 'Delete reason type which is provided in case deleted by moderator due to a user report'
+            },
+            deletedReasonText: {
+                type: DataTypes.STRING(2048),
+                allowNull: true,
+                validate: {
+                    len: {
+                        args: [1, 2048],
+                        msg: 'Text can be 1 to 2048 characters long.'
+                    }
+                },
+                comment: 'Free text with reason why the comment was deleted'
+            },
+            deletedByReportId: {
+                type: DataTypes.UUID,
+                comment: 'Report ID due to which comment was deleted',
+                allowNull: true,
+                references: {
+                    model: 'Reports',
+                    key: 'id'
+                },
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
+            },
             createdAt: {
                 allowNull: false,
                 type: DataTypes.DATE
@@ -71,9 +119,50 @@ module.exports = function (sequelize, DataTypes) {
         }
     );
 
+    Idea.prototype.toJSON = function () {
+        // Using whitelist instead of blacklist, so that no accidents occur when adding new properties.
+
+        const data = {
+            id: this.dataValues.id,
+            ideationId: this.dataValues.ideationId,
+            statement: this.dataValues.statement,
+            description: this.dataValues.description,
+            imageUrl: this.dataValues.imageUrl,
+            createdAt: this.dataValues.createdAt,
+            updatedAt: this.dataValues.updatedAt,
+            deletedAt: this.dataValues.deletedAt,
+            deletedReasonType: this.dataValues.deletedReasonType,
+            deletedReasonText: this.dataValues.deletedReasonText
+        };
+
+
+        if (this.dataValues.author) {
+            data.author = this.dataValues.author;
+        } else {
+            data.author = {};
+            data.author.id = this.dataValues.authorId;
+        }
+
+        if (this.dataValues.deletedBy) {
+            data.deletedBy = this.dataValues.deletedBy;
+        } else {
+            data.deletedBy = {};
+            data.deletedBy.id = this.dataValues.deletedById;
+        }
+
+        if (this.dataValues.report) {
+            data.report = this.dataValues.report;
+        } else {
+            data.report = {};
+            data.report.id = this.dataValues.deletedByReportId;
+        }
+
+        return data;
+    };
+
     Idea.associate = function (models) {
         Idea.belongsTo(models.User, {
-            as:'creator',
+            as:'author',
             foreignKey: 'authorId',
             constraints: true
         });
@@ -85,6 +174,12 @@ module.exports = function (sequelize, DataTypes) {
 
         Idea.hasMany(models.IdeaVote, {
             foreignKey: 'ideaId'
+        });
+
+        Idea.belongsToMany(models.Report, {
+            through: models.IdeaReport,
+            foreignKey: 'IdeaId',
+            constraints: true
         });
 
         Idea.belongsToMany(models.User, {
@@ -105,6 +200,8 @@ module.exports = function (sequelize, DataTypes) {
             constraints: true
         });
     }
+
+    Idea.DELETE_REASON_TYPES = DELETE_REASON_TYPES;
 
     return Idea;
 }
