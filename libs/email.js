@@ -1208,7 +1208,7 @@ module.exports = function (app) {
 
         if (moderators) {
             const linkModerate = urlLib.getFe(
-                '/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId/reports/:reportId/moderate',
+                '/topics/:topicId/ideation/:ideationId/ideas/:ideaId/comments/:commentId/reports/:reportId/moderate',
                 {
                     topicId: commentInfo.topic.id,
                     commentId: commentInfo.comment.id,
@@ -1227,14 +1227,14 @@ module.exports = function (app) {
                             userId: moderator.id
                         },
                         [
-                            'POST /api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId/reports/:reportId/moderate'
+                            'POST /api/topics/:topicId/ideation/:ideationId/ideas/:ideaId/comments/:commentId/reports/:reportId/moderate'
                                 .replace(':topicId', commentInfo.topic.id)
                                 .replace(':commentId', commentInfo.comment.id)
                                 .replace(':ideationId', commentInfo.ideation.id)
                                 .replace(':ideaId', commentInfo.idea.id)
                                 .replace(':reportId', report.id)
                             ,
-                            'GET /api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId/reports/:reportId'
+                            'GET /api/topics/:topicId/ideation/:ideationId/ideas/:ideaId/comments/:commentId/reports/:reportId'
                                 .replace(':topicId', commentInfo.topic.id)
                                 .replace(':commentId', commentInfo.comment.id)
                                 .replace(':ideationId', commentInfo.ideation.id)
@@ -1370,7 +1370,7 @@ module.exports = function (app) {
 
         if (moderators) {
             const linkModerate = urlLib.getFe(
-                '/topics/:topicId/ideations/:ideationId/ideas/:ideaId/reports/:reportId/moderate',
+                '/topics/:topicId/ideation/:ideationId/ideas/:ideaId/reports/:reportId/moderate',
                 {
                     topicId: ideaInfo.topic.id,
                     ideationId: ideaInfo.ideation.id,
@@ -1388,13 +1388,13 @@ module.exports = function (app) {
                             userId: moderator.id
                         },
                         [
-                            'POST /api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/reports/:reportId/moderate'
+                            'POST /api/topics/:topicId/ideation/:ideationId/ideas/:ideaId/reports/:reportId/moderate'
                                 .replace(':topicId', ideaInfo.topic.id)
                                 .replace(':ideationId', ideaInfo.ideation.id)
                                 .replace(':ideaId', ideaInfo.idea.id)
                                 .replace(':reportId', report.id)
                             ,
-                            'GET /api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/reports/:reportId'
+                            'GET /api/topics/:topicId/ideation/:ideationId/ideas/:ideaId/reports/:reportId'
                                 .replace(':topicId', ideaInfo.topic.id)
                                 .replace(':ideationId', ideaInfo.ideation.id)
                                 .replace(':ideaId', ideaInfo.idea.id)

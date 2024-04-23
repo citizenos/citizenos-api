@@ -173,6 +173,76 @@ module.exports = function (app) {
         }
     }
 
+    const _readIdeationParticipants = async (req, res, next) => {
+        try {
+
+            const users = await User.findAndCountAll({
+                include: [{
+                    model: Idea,
+                    where: {
+                        ideationId: req.params.ideationId
+                    }
+                }]
+            });
+
+            return res.ok(users);
+        }catch (err) {
+            next(err);
+        }
+    };
+
+    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/participants', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+        try {
+            const ideation = await Ideation.findOne({
+                where: {
+                    id: req.params.ideationId
+                },
+                include: [
+                    {
+                        model: Topic,
+                        where: {
+                            id: req.params.topicId
+                        },
+                        attributes: ['visibility']
+                    }
+                ]
+            });
+            if (!ideation || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+                return res.notFound();
+            }
+            return _readIdeationParticipants(req, res, next);
+
+        } catch (err) {
+            next(err);
+        }
+    });
+
+    app.get('/api/topics/:topicId/ideations/:ideationId/participants', topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+        try {
+            const ideation = await Ideation.findOne({
+                where: {
+                    id: req.params.ideationId
+                },
+                include: [
+                    {
+                        model: Topic,
+                        where: {
+                            id: req.params.topicId
+                        },
+                        attributes: ['visibility']
+                    }
+                ]
+            });
+            if (!ideation || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+                return res.notFound();
+            }
+            return _readIdeationParticipants(req, res, next);
+
+        } catch (err) {
+            next(err);
+        }
+    });
+
     app.get('/api/topics/:topicId/ideations/:ideationId', async (req, res, next) => {
         try {
             const ideation = await Ideation.findOne({
@@ -333,7 +403,7 @@ module.exports = function (app) {
     /**
      * Create an Idea
      */
-    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.ideation]), async (req, res, next) => {
+    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.ideation]), async (req, res, next) => {
         const ideationId = req.params.ideationId;
         const topicId = req.params.topicId;
         const statement = req.body.statement;
