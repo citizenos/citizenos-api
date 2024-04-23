@@ -216,20 +216,21 @@ const ideationIdeaList = async function (agent, userId, topicId, ideationId, que
     return _ideationIdeaList(agent, userId, topicId, ideationId, queryParams, 200);
 };
 
-const _ideationIdeaListUnauth = async function (agent, topicId, ideationId, expectedHttpCode) {
+const _ideationIdeaListUnauth = async function (agent, topicId, ideationId, queryParams, expectedHttpCode) {
     const path = '/api/topics/:topicId/ideations/:ideationId/ideas'
         .replace(':topicId', topicId)
         .replace(':ideationId', ideationId);
 
     return agent
         .get(path)
+        .query(queryParams)
         .set('Content-Type', 'application/json')
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/)
 };
 
-const ideationIdeaListUnauth = async function (agent, topicId, ideationId) {
-    return _ideationIdeaListUnauth(agent, topicId, ideationId, 200);
+const ideationIdeaListUnauth = async function (agent, topicId, ideationId, queryParams) {
+    return _ideationIdeaListUnauth(agent, topicId, ideationId, queryParams, 200);
 };
 
 /* Reports*/
@@ -1282,6 +1283,62 @@ suite('Users', function () {
                     assert.deepEqual(ideas.rows[0].votes, { up: { count: 0 }, down: { count: 0 } });
                     delete ideas.rows[0].votes;
                     assert.deepEqual(ideas, { count: 1, rows: [idea] });
+                });
+
+                test('Success - query - showModerated', async function () {
+                    const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    await topicLib.topicUpdate(agent, user.id, topic.id, null, Topic.VISIBILITY.public);
+                    const agentModerator = request.agent(app);
+                    const userModerator = await userLib.createUser(agentModerator, 'moderator@test.com', null, null);
+                    await Moderator.create({
+                        userId: userModerator.id
+                    });
+                    const agentReporter = request.agent(app);
+                    const userReporter = await userLib.createUserAndLogin(agentReporter, 'reporter@test.com', null, null);
+                    const report = (await ideationIdeaReportCreate(agentReporter, topic.id, ideation.id, idea.id, Report.TYPES.hate, 'Report create test text')).body.data;
+
+                    assert.isTrue(validator.isUUID(report.id));
+                    assert.equal(report.type, Report.TYPES.hate);
+                    assert.equal(report.text, 'Report create test text');
+                    assert.property(report, 'createdAt');
+                    assert.equal(report.creator.id, userReporter.id);
+
+                    const moderateType = Comment.DELETE_REASON_TYPES.duplicate;
+                    const moderateText = 'Report create moderation text';
+
+                    const token = cosJwt.getTokenRestrictedUse(
+                        {
+                            userId: userModerator.id
+                        },
+                        [
+                            'POST /api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/reports/:reportId/moderate'
+                                .replace(':topicId', topic.id)
+                                .replace(':ideationId', ideation.id)
+                                .replace(':ideaId', idea.id)
+                                .replace(':reportId', report.id)
+                        ]
+                    );
+
+                    await ideationIdeaReportModerate(request.agent(app), topic.id, ideation.id, idea.id, report.id, token, moderateType, moderateText);
+
+                    const ideas = (await ideationIdeaListUnauth(request.agent(app), topic.id, ideation.id, { showModerated: 'showModerated' })).body.data;
+                    assert.deepEqual(ideas.rows[0].replies, { count: 0 });
+                    delete ideas.rows[0].replies;
+                    assert.deepEqual(ideas.rows[0].votes, { up: { count: 0 }, down: { count: 0 } });
+                    delete ideas.rows[0].votes;
+                    assert.equal(ideas.count, 1);
+                    assert.equal(ideas.rows.length, 1);
+                    const ideaRes = ideas.rows[0];
+                    assert.deepEqual(ideaRes.author, idea.author);
+                    assert.equal(ideaRes.statement, idea.statement);
+                    assert.equal(ideaRes.description, idea.description);
+                    assert.equal(ideaRes.imageUrl, idea.imageUrl);
+                    assert.equal(ideaRes.createdAt, idea.createdAt);
+                    assert.deepEqual(ideaRes.deletedBy, {id: userModerator.id, name: userModerator.name});
+                    assert.deepEqual(ideaRes.report, {id: report.id});
+                    assert.notEqual(ideaRes.deletedAt, null);
+                    assert.equal(ideaRes.deletedReasonText, moderateText);
+                    assert.equal(ideaRes.deletedReasonType, moderateType);
                 });
 
                 test('Fail - Unauthorized', async function () {
@@ -3665,10 +3722,10 @@ suite('Users', function () {
                         const folder = (await ideationFolderCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
                         await ideationFolderIdeaCreate(agent, user.id, topic.id, ideation.id, folder.id, [idea, idea2]);
                         const folderR = (await ideationFolderRead(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
-                        assert.deepEqual(folderR, { count: 2, rows: [idea2, idea] });
+                        assert.deepEqual(folderR, { count: 2, rows: [idea, idea2] });
                         const folderR2 = (await ideationFolderRead(agent, user.id, topic.id, ideation.id, folder.id, 1, 1)).body.data;
 
-                        assert.deepEqual(folderR2, { count: 2, rows: [idea] });
+                        assert.deepEqual(folderR2, { count: 2, rows: [idea2] });
                     });
 
                     test('Fail - Unauthorized', async function () {

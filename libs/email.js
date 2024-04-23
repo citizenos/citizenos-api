@@ -1293,8 +1293,8 @@ module.exports = function (app) {
                 `
                     SELECT
                         i."id" as "idea.id",
-                        i."statement" as "idea.subject",
-                        i."description" as "idea.text",
+                        i."statement" as "idea.statement",
+                        i."description" as "idea.description",
                         i."updatedAt" as "idea.updatedAt",
                         u."name" as "idea.author.name",
                         u."email" as "idea.author.email",
@@ -1356,8 +1356,8 @@ module.exports = function (app) {
             );
             emailOptions.images.push(
                 {
-                    name: 'icon_argument.png',
-                    file: path.join(templateRoot, 'images/Discussions.png')
+                    name: 'icon_ideation.png',
+                    file: path.join(templateRoot, 'images/Ideation.png')
                 });
             emailOptions.linkedData.translations = template.translations;
             const promiseCreatorEmail = emailClient.sendString(template.body, emailOptions);
@@ -1421,8 +1421,8 @@ module.exports = function (app) {
                     );
                     emailOptions.images.push(
                         {
-                            name: 'icon_argument.png',
-                            file: path.join(templateRoot, 'images/Discussions.png')
+                            name: 'icon_ideation.png',
+                            file: path.join(templateRoot, 'images/Ideation.png')
                         });
                     emailOptions.linkedData.translations = template.translations;
                     const promiseModeratorEmail = emailClient.sendString(template.body, emailOptions);

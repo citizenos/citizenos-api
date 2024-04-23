@@ -333,7 +333,7 @@ module.exports = function (app) {
     /**
      * Create an Idea
      */
-    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.ideation]), async (req, res, next) => {
+    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, null, [Topic.STATUSES.ideation]), async (req, res, next) => {
         const ideationId = req.params.ideationId;
         const topicId = req.params.topicId;
         const statement = req.body.statement;
@@ -552,7 +552,7 @@ module.exports = function (app) {
         }
     });
 
-    app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin), async (req, res, next) => {
+    app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read), async (req, res, next) => {
         try {
             const ideaId = req.params.ideaId;
             const ideationId = req.params.ideationId;
@@ -640,16 +640,16 @@ module.exports = function (app) {
                 ) ii
         ) iv ON iv."ideaId" = "Idea".id
         `;
-        let where = ` WHERE "Idea"."ideationId" = :ideationId AND "Idea"."deletedAt" IS NULL `;
+        let where = ` WHERE "Idea"."ideationId" = :ideationId `;
         let returncolumns = ``;
         if (authorId) {
             where += ` AND "Idea"."authorId" = :authorId `;
         }
         let orderSql = ' "Idea"."createdAt" DESC';
         if (!showModerated || showModerated == "false") {
-            where += ` AND ("Idea"."deletedAt" IS NULL) `;
+            where += ` AND "Idea"."deletedAt" IS NULL `;
         } else {
-            where += ` AND ("Idea"."deletedAt" IS NOT NULL `;
+            where += ` AND "Idea"."deletedAt" IS NOT NULL `;
         }
         if (orderBy) {
             switch (orderBy) {
