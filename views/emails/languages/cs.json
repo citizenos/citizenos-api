@@ -34,16 +34,16 @@
     "SUBJECT": "Témata, která jste nahlásili, byla zkontrolována"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
-    "SUBJECT": "Your topic has been reviewed by a moderator"
+    "SUBJECT": "Vaše téma bylo zkontrolováno moderátorem"
   },
   "REPORT_TOPIC_REPORT_REVIEW_MODERATOR": {
-    "SUBJECT": "A reported topic has been revised, please review"
+    "SUBJECT": "Hlášené téma bylo revidováno, prosím zkontrolujte"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_MEMBER": {
-    "SUBJECT": "Access to your reported topic has been restored"
+    "SUBJECT": "Přístup k nahlášenému tématu byl obnoven"
   },
   "REPORT_TOPIC_REPORT_RESOLVE_REPORTER": {
-    "SUBJECT": "The issue you reported has been resolved"
+    "SUBJECT": "Problém, který jste nahlásili, byl vyřešen"
   },
   "REPORT": {
     "REPORT_TYPE": {
@@ -66,7 +66,7 @@
     }
   },
   "REPORT_COMMENT_CREATOR": {
-    "SUBJECT": "Your discussion contribution has been reported as inappropriate"
+    "SUBJECT": "Váš diskusní příspěvek byl nahlášen jako nevhodný"
   },
   "REPORT_COMMENT_MODERATOR": {
     "SUBJECT": "Please moderate this reported discussion content"
