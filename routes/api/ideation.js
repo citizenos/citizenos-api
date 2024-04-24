@@ -142,7 +142,8 @@ module.exports = function (app) {
                     i."creatorId",
                     i."createdAt",
                     i."updatedAt",
-                    COALESCE(ii.count, 0) as "ideas.count"
+                    COALESCE(ii.count, 0) as "ideas.count",
+                    COALESCE(fi.count, 0) as "folders.count"
                 FROM "Ideations" i
                 LEFT JOIN (
                     SELECT
@@ -151,6 +152,14 @@ module.exports = function (app) {
                     FROM "Ideas"
                     GROUP BY "ideationId"
                 ) AS ii ON ii."ideationId" = i.id
+                LEFT JOIN (
+                    SELECT
+                        "ideationId",
+                        COUNT("ideationId") as count
+                    FROM "Folders"
+                    WHERE "deletedAt" IS NULL
+                    GROUP BY "ideationId"
+                ) AS fi ON fi."ideationId" = i.id
                 WHERE i.id = :ideationId AND i."deletedAt" IS NULL
                 ;
             `, {
@@ -186,7 +195,7 @@ module.exports = function (app) {
             });
 
             return res.ok(users);
-        }catch (err) {
+        } catch (err) {
             next(err);
         }
     };
@@ -689,6 +698,7 @@ module.exports = function (app) {
         const order = (req.query.order?.toLowerCase() === 'asc') ? 'ASC' : 'DESC';
         const authorId = req.query.authorId;
         const favourite = req.query.favourite;
+        const folderId = req.query.folderId;
         const showModerated = req.query.showModerated || false;
         let groupBySql = ``;
         let joinSql = `
@@ -773,6 +783,9 @@ module.exports = function (app) {
                 where += ` AND if."ideaId" IS NOT NULL `;
             }
         }
+        if (folderId) {
+            joinSql += ` JOIN "FolderIdeas" fi ON fi."ideaId" = "Idea".id AND fi."folderId" = :folderId `
+        }
         try {
             const ideas = await db.query(`
             SELECT
@@ -823,6 +836,7 @@ module.exports = function (app) {
                     ideationId,
                     authorId,
                     favourite,
+                    folderId,
                     limit,
                     offset
                 },
@@ -1291,7 +1305,6 @@ module.exports = function (app) {
                             ip: req.ip
                         }, req.method + ' ' + req.path, t);
 
-
                     await folder.destroy();
 
                     t.afterCommit(() => {
@@ -1308,24 +1321,43 @@ module.exports = function (app) {
 
     const _readIdeationFolders = async (req, res, next) => {
         const ideationId = req.params.ideationId;
-        const limit = req.query.limit || 8;
-        const offset = req.query.offset || 0;
-
+    /*    const limit = req.query.limit || 8;
+        const offset = req.query.offset || 0;*/
         try {
-            const folders = await Folder.findAndCountAll({
-                where: {
+            const folders = await db.query(`
+            SELECT
+                f.id,
+                f."ideationId",
+                u.id as "creator.id",
+                u.name as "creator.name",
+                u."imageUrl" AS "creator.imageUrl",
+                f.name,
+                f.description,
+                f."createdAt",
+                f."updatedAt",
+                COALESCE(fi.count, 0) as "ideas.count",
+                count(*) OVER()::integer AS "countTotal"
+                FROM "Folders" f
+                JOIN "Users" u ON u.id = f."creatorId"
+                LEFT JOIN (
+                    SELECT "folderId", COUNT(*) FROM "FolderIdeas" GROUP BY "folderId"
+                ) fi ON fi."folderId" = f.id
+                WHERE f."ideationId" = :ideationId AND f."deletedAt" IS NULL;
+            `, {
+                replacements: {
                     ideationId: ideationId
                 },
-                include: [
-                    {
-                        model: Idea,
-                        attributes: []
-                    }
-                ],
-                limit: limit,
-                offset: offset
+                type: db.QueryTypes.SELECT,
+                raw: true,
+                nest: true
             });
-            return res.ok(folders);
+            const count = folders[0]?.countTotal || 0;
+            folders.forEach((folder) => delete folder.countTotal);
+
+            return res.ok({
+                count,
+                rows: folders
+            });
 
         } catch (err) {
             next(err);
