@@ -3,7 +3,7 @@
     "FOR_MORE_INFORMATION": "For more information, please see our",
     "LINK_TO_PLATFORM": "Odkaz na platformu",
     "LINK_PRIVACY_POLICY": "zásady ochrany osobních údajů",
-    "VISIT_OUR_WEBSITE": "Visit our website",
+    "VISIT_OUR_WEBSITE": "Navštivte naše webové stránky",
     "EMPOWERED_BY": "Běží na"
   },
   "ACCOUNT_VERIFICATION": {
@@ -19,19 +19,19 @@
     "SUBJECT_rahvaalgatus_test": "Rahvaalgatus.ee kasutaja {{fromUser.name}} kutsub Sind kooslooma arutelu/algatust"
   },
   "PASSWORD_RESET": {
-    "SUBJECT": "Reset your password"
+    "SUBJECT": "Resetovat heslo"
   },
   "REPORT_TOPIC_REPORT_REPORTER": {
     "SUBJECT": "Děkujeme za nahlášení tématu"
   },
   "REPORT_TOPIC_REPORT_MEMBER": {
-    "SUBJECT": "Your topic has been reported to moderators"
+    "SUBJECT": "Vaše téma bylo nahlášeno moderátorům"
   },
   "REPORT_TOPIC_REPORT_MODERATOR": {
-    "SUBJECT": "Please moderate this reported topic"
+    "SUBJECT": "Moderovat toto nahlášené téma"
   },
   "REPORT_TOPIC_MODERATE_REPORTER": {
-    "SUBJECT": "The topic you reported has been reviewed"
+    "SUBJECT": "Témata, která jste nahlásili, byla zkontrolována"
   },
   "REPORT_TOPIC_MODERATE_MEMBER": {
     "SUBJECT": "Your topic has been reviewed by a moderator"
