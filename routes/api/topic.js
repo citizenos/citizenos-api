@@ -1900,11 +1900,12 @@ module.exports = function (app) {
             const vote = topic.Votes[0];
             if (statusNew && statusNew !== topic.status && topic.status !== Topic.STATUSES.draft) {
                 // The only flow that allows going back in status flow is reopening for voting
-                if (statusNew === Topic.STATUSES.voting && topic.status === Topic.STATUSES.followUp) {
+                if (statusNew === Topic.STATUSES.voting) {
                     if (!vote) {
                         return res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew + ' when the Topic has no Vote created');
                     }
-                    isBackToVoting = true;
+                    if (topic.status === Topic.STATUSES.followUp)
+                        isBackToVoting = true;
                 } else if (statuses.indexOf(topic.status) > statuses.indexOf(statusNew) || [Topic.STATUSES.voting].indexOf(statusNew) > -1) { // You are not allowed to go "back" in the status flow nor you are allowed to set "voting" directly, it can only be done creating a Vote.
                     return res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew);
                 }
