@@ -54,11 +54,13 @@ module.exports = function (app) {
             }
         }
         Object.values(data).forEach((value) => {
-            values.userName2 = value.userName || value[0]?.userName;
-            if (value['@type'] === 'User') {
-                return values.userName2 = value.name
-            } else if (Array.isArray(value) && value[0]['@type'] === 'User') {
-                values.userName2 = value[0].name;
+            if (typeof value === 'object') {
+                values.userName2 = value.userName || value[0]?.userName;
+                if (value['@type'] === 'User') {
+                    return values.userName2 = value.name
+                } else if (Array.isArray(value) && value[0]['@type'] === 'User') {
+                    values.userName2 = value[0].name;
+                }
             }
         });
     };
@@ -232,7 +234,7 @@ module.exports = function (app) {
                 dataobject = dataobject[0];
             }
             await getActivityUsers(activity.data, values);
-            values.topicTitle = await getActivityTopicTitle(dataobject, activity.data);
+            values.topicTitle = await getActivityTopicTitle(activity.data, activity.data);
             values.description = getActivityDescription(dataobject, activity.data);
             values.groupName = getActivityGroupName(activity.data);
             values.attachmentName = getActivityAttachmentName(dataobject, activity.data);
