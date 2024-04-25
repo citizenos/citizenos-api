@@ -668,6 +668,8 @@ module.exports = function (app) {
 
             await db
                 .transaction(async function (t) {
+                    idea.deletedById = req.user.userId || req.user.id;
+                    await idea.save();
                     await cosActivities
                         .deleteActivity(idea, ideation, {
                             type: 'User',

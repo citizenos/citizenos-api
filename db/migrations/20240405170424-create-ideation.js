@@ -504,7 +504,7 @@ module.exports = {
           }
         ),
         queryInterface.sequelize.query(
-          `ALTER TYPE "enum_Topics_status" ADD VALUE 'ideation' BEFORE 'inProgress'`
+          `ALTER TYPE "enum_Topics_status" ADD VALUE 'ideation' BEFORE 'inProgress';`
           , { transaction: t })
       ])
     });

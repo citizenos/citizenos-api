@@ -6703,7 +6703,7 @@ module.exports = function (app) {
     /**
      * Create a Vote
      */
-    app.post('/api/users/:userId/topics/:topicId/votes', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.inProgress]), asyncMiddleware(async function (req, res) {
+    app.post('/api/users/:userId/topics/:topicId/votes', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress]), asyncMiddleware(async function (req, res) {
         const voteOptions = req.body.options;
 
         if (!voteOptions || !Array.isArray(voteOptions) || voteOptions.length < 2) {
