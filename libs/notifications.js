@@ -42,7 +42,6 @@ module.exports = function (app) {
         }
         buildActivityString(activity);
         activity = await getActivityValues(activity);
-
         return activity;
     }
     const getActivityUsers = async function (data, values) {
@@ -54,11 +53,13 @@ module.exports = function (app) {
             }
         }
         Object.values(data).forEach((value) => {
-            values.userName2 = value.userName || value[0]?.userName;
-            if (value['@type'] === 'User') {
-                return values.userName2 = value.name
-            } else if (Array.isArray(value) && value[0]['@type'] === 'User') {
-                values.userName2 = value[0].name;
+            if (typeof value === 'object') {
+                values.userName2 = value.userName || value[0]?.userName;
+                if (value['@type'] === 'User') {
+                    return values.userName2 = value.name
+                } else if (Array.isArray(value) && value[0]['@type'] === 'User') {
+                    values.userName2 = value[0].name;
+                }
             }
         });
     };
@@ -225,14 +226,13 @@ module.exports = function (app) {
 
     const getActivityValues = async function (activity) {
         const values = {};
-
         if (activity.data.object) {
             let dataobject = activity.data.object;
             if (Array.isArray(dataobject)) {
                 dataobject = dataobject[0];
             }
             await getActivityUsers(activity.data, values);
-            values.topicTitle = await getActivityTopicTitle(dataobject, activity.data);
+            values.topicTitle = await getActivityTopicTitle(activity.data, activity.data);
             values.description = getActivityDescription(dataobject, activity.data);
             values.groupName = getActivityGroupName(activity.data);
             values.attachmentName = getActivityAttachmentName(dataobject, activity.data);
@@ -540,7 +540,6 @@ module.exports = function (app) {
             const users = await getRelatedUsers(activity);
             if (!users?.length) return;
             const activityRes = await parseActivity(activity);
-
             const emailLib = app.get('email');
             return emailLib.sendTopicNotification(activityRes, users);
         } catch (err) {
