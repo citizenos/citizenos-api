@@ -2015,8 +2015,8 @@ module.exports = function (app) {
             }
             notificationText += Mustache.render(handleTranslation(template.translations, notification.string), translateValues);
             if (notification.values.groupItems && Object.keys(notification.values.groupItems).length > 1) {
-                for (const [field] of Object.keys(notification.values.groupItems)) {
-                    translateValues.fieldName = template.translations[field];
+                for (const field of Object.keys(notification.values.groupItems)) {
+                    translateValues.fieldName = handleTranslation(template.translations, field);
                     const string = notification.string.replace('_USERACTIVITYGROUP', '');
                     notificationText += '<p>' + Mustache.render(handleTranslation(template.translations, string), translateValues) + '</p>';
                 }

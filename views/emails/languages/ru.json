@@ -82,8 +82,8 @@
   },
   "NOTIFICATIONS": {
     "SUBJECT": "Обновление по теме “{{topicTitle}}”",
-    "NOTIFICATION_USER_ACCEPT_REQUEST_TOPIC_GROUP": "User <b>{{userName}}</b> has accepted a request to add <b>{{topicTitle}}</b> to group <b>{{groupName}}</b>",
-    "NOTIFICATION_USER_REJECT_REQUEST_TOPIC_GROUP": "User <b>{{userName}}</b> has rejected a request to add <b>{{topicTitle}}</b> to group <b>{{groupName}}</b>",
+    "NOTIFICATION_USER_ACCEPT_REQUEST_TOPIC_GROUP": "Пользователь <b>{{userName}}</b> принял запрос на добавление темы <b>{{topicTitle}}</b> в группу <b>{{groupName}}</b>.",
+    "NOTIFICATION_USER_REJECT_REQUEST_TOPIC_GROUP": "Пользователь <b>{{userName}}</b> отклонил запрос на добавление темы <b>{{topicTitle}}</b> в группу <b>{{groupName}}</b>.",
     "NOTIFICATION_USER_CREATE_TOPIC": "Пользователь <b>{{userName}}</b> создал новую тему.",
     "NOTIFICATION_USER_UPDATE_TOPIC": "Пользователь <b>{{userName}}</b> обновил поле <b>{{fieldName}}</b> в этой теме.",
     "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "Пользователь <b>{{userName}}</b> создал <b>{{groupCount}}</b> обновлений в этой теме.",
@@ -192,9 +192,9 @@
   "VOTE_REMINDER": {
     "SUBJECT": "Напоминание для голосования"
   },
-  "TXT_TOPIC_LEVELS_ADMIN": "admin",
-  "TXT_TOPIC_LEVELS_EDIT": "editor",
-  "TXT_TOPIC_LEVELS_READ": "participant",
+  "TXT_TOPIC_LEVELS_ADMIN": "администратор",
+  "TXT_TOPIC_LEVELS_EDIT": "редактор",
+  "TXT_TOPIC_LEVELS_READ": "участник",
   "TXT_TOPIC_VISIBILITY_PRIVATE": "@:NOTIFICATIONS.NOTIFICATION_TOPIC_FIELD_VISIBILITY_PRIVATE",
   "TXT_TOPIC_VISIBILITY_PUBLIC": "@:NOTIFICATIONS.NOTIFICATION_TOPIC_FIELD_VISIBILITY_PUBLIC",
   "TXT_TOPIC_CATEGORY_ALL": "все категории",

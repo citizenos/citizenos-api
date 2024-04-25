@@ -567,15 +567,17 @@ module.exports = function (app) {
                 JOIN (
                     SELECT
                         va.id,
-                        va.data,
-                        va."createdAt",
-                        va."updatedAt",
-                        va."deletedAt"
+                        va."updatedAt"
                     FROM "Activities" va
                     WHERE
                         va."actorType" = 'User' AND va."actorId" = :userId::text
                     AND va.data@>'{"type": "View"}'
                     AND va.data#>>'{object, @type}' = 'Activity'
+                    UNION
+                    SELECT
+                        '00000000-0000-0000-0000-000000000000'::uuid AS id,
+                        DATE('2000-10-10') as "updatedAt"
+                    ORDER BY "updatedAt" DESC LIMIT 1
                 ) ua ON ua.id = ua.id
                 WHERE
                     uac.id <> ua.id
@@ -824,15 +826,17 @@ module.exports = function (app) {
                 JOIN (
                     SELECT
                         va.id,
-                        va.data,
-                        va."createdAt",
-                        va."updatedAt",
-                        va."deletedAt"
+                        va."updatedAt"
                     FROM "Activities" va
                     WHERE
                         va."actorType" = 'User' AND va."actorId" = :userId::text
                     AND va.data@>'{"type": "View"}'
                     AND va.data#>>'{object, @type}' = 'Activity'
+                    UNION
+                    SELECT
+                        '00000000-0000-0000-0000-000000000000'::uuid AS id,
+                        DATE('2000-10-10') as "updatedAt"
+                    ORDER BY "updatedAt" DESC LIMIT 1
                 ) ua ON ua.id = ua.id
                 WHERE
                     uac.id <> ua.id
@@ -1362,15 +1366,17 @@ module.exports = function (app) {
                 JOIN (
                     SELECT
                         va.id,
-                        va.data,
-                        va."createdAt",
-                        va."updatedAt",
-                        va."deletedAt"
+                        va."updatedAt"
                     FROM "Activities" va
                     WHERE
                         va."actorType" = 'User' AND va."actorId" = :userId::text
                     AND va.data@>'{"type": "View"}'
                     AND va.data#>>'{object, @type}' = 'Activity'
+                    UNION
+                    SELECT
+                        '00000000-0000-0000-0000-000000000000'::uuid AS id,
+                        DATE('2000-10-10') as "updatedAt"
+                    ORDER BY "updatedAt" DESC LIMIT 1
                 ) ua ON ua.id = ua.id
                 WHERE
                     uac.id <> ua.id
