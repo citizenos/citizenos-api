@@ -184,17 +184,37 @@ module.exports = function (app) {
 
     const _readIdeationParticipants = async (req, res, next) => {
         try {
+            const ideationId = req.params.ideationId;
+            const users = await db.query(`
+                SELECT
+                    u.id,
+                    u.name,
+                    u."imageUrl",
+                    i."ideaCount" as "ideas.count",
+                    count(*) OVER()::integer AS "countTotal"
+                FROM "Users" u
+                JOIN (
+                    SELECT "authorId",
+                    COUNT(id) as "ideaCount"
+                    FROM "Ideas" i WHERE "ideationId" = :ideationId
+                    GROUP BY "authorId"
+                ) i ON u.id = i."authorId";
+            `, {
+                replacements: {
+                    ideationId
+                },
+                type: db.QueryTypes.SELECT,
+                raw: true,
+                nest: true
+            }
+            )
+            const count = users[0]?.countTotal || 0;
+            users.forEach((user) => delete user.countTotal);
 
-            const users = await User.findAndCountAll({
-                include: [{
-                    model: Idea,
-                    where: {
-                        ideationId: req.params.ideationId
-                    }
-                }]
+            return res.ok({
+                count,
+                rows: users
             });
-
-            return res.ok(users);
         } catch (err) {
             next(err);
         }
@@ -1323,8 +1343,8 @@ module.exports = function (app) {
 
     const _readIdeationFolders = async (req, res, next) => {
         const ideationId = req.params.ideationId;
-    /*    const limit = req.query.limit || 8;
-        const offset = req.query.offset || 0;*/
+        /*    const limit = req.query.limit || 8;
+            const offset = req.query.offset || 0;*/
         try {
             const folders = await db.query(`
             SELECT
