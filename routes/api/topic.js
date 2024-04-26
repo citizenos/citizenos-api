@@ -202,7 +202,7 @@ module.exports = function (app) {
      */
     const hasPermission = function (level, allowPublic, topicStatusesAllowed, allowSelf) {
         return async function (req, res, next) {
-            const userId = req.user.id || req.user.userId;
+            const userId = req.user?.userId || req.user?.id;
             const partnerId = req.user.partnerId;
             const topicId = req.params.topicId;
 
@@ -213,7 +213,7 @@ module.exports = function (app) {
             }
             topicStatusesAllowed = topicStatusesAllowed ? topicStatusesAllowed : null;
             let allowSelfDelete = allowSelf ? allowSelf : null;
-            if (allowSelfDelete && req.user.userId !== req.params.memberId) {
+            if (allowSelfDelete && req.user?.userId !== req.params.memberId) {
                 allowSelfDelete = false;
             }
 
