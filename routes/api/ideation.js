@@ -902,7 +902,7 @@ module.exports = function (app) {
     /**
      * Create a folder
      */
-    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.ideation]), async (req, res, next) => {
+    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, null), async (req, res, next) => {
         const ideationId = req.params.ideationId;
         const topicId = req.params.topicId;
         const name = req.body.name;
@@ -1196,7 +1196,7 @@ module.exports = function (app) {
     /**
      * Update a folder
      */
-    app.put('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.ideation]), async (req, res, next) => {
+    app.put('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, null), async (req, res, next) => {
         try {
             const topicId = req.params.topicId;
             const ideationId = req.params.ideationId;
