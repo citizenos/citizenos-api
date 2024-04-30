@@ -105,48 +105,48 @@ module.exports = {
               comment: 'Image for the idea'
             },
             deletedById: {
-                type: Sequelize.UUID,
-                comment: 'User ID of the person who deleted the Comment',
-                allowNull: true,
-                references: {
-                    model: 'Users',
-                    key: 'id'
-                },
-                onUpdate: 'CASCADE',
-                onDelete: 'CASCADE'
+              type: Sequelize.UUID,
+              comment: 'User ID of the person who deleted the Comment',
+              allowNull: true,
+              references: {
+                model: 'Users',
+                key: 'id'
+              },
+              onUpdate: 'CASCADE',
+              onDelete: 'CASCADE'
             },
             deletedReasonType: {
-                type: Sequelize.ENUM,
-                values: Object.values(DELETE_REASON_TYPES),
-                allowNull: true,
-                comment: 'Delete reason type which is provided in case deleted by moderator due to a user report'
+              type: Sequelize.ENUM,
+              values: Object.values(DELETE_REASON_TYPES),
+              allowNull: true,
+              comment: 'Delete reason type which is provided in case deleted by moderator due to a user report'
             },
             deletedReasonText: {
-                type: Sequelize.STRING(2048),
-                allowNull: true,
-                validate: {
-                    len: {
-                        args: [1, 2048],
-                        msg: 'Text can be 1 to 2048 characters long.'
-                    }
-                },
-                comment: 'Free text with reason why the comment was deleted'
+              type: Sequelize.STRING(2048),
+              allowNull: true,
+              validate: {
+                len: {
+                  args: [1, 2048],
+                  msg: 'Text can be 1 to 2048 characters long.'
+                }
+              },
+              comment: 'Free text with reason why the comment was deleted'
             },
             deletedByReportId: {
-                type: Sequelize.UUID,
-                comment: 'Report ID due to which comment was deleted',
-                allowNull: true,
-                references: {
-                    model: 'Reports',
-                    key: 'id'
-                },
-                onUpdate: 'CASCADE',
-                onDelete: 'CASCADE'
+              type: Sequelize.UUID,
+              comment: 'Report ID due to which comment was deleted',
+              allowNull: true,
+              references: {
+                model: 'Reports',
+                key: 'id'
+              },
+              onUpdate: 'CASCADE',
+              onDelete: 'CASCADE'
             },
             edits: {
-                type: Sequelize.JSONB,
-                comment: 'Comment versions in JSONB array',
-                allowNull: true
+              type: Sequelize.JSONB,
+              comment: 'Comment versions in JSONB array',
+              allowNull: true
             },
             createdAt: {
               allowNull: false,
@@ -192,6 +192,18 @@ module.exports = {
               onUpdate: 'CASCADE',
               onDelete: 'CASCADE',
               primaryKey: true
+            },
+            createdAt: {
+              allowNull: false,
+              type: Sequelize.DATE
+            },
+            updatedAt: {
+              allowNull: false,
+              type: Sequelize.DATE
+            },
+            deletedAt: {
+              allowNull: true,
+              type: Sequelize.DATE
             }
           }, {
           transaction: t
@@ -247,7 +259,7 @@ module.exports = {
           }, {
           transaction: t
         }),
-        queryInterface.createTable('IdeaFavorites',
+        queryInterface.createTable('IdeaFavourites',
           {
             ideaId: {
               type: Sequelize.UUID,
@@ -271,6 +283,18 @@ module.exports = {
               onUpdate: 'CASCADE',
               onDelete: 'CASCADE',
               primaryKey: true
+            },
+            createdAt: {
+              allowNull: false,
+              type: Sequelize.DATE
+            },
+            updatedAt: {
+              allowNull: false,
+              type: Sequelize.DATE
+            },
+            deletedAt: {
+              allowNull: true,
+              type: Sequelize.DATE
             }
           }, {
           transaction: t
@@ -281,6 +305,17 @@ module.exports = {
               type: Sequelize.UUID,
               allowNull: false,
               primaryKey: true
+            },
+            ideationId: {
+              type: Sequelize.UUID,
+              allowNull: false,
+              comment: 'To what ideation the folder belongs to',
+              references: {
+                model: 'Ideations',
+                key: 'id'
+              },
+              onUpdate: 'CASCADE',
+              onDelete: 'CASCADE'
             },
             creatorId: {
               type: Sequelize.UUID,
@@ -375,7 +410,7 @@ module.exports = {
           }, {
           transaction: t
         }),
-       queryInterface.createTable(
+        queryInterface.createTable(
           'IdeaReports',
           {
             id: {
@@ -482,8 +517,8 @@ module.exports = {
               type: Sequelize.DATE
             }
           }, {
-            transaction: t
-          }
+          transaction: t
+        }
         ),
         queryInterface.sequelize.query(
           `ALTER TYPE "enum_Topics_status" ADD VALUE IF NOT EXISTS 'ideation' BEFORE 'inProgress';`
@@ -498,7 +533,7 @@ module.exports = {
       return Promise.all([
         queryInterface.dropTable('TopicIdeations', { transaction: t }),
         queryInterface.dropTable('IdeaVotes', { transaction: t }),
-        queryInterface.dropTable('IdeaFavorites', { transaction: t }),
+        queryInterface.dropTable('IdeaFavourites', { transaction: t }),
         queryInterface.dropTable('FolderIdeas', { transaction: t }),
         queryInterface.dropTable('IdeaComments', { transaction: t }),
         queryInterface.dropTable('Folders', { transaction: t }),

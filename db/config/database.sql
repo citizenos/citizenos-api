@@ -899,15 +899,18 @@ COMMENT ON COLUMN public."IdeaComments"."commentId" IS 'Which Comment belongs to
 
 CREATE TABLE public."IdeaFavorites" (
     "ideaId" uuid NOT NULL,
-    "creatorId" uuid NOT NULL
+    "userId" uuid NOT NULL,
+    "createdAt" timestamp with time zone NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL,
+    "deletedAt" timestamp with time zone
 );
 
 
 --
--- Name: COLUMN "IdeaFavorites"."creatorId"; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN "IdeaFavorites"."userId"; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public."IdeaFavorites"."creatorId" IS 'User ID who favourited the idea';
+COMMENT ON COLUMN public."IdeaFavorites"."userId" IS 'User ID who favourited the idea';
 
 
 --
@@ -2705,7 +2708,7 @@ ALTER TABLE ONLY public."IdeaComments"
 --
 
 ALTER TABLE ONLY public."IdeaFavorites"
-    ADD CONSTRAINT "IdeaFavorites_pkey" PRIMARY KEY ("ideaId", "creatorId");
+    ADD CONSTRAINT "IdeaFavorites_pkey" PRIMARY KEY ("ideaId", "userId");
 
 
 --
@@ -3245,6 +3248,14 @@ ALTER TABLE ONLY public."FolderIdeas"
 
 
 --
+-- Name: Folders Folders_creatorId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Folders"
+    ADD CONSTRAINT "Folders_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: Folders Folders_ideationId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3333,6 +3344,14 @@ ALTER TABLE ONLY public."Groups"
 
 
 --
+-- Name: IdeaComments IdeaComments_commentId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."IdeaComments"
+    ADD CONSTRAINT "IdeaComments_commentId_fkey" FOREIGN KEY ("commentId") REFERENCES public."Comments"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: IdeaComments IdeaComments_ideaId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3349,11 +3368,27 @@ ALTER TABLE ONLY public."IdeaFavourites"
 
 
 --
+-- Name: IdeaFavourites IdeaFavourites_userId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."IdeaFavourites"
+    ADD CONSTRAINT "IdeaFavourites_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: IdeaReports IdeaReports_IdeaId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public."IdeaReports"
     ADD CONSTRAINT "IdeaReports_IdeaId_fkey" FOREIGN KEY ("IdeaId") REFERENCES public."Ideas"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: IdeaReports IdeaReports_ReportId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."IdeaReports"
+    ADD CONSTRAINT "IdeaReports_ReportId_fkey" FOREIGN KEY ("ReportId") REFERENCES public."Reports"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -3365,6 +3400,22 @@ ALTER TABLE ONLY public."IdeaReports"
 
 
 --
+-- Name: IdeaReports IdeaReports_reportId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."IdeaReports"
+    ADD CONSTRAINT "IdeaReports_reportId_fkey" FOREIGN KEY ("reportId") REFERENCES public."Reports"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: IdeaVotes IdeaVotes_creatorId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."IdeaVotes"
+    ADD CONSTRAINT "IdeaVotes_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: IdeaVotes IdeaVotes_ideaId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3373,11 +3424,43 @@ ALTER TABLE ONLY public."IdeaVotes"
 
 
 --
+-- Name: Ideas Ideas_authorId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Ideas"
+    ADD CONSTRAINT "Ideas_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: Ideas Ideas_deletedById_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Ideas"
+    ADD CONSTRAINT "Ideas_deletedById_fkey" FOREIGN KEY ("deletedById") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: Ideas Ideas_deletedByReportId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Ideas"
+    ADD CONSTRAINT "Ideas_deletedByReportId_fkey" FOREIGN KEY ("deletedByReportId") REFERENCES public."Reports"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: Ideas Ideas_ideationId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public."Ideas"
     ADD CONSTRAINT "Ideas_ideationId_fkey" FOREIGN KEY ("ideationId") REFERENCES public."Ideations"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: Ideations Ideations_creatorId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Ideations"
+    ADD CONSTRAINT "Ideations_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -3498,6 +3581,14 @@ ALTER TABLE ONLY public."TopicFavourites"
 
 ALTER TABLE ONLY public."TopicIdeations"
     ADD CONSTRAINT "TopicIdeations_ideationId_fkey" FOREIGN KEY ("ideationId") REFERENCES public."Ideations"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: TopicIdeations TopicIdeations_topicId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicIdeations"
+    ADD CONSTRAINT "TopicIdeations_topicId_fkey" FOREIGN KEY ("topicId") REFERENCES public."Topics"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
