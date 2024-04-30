@@ -71,6 +71,8 @@ module.exports = function (app) {
     const TopicFavourite = models.TopicFavourite;
     const UserNotificationSettings = models.UserNotificationSettings;
 
+    const Ideation = models.Ideation;
+
     const createDataHash = (dataToHash) => {
         const hmac = crypto.createHmac('sha256', config.encryption.salt);
 
@@ -1889,7 +1891,7 @@ module.exports = function (app) {
             const topic = await Topic
                 .findOne({
                     where: { id: topicId },
-                    include: [Vote]
+                    include: [Vote, Ideation]
                 });
 
             if (!topic) {
@@ -1898,6 +1900,7 @@ module.exports = function (app) {
 
             const statuses = _.values(Topic.STATUSES);
             const vote = topic.Votes[0];
+            const ideation = topic.Ideations[0];
             if (statusNew && statusNew !== topic.status && topic.status !== Topic.STATUSES.draft) {
                 // The only flow that allows going back in status flow is reopening for voting
                 if (statusNew === Topic.STATUSES.voting) {
@@ -1906,7 +1909,13 @@ module.exports = function (app) {
                     }
                     if (topic.status === Topic.STATUSES.followUp)
                         isBackToVoting = true;
-                } else if (statuses.indexOf(topic.status) > statuses.indexOf(statusNew) || [Topic.STATUSES.voting].indexOf(statusNew) > -1) { // You are not allowed to go "back" in the status flow nor you are allowed to set "voting" directly, it can only be done creating a Vote.
+                } else if (statusNew === Topic.STATUSES.indeation) {
+                    if (!ideation) {
+                        return res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew + ' when the Topic has no Ideation created');
+                    }
+                }
+
+                else if (statuses.indexOf(topic.status) > statuses.indexOf(statusNew) || [Topic.STATUSES.voting].indexOf(statusNew) > -1) { // You are not allowed to go "back" in the status flow nor you are allowed to set "voting" directly, it can only be done creating a Vote.
                     return res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew);
                 }
             }
