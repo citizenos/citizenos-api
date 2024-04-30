@@ -3,21 +3,22 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    return queryInterface.sequelize.transaction((t) => {
-      const DELETE_REASON_TYPES = {
-        abuse: 'abuse', // is abusive or insulting
-        obscene: 'obscene', // contains obscene language
-        spam: 'spam', // contains spam or is unrelated to topic
-        hate: 'hate', // contains hate speech
-        netiquette: 'netiquette', // infringes (n)etiquette
-        duplicate: 'duplicate' // duplicate
-      };
+    const DELETE_REASON_TYPES = {
+      abuse: 'abuse', // is abusive or insulting
+      obscene: 'obscene', // contains obscene language
+      spam: 'spam', // contains spam or is unrelated to topic
+      hate: 'hate', // contains hate speech
+      netiquette: 'netiquette', // infringes (n)etiquette
+      duplicate: 'duplicate' // duplicate
+    };
+    await queryInterface.sequelize.transaction((t) => {
       return Promise.all([
         queryInterface.createTable('Ideations',
           {
             id: {
               type: Sequelize.UUID,
               primaryKey: true,
+              unique: true,
               allowNull: false,
               defaultValue: Sequelize.UUIDV4
             },
@@ -62,6 +63,7 @@ module.exports = {
             id: {
               type: Sequelize.UUID,
               primaryKey: true,
+              unique: true,
               allowNull: false,
               defaultValue: Sequelize.UUIDV4
             },
@@ -74,8 +76,7 @@ module.exports = {
                 key: 'id'
               },
               onUpdate: 'CASCADE',
-              onDelete: 'CASCADE',
-              primaryKey: true
+              onDelete: 'CASCADE'
             },
             authorId: {
               type: Sequelize.UUID,
@@ -162,6 +163,10 @@ module.exports = {
           }, {
           transaction: t
         }),
+      ])
+    })
+    return queryInterface.sequelize.transaction((t) => {
+      return Promise.all([
         queryInterface.createTable('TopicIdeations',
           {
             topicId: {
@@ -187,23 +192,10 @@ module.exports = {
               onUpdate: 'CASCADE',
               onDelete: 'CASCADE',
               primaryKey: true
-            },
-            createdAt: {
-              allowNull: false,
-              type: Sequelize.DATE
-            },
-            updatedAt: {
-              allowNull: false,
-              type: Sequelize.DATE
-            },
-            deletedAt: {
-              allowNull: true,
-              type: Sequelize.DATE
-            },
+            }
           }, {
           transaction: t
         }),
-
         queryInterface.createTable('IdeaVotes',
           {
             ideaId: {
@@ -279,19 +271,7 @@ module.exports = {
               onUpdate: 'CASCADE',
               onDelete: 'CASCADE',
               primaryKey: true
-            },
-            createdAt: {
-              allowNull: false,
-              type: Sequelize.DATE
-            },
-            updatedAt: {
-              allowNull: false,
-              type: Sequelize.DATE
-            },
-            deletedAt: {
-              allowNull: true,
-              type: Sequelize.DATE
-            },
+            }
           }, {
           transaction: t
         }),
@@ -373,7 +353,7 @@ module.exports = {
               comment: 'Which Comment belongs to this Idea.',
               allowNull: false,
               references: {
-                model: 'Folders',
+                model: 'Comments',
                 key: 'id'
               },
               onUpdate: 'CASCADE',
@@ -395,7 +375,7 @@ module.exports = {
           }, {
           transaction: t
         }),
-        queryInterface.createTable(
+       queryInterface.createTable(
           'IdeaReports',
           {
             id: {
@@ -501,10 +481,12 @@ module.exports = {
             deletedAt: {
               type: Sequelize.DATE
             }
+          }, {
+            transaction: t
           }
         ),
         queryInterface.sequelize.query(
-          `ALTER TYPE "enum_Topics_status" ADD VALUE 'ideation' BEFORE 'inProgress';`
+          `ALTER TYPE "enum_Topics_status" ADD VALUE IF NOT EXISTS 'ideation' BEFORE 'inProgress';`
           , { transaction: t })
       ])
     });
@@ -512,16 +494,14 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    return queryInterface.sequelize.transaction((t) => {
+    await queryInterface.sequelize.transaction((t) => {
       return Promise.all([
-        queryInterface.dropTable('Ideation', { transaction: t }),
-        queryInterface.dropTable('Ideas', { transaction: t }),
         queryInterface.dropTable('TopicIdeations', { transaction: t }),
         queryInterface.dropTable('IdeaVotes', { transaction: t }),
         queryInterface.dropTable('IdeaFavorites', { transaction: t }),
-        queryInterface.dropTable('Folders', { transaction: t }),
         queryInterface.dropTable('FolderIdeas', { transaction: t }),
         queryInterface.dropTable('IdeaComments', { transaction: t }),
+        queryInterface.dropTable('Folders', { transaction: t }),
         queryInterface
           .dropTable('IdeaReports', { transaction: t })
           .then(function () { // While Sequelize does not support naming ENUMS, it creates duplicates - https://github.com/sequelize/sequelize/issues/2577
@@ -531,11 +511,15 @@ module.exports = {
           .then(function () {
             return queryInterface.sequelize
               .query('DROP TYPE IF EXISTS "enum_IdeaReports_type";', { transaction: t });
-          }),
-        queryInterface.sequelize.query(
-          `ALTER TYPE "enum_Topics_status" REMOVE VALUE 'ideation' BEFORE 'inProgress'`
-          , { transaction: t })
+          })
       ]);
     });
+
+    return queryInterface.sequelize.transaction((t) => {
+      return Promise.all([
+        queryInterface.dropTable('Ideation', { transaction: t }),
+        queryInterface.dropTable('Ideas', { transaction: t }),
+      ])
+    })
   }
 };
