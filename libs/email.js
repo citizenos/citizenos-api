@@ -696,6 +696,8 @@ module.exports = function (app) {
 
                     // In case Topic has no title, just show the full url.
                     topic.title = topic.title ? topic.title : linkViewTopic;
+                    const statusKey = `TXT_TOPIC_STATUS_${topic.status.toUpperCase()}`;
+                    topic.status = topic.status = template.translations[statusKey];
                     const images = [
                         {
                             name: 'Warning.png',
