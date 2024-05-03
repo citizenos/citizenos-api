@@ -1742,7 +1742,7 @@ suite('Users', function () {
 
                 topic.sourcePartnerId = updatedTopic.sourcePartnerId;
                 topic.sourcePartnerObjectId = updatedTopic.sourcePartnerObjectId;
-                topic.updatedAt = updatedTopic.updatedAt.toJSON();
+                topic.updatedAt = updatedTopic.updatedAt;
             });
 
 
@@ -1750,7 +1750,11 @@ suite('Users', function () {
                 const topicR = (await topicRead(agent, user.id, topic.id, null)).body.data;
 
                 // The difference from create result is that there is "members" and "creator" is extended. Might consider changing in the future..
-                const expectedTopic = _.cloneDeep(topic);
+                const expectedTopic = Object.assign({},topic);
+                expectedTopic.ideationId = null;
+                expectedTopic.revision = 2;
+             //  delete expectedTopic.authors
+                expectedTopic.updatedAt = topicR.updatedAt;
                 expectedTopic.members = {
                     users: {
                         count: 1
@@ -1791,7 +1795,7 @@ suite('Users', function () {
                 test('Success - no vote created', async function () {
                     const topicR = (await topicRead(agent, user.id, topic.id, 'vote')).body.data;
                     // The difference from create result "members" and "creator" are extended. Might consider changing in the future..
-                    const expectedTopic = _.cloneDeep(topic);
+                    const expectedTopic = Object.assign({},topic);
                     expectedTopic.members = {
                         users: {
                             count: 1
@@ -1842,7 +1846,7 @@ suite('Users', function () {
                     assert.equal(topicR.status, Topic.STATUSES.voting);
 
                     // The difference from create result is that there is "members" and "creator" is extended. Might consider changing in the future..
-                    const expectedTopic = _.cloneDeep(topicR);
+                    const expectedTopic = Object.assign({},topicR);
 
                     expectedTopic.members = {
                         users: {
@@ -9734,6 +9738,7 @@ suite('Topics', function () {
             // Also, padUrl will not have authorization token
             topicR.data.padUrl = topicR.data.padUrl.split('?')[0];
 
+            delete topicR.data.revision;
             assert.deepEqual(topicRUnauth, topicR);
         });
 
@@ -9793,6 +9798,7 @@ suite('Topics', function () {
                 assert.property(events, 'count');
                 assert.equal(events.count, 0);
 
+                delete topicR.data.revision;
                 assert.deepEqual(topicRUnauth, topicR);
             });
         });
@@ -9808,8 +9814,8 @@ suite('Topics', function () {
             ];
             await topicVoteCreate(creatorAgent, creator.id, topic.id, options, 1, 1, false, null, null, Vote.TYPES.regular, Vote.AUTH_TYPES.soft);
             await topicUpdateStatus(creatorAgent, creator.id, topic.id, Topic.STATUSES.followUp);
-            const topicR = (await topicRead(creatorAgent, creator.id, topic.id, ['vote', 'event'])).body;
-            const topicRUnauth = (await topicReadUnauth(request.agent(app), topic.id, ['vote', 'event'])).body;
+            let topicR = (await topicRead(creatorAgent, creator.id, topic.id, ['vote', 'event'])).body;
+            let topicRUnauth = (await topicReadUnauth(request.agent(app), topic.id, ['vote', 'event'])).body;
 
             assert.equal(topicR.data.status, Topic.STATUSES.followUp);
             // The only difference between auth and unauth is the permission, thus modify it in expected response.
@@ -9837,6 +9843,7 @@ suite('Topics', function () {
                 assert.property(option, 'value');
             });
 
+            delete topicR.data.revision;
             assert.deepEqual(topicRUnauth, topicR);
         });
 

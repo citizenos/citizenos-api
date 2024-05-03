@@ -2441,6 +2441,9 @@ module.exports = function (app) {
                      COALESCE(mgc.count, 0) as "members.groups.count",
                      tv."voteId" as "voteId",
                      tv."voteId" as "vote.id",
+                     ti."ideationId" as "ideationId",
+                     ti."ideationId" as "ideation.id",
+                     ti."ideaCount" as "ideation.ideas.count",
                      COALESCE(MAX(a."updatedAt"), t."updatedAt") as "lastActivity",
                      CASE WHEN t.status = 'voting' THEN 1
                         WHEN t.status = 'inProgress' THEN 2
@@ -2551,11 +2554,25 @@ module.exports = function (app) {
                             GROUP BY tcc."topicId"
                     ) AS com ON (com."topicId" = t.id)
                     LEFT JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds"
+                    LEFT JOIN (
+                        SELECT
+                            ti."topicId",
+                            ti."ideationId",
+                            COALESCE(i."ideaCount", 0) as "ideaCount"
+                        FROM "TopicIdeations" ti
+                        LEFT JOIN (
+                            SELECT "ideationId",
+                            COUNT("ideationId") as "ideaCount"
+                            FROM "Ideas"
+                            GROUP BY "ideationId"
+                        ) i ON ti."ideationId" = i."ideationId"
+                        GROUP BY ti."topicId", ti."ideationId", i."ideaCount"
+                    ) AS ti ON ti."topicId" = t.id
                     LEFT JOIN "TopicFavourites" tf ON (tf."topicId" = t.id AND tf."userId" = :userId)
                     LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                     ${join}
                 WHERE ${where}
-                GROUP BY t.id, tr.id, tr."moderatedReasonType", tr."moderatedReasonText", tj."token", tj.level, c.id, muc.count, mgc.count, tv."voteId", tc.count, com."createdAt", tmup.level, tmgp.level, tf."topicId"
+                GROUP BY t.id, tr.id, tr."moderatedReasonType", tr."moderatedReasonText", ti."ideationId", ti."ideaCount", tj."token", tj.level, c.id, muc.count, mgc.count, tv."voteId", tc.count, com."createdAt", tmup.level, tmgp.level, tf."topicId"
                 ${groupBy}
                 ${orderSql}
                 OFFSET :offset LIMIT :limit
@@ -2803,6 +2820,9 @@ module.exports = function (app) {
                         tv."voteId",
                         COALESCE(tc.count, 0) AS "comments.count",
                         COALESCE(com."createdAt", NULL) AS "comments.lastCreatedAt",
+                        ti."ideationId" as "ideationId",
+                        ti."ideationId" as "ideation.id",
+                        ti."ideaCount" as "ideation.ideas.count",
                         count(*) OVER()::integer AS "countTotal"
                         ${returncolumns}
                     FROM "Topics" t
@@ -2883,10 +2903,24 @@ module.exports = function (app) {
                                     ON v.id = tv."voteId"
                         ) AS tv ON (tv."topicId" = t.id)
                         LEFT JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds"
+                        LEFT JOIN (
+                            SELECT
+                                ti."topicId",
+                                ti."ideationId",
+                                COALESCE(i."ideaCount", 0) as "ideaCount"
+                            FROM "TopicIdeations" ti
+                            LEFT JOIN (
+                                SELECT "ideationId",
+                                COUNT("ideationId") as "ideaCount"
+                                FROM "Ideas"
+                                GROUP BY "ideationId"
+                            ) i ON ti."ideationId" = i."ideationId"
+                            GROUP BY ti."topicId", ti."ideationId", i."ideaCount"
+                        ) AS ti ON ti."topicId" = t.id
                         LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                         ${join}
                     WHERE ${where}
-                    GROUP BY t.id, tr.id, tr."moderatedReasonType", tr."moderatedReasonText", tj."token", tj.level, c.id, muc.count, mgc.count, tv."voteId", tc.count, com."createdAt"
+                    GROUP BY t.id, tr.id, tr."moderatedReasonType", tr."moderatedReasonText", ti."ideationId", ti."ideaCount", tj."token", tj.level, c.id, muc.count, mgc.count, tv."voteId", tc.count, com."createdAt"
                     ${groupBy}
                     ORDER BY "lastActivity" DESC
                     LIMIT :limit OFFSET :offset

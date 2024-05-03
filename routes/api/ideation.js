@@ -355,24 +355,33 @@ module.exports = function (app) {
                 });
                 t.afterCommit(async () => {
                     const ideationInfo = await db.query(`
+                    SELECT
+                        i.id,
+                        i.question,
+                        i.deadline,
+                        i."creatorId",
+                        i."createdAt",
+                        i."updatedAt",
+                        COALESCE(ii.count, 0) as "ideas.count",
+                        COALESCE(fi.count, 0) as "folders.count"
+                    FROM "Ideations" i
+                    LEFT JOIN (
                         SELECT
-                            i.id,
-                            i.question,
-                            i.deadline,
-                            i."creatorId",
-                            i."createdAt",
-                            i."updatedAt",
-                            COALESCE(ii.count, 0) as "ideas.count"
-                        FROM "Ideations" i
-                        LEFT JOIN (
-                            SELECT
-                                "ideationId",
-                                COUNT("ideationId") as count
-                            FROM "Ideas"
-                            GROUP BY "ideationId"
-                        ) AS ii ON ii."ideationId" = i.id
-                        WHERE i.id = :ideationId AND i."deletedAt" IS NULL
-                        ;
+                            "ideationId",
+                            COUNT("ideationId") as count
+                        FROM "Ideas"
+                        GROUP BY "ideationId"
+                    ) AS ii ON ii."ideationId" = i.id
+                    LEFT JOIN (
+                        SELECT
+                            "ideationId",
+                            COUNT("ideationId") as count
+                        FROM "Folders"
+                        WHERE "deletedAt" IS NULL
+                        GROUP BY "ideationId"
+                    ) AS fi ON fi."ideationId" = i.id
+                    WHERE i.id = :ideationId AND i."deletedAt" IS NULL
+                    ;
                     `, {
                         replacements: {
                             ideationId

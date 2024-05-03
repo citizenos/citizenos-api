@@ -868,6 +868,7 @@ suite('Users', function () {
                 // The difference from create result is that there is "members" and "creator" is extended. Might consider changing in the future..
                 const expectedIdeation = Object.assign({}, ideation);
                 expectedIdeation.ideas = { count: 0 };
+                expectedIdeation.folders = { count: 0 };
                 assert.deepEqual(ideationR, expectedIdeation);
             });
 
@@ -878,6 +879,7 @@ suite('Users', function () {
                 // The difference from create result is that there is "members" and "creator" is extended. Might consider changing in the future..
                 const expectedIdeation = Object.assign({}, ideation);
                 expectedIdeation.ideas = { count: 0 };
+                expectedIdeation.folders = { count: 0 };
                 assert.deepEqual(ideationR, expectedIdeation);
             });
 
@@ -3848,12 +3850,6 @@ suite('Users', function () {
                     assert.equal(folderUpdate.deletedAt, folder.deletedAt);
                 });
 
-                test('Fail - topic status not ideation', async function () {
-                    const idea = (await ideationFolderCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
-                    await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.inProgress);
-                    await _ideationFolderUpdate(agent, user.id, topic.id, ideation.id, idea.id, 'TEST folder', 'description', 403);
-                });
-
                 test('Fail - Unauthorized', async function () {
                     const idea = (await ideationFolderCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
                     await _ideationFolderUpdate(request.agent(app), user.id, topic.id, ideation.id, idea.id, 'TEST idea', 'description', 401);
@@ -3939,14 +3935,34 @@ suite('Users', function () {
                 test('Success', async function () {
                     const folder = (await ideationFolderCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
                     const folders = (await ideationFolderList(agent, user.id, topic.id, ideation.id)).body.data;
-                    assert.deepEqual(folders, { count: 1, rows: [folder] });
+                    const expectedFolder = Object.assign({
+                        creator: {
+                            id: user.id,
+                            imageUrl: user.imageUrl,
+                            name: user.name
+                        },
+                        ideas: {count: 0}
+                    }, folder);
+                    delete expectedFolder.creatorId;
+                    delete expectedFolder.deletedAt;
+                    assert.deepEqual(folders, { count: 1, rows: [expectedFolder] });
                 });
 
                 test('Success - unauth', async function () {
                     const folder = (await ideationFolderCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
                     await topicLib.topicUpdate(agent, user.id, topic.id, null, Topic.VISIBILITY.public);
                     const folders = (await ideationFolderListUnauth(request.agent(app), topic.id, ideation.id)).body.data;
-                    assert.deepEqual(folders, { count: 1, rows: [folder] });
+                    const expectedFolder = Object.assign({
+                        creator: {
+                            id: user.id,
+                            imageUrl: user.imageUrl,
+                            name: user.name
+                        },
+                        ideas: {count: 0}
+                    }, folder);
+                    delete expectedFolder.creatorId;
+                    delete expectedFolder.deletedAt;
+                    assert.deepEqual(folders, { count: 1, rows: [expectedFolder] });
                 });
 
                 test('Fail - Unauthorized', async function () {

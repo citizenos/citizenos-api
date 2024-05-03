@@ -3100,8 +3100,14 @@ module.exports = function (app) {
                             );
 
                             await emailLib.sendRequestAddTopicGroup(newRequest[0]);
-
-                            return newRequest[0].toJSON();
+                            const resObject = newRequest[0].toJSON();
+                            resObject.topic = {
+                                id: topic.id,
+                                title: topic.title,
+                                visibility: topic.visibility,
+                                creator: {}
+                            };
+                            return resObject;
                         }
                     }
                 })
@@ -3335,7 +3341,9 @@ module.exports = function (app) {
                 },
                 transaction: t
             });
-            if (request.acceptedAt === null && request.rejectedAt === null) {
+            if (!request)
+                return res.notFound();
+            if (request?.acceptedAt === null && request?.rejectedAt === null) {
                 const group = await Group.findOne({
                     where: {
                         id: request.groupId
@@ -3374,8 +3382,6 @@ module.exports = function (app) {
                 });
             } else {
                 t.afterCommit(() => {
-                    if (!request)
-                        return res.notFound();
 
                     if (redirect) {
                         return res.redirect(redirect)
