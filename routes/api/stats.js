@@ -26,6 +26,9 @@ module.exports = function (app) {
                         SELECT COUNT(*) FROM "VoteLists"
                     ) AS "votesCast",
                     (
+                        SELECT COUNT(*) FROM "Ideas"
+                    ) AS "ideasProposed",
+                    (
                         SELECT COUNT(*) FROM "Groups"
                     ) AS "groupsCreated",
                     (

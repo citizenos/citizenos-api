@@ -464,7 +464,7 @@ module.exports = function (app) {
             if (!ideation || !ideation.Topics.length) {
                 return res.notFound();
             }
-
+            if (ideation.deadline && new Date(ideation.deadline) < new Date()) return res.forbidden();
             await db
                 .transaction(async function (t) {
                     const idea = Idea.build({
@@ -1120,8 +1120,8 @@ module.exports = function (app) {
                     const folderIdeaActivities = [];
                     const results = await Promise.allSettled(findOrCreateFolderIdeas);
                     results.forEach((inspection) => {
-                        const folderIdea = inspection.value[0];
                         if (inspection.status === 'fulfilled') {
+                            const folderIdea = inspection.value[0];
                             const exists = excisitingItems.find((item) => {
                                 return item.ideaId === folderIdea.ideaId
                             });
@@ -1180,24 +1180,22 @@ module.exports = function (app) {
     app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId/ideas/:ideaId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin), async function (req, res, next) {
         const folderId = req.params.folderId;
         const ideaId = req.params.ideaId;
-
         try {
-            const folder = await Folder.findOne({
+            const idea = await Idea.findOne({
                 where: {
-                    id: folderId
+                    id: ideaId
                 },
                 include: [
                     {
-                        model: Idea,
+                        model: Folder,
                         where: {
-                            id: ideaId
+                            id: folderId
                         }
                     }
                 ]
             });
-            const idea = folder.Ideas[0];
-            const folderIdea = idea.FolderIdea;
-
+            const folder = idea.Folders[0];
+            const folderIdea = folder.FolderIdea;
             await db.transaction(async function (t) {
                 await cosActivities.deleteActivity(
                     idea,
@@ -1211,7 +1209,7 @@ module.exports = function (app) {
                     t
                 );
 
-                await folderIdea.destroy();
+                await folderIdea.destroy({ paranoid: false });
 
                 t.afterCommit(() => res.ok());
             });
