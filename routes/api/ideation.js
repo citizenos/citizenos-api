@@ -246,7 +246,7 @@ module.exports = function (app) {
         }
     });
 
-    app.get('/api/topics/:topicId/ideations/:ideationId/participants', topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+    app.get('/api/topics/:topicId/ideations/:ideationId/participants', async (req, res, next) => {
         try {
             const ideation = await Ideation.findOne({
                 where: {
