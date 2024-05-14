@@ -756,7 +756,7 @@ module.exports = function (app) {
         if (authorId) {
             where += ` AND "Idea"."authorId" = :authorId `;
         }
-        let orderSql = ' "Idea"."createdAt" DESC';
+        let orderSql = ' iv."up.count" DESC, "replies.count" DESC, "Idea"."createdAt" DESC ';
         if (!showModerated || showModerated == "false") {
             where += ` AND "Idea"."deletedAt" IS NULL `;
         } else {
