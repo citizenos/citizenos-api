@@ -5622,7 +5622,7 @@ module.exports = function (app) {
     /**
      * Create Topic Comment
      */
-    app.post('/api/users/:userId/topics/:topicId/comments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true), asyncMiddleware(async function (req, res) {
+    app.post('/api/users/:userId/topics/:topicId/comments', loginCheck(['partner']), hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
         let type = req.body.type;
         const parentId = req.body.parentId;
         const parentVersion = req.body.parentVersion;
