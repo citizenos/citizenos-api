@@ -1469,9 +1469,9 @@ module.exports = function (app) {
     });
 
     /**
-     * Create a Comment Vote
+     * Create an idea Vote
      */
-    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/votes', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/votes', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true,[Topic.STATUSES.ideation]), async function (req, res, next) {
         const value = parseInt(req.body.value, 10);
         try {
             const idea = await Idea
