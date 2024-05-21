@@ -39,6 +39,7 @@ module.exports = function (app) {
     app.post('/api/users/:userId/topics/:topicId/ideations', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft]), async (req, res, next) => {
         const question = req.body.question;
         const deadline = req.body.deadline;
+        const topicId = req.params.topicId;
         try {
             if (!question) {
                 return res.badRequest('Ideation question is missing', 1);
@@ -60,19 +61,7 @@ module.exports = function (app) {
 
             await db
                 .transaction(async function (t) {
-
-                    await cosActivities
-                        .createActivity(
-                            ideation,
-                            null,
-                            {
-                                type: 'User',
-                                id: req.user.id,
-                                ip: req.ip
-                            },
-                            req.method + ' ' + req.path,
-                            t
-                        );
+                    ideation.topicId = topicId;
                     await ideation.save({ transaction: t });
 
                     await TopicIdeation
@@ -331,7 +320,6 @@ module.exports = function (app) {
                 fields = fields.concat(['question']);
             }
             const ideation = topic.Ideations[0];
-
             await db.transaction(async function (t) {
                 fields.forEach(function (field) {
                     if (Object.keys(req.body).indexOf(field) > -1)
@@ -474,19 +462,7 @@ module.exports = function (app) {
                         imageUrl,
                         ideationId
                     });
-
-                    await cosActivities
-                        .createActivity(
-                            idea,
-                            null,
-                            {
-                                type: 'User',
-                                id: req.user.id,
-                                ip: req.ip
-                            },
-                            req.method + ' ' + req.path,
-                            t
-                        );
+                    idea.topicId = topicId;
                     await idea.save({ transaction: t });
 
                     await cosActivities
@@ -635,6 +611,7 @@ module.exports = function (app) {
                     if (Object.keys(req.body).indexOf(field) > -1)
                         idea[field] = req.body[field];
                 });
+                idea.topicId = topicId;
                 await cosActivities
                     .updateActivity(
                         idea,
@@ -698,6 +675,7 @@ module.exports = function (app) {
             await db
                 .transaction(async function (t) {
                     idea.deletedById = req.user.userId || req.user.id;
+                    idea.topicId = topicId;
                     await idea.save();
                     await cosActivities
                         .deleteActivity(idea, ideation, {
@@ -962,19 +940,7 @@ module.exports = function (app) {
                         description,
                         ideationId
                     });
-
-                    await cosActivities
-                        .createActivity(
-                            folder,
-                            null,
-                            {
-                                type: 'User',
-                                id: req.user.id,
-                                ip: req.ip
-                            },
-                            req.method + ' ' + req.path,
-                            t
-                        );
+                    folder.topicId = topicId;
                     await folder.save({ transaction: t });
 
                     await cosActivities
@@ -1037,15 +1003,19 @@ module.exports = function (app) {
     }
     app.get('/api/topics/:topicId/ideations/:ideationId/folders/:folderId/ideas', async (req, res, next) => {
         try {
+            const ideationId = req.params.ideationId;
+            const topicId = req.params.topicId;
+            if (!ideationId || !topicId) return res.badRequest();
+
             const ideation = await Ideation.findOne({
                 where: {
-                    id: req.params.ideationId
+                    id: ideationId
                 },
                 include: [
                     {
                         model: Topic,
                         where: {
-                            id: req.params.topicId
+                            id: topicId
                         },
                         attributes: ['visibility']
                     },
@@ -1131,7 +1101,7 @@ module.exports = function (app) {
                                     return item.id === folderIdeaItem.ideaId;
                                 });
                                 const folder = Folder.build(folderData);
-
+                                folder.topicId = topicId;
                                 const addActivity = cosActivities.addActivity(
                                     folderIdea,
                                     {
@@ -1180,6 +1150,7 @@ module.exports = function (app) {
     app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId/ideas/:ideaId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin), async function (req, res, next) {
         const folderId = req.params.folderId;
         const ideaId = req.params.ideaId;
+        const topicId = req.params.topicId;
         try {
             const idea = await Idea.findOne({
                 where: {
@@ -1197,6 +1168,7 @@ module.exports = function (app) {
             const folder = idea.Folders[0];
             const folderIdea = folder.FolderIdea;
             await db.transaction(async function (t) {
+                idea.topicId = topicId;
                 await cosActivities.deleteActivity(
                     idea,
                     folder,
@@ -1265,6 +1237,7 @@ module.exports = function (app) {
                     if (Object.keys(req.body).indexOf(field) > -1)
                         folder[field] = req.body[field];
                 });
+                folder.topicId = topicId;
                 await cosActivities
                     .updateActivity(
                         folder,
@@ -1327,6 +1300,7 @@ module.exports = function (app) {
 
             await db
                 .transaction(async function (t) {
+                    folder.topicId = topicId;
                     await cosActivities
                         .deleteActivity(folder, ideation, {
                             type: 'User',
@@ -1471,8 +1445,9 @@ module.exports = function (app) {
     /**
      * Create an idea Vote
      */
-    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/votes', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true,[Topic.STATUSES.ideation]), async function (req, res, next) {
+    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/votes', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.ideation]), async function (req, res, next) {
         const value = parseInt(req.body.value, 10);
+        const topicId = req.params.topicId;
         try {
             const idea = await Idea
                 .findOne({
@@ -1495,6 +1470,7 @@ module.exports = function (app) {
                             },
                             transaction: t
                         });
+
                     if (vote) {
                         //User already voted
                         if (vote.value === value) { // Same value will 0 the vote...
@@ -1502,22 +1478,24 @@ module.exports = function (app) {
                         } else {
                             vote.value = value;
                         }
-                        vote.topicId = req.params.topicId;
+                        vote.topicId = topicId;
+                        if (vote.value === 0) {
+                            await cosActivities
+                                .deleteActivity(
+                                    vote,
+                                    idea,
+                                    {
+                                        type: 'User',
+                                        id: req.user.userId,
+                                        ip: req.ip
+                                    },
+                                    req.method + ' ' + req.path,
+                                    t
+                                );
 
-                        await cosActivities
-                            .updateActivity(
-                                vote,
-                                idea,
-                                {
-                                    type: 'User',
-                                    id: req.user.userId,
-                                    ip: req.ip
-                                },
-                                req.method + ' ' + req.path,
-                                t
-                            );
+                            await vote.destroy({ force: true });
+                        }
 
-                        await vote.save({ transaction: t });
                     } else {
                         //User has not voted...
                         const iv = await IdeaVote
@@ -1529,7 +1507,7 @@ module.exports = function (app) {
                                 transaction: t
                             });
                         const i = Idea.build(Object.assign({}, idea));
-
+                        iv.topicId = topicId;
                         await cosActivities
                             .createActivity(iv, i, {
                                 type: 'User',
@@ -1657,6 +1635,7 @@ module.exports = function (app) {
         try {
             let type = req.body.type || Comment.TYPES.reply;
             const parentId = req.body.parentId;
+            const topicId = req.params.topicId;
             const parentVersion = req.body.parentVersion;
             let subject = req.body.subject;
             const text = req.body.text;
@@ -1699,6 +1678,7 @@ module.exports = function (app) {
                         transaction: t
                     });
 
+                    idea.topicId = topicId;
                     if (parentId) {
                         const parentComment = await Comment.findOne({
                             where: {
@@ -1706,7 +1686,6 @@ module.exports = function (app) {
                             },
                             transaction: t
                         });
-
                         if (parentComment) {
                             await cosActivities
                                 .replyActivity(
@@ -2170,6 +2149,7 @@ module.exports = function (app) {
     //NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
     app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId', async (req, res, next) => {
         try {
+            const topicId = req.params.topicId;
             await db
                 .transaction(async function (t) {
                     const comment = await Comment.findOne({
@@ -2184,7 +2164,7 @@ module.exports = function (app) {
                     await comment.save({
                         transaction: t
                     });
-
+                    comment.topicId = topicId;
                     await cosActivities
                         .deleteActivity(
                             comment,
@@ -2221,6 +2201,7 @@ module.exports = function (app) {
             const text = req.body.text;
             let type = req.body.type;
             const commentId = req.params.commentId;
+            const topicId = req.params.topicId;
 
             const comment = await Comment.findOne({
                 where: {
@@ -2253,7 +2234,7 @@ module.exports = function (app) {
                 .transaction(async function (t) {
                     const idea = comment.Ideas[0];
                     delete comment.Idea;
-
+                    idea.topicId = topicId;
                     await cosActivities
                         .updateActivity(
                             comment,
@@ -2299,6 +2280,7 @@ module.exports = function (app) {
 
     const ideaCommentsReportsCreate = async function (req, res, next) {
         const commentId = req.params.commentId;
+        const topicId = req.params.topicId;
         try {
             const comment = await Comment.findOne({
                 where: {
@@ -2306,6 +2288,11 @@ module.exports = function (app) {
                 }
             });
 
+            const idea = await Idea.findOne({
+                where: {
+                    id: req.params.ideaId
+                }
+            })
             if (!comment) {
                 return comment;
             }
@@ -2324,6 +2311,7 @@ module.exports = function (app) {
                                 transaction: t
                             }
                         );
+                    report.topicId = topicId;
                     await cosActivities.addActivity(
                         report,
                         {
@@ -2331,7 +2319,7 @@ module.exports = function (app) {
                             id: req.user.userId,
                             ip: req.ip
                         },
-                        null,
+                        idea,
                         comment,
                         req.method + ' ' + req.path,
                         t
@@ -2411,6 +2399,7 @@ module.exports = function (app) {
 
     app.post('/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId/reports/:reportId/moderate', authTokenRestrictedUse, async (req, res, next) => {
         try {
+            const topicId = req.params.topicId;
             const eventTokenData = req.locals.tokenDecoded;
             const type = req.body.type;
 
@@ -2471,6 +2460,7 @@ module.exports = function (app) {
             comment.deletedReasonText = req.body.text;
             comment.deletedByReportId = report.id;
 
+            idea.topicId = topicId;
             await db
                 .transaction(async function (t) {
                     await cosActivities.updateActivity(
@@ -2524,6 +2514,7 @@ module.exports = function (app) {
 
     const ideaReportsCreate = async function (req, res, next) {
         const ideaId = req.params.ideaId;
+        const topicId = req.params.topicId;
         try {
             const idea = await Idea.findOne({
                 where: {
@@ -2549,6 +2540,7 @@ module.exports = function (app) {
                                 transaction: t
                             }
                         );
+                    idea.topicId = topicId;
                     await cosActivities.addActivity(
                         report,
                         {
@@ -2636,6 +2628,7 @@ module.exports = function (app) {
 
     app.post('/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/reports/:reportId/moderate', authTokenRestrictedUse, async (req, res, next) => {
         try {
+            const topicId = req.params.topicId;
             const eventTokenData = req.locals.tokenDecoded;
             const type = req.body.type;
 
@@ -2686,7 +2679,7 @@ module.exports = function (app) {
                     id: idea.id
                 }
             });
-
+            idea.topicId = topicId;
             idea.deletedById = eventTokenData.userId;
             idea.deletedAt = db.fn('NOW');
             idea.deletedReasonType = req.body.type;
@@ -2727,7 +2720,7 @@ module.exports = function (app) {
                     ))[1];
 
                     i = Idea.build(i.dataValues);
-
+                    i.topicId = topicId;
                     await cosActivities
                         .deleteActivity(i, idea, {
                             type: 'Moderator',
@@ -2789,6 +2782,7 @@ module.exports = function (app) {
      */
     app.post('/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId/votes', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async function (req, res, next) {
         const value = parseInt(req.body.value, 10);
+
         try {
             const comment = await Comment
                 .findOne({
@@ -2796,13 +2790,19 @@ module.exports = function (app) {
                         id: req.params.commentId
                     }
                 });
-
-            if (!comment) {
+            const idea = await Idea
+                .findOne({
+                    where: {
+                        id: req.params.ideaId
+                    }
+                });
+            if (!comment || !idea) {
                 return res.notFound();
             }
 
             await db
                 .transaction(async function (t) {
+                    idea.topicId = req.params.topicId;
                     const vote = await CommentVote
                         .findOne({
                             where: {
@@ -2823,7 +2823,7 @@ module.exports = function (app) {
                         await cosActivities
                             .updateActivity(
                                 vote,
-                                comment,
+                                idea,
                                 {
                                     type: 'User',
                                     id: req.user.userId,
@@ -2844,11 +2844,9 @@ module.exports = function (app) {
                             }, {
                                 transaction: t
                             });
-                        const c = Comment.build(Object.assign({}, comment));
-                        c.topicId = req.params.topicId;
 
                         await cosActivities
-                            .createActivity(cv, c, {
+                            .createActivity(cv, idea, {
                                 type: 'User',
                                 id: req.user.userId,
                                 ip: req.ip
