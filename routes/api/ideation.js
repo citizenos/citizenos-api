@@ -1038,7 +1038,6 @@ module.exports = function (app) {
     /* Add ideas to folder*/
     app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId/ideas', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         let ideas = req.body;
-        console.log('IDEAS', ideas);
         const topicId = req.params.topicId;
         const ideationId = req.params.ideationId;
         const folderId = req.params.folderId;
@@ -1048,7 +1047,6 @@ module.exports = function (app) {
         }
         const ideaIds = [];
         ideas.forEach((idea) => ideaIds.push(idea.id || idea.ideaId));
-        console.log('IDEA IDS', ideaIds)
         const ideation = await Ideation.findOne({
             where: {
                 id: ideationId
@@ -1440,7 +1438,6 @@ module.exports = function (app) {
 
     app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/folders', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         let folders = req.body;
-        console.log('IDEAS', folders);
         const topicId = req.params.topicId;
         const ideationId = req.params.ideationId;
         const ideaId = req.params.ideaId;
@@ -1450,7 +1447,6 @@ module.exports = function (app) {
         }
         const folderIds = [];
         folders.forEach((folder) => folderIds.push(folder.id || folder.folderId));
-        console.log('FOLDER IDS', folderIds)
         const ideation = await Ideation.findOne({
             where: {
                 id: ideationId
