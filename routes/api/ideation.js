@@ -1038,6 +1038,7 @@ module.exports = function (app) {
     /* Add ideas to folder*/
     app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId/ideas', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         let ideas = req.body;
+        console.log('IDEAS', ideas);
         const topicId = req.params.topicId;
         const ideationId = req.params.ideationId;
         const folderId = req.params.folderId;
@@ -1047,7 +1048,7 @@ module.exports = function (app) {
         }
         const ideaIds = [];
         ideas.forEach((idea) => ideaIds.push(idea.id || idea.ideaId));
-
+        console.log('IDEA IDS', ideaIds)
         const ideation = await Ideation.findOne({
             where: {
                 id: ideationId
@@ -1117,7 +1118,7 @@ module.exports = function (app) {
                                 folderIdeaActivities.push(addActivity);
                             }
                         } else {
-                            logger.error('Adding Idea failed', inspection.reason());
+                            logger.error('Adding Idea failed', inspection.reason);
                         }
                     });
                     await Promise.all(folderIdeaActivities);
@@ -1366,6 +1367,193 @@ module.exports = function (app) {
             next(err);
         }
     }
+    app.get(['/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/folders', '/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/folders'], loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+        try {
+            const ideationId = req.params.ideationId;
+            const ideaId = req.params.ideaId;
+
+            const ideation = await Ideation.findOne({
+                where: {
+                    id: ideationId
+                },
+                include: [
+                    {
+                        model: Topic,
+                        where: {
+                            id: req.params.topicId
+                        },
+                        attributes: ['visibility']
+                    },
+                    {
+                        model: Idea,
+                        where: {
+                            id: ideaId
+                        }
+                    }
+                ]
+            });
+
+            if (!ideation || !ideation.Ideas.length || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+                return res.notFound();
+            }
+
+            const folders = await db.query(`
+            SELECT
+                f.id,
+                f."ideationId",
+                u.id as "creator.id",
+                u.name as "creator.name",
+                u."imageUrl" AS "creator.imageUrl",
+                f.name,
+                f.description,
+                f."createdAt",
+                f."updatedAt",
+                COALESCE(fi.count, 0) as "ideas.count",
+                count(*) OVER()::integer AS "countTotal"
+                FROM "FolderIdeas" fis
+                JOIN "Folders" f ON fis."folderId" = f.id
+                JOIN "Users" u ON u.id = f."creatorId"
+                LEFT JOIN (
+                    SELECT "folderId", COUNT(*) FROM "FolderIdeas" GROUP BY "folderId"
+                ) fi ON fi."folderId" = f.id
+                WHERE fis."ideaId" = :ideaId AND f."ideationId" = :ideationId AND f."deletedAt" IS NULL;
+            `, {
+                replacements: {
+                    ideationId: ideationId,
+                    ideaId
+                },
+                type: db.QueryTypes.SELECT,
+                raw: true,
+                nest: true
+            });
+            const count = folders[0]?.countTotal || 0;
+            folders.forEach((folder) => delete folder.countTotal);
+
+            return res.ok({
+                count,
+                rows: folders
+            });
+        } catch (err) {
+            next(err);
+        }
+    });
+
+    app.post('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/folders', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+        let folders = req.body;
+        console.log('IDEAS', folders);
+        const topicId = req.params.topicId;
+        const ideationId = req.params.ideationId;
+        const ideaId = req.params.ideaId;
+
+        if (!Array.isArray(folders)) {
+            folders = [folders];
+        }
+        const folderIds = [];
+        folders.forEach((folder) => folderIds.push(folder.id || folder.folderId));
+        console.log('FOLDER IDS', folderIds)
+        const ideation = await Ideation.findOne({
+            where: {
+                id: ideationId
+            },
+            include: [
+                {
+                    model: Topic,
+                    where: {
+                        id: topicId
+                    },
+                    attributes: ['visibility']
+                },
+                {
+                    model: Idea,
+                    where: {
+                        id: ideaId
+                    }
+                }
+            ]
+        });
+
+        if (!ideation || !ideation.Ideas.length || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+            return res.notFound();
+        }
+
+        try {
+            if (folderIds.length) {
+                await db.transaction(async function (t) {
+                    const excisitingItems = await FolderIdea.findAll({
+                        where: {
+                            ideaId: ideaId,
+                            folderId: {
+                                [Op.in]: folderIds
+                            }
+                        }
+                    });
+                    const findOrCreateFolderIdeas = folders.map((folder) => {
+                        return FolderIdea
+                            .upsert({
+                                ideaId: ideaId,
+                                folderId: folder.id || folder.folderId
+                            },
+                                { transaction: t }
+                            );
+                    });
+
+                    const folderIdeaActivities = [];
+                    const results = await Promise.allSettled(findOrCreateFolderIdeas);
+                    results.forEach((inspection) => {
+                        if (inspection.status === 'fulfilled') {
+                            const folderIdea = inspection.value[0];
+                            const exists = excisitingItems.find((item) => {
+                                return item.ideaId === folderIdea.ideaId
+                            });
+                            const folderIdeaItem = folderIdea.toJSON();
+                            if (!exists) {
+                                const folderData = folderIds.find((item) => {
+                                    return item.id === folderIdeaItem.folderId;
+                                });
+                                const folder = Folder.build(folderData);
+                                folder.topicId = topicId;
+                                const addActivity = cosActivities.addActivity(
+                                    folderIdea,
+                                    {
+                                        type: 'User',
+                                        id: req.user.userId,
+                                        ip: req.ip
+                                    },
+                                    null,
+                                    folder,
+                                    req.method + ' ' + req.path,
+                                    t
+                                );
+                                folderIdeaActivities.push(addActivity);
+                            }
+                        } else {
+                            logger.error('Adding Idea failed', inspection.reason);
+                        }
+                    });
+                    await Promise.all(folderIdeaActivities);
+
+                    t.afterCommit(() => {
+                        return res.created();
+                    });
+                });
+            } else {
+                return res.forbidden();
+            }
+
+        } catch (err) {
+            if (err) {
+                if (err.message === 'Access denied') {
+                    return res.forbidden();
+                }
+                logger.error('Adding Idea to Folder failed', req.path, err);
+
+                return next(err);
+            }
+
+            return res.forbidden();
+        }
+    });
+
     app.get('/api/topics/:topicId/ideations/:ideationId/folders', async (req, res, next) => {
         try {
             const ideation = await Ideation.findOne({
