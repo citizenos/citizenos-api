@@ -71,6 +71,18 @@
   "REPORT_COMMENT_MODERATOR": {
     "SUBJECT": "Prosíme o moderáciu tohto nahláseného obsahu diskusie"
   },
+  "REPORT_IDEA_COMMENT_CREATOR": {
+    "SUBJECT": "Tvoja odpoveď na nápad bola nahlásená ako nevhodná"
+  },
+  "REPORT_IDEA_COMMENT_MODERATOR": {
+    "SUBJECT": "Prosíme o moderovanie tejto nahlásenej odpovede na nápad"
+  },
+  "REPORT_IDEA_CREATOR": {
+    "SUBJECT": "Tvoj nápad bol nahlásený ako nevhodný"
+  },
+  "REPORT_IDEA_MODERATOR": {
+    "SUBJECT": "V téme, ktorú moderujete bol nahlásený nápad"
+  },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
