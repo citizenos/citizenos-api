@@ -71,6 +71,18 @@
   "REPORT_COMMENT_MODERATOR": {
     "SUBJECT": "Bitte moderieren Sie diesen gemeldeten Diskussionsinhalt"
   },
+  "REPORT_IDEA_COMMENT_CREATOR": {
+    "SUBJECT": "Your reply to an idea has been reported as inappropriate"
+  },
+  "REPORT_IDEA_COMMENT_MODERATOR": {
+    "SUBJECT": "Please moderate this reported idea reply"
+  },
+  "REPORT_IDEA_CREATOR": {
+    "SUBJECT": "Your idea has been reported as inappropriate"
+  },
+  "REPORT_IDEA_MODERATOR": {
+    "SUBJECT": "An idea has been reported in a topic you moderate"
+  },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
