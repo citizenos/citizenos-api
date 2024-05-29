@@ -253,7 +253,7 @@ module.exports = function (app) {
                     where: {
                         id: topicId,
                         status: {
-                            [models.Sequelize.Op.in]: [Topic.STATUSES.inProgress, Topic.STATUSES.draft]
+                            [models.Sequelize.Op.in]: [Topic.STATUSES.inProgress, Topic.STATUSES.draft, Topic.STATUSES.ideation]
                         } // Only in progress Topics can be updated
                     },
                     limit: 1
