@@ -72,16 +72,16 @@
     "SUBJECT": "Просим Вас модерировать этот вклад, в отношении которого была составлена жалоба"
   },
   "REPORT_IDEA_COMMENT_CREATOR": {
-    "SUBJECT": "Your reply to an idea has been reported as inappropriate"
+    "SUBJECT": "Ваш ответ на идею был отмечен как неуместный"
   },
   "REPORT_IDEA_COMMENT_MODERATOR": {
-    "SUBJECT": "Please moderate this reported idea reply"
+    "SUBJECT": "Пожалуйста, модерируйте этот ответ на идею, который был отмечен неуместным"
   },
   "REPORT_IDEA_CREATOR": {
-    "SUBJECT": "Your idea has been reported as inappropriate"
+    "SUBJECT": "Ваша идея был помечена, как неуместная"
   },
   "REPORT_IDEA_MODERATOR": {
-    "SUBJECT": "An idea has been reported in a topic you moderate"
+    "SUBJECT": "В теме, которую вы модерируете, была отмечена неуместная идея"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
@@ -238,6 +238,7 @@
   "TXT_TOPIC_CATEGORY_SOCIETY": "Демократия и гражданское общество",
   "TXT_TOPIC_CATEGORY_EUROCHANGEMAKERS": "EuroChangeMakers",
   "TXT_TOPIC_STATUS_INPROGRESS": "создается",
+  "TXT_TOPIC_STATUS_DRAFT": "черновик",
   "TXT_TOPIC_STATUS_VOTING": "на голосовании",
   "TXT_TOPIC_STATUS_FOLLOWUP": "в стадии применения решения",
   "TXT_TOPIC_STATUS_CLOSED": "закрыто",

@@ -238,6 +238,7 @@
   "TXT_TOPIC_CATEGORY_SOCIETY": "Demokracia a občianska spoločnosť",
   "TXT_TOPIC_CATEGORY_EUROCHANGEMAKERS": "Organizácia EuroChangeMakers",
   "TXT_TOPIC_STATUS_INPROGRESS": "rozpracované",
+  "TXT_TOPIC_STATUS_DRAFT": "draft",
   "TXT_TOPIC_STATUS_VOTING": "v hlasovaní",
   "TXT_TOPIC_STATUS_FOLLOWUP": "v nadväzujúcich opatreniach",
   "TXT_TOPIC_STATUS_CLOSED": "uzavreté",

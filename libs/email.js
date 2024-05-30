@@ -656,7 +656,7 @@ module.exports = function (app) {
             .all([toUsersPromise, fromUserPromise, topicPromise])
         const fromUser = fromUserRes.toJSON();
         const topic = topicRes.toJSON();
-
+        console.log()
         if (toUsers && toUsers.length) {
             const promisesToResolve = [];
             const memberCount = await TopicMemberUser.count({
@@ -682,6 +682,7 @@ module.exports = function (app) {
                     }
                 );
             toUsers.forEach((user) => {
+                const topicObject = Object.assign({}, topic);
                 if (user.email) {
                     const template = resolveTemplate('inviteTopic', user.language);
                     // TODO: Could use Mu here....
@@ -695,9 +696,10 @@ module.exports = function (app) {
                     });
 
                     // In case Topic has no title, just show the full url.
-                    topic.title = topic.title ? topic.title : linkViewTopic;
+                    topicObject.title = topic.title ? topic.title : linkViewTopic;
+                    console.log('STATUS', topic.status);
                     const statusKey = `TXT_TOPIC_STATUS_${topic.status.toUpperCase()}`;
-                    topic.status = topic.status = template.translations[statusKey];
+                    topicObject.status = template.translations[statusKey];
                     const images = [
                         {
                             name: 'Warning.png',
@@ -711,7 +713,7 @@ module.exports = function (app) {
                             images,
                             toUser: user,
                             fromUser: fromUser,
-                            topic: topic,
+                            topic: topicObject,
                             topicTitle: topic.title,
                             linkViewTopic: linkViewTopic,
                             memberCount: memberCount,

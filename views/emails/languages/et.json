@@ -72,16 +72,16 @@
     "SUBJECT": "Palun modereeri seda sisu, mille kohta teavitus tehti"
   },
   "REPORT_IDEA_COMMENT_CREATOR": {
-    "SUBJECT": "Your reply to an idea has been reported as inappropriate"
+    "SUBJECT": "Su vastus ideele on märgitud sobimatuks"
   },
   "REPORT_IDEA_COMMENT_MODERATOR": {
-    "SUBJECT": "Please moderate this reported idea reply"
+    "SUBJECT": "Palun modereeri sobimatuks märgitud idee vastust"
   },
   "REPORT_IDEA_CREATOR": {
-    "SUBJECT": "Your idea has been reported as inappropriate"
+    "SUBJECT": "Su idee on märgitud sobimatuks"
   },
   "REPORT_IDEA_MODERATOR": {
-    "SUBJECT": "An idea has been reported in a topic you moderate"
+    "SUBJECT": "Teemal, mida modereerid, on märgitud sobimatu idee"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
@@ -238,6 +238,7 @@
   "TXT_TOPIC_CATEGORY_SOCIETY": "Demokraatia ja kodanikuühiskond",
   "TXT_TOPIC_CATEGORY_EUROCHANGEMAKERS": "EuroChangeMakers",
   "TXT_TOPIC_STATUS_INPROGRESS": "ühisloomes",
+  "TXT_TOPIC_STATUS_DRAFT": "mustand",
   "TXT_TOPIC_STATUS_VOTING": "hääletamisel",
   "TXT_TOPIC_STATUS_FOLLOWUP": "elluviimisel",
   "TXT_TOPIC_STATUS_CLOSED": "suletud",

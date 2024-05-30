@@ -238,6 +238,7 @@
   "TXT_TOPIC_CATEGORY_SOCIETY": "Demokratie und Zivilgesellschaft",
   "TXT_TOPIC_CATEGORY_EUROCHANGEMAKERS": "EuroChangeMakers",
   "TXT_TOPIC_STATUS_INPROGRESS": "in Bearbeitung",
+  "TXT_TOPIC_STATUS_DRAFT": "draft",
   "TXT_TOPIC_STATUS_VOTING": "in Abstimmung",
   "TXT_TOPIC_STATUS_FOLLOWUP": "in Nachverfolgung",
   "TXT_TOPIC_STATUS_CLOSED": "geschlossen",
