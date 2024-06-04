@@ -1496,7 +1496,7 @@ module.exports = function (app) {
     });
 
     //Copy topic
-    app.get('/api/users/:userId/topics/:topicId/duplicate', loginCheck(['partner']), partnerParser, async function (req, res, next) {
+    app.get('/api/users/:userId/topics/:topicId/duplicate', loginCheck(['partner']), partnerParser, hasPermission(TopicMemberUser.LEVELS.admin), async function (req, res, next) {
         try {
             // I wish Sequelize Model.build supported "fields". This solution requires you to add a field here once new are defined in model.
             const sourceTopic = await Topic.findOne({
@@ -1504,10 +1504,6 @@ module.exports = function (app) {
                     id: req.params.topicId
                 }
             });
-
-            if (sourceTopic.creatorId !== req.user.userId) {
-                return res.forbidden();
-            }
 
             let topic = Topic.build({
                 title: sourceTopic.title,
