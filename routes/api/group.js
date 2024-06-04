@@ -2620,6 +2620,9 @@ module.exports = function (app) {
                         muc.count as "members.users.count",
                         COALESCE(mgc.count, 0) as "members.groups.count",
                         COALESCE(tc.count, 0) AS "comments.count",
+                        ti."ideationId" as "ideationId",
+                        ti."ideationId" as "ideation.id",
+                        ti."ideaCount" as "ideation.ideas.count",
                         count(*) OVER()::integer AS "countTotal"
                         ${returncolumns}
                     FROM "TopicMemberGroups" gt
@@ -2677,6 +2680,20 @@ module.exports = function (app) {
                         LEFT JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds"
                         LEFT JOIN (
                             SELECT
+                                ti."topicId",
+                                ti."ideationId",
+                                COALESCE(i."ideaCount", 0) as "ideaCount"
+                            FROM "TopicIdeations" ti
+                            LEFT JOIN (
+                                SELECT "ideationId",
+                                COUNT("ideationId") as "ideaCount"
+                                FROM "Ideas"
+                                GROUP BY "ideationId"
+                            ) i ON ti."ideationId" = i."ideationId"
+                            GROUP BY ti."topicId", ti."ideationId", i."ideaCount"
+                        ) AS ti ON ti."topicId" = t.id
+                        LEFT JOIN (
+                            SELECT
                                 "topicId",
                                 COUNT(*) AS count
                             FROM "TopicComments"
@@ -2687,7 +2704,7 @@ module.exports = function (app) {
                         AND gt."deletedAt" IS NULL
                         AND t."deletedAt" IS NULL
                         ${where}
-                    GROUP BY t.id, u.id, tv."voteId", ${groupBy} muc.count, mgc.count, tc.count
+                    GROUP BY t.id, u.id, tv."voteId", ${groupBy} muc.count, ti."ideationId", ti."ideaCount", mgc.count, tc.count
                     ${sortSql}
                     LIMIT :limit
                     OFFSET :offset
