@@ -56,12 +56,12 @@ module.exports = function (sequelize, DataTypes) {
                 comment: 'Main idea statement'
             },
             description: {
-                type: DataTypes.STRING,
+                type: DataTypes.STRING(2048),
                 allowNull: false,
                 comment: 'Idea description'
             },
             imageUrl: {
-                type: DataTypes.STRING,
+                type: DataTypes.TEXT,
                 allowNull: true,
                 comment: 'Image for the idea'
             },

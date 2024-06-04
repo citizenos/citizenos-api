@@ -95,12 +95,12 @@ module.exports = {
               comment: 'Main idea statement'
             },
             description: {
-              type: Sequelize.STRING,
+              type: Sequelize.STRING(2048),
               allowNull: true,
               comment: 'Idea description'
             },
             imageUrl: {
-              type: Sequelize.STRING,
+              type: Sequelize.TEXT,
               allowNull: true,
               comment: 'Image for the idea'
             },
