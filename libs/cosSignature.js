@@ -52,9 +52,7 @@ module.exports = function (app) {
     const VoteContainerFile = models.VoteContainerFile;
     const Vote = models.Vote;
     const Topic = models.Topic;
-    const UserConnection = models.UserConnection;
     const Signature = models.Signature;
-    const Op = db.Sequelize.Op;
     const FILE_CREATE_MODE = '0760';
 
     const TOPIC_FILE = {
