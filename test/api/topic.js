@@ -7711,6 +7711,7 @@ suite('Users', function () {
                                         '__userinfo.html',
                                         `${options[1].value}.html`,
                                         `${options[2].value}.html`,
+                                        'hääl.html',
                                         'document.docx',
                                         'hääl.html',
                                         'META-INF/manifest.xml',
