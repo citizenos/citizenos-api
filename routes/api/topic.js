@@ -7411,6 +7411,7 @@ module.exports = function (app) {
             let certificateInfo;
             let smartIdcertificate;
             let mobileIdCertificate;
+            let signingTime = new Date();
             let certFormat = 'base64';
             if (pid && countryCode) {
                 signingMethod = Vote.SIGNING_METHODS.smartId;
@@ -7461,13 +7462,13 @@ module.exports = function (app) {
 
                 switch (signingMethod) {
                     case Vote.SIGNING_METHODS.idCard:
-                        signInitResponse = await cosSignature.signInitIdCard(voteId, userId, vote.VoteOptions, certificate, t);
+                        signInitResponse = await cosSignature.signInitIdCard(voteId, userId, vote.VoteOptions, signingTime, certificate, t);
                         break;
                     case Vote.SIGNING_METHODS.smartId:
-                        signInitResponse = await cosSignature.signInitSmartId(voteId, userId, vote.VoteOptions, personalInfo.pid, countryCode, smartIdcertificate, t);
+                        signInitResponse = await cosSignature.signInitSmartId(voteId, userId, vote.VoteOptions, signingTime, personalInfo.pid, countryCode, smartIdcertificate, t);
                         break;
                     case Vote.SIGNING_METHODS.mid:
-                        signInitResponse = await cosSignature.signInitMobile(voteId, userId, vote.VoteOptions, personalInfo.pid, personalInfo.phoneNumber, mobileIdCertificate, t);
+                        signInitResponse = await cosSignature.signInitMobile(voteId, userId, vote.VoteOptions, signingTime, personalInfo.pid, personalInfo.phoneNumber, mobileIdCertificate, t);
                         break;
                     default:
                         throw new Error('Invalid signing method ' + signingMethod);
@@ -7477,15 +7478,17 @@ module.exports = function (app) {
 
                     let sessionData = {
                         voteOptions: vote.VoteOptions,
+                        signingTime: signingTime,
                         signingMethod,
                         userId: userId, // Required for un-authenticated signing.
                         voteId: voteId // saves one run of "handleTopicVotePreconditions" in the /sign
                     }
 
                     if (signInitResponse.sessionId) {
-                        sessionData.sessionId = signInitResponse.sessionId,
-                            sessionData.sessionHash = signInitResponse.sessionHash,
-                            sessionData.personalInfo = signInitResponse.personalInfo,
+                        sessionData.sessionId = signInitResponse.sessionId;
+                        sessionData.signingTime = signInitResponse.signingTime;
+                            sessionData.sessionHash = signInitResponse.sessionHash;
+                            sessionData.personalInfo = signInitResponse.personalInfo;
                             sessionData.signatureId = signInitResponse.signatureId;
                     } else {
                         switch (signInitResponse.statusCode) {
@@ -7764,7 +7767,6 @@ module.exports = function (app) {
 
         let tokenData;
         let idSignFlowData;
-
         try {
             tokenData = jwt.verify(token, config.session.publicKey, { algorithms: [config.session.algorithm] });
             idSignFlowData = cryptoLib.decrypt(config.session.secret, tokenData.sessionDataEncrypted);
@@ -7786,9 +7788,9 @@ module.exports = function (app) {
                 let signedDocInfo;
                 try {
                     if (idSignFlowData.signingMethod === Vote.SIGNING_METHODS.smartId) {
-                        signedDocInfo = await cosSignature.getSmartIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions, timeoutMs);
+                        signedDocInfo = await cosSignature.getSmartIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions, idSignFlowData.personalInfo, idSignFlowData.signingTime, timeoutMs);
                     } else {
-                        signedDocInfo = await cosSignature.getMobileIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions, timeoutMs);
+                        signedDocInfo = await cosSignature.getMobileIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions, idSignFlowData.personalInfo, idSignFlowData.signingTime, timeoutMs);
                     }
 
                     return signedDocInfo;
