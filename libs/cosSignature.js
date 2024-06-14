@@ -9,6 +9,7 @@ module.exports = function (app) {
     const fsExtra = app.get('fsExtra');
     const mu = app.get('mu');
     const sanitizeFilename = app.get('sanitizeFilename');
+    const moment = app.get('moment');
     const fastCsv = app.get('fastCsv');
     const db = models.sequelize;
     const QueryStream = app.get('QueryStream');
@@ -51,8 +52,10 @@ module.exports = function (app) {
 
     const VoteContainerFile = models.VoteContainerFile;
     const Vote = models.Vote;
+    const Topic = models.Topic;
+    const UserConnection = models.UserConnection;
     const Signature = models.Signature;
-
+    const Op = db.Sequelize.Op;
     const FILE_CREATE_MODE = '0760';
 
     const TOPIC_FILE = {
@@ -64,6 +67,12 @@ module.exports = function (app) {
     const METAINFO_FILE = {
         template: 'bdoc/metainfo.html',
         name: '__metainfo.html',
+        mimeType: 'text/html'
+    };
+
+    const SIGNATURE_FILE = {
+        template: 'bdoc/hääl.html',
+        name: 'hääl.html',
         mimeType: 'text/html'
     };
 
@@ -296,7 +305,7 @@ module.exports = function (app) {
 
     };
 
-    const _getUserContainer = async function (voteId, userId, voteOptions) {
+    const _getUserContainer = async function (voteId, userId, voteOptions, personalInfo, signingTime) {
         const container = new Asic();
         const chosenVoteOptionFileNames = voteOptions.map(_getVoteOptionFileName);
 
@@ -325,6 +334,39 @@ module.exports = function (app) {
             container.add(fileName, content, mimeType);
         });
 
+        const vote = await Vote.findOne({
+            where: {
+                id: voteId
+            },
+            include: [Topic]
+        });
+        const topic = vote.Topics[0];
+
+        await new Promise((resolve) => {
+            let finalData = '';
+            const templateStream = mu.compileAndRender(SIGNATURE_FILE.template, {
+                topic: topic,
+                user: {
+                    name: `${personalInfo.firstName} ${personalInfo.lastName}`,
+                    pid: (personalInfo.pid.indexOf('PNO') === 0) ? personalInfo.pid.substring(6, personalInfo.pid.length) : personalInfo.pid
+                },
+                vote: vote,
+                signingTime: `${moment(signingTime).format('YYYY-MM-DD HH:mm')}`,
+                voteOptions: voteOptions.map((voteOption) => '<b>' + voteOption.value + '</b>').join(', ')
+            });
+
+            templateStream
+                .on('data', function (data) {
+                    finalData += data.toString();
+                });
+            templateStream
+                .on('end', function () {
+                    container.add(SIGNATURE_FILE.name,finalData,SIGNATURE_FILE.mimeType);
+
+                    return resolve();
+                });
+        });
+
         return new Promise(function (resolve) {
             let finalData = '';
             const mufileStream = mu
@@ -342,10 +384,22 @@ module.exports = function (app) {
         });
     };
 
-    const _createUserBdoc = async function (voteId, userId, voteOptions, cert, certFormat, transaction) {
+    const _createUserBdoc = async function (voteId, userId, voteOptions, signingTime, cert, certFormat, transaction) {
         try {
             let containerFiles = [];
             const certificate = new Certificate(Buffer.from(cert, certFormat));
+            const subject = certificate.subject.reduce(
+                (accumulator, currentValue) => {
+                    const entry = Object.entries(currentValue);
+                    accumulator[entry[0][0]] = entry[0][1]
+                    return accumulator;
+                },
+                {},
+            );
+            const user = {
+                name: `${subject.givenName} ${subject.surname}`,
+                pid: (subject.serialNumber.indexOf('PNO') === 0) ? subject.serialNumber.substring(6, subject.serialNumber.length) : subject.serialNumber
+            }
             const chosenVoteOptionFileNames = voteOptions.map(_getVoteOptionFileName);
 
             const voteContainerFiles = await VoteContainerFile
@@ -378,11 +432,45 @@ module.exports = function (app) {
                     hash: Crypto.createHash('sha256').update(content).digest()
                 });
             })
+            const vote = await Vote.findOne({
+                where: {
+                    id: voteId
+                },
+                include: [Topic]
+            });
+            const topic = vote.Topics[0];
+
+            await new Promise((resolve) => {
+                let finalData = '';
+                const templateStream = mu.compileAndRender(SIGNATURE_FILE.template, {
+                    topic: topic,
+                    user: user,
+                    vote: vote,
+                    signingTime: `${moment(signingTime).format('YYYY-MM-DD HH:mm')}`,
+                    voteOptions: voteOptions.map((voteOption) => '<b>' + voteOption.value + '</b>').join(', ')
+                });
+
+                templateStream
+                    .on('data', function (data) {
+                        finalData += data.toString();
+                    });
+                templateStream
+                    .on('end', function () {
+                        containerFiles.push({
+                            path: SIGNATURE_FILE.name,
+                            type: SIGNATURE_FILE.mimeType,
+                            hash: Crypto.createHash('sha256').update(Buffer.from(finalData)).digest()
+                        });
+
+                        return resolve();
+                    });
+            });
 
             const files = await new Promise(function (resolve) {
                 let finalData = '';
                 const mufileStream = mu
                     .compileAndRender(USERINFO_FILE.template, { user: { id: userId } });
+
                 mufileStream
                     .on('data', function (data) {
                         finalData += data.toString();
@@ -421,8 +509,8 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _signInitIdCard = async function (voteId, userId, voteOptions, certificate, transaction) {
-        const xades = await _createUserBdoc(voteId, userId, voteOptions, certificate, 'hex', transaction);
+    const _signInitIdCard = async function (voteId, userId, voteOptions, signingTime, certificate, transaction) {
+        const xades = await _createUserBdoc(voteId, userId, voteOptions, signingTime, certificate, 'hex', transaction);
         const signableData = xades.signableHash;
 
         const personalInfo = await mobileId.getCertUserData(certificate, 'hex');
@@ -434,6 +522,7 @@ module.exports = function (app) {
         return {
             statusCode: 0,
             personalInfo,
+            signingTime,
             signableHash: signableData.toString('hex'),
             signatureId: signatureData.id
         };
@@ -455,8 +544,8 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _signInitMobile = async function (voteId, userId, voteOptions, pid, phoneNumber, certificate, transaction) {
-        const xades = await _createUserBdoc(voteId, userId, voteOptions, certificate, 'base64', transaction);
+    const _signInitMobile = async function (voteId, userId, voteOptions, signingTime, pid, phoneNumber, certificate, transaction) {
+        const xades = await _createUserBdoc(voteId, userId, voteOptions, signingTime, certificate, 'base64', transaction);
         const signableData = xades.signableHash;
 
         const personalInfo = await mobileId.getCertUserData(certificate, 'base64');
@@ -464,6 +553,7 @@ module.exports = function (app) {
         const signatureData = await Signature.create({ data: xades.toString() });
         response.signatureId = signatureData.id
         response.personalInfo = personalInfo;
+        response.signingTime = signingTime;
 
         return response;
     };
@@ -484,19 +574,20 @@ module.exports = function (app) {
      *
      * @private
      */
-    const _signInitSmartId = async function (voteId, userId, voteOptions, pid, countryCode, certificate, transaction) {
-        const xades = await _createUserBdoc(voteId, userId, voteOptions, certificate, 'base64', transaction);
+    const _signInitSmartId = async function (voteId, userId, voteOptions, signingTime, pid, countryCode, certificate, transaction) {
+        const xades = await _createUserBdoc(voteId, userId, voteOptions, signingTime, certificate, 'base64', transaction);
         const signableData = xades.signableHash;
         const personalInfo = await smartId.getCertUserData(certificate);
         const response = await smartId.signature(pid, countryCode, signableData.toString('base64'))
         const signatureData = await Signature.create({ data: xades.toString() });
         response.signatureId = signatureData.id
         response.personalInfo = personalInfo;
+        response.signingTime = signingTime;
 
         return response;
     };
 
-    const _handleSigningResult = async function (voteId, userId, voteOptions, signableHash, signatureId, signature) {
+    const _handleSigningResult = async function (voteId, userId, voteOptions, signableHash, signatureId, signature, personalInfo, signingTime) {
         const signatureData = await Signature
             .findOne({
                 where: {
@@ -509,7 +600,7 @@ module.exports = function (app) {
         xades.setTimestamp(await hades.timestamp(xades));
         xades.setOcspResponse(await hades.timemark(xades));
 
-        const container = await _getUserContainer(voteId, userId, voteOptions)
+        const container = await _getUserContainer(voteId, userId, voteOptions, personalInfo, signingTime)
 
         const signedDocData = await new Promise(function (resolve) {
             const chunks = [];
@@ -533,11 +624,11 @@ module.exports = function (app) {
         }
     };
 
-    const _getSmartIdSignedDoc = async function (sessionId, signableHash, signatureId, voteId, userId, voteOptions, timeoutMs) {
+    const _getSmartIdSignedDoc = async function (sessionId, signableHash, signatureId, voteId, userId, voteOptions, personalInfo, signingTime, timeoutMs) {
         try {
             const signResult = await smartId.statusSign(sessionId, timeoutMs);
             if (signResult.signature) {
-                return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value);
+                return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value, personalInfo, signingTime);
             }
 
             logger.error(signResult);
@@ -548,11 +639,11 @@ module.exports = function (app) {
         }
     };
 
-    const _getMobileIdSignedDoc = async function (sessionId, signableHash, signatureId, voteId, userId, voteOptions, timeoutMs) {
+    const _getMobileIdSignedDoc = async function (sessionId, signableHash, signatureId, voteId, userId, voteOptions, personalInfo, signingTime, timeoutMs) {
         try {
             const signResult = await mobileId.statusSign(sessionId, timeoutMs)
             if (signResult.signature) {
-                return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value);
+                return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value, personalInfo, signingTime);
             }
 
             logger.error(signResult);
@@ -563,8 +654,8 @@ module.exports = function (app) {
         }
     };
 
-    const _signUserBdoc = function (voteId, userId, voteOptions, signableHash, signatureId, signatureValue) {
-        return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signatureValue);
+    const _signUserBdoc = function (voteId, userId, voteOptions, signableHash, signatureId, signatureValue, signingTime) {
+        return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signatureValue, signingTime);
     };
 
     const _generateFinalCSV = async function (voteId, type, finalContainer) {

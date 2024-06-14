@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Hääl</title>
+    <style type="text/css">
+        * {
+            font-family: sans-serif;
+        }
+
+        table {
+            text-align: left;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <p>Lähtudes käesolevas konteineris oleva faili document.docx sisust annan mina, {{user.name}} (IK {{user.pid}}), küsimuses
+            <i>{{vote.description}}</i> oma hääle järgmiselt:</p>
+        <p>{{{voteOptions}}}</p>
+        <p>/allkirjastatud digitaalselt/</p>
+        <p>{{signingTime}}</p>
+    </div>
+</body>
+
+</html>

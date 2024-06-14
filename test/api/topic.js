@@ -7701,6 +7701,7 @@ suite('Users', function () {
                                         '__userinfo.html',
                                         `${options[1].value}.html`,
                                         `${options[2].value}.html`,
+                                        'hääl.html',
                                         'document.docx',
                                         'META-INF/manifest.xml',
                                         'META-INF/signatures-1.xml'
