@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 14.11 (Ubuntu 14.11-0ubuntu0.22.04.1)
--- Dumped by pg_dump version 14.11 (Ubuntu 14.11-0ubuntu0.22.04.1)
+-- Dumped from database version 14.12 (Ubuntu 14.12-0ubuntu0.22.04.1)
+-- Dumped by pg_dump version 14.12 (Ubuntu 14.12-0ubuntu0.22.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -560,15 +560,72 @@ COMMENT ON COLUMN public."Comments".edits IS 'Comment versions in JSONB array';
 
 
 --
+-- Name: DiscussionComments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."DiscussionComments" (
+    "discussionId" uuid NOT NULL,
+    "commentId" uuid NOT NULL
+);
+
+
+--
+-- Name: COLUMN "DiscussionComments"."discussionId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."DiscussionComments"."discussionId" IS 'To what Discussion this Comment belongs to.';
+
+
+--
+-- Name: COLUMN "DiscussionComments"."commentId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."DiscussionComments"."commentId" IS 'Which Comment belongs to this Discussion.';
+
+
+--
+-- Name: Discussions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."Discussions" (
+    id uuid NOT NULL,
+    "creatorId" uuid NOT NULL,
+    question character varying(2048),
+    deadline timestamp with time zone,
+    "createdAt" timestamp with time zone NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL,
+    "deletedAt" timestamp with time zone
+);
+
+
+--
+-- Name: COLUMN "Discussions"."creatorId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Discussions"."creatorId" IS 'User who created the discussion.';
+
+
+--
+-- Name: COLUMN "Discussions".question; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Discussions".question IS 'Question the discussion is about';
+
+
+--
+-- Name: COLUMN "Discussions".deadline; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Discussions".deadline IS 'Deadline for the discussion. If NULL then no deadline at all.';
+
+
+--
 -- Name: FolderIdeas; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public."FolderIdeas" (
     "folderId" uuid NOT NULL,
-    "ideaId" uuid NOT NULL,
-    "createdAt" timestamp with time zone NOT NULL,
-    "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone
+    "ideaId" uuid NOT NULL
 );
 
 
@@ -894,26 +951,6 @@ COMMENT ON COLUMN public."IdeaComments"."commentId" IS 'Which Comment belongs to
 
 
 --
--- Name: IdeaFavorites; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public."IdeaFavorites" (
-    "ideaId" uuid NOT NULL,
-    "userId" uuid NOT NULL,
-    "createdAt" timestamp with time zone NOT NULL,
-    "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone
-);
-
-
---
--- Name: COLUMN "IdeaFavorites"."userId"; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public."IdeaFavorites"."userId" IS 'User ID who favourited the idea';
-
-
---
 -- Name: IdeaFavourites; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -996,8 +1033,8 @@ CREATE TABLE public."Ideas" (
     "ideationId" uuid NOT NULL,
     "authorId" uuid NOT NULL,
     statement character varying(2048) NOT NULL,
-    description character varying(255) NOT NULL,
-    "imageUrl" character varying(255),
+    description text NOT NULL,
+    "imageUrl" text,
     "deletedById" uuid,
     "deletedReasonType" public."enum_Ideas_deletedReasonType",
     "deletedReasonText" character varying(2048),
@@ -1400,27 +1437,30 @@ COMMENT ON COLUMN public."TopicAttachments"."attachmentId" IS 'Which Attachment 
 
 
 --
--- Name: TopicComments; Type: TABLE; Schema: public; Owner: -
+-- Name: TopicDiscussions; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public."TopicComments" (
+CREATE TABLE public."TopicDiscussions" (
     "topicId" uuid NOT NULL,
-    "commentId" uuid NOT NULL
+    "discussionId" uuid NOT NULL,
+    "createdAt" timestamp with time zone NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL,
+    "deletedAt" timestamp with time zone
 );
 
 
 --
--- Name: COLUMN "TopicComments"."topicId"; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN "TopicDiscussions"."topicId"; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public."TopicComments"."topicId" IS 'To what Topic this Comment belongs to.';
+COMMENT ON COLUMN public."TopicDiscussions"."topicId" IS 'To what Topic this discussion belongs to.';
 
 
 --
--- Name: COLUMN "TopicComments"."commentId"; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN "TopicDiscussions"."discussionId"; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public."TopicComments"."commentId" IS 'Which Comment belongs to this Topic.';
+COMMENT ON COLUMN public."TopicDiscussions"."discussionId" IS 'Discussion id.';
 
 
 --
@@ -2632,6 +2672,22 @@ ALTER TABLE ONLY public."Comments"
 
 
 --
+-- Name: DiscussionComments DiscussionComments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."DiscussionComments"
+    ADD CONSTRAINT "DiscussionComments_pkey" PRIMARY KEY ("discussionId", "commentId");
+
+
+--
+-- Name: Discussions Discussions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Discussions"
+    ADD CONSTRAINT "Discussions_pkey" PRIMARY KEY (id);
+
+
+--
 -- Name: FolderIdeas FolderIdeas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2701,14 +2757,6 @@ ALTER TABLE ONLY public."Groups"
 
 ALTER TABLE ONLY public."IdeaComments"
     ADD CONSTRAINT "IdeaComments_pkey" PRIMARY KEY ("ideaId", "commentId");
-
-
---
--- Name: IdeaFavorites IdeaFavorites_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."IdeaFavorites"
-    ADD CONSTRAINT "IdeaFavorites_pkey" PRIMARY KEY ("ideaId", "userId");
 
 
 --
@@ -2824,11 +2872,11 @@ ALTER TABLE ONLY public."TopicAttachments"
 
 
 --
--- Name: TopicComments TopicComments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: TopicDiscussions TopicDiscussions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public."TopicComments"
-    ADD CONSTRAINT "TopicComments_pkey" PRIMARY KEY ("topicId", "commentId");
+ALTER TABLE ONLY public."TopicDiscussions"
+    ADD CONSTRAINT "TopicDiscussions_pkey" PRIMARY KEY ("topicId", "discussionId");
 
 
 --
@@ -3232,6 +3280,30 @@ ALTER TABLE ONLY public."Comments"
 
 
 --
+-- Name: DiscussionComments DiscussionComments_commentId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."DiscussionComments"
+    ADD CONSTRAINT "DiscussionComments_commentId_fkey" FOREIGN KEY ("commentId") REFERENCES public."Comments"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: DiscussionComments DiscussionComments_discussionId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."DiscussionComments"
+    ADD CONSTRAINT "DiscussionComments_discussionId_fkey" FOREIGN KEY ("discussionId") REFERENCES public."Discussions"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: Discussions Discussions_creatorId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Discussions"
+    ADD CONSTRAINT "Discussions_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: FolderIdeas FolderIdeas_folderId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3536,19 +3608,19 @@ ALTER TABLE ONLY public."TopicAttachments"
 
 
 --
--- Name: TopicComments TopicComments_commentId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: TopicDiscussions TopicDiscussions_discussionId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public."TopicComments"
-    ADD CONSTRAINT "TopicComments_commentId_fkey" FOREIGN KEY ("commentId") REFERENCES public."Comments"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE ONLY public."TopicDiscussions"
+    ADD CONSTRAINT "TopicDiscussions_discussionId_fkey" FOREIGN KEY ("discussionId") REFERENCES public."Discussions"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
--- Name: TopicComments TopicComments_topicId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: TopicDiscussions TopicDiscussions_topicId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public."TopicComments"
-    ADD CONSTRAINT "TopicComments_topicId_fkey" FOREIGN KEY ("topicId") REFERENCES public."Topics"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE ONLY public."TopicDiscussions"
+    ADD CONSTRAINT "TopicDiscussions_topicId_fkey" FOREIGN KEY ("topicId") REFERENCES public."Topics"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -3900,4 +3972,5 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 20240325115611-user-newsletter.js
 20240326102945-create-request.js
 20240405170424-create-ideation.js
+20240618064610-create-discussion.js
 \.

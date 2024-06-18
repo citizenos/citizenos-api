@@ -56,7 +56,7 @@ module.exports = function (sequelize, DataTypes) {
                 comment: 'Main idea statement'
             },
             description: {
-                type: DataTypes.STRING(2048),
+                type: DataTypes.TEXT,
                 allowNull: false,
                 comment: 'Idea description'
             },

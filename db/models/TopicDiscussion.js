@@ -1,24 +1,22 @@
-'use strict';
-
 /**
- * TopicComment
+ * TopicDiscussion
  *
- * @param {object} sequelize Sequelize instance
- * @param {object} DataTypes Sequelize DataTypes
+ * @param {object} sequelize DataTypes instance
+ * @param {object} DataTypes DataTypes DataTypes
  *
- * @returns {object} Sequelize model
+ * @returns {object} DataTypes model
  *
  * @see http://sequelizejs.com/docs/latest/models
  */
-module.exports = function (sequelize, DataTypes) {
 
-    var TopicComment = sequelize.define(
-        'TopicComment',
+module.exports = function (sequelize, DataTypes) {
+    const TopicDiscussion = sequelize.define(
+        'TopicDiscussion',
         {
             topicId: {
                 type: DataTypes.UUID,
                 allowNull: false,
-                comment: 'To what Topic this Comment belongs to.',
+                comment: 'To what Topic this discussion belongs to.',
                 references: {
                     model: 'Topics',
                     key: 'id'
@@ -27,23 +25,20 @@ module.exports = function (sequelize, DataTypes) {
                 onDelete: 'CASCADE',
                 primaryKey: true
             },
-            commentId: {
+            discussionId: {
                 type: DataTypes.UUID,
                 allowNull: false,
-                comment: 'Which Comment belongs to this Topic.',
+                comment: 'Discussion id.',
                 references: {
-                    model: 'Comments',
+                    model: 'Discussions',
                     key: 'id'
                 },
                 onUpdate: 'CASCADE',
                 onDelete: 'CASCADE',
                 primaryKey: true
             }
-        },
-        {
-            timestamps: false
         }
     );
 
-    return TopicComment;
-};
+    return TopicDiscussion;
+}

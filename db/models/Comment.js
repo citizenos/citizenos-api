@@ -157,12 +157,11 @@ module.exports = function (sequelize, DataTypes) {
         });
 
         // TODO: funky association for cascade delete and right commentId reference
-        Comment.belongsToMany(models.Topic, {
-            through: models.TopicComment,
+        Comment.belongsToMany(models.Discussion, {
+            through: models.DiscussionComment,
             foreignKey: 'commentId',
             constraints: true
         });
-
 
         Comment.belongsToMany(models.Idea, {
             through: models.IdeaComment,

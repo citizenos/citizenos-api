@@ -2696,7 +2696,8 @@ module.exports = function (app) {
                             SELECT
                                 "topicId",
                                 COUNT(*) AS count
-                            FROM "TopicComments"
+                            FROM "DiscussionComments" dc
+                                JOIN "TopicDiscussions" td ON td."discussionId" = dc."discussionId"
                             GROUP BY "topicId"
                         ) AS tc ON (tc."topicId" = t.id)
                         ${join}

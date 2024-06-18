@@ -697,7 +697,6 @@ module.exports = function (app) {
 
                     // In case Topic has no title, just show the full url.
                     topicObject.title = topic.title ? topic.title : linkViewTopic;
-                    console.log('STATUS', topic.status);
                     const statusKey = `TXT_TOPIC_STATUS_${topic.status.toUpperCase()}`;
                     topicObject.status = template.translations[statusKey];
                     const images = [
@@ -979,7 +978,7 @@ module.exports = function (app) {
             .query(
                 `
                     SELECT
-                        tc."commentId" as "comment.id",
+                        dc."commentId" as "comment.id",
                         c."subject" as "comment.subject",
                         c."text" as "comment.text",
                         c."updatedAt" as "comment.updatedAt",
@@ -990,11 +989,12 @@ module.exports = function (app) {
                         t."title" as "topic.title",
                         t."sourcePartnerId" as "topic.sourcePartnerId",
                         t."visibility" as "topic.visibility"
-                    FROM "TopicComments" tc
-                        JOIN "Topics" t ON (t.id = tc."topicId")
-                        JOIN "Comments" c ON (c.id = tc."commentId")
+                    FROM "DiscussionComments" dc
+                        JOIN "TopicDiscussions" td ON (td."discussionId" = dc."discussionId")
+                        JOIN "Topics" t ON (t.id = td."topicId")
+                        JOIN "Comments" c ON (c.id = dc."commentId")
                         JOIN "Users" u ON (u.id = c."creatorId")
-                    WHERE tc."commentId" = :commentId
+                    WHERE dc."commentId" = :commentId
                 `,
                 {
                     replacements: {

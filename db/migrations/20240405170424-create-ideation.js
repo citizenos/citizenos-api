@@ -95,7 +95,7 @@ module.exports = {
               comment: 'Main idea statement'
             },
             description: {
-              type: Sequelize.STRING(2048),
+              type: Sequelize.TEXT,
               allowNull: true,
               comment: 'Idea description'
             },

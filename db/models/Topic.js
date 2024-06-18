@@ -278,8 +278,8 @@ module.exports = function (sequelize, DataTypes) {
             constraints: true
         });
 
-        Topic.belongsToMany(models.Comment, {
-            through: models.TopicComment,
+        Topic.belongsToMany(models.Discussion, {
+            through: models.TopicDiscussion,
             foreignKey: 'topicId',
             constraints: true
         });

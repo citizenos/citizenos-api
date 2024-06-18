@@ -2,7 +2,7 @@
 
 const config = require('config');
 /**
- * TopicComment
+ * TokenRevocation
  *
  * @param {object} sequelize Sequelize instance
  * @param {object} DataTypes Sequelize DataTypes

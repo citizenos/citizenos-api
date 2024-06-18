@@ -9,6 +9,7 @@ const config = require('config');
 const shared = require('../utils/shared');
 const userLib = require('../api/lib/user')(app);
 const topicLib = require('../api/topic');
+const discussionLib = require('../api/discussion');
 const groupLib = require('../api/group');
 
 const models = app.get('models');
@@ -108,6 +109,7 @@ suite('Email', function () {
             let user;
             let user2;
             let topic;
+            let discussion;
             let report;
             let comment;
             let commentReport;
@@ -120,7 +122,8 @@ suite('Email', function () {
                 user = await userLib.createUserAndLogin(agent, null, null, null);
                 user2 = await userLib.createUserAndLogin(agent2, null, null, null);
                 topic = (await topicLib.topicCreate(agent, user.id, 'TEST', Topic.STATUSES.inProgress, '<html><head></head><body><h2>TEST</h2></body></html>')).body.data;
-                comment = (await topicLib.topicCommentCreate(agent, user.id, topic.id, null, null, Comment.TYPES.pro, 'subject', 'text')).body.data;
+                discussion = (await discussionLib.discussionCreate(agent, user.id, topic.id, 'Test question?')).body.data;
+                comment = (await discussionLib.topicCommentCreate(agent, user.id, topic.id, discussion.id, null, null, Comment.TYPES.pro, 'subject', 'text')).body.data;
 
                 report = await TopicReport.create({
                     topicId: topic.id,

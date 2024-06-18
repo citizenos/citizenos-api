@@ -32,7 +32,7 @@ module.exports = function (app) {
     const IdeaReport = models.IdeaReport;
 
     const topicLib = require('./topic')(app);
-
+    const discussionLib = require('./discussion')(app);
     /**
      * Create an Ideation
      */
@@ -2327,7 +2327,7 @@ module.exports = function (app) {
     /**
      * Delete Topic Comment
      */
-    app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId', loginCheck(['partner']), topicLib.isCommentCreator(), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, false, null, true));
+    app.delete('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId', loginCheck(['partner']), discussionLib.isCommentCreator(), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, false, null, true));
 
     //WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition
     //NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
@@ -2375,7 +2375,7 @@ module.exports = function (app) {
         }
     });
 
-    app.put('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId', loginCheck(['partner']), topicLib.isCommentCreator());
+    app.put('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/comments/:commentId', loginCheck(['partner']), discussionLib.isCommentCreator());
 
     //WARNING: Don't mess up with order here! In order to use "next('route')" in the isCommentCreator, we have to have separate route definition.
     //NOTE: If you have good ideas how to keep one route definition with several middlewares, feel free to share!
