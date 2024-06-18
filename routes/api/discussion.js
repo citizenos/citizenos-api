@@ -444,6 +444,7 @@ module.exports = function (app) {
     app.post('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
         let type = req.body.type;
         const parentId = req.body.parentId;
+        const discussionId = req.params.discussionId;
         const parentVersion = req.body.parentVersion;
         let subject = req.body.subject;
         const text = req.body.text;
@@ -529,7 +530,7 @@ module.exports = function (app) {
                 await DiscussionComment
                     .create(
                         {
-                            discussionId: req.params.discussionId,
+                            discussionId: discussionId,
                             commentId: comment.id
                         },
                         {
@@ -561,7 +562,9 @@ module.exports = function (app) {
 
                 const resComment = await Comment.build(c[0][0]);
                 t.afterCommit(() => {
-                    return res.created(resComment.toJSON());
+                    const resObj = resComment.toJSON();
+                    resObj.discussionId = discussionId;
+                    return res.created(resObj);
                 });
             });
     }));
@@ -618,6 +621,7 @@ module.exports = function (app) {
                     jsonb_build_object('id', c."parentId",'version',c."parentVersion") as parent,
                     c.subject,
                     c.text,
+                    dc."discussionId",
                     pg_temp.editCreatedAtToJson(c.edits) as edits,
                     jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl", 'company', u.company ${dataForModerator}) as creator,
                     CASE
@@ -633,6 +637,7 @@ module.exports = function (app) {
                     to_char(c."deletedAt" at time zone 'UTC', :dateFormat) as "deletedAt",
                     0 AS depth
                     FROM "Comments" c
+                    JOIN "DiscussionComments" dc ON dc."commentId" = c.id
                     LEFT JOIN "Users" u ON (u.id = c."creatorId")
                     LEFT JOIN "UserConnections" uc ON (u.id = uc."userId" AND uc."connectionId" = 'esteid')
                     LEFT JOIN "Users" dbu ON (dbu.id = c."deletedById")
@@ -656,6 +661,7 @@ module.exports = function (app) {
                     jsonb_build_object('id', c."parentId",'version',c."parentVersion") as parent,
                     c.subject,
                     c.text,
+                    dc."discussionId",
                     pg_temp.editCreatedAtToJson(c.edits) as edits,
                     jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl", 'company', u.company ${dataForModerator}) as creator,
                     CASE
@@ -671,6 +677,7 @@ module.exports = function (app) {
                     to_char(c."deletedAt" at time zone 'UTC', :dateFormat) as "deletedAt",
                     commentRelations.depth + 1
                     FROM "Comments" c
+                    JOIN "DiscussionComments" dc ON dc."commentId" = c.id
                     JOIN commentRelations ON c."parentId" = commentRelations.id AND c.id != c."parentId"
                     LEFT JOIN "Users" u ON (u.id = c."creatorId")
                     LEFT JOIN "UserConnections" uc ON (u.id = uc."userId" AND uc."connectionId" = 'esteid')
@@ -717,6 +724,7 @@ module.exports = function (app) {
                         parent jsonb,
                         subject text,
                         text text,
+                        "discussionId" uuid,
                         edits jsonb,
                         creator jsonb,
                         "deletedBy" jsonb,
@@ -753,6 +761,7 @@ module.exports = function (app) {
                                 c.parent,
                                 c.subject,
                                 c.text,
+                                c."discussionId",
                                 pg_temp.editCreatedAtToJson(c.edits) as edits,
                                 c.creator,
                                 c."deletedBy",
@@ -833,6 +842,7 @@ module.exports = function (app) {
                         parent::jsonb,
                         subject,
                         text,
+                        "discussionId",
                         edits::jsonb,
                         creator::jsonb,
                         "deletedBy",
@@ -857,6 +867,7 @@ module.exports = function (app) {
                 ct.parent,
                 ct.subject,
                 ct.text,
+                dc."discussionId",
                 ct.edits,
                 ct.creator,
                 ct."deletedBy",
