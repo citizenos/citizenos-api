@@ -37,6 +37,9 @@ module.exports = function (sequelize, DataTypes) {
                 onDelete: 'CASCADE',
                 primaryKey: true
             }
+        },
+        {
+            timestamps: false
         }
     );
 
