@@ -760,7 +760,7 @@ module.exports = function (app) {
                         LEFT JOIN "Votes" v
                                 ON v.id = tv."voteId"
                     ) AS tv ON (tv."topicId" = t.id)
-                    LEFT JOIN "TopicDiscussions" td ON td."topicId" t.id
+                    LEFT JOIN "TopicDiscussions" td ON td."topicId"=t.id
                     LEFT JOIN (
                         SELECT
                             ti."topicId",
