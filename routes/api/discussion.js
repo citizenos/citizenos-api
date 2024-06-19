@@ -335,9 +335,7 @@ module.exports = function (app) {
             if (!topic || !topic.Discussions || !topic.Discussions.length) {
                 return res.notFound();
             }
-            if (topic.status === Topic.STATUSES.draft) {
-                fields = fields.concat(['question']);
-            }
+
             const discussion = topic.Discussions[0];
             await db.transaction(async function (t) {
                 fields.forEach(function (field) {
@@ -621,7 +619,6 @@ module.exports = function (app) {
                     jsonb_build_object('id', c."parentId",'version',c."parentVersion") as parent,
                     c.subject,
                     c.text,
-                    dc."discussionId",
                     pg_temp.editCreatedAtToJson(c.edits) as edits,
                     jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl", 'company', u.company ${dataForModerator}) as creator,
                     CASE
@@ -637,7 +634,6 @@ module.exports = function (app) {
                     to_char(c."deletedAt" at time zone 'UTC', :dateFormat) as "deletedAt",
                     0 AS depth
                     FROM "Comments" c
-                    JOIN "DiscussionComments" dc ON dc."commentId" = c.id
                     LEFT JOIN "Users" u ON (u.id = c."creatorId")
                     LEFT JOIN "UserConnections" uc ON (u.id = uc."userId" AND uc."connectionId" = 'esteid')
                     LEFT JOIN "Users" dbu ON (dbu.id = c."deletedById")
@@ -661,7 +657,6 @@ module.exports = function (app) {
                     jsonb_build_object('id', c."parentId",'version',c."parentVersion") as parent,
                     c.subject,
                     c.text,
-                    dc."discussionId",
                     pg_temp.editCreatedAtToJson(c.edits) as edits,
                     jsonb_build_object('id', u.id,'name',u.name, 'imageUrl', u."imageUrl", 'company', u.company ${dataForModerator}) as creator,
                     CASE
@@ -677,7 +672,6 @@ module.exports = function (app) {
                     to_char(c."deletedAt" at time zone 'UTC', :dateFormat) as "deletedAt",
                     commentRelations.depth + 1
                     FROM "Comments" c
-                    JOIN "DiscussionComments" dc ON dc."commentId" = c.id
                     JOIN commentRelations ON c."parentId" = commentRelations.id AND c.id != c."parentId"
                     LEFT JOIN "Users" u ON (u.id = c."creatorId")
                     LEFT JOIN "UserConnections" uc ON (u.id = uc."userId" AND uc."connectionId" = 'esteid')
@@ -724,7 +718,6 @@ module.exports = function (app) {
                         parent jsonb,
                         subject text,
                         text text,
-                        "discussionId" uuid,
                         edits jsonb,
                         creator jsonb,
                         "deletedBy" jsonb,
@@ -761,7 +754,6 @@ module.exports = function (app) {
                                 c.parent,
                                 c.subject,
                                 c.text,
-                                c."discussionId",
                                 pg_temp.editCreatedAtToJson(c.edits) as edits,
                                 c.creator,
                                 c."deletedBy",
@@ -842,7 +834,6 @@ module.exports = function (app) {
                         parent::jsonb,
                         subject,
                         text,
-                        "discussionId",
                         edits::jsonb,
                         creator::jsonb,
                         "deletedBy",
@@ -923,6 +914,20 @@ module.exports = function (app) {
                     }
                 });
             const [comments, commentsCount] = await Promise.all([commentsQuery, commentCountQuery]);
+
+            const setDiscussionId = (discussionId, reply) => {
+                reply.discussionId = discussionId;
+                if (reply.replies.rows.length) {
+                    reply.replies.rows.forEach((r) => setDiscussionId(discussionId, r));
+                }
+            }
+            comments.forEach((comment) => {
+                const discussionId = comment.discussionId;
+                comment.replies.rows.forEach((reply) => {
+                    setDiscussionId(discussionId, reply);
+                })
+            });
+
             let countRes = {
                 pro: 0,
                 con: 0,

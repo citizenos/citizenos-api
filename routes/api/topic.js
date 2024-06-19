@@ -45,6 +45,7 @@ module.exports = function (app) {
     const UserConnection = models.UserConnection;
     const Group = models.Group;
     const Topic = models.Topic;
+    const Discussion = models.Discussion;
     const TopicMemberUser = models.TopicMemberUser;
     const TopicMemberGroup = models.TopicMemberGroup;
     const TopicJoin = models.TopicJoin;
@@ -1859,7 +1860,7 @@ module.exports = function (app) {
             const topic = await Topic
                 .findOne({
                     where: { id: topicId },
-                    include: [Vote, Ideation]
+                    include: [Vote, Ideation, Discussion]
                 });
 
             if (!topic) {
@@ -1869,6 +1870,7 @@ module.exports = function (app) {
             const statuses = _.values(Topic.STATUSES);
             const vote = topic.Votes[0];
             const ideation = topic.Ideations[0];
+            const discussion = topic.Discussions[0];
             if (statusNew && statusNew !== topic.status && topic.status !== Topic.STATUSES.draft) {
                 // The only flow that allows going back in status flow is reopening for voting
                 if (statusNew === Topic.STATUSES.voting) {
@@ -1880,6 +1882,10 @@ module.exports = function (app) {
                 } else if (statusNew === Topic.STATUSES.indeation) {
                     if (!ideation) {
                         return res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew + ' when the Topic has no Ideation created');
+                    }
+                } else if (statusNew === Topic.STATUSES.inProgress) {
+                    if (!discussion) {
+                        return res.badRequest('Invalid status flow. Cannot change Topic status from ' + topic.status + ' to ' + statusNew + ' when the Topic has no Discussion created');
                     }
                 }
 
