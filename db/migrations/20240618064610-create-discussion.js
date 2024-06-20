@@ -109,6 +109,7 @@ module.exports = {
         transaction: t
       });
 
+      await queryInterface.removeConstraint('DiscussionComments', 'TopicComments_topicId_fkey');
     });
   },
 

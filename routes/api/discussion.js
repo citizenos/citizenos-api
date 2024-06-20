@@ -442,10 +442,29 @@ module.exports = function (app) {
     app.post('/api/users/:userId/topics/:topicId/discussions/:discussionId/comments', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true, [Topic.STATUSES.inProgress, Topic.STATUSES.voting, Topic.STATUSES.followUp]), asyncMiddleware(async function (req, res) {
         let type = req.body.type;
         const parentId = req.body.parentId;
+        const topicId = req.params.topicId;
         const discussionId = req.params.discussionId;
         const parentVersion = req.body.parentVersion;
         let subject = req.body.subject;
         const text = req.body.text;
+
+        const discussion = await Discussion.findOne({
+            where: {
+                id: discussionId
+            },
+            include: [
+                {
+                    model: Topic,
+                    where: { id: topicId }
+                },
+            ]
+        });
+
+        if (!discussion || !discussion.Topics.length) {
+            return res.notFound();
+        }
+        if (discussion.deadline && new Date(discussion.deadline) < new Date()) return res.forbidden();
+
         const edits = [
             {
                 text: text,
