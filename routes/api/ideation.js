@@ -1365,7 +1365,78 @@ module.exports = function (app) {
             next(err);
         }
     }
-    app.get(['/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/folders', '/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/folders'], loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+    app.get('/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/folders', async (req, res, next) => {
+        try {
+            const ideationId = req.params.ideationId;
+            const ideaId = req.params.ideaId;
+
+            const ideation = await Ideation.findOne({
+                where: {
+                    id: ideationId
+                },
+                include: [
+                    {
+                        model: Topic,
+                        where: {
+                            id: req.params.topicId
+                        },
+                        attributes: ['visibility']
+                    },
+                    {
+                        model: Idea,
+                        where: {
+                            id: ideaId
+                        }
+                    }
+                ]
+            });
+
+            if (!ideation || !ideation.Ideas.length || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+                return res.notFound();
+            }
+
+            const folders = await db.query(`
+            SELECT
+                f.id,
+                f."ideationId",
+                u.id as "creator.id",
+                u.name as "creator.name",
+                u."imageUrl" AS "creator.imageUrl",
+                f.name,
+                f.description,
+                f."createdAt",
+                f."updatedAt",
+                COALESCE(fi.count, 0) as "ideas.count",
+                count(*) OVER()::integer AS "countTotal"
+                FROM "FolderIdeas" fis
+                JOIN "Folders" f ON fis."folderId" = f.id
+                JOIN "Users" u ON u.id = f."creatorId"
+                LEFT JOIN (
+                    SELECT "folderId", COUNT(*) FROM "FolderIdeas" GROUP BY "folderId"
+                ) fi ON fi."folderId" = f.id
+                WHERE fis."ideaId" = :ideaId AND f."ideationId" = :ideationId AND f."deletedAt" IS NULL;
+            `, {
+                replacements: {
+                    ideationId: ideationId,
+                    ideaId
+                },
+                type: db.QueryTypes.SELECT,
+                raw: true,
+                nest: true
+            });
+            const count = folders[0]?.countTotal || 0;
+            folders.forEach((folder) => delete folder.countTotal);
+
+            return res.ok({
+                count,
+                rows: folders
+            });
+        } catch (err) {
+            next(err);
+        }
+    });
+
+    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/ideas/:ideaId/folders', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         try {
             const ideationId = req.params.ideationId;
             const ideaId = req.params.ideaId;
