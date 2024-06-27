@@ -1697,6 +1697,66 @@ module.exports = function (app) {
         }
     });
 
+    app.get('/api/topics/:topicId/ideations/:ideationId/ideas/:ideaId/votes', async function (req, res, next) {
+        try {
+            const topicId = req.params.topicId;
+            const userId = req.user?.id;
+            if (userId) {
+                const authorizationResult = await topicLib._hasPermission(topicId, userId, TopicMemberUser.LEVELS.read, true);
+                // Add "req.locals" to store info collected from authorization for further use in the request. Might save a query or two for some use cases.
+                // Naming convention ".locals" is inspired by "res.locals" - http://expressjs.com/api.html#res.locals
+                if (!authorizationResult) {
+                    return res.forbidden();
+                }
+            } else {
+                const topic = await Topic.findOne({
+                    where: {
+                        id: topicId,
+                        visibility: Topic.VISIBILITY.public
+                    }
+                })
+                if (!topic) {
+                    return res.forbidden();
+                }
+            }
+            const results = await db.query(
+                `
+                SELECT
+                    u.name,
+                    u.company,
+                    u."imageUrl",
+                    CAST(CASE
+                        WHEN iv.value=1 Then 'up'
+                        ELSE 'down' END
+                    AS VARCHAR(5)) AS vote,
+                    iv."createdAt",
+                    iv."updatedAt"
+                    FROM "IdeaVotes" iv
+                    LEFT JOIN "Users" u
+                    ON
+                        u.id = iv."creatorId"
+                    WHERE iv."ideaId" = :ideaId
+                    AND iv.value <> 0
+                    ;
+                `,
+                {
+                    replacements: {
+                        ideaId: req.params.ideaId
+                    },
+                    type: db.QueryTypes.SELECT,
+                    raw: true,
+                    nest: true
+                });
+
+            return res.ok({
+                rows: results,
+                count: results.length
+            });
+        } catch (err) {
+            return next(err);
+        }
+    });
+
     /**
      * Create an idea Vote
      */
