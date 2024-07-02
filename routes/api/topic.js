@@ -6464,6 +6464,7 @@ module.exports = function (app) {
                             case 0:
                                 // Common to MID and ID-card signing
                                 sessionData.personalInfo = personalInfo;
+                                sessionData.hash = signInitResponse.hash;
                                 sessionData.signableHash = signInitResponse.signableHash;
                                 sessionData.signatureId = signInitResponse.signatureId;
                                 break;
@@ -6660,6 +6661,7 @@ module.exports = function (app) {
                     voteOptionsResult,
                     idSignFlowData.signableHash,
                     idSignFlowData.signatureId,
+                    Buffer.from(signatureValue, 'hex').toString('base64'),
                     idSignFlowData.hash
                 );
 
