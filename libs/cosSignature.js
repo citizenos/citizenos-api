@@ -605,7 +605,6 @@ module.exports = function (app) {
                     id: signatureId
                 }
             });
-
         const xades = Xades.parse(signatureData.data);
         xades.setSignature(Buffer.from(signature, 'base64'));
         xades.setTimestamp(await hades.timestamp(xades));
