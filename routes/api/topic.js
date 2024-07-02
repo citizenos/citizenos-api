@@ -55,6 +55,7 @@ module.exports = function (app) {
     const Vote = models.Vote;
     const VoteOption = models.VoteOption;
     const VoteUserContainer = models.VoteUserContainer;
+    const VoteContainerFile = models.VoteContainerFile;
     const VoteList = models.VoteList;
     const VoteDelegation = models.VoteDelegation;
 
@@ -6454,7 +6455,7 @@ module.exports = function (app) {
 
                     if (signInitResponse.sessionId) {
                         sessionData.sessionId = signInitResponse.sessionId;
-                        sessionData.signingTime = signInitResponse.signingTime;
+                        sessionData.hash = signInitResponse.hash;
                             sessionData.sessionHash = signInitResponse.sessionHash;
                             sessionData.personalInfo = signInitResponse.personalInfo;
                             sessionData.signatureId = signInitResponse.signatureId;
@@ -6659,7 +6660,7 @@ module.exports = function (app) {
                     voteOptionsResult,
                     idSignFlowData.signableHash,
                     idSignFlowData.signatureId,
-                    Buffer.from(signatureValue, 'hex').toString('base64')
+                    idSignFlowData.hash
                 );
 
                 let connectionUserId = idSignFlowData.personalInfo.pid;
@@ -6756,9 +6757,9 @@ module.exports = function (app) {
                 let signedDocInfo;
                 try {
                     if (idSignFlowData.signingMethod === Vote.SIGNING_METHODS.smartId) {
-                        signedDocInfo = await cosSignature.getSmartIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions, idSignFlowData.personalInfo, idSignFlowData.signingTime, timeoutMs);
+                        signedDocInfo = await cosSignature.getSmartIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions, idSignFlowData.hash, timeoutMs);
                     } else {
-                        signedDocInfo = await cosSignature.getMobileIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions, idSignFlowData.personalInfo, idSignFlowData.signingTime, timeoutMs);
+                        signedDocInfo = await cosSignature.getMobileIdSignedDoc(idSignFlowData.sessionId, idSignFlowData.sessionHash, idSignFlowData.signatureId, idSignFlowData.voteId, idSignFlowData.userId, idSignFlowData.voteOptions, idSignFlowData.hash, timeoutMs);
                     }
 
                     return signedDocInfo;
@@ -6789,6 +6790,15 @@ module.exports = function (app) {
                     const country = (idSignFlowData.personalInfo.country || idSignFlowData.personalInfo.countryCode);
                     connectionUserId = `PNO${country}-${connectionUserId}`;
                 }
+
+                await VoteContainerFile.destroy({
+                    where: {
+                        voteId: voteId,
+                        hash: idSignFlowData.hash
+                    },
+                    force: true,
+                    transaction: t
+                });
 
                 await VoteUserContainer.destroy({
                     where: {

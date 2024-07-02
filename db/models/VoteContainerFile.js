@@ -48,6 +48,11 @@ module.exports = function (sequelize, DataTypes) {
                 type: DataTypes.BLOB,
                 allowNull: false,
                 comment: 'File content.'
+            },
+            hash: {
+                type: DataTypes.STRING,
+                allowNull: true,
+                comment: 'File hash'
             }
         }
     );

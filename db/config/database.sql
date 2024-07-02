@@ -1464,6 +1464,30 @@ COMMENT ON COLUMN public."TopicDiscussions"."discussionId" IS 'Discussion id.';
 
 
 --
+-- Name: TopicDiscussions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."TopicDiscussions" (
+    "topicId" uuid NOT NULL,
+    "discussionId" uuid NOT NULL
+);
+
+
+--
+-- Name: COLUMN "TopicDiscussions"."topicId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicDiscussions"."topicId" IS 'To what Topic this discussion belongs to.';
+
+
+--
+-- Name: COLUMN "TopicDiscussions"."discussionId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."TopicDiscussions"."discussionId" IS 'Discussion id.';
+
+
+--
 -- Name: TopicEvents; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2282,6 +2306,7 @@ CREATE TABLE public."VoteContainerFiles" (
     "fileName" character varying(255) NOT NULL,
     "mimeType" character varying(255) NOT NULL,
     content bytea NOT NULL,
+    hash character varying(255),
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
     "deletedAt" timestamp with time zone
@@ -2314,6 +2339,13 @@ COMMENT ON COLUMN public."VoteContainerFiles"."mimeType" IS 'Mime type of the fi
 --
 
 COMMENT ON COLUMN public."VoteContainerFiles".content IS 'File content.';
+
+
+--
+-- Name: COLUMN "VoteContainerFiles".hash; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."VoteContainerFiles".hash IS 'File hash';
 
 
 --
@@ -2869,6 +2901,14 @@ ALTER TABLE ONLY public."TokenRevocations"
 
 ALTER TABLE ONLY public."TopicAttachments"
     ADD CONSTRAINT "TopicAttachments_pkey" PRIMARY KEY ("topicId", "attachmentId");
+
+
+--
+-- Name: TopicDiscussions TopicDiscussions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicDiscussions"
+    ADD CONSTRAINT "TopicDiscussions_pkey" PRIMARY KEY ("topicId", "discussionId");
 
 
 --
@@ -3624,6 +3664,14 @@ ALTER TABLE ONLY public."TopicDiscussions"
 
 
 --
+-- Name: TopicDiscussions TopicDiscussions_discussionId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicDiscussions"
+    ADD CONSTRAINT "TopicDiscussions_discussionId_fkey" FOREIGN KEY ("discussionId") REFERENCES public."Discussions"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: TopicEvents TopicEvents_topicId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3973,4 +4021,5 @@ COPY public."SequelizeMeta" (name) FROM stdin;
 20240326102945-create-request.js
 20240405170424-create-ideation.js
 20240618064610-create-discussion.js
+20240702054643-alter-vote-container-files.js
 \.
