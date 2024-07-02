@@ -1,5 +1,6 @@
 'use strict';
 
+
 module.exports = function (app) {
     const logger = app.get('logger');
     const models = app.get('models');
@@ -70,8 +71,8 @@ module.exports = function (app) {
 
     const SIGNATURE_FILE = {
         template: 'bdoc/hääl.html',
-        name: 'hääl.html',
-        mimeType: 'text/html'
+        name: 'hääl.docx',
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     };
 
     const VOTE_OPTION_FILE = {
@@ -303,14 +304,15 @@ module.exports = function (app) {
 
     };
 
-    const _getUserContainer = async function (voteId, userId, voteOptions, personalInfo, signingTime) {
+    const _getUserContainer = async function (voteId, userId, voteOptions, hash) {
         const container = new Asic();
         const chosenVoteOptionFileNames = voteOptions.map(_getVoteOptionFileName);
 
         const voteContainerFiles = await VoteContainerFile
             .findAll({
                 where: {
-                    voteId: voteId
+                    voteId: voteId,
+                    hash: null
                 }
             })
         voteContainerFiles.forEach(function (voteContainerFile) {
@@ -332,38 +334,13 @@ module.exports = function (app) {
             container.add(fileName, content, mimeType);
         });
 
-        const vote = await Vote.findOne({
+        const voteFile = await VoteContainerFile.findOne({
             where: {
-                id: voteId
-            },
-            include: [Topic]
+                voteId: voteId,
+                hash
+            }
         });
-        const topic = vote.Topics[0];
-
-        await new Promise((resolve) => {
-            let finalData = '';
-            const templateStream = mu.compileAndRender(SIGNATURE_FILE.template, {
-                topic: topic,
-                user: {
-                    name: `${personalInfo.firstName} ${personalInfo.lastName}`,
-                    pid: (personalInfo.pid.indexOf('PNO') === 0) ? personalInfo.pid.substring(6, personalInfo.pid.length) : personalInfo.pid
-                },
-                vote: vote,
-                signingTime: `${moment(signingTime).format('YYYY-MM-DD HH:mm')}`,
-                voteOptions: voteOptions.map((voteOption) => '<b>' + voteOption.value + '</b>').join(', ')
-            });
-
-            templateStream
-                .on('data', function (data) {
-                    finalData += data.toString();
-                });
-            templateStream
-                .on('end', function () {
-                    container.add(SIGNATURE_FILE.name,finalData,SIGNATURE_FILE.mimeType);
-
-                    return resolve();
-                });
-        });
+        container.add(voteFile.fileName, voteFile.content, voteFile.mimeType);
 
         return new Promise(function (resolve) {
             let finalData = '';
@@ -438,14 +415,35 @@ module.exports = function (app) {
             });
             const topic = vote.Topics[0];
 
-            await new Promise((resolve) => {
+            const getSignatureOptionValue = function (opt) {
+                let value = opt;
+                switch (opt) {
+                    case 'Yes':
+                        value = 'Jah';
+                        break;
+                    case 'No':
+                        value = 'Ei';
+                        break;
+                    case 'Veto':
+                        value = 'Veto';
+                        break;
+                    case 'Neutral':
+                        value = 'Erapooletu';
+                        break;
+                    default:
+                        return value;
+                }
+                return value;
+            };
+
+            const hash = await new Promise((resolve) => {
                 let finalData = '';
                 const templateStream = mu.compileAndRender(SIGNATURE_FILE.template, {
                     topic: topic,
                     user: user,
                     vote: vote,
                     signingTime: `${moment(signingTime).format('YYYY-MM-DD HH:mm')}`,
-                    voteOptions: voteOptions.map((voteOption) => '<b>' + voteOption.value + '</b>').join(', ')
+                    voteOptions: voteOptions.map((voteOption) => '<b>' + getSignatureOptionValue(voteOption.value) + '</b>').join(', ')
                 });
 
                 templateStream
@@ -453,14 +451,29 @@ module.exports = function (app) {
                         finalData += data.toString();
                     });
                 templateStream
-                    .on('end', function () {
+                    .on('end', async function () {
+                        const doc = new CosHtmlToDocx(finalData);
+                        const docxBuffer = await doc.processHTML();
+                        const hash = Crypto.createHash('sha256').update(docxBuffer).digest();
                         containerFiles.push({
                             path: SIGNATURE_FILE.name,
                             type: SIGNATURE_FILE.mimeType,
-                            hash: Crypto.createHash('sha256').update(Buffer.from(finalData)).digest()
+                            hash: hash
                         });
 
-                        return resolve();
+                        await VoteContainerFile.create(
+                            {
+                                voteId: vote.id,
+                                fileName: SIGNATURE_FILE.name,
+                                mimeType: SIGNATURE_FILE.mimeType,
+                                content: docxBuffer,
+                                hash: hash.toString()
+                            },
+                            {
+                                transaction: transaction
+                            }
+                        );
+                        return resolve(hash.toString());
                     });
             });
 
@@ -485,7 +498,7 @@ module.exports = function (app) {
                     });
             });
 
-            return hades.new(certificate, files, { policy: "bdoc" });
+            return { xades: hades.new(certificate, files, { policy: "bdoc" }), hash };
         } catch (e) {
             logger.error(e)
         }
@@ -508,7 +521,7 @@ module.exports = function (app) {
      * @private
      */
     const _signInitIdCard = async function (voteId, userId, voteOptions, signingTime, certificate, transaction) {
-        const xades = await _createUserBdoc(voteId, userId, voteOptions, signingTime, certificate, 'hex', transaction);
+        const { xades, hash } = await _createUserBdoc(voteId, userId, voteOptions, signingTime, certificate, 'hex', transaction);
         const signableData = xades.signableHash;
 
         const personalInfo = await mobileId.getCertUserData(certificate, 'hex');
@@ -520,7 +533,7 @@ module.exports = function (app) {
         return {
             statusCode: 0,
             personalInfo,
-            signingTime,
+            hash,
             signableHash: signableData.toString('hex'),
             signatureId: signatureData.id
         };
@@ -543,7 +556,7 @@ module.exports = function (app) {
      * @private
      */
     const _signInitMobile = async function (voteId, userId, voteOptions, signingTime, pid, phoneNumber, certificate, transaction) {
-        const xades = await _createUserBdoc(voteId, userId, voteOptions, signingTime, certificate, 'base64', transaction);
+        const { xades, hash } = await _createUserBdoc(voteId, userId, voteOptions, signingTime, certificate, 'base64', transaction);
         const signableData = xades.signableHash;
 
         const personalInfo = await mobileId.getCertUserData(certificate, 'base64');
@@ -551,7 +564,7 @@ module.exports = function (app) {
         const signatureData = await Signature.create({ data: xades.toString() });
         response.signatureId = signatureData.id
         response.personalInfo = personalInfo;
-        response.signingTime = signingTime;
+        response.hash = hash;
 
         return response;
     };
@@ -573,19 +586,19 @@ module.exports = function (app) {
      * @private
      */
     const _signInitSmartId = async function (voteId, userId, voteOptions, signingTime, pid, countryCode, certificate, transaction) {
-        const xades = await _createUserBdoc(voteId, userId, voteOptions, signingTime, certificate, 'base64', transaction);
+        const { xades, hash } = await _createUserBdoc(voteId, userId, voteOptions, signingTime, certificate, 'base64', transaction);
         const signableData = xades.signableHash;
         const personalInfo = await smartId.getCertUserData(certificate);
         const response = await smartId.signature(pid, countryCode, signableData.toString('base64'))
         const signatureData = await Signature.create({ data: xades.toString() });
         response.signatureId = signatureData.id
         response.personalInfo = personalInfo;
-        response.signingTime = signingTime;
+        response.hash = hash
 
         return response;
     };
 
-    const _handleSigningResult = async function (voteId, userId, voteOptions, signableHash, signatureId, signature, personalInfo, signingTime) {
+    const _handleSigningResult = async function (voteId, userId, voteOptions, signableHash, signatureId, signature, hash) {
         const signatureData = await Signature
             .findOne({
                 where: {
@@ -598,7 +611,7 @@ module.exports = function (app) {
         xades.setTimestamp(await hades.timestamp(xades));
         xades.setOcspResponse(await hades.timemark(xades));
 
-        const container = await _getUserContainer(voteId, userId, voteOptions, personalInfo, signingTime)
+        const container = await _getUserContainer(voteId, userId, voteOptions, hash)
 
         const signedDocData = await new Promise(function (resolve) {
             const chunks = [];
@@ -622,11 +635,11 @@ module.exports = function (app) {
         }
     };
 
-    const _getSmartIdSignedDoc = async function (sessionId, signableHash, signatureId, voteId, userId, voteOptions, personalInfo, signingTime, timeoutMs) {
+    const _getSmartIdSignedDoc = async function (sessionId, signableHash, signatureId, voteId, userId, voteOptions, hash, timeoutMs) {
         try {
             const signResult = await smartId.statusSign(sessionId, timeoutMs);
             if (signResult.signature) {
-                return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value, personalInfo, signingTime);
+                return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value, hash);
             }
 
             logger.error(signResult);
@@ -637,11 +650,11 @@ module.exports = function (app) {
         }
     };
 
-    const _getMobileIdSignedDoc = async function (sessionId, signableHash, signatureId, voteId, userId, voteOptions, personalInfo, signingTime, timeoutMs) {
+    const _getMobileIdSignedDoc = async function (sessionId, signableHash, signatureId, voteId, userId, voteOptions, hash, timeoutMs) {
         try {
             const signResult = await mobileId.statusSign(sessionId, timeoutMs)
             if (signResult.signature) {
-                return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value, personalInfo, signingTime);
+                return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signResult.signature.value, hash);
             }
 
             logger.error(signResult);
@@ -652,8 +665,8 @@ module.exports = function (app) {
         }
     };
 
-    const _signUserBdoc = function (voteId, userId, voteOptions, signableHash, signatureId, signatureValue, signingTime) {
-        return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signatureValue, signingTime);
+    const _signUserBdoc = function (voteId, userId, voteOptions, signableHash, signatureId, signatureValue, hash) {
+        return _handleSigningResult(voteId, userId, voteOptions, signableHash, signatureId, signatureValue, hash);
     };
 
     const _generateFinalCSV = async function (voteId, type, finalContainer) {
