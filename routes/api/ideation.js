@@ -506,26 +506,123 @@ module.exports = function (app) {
      */
 
     const _readIdeationIdea = async (req, res, next) => {
-        const ideaId = req.params.ideaId;
+        const ideationId = req.params.ideationId;
+        const ideaId = req.params.ideaId
+        const authorId = req.query.authorId;
+        const folderId = req.query.folderId;
+        let joinSql = `
+        LEFT JOIN (
+            SELECT
+                ii."ideaId",
+                ii."up.count",
+                ii."down.count"
+                FROM (
+                    SELECT
+                    i.id AS "ideaId",
+                        COALESCE(cvu.count, 0) as "up.count",
+                        COALESCE(cvd.count, 0) as "down.count"
+                    FROM "Ideas" i
+                        LEFT JOIN ( SELECT "ideaId", COUNT(value) as count FROM "IdeaVotes" WHERE value > 0 GROUP BY "ideaId") cvu ON i.id = cvu."ideaId"
+                        LEFT JOIN ( SELECT "ideaId", COUNT(value) as count FROM "IdeaVotes"  WHERE value < 0 GROUP BY "ideaId") cvd ON i.id = cvd."ideaId"
+                    WHERE i."ideationId" = :ideationId
+                    GROUP BY i.id, cvu.count, cvd.count
+                ) ii
+        ) iv ON iv."ideaId" = "Idea".id
+        `;
+        let where = ` WHERE "Idea"."ideationId" = :ideationId AND "Idea".id = :ideaId`;
+        let returncolumns = ``;
+
+        if (req.user?.id || req.user?.userId) {
+            joinSql = `
+            LEFT JOIN "IdeaFavourites" if ON (if."ideaId" = "Idea".id AND if."userId" = :userId)
+            LEFT JOIN (
+                SELECT
+                    ii."ideaId",
+                    ii."up.count",
+                    ii."down.count",
+                    COALESCE(cvus.selected, false) as "up.selected",
+                    COALESCE(cvds.selected, false) as "down.selected"
+                    FROM (
+                        SELECT
+                        i.id AS "ideaId",
+                            COALESCE(cvu.count, 0) as "up.count",
+                            COALESCE(cvd.count, 0) as "down.count"
+                        FROM "Ideas" i
+                            LEFT JOIN ( SELECT "ideaId", COUNT(value) as count FROM "IdeaVotes" WHERE value > 0 GROUP BY "ideaId") cvu ON i.id = cvu."ideaId"
+                            LEFT JOIN ( SELECT "ideaId", COUNT(value) as count FROM "IdeaVotes"  WHERE value < 0 GROUP BY "ideaId") cvd ON i.id = cvd."ideaId"
+                        WHERE i."ideationId" = :ideationId
+                        GROUP BY i.id, cvu.count, cvd.count
+                    ) ii
+                    LEFT JOIN (SELECT "ideaId", "creatorId", value, true AS selected FROM "IdeaVotes" WHERE value > 0 AND "creatorId" = :userId) cvus ON (ii."ideaId" = cvus."ideaId")
+                    LEFT JOIN (SELECT "ideaId", "creatorId", value, true AS selected FROM "IdeaVotes" WHERE value < 0 AND "creatorId" = :userId) cvds ON (ii."ideaId" = cvds."ideaId")
+            ) iv ON iv."ideaId" = "Idea".id
+            `;
+            returncolumns += `
+
+            iv."up.selected" as "votes.up.selected",
+            iv."down.selected" as "votes.down.selected",
+            CASE
+                WHEN if."ideaId" = "Idea".id THEN true
+                ELSE false
+            END as "favourite",
+            `;
+        }
+        if (folderId) {
+            joinSql += ` JOIN "FolderIdeas" fi ON fi."ideaId" = "Idea".id AND fi."folderId" = :folderId `
+        }
         try {
-            const idea = await Idea.findOne({
-                where: {
-                    id: ideaId
+            const idea = await db.query(`
+            SELECT
+                "Idea"."id",
+                "Idea"."ideationId",
+                "Idea"."statement",
+                "Idea"."description",
+                "Idea"."createdAt",
+                "Idea"."imageUrl",
+                "Idea"."updatedAt",
+                "Idea"."deletedAt",
+                "author"."id" AS "author.id",
+                "author"."name" AS "author.name",
+                "author"."email" AS "author.email",
+                "author"."imageUrl" AS "author.imageUrl",
+                count(*) OVER()::integer AS "countTotal",
+                iv."up.count" as "votes.up.count",
+                iv."down.count" as "votes.down.count",
+                CASE
+                    WHEN "Idea"."deletedById" IS NOT NULL THEN jsonb_build_object('id', "Idea"."deletedById", 'name', dbu.name )
+                    ELSE jsonb_build_object('id', "Idea"."deletedById")
+                END as "deletedBy",
+                "Idea"."deletedReasonType"::text,
+                "Idea"."deletedReasonText",
+                jsonb_build_object('id', "Idea"."deletedByReportId") as report,
+                ${returncolumns}
+                COALESCE(ic.count, 0) AS "replies.count"
+                FROM "Ideas" AS "Idea"
+                INNER JOIN "Users" AS "author" ON "Idea"."authorId" = "author"."id"
+                LEFT JOIN "Users" dbu ON (dbu.id = "Idea"."deletedById")
+                LEFT JOIN (
+                    SELECT
+                        "ideaId",
+                        COUNT(*) AS count
+                    FROM "IdeaComments"
+                    GROUP BY "ideaId"
+                ) AS ic ON (ic."ideaId" = "Idea".id)
+                ${joinSql}
+                ${where}
+                ;
+            `, {
+                replacements: {
+                    userId: req.user?.id || req.user?.userId,
+                    ideationId,
+                    authorId,
+                    ideaId,
+                    folderId
                 },
-                include: [
-                    {
-                        model: User,
-                        as: 'author',
-                        attributes: ['id', 'name', 'imageUrl', 'email']
-                    }
-                ]
-            })
-
-            if (!idea) {
-                return res.notFound();
-            }
-
-            return res.ok(idea);
+                type: db.QueryTypes.SELECT,
+                raw: true,
+                nest: true
+            });
+            return res.ok(idea[0]);
 
         } catch (err) {
             next(err);
@@ -1384,13 +1481,15 @@ module.exports = function (app) {
                     },
                     {
                         model: Idea,
+                        paranoid:false,
                         where: {
                             id: ideaId
                         }
                     }
                 ]
             });
-
+            console.log(ideation);
+            console.log(ideation.Ideas);
             if (!ideation || !ideation.Ideas.length || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
                 return res.notFound();
             }
@@ -1455,6 +1554,7 @@ module.exports = function (app) {
                     },
                     {
                         model: Idea,
+                        paranoid: false,
                         where: {
                             id: ideaId
                         }
@@ -1990,9 +2090,12 @@ module.exports = function (app) {
                         where: {
                             id: req.params.ideaId
                         },
+                        paranoid: false,
                         transaction: t
                     });
-
+                    if (idea.deletedAt) {
+                        return res.forbidden();
+                    }
                     idea.topicId = topicId;
                     if (parentId) {
                         const parentComment = await Comment.findOne({
