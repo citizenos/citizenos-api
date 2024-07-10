@@ -8,7 +8,7 @@ module.exports = function (app) {
     const models = app.get('models');
     const db = models.sequelize;
     const { injectReplacements } = require('sequelize/lib/utils/sql');
-    const _ = app.get('lodash');
+    //const _ = app.get('lodash');
     const emailLib = app.get('email');
     const cosActivities = app.get('cosActivities');
 
@@ -58,7 +58,7 @@ module.exports = function (app) {
     /**
      * Create a Discussion
      */
-    app.post('/api/users/:userId/topics/:topicId/discussions', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation]), async (req, res, next) => {
+    app.post('/api/users/:userId/topics/:topicId/discussions', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, null, [Topic.STATUSES.draft, Topic.STATUSES.ideation, Topic.STATUSES.inProgress]), async (req, res, next) => {
         const question = req.body.question;
         const deadline = req.body.deadline;
         const topicId = req.params.topicId;
@@ -78,9 +78,13 @@ module.exports = function (app) {
             const topic = await Topic.findOne({
                 where: {
                     id: topicId
-                }
+                },
+                include: [
+                    Discussion
+                ]
             });
-
+            /* Allow only one discussion per topic*/
+            if (topic.Discussions.length) return res.forbidden();
             await db
                 .transaction(async function (t) {
                     discussion.topicId = topicId;
@@ -1387,7 +1391,7 @@ module.exports = function (app) {
                             }, {
                                 transaction: t
                             });
-                        const c = _.cloneDeep(comment);
+                        const c = Comment.build(JSON.parse(JSON.stringify(comment)));
                         c.topicId = req.params.topicId;
 
                         await cosActivities

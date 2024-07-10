@@ -11,7 +11,6 @@ module.exports = function (app) {
     const db = models.sequelize;
     const { injectReplacements } = require('sequelize/lib/utils/sql');
     const Op = db.Sequelize.Op;
-    const _ = app.get('lodash');
     const validator = app.get('validator');
     const util = app.get('util');
     const urlLib = app.get('urlLib');
@@ -617,7 +616,7 @@ module.exports = function (app) {
                 join += `
                 LEFT JOIN (
                     SELECT "voteId", to_json(array(
-                        SELECT CONCAT(id, ':', value)
+                        SELECT CONCAT(id, ':', value, ':', "ideaId")
                         FROM "VoteOptions"
                         WHERE "deletedAt" IS NULL AND vo."voteId"="voteId"
                     )) as "optionIds"
@@ -806,14 +805,15 @@ module.exports = function (app) {
             const voteResults = await getVoteResults(topic.vote.id);
             const options = [];
 
-            topic.vote.options.forEach(function (option) {
+            topic.vote.options.forEach((option) => {
                 option = option.split(':');
                 const o = {
                     id: option[0],
-                    value: option[1]
+                    value: option[1],
+                    ideaId: option[2] || null
                 };
                 if (voteResults && voteResults.length) {
-                    const res = _.find(voteResults, { 'optionId': o.id });
+                    const res = voteResults.find(opt => opt.optionId === o.id);
                     if (res) {
                         o.voteCount = res.voteCount;
                     }
@@ -868,7 +868,7 @@ module.exports = function (app) {
                 join += `
                     LEFT JOIN (
                         SELECT "voteId", to_json(array(
-                            SELECT CONCAT(id, ':', value)
+                            SELECT CONCAT(id, ':', value, ':', "ideaId")
                             FROM "VoteOptions"
                             WHERE "deletedAt" IS NULL AND vo."voteId"="voteId"
                         )) as "optionIds"
@@ -1120,14 +1120,15 @@ module.exports = function (app) {
             const options = [];
             let hasVoted = false;
 
-            topic.vote.options.forEach(function (option) {
+            topic.vote.options.forEach((option) => {
                 option = option.split(':');
                 const o = {
                     id: option[0],
-                    value: option[1]
+                    value: option[1],
+                    ideaId: option[2] || null
                 };
                 if (voteResult) {
-                    const res = _.find(voteResult, { 'optionId': o.id });
+                    const res = voteResult.find(opt => opt.optionId === o.id);
                     if (res) {
                         const count = parseInt(res.voteCount, 10);
                         if (count) {
@@ -1358,7 +1359,8 @@ module.exports = function (app) {
                             vc."votersCount",
                             v."optionId",
                             v."voteId",
-                            vo."value"
+                            vo."value",
+                            vo."ideaId"
                             ${select}
                         FROM "Topics" t
                         LEFT JOIN "TopicVotes" tv
@@ -1372,7 +1374,7 @@ module.exports = function (app) {
                         AND v."voteId" IS NOT NULL
                         AND vo."value" IS NOT NULL
                         ${where}
-                        GROUP BY v."optionId", v."voteId", vo."value", vc."votersCount"
+                        GROUP BY v."optionId", v."voteId", vo."value", vo."ideaId", vc."votersCount"
                     ;`;
 
         return db
@@ -1868,7 +1870,7 @@ module.exports = function (app) {
                 return res.badRequest();
             }
 
-            const statuses = _.values(Topic.STATUSES);
+            const statuses = Object.values(Topic.STATUSES);
             const vote = topic.Votes[0];
             const ideation = topic.Ideations[0];
             const discussion = topic.Discussions[0];
@@ -2238,7 +2240,7 @@ module.exports = function (app) {
             , (
                 SELECT to_json(
                     array (
-                        SELECT concat(id, ':', value)
+                        SELECT concat(id, ':', value, ':', "ideaId")
                         FROM   "VoteOptions"
                         WHERE  "deletedAt" IS NULL
                         AND    "voteId" = tv."voteId"
@@ -2604,9 +2606,10 @@ module.exports = function (app) {
                                     const optText = voteOption.split(':');
                                     o.id = optText[0];
                                     o.value = optText[1];
+                                    o.ideaId = optText[2] || null;
                                     let result = 0;
                                     if (voteResults && voteResults.length) {
-                                        result = _.find(voteResults, { 'optionId': optText[0] });
+                                        result = voteResults.find(opt => opt.optionId === optText[0]);
                                         if (result) {
                                             o.voteCount = parseInt(result.voteCount, 10);
                                             if (result.selected) {
@@ -2673,7 +2676,7 @@ module.exports = function (app) {
                     , (
                         SELECT to_json(
                             array (
-                                SELECT concat(id, ':', value)
+                                SELECT concat(id, ':', value, ':', "ideaId")
                                 FROM   "VoteOptions"
                                 WHERE  "deletedAt" IS NULL
                                 AND    "voteId" = tv."voteId"
@@ -2945,8 +2948,9 @@ module.exports = function (app) {
                                 const optText = voteOption.split(':');
                                 o.id = optText[0];
                                 o.value = optText[1];
+                                o.ideaId = optText[2];
                                 if (voteResults && voteResults.length) {
-                                    const result = _.find(voteResults, { 'optionId': optText[0] });
+                                    const result = voteResults.find(opt => opt.optionId === optText[0]);
                                     if (result) {
                                         o.voteCount = parseInt(result.voteCount, 10);
                                     }
@@ -3626,9 +3630,7 @@ module.exports = function (app) {
                         }
                     });
                     const findOrCreateTopicMemberGroups = allowedGroups.map(function (group) {
-                        const member = _.find(members, function (o) {
-                            return o.groupId === group.id;
-                        });
+                        const member = members.find(o => o.groupId === group.id);
 
                         return TopicMemberGroup
                             .upsert({
@@ -3652,9 +3654,7 @@ module.exports = function (app) {
                             const memberGroup = member.toJSON();
                             if (!exists) {
                                 groupIdsToInvite.push(memberGroup.groupId);
-                                const groupData = _.find(allowedGroups, function (item) {
-                                    return item.id === memberGroup.groupId;
-                                });
+                                const groupData = allowedGroups.find(item => item.id === memberGroup.groupId);
                                 const group = Group.build(groupData);
 
                                 const addActivity = cosActivities.addActivity(
@@ -3729,7 +3729,7 @@ module.exports = function (app) {
                 }
             });
 
-            if (topicAdminMembers && topicAdminMembers.length === 1 && _.find(topicAdminMembers, { userId: memberId })) {
+            if (topicAdminMembers && topicAdminMembers.length === 1 && topicAdminMembers.find(m => m.userId === memberId)) {
                 return res.badRequest('Cannot revoke admin permissions from the last admin member.');
             }
 
@@ -3842,7 +3842,7 @@ module.exports = function (app) {
             });
 
             // At least 1 admin member has to remain at all times..
-            if (result.length === 1 && _.find(result, { userId: memberId })) {
+            if (result.length === 1 && result.find(r => r.userId === memberId)) {
                 return res.badRequest('Cannot delete the last admin member.', 10);
             }
             // TODO: Used to use TopicMemberUser.destroy, but that broke when moving 2.x->3.x - https://github.com/sequelize/sequelize/issues/4465
@@ -4113,7 +4113,7 @@ module.exports = function (app) {
         let validUserIdMembers = [];
 
         // userId can be actual UUID or e-mail, sort to relevant buckets
-        _(members).forEach(function (m) {
+        members.forEach((m) => {
             if (m.userId) {
                 m.userId = m.userId.trim();
                 // Is it an e-mail?
@@ -4130,7 +4130,7 @@ module.exports = function (app) {
             }
         });
 
-        const validEmails = _.map(validEmailMembers, 'userId');
+        const validEmails = validEmailMembers.map(m => m.userId);
         if (validEmails.length) {
             // Find out which e-mails already exist
             const usersExistingEmail = await User
@@ -4146,12 +4146,13 @@ module.exports = function (app) {
                 });
 
 
-            _(usersExistingEmail).forEach(function (u) {
-                const member = _.find(validEmailMembers, { userId: u.email });
+            usersExistingEmail.forEach((u) => {
+                const member = validEmailMembers.find(m => m.userId === u.email);
                 if (member) {
                     member.userId = u.id;
                     validUserIdMembers.push(member);
-                    _.remove(validEmailMembers, member); // Remove the e-mail, so that by the end of the day only e-mails that did not exist remain.
+                    const index = validEmailMembers.findIndex(m => m.userId === u.email);
+                    validEmailMembers.splice(index, 1) // Remove the e-mail, so that by the end of the day only e-mails that did not exist remain.
                 }
             });
         }
@@ -4162,7 +4163,7 @@ module.exports = function (app) {
             // The leftovers are e-mails for which User did not exist
             if (validEmailMembers.length) {
                 const usersToCreate = [];
-                _(validEmailMembers).forEach(function (m) {
+                validEmailMembers.forEach((m) => {
                     usersToCreate.push({
                         email: m.userId,
                         language: m.language,
@@ -4192,13 +4193,13 @@ module.exports = function (app) {
 
             // Go through the newly created users and add them to the validUserIdMembers list so that they get invited
             if (createdUsers && createdUsers.length) {
-                _(createdUsers).forEach(function (u) {
+                createdUsers.forEach((u) => {
                     const member = {
                         userId: u.id
                     };
 
                     // Sequelize defaultValue has no effect if "undefined" or "null" is set for attribute...
-                    const level = _.find(validEmailMembers, { userId: u.email }).level;
+                    const level = validEmailMembers.find(m => m.userId === u.email).level;
                     if (level) {
                         member.level = level;
                     }
@@ -5649,7 +5650,7 @@ module.exports = function (app) {
               const allMentions = [];
               if (data && data.statuses) {
                   logger.info('Twitter response', req.method, req.path, req.user, data.statuses.length);
-                  _.forEach(data.statuses, function (m) {
+                  data.statuses.forEach(function (m) {
                       let mTimeStamp = new Date(Date.parse(m.created_at)).toISOString();
 
                       const status = {
@@ -5723,11 +5724,11 @@ module.exports = function (app) {
 
         // We cannot allow too similar options, otherwise the options are not distinguishable in the signed file
         if (authType === Vote.AUTH_TYPES.hard) {
-            const voteOptionValues = _.map(voteOptions, 'value').map(function (value) {
-                return sanitizeFilename(value).toLowerCase();
-            });
+            const voteOptionValues = voteOptions.map(o => sanitizeFilename(o.value).toLowerCase());
 
-            const uniqueValues = _.uniq(voteOptionValues);
+            const uniqueValues = voteOptionValues.filter((value, index, array) => {
+                return array.indexOf(value) === index;
+            });
             if (uniqueValues.length !== voteOptions.length) {
                 return res.badRequest('Vote options are too similar', 2);
             }
@@ -5783,7 +5784,7 @@ module.exports = function (app) {
                     );
                 await vote.save({ transaction: t });
                 const voteOptionPromises = [];
-                _(voteOptions).forEach(function (o) {
+                voteOptions.forEach((o) => {
                     o.voteId = vote.id;
                     const vopt = VoteOption.build(o);
                     voteOptionPromises.push(vopt.validate());
@@ -5794,7 +5795,7 @@ module.exports = function (app) {
                     .bulkCreate(
                         voteOptions,
                         {
-                            fields: ['id', 'voteId', 'value'], // Deny updating other fields like "updatedAt", "createdAt"...
+                            fields: ['id', 'voteId', 'value', 'ideaId'], // Deny updating other fields like "updatedAt", "createdAt"...
                             returning: true,
                             transaction: t
                         }
@@ -5908,7 +5909,7 @@ module.exports = function (app) {
         let hasVoted = false;
         if (voteResults && voteResults.length) {
             voteInfo.dataValues.VoteOptions.forEach(function (option) {
-                const result = _.find(voteResults, { optionId: option.id });
+                const result = voteResults.find((o) => o.optionId === option.id);
 
                 if (result) {
                     const voteCount = parseInt(result.voteCount, 10);
@@ -6026,11 +6027,11 @@ module.exports = function (app) {
                     console.error('Vote Option delete fail', e);
                 }
                 if (vote.authType === Vote.AUTH_TYPES.hard) {
-                    const voteOptionValues = _.map(voteOptions, 'value').map(function (value) {
-                        return sanitizeFilename(value).toLowerCase();
-                    });
+                    const voteOptionValues = voteOptions.map(o => sanitizeFilename(o.value).toLowerCase());
 
-                    const uniqueValues = _.uniq(voteOptionValues);
+                    const uniqueValues = voteOptionValues.filter((value, index, array) => {
+                        return array.indexOf(value) === index;
+                    })
                     if (uniqueValues.length !== voteOptions.length) {
                         return res.badRequest('Vote options are too similar', 2);
                     }
@@ -6043,7 +6044,7 @@ module.exports = function (app) {
                     });
                 }
 
-                _(voteOptions).forEach(function (o) {
+                voteOptions.forEach((o) => {
                     o.voteId = vote.id;
                     const vopt = VoteOption.build(o);
                     createPromises.push(vopt.validate());
@@ -6122,8 +6123,8 @@ module.exports = function (app) {
 
         const voteResults = await getVoteResults(voteId);
         if (voteResults && voteResults.length) {
-            _(voteInfo.dataValues.VoteOptions).forEach(function (option) {
-                const result = _.find(voteResults, { optionId: option.id });
+            voteInfo.dataValues.VoteOptions.forEach((option) => {
+                const result = voteResults.find((o) => o.optionId === option.id);
                 if (result) {
                     option.dataValues.voteCount = parseInt(result.voteCount, 10); //TODO: this could be replaced with virtual getters/setters - https://gist.github.com/pranildasika/2964211
                     if (result.selected) {
@@ -6155,7 +6156,7 @@ module.exports = function (app) {
                     },
                     {
                         model: VoteOption,
-                        where: { id: _.map(voteOptions, 'optionId') },
+                        where: { id: voteOptions.map(o => o.optionId) },
                         required: false
                     }
                 ]
@@ -6172,16 +6173,14 @@ module.exports = function (app) {
         if (!vote.VoteOptions.length) {
             return res.badRequest('Invalid option');
         }
-        const singleOptions = _.filter(vote.VoteOptions, function (option) {
+        const singleOptions = vote.VoteOptions.filter((option) => {
             const optVal = option.value.toLowerCase();
 
             return optVal === 'neutral' || optVal === 'veto';
         });
         if (singleOptions.length) {
             for (let i = 0; i < voteOptions.length; i++) {
-                const isOption = _.find(singleOptions, function (opt) {
-                    return opt.id === voteOptions[i].optionId;
-                });
+                const isOption = singleOptions.find(opt => opt.id === voteOptions[i].optionId);
 
                 if (isOption) {
                     isSingelOption = true;
@@ -6255,7 +6254,7 @@ module.exports = function (app) {
         });
         const [voteList, topic] = await Promise.all([voteListPromise, topicPromise]);
         const vl = [];
-        let tc = _.cloneDeep(topic.dataValues);
+        let tc = JSON.parse(JSON.stringify(topic.dataValues));
         tc.description = null;
         tc = Topic.build(tc);
 
@@ -6456,9 +6455,9 @@ module.exports = function (app) {
                     if (signInitResponse.sessionId) {
                         sessionData.sessionId = signInitResponse.sessionId;
                         sessionData.hash = signInitResponse.hash;
-                            sessionData.sessionHash = signInitResponse.sessionHash;
-                            sessionData.personalInfo = signInitResponse.personalInfo;
-                            sessionData.signatureId = signInitResponse.signatureId;
+                        sessionData.sessionHash = signInitResponse.sessionHash;
+                        sessionData.personalInfo = signInitResponse.personalInfo;
+                        sessionData.signatureId = signInitResponse.signatureId;
                     } else {
                         switch (signInitResponse.statusCode) {
                             case 0:
@@ -6569,7 +6568,7 @@ module.exports = function (app) {
 
         const userHash = createDataHash(voteId + connectionUserId);
 
-        _(voteOptions).forEach(function (o) {
+        voteOptions.forEach((o) => {
             o.voteId = voteId;
             o.userId = userId;
             o.optionGroupId = optionGroupId;

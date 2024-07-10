@@ -1,6 +1,5 @@
 'use strict';
 
-var _ = require('lodash');
 const LEVELS = {
     none: 'none', // Enables to override inherited permissions.
     read: 'read',
@@ -47,7 +46,7 @@ module.exports = {
             },
             level: {
                 type: Sequelize.ENUM,
-                values: _.values(LEVELS),
+                values: Object.values(LEVELS),
                 allowNull: false,
                 defaultValue: LEVELS.read,
                 comment: 'User membership level.'

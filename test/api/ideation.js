@@ -774,6 +774,7 @@ const models = app.get('models');
 const shared = require('../utils/shared');
 const userLib = require('./lib/user')(app);
 const topicLib = require('./topic');
+const { discussionCreate } = require('./discussion');
 const memberLib = require('./lib/members')(app);
 
 const jwt = app.get('jwt');
@@ -932,11 +933,11 @@ suite('Users', function () {
 
             });
 
-            test('Success - question not updated when topic status ideation', async function () {
+            test('Success - question updated when topic status ideation', async function () {
                 const updatedQuestion = 'Updated ideation';
                 await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
-                const ideationR = (await ideationRead(agent, user.id, topic.id, ideation.id)).body.data;
                 const ideationUpdated = (await ideationUpdate(agent, user.id, topic.id, ideation.id, updatedQuestion)).body.data;
+                const ideationR = (await ideationRead(agent, user.id, topic.id, ideation.id)).body.data;
                 // The difference from create result is that there is "members" and "creator" is extended. Might consider changing in the future..
                 assert.deepEqual(ideationUpdated, ideationR);
             });
@@ -1051,6 +1052,7 @@ suite('Users', function () {
                 });
 
                 test('Fail - topic status not ideation', async function () {
+                    await discussionCreate(agent, user.id, topic.id, 'TEST?');
                     await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.inProgress);
                     await _ideationIdeaCreate(request.agent(app), user.id, topic.id, ideation.id, 'TEST idea', 'description', null, 401);
                 });
@@ -1099,7 +1101,9 @@ suite('Users', function () {
                     const ideaR = (await ideationIdeaRead(agent, user.id, topic.id, ideation.id, idea.id)).body.data;
 
                     await topicLib.topicUpdate(agent, user.id, topic.id, null, Topic.VISIBILITY.public);
-
+                    delete ideaR.favourite;
+                    delete ideaR.votes.up.selected;
+                    delete ideaR.votes.down.selected;
                     const ideaRUnauth = (await ideationIdeaReadUnauth(request.agent(app), topic.id, ideation.id, idea.id)).body.data;
                     assert.deepEqual(ideaR, ideaRUnauth);
                 });

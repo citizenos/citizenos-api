@@ -520,6 +520,19 @@ module.exports = {
           transaction: t
         }
         ),
+        queryInterface.addColumn('VoteOptions', 'ideaId', {
+          type: Sequelize.UUID,
+          allowNull: true,
+          references: {
+            model: 'Ideas',
+            key: 'id'
+          },
+          comment: 'Idea refered to this option',
+          onUpdate: 'CASCADE',
+          onDelete: 'CASCADE'
+        },
+          { transaction: t }
+        ),
         queryInterface.sequelize.query(
           `ALTER TYPE "enum_Topics_status" ADD VALUE IF NOT EXISTS 'ideation' BEFORE 'inProgress';`
           , { transaction: t })

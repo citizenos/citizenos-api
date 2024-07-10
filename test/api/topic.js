@@ -2201,7 +2201,7 @@ suite('Users', function () {
                 creator = await userLib.createUserAndLogin(agentCreator, null, null, null);
                 user = await userLib.createUserAndLogin(agentUser, null, null, null);
                 group = (await groupLib.create(agentCreator, creator.id, 'Group', null, null)).body.data;
-                const topicRes = (await topicCreate(agentCreator, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.private)).body.data;
+                const topicRes = (await topicCreate(agentCreator, creator.id, null, Topic.STATUSES.ideation, null, Topic.VISIBILITY.private)).body.data;
                 const title = 'T title';
                 const description = 'T desc';
                 topic = (await Topic.update(
@@ -6827,10 +6827,10 @@ suite('Users', function () {
                             // Vote for the first time
                             const voteList1 = [
                                 {
-                                    optionId: _.find(voteRead.options.rows, { value: options[0].value }).id
+                                    optionId: voteRead.options.rows.find((o) => o.value === options[0].value ).id
                                 },
                                 {
-                                    optionId: _.find(voteRead.options.rows, { value: options[1].value }).id
+                                    optionId: voteRead.options.rows.find((o) => o.value === options[1].value ).id
                                 }
                             ];
 
@@ -6843,7 +6843,7 @@ suite('Users', function () {
                             await topicVoteStatus(agent, user.id, topic.id, voteRead.id, voteVoteResult1.data.token);
                             const voteReadAfterVote1 = (await topicVoteRead(agent, user.id, topic.id, voteRead.id)).body.data;
 
-                            _(voteList1).forEach(function (voteOption) {
+                            voteList1.forEach((voteOption) => {
                                 const option = _.find(voteReadAfterVote1.options.rows, { id: voteOption.optionId });
                                 assert.equal(option.voteCount, 1);
                             });
@@ -6851,10 +6851,10 @@ suite('Users', function () {
                             // Vote for the 2nd time, change your vote, by choosing 1
                             const voteList2 = [
                                 {
-                                    optionId: _.find(voteRead.options.rows, { value: options[1].value }).id
+                                    optionId: voteRead.options.rows.find((o) => o.value === options[1].value ).id
                                 },
                                 {
-                                    optionId: _.find(voteRead.options.rows, { value: options[2].value }).id
+                                    optionId: voteRead.options.rows.find((o) => o.value === options[2].value ).id
                                 }
                             ];
 
@@ -7528,9 +7528,8 @@ suite('Users', function () {
                                         '__userinfo.html',
                                         `${options[1].value}.html`,
                                         `${options[2].value}.html`,
-                                        'hääl.html',
+                                        'hääl.docx',
                                         'document.docx',
-                                        'hääl.html',
                                         'META-INF/manifest.xml',
                                         'META-INF/signatures-1.xml'
                                     ];

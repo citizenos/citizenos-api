@@ -334,7 +334,7 @@ suite('Users', function () {
             let user;
             let topic;
 
-            suiteSetup(async function () {
+            setup(async function () {
                 user = await userLib.createUserAndLogin(agent, email, password, null);
                 topic = (await topicLib.topicCreate(agent, user.id, 'TEST DISCUSSION')).body.data;
             });
@@ -566,7 +566,7 @@ suite('Users', function () {
                 let reply1111;
                 let reply11111;
 
-                suiteSetup(async function () {
+                setup(async function () {
                     creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);
                     topic = (await topicLib.topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.draft, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.communities, Topic.CATEGORIES.culture])).body.data;
                     const question = 'Test discussion?';

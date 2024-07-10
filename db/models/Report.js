@@ -1,6 +1,5 @@
 'use strict';
 
-var _ = require('lodash');
 var hooks = require('../../libs/sequelize/hooks');
 
 /**
@@ -35,7 +34,7 @@ module.exports = function (sequelize, DataTypes) {
             },
             type: {
                 type: DataTypes.ENUM,
-                values: _.values(TYPES),
+                values: Object.values(TYPES),
                 allowNull: false,
                 comment: 'Report reason - verbal abuse, obscene content, hate speech etc..'
             },

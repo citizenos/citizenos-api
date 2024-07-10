@@ -1,6 +1,5 @@
 'use strict';
 
-const _ = require('lodash');
 // All possible permission levels.
 
 const LEVELS = {
@@ -47,7 +46,7 @@ module.exports = {
       },
       level: {
         type: Sequelize.ENUM,
-        values: _.values(LEVELS),
+        values: Object.values(LEVELS),
         allowNull: false,
         defaultValue: LEVELS.read,
         comment: 'User membership level.'

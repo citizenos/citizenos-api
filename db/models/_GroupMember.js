@@ -11,7 +11,6 @@
  * @see http://stackoverflow.com/questions/19682171/how-to-extend-sequelize-model#answer-19684348
  */
 
-const _ = require('lodash');
 const LEVELS = {
     read: 'read',
     admin: 'admin'
@@ -35,7 +34,7 @@ module.exports.model = function (sequelize, DataTypes) {
             },
             level: {
                 type: DataTypes.ENUM,
-                values: _.values(LEVELS),
+                values: Object.values(LEVELS),
                 allowNull: false,
                 defaultValue: LEVELS.read,
                 comment: 'User membership level.'

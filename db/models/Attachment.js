@@ -1,6 +1,5 @@
 'use strict';
 
-var _ = require('lodash');
 
 /**
  * Attachments
@@ -44,7 +43,7 @@ module.exports = function (sequelize, DataTypes) {
             },
             source: {
                 type: DataTypes.ENUM,
-                values: _.values(SOURCES),
+                values: Object.values(SOURCES),
                 allowNull: false
             },
             size: {
@@ -89,6 +88,6 @@ module.exports = function (sequelize, DataTypes) {
     };
 
     Attachment.SOURCES = SOURCES;
-    
+
     return Attachment;
 };

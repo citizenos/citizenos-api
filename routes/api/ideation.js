@@ -1885,7 +1885,6 @@ module.exports = function (app) {
                             },
                             transaction: t
                         });
-
                     if (vote) {
                         //User already voted
                         if (vote.value === value) { // Same value will 0 the vote...
@@ -1909,6 +1908,10 @@ module.exports = function (app) {
                                 );
 
                             await vote.destroy({ force: true });
+                        } else {
+                            await vote.save({
+                                transaction: t
+                            });
                         }
 
                     } else {

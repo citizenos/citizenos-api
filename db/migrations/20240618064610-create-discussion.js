@@ -91,9 +91,28 @@ module.exports = {
       await queryInterface.renameTable('TopicComments', 'DiscussionComments', {
         transaction: t
       });
-      await queryInterface.renameColumn('DiscussionComments', 'topicId', 'discussionId', {
+
+      await queryInterface.addColumn('DiscussionComments', 'discussionId', {
+        type: Sequelize.UUID,
+        allowNull: true,
+        comment: 'Discussion id',
+        references: {
+          model: 'Discussions',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
+      }, {
         transaction: t
       });
+
+      await queryInterface.sequelize.query(
+        `UPDATE "DiscussionComments" dc SET "discussionId"=dc."topicId";
+          `
+        , {
+          transaction: t
+        });
+
       await queryInterface.changeColumn('DiscussionComments', 'discussionId', {
         type: Sequelize.UUID,
         allowNull: false,
@@ -109,25 +128,49 @@ module.exports = {
         transaction: t
       });
 
-      await queryInterface.removeConstraint('DiscussionComments', 'TopicComments_topicId_fkey');
+      await queryInterface.removeColumn('DiscussionComments', 'topicId', {
+        transaction: t
+      });
+
+  /*    await queryInterface.removeConstraint('DiscussionComments', 'TopicComments_topicId_fkey', {
+        transaction: t
+      });*/
     });
   },
 
   async down(queryInterface, Sequelize) {
     await queryInterface.sequelize.transaction(async (t) => {
 
-      await queryInterface.dropTable('TopicDiscussions', {
-        transaction: t
-      })
-      await queryInterface.dropTable('Discussions', {
-        transaction: t
-      });
       await queryInterface.renameTable('DiscussionComments', 'TopicComments', {
         transaction: t
       });
-      await queryInterface.renameColumn('TopicComments', 'discussionId', 'topicId', {
+
+      await queryInterface.addColumn('TopicComments', 'topicId', {
+        type: Sequelize.UUID,
+        allowNull: true,
+        comment: 'Topic id',
+        references: {
+          model: 'Topics',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE',
+        primaryKey: true
+      }, {
         transaction: t
       });
+
+      await queryInterface.sequelize.query(
+        `UPDATE "TopicComments" tc SET "topicId"=td."topicId" FROM "TopicDiscussions" td WHERE td."discussionId" = tc."discussionId";
+          `
+        , {
+          transaction: t
+        });
+
+      await queryInterface.removeColumn('TopicComments', 'discussionId', {
+        transaction: t
+      });
+
       await queryInterface.changeColumn('TopicComments', 'topicId', {
         type: Sequelize.UUID,
         allowNull: false,
@@ -140,6 +183,14 @@ module.exports = {
         onDelete: 'CASCADE',
         primaryKey: true
       }, {
+        transaction: t
+      });
+
+      await queryInterface.dropTable('TopicDiscussions', {
+        transaction: t
+      })
+
+      await queryInterface.dropTable('Discussions', {
         transaction: t
       });
     });

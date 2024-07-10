@@ -1,6 +1,5 @@
 'use strict';
 
-const _ = require('lodash');
 const hooks = require('../../libs/sequelize/hooks');
 const util = require('util');
 const config = require('config');
@@ -107,7 +106,7 @@ module.exports = function (sequelize, DataTypes) {
             },
             status: {
                 type: DataTypes.ENUM,
-                values: _.values(STATUSES),
+                values: Object.values(STATUSES),
                 comment: 'Topic statuses.',
                 allowNull: false,
                 defaultValue: STATUSES.draft
@@ -119,7 +118,7 @@ module.exports = function (sequelize, DataTypes) {
             },
             visibility: {
                 type: DataTypes.ENUM,
-                values: _.values(VISIBILITY),
+                values: Object.values(VISIBILITY),
                 comment: 'Who can see (read) the Topic apart from the Members.',
                 allowNull: false,
                 defaultValue: VISIBILITY.private
