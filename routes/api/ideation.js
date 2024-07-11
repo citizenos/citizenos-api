@@ -1065,6 +1065,136 @@ module.exports = function (app) {
     /**
      * Read a folder
      */
+    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, null), async (req, res, next) => {
+        const folderId = req.params.folderId;
+        const offset = req.query.offset || 0;
+        const limit = req.query.limit || 8;
+        try {
+            const ideationId = req.params.ideationId;
+            const topicId = req.params.topicId;
+            if (!ideationId || !topicId) return res.badRequest();
+
+            const ideation = await Ideation.findOne({
+                where: {
+                    id: ideationId
+                },
+                include: [
+                    {
+                        model: Topic,
+                        where: {
+                            id: topicId
+                        },
+                        attributes: ['visibility']
+                    },
+                ]
+            });
+            if (!ideation || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+                return res.notFound();
+            }
+
+            try {
+                const folder = await Folder.findOne({
+                    where: {
+                        id: folderId
+                    }
+                })
+                const ideas = await Idea.findAndCountAll({
+                    where: {
+                        ideationId: req.params.ideationId
+                    },
+                    include: [
+                        {
+                            model: User,
+                            as: 'author',
+                            attributes: ['id', 'name', 'email', 'imageUrl']
+                        },
+                        {
+                            model: Folder,
+                            where: { id: folderId },
+                            attributes: []
+                        },
+                    ],
+                    offset,
+                    limit
+                })
+                const resFolder = folder.toJSON();
+                resFolder.ideas = ideas;
+                return res.ok(resFolder);
+
+            } catch (err) {
+                next(err);
+            }
+
+        } catch (err) {
+            next(err);
+        }
+    })
+
+    app.get('/api/topics/:topicId/ideations/:ideationId/folders/:folderId', async (req, res, next) => {
+        const folderId = req.params.folderId;
+        const offset = req.query.offset || 0;
+        const limit = req.query.limit || 8;
+        try {
+            const ideationId = req.params.ideationId;
+            const topicId = req.params.topicId;
+            if (!ideationId || !topicId) return res.badRequest();
+
+            const ideation = await Ideation.findOne({
+                where: {
+                    id: ideationId
+                },
+                include: [
+                    {
+                        model: Topic,
+                        where: {
+                            id: topicId
+                        },
+                        attributes: ['visibility']
+                    },
+                ]
+            });
+            if (!ideation || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
+                return res.notFound();
+            }
+
+            try {
+                const folder = await Folder.findOne({
+                    where: {
+                        id: folderId
+                    }
+                })
+                const ideas = await Idea.findAndCountAll({
+                    where: {
+                        ideationId: req.params.ideationId
+                    },
+                    include: [
+                        {
+                            model: User,
+                            as: 'author',
+                            attributes: ['id', 'name', 'email', 'imageUrl']
+                        },
+                        {
+                            model: Folder,
+                            where: { id: folderId },
+                            attributes: []
+                        },
+                    ],
+                    offset,
+                    limit
+                })
+                const resFolder = folder.toJSON();
+                resFolder.ideas = ideas;
+
+                return res.ok(resFolder);
+
+            } catch (err) {
+                next(err);
+            }
+
+        } catch (err) {
+            next(err);
+        }
+    })
 
     const _readIdeationFolder = async (req, res, next) => {
         const folderId = req.params.folderId;
