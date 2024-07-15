@@ -1065,7 +1065,7 @@ module.exports = function (app) {
     /**
      * Read a folder
      */
-    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.admin, true), async (req, res, next) => {
+    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
         const folderId = req.params.folderId;
         const offset = req.query.offset || 0;
         const limit = req.query.limit || 8;
