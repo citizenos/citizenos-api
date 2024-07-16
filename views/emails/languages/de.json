@@ -94,8 +94,8 @@
   },
   "NOTIFICATIONS": {
     "SUBJECT": "Eine Aktualisierung zum Thema “{{topicTitle}}”",
-    "NOTIFICATION_USER_ACCEPT_REQUEST_TOPIC_GROUP": "User <b>{{userName}}</b> has accepted a request to add <b>{{topicTitle}}</b> to group <b>{{groupName}}</b>",
-    "NOTIFICATION_USER_REJECT_REQUEST_TOPIC_GROUP": "User <b>{{userName}}</b> has rejected a request to add <b>{{topicTitle}}</b> to group <b>{{groupName}}</b>",
+    "NOTIFICATION_USER_ACCEPT_REQUEST_TOPIC_GROUP": "Benutzer <b>{{userName}}</b> hat die Anfrage akzeptiert, das Thema <b>{{topicTitle}}</b> zur Gruppe <b>{{groupName}}</b> hinzuzufügen",
+    "NOTIFICATION_USER_REJECT_REQUEST_TOPIC_GROUP": "Benutzer <b>{{userName}}</b> hat die Anfrage abgelehnt, das Thema <b>{{topicTitle}}</b> zur Gruppe <b>{{groupName}}</b> hinzuzufügen",
     "NOTIFICATION_USER_CREATE_TOPIC": "Benutzer <b>{{userName}}</b> hat ein neues Thema erstellt.",
     "NOTIFICATION_USER_UPDATE_TOPIC": "Benutzer <b>{{userName}}</b> hat das Feld <b>{{fieldName}}</b> in diesem Thema aktualisiert.",
     "NOTIFICATION_USER_UPDATE_TOPIC_USERACTIVITYGROUP": "Benutzer <b>{{userName}}</b> hat an diesem Thema <b>{{groupCount}}</b> Aktualisierungen vorgenommen.",
@@ -204,9 +204,9 @@
   "VOTE_REMINDER": {
     "SUBJECT": "Eine Erinnerung zur Abstimmung"
   },
-  "TXT_TOPIC_LEVELS_ADMIN": "admin",
-  "TXT_TOPIC_LEVELS_EDIT": "editor",
-  "TXT_TOPIC_LEVELS_READ": "participant",
+  "TXT_TOPIC_LEVELS_ADMIN": "Admin",
+  "TXT_TOPIC_LEVELS_EDIT": "Editor",
+  "TXT_TOPIC_LEVELS_READ": "Teilnehmer",
   "TXT_TOPIC_VISIBILITY_PRIVATE": "@:NOTIFICATIONS.NOTIFICATION_TOPIC_FIELD_VISIBILITY_PRIVATE",
   "TXT_TOPIC_VISIBILITY_PUBLIC": "@:NOTIFICATIONS.NOTIFICATION_TOPIC_FIELD_VISIBILITY_PUBLIC",
   "TXT_TOPIC_CATEGORY_ALL": "alle Kategorien",
@@ -238,7 +238,7 @@
   "TXT_TOPIC_CATEGORY_SOCIETY": "Demokratie und Zivilgesellschaft",
   "TXT_TOPIC_CATEGORY_EUROCHANGEMAKERS": "EuroChangeMakers",
   "TXT_TOPIC_STATUS_INPROGRESS": "in Bearbeitung",
-  "TXT_TOPIC_STATUS_DRAFT": "draft",
+  "TXT_TOPIC_STATUS_DRAFT": "Entwurf",
   "TXT_TOPIC_STATUS_VOTING": "in Abstimmung",
   "TXT_TOPIC_STATUS_FOLLOWUP": "in Nachverfolgung",
   "TXT_TOPIC_STATUS_CLOSED": "geschlossen",
