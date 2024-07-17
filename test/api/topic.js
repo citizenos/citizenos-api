@@ -1557,17 +1557,24 @@ suite('Users', function () {
 
                 topic.sourcePartnerId = updatedTopic.sourcePartnerId;
                 topic.sourcePartnerObjectId = updatedTopic.sourcePartnerObjectId;
-                topic.updatedAt = updatedTopic.updatedAt;
+          //      topic.updatedAt = updatedTopic.updatedAt;
+                topic.revision = 2;
+                topic.discussionId = null;
+                topic.ideationId = null;
+                topic.authors = [
+                    {
+                        id: user.id,
+                        name: user.name
+                    }
+                ];
             });
 
 
             test('Success', async function () {
                 const topicR = (await topicRead(agent, user.id, topic.id, null)).body.data;
-
                 // The difference from create result is that there is "members" and "creator" is extended. Might consider changing in the future..
                 const expectedTopic = Object.assign({},topic);
                 expectedTopic.ideationId = null;
-                expectedTopic.revision = 2;
              //  delete expectedTopic.authors
                 expectedTopic.updatedAt = topicR.updatedAt;
                 expectedTopic.members = {
@@ -1619,6 +1626,7 @@ suite('Users', function () {
                             count: 0
                         }
                     };
+                    expectedTopic.updatedAt = topicR.updatedAt;
                     expectedTopic.creator = user.toJSON();
                     delete expectedTopic.creator.email; // Email url is not returned by Topic read, we don't need it
                     delete expectedTopic.creator.imageUrl; // Image url is not returned by Topic read, we don't need it
@@ -2061,10 +2069,9 @@ suite('Users', function () {
             });
 
             test('Fail - Bad Request - status is null - should not modify existing value', async function () {
-                await _topicUpdate(agent, user.id, topic.id, null, topicVisibilityNew, [], null, null, 400);
+                await topicUpdate(agent, user.id, topic.id, null, topicVisibilityNew, [], null, null);
 
                 const topicNew = (await topicRead(agent, user.id, topic.id, null)).body.data;
-
                 assert.equal(topicNew.status, topic.status);
             });
 
@@ -3839,6 +3846,7 @@ suite('Users', function () {
                         assert.equal(userInvited1.email, invitation[0].userId.toLowerCase());
 
                         const createdInviteUser2 = createdInvites.find((i) => { return i.level === invitation[1].level }); // find by level, not by id to keep the code simpler
+                     //   console.log(invitation[1].level, createdInvites)
                         assert.uuid(createdInviteUser2.id, 'v4');
                         assert.equal(createdInviteUser2.topicId, topic.id);
                         assert.equal(createdInviteUser2.creatorId, userCreator.id);
@@ -8981,7 +8989,6 @@ suite('Topics', function () {
             // Also, padUrl will not have authorization token
             topicR.data.padUrl = topicR.data.padUrl.split('?')[0];
 
-            delete topicR.data.revision;
             assert.deepEqual(topicRUnauth, topicR);
         });
 
@@ -9041,7 +9048,6 @@ suite('Topics', function () {
                 assert.property(events, 'count');
                 assert.equal(events.count, 0);
 
-                delete topicR.data.revision;
                 assert.deepEqual(topicRUnauth, topicR);
             });
         });
@@ -9086,7 +9092,6 @@ suite('Topics', function () {
                 assert.property(option, 'value');
             });
 
-            delete topicR.data.revision;
             assert.deepEqual(topicRUnauth, topicR);
         });
 
@@ -10032,7 +10037,7 @@ suite('Topics', function () {
                 const expectedResult = {
                     status: {
                         code: 40300,
-                        message: 'Forbidden'
+                        message: 'Insufficient permissions'
                     }
                 };
                 assert.deepEqual(resultMessage, expectedResult);

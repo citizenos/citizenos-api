@@ -121,8 +121,9 @@ suite('Email', function () {
             suiteSetup(async function () {
                 user = await userLib.createUserAndLogin(agent, null, null, null);
                 user2 = await userLib.createUserAndLogin(agent2, null, null, null);
-                topic = (await topicLib.topicCreate(agent, user.id, 'TEST', Topic.STATUSES.inProgress, '<html><head></head><body><h2>TEST</h2></body></html>')).body.data;
+                topic = (await topicLib.topicCreate(agent, user.id, 'TEST', Topic.STATUSES.draft, '<html><head></head><body><h2>TEST</h2></body></html>')).body.data;
                 discussion = (await discussionLib.discussionCreate(agent, user.id, topic.id, 'Test question?')).body.data;
+                await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.inProgress);
                 comment = (await discussionLib.topicCommentCreate(agent, user.id, topic.id, discussion.id, null, null, Comment.TYPES.pro, 'subject', 'text')).body.data;
 
                 report = await TopicReport.create({

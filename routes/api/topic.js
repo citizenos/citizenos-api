@@ -602,7 +602,6 @@ module.exports = function (app) {
 
         let join = '';
         let returncolumns = '';
-
         if (include) {
             if (include.indexOf('ideation') > -1) {
                 returncolumns += `
@@ -800,7 +799,7 @@ module.exports = function (app) {
         }
 
         topic.url = urlLib.getFe('/topics/:topicId', { topicId: topic.id });
-
+        topic.revision = (await cosEtherpad.topicPadRevisions(topicId)).revisions;
         if (include && include.indexOf('vote') > -1 && topic.vote && topic.vote.id) {
             const voteResults = await getVoteResults(topic.vote.id);
             const options = [];
@@ -1387,14 +1386,18 @@ module.exports = function (app) {
             );
     };
 
-    const _syncTopicAuthors = async function (topicId) {
+    const _syncTopicAuthors = async (topicId) => {
         const authorIds = await cosEtherpad.getTopicPadAuthors(topicId);
         const topicData = await Topic.findOne({
             where: {
                 id: topicId
             },
-            attributes: ['authorIds']
+            attributes: ['authorIds'],
+            include:  [{model: User, as: 'creator'}]
         })
+        if (!authorIds.length) {
+            authorIds.push(topicData.creator.id);
+        }
         const compareArrays = (a, b) => a.length === b.length && a.every((element, index) => element === b[index]);
         if (!compareArrays(authorIds.sort(), topicData.authorIds.sort())) {
             await Topic.update({
@@ -4145,13 +4148,14 @@ module.exports = function (app) {
                     attributes: ['id', 'email']
                 });
 
-
             usersExistingEmail.forEach((u) => {
-                const member = validEmailMembers.find(m => m.userId === u.email);
+                const member = validEmailMembers.find(m => {
+                    return m.userId === u.email
+                } );
                 if (member) {
+                    const index = validEmailMembers.findIndex(m => m.userId === u.email);
                     member.userId = u.id;
                     validUserIdMembers.push(member);
-                    const index = validEmailMembers.findIndex(m => m.userId === u.email);
                     validEmailMembers.splice(index, 1) // Remove the e-mail, so that by the end of the day only e-mails that did not exist remain.
                 }
             });

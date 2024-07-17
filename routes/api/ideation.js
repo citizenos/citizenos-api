@@ -585,7 +585,6 @@ module.exports = function (app) {
                 "author"."name" AS "author.name",
                 "author"."email" AS "author.email",
                 "author"."imageUrl" AS "author.imageUrl",
-                count(*) OVER()::integer AS "countTotal",
                 iv."up.count" as "votes.up.count",
                 iv."down.count" as "votes.down.count",
                 CASE

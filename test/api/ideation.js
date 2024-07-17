@@ -319,7 +319,42 @@ const ideationFolderCreate = async function (agent, userId, topicId, ideationId,
     return _ideationFolderCreate(agent, userId, topicId, ideationId, name, description, 201)
 };
 
-const _ideationFolderRead = async function (agent, userId, topicId, ideationId, folderId, limit, offset, expectedHttpCode) {
+const _ideationFolderRead = async function (agent, userId, topicId, ideationId, folderId, expectedHttpCode) {
+    const path = '/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId'
+        .replace(':userId', userId)
+        .replace(':topicId', topicId)
+        .replace(':ideationId', ideationId)
+        .replace(':folderId', folderId);
+
+    return agent
+        .get(path)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+};
+
+const ideationFolderRead = async function (agent, userId, topicId, ideationId, folderId) {
+    return _ideationFolderRead(agent, userId, topicId, ideationId, folderId, 200)
+};
+
+const _ideationFolderReadUnauth = async function (agent, topicId, ideationId, folderId, expectedHttpCode) {
+    const path = '/api/topics/:topicId/ideations/:ideationId/folders/:folderId'
+        .replace(':topicId', topicId)
+        .replace(':ideationId', ideationId)
+        .replace(':folderId', folderId);
+
+    return agent
+        .get(path)
+        .set('Content-Type', 'application/json')
+        .expect(expectedHttpCode)
+        .expect('Content-Type', /json/)
+};
+
+const ideationFolderReadUnauth = async function (agent, topicId, ideationId, folderId) {
+    return _ideationFolderReadUnauth(agent, topicId, ideationId, folderId, 200)
+};
+
+const _ideationFolderReadIdeas = async function (agent, userId, topicId, ideationId, folderId, limit, offset, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/ideations/:ideationId/folders/:folderId/ideas'
         .replace(':userId', userId)
         .replace(':topicId', topicId)
@@ -337,11 +372,11 @@ const _ideationFolderRead = async function (agent, userId, topicId, ideationId, 
         .expect('Content-Type', /json/)
 };
 
-const ideationFolderRead = async function (agent, userId, topicId, ideationId, folderId, limit, offset) {
-    return _ideationFolderRead(agent, userId, topicId, ideationId, folderId, limit, offset, 200)
+const ideationFolderReadIdeas = async function (agent, userId, topicId, ideationId, folderId, limit, offset) {
+    return _ideationFolderReadIdeas(agent, userId, topicId, ideationId, folderId, limit, offset, 200)
 };
 
-const _ideationFolderReadUnauth = async function (agent, topicId, ideationId, folderId, limit, offset, expectedHttpCode) {
+const _ideationFolderReadIdeasUnauth = async function (agent, topicId, ideationId, folderId, limit, offset, expectedHttpCode) {
     const path = '/api/topics/:topicId/ideations/:ideationId/folders/:folderId/ideas'
         .replace(':topicId', topicId)
         .replace(':ideationId', ideationId)
@@ -358,8 +393,8 @@ const _ideationFolderReadUnauth = async function (agent, topicId, ideationId, fo
         .expect('Content-Type', /json/)
 };
 
-const ideationFolderReadUnauth = async function (agent, topicId, ideationId, folderId, limit, offset,) {
-    return _ideationFolderReadUnauth(agent, topicId, ideationId, folderId, limit, offset, 200)
+const ideationFolderReadIdeasUnauth = async function (agent, topicId, ideationId, folderId, limit, offset,) {
+    return _ideationFolderReadIdeasUnauth(agent, topicId, ideationId, folderId, limit, offset, 200)
 };
 
 const _ideationFolderIdeaCreate = async function (agent, userId, topicId, ideationId, folderId, ideas, expectedHttpCode) {
@@ -1053,7 +1088,7 @@ suite('Users', function () {
 
                 test('Fail - topic status not ideation', async function () {
                     await discussionCreate(agent, user.id, topic.id, 'TEST?');
-                    await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.inProgress);
+                    await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.followUp);
                     await _ideationIdeaCreate(request.agent(app), user.id, topic.id, ideation.id, 'TEST idea', 'description', null, 401);
                 });
 
@@ -1091,6 +1126,23 @@ suite('Users', function () {
                     const description = 'This idea is just for testing';
                     const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
                     const ideaR = (await ideationIdeaRead(agent, user.id, topic.id, ideation.id, idea.id)).body.data;
+                    assert.deepEqual(ideaR.votes, {
+                        down: {
+                            count: 0,
+                            selected: false
+                        },
+                        up: {
+                            count: 0,
+                            selected: false
+                        }
+                    });
+                    assert.equal(ideaR.favourite, false)
+                    assert.deepEqual(ideaR.replies, {
+                        count: 0
+                    });
+                    delete ideaR.replies;
+                    delete ideaR.votes;
+                    delete ideaR.favourite;
                     assert.deepEqual(idea, ideaR);
                 });
 
@@ -1113,6 +1165,23 @@ suite('Users', function () {
                     const description = 'This idea is just for testing';
                     const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
                     const ideaR = (await ideationIdeaRead(agent, user.id, topic.id, ideation.id, idea.id)).body.data;
+                    assert.deepEqual(ideaR.votes, {
+                        down: {
+                            count: 0,
+                            selected: false
+                        },
+                        up: {
+                            count: 0,
+                            selected: false
+                        }
+                    });
+                    assert.equal(ideaR.favourite, false)
+                    assert.deepEqual(ideaR.replies, {
+                        count: 0
+                    });
+                    delete ideaR.replies;
+                    delete ideaR.votes;
+                    delete ideaR.favourite;
                     assert.deepEqual(idea, ideaR);
                 });
 
@@ -1179,6 +1248,7 @@ suite('Users', function () {
 
                 test('Fail - topic status not ideation', async function () {
                     const idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    await discussionCreate(agent, user.id, topic.id, 'TEST');
                     await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.inProgress);
                     await _ideationIdeaUpdate(agent, user.id, topic.id, ideation.id, idea.id, 'TEST idea', 'description', null, 403);
                 });
@@ -1340,8 +1410,8 @@ suite('Users', function () {
                     assert.equal(ideaRes.description, idea.description);
                     assert.equal(ideaRes.imageUrl, idea.imageUrl);
                     assert.equal(ideaRes.createdAt, idea.createdAt);
-                    assert.deepEqual(ideaRes.deletedBy, {id: userModerator.id, name: userModerator.name});
-                    assert.deepEqual(ideaRes.report, {id: report.id});
+                    assert.deepEqual(ideaRes.deletedBy, { id: userModerator.id, name: userModerator.name });
+                    assert.deepEqual(ideaRes.report, { id: report.id });
                     assert.notEqual(ideaRes.deletedAt, null);
                     assert.equal(ideaRes.deletedReasonText, moderateText);
                     assert.equal(ideaRes.deletedReasonType, moderateType);
@@ -3592,12 +3662,68 @@ suite('Users', function () {
                 });
 
                 test('Fail - topic status not ideation', async function () {
+                    await discussionCreate(agent, user.id, topic.id, 'TEST');
                     await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.inProgress);
                     await _ideationFolderCreate(request.agent(app), user.id, topic.id, ideation.id, 'TEST folder', 'description', 401);
                 });
 
                 test('Fail - Unauthorized', async function () {
                     await _ideationFolderCreate(request.agent(app), user.id, topic.id, ideation.id, 'TEST folder', 'description', 401);
+                });
+            });
+
+            suite('Read', function () {
+                const agent = request.agent(app);
+                const agent2 = request.agent(app);
+                const email = 'test_topicr_' + new Date().getTime() + '@test.ee';
+                const email2 = 'test_topicr_' + new Date().getTime() + '@test.ee';
+                const password = 'testPassword123';
+
+                let user;
+                let user2;
+                let topic;
+                let ideation;
+                let idea;
+                let folder;
+                suiteSetup(async function () {
+                    user = await userLib.createUserAndLogin(agent, email, password, null);
+                    user2 = await userLib.createUserAndLogin(agent2, email2, password, null);
+                    topic = (await topicLib.topicCreate(agent, user.id, 'TEST', null, null, Topic.VISIBILITY.private)).body.data;
+                    ideation = (await ideationCreate(agent, user.id, topic.id, 'TEST ideation')).body.data;
+                    await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.ideation);
+                    await memberLib.topicMemberUsersCreate(topic.id, [{
+                        userId: user2.id,
+                        level: TopicMemberUser.LEVELS.edit
+                    }]);
+                });
+
+                const folderName = 'TEST folder';
+                const description = 'This folder is just for testing';
+                setup(async function () {
+                    idea = (await ideationIdeaCreate(agent, user.id, topic.id, ideation.id, 'TEST', 'TEST')).body.data;
+                    folder = (await ideationFolderCreate(agent, user.id, topic.id, ideation.id, folderName, description)).body.data;
+                    folder.ideas = {
+                        count: 1,
+                        rows: [idea]
+                    };
+                    await ideationFolderIdeaCreate(agent, user.id, topic.id, ideation.id, folder.id, idea);
+                })
+
+                test('Success', async function () {
+                    const folderR = (await ideationFolderRead(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
+
+                    assert.deepEqual(folderR, folder);
+                });
+
+                test('Success - public topic unauth', async function () {
+                    const folderR = (await ideationFolderRead(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
+                    await topicLib.topicUpdate(agent, user.id, topic.id, null, Topic.VISIBILITY.public);
+                    const folderRUnauth = (await ideationFolderReadUnauth(request.agent(app), topic.id, ideation.id, folder.id)).body.data;
+                    assert.deepEqual(folderR, folderRUnauth);
+                });
+
+                test('Fail - Unauthorized', async function () {
+                    await _ideationFolderRead(request.agent(app), user.id, topic.id, ideation.id, folder.id, 401);
                 });
             });
 
@@ -3638,7 +3764,7 @@ suite('Users', function () {
                         const expectedRes = { status: { code: 20100 } };
                         assert.deepEqual(addIdeaRes, expectedRes);
 
-                        const folderR = (await ideationFolderRead(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
+                        const folderR = (await ideationFolderReadIdeas(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
                         assert.deepEqual(folderR, { count: 1, rows: [idea] });
                     });
 
@@ -3650,7 +3776,7 @@ suite('Users', function () {
                         const expectedRes = { status: { code: 20100 } };
                         assert.deepEqual(addIdeaRes, expectedRes);
 
-                        const folderR = (await ideationFolderRead(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
+                        const folderR = (await ideationFolderReadIdeas(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
                         assert.deepEqual(folderR, { count: 2, rows: [idea, idea2] });
                     });
                 });
@@ -3693,7 +3819,7 @@ suite('Users', function () {
                         const expectedRes = { status: { code: 20100 } };
                         assert.deepEqual(addIdeaRes, expectedRes);
 
-                        const folderR = (await ideationFolderRead(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
+                        const folderR = (await ideationFolderReadIdeas(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
                         assert.deepEqual(folderR, { count: 1, rows: [idea] });
                     });
 
@@ -3705,7 +3831,7 @@ suite('Users', function () {
                         const expectedRes = { status: { code: 20100 } };
                         assert.deepEqual(addIdeaRes, expectedRes);
 
-                        const folderR = (await ideationFolderRead(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
+                        const folderR = (await ideationFolderReadIdeas(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
                         assert.deepEqual(folderR, { count: 2, rows: [idea, idea2] });
                     });
 
@@ -3715,10 +3841,10 @@ suite('Users', function () {
                         const folder = (await ideationFolderCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
                         await ideationFolderIdeaCreate(agent, user.id, topic.id, ideation.id, folder.id, [idea, idea2]);
 
-                        const folderR = (await ideationFolderRead(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
+                        const folderR = (await ideationFolderReadIdeas(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
                         await topicLib.topicUpdate(agent, user.id, topic.id, null, Topic.VISIBILITY.public);
 
-                        const folderRUnauth = (await ideationFolderReadUnauth(request.agent(app), topic.id, ideation.id, folder.id)).body.data;
+                        const folderRUnauth = (await ideationFolderReadIdeasUnauth(request.agent(app), topic.id, ideation.id, folder.id)).body.data;
                         assert.deepEqual(folderR, folderRUnauth);
                     });
 
@@ -3727,9 +3853,9 @@ suite('Users', function () {
                         const description = 'This folder is just for testing';
                         const folder = (await ideationFolderCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
                         await ideationFolderIdeaCreate(agent, user.id, topic.id, ideation.id, folder.id, [idea, idea2]);
-                        const folderR = (await ideationFolderRead(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
+                        const folderR = (await ideationFolderReadIdeas(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
                         assert.deepEqual(folderR, { count: 2, rows: [idea, idea2] });
-                        const folderR2 = (await ideationFolderRead(agent, user.id, topic.id, ideation.id, folder.id, 1, 1)).body.data;
+                        const folderR2 = (await ideationFolderReadIdeas(agent, user.id, topic.id, ideation.id, folder.id, 1, 1)).body.data;
 
                         assert.deepEqual(folderR2, { count: 2, rows: [idea2] });
                     });
@@ -3738,7 +3864,7 @@ suite('Users', function () {
                         const statement = 'TEST folder';
                         const description = 'This folder is just for testing';
                         const folder = (await ideationFolderCreate(agent, user.id, topic.id, ideation.id, statement, description)).body.data;
-                        await _ideationFolderRead(request.agent(app), user.id, topic.id, ideation.id, folder.id, null, null, 401);
+                        await _ideationFolderReadIdeas(request.agent(app), user.id, topic.id, ideation.id, folder.id, null, null, 401);
                     });
                 });
 
@@ -3777,13 +3903,13 @@ suite('Users', function () {
                         const expectedRes = { status: { code: 20100 } };
                         assert.deepEqual(addIdeaRes, expectedRes);
 
-                        const folderR = (await ideationFolderRead(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
+                        const folderR = (await ideationFolderReadIdeas(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
                         assert.deepEqual(folderR, { count: 1, rows: [idea] });
                         const removeIdeaRes = (await ideationFolderIdeaRemove(agent, user.id, topic.id, ideation.id, folder.id, idea.id)).body;
                         const expectedRes2 = { status: { code: 20000 } };
                         assert.deepEqual(removeIdeaRes, expectedRes2);
 
-                        const folderR2 = (await ideationFolderRead(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
+                        const folderR2 = (await ideationFolderReadIdeas(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
                         assert.deepEqual(folderR2, { count: 0, rows: [] });
                     });
 
@@ -3795,7 +3921,7 @@ suite('Users', function () {
                         const expectedRes = { status: { code: 20100 } };
                         assert.deepEqual(addIdeaRes, expectedRes);
 
-                        const folderR = (await ideationFolderRead(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
+                        const folderR = (await ideationFolderReadIdeas(agent, user.id, topic.id, ideation.id, folder.id)).body.data;
                         assert.deepEqual(folderR, { count: 2, rows: [idea, idea2] });
                     });
                 });
@@ -3945,7 +4071,7 @@ suite('Users', function () {
                             imageUrl: user.imageUrl,
                             name: user.name
                         },
-                        ideas: {count: 0}
+                        ideas: { count: 0 }
                     }, folder);
                     delete expectedFolder.creatorId;
                     delete expectedFolder.deletedAt;
@@ -3962,7 +4088,7 @@ suite('Users', function () {
                             imageUrl: user.imageUrl,
                             name: user.name
                         },
-                        ideas: {count: 0}
+                        ideas: { count: 0 }
                     }, folder);
                     delete expectedFolder.creatorId;
                     delete expectedFolder.deletedAt;
