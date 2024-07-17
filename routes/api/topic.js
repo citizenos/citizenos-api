@@ -1061,23 +1061,30 @@ module.exports = function (app) {
                             ON v.id = tv."voteId"
                 ) AS tv ON (tv."topicId" = t.id)
                 LEFT JOIN (
-                    SELECT
-                        ti."topicId",
-                        ti."ideationId",
-                        i."createdAt",
-                        i."deadline",
-                        i."creatorId"
-                    FROM "TopicIdeations" ti INNER JOIN
-                        (
-                            SELECT
-                                MAX("createdAt") as "createdAt",
-                                "topicId"
-                            FROM "TopicIdeations"
-                            GROUP BY "topicId"
-                        ) AS _ti ON (_ti."topicId" = ti."topicId" AND _ti."createdAt" = ti."createdAt")
-                    LEFT JOIN "Ideations" i
-                            ON i.id = ti."ideationId"
-                ) AS ti ON (ti."topicId" = t.id)
+						SELECT
+							ti."topicId",
+							ti."ideationId",
+							i."createdAt",
+							i."deadline",
+							i."creatorId",
+							COALESCE(id."ideaCount", 0) as "ideaCount"
+						FROM "TopicIdeations" ti INNER JOIN
+							(
+								SELECT
+									MAX("createdAt") as "createdAt",
+									"topicId"
+								FROM "TopicIdeations"
+								GROUP BY "topicId"
+							) AS _ti ON (_ti."topicId" = ti."topicId" AND _ti."createdAt" = ti."createdAt")
+						LEFT JOIN "Ideations" i
+								ON i.id = ti."ideationId"
+                        LEFT JOIN (
+                            SELECT "ideationId",
+                            COUNT("ideationId") as "ideaCount"
+                            FROM "Ideas"
+                            GROUP BY "ideationId"
+                        ) id ON ti."ideationId" = id."ideationId"
+				) AS ti ON (ti."topicId" = t.id)
                 LEFT JOIN "TopicDiscussions" td ON td."topicId" = t.id
                 LEFT JOIN "TopicFavourites" tf ON tf."topicId" = t.id AND tf."userId" = :userId
                 LEFT JOIN "TopicReports" tr ON (tr."topicId" = t.id AND tr."resolvedById" IS NULL AND tr."deletedAt" IS NULL)
