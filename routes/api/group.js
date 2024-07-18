@@ -2682,16 +2682,27 @@ module.exports = function (app) {
                             SELECT
                                 ti."topicId",
                                 ti."ideationId",
-                                COALESCE(i."ideaCount", 0) as "ideaCount"
-                            FROM "TopicIdeations" ti
+                                i."createdAt",
+                                i."deadline",
+                                i."creatorId",
+                                COALESCE(id."ideaCount", 0) as "ideaCount"
+                            FROM "TopicIdeations" ti INNER JOIN
+                                (
+                                    SELECT
+                                        MAX("createdAt") as "createdAt",
+                                        "topicId"
+                                    FROM "TopicIdeations"
+                                    GROUP BY "topicId"
+                                ) AS _ti ON (_ti."topicId" = ti."topicId" AND _ti."createdAt" = ti."createdAt")
+                            LEFT JOIN "Ideations" i
+                                    ON i.id = ti."ideationId"
                             LEFT JOIN (
                                 SELECT "ideationId",
                                 COUNT("ideationId") as "ideaCount"
                                 FROM "Ideas"
                                 GROUP BY "ideationId"
-                            ) i ON ti."ideationId" = i."ideationId"
-                            GROUP BY ti."topicId", ti."ideationId", i."ideaCount"
-                        ) AS ti ON ti."topicId" = t.id
+                            ) id ON ti."ideationId" = id."ideationId"
+                        ) AS ti ON (ti."topicId" = t.id)
                         LEFT JOIN (
                             SELECT
                                 "topicId",

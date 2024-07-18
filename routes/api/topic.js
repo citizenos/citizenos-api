@@ -1400,7 +1400,7 @@ module.exports = function (app) {
                 id: topicId
             },
             attributes: ['authorIds'],
-            include:  [{model: User, as: 'creator'}]
+            include: [{ model: User, as: 'creator' }]
         })
         if (!authorIds.length) {
             authorIds.push(topicData.creator.id);
@@ -2544,19 +2544,30 @@ module.exports = function (app) {
                     ) AS com ON (com."topicId" = t.id)
                     LEFT JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds"
                     LEFT JOIN (
-                        SELECT
-                            ti."topicId",
-                            ti."ideationId",
-                            COALESCE(i."ideaCount", 0) as "ideaCount"
-                        FROM "TopicIdeations" ti
+						SELECT
+							ti."topicId",
+							ti."ideationId",
+							i."createdAt",
+							i."deadline",
+							i."creatorId",
+							COALESCE(id."ideaCount", 0) as "ideaCount"
+						FROM "TopicIdeations" ti INNER JOIN
+							(
+								SELECT
+									MAX("createdAt") as "createdAt",
+									"topicId"
+								FROM "TopicIdeations"
+								GROUP BY "topicId"
+							) AS _ti ON (_ti."topicId" = ti."topicId" AND _ti."createdAt" = ti."createdAt")
+						LEFT JOIN "Ideations" i
+								ON i.id = ti."ideationId"
                         LEFT JOIN (
                             SELECT "ideationId",
                             COUNT("ideationId") as "ideaCount"
                             FROM "Ideas"
                             GROUP BY "ideationId"
-                        ) i ON ti."ideationId" = i."ideationId"
-                        GROUP BY ti."topicId", ti."ideationId", i."ideaCount"
-                    ) AS ti ON ti."topicId" = t.id
+                        ) id ON ti."ideationId" = id."ideationId"
+				    ) AS ti ON (ti."topicId" = t.id)
                     LEFT JOIN "TopicFavourites" tf ON (tf."topicId" = t.id AND tf."userId" = :userId)
                     LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                     ${join}
@@ -2899,16 +2910,27 @@ module.exports = function (app) {
                             SELECT
                                 ti."topicId",
                                 ti."ideationId",
-                                COALESCE(i."ideaCount", 0) as "ideaCount"
-                            FROM "TopicIdeations" ti
+                                i."createdAt",
+                                i."deadline",
+                                i."creatorId",
+                                COALESCE(id."ideaCount", 0) as "ideaCount"
+                            FROM "TopicIdeations" ti INNER JOIN
+                                (
+                                    SELECT
+                                        MAX("createdAt") as "createdAt",
+                                        "topicId"
+                                    FROM "TopicIdeations"
+                                    GROUP BY "topicId"
+                                ) AS _ti ON (_ti."topicId" = ti."topicId" AND _ti."createdAt" = ti."createdAt")
+                            LEFT JOIN "Ideations" i
+                                    ON i.id = ti."ideationId"
                             LEFT JOIN (
                                 SELECT "ideationId",
                                 COUNT("ideationId") as "ideaCount"
                                 FROM "Ideas"
                                 GROUP BY "ideationId"
-                            ) i ON ti."ideationId" = i."ideationId"
-                            GROUP BY ti."topicId", ti."ideationId", i."ideaCount"
-                        ) AS ti ON ti."topicId" = t.id
+                            ) id ON ti."ideationId" = id."ideationId"
+                        ) AS ti ON (ti."topicId" = t.id)
                         LEFT JOIN "TopicJoins" tj ON (tj."topicId" = t.id AND tj."deletedAt" IS NULL)
                         ${join}
                     WHERE ${where}
@@ -4158,7 +4180,7 @@ module.exports = function (app) {
             usersExistingEmail.forEach((u) => {
                 const member = validEmailMembers.find(m => {
                     return m.userId === u.email
-                } );
+                });
                 if (member) {
                     const index = validEmailMembers.findIndex(m => m.userId === u.email);
                     member.userId = u.id;

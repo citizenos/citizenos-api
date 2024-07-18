@@ -2225,6 +2225,8 @@ suite('Users', function () {
                     }
                 ))[1][0];
                 discussion = (await discussionLib.discussionCreate(agentCreator, creator.id, topic.id, 'Test question?')).body.data;
+                await topicUpdate(agentCreator, creator.id, topic.id, Topic.STATUSES.inProgress);
+                topic.status = Topic.STATUSES.inProgress;
                 // Add Group to Topic members and User to that Group
                 const topicMemberGroup = {
                     groupId: group.id,
