@@ -1183,7 +1183,7 @@ module.exports = function (app) {
     /**
      * Read Report
      */
-    app.get(['/api/topics/:topicId/discussions/:discussionId/comments/:commentId/reports/:reportId', '/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/reports/:reportId'], authTokenRestrictedUse, asyncMiddleware(async function (req, res) {
+    app.get(['/api/topics/:topicId/comments/:commentId/reports/:reportId', '/api/topics/:topicId/discussions/:discussionId/comments/:commentId/reports/:reportId', '/api/users/:userId/topics/:topicId/comments/:commentId/reports/:reportId', '/api/users/:userId/topics/:topicId/discussions/:discussionId/comments/:commentId/reports/:reportId'], authTokenRestrictedUse, asyncMiddleware(async function (req, res) {
         const results = await db
             .query(
                 `
