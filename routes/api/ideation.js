@@ -1549,8 +1549,8 @@ module.exports = function (app) {
 
     const _readIdeationFolders = async (req, res, next) => {
         const ideationId = req.params.ideationId;
-        /*    const limit = req.query.limit || 8;
-            const offset = req.query.offset || 0;*/
+        const limit = req.query.limit || 8;
+        const offset = req.query.offset || 0;
         try {
             const folders = await db.query(`
             SELECT
@@ -1570,10 +1570,14 @@ module.exports = function (app) {
                 LEFT JOIN (
                     SELECT "folderId", COUNT(*) FROM "FolderIdeas" GROUP BY "folderId"
                 ) fi ON fi."folderId" = f.id
-                WHERE f."ideationId" = :ideationId AND f."deletedAt" IS NULL;
+                WHERE f."ideationId" = :ideationId AND f."deletedAt" IS NULL
+                LIMIT :limit
+                OFFSET :offset;
             `, {
                 replacements: {
-                    ideationId: ideationId
+                    ideationId: ideationId,
+                    limit,
+                    offset
                 },
                 type: db.QueryTypes.SELECT,
                 raw: true,
@@ -1595,6 +1599,8 @@ module.exports = function (app) {
         try {
             const ideationId = req.params.ideationId;
             const ideaId = req.params.ideaId;
+            const limit = req.query.limit || 8;
+            const offset = req.query.offset || 0;
 
             const ideation = await Ideation.findOne({
                 where: {
@@ -1610,15 +1616,14 @@ module.exports = function (app) {
                     },
                     {
                         model: Idea,
-                        paranoid:false,
+                        paranoid: false,
                         where: {
                             id: ideaId
                         }
                     }
                 ]
             });
-            console.log(ideation);
-            console.log(ideation.Ideas);
+
             if (!ideation || !ideation.Ideas.length || !ideation.Topics.length || ideation.Topics[0].visbility === Topic.VISIBILITY.private) {
                 return res.notFound();
             }
@@ -1642,11 +1647,15 @@ module.exports = function (app) {
                 LEFT JOIN (
                     SELECT "folderId", COUNT(*) FROM "FolderIdeas" GROUP BY "folderId"
                 ) fi ON fi."folderId" = f.id
-                WHERE fis."ideaId" = :ideaId AND f."ideationId" = :ideationId AND f."deletedAt" IS NULL;
+                WHERE fis."ideaId" = :ideaId AND f."ideationId" = :ideationId AND f."deletedAt" IS NULL
+                LIMIT :limit
+                OFFSET :offset;
             `, {
                 replacements: {
                     ideationId: ideationId,
-                    ideaId
+                    ideaId,
+                    limit,
+                    offset
                 },
                 type: db.QueryTypes.SELECT,
                 raw: true,
