@@ -3,7 +3,7 @@
         <tr>
             <td valign="middle" style="padding:22px 22px 22px 0;">
                 <p id="header_title_description">
-                    Some discussion content has been reported in
+                    An idea has been reported in
                 </p>
                 <p id="header_title">{{topic.title}}</p>
             </td>
@@ -19,7 +19,7 @@
         </tr>
         <tr>
           <td width="100%">
-            Some discussion content has been reported as inappropriate in a topic you moderate.{{#isUserNotified}} The argument's author has been notified. {{/isUserNotified}}{{^isUserNotified}}The argument's author has now deleted their account.{{/isUserNotified}} Please see the reasons for reporting below, review the content, and decide on the necessary course of action.
+            An idea has been reported as inappropriate in a topic you moderate.{{#isUserNotified}} The idea's author has been notified. {{/isUserNotified}}{{^isUserNotified}}The idea's author has now deleted their account.{{/isUserNotified}} Please see the reasons for reporting below, review the content, and decide on the necessary course of action.
             </td>
         </tr>
         <tr>
@@ -27,21 +27,21 @@
         </tr>
         <tr>
             <td valign="middle">
-                <table class="info_table" style="background-color: #F1F7FC; padding: 12px 16px;">
+                <table class="info_table" style="background-color: #FFF8E1; padding: 12px 16px;">
                     <tbody>
                         <tr>
                             <td width="54">
-                                <img src="cid:icon_argument.png" />
+                                <img src="cid:icon_ideation.png" />
                             </td>
                             <td>
-                                {{#comment.subject}}
+                                {{#idea.statement}}
                                 <p
                                     style="font-size:16px;font-weight:600;color:#1168A8;line-height:24px;padding-bottom:0;">
-                                    {{comment.subject}}
+                                    {{idea.statement}}
                                 </p>
-                                {{/comment.subject}}
+                                {{/idea.statement}}
                                 <p style="font-size:14px; color:#2C3B47;line-height:16px;padding-bottom:0;">
-                                    {{comment.text}}
+                                    {{idea.description}}
                                 </p>
                             </td>
                         </tr>
@@ -76,7 +76,7 @@
             <td style="padding-bottom: 32px; padding-top: 16px;">
                 <p class="submit_button">
                     <a href="{{linkModerate}}" target="_blank"
-                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 60px;">Review argument</a>
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 60px;">Review idea</a>
                 </p>
             </td>
         </tr>

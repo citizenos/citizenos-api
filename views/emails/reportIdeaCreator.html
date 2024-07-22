@@ -2,9 +2,7 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding:22px 22px 22px 0;">
-                <p id="header_title_description">
-                    Some discussion content has been reported in
-                </p>
+                <p id="header_title_description">Your idea has been reported in</p>
                 <p id="header_title">{{topic.title}}</p>
             </td>
         </tr>
@@ -14,34 +12,36 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding-bottom: 32px;">
-                Hi {{userModerator.name}}!
+                Hi {{toUser.name}}!
             </td>
         </tr>
         <tr>
-          <td width="100%">
-            Some discussion content has been reported as inappropriate in a topic you moderate.{{#isUserNotified}} The argument's author has been notified. {{/isUserNotified}}{{^isUserNotified}}The argument's author has now deleted their account.{{/isUserNotified}} Please see the reasons for reporting below, review the content, and decide on the necessary course of action.
+            <td width="100%">
+                An idea of yours in the above topic has been reported as inappropriate. Please see the reasons below.
             </td>
         </tr>
         <tr>
-            <td><p class="info_heading">Content</p></td>
+            <td>
+                <p class="info_heading">Idea</p>
+            </td>
         </tr>
         <tr>
             <td valign="middle">
-                <table class="info_table" style="background-color: #F1F7FC; padding: 12px 16px;">
+                <table class="info_table" style="background-color: #FFF8E1; padding: 12px 16px;">
                     <tbody>
                         <tr>
                             <td width="54">
-                                <img src="cid:icon_argument.png" />
+                                <img src="cid:icon_ideation.png" />
                             </td>
                             <td>
-                                {{#comment.subject}}
+                                {{#idea.statement}}
                                 <p
                                     style="font-size:16px;font-weight:600;color:#1168A8;line-height:24px;padding-bottom:0;">
-                                    {{comment.subject}}
+                                    {{idea.statement}}
                                 </p>
-                                {{/comment.subject}}
+                                {{/idea.statement}}
                                 <p style="font-size:14px; color:#2C3B47;line-height:16px;padding-bottom:0;">
-                                    {{comment.text}}
+                                    {{idea.description}}
                                 </p>
                             </td>
                         </tr>
@@ -50,14 +50,17 @@
             </td>
         </tr>
         <tr>
-            <td><p class="info_heading">Reason</p></td>
+            <td>
+                <p class="info_heading">Reason</p>
+            </td>
         </tr>
         <tr>
             <td>
-                <table class="info_table" >
+                <table class="info_table">
                     <tbody>
                         <tr>
-                            <td style="font-size:14px;font-weight:600;color:#2C3B47;line-height:16px;padding-bottom: 16px;">
+                            <td
+                                style="font-size:14px;font-weight:600;color:#2C3B47;line-height:16px;padding-bottom: 16px;">
                                 {{report.type}}
                             </td>
                         </tr>
@@ -75,15 +78,15 @@
         <tr>
             <td style="padding-bottom: 32px; padding-top: 16px;">
                 <p class="submit_button">
-                    <a href="{{linkModerate}}" target="_blank"
-                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 60px;">Review argument</a>
+                    <a href="{{linkViewTopic}}" target="_blank"
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 60px;">Edit or
+                        delete</a>
                 </p>
             </td>
         </tr>
-
         <tr>
             <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size:14px;">
-                You can also leave it as is, but other moderators may decide to have it hidden by default (users will get a warning prior to seeing the content).
+                You can also leave it as is, but moderators may decide to have it hidden by default (users will get a warning prior to seeing your idea).
             </td>
         </tr>
         <tr>
