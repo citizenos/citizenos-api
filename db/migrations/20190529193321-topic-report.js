@@ -1,7 +1,5 @@
 'use strict';
 
-var _ = require('lodash');
-
 module.exports = {
     up: (queryInterface, Sequelize) => {
         var TYPES = {
@@ -24,7 +22,7 @@ module.exports = {
                 },
                 type: {
                     type: Sequelize.ENUM,
-                    values: _.values(TYPES),
+                    values: Object.values(TYPES),
                     allowNull: false,
                     comment: 'Report reason - verbal abuse, obscene content, hate speech etc..'
                 },
@@ -83,7 +81,7 @@ module.exports = {
                 },
                 moderatedReasonType: {
                     type: Sequelize.ENUM,
-                    values: _.values(TYPES),
+                    values: Object.values(TYPES),
                     allowNull: true,
                     comment: 'Moderation reason - verbal abuse, obscene content, hate speech etc..'
                 },

@@ -36,6 +36,7 @@ const app = require('../../../app');
 const notifications = app.get('notifications');
 const userLib = require('../lib/user')(app);
 const topicLib = require('../topic');
+const discussionLib = require('../discussion');
 const memberLib = require('../lib/members')(app);
 const assert = require('chai').assert;
 const activityLib = require('../activity');
@@ -58,10 +59,13 @@ suite('Internal', function () {
                 let user;
                 let user2;
                 let topic;
+                let discussion;
                 setup( async() => {
                     user = await userLib.createUserAndLogin(agent);
                     user2 = await userLib.createUserAndLogin(agent2);
-                    topic = (await topicLib.topicCreate(agent, user.id, null, Topic.STATUSES.inProgress)).body.data;
+                    topic = (await topicLib.topicCreate(agent, user.id, null, Topic.STATUSES.draft)).body.data;
+                    discussion = (await discussionLib.discussionCreate(agent, user.id, topic.id, 'Test question?')).body.data;
+                    await topicLib.topicUpdate(agent, user.id, topic.id, Topic.STATUSES.inProgress);
                 });
 
                 test('Success', async () => {
@@ -104,13 +108,13 @@ suite('Internal', function () {
                     assert.equal(users.length, 1);
                     assert.equal(users[0].id, user2.id);
 
-                    await topicLib.topicCommentCreate(agent, user.id, topic.id, null, null, 'pro', 'test', 'test content');
+                    await discussionLib.topicCommentCreate(agent, user.id, topic.id, discussion.id, null, null, 'pro', 'test', 'test content');
                     const activities2 = (await activityLib.activitiesRead(agent, user.id)).body.data;
                     const users2 = await notifications.getRelatedUsers(activities2[0]);
                     assert.equal(users2.length, 0);
                 });
 
-                test('Success - settings set to TopicComment activity', async () => {
+                test('Success - settings set to DiscussionComment activity', async () => {
                     const topicMemberUser = {
                         userId: user2.id,
                         level: TopicMemberUser.LEVELS.edit
@@ -130,7 +134,7 @@ suite('Internal', function () {
                     const activities = (await activityLib.activitiesRead(agent, user.id)).body.data;
                     const users = await notifications.getRelatedUsers(activities[0]);
                     assert.equal(users.length, 0);
-                    await topicLib.topicCommentCreate(agent, user.id, topic.id, null, null, 'pro', 'test', 'test content');
+                    await discussionLib.topicCommentCreate(agent, user.id, topic.id, discussion.id, null, null, 'pro', 'test', 'test content');
                     const activities2 = (await activityLib.activitiesRead(agent, user.id)).body.data;
                     const users2 = await notifications.getRelatedUsers(activities2[0]);
                     assert.equal(users2.length, 1);
@@ -156,7 +160,7 @@ suite('Internal', function () {
                     const activities = (await activityLib.activitiesRead(agent, user.id)).body.data;
                     const users = await notifications.getRelatedUsers(activities[0]);
                     assert.equal(users.length, 0);
-                    await topicLib.topicCommentCreate(agent, user.id, topic.id, null, null, 'pro', 'test', 'test content');
+                    await discussionLib.topicCommentCreate(agent, user.id, topic.id, discussion.id, null, null, 'pro', 'test', 'test content');
                     const activities2 = (await activityLib.activitiesRead(agent, user.id)).body.data;
                     const users2 = await notifications.getRelatedUsers(activities2[0]);
                     assert.equal(users2.length, 0);

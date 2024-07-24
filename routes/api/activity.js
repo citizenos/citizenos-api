@@ -411,7 +411,7 @@ module.exports = function (app) {
 
             if (limit > limitMax) limit = limitDefault;
 
-            const allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User', 'VoteList'];
+            const allowedFilters = ['Topic', 'Group', 'DiscussionComment', 'Vote', 'User', 'VoteList'];
             let queryFilters = req.query.filter || [];
             if (queryFilters && !Array.isArray(queryFilters)) {
                 queryFilters = [queryFilters];
@@ -869,7 +869,7 @@ module.exports = function (app) {
         try {
             const limitMax = 50;
             const limitDefault = 10;
-            const allowedFilters = ['Topic', 'Group', 'TopicComment', 'Vote', 'User', 'VoteList'];
+            const allowedFilters = ['Topic', 'Group', 'DiscussionComment', 'Vote', 'User', 'VoteList'];
             let userId;
 
             if (req.user) {

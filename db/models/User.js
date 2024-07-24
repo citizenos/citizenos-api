@@ -160,7 +160,7 @@ module.exports = function (sequelize, DataTypes) {
                 type: Sequelize.JSONB,
                 allowNull: true,
                 comment: 'User preferences JSON object',
-                set (value) {
+                set(value) {
                     let final = {};
                     const allowedFields = ['showInSearch'];
                     if (value) {
@@ -210,6 +210,20 @@ module.exports = function (sequelize, DataTypes) {
 
         User.hasMany(models.Request, {
             foreignKey: 'actorId'
+        });
+
+        User.hasMany(models.Ideation, {
+            foreignKey: 'creatorId'
+        });
+
+        User.belongsToMany(models.Idea, {
+            through: models.IdeaFavourite,
+            foreignKey: 'userId',
+            constraints: true
+        });
+
+        User.hasMany(models.Idea, {
+            foreignKey: 'authorId'
         });
     };
 

@@ -11,7 +11,6 @@
  * @see http://stackoverflow.com/questions/19682171/how-to-extend-sequelize-model#answer-19684348
  */
 
-var _ = require('lodash');
 const LEVELS = {
     none: 'none', // Enables to override inherited permissions.
     read: 'read',
@@ -38,7 +37,7 @@ module.exports.model = function (sequelize, DataTypes) {
             },
             level: {
                 type: DataTypes.ENUM,
-                values: _.values(LEVELS),
+                values: Object.values(LEVELS),
                 allowNull: false,
                 defaultValue: LEVELS.read,
                 comment: 'User membership level.'

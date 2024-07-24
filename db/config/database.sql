@@ -269,6 +269,7 @@ CREATE TYPE public."enum_TopicReports_type" AS ENUM (
 
 CREATE TYPE public."enum_Topics_status" AS ENUM (
     'draft',
+    'ideation',
     'inProgress',
     'voting',
     'followUp',
@@ -563,16 +564,9 @@ COMMENT ON COLUMN public."Comments".edits IS 'Comment versions in JSONB array';
 --
 
 CREATE TABLE public."DiscussionComments" (
-    "discussionId" uuid NOT NULL,
-    "commentId" uuid NOT NULL
+    "commentId" uuid NOT NULL,
+    "discussionId" uuid NOT NULL
 );
-
-
---
--- Name: COLUMN "DiscussionComments"."discussionId"; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public."DiscussionComments"."discussionId" IS 'To what Discussion this Comment belongs to.';
 
 
 --
@@ -580,6 +574,13 @@ COMMENT ON COLUMN public."DiscussionComments"."discussionId" IS 'To what Discuss
 --
 
 COMMENT ON COLUMN public."DiscussionComments"."commentId" IS 'Which Comment belongs to this Discussion.';
+
+
+--
+-- Name: COLUMN "DiscussionComments"."discussionId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."DiscussionComments"."discussionId" IS 'Discussion id';
 
 
 --
@@ -615,7 +616,7 @@ COMMENT ON COLUMN public."Discussions".question IS 'Question the discussion is a
 -- Name: COLUMN "Discussions".deadline; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public."Discussions".deadline IS 'Deadline for the discussion. If NULL then no deadline at all.';
+COMMENT ON COLUMN public."Discussions".deadline IS 'Deadline for the discussion';
 
 
 --
@@ -643,7 +644,7 @@ CREATE TABLE public."Folders" (
     id uuid NOT NULL,
     "ideationId" uuid NOT NULL,
     "creatorId" uuid NOT NULL,
-    name character varying(512) NOT NULL,
+    name character varying(512),
     description character varying(2048),
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
@@ -662,7 +663,7 @@ COMMENT ON COLUMN public."Folders"."ideationId" IS 'To what ideation the folder 
 -- Name: COLUMN "Folders"."creatorId"; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public."Folders"."creatorId" IS 'User ID who created the folder';
+COMMENT ON COLUMN public."Folders"."creatorId" IS 'User ID who favourited the idea';
 
 
 --
@@ -930,16 +931,9 @@ COMMENT ON COLUMN public."Groups".description IS 'Short description of what the 
 --
 
 CREATE TABLE public."IdeaComments" (
-    "ideaId" uuid NOT NULL,
-    "commentId" uuid NOT NULL
+    "commentId" uuid NOT NULL,
+    "ideaId" uuid NOT NULL
 );
-
-
---
--- Name: COLUMN "IdeaComments"."ideaId"; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public."IdeaComments"."ideaId" IS 'To what Idea this Comment belongs to.';
 
 
 --
@@ -947,6 +941,13 @@ COMMENT ON COLUMN public."IdeaComments"."ideaId" IS 'To what Idea this Comment b
 --
 
 COMMENT ON COLUMN public."IdeaComments"."commentId" IS 'Which Comment belongs to this Idea.';
+
+
+--
+-- Name: COLUMN "IdeaComments"."ideaId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."IdeaComments"."ideaId" IS 'To what Idea this Comment belongs to.';
 
 
 --
@@ -974,25 +975,99 @@ COMMENT ON COLUMN public."IdeaFavourites"."userId" IS 'User ID who favourited th
 --
 
 CREATE TABLE public."IdeaReports" (
+    id uuid NOT NULL,
+    type public."enum_IdeaReports_type" NOT NULL,
+    text character varying(2048) NOT NULL,
+    "creatorId" uuid NOT NULL,
+    "creatorIp" character varying(45) NOT NULL,
     "ideaId" uuid NOT NULL,
-    "reportId" uuid NOT NULL,
-    "IdeaId" uuid,
-    "ReportId" uuid
+    "moderatedById" uuid,
+    "moderatedAt" timestamp with time zone,
+    "moderatedReasonType" public."enum_IdeaReports_moderatedReasonType",
+    "moderatedReasonText" character varying(2048),
+    "resolvedById" uuid,
+    "resolvedAt" timestamp with time zone,
+    "createdAt" timestamp with time zone NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL,
+    "deletedAt" timestamp with time zone
 );
+
+
+--
+-- Name: COLUMN "IdeaReports".type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."IdeaReports".type IS 'Report reason - verbal abuse, obscene content, hate speech etc..';
+
+
+--
+-- Name: COLUMN "IdeaReports".text; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."IdeaReports".text IS 'Additional comment for the report to provide more details on the violation.';
+
+
+--
+-- Name: COLUMN "IdeaReports"."creatorId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."IdeaReports"."creatorId" IS 'User ID of the reporter.';
+
+
+--
+-- Name: COLUMN "IdeaReports"."creatorIp"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."IdeaReports"."creatorIp" IS 'IP address of the reporter';
 
 
 --
 -- Name: COLUMN "IdeaReports"."ideaId"; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public."IdeaReports"."ideaId" IS 'Id of the idea which the Report belongs to.';
+COMMENT ON COLUMN public."IdeaReports"."ideaId" IS 'Id of the Idea which the Report belongs to.';
 
 
 --
--- Name: COLUMN "IdeaReports"."reportId"; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN "IdeaReports"."moderatedById"; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public."IdeaReports"."reportId" IS 'Which Report belongs to the Idea';
+COMMENT ON COLUMN public."IdeaReports"."moderatedById" IS 'User ID of the person who moderated the Idea on report. That is, a Moderator agreed that Report is valid.';
+
+
+--
+-- Name: COLUMN "IdeaReports"."moderatedAt"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."IdeaReports"."moderatedAt" IS 'Time when the Idea was Moderated';
+
+
+--
+-- Name: COLUMN "IdeaReports"."moderatedReasonType"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."IdeaReports"."moderatedReasonType" IS 'Moderation reason - verbal abuse, obscene content, hate speech etc..';
+
+
+--
+-- Name: COLUMN "IdeaReports"."moderatedReasonText"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."IdeaReports"."moderatedReasonText" IS 'Additional comment for the Report to provide more details on the Moderator acton.';
+
+
+--
+-- Name: COLUMN "IdeaReports"."resolvedById"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."IdeaReports"."resolvedById" IS 'User ID of the person who considered the issue to be resolved thus making the report outdated.';
+
+
+--
+-- Name: COLUMN "IdeaReports"."resolvedAt"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."IdeaReports"."resolvedAt" IS 'Time when the Report was marked as resolved.';
 
 
 --
@@ -1031,13 +1106,14 @@ CREATE TABLE public."Ideas" (
     id uuid NOT NULL,
     "ideationId" uuid NOT NULL,
     "authorId" uuid NOT NULL,
-    statement character varying(2048) NOT NULL,
-    description text NOT NULL,
+    statement character varying(2048),
+    description text,
     "imageUrl" text,
     "deletedById" uuid,
     "deletedReasonType" public."enum_Ideas_deletedReasonType",
     "deletedReasonText" character varying(2048),
     "deletedByReportId" uuid,
+    edits jsonb,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
     "deletedAt" timestamp with time zone
@@ -1048,7 +1124,7 @@ CREATE TABLE public."Ideas" (
 -- Name: COLUMN "Ideas"."ideationId"; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public."Ideas"."ideationId" IS 'To what ideation the idea belongs to';
+COMMENT ON COLUMN public."Ideas"."ideationId" IS 'Ideation id.';
 
 
 --
@@ -1108,6 +1184,13 @@ COMMENT ON COLUMN public."Ideas"."deletedByReportId" IS 'Report ID due to which 
 
 
 --
+-- Name: COLUMN "Ideas".edits; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."Ideas".edits IS 'Comment versions in JSONB array';
+
+
+--
 -- Name: Ideations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1140,7 +1223,7 @@ COMMENT ON COLUMN public."Ideations".question IS 'Question the ideation is gathe
 -- Name: COLUMN "Ideations".deadline; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public."Ideations".deadline IS 'Deadline for the ideation. If NULL then no deadline at all.';
+COMMENT ON COLUMN public."Ideations".deadline IS 'Deadline for the ideation';
 
 
 --
@@ -1436,30 +1519,6 @@ COMMENT ON COLUMN public."TopicAttachments"."attachmentId" IS 'Which Attachment 
 
 
 --
--- Name: TopicComments; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public."TopicComments" (
-    "topicId" uuid NOT NULL,
-    "commentId" uuid NOT NULL
-);
-
-
---
--- Name: COLUMN "TopicComments"."topicId"; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public."TopicComments"."topicId" IS 'To what Topic this Comment belongs to.';
-
-
---
--- Name: COLUMN "TopicComments"."commentId"; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public."TopicComments"."commentId" IS 'Which Comment belongs to this Topic.';
-
-
---
 -- Name: TopicDiscussions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1473,7 +1532,7 @@ CREATE TABLE public."TopicDiscussions" (
 -- Name: COLUMN "TopicDiscussions"."topicId"; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public."TopicDiscussions"."topicId" IS 'To what Topic this discussion belongs to.';
+COMMENT ON COLUMN public."TopicDiscussions"."topicId" IS 'To what Topic this Ideation belongs to.';
 
 
 --
@@ -2302,10 +2361,10 @@ CREATE TABLE public."VoteContainerFiles" (
     "fileName" character varying(255) NOT NULL,
     "mimeType" character varying(255) NOT NULL,
     content bytea NOT NULL,
-    hash character varying(255),
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone
+    "deletedAt" timestamp with time zone,
+    hash character varying(255)
 );
 
 
@@ -2482,7 +2541,8 @@ CREATE TABLE public."VoteOptions" (
     value character varying(200) NOT NULL,
     "createdAt" timestamp with time zone NOT NULL,
     "updatedAt" timestamp with time zone NOT NULL,
-    "deletedAt" timestamp with time zone
+    "deletedAt" timestamp with time zone,
+    "ideaId" uuid
 );
 
 
@@ -2498,6 +2558,13 @@ COMMENT ON COLUMN public."VoteOptions"."voteId" IS 'To what Vote this option bel
 --
 
 COMMENT ON COLUMN public."VoteOptions".value IS 'Option value shown to the voter.';
+
+
+--
+-- Name: COLUMN "VoteOptions"."ideaId"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public."VoteOptions"."ideaId" IS 'Idea refered to this option';
 
 
 --
@@ -2700,14 +2767,6 @@ ALTER TABLE ONLY public."Comments"
 
 
 --
--- Name: DiscussionComments DiscussionComments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."DiscussionComments"
-    ADD CONSTRAINT "DiscussionComments_pkey" PRIMARY KEY ("discussionId", "commentId");
-
-
---
 -- Name: Discussions Discussions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2784,7 +2843,7 @@ ALTER TABLE ONLY public."Groups"
 --
 
 ALTER TABLE ONLY public."IdeaComments"
-    ADD CONSTRAINT "IdeaComments_pkey" PRIMARY KEY ("ideaId", "commentId");
+    ADD CONSTRAINT "IdeaComments_pkey" PRIMARY KEY ("commentId", "ideaId");
 
 
 --
@@ -2796,19 +2855,11 @@ ALTER TABLE ONLY public."IdeaFavourites"
 
 
 --
--- Name: IdeaReports IdeaReports_IdeaId_ReportId_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."IdeaReports"
-    ADD CONSTRAINT "IdeaReports_IdeaId_ReportId_key" UNIQUE ("IdeaId", "ReportId");
-
-
---
 -- Name: IdeaReports IdeaReports_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public."IdeaReports"
-    ADD CONSTRAINT "IdeaReports_pkey" PRIMARY KEY ("ideaId", "reportId");
+    ADD CONSTRAINT "IdeaReports_pkey" PRIMARY KEY (id, "ideaId");
 
 
 --
@@ -2897,14 +2948,6 @@ ALTER TABLE ONLY public."TokenRevocations"
 
 ALTER TABLE ONLY public."TopicAttachments"
     ADD CONSTRAINT "TopicAttachments_pkey" PRIMARY KEY ("topicId", "attachmentId");
-
-
---
--- Name: TopicComments TopicComments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."TopicComments"
-    ADD CONSTRAINT "TopicComments_pkey" PRIMARY KEY ("topicId", "commentId");
 
 
 --
@@ -3316,11 +3359,35 @@ ALTER TABLE ONLY public."Comments"
 
 
 --
+-- Name: DiscussionComments DiscussionComments_commentId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."DiscussionComments"
+    ADD CONSTRAINT "DiscussionComments_commentId_fkey" FOREIGN KEY ("commentId") REFERENCES public."Comments"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: DiscussionComments DiscussionComments_discussionId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public."DiscussionComments"
     ADD CONSTRAINT "DiscussionComments_discussionId_fkey" FOREIGN KEY ("discussionId") REFERENCES public."Discussions"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: DiscussionComments DiscussionComments_discussionId_fkey1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."DiscussionComments"
+    ADD CONSTRAINT "DiscussionComments_discussionId_fkey1" FOREIGN KEY ("discussionId") REFERENCES public."Discussions"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: Discussions Discussions_creatorId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Discussions"
+    ADD CONSTRAINT "Discussions_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -3337,6 +3404,14 @@ ALTER TABLE ONLY public."FolderIdeas"
 
 ALTER TABLE ONLY public."FolderIdeas"
     ADD CONSTRAINT "FolderIdeas_ideaId_fkey" FOREIGN KEY ("ideaId") REFERENCES public."Ideas"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: Folders Folders_creatorId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Folders"
+    ADD CONSTRAINT "Folders_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -3428,6 +3503,14 @@ ALTER TABLE ONLY public."Groups"
 
 
 --
+-- Name: IdeaComments IdeaComments_commentId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."IdeaComments"
+    ADD CONSTRAINT "IdeaComments_commentId_fkey" FOREIGN KEY ("commentId") REFERENCES public."Comments"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: IdeaComments IdeaComments_ideaId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3444,11 +3527,19 @@ ALTER TABLE ONLY public."IdeaFavourites"
 
 
 --
--- Name: IdeaReports IdeaReports_IdeaId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: IdeaFavourites IdeaFavourites_userId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."IdeaFavourites"
+    ADD CONSTRAINT "IdeaFavourites_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: IdeaReports IdeaReports_creatorId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public."IdeaReports"
-    ADD CONSTRAINT "IdeaReports_IdeaId_fkey" FOREIGN KEY ("IdeaId") REFERENCES public."Ideas"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+    ADD CONSTRAINT "IdeaReports_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -3456,7 +3547,31 @@ ALTER TABLE ONLY public."IdeaReports"
 --
 
 ALTER TABLE ONLY public."IdeaReports"
-    ADD CONSTRAINT "IdeaReports_ideaId_fkey" FOREIGN KEY ("ideaId") REFERENCES public."Ideas"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+    ADD CONSTRAINT "IdeaReports_ideaId_fkey" FOREIGN KEY ("ideaId") REFERENCES public."Ideas"(id);
+
+
+--
+-- Name: IdeaReports IdeaReports_moderatedById_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."IdeaReports"
+    ADD CONSTRAINT "IdeaReports_moderatedById_fkey" FOREIGN KEY ("moderatedById") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: IdeaReports IdeaReports_resolvedById_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."IdeaReports"
+    ADD CONSTRAINT "IdeaReports_resolvedById_fkey" FOREIGN KEY ("resolvedById") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: IdeaVotes IdeaVotes_creatorId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."IdeaVotes"
+    ADD CONSTRAINT "IdeaVotes_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -3468,11 +3583,43 @@ ALTER TABLE ONLY public."IdeaVotes"
 
 
 --
+-- Name: Ideas Ideas_authorId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Ideas"
+    ADD CONSTRAINT "Ideas_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: Ideas Ideas_deletedById_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Ideas"
+    ADD CONSTRAINT "Ideas_deletedById_fkey" FOREIGN KEY ("deletedById") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: Ideas Ideas_deletedByReportId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Ideas"
+    ADD CONSTRAINT "Ideas_deletedByReportId_fkey" FOREIGN KEY ("deletedByReportId") REFERENCES public."Reports"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: Ideas Ideas_ideationId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public."Ideas"
     ADD CONSTRAINT "Ideas_ideationId_fkey" FOREIGN KEY ("ideationId") REFERENCES public."Ideations"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: Ideations Ideations_creatorId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Ideations"
+    ADD CONSTRAINT "Ideations_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES public."Users"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -3548,27 +3695,19 @@ ALTER TABLE ONLY public."TopicAttachments"
 
 
 --
--- Name: TopicComments TopicComments_commentId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."TopicComments"
-    ADD CONSTRAINT "TopicComments_commentId_fkey" FOREIGN KEY ("commentId") REFERENCES public."Comments"(id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
--- Name: TopicComments TopicComments_topicId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."TopicComments"
-    ADD CONSTRAINT "TopicComments_topicId_fkey" FOREIGN KEY ("topicId") REFERENCES public."Topics"(id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
 -- Name: TopicDiscussions TopicDiscussions_discussionId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public."TopicDiscussions"
     ADD CONSTRAINT "TopicDiscussions_discussionId_fkey" FOREIGN KEY ("discussionId") REFERENCES public."Discussions"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: TopicDiscussions TopicDiscussions_topicId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicDiscussions"
+    ADD CONSTRAINT "TopicDiscussions_topicId_fkey" FOREIGN KEY ("topicId") REFERENCES public."Topics"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -3601,6 +3740,14 @@ ALTER TABLE ONLY public."TopicFavourites"
 
 ALTER TABLE ONLY public."TopicIdeations"
     ADD CONSTRAINT "TopicIdeations_ideationId_fkey" FOREIGN KEY ("ideationId") REFERENCES public."Ideations"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: TopicIdeations TopicIdeations_topicId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."TopicIdeations"
+    ADD CONSTRAINT "TopicIdeations_topicId_fkey" FOREIGN KEY ("topicId") REFERENCES public."Topics"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -3841,6 +3988,14 @@ ALTER TABLE ONLY public."VoteLists"
 
 ALTER TABLE ONLY public."VoteLists"
     ADD CONSTRAINT "VoteLists_voteId_fkey" FOREIGN KEY ("voteId") REFERENCES public."Votes"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: VoteOptions VoteOptions_ideaId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."VoteOptions"
+    ADD CONSTRAINT "VoteOptions_ideaId_fkey" FOREIGN KEY ("ideaId") REFERENCES public."Ideas"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --

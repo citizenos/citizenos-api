@@ -1918,12 +1918,14 @@ suite('Users', function () {
                             id: userCreator.id,
                             name: userCreator.name,
                             company: userCreator.company,
+                            invite: "{}",
                             imageUrl: userCreator.imageUrl,
                             level: GroupMemberUser.LEVELS.admin,
                             email: userCreator.email,
                             phoneNumber: null
                         };
-
+                        assert.property(userCreatorMember, 'latestActivity');
+                        delete userCreatorMember.latestActivity;
                         assert.deepEqual(userCreatorMember, userCreatorMemberExpected);
 
                         const userMemberMember = memberListRes.rows.find(function (member) {
@@ -1934,12 +1936,14 @@ suite('Users', function () {
                             id: userMember.id,
                             name: userMember.name,
                             company: userMember.company,
+                            invite: "{}",
                             imageUrl: userMember.imageUrl,
                             level: GroupMemberUser.LEVELS.read,
                             email: userMember.email,
                             phoneNumber: null
                         };
-
+                        assert.property(userMemberMember, 'latestActivity');
+                        delete userMemberMember.latestActivity;
                         assert.deepEqual(userMemberMember, userMemberMemberExpected);
                     });
 
@@ -1958,10 +1962,12 @@ suite('Users', function () {
                             id: userCreator.id,
                             name: userCreator.name,
                             company: userCreator.company,
+                            invite: "{}",
                             imageUrl: userCreator.imageUrl,
                             level: GroupMemberUser.LEVELS.admin
                         };
-
+                        assert.property(userCreatorMember, 'latestActivity');
+                        delete userCreatorMember.latestActivity;
                         assert.deepEqual(userCreatorMember, userCreatorMemberExpected);
 
                         const userMemberMember = memberListRes.rows.find(function (member) {
@@ -1973,9 +1979,11 @@ suite('Users', function () {
                             name: userMember.name,
                             company: userMember.company,
                             imageUrl: userMember.imageUrl,
+                            invite: "{}",
                             level: GroupMemberUser.LEVELS.read
                         };
-
+                        assert.property(userMemberMember, 'latestActivity');
+                        delete userMemberMember.latestActivity;
                         assert.deepEqual(userMemberMember, userMemberMemberExpected);
                     });
 
@@ -2232,7 +2240,7 @@ suite('Users', function () {
 
                         /*public user logged in*/
                         const topicsList2 = (await groupMembersTopicsList(userAgent, null, publicGroup.id)).body.data;
-                        assert.equal(topicsList2.rows.length, 2);
+                        assert.equal(topicsList2.rows.length, 1);
 
                         const groupMemberTopic2 = topicsList.rows[0];
 
@@ -2731,6 +2739,12 @@ suite('Users', function () {
                             type: 'addTopicGroup',
                             creatorId: topicCreator.id,
                             topicId: topic.id,
+                            topic: {
+                                id: topic.id,
+                                title: topic.title,
+                                visibility: topic.visibility,
+                                creator: {}
+                            },
                             groupId: group.id,
                             text: 'Please accept this topic',
                             level: TopicMemberGroup.LEVELS.edit,
@@ -2757,6 +2771,12 @@ suite('Users', function () {
                             type: 'addTopicGroup',
                             creatorId: topicCreator.id,
                             topicId: topic.id,
+                            topic: {
+                                id: topic.id,
+                                title: topic.title,
+                                visibility: topic.visibility,
+                                creator: {}
+                            },
                             groupId: group.id,
                             text: 'Please accept this topic',
                             level: TopicMemberGroup.LEVELS.edit,
@@ -2780,6 +2800,12 @@ suite('Users', function () {
                             type: 'addTopicGroup',
                             creatorId: topicCreator.id,
                             topicId: topic.id,
+                            topic: {
+                                id: topic.id,
+                                title: topic.title,
+                                visibility: topic.visibility,
+                                creator: {}
+                            },
                             groupId: group.id,
                             text: 'Please now accept this topic',
                             level: TopicMemberGroup.LEVELS.admin,
@@ -2829,7 +2855,6 @@ suite('Users', function () {
                         assert.equal(result.count, 1);
                         assert.equal(result.rows.length, 1);
                         const list = (await groupRequesAddTopicList(agentGroupCreator, groupCreator.id, group.id)).body.data;
-
                         assert.deepEqual(list, result);
                     });
 

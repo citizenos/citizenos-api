@@ -36,7 +36,7 @@ const _topicRead = async function (agent, userId, topicId, include, expectedHttp
 
     return agent
         .get(path)
-        .query({include: include})
+        .query({ include: include })
         .set('Content-Type', 'application/json')
         .set('Origin', 'https://citizenos.com')
         .expect(expectedHttpCode)
@@ -53,7 +53,7 @@ const _topicReadUnauth = async function (agent, topicId, include, expectedHttpCo
 
     return agent
         .get(path)
-        .query({include: include})
+        .query({ include: include })
         .set('Content-Type', 'application/json')
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
@@ -73,9 +73,15 @@ const _topicUpdate = async function (agent, userId, topicId, status, visibility,
     // IF I it's undefined, it should not change the value and not pass to server
 
     const payload = {
-        visibility: visibility,
-        status: status
     };
+
+    if (status) {
+        payload.status = status;
+    }
+
+    if (visibility) {
+        payload.visibility = visibility;
+    }
 
     if (categories) {
         payload.categories = categories;
@@ -248,7 +254,7 @@ const _topicMemberUsersUpdate = async function (agent, userId, topicId, memberId
 
     return agent
         .put(path)
-        .send({level: level})
+        .send({ level: level })
         .set('Content-Type', 'application/json')
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
@@ -300,7 +306,7 @@ const _topicMemberGroupsUpdate = async function (agent, userId, topicId, memberI
 
     return agent
         .put(path)
-        .send({level: level})
+        .send({ level: level })
         .set('Content-Type', 'application/json')
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
@@ -472,7 +478,7 @@ const _topicInviteUsersUpdate = async function (agent, userId, topicId, inviteId
 
     return agent
         .put(path)
-        .send({level: level})
+        .send({ level: level })
         .set('Content-Type', 'application/json')
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
@@ -640,157 +646,6 @@ const topicReportsResolve = async function (agent, topicId, reportId) {
     return _topicReportsResolve(agent, topicId, reportId, 200);
 };
 
-const _topicCommentCreate = async function (agent, userId, topicId, parentId, parentVersion, type, subject, text, expectedHttpCode) {
-    const path = '/api/users/:userId/topics/:topicId/comments'
-        .replace(':userId', userId)
-        .replace(':topicId', topicId);
-
-    return agent
-        .post(path)
-        .set('Content-Type', 'application/json')
-        .send({
-            type: type,
-            subject: subject,
-            text: text,
-            parentId: parentId,
-            parentVersion: parentVersion
-        })
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/);
-}
-
-const topicCommentCreate = async function (agent, userId, topicId, parentId, parentVersion, type, subject, text) {
-    return _topicCommentCreate(agent, userId, topicId, parentId, parentVersion, type, subject, text, 201);
-};
-
-const _topicCommentEdit = async function (agent, userId, topicId, commentId, subject, text, type, expectedHttpCode) {
-    const path = '/api/users/:userId/topics/:topicId/comments/:commentId'
-        .replace(':userId', userId)
-        .replace(':topicId', topicId)
-        .replace(':commentId', commentId);
-
-    return agent
-        .put(path)
-        .set('Content-Type', 'application/json')
-        .send({
-            subject: subject,
-            text: text,
-            type: type
-        })
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/);
-};
-
-const topicCommentEdit = async function (agent, userId, topicId, commentId, subject, text, type) {
-    return _topicCommentEdit(agent, userId, topicId, commentId, subject, text, type, 200);
-};
-
-const _topicCommentList = async function (agent, userId, topicId, orderBy, expectedHttpCode) {
-    const path = '/api/users/:userId/topics/:topicId/comments'
-        .replace(':userId', userId)
-        .replace(':topicId', topicId);
-
-    return agent
-        .get(path)
-        .query({orderBy: orderBy})
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/);
-};
-
-const topicCommentList = async function (agent, userId, topicId, orderBy) {
-    return _topicCommentList(agent, userId, topicId, orderBy, 200);
-};
-
-const _topicCommentListUnauth = async function (agent, topicId, orderBy, expectedHttpCode) {
-    const path = '/api/topics/:topicId/comments'
-        .replace(':topicId', topicId);
-
-    return agent
-        .get(path)
-        .expect(expectedHttpCode)
-        .query({orderBy: orderBy})
-        .expect('Content-Type', /json/);
-};
-
-const topicCommentListUnauth = async function (agent, topicId, orderBy) {
-    return _topicCommentListUnauth(agent, topicId, orderBy, 200);
-};
-
-const _topicCommentDelete = async function (agent, userId, topicId, commentId, expectedHttpCode) {
-    const path = '/api/users/:userId/topics/:topicId/comments/:commentId'
-        .replace(':userId', userId)
-        .replace(':topicId', topicId)
-        .replace(':commentId', commentId);
-
-    return agent
-        .delete(path)
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/);
-};
-
-const topicCommentDelete = async function (agent, userId, topicId, commentId) {
-    return _topicCommentDelete(agent, userId, topicId, commentId, 200);
-};
-
-const _topicCommentReportCreate = async function (agent, topicId, commentId, type, text, expectedHttpCode) {
-    const path = '/api/topics/:topicId/comments/:commentId/reports'
-        .replace(':topicId', topicId)
-        .replace(':commentId', commentId);
-
-    return agent
-        .post(path)
-        .set('Content-Type', 'application/json')
-        .send({
-            type: type,
-            text: text
-        })
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/);
-};
-
-const topicCommentReportCreate = async function (agent, topicId, commentId, type, text) {
-    return _topicCommentReportCreate(agent, topicId, commentId, type, text, 200);
-};
-
-const _topicCommentReportRead = async function (agent, topicId, commentId, reportId, token, expectedHttpCode) {
-    const path = '/api/topics/:topicId/comments/:commentId/reports/:reportId'
-        .replace(':topicId', topicId)
-        .replace(':commentId', commentId)
-        .replace(':reportId', reportId);
-
-    return agent
-        .get(path)
-        .set('Authorization', 'Bearer ' + token)
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/);
-};
-
-const topicCommentReportRead = async function (agent, topicId, commentId, reportId, token) {
-    return _topicCommentReportRead(agent, topicId, commentId, reportId, token, 200);
-};
-
-const _topicCommentReportModerate = async function (agent, topicId, commentId, reportId, token, type, text, expectedHttpCode) {
-    const path = '/api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
-        .replace(':topicId', topicId)
-        .replace(':commentId', commentId)
-        .replace(':reportId', reportId);
-
-    return agent
-        .post(path)
-        .set('Content-Type', 'application/json')
-        .set('Authorization', 'Bearer ' + token)
-        .send({
-            type: type,
-            text: text
-        })
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/);
-};
-
-const topicCommentReportModerate = async function (agent, topicId, commentId, reportId, token, type, text) {
-    return _topicCommentReportModerate(agent, topicId, commentId, reportId, token, type, text, 200);
-};
-
 const _topicAttachmentAdd = async function (agent, userId, topicId, name, link, source, type, size, expectedHttpCode) {
     const path = '/api/users/:userId/topics/:topicId/attachments'
         .replace(':userId', userId)
@@ -823,7 +678,7 @@ const _topicAttachmentUpdate = async function (agent, userId, topicId, attachmen
     return agent
         .put(path)
         .set('Content-Type', 'application/json')
-        .send({name: name})
+        .send({ name: name })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
@@ -872,7 +727,7 @@ const _topicAttachmentDownload = async function (agent, userId, topicId, attachm
 
     return agent
         .get(path)
-        .query({download: true})
+        .query({ download: true })
         .expect(expectedHttpCode);
 
 };
@@ -961,7 +816,7 @@ const _topicMentionListTestUnauth = async function (agent, topicId, expectedHttp
 
     return agent
         .get(path)
-        .query({test: 'error'})
+        .query({ test: 'error' })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
@@ -1112,7 +967,7 @@ const _topicVoteStatus = async function (agent, userId, topicId, voteId, token, 
     return agent
         .get(path)
         .set('Content-Type', 'application/json')
-        .query({token: token})
+        .query({ token: token })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
@@ -1129,7 +984,7 @@ const _topicVoteStatusUnauth = async function (agent, topicId, voteId, token, ex
     return agent
         .get(path)
         .set('Content-Type', 'application/json')
-        .query({token: token})
+        .query({ token: token })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
@@ -1198,7 +1053,7 @@ const _topicVoteDownloadBdocFinalUnauth = async function (agent, topicId, voteId
 
     return agent
         .get(path)
-        .query({token: token})
+        .query({ token: token })
         .send()
         .expect(expectedHttpCode);
 };
@@ -1215,7 +1070,7 @@ const _topicVoteDownloadBdocUserUnauth = async function (agent, topicId, voteId,
 
     return agent
         .get(path)
-        .query({token: token})
+        .query({ token: token })
         .send()
         .expect(expectedHttpCode);
 };
@@ -1233,7 +1088,7 @@ const _topicVoteDownloadBdocUser = async function (agent, topicId, voteId, token
 
     return agent
         .get(path)
-        .query({token: token})
+        .query({ token: token })
         .send()
         .expect(expectedHttpCode)
         .expect('Content-Type', 'application/vnd.etsi.asic-e+zip')
@@ -1280,7 +1135,7 @@ const _topicVoteDelegationCreate = async function (agent, userId, topicId, voteI
     return agent
         .post(path)
         .set('Content-Type', 'application/json')
-        .send({userId: toUserId})
+        .send({ userId: toUserId })
         .expect(expectedHttpCode)
         .expect('Content-Type', /json/);
 };
@@ -1304,40 +1159,6 @@ const _topicVoteDelegationDelete = async function (agent, userId, topicId, voteI
 
 const topicVoteDelegationDelete = async function (agent, userId, topicId, voteId) {
     return _topicVoteDelegationDelete(agent, userId, topicId, voteId, 200);
-};
-
-const _topicCommentVotesCreate = async function (agent, topicId, commentId, value, expectedHttpCode) {
-    const path = '/api/topics/:topicId/comments/:commentId/votes'
-        .replace(':topicId', topicId)
-        .replace(':commentId', commentId);
-
-    return agent
-        .post(path)
-        .set('Content-Type', 'application/json')
-        .send({value: value})
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/);
-};
-
-const topicCommentVotesCreate = async function (agent, topicId, commentId, value) {
-    return _topicCommentVotesCreate(agent, topicId, commentId, value, 200);
-};
-
-const _topicCommentVotesList = async function (agent, userId, topicId, commentId, expectedHttpCode) {
-    let path = '/api/users/:userId/topics/:topicId/comments/:commentId/votes'
-        .replace(':userId', userId)
-        .replace(':topicId', topicId)
-        .replace(':commentId', commentId);
-
-    return agent
-        .get(path)
-        .expect(expectedHttpCode)
-        .expect('Content-Type', /json/);
-};
-
-
-const topicCommentVotesList = async function (agent, userId, topicId, commentId) {
-    return _topicCommentVotesList(agent, userId, topicId, commentId, 200);
 };
 
 const _topicEventCreate = async function (agent, userId, topicId, subject, text, expectedHttpCode) {
@@ -1530,7 +1351,6 @@ module.exports.topicUpdate = topicUpdate;
 module.exports.topicFavouriteCreate = topicFavouriteCreate;
 module.exports.topicDelete = topicDelete;
 module.exports.topicMemberGroupsCreate = topicMemberGroupsCreate;
-module.exports.topicCommentCreate = topicCommentCreate;
 module.exports.topicReportCreate = topicReportCreate;
 module.exports.topicVoteCreate = topicVoteCreate;
 module.exports.topicVoteVote = topicVoteVote;
@@ -1565,6 +1385,7 @@ const userLib = require('./lib/user')(app);
 const memberLib = require('./lib/members')(app);
 const groupLib = require('./group');
 const authLib = require('./auth');
+const discussionLib = require('./discussion');
 const activityLib = require('./activity');
 
 const UserConnection = models.UserConnection;
@@ -1629,7 +1450,7 @@ suite('Users', function () {
                 const description = '<!DOCTYPE HTML><html><body><h1>H1</h1><br><h2>h2</h2><br><h3>h3</h3><br><script>alert("owned!");</script><br><br>script<br><br></body></html>';
 
                 const topic = (await topicCreate(agent, user.id, 'H1', Topic.STATUSES.inProgress, description, Topic.VISIBILITY.public, [Topic.CATEGORIES.environment, Topic.CATEGORIES.health])).body.data;
-                const getHtmlResult = await etherpadClient.getHTMLAsync({padID: topic.id});
+                const getHtmlResult = await etherpadClient.getHTMLAsync({ padID: topic.id });
                 assert.equal(getHtmlResult.html, '<!DOCTYPE HTML><html><body><h1>H1</h1><br><h2>h2</h2><br><h3>h3</h3><br><br><br>script<br><br><br></body></html>');
                 const topicR = (await topicRead(agent, user.id, topic.id, null)).body.data;
                 assert.equal(topicR.title, 'H1');
@@ -1736,15 +1557,26 @@ suite('Users', function () {
 
                 topic.sourcePartnerId = updatedTopic.sourcePartnerId;
                 topic.sourcePartnerObjectId = updatedTopic.sourcePartnerObjectId;
-                topic.updatedAt = updatedTopic.updatedAt.toJSON();
+          //      topic.updatedAt = updatedTopic.updatedAt;
+                topic.revision = 2;
+                topic.discussionId = null;
+                topic.ideationId = null;
+                topic.authors = [
+                    {
+                        id: user.id,
+                        name: user.name
+                    }
+                ];
             });
 
 
             test('Success', async function () {
                 const topicR = (await topicRead(agent, user.id, topic.id, null)).body.data;
-
                 // The difference from create result is that there is "members" and "creator" is extended. Might consider changing in the future..
-                const expectedTopic = _.cloneDeep(topic);
+                const expectedTopic = Object.assign({},topic);
+                expectedTopic.ideationId = null;
+             //  delete expectedTopic.authors
+                expectedTopic.updatedAt = topicR.updatedAt;
                 expectedTopic.members = {
                     users: {
                         count: 1
@@ -1785,7 +1617,7 @@ suite('Users', function () {
                 test('Success - no vote created', async function () {
                     const topicR = (await topicRead(agent, user.id, topic.id, 'vote')).body.data;
                     // The difference from create result "members" and "creator" are extended. Might consider changing in the future..
-                    const expectedTopic = _.cloneDeep(topic);
+                    const expectedTopic = Object.assign({},topic);
                     expectedTopic.members = {
                         users: {
                             count: 1
@@ -1794,6 +1626,7 @@ suite('Users', function () {
                             count: 0
                         }
                     };
+                    expectedTopic.updatedAt = topicR.updatedAt;
                     expectedTopic.creator = user.toJSON();
                     delete expectedTopic.creator.email; // Email url is not returned by Topic read, we don't need it
                     delete expectedTopic.creator.imageUrl; // Image url is not returned by Topic read, we don't need it
@@ -1836,7 +1669,7 @@ suite('Users', function () {
                     assert.equal(topicR.status, Topic.STATUSES.voting);
 
                     // The difference from create result is that there is "members" and "creator" is extended. Might consider changing in the future..
-                    const expectedTopic = _.cloneDeep(topicR);
+                    const expectedTopic = Object.assign({},topicR);
 
                     expectedTopic.members = {
                         users: {
@@ -1925,7 +1758,7 @@ suite('Users', function () {
                         const bdocUri = statusresponse.data.bdocUri;
 
                         const token = bdocUri.slice(bdocUri.indexOf('token=') + 6);
-                        const tokenData = jwt.verify(token, config.session.publicKey, {algorithms: [config.session.algorithm]});
+                        const tokenData = jwt.verify(token, config.session.publicKey, { algorithms: [config.session.algorithm] });
                         assert.equal(tokenData.userId, creator.id);
                         assert.equal(tokenData.aud[0], 'GET ' + bdocpathExpected);
 
@@ -2066,7 +1899,7 @@ suite('Users', function () {
                         await _topicRead(agentUser, user.id, topic.id, null, 403);
 
                         const topicData = await Topic.findOne({
-                            where: {id: topic.id}
+                            where: { id: topic.id }
                         });
 
                         const padUrl = cosEtherpad.getUserAccessUrl(topicData, user.id, user.name, user.language);
@@ -2078,7 +1911,7 @@ suite('Users', function () {
                         await _topicRead(agentUser, user.id, topic.id, null, 403);
 
                         const topicData = await Topic.findOne({
-                            where: {id: topic.id}
+                            where: { id: topic.id }
                         });
                         const padUrl = cosEtherpad.getUserAccessUrl(topicData, user.id, user.name, user.language);
                         await _padRead(padUrl, 403);
@@ -2179,7 +2012,7 @@ suite('Users', function () {
             });
 
             test('Success - update field', async function () {
-                const resBody = (await topicUpdateField(agent, user.id, topic.id, {visibility: Topic.VISIBILITY.public})).body;
+                const resBody = (await topicUpdateField(agent, user.id, topic.id, { visibility: Topic.VISIBILITY.public })).body;
 
                 assert.isObject(resBody);
                 assert.deepEqual(resBody, {});
@@ -2236,15 +2069,14 @@ suite('Users', function () {
             });
 
             test('Fail - Bad Request - status is null - should not modify existing value', async function () {
-                await _topicUpdate(agent, user.id, topic.id, null, topicVisibilityNew, [], null, null, 400);
+                await topicUpdate(agent, user.id, topic.id, null, topicVisibilityNew, [], null, null);
 
                 const topicNew = (await topicRead(agent, user.id, topic.id, null)).body.data;
-
                 assert.equal(topicNew.status, topic.status);
             });
 
             test('Fail - Bad Request - update field - status is null - should not modify existing value', async function () {
-                await _topicUpdateField(agent, user.id, topic.id, {status: null}, 400);
+                await _topicUpdateField(agent, user.id, topic.id, { status: null }, 400);
 
                 const topicNew = (await topicRead(agent, user.id, topic.id, null)).body.data
 
@@ -2303,7 +2135,7 @@ suite('Users', function () {
 
             test('Fail - Cannot update content when status is not inProgress', async function () {
                 await topicUpdate(agent, user.id, topic.id, Topic.STATUSES.followUp, Topic.VISIBILITY.private, null, null, null);
-                await _topicUpdateField(agent, user.id, topic.id, {description: '<html><body><h1>New content</h1></body></html>'}, 400);
+                await _topicUpdateField(agent, user.id, topic.id, { description: '<html><body><h1>New content</h1></body></html>' }, 400);
             });
         });
 
@@ -2341,7 +2173,7 @@ suite('Users', function () {
                 assert.equal(tmCount, 0);
 
                 try {
-                    await etherpadClient.getRevisionsCountAsync({padID: topic.id});
+                    await etherpadClient.getRevisionsCountAsync({ padID: topic.id });
                 } catch (err) {
                     const expectedResult = {
                         code: 1,
@@ -2367,6 +2199,7 @@ suite('Users', function () {
             let creator;
             let user;
             let topic;
+            let discussion;
             let group;
 
             setup(async function () {
@@ -2375,7 +2208,7 @@ suite('Users', function () {
                 creator = await userLib.createUserAndLogin(agentCreator, null, null, null);
                 user = await userLib.createUserAndLogin(agentUser, null, null, null);
                 group = (await groupLib.create(agentCreator, creator.id, 'Group', null, null)).body.data;
-                const topicRes = (await topicCreate(agentCreator, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.private)).body.data;
+                const topicRes = (await topicCreate(agentCreator, creator.id, null, Topic.STATUSES.ideation, null, Topic.VISIBILITY.private)).body.data;
                 const title = 'T title';
                 const description = 'T desc';
                 topic = (await Topic.update(
@@ -2391,6 +2224,9 @@ suite('Users', function () {
                         returning: true
                     }
                 ))[1][0];
+                discussion = (await discussionLib.discussionCreate(agentCreator, creator.id, topic.id, 'Test question?')).body.data;
+                await topicUpdate(agentCreator, creator.id, topic.id, Topic.STATUSES.inProgress);
+                topic.status = Topic.STATUSES.inProgress;
                 // Add Group to Topic members and User to that Group
                 const topicMemberGroup = {
                     groupId: group.id,
@@ -2410,14 +2246,14 @@ suite('Users', function () {
                 const type2 = Comment.TYPES.con;
                 const subject = 'TEST';
                 const text = 'THIS IS A TEST';
-                const comment = (await topicCommentCreate(agentCreator, creator.id, topic.id, null, null, Comment.TYPES.pro, subject, text)).body.data;
+                const comment = (await discussionLib.topicCommentCreate(agentCreator, creator.id, topic.id, discussion.id, null, null, Comment.TYPES.pro, subject, text)).body.data;
                 assert.property(comment, 'id');
                 assert.equal(comment.type, type);
                 assert.equal(comment.subject, subject);
                 assert.equal(comment.text, text);
                 assert.equal(comment.creator.id, creator.id);
 
-                const comment2 = (await topicCommentCreate(agentCreator, creator.id, topic.id, null, null, Comment.TYPES.con, subject, text)).body.data;
+                const comment2 = (await discussionLib.topicCommentCreate(agentCreator, creator.id, topic.id, discussion.id, null, null, Comment.TYPES.con, subject, text)).body.data;
 
                 assert.property(comment2, 'id');
                 assert.equal(comment2.type, type2);
@@ -3266,12 +3102,12 @@ suite('Users', function () {
                     assert.equal(groups.count, 2);
                     assert.equal(groups.rows.length, 2);
 
-                    const groupRes = groups.rows.find((g) => {return g.id === group.id});
+                    const groupRes = groups.rows.find((g) => { return g.id === group.id });
                     assert.equal(groupRes.name, group.name);
                     assert.equal(groupRes.level, topicMemberGroupLevel);
                     assert.equal(groupRes.permission.level, TopicMemberGroup.LEVELS.admin);
 
-                    const group2Res = groups.rows.find((g) => {return g.id === group2.id});
+                    const group2Res = groups.rows.find((g) => { return g.id === group2.id });
                     assert.isNull(group2Res.name);
                     assert.equal(group2Res.level, topicMemberGroupLevel);
                     assert.isNull(group2Res.permission.level);
@@ -3993,7 +3829,7 @@ suite('Users', function () {
                         assert.isArray(createdInvites);
                         assert.equal(createdInvites.length, 2);
 
-                        const createdInviteUser1 = createdInvites.find((i) => {return i.level === invitation[0].level}); // find by level, not by id to keep the code simpler
+                        const createdInviteUser1 = createdInvites.find((i) => { return i.level === invitation[0].level }); // find by level, not by id to keep the code simpler
                         assert.uuid(createdInviteUser1.id, 'v4');
                         assert.equal(createdInviteUser1.topicId, topic.id);
                         assert.equal(createdInviteUser1.creatorId, userCreator.id);
@@ -4011,7 +3847,8 @@ suite('Users', function () {
 
                         assert.equal(userInvited1.email, invitation[0].userId.toLowerCase());
 
-                        const createdInviteUser2 = createdInvites.find((i) => {return i.level === invitation[1].level}); // find by level, not by id to keep the code simpler
+                        const createdInviteUser2 = createdInvites.find((i) => { return i.level === invitation[1].level }); // find by level, not by id to keep the code simpler
+                     //   console.log(invitation[1].level, createdInvites)
                         assert.uuid(createdInviteUser2.id, 'v4');
                         assert.equal(createdInviteUser2.topicId, topic.id);
                         assert.equal(createdInviteUser2.creatorId, userCreator.id);
@@ -5014,7 +4851,7 @@ suite('Users', function () {
 
                             const resBody = (await topicUpdateTokenJoinLevel(agentCreator, creator.id, topic.id, token, TopicJoin.LEVELS.admin)).body;
                             const resBodyExpected = {
-                                status: {code: 20000},
+                                status: { code: 20000 },
                                 data: {
                                     token: token,
                                     level: TopicJoin.LEVELS.admin
@@ -5677,7 +5514,7 @@ suite('Users', function () {
 
                         await memberLib.topicMemberUsersCreate(topic.id, members);
 
-                        await topicVoteVote(agent, user.id, topic.id, voteRead.id, [{optionId: voteRead.options.rows[0].id}], null, null, null, null);
+                        await topicVoteVote(agent, user.id, topic.id, voteRead.id, [{ optionId: voteRead.options.rows[0].id }], null, null, null, null);
 
                         const delegationPromises = [
                             topicVoteDelegationCreate(agent, user.id, topic.id, voteRead.id, toUser1.id),
@@ -5689,15 +5526,15 @@ suite('Users', function () {
                         await Promise.all(delegationPromises);
 
                         const votePromises = [
-                            topicVoteVote(agentToUser3, toUser3.id, topic.id, voteRead.id, [{optionId: voteRead.options.rows[0].id}], null, null, null, null),
-                            topicVoteVote(agentToUser6, toUser6.id, topic.id, voteRead.id, [{optionId: voteRead.options.rows[1].id}], null, null, null, null)
+                            topicVoteVote(agentToUser3, toUser3.id, topic.id, voteRead.id, [{ optionId: voteRead.options.rows[0].id }], null, null, null, null),
+                            topicVoteVote(agentToUser6, toUser6.id, topic.id, voteRead.id, [{ optionId: voteRead.options.rows[1].id }], null, null, null, null)
                         ];
                         await Promise.all(votePromises);
 
                         const voteReadAfterVote = (await topicVoteRead(agentToUser6, toUser6.id, topic.id, voteRead.id)).body.data;
                         assert.equal(voteReadAfterVote.votersCount, 5);
 
-                        await topicVoteVote(agentToUser5, toUser5.id, topic.id, voteRead.id, [{optionId: voteRead.options.rows[1].id}], null, null, null, null);
+                        await topicVoteVote(agentToUser5, toUser5.id, topic.id, voteRead.id, [{ optionId: voteRead.options.rows[1].id }], null, null, null, null);
 
                         const voteReadAfterVote2 = (await topicVoteRead(agentToUser6, toUser6.id, topic.id, voteRead.id)).body.data;
                         assert.equal(voteReadAfterVote2.votersCount, 8);
@@ -6185,7 +6022,7 @@ suite('Users', function () {
                         const voteReadAfterVote = (await topicVoteRead(agent, user.id, topic.id, vote.id)).body.data;
 
                         _(voteList).forEach(function (voteOption) {
-                            const option = voteReadAfterVote.options.rows.find((o) => {return o.id === voteOption.optionId});
+                            const option = voteReadAfterVote.options.rows.find((o) => { return o.id === voteOption.optionId });
                             assert.equal(option.voteCount, 1);
                         });
                     });
@@ -6203,7 +6040,7 @@ suite('Users', function () {
                             }
                         ];
 
-                        const vote = (await topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null, [{value: 'allMembersVoted', enabled: true}])).body.data;
+                        const vote = (await topicVoteCreate(agent, user.id, topic.id, options, null, null, null, null, null, null, null, [{ value: 'allMembersVoted', enabled: true }])).body.data;
                         await topicUpdateStatus(agent, user.id, topic.id, Topic.STATUSES.voting);
                         const voteRead = (await topicVoteRead(agent, user.id, topic.id, vote.id)).body.data;
                         const voteList = [
@@ -6215,7 +6052,7 @@ suite('Users', function () {
                         const voteReadAfterVote = (await topicVoteRead(agent, user.id, topic.id, vote.id)).body.data;
 
                         voteList.forEach((voteOption) => {
-                            const option = voteReadAfterVote.options.rows.find((vo) => { return vo.id === voteOption.optionId});
+                            const option = voteReadAfterVote.options.rows.find((vo) => { return vo.id === voteOption.optionId });
                             assert.equal(option.voteCount, 1);
                         });
                         assert.closeTo(new Date(voteReadAfterVote.endsAt).getTime(), new Date().getTime(), 1000);
@@ -6240,10 +6077,10 @@ suite('Users', function () {
 
                         const voteList1 = [
                             {
-                                optionId: voteRead.options.rows.find((o) => {return o.value === options[0].value}).id
+                                optionId: voteRead.options.rows.find((o) => { return o.value === options[0].value }).id
                             },
                             {
-                                optionId: voteRead.options.rows.find((o) => {return o.value === options[1].value}).id
+                                optionId: voteRead.options.rows.find((o) => { return o.value === options[1].value }).id
                             }
                         ];
 
@@ -6251,17 +6088,17 @@ suite('Users', function () {
                         const voteReadAfterVote1 = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
 
                         _(voteList1).forEach(function (voteOption) {
-                            const option = voteReadAfterVote1.options.rows.find((o) => {return o.id === voteOption.optionId});
+                            const option = voteReadAfterVote1.options.rows.find((o) => { return o.id === voteOption.optionId });
                             assert.equal(option.voteCount, 1);
                         });
 
                         // Vote for the 2nd time, change your vote, by choosing 1
                         const voteList2 = [
                             {
-                                optionId: voteCreated.options.rows.find((o) => {return o.value === options[1].value}).id
+                                optionId: voteCreated.options.rows.find((o) => { return o.value === options[1].value }).id
                             },
                             {
-                                optionId: voteCreated.options.rows.find((o) => {return o.value === options[2].value}).id
+                                optionId: voteCreated.options.rows.find((o) => { return o.value === options[2].value }).id
                             }
                         ];
 
@@ -6286,7 +6123,7 @@ suite('Users', function () {
                         });
 
                         // Check that the 1st vote was overwritten
-                        const optionOverwritten = voteReadAfterVote2.options.rows.find((o) => {return o.id === voteList1[0].optionId});
+                        const optionOverwritten = voteReadAfterVote2.options.rows.find((o) => { return o.id === voteList1[0].optionId });
                         assert.notProperty(optionOverwritten, 'voteCount');
                         assert.notProperty(optionOverwritten, 'selected');
 
@@ -6314,10 +6151,10 @@ suite('Users', function () {
 
                         const voteList1 = [
                             {
-                                optionId: voteRead.options.rows.find((o) => {return o.value === options[0].value}).id
+                                optionId: voteRead.options.rows.find((o) => { return o.value === options[0].value }).id
                             },
                             {
-                                optionId: voteRead.options.rows.find((o) => {return o.value === options[0].value}).id
+                                optionId: voteRead.options.rows.find((o) => { return o.value === options[0].value }).id
                             }
                         ];
 
@@ -6325,7 +6162,7 @@ suite('Users', function () {
 
                         const voteReadAfterVote1 = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
                         _(voteList1).forEach(function (voteOption) {
-                            const option = voteReadAfterVote1.options.rows.find((o) => {return o.id === voteOption.optionId});
+                            const option = voteReadAfterVote1.options.rows.find((o) => { return o.id === voteOption.optionId });
                             assert.equal(option.voteCount, 1);
                         });
                     });
@@ -6352,17 +6189,17 @@ suite('Users', function () {
 
                         const voteList = [
                             {
-                                optionId: _.find(voteRead.options.rows, {value: options[0].value}).id
+                                optionId: _.find(voteRead.options.rows, { value: options[0].value }).id
                             },
                             {
-                                optionId: _.find(voteRead.options.rows, {value: options[3].value}).id
+                                optionId: _.find(voteRead.options.rows, { value: options[3].value }).id
                             }
                         ];
 
                         await topicVoteVote(agent, user.id, topic.id, voteCreated.id, voteList, null, null, null, null);
                         const voteReadAfterVote1 = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
-                        const option1 = _.find(voteReadAfterVote1.options.rows, {id: voteList[0].optionId});
-                        const option2 = _.find(voteReadAfterVote1.options.rows, {id: voteList[1].optionId});
+                        const option1 = _.find(voteReadAfterVote1.options.rows, { id: voteList[0].optionId });
+                        const option2 = _.find(voteReadAfterVote1.options.rows, { id: voteList[1].optionId });
                         assert.notProperty(option1, 'voteCount');
                         assert.equal(option2.voteCount, 1);
                         assert.equal(option2.value, 'Veto');
@@ -6390,17 +6227,17 @@ suite('Users', function () {
 
                         const voteList = [
                             {
-                                optionId: _.find(voteRead.options.rows, {value: options[0].value}).id
+                                optionId: _.find(voteRead.options.rows, { value: options[0].value }).id
                             },
                             {
-                                optionId: _.find(voteRead.options.rows, {value: options[3].value}).id
+                                optionId: _.find(voteRead.options.rows, { value: options[3].value }).id
                             }
                         ];
 
                         await topicVoteVote(agent, user.id, topic.id, voteCreated.id, voteList, null, null, null, null);
                         const voteReadAfterVote1 = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
-                        const option1 = _.find(voteReadAfterVote1.options.rows, {id: voteList[0].optionId});
-                        const option2 = _.find(voteReadAfterVote1.options.rows, {id: voteList[1].optionId});
+                        const option1 = _.find(voteReadAfterVote1.options.rows, { id: voteList[0].optionId });
+                        const option2 = _.find(voteReadAfterVote1.options.rows, { id: voteList[1].optionId });
                         assert.notProperty(option1, 'voteCount');
                         assert.equal(option2.voteCount, 1);
                         assert.equal(option2.value, 'Neutral');
@@ -6428,17 +6265,17 @@ suite('Users', function () {
 
                         const voteList = [
                             {
-                                optionId: _.find(voteRead.options.rows, {value: options[2].value}).id
+                                optionId: _.find(voteRead.options.rows, { value: options[2].value }).id
                             },
                             {
-                                optionId: _.find(voteRead.options.rows, {value: options[3].value}).id
+                                optionId: _.find(voteRead.options.rows, { value: options[3].value }).id
                             }
                         ];
 
                         await topicVoteVote(agent, user.id, topic.id, voteCreated.id, voteList, null, null, null, null);
                         const voteReadAfterVote1 = (await topicVoteRead(agent, user.id, topic.id, voteCreated.id)).body.data;
-                        const option1 = _.find(voteReadAfterVote1.options.rows, {id: voteList[0].optionId});
-                        const option2 = _.find(voteReadAfterVote1.options.rows, {id: voteList[1].optionId});
+                        const option1 = _.find(voteReadAfterVote1.options.rows, { id: voteList[0].optionId });
+                        const option2 = _.find(voteReadAfterVote1.options.rows, { id: voteList[1].optionId });
 
                         assert.equal(option1.value, 'Veto');
                         assert.equal(option2.value, 'Neutral');
@@ -6751,7 +6588,7 @@ suite('Users', function () {
                                 const status = res.body.status;
                                 const data = res.body.data;
 
-                                assert.deepEqual(status, {code: 20001});
+                                assert.deepEqual(status, { code: 20001 });
                                 assert.property(data, 'signedInfoDigest');
                                 assert.isTrue(data.signedInfoDigest.length > 0);
                             });
@@ -6769,7 +6606,7 @@ suite('Users', function () {
                                 const status = res.body.status;
                                 const data = res.body.data;
 
-                                assert.deepEqual(status, {code: 20001});
+                                assert.deepEqual(status, { code: 20001 });
                                 assert.property(data, 'signedInfoDigest');
                                 assert.isTrue(data.signedInfoDigest.length > 0);
                             });
@@ -6817,9 +6654,9 @@ suite('Users', function () {
                                 ];
                                 await UserConnection
                                     .create({
-                                            userId: user.id,
-                                            connectionId: UserConnection.CONNECTION_IDS.esteid,
-                                            connectionUserId: 'PNOEE-19101010021'
+                                        userId: user.id,
+                                        connectionId: UserConnection.CONNECTION_IDS.esteid,
+                                        connectionUserId: 'PNOEE-19101010021'
                                     });
                                 const certificate = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
                                 const resBody = (await _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, certificate, null, null, null, 400)).body;
@@ -6870,7 +6707,7 @@ suite('Users', function () {
 
                                 const status = resBody.status;
                                 const data = resBody.data;
-                                assert.deepEqual(status, {code: 20001});
+                                assert.deepEqual(status, { code: 20001 });
                                 assert.property(data, 'signedInfoDigest');
                                 assert.isTrue(data.signedInfoDigest.length > 0);
 
@@ -6954,7 +6791,7 @@ suite('Users', function () {
                                 }
                             ];
 
-                            const vote = (await topicVoteCreate(agent, user.id, topicNew.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard, [{value: 'allMembersVoted', enabled: true}])).body.data;
+                            const vote = (await topicVoteCreate(agent, user.id, topicNew.id, options, null, null, null, null, null, null, Vote.AUTH_TYPES.hard, [{ value: 'allMembersVoted', enabled: true }])).body.data;
                             await topicUpdateStatus(agent, user.id, topicNew.id, Topic.STATUSES.voting);
                             const phoneNumber = '+37200000766';
                             const pid = '60001019906';
@@ -7000,10 +6837,10 @@ suite('Users', function () {
                             // Vote for the first time
                             const voteList1 = [
                                 {
-                                    optionId: _.find(voteRead.options.rows, {value: options[0].value}).id
+                                    optionId: voteRead.options.rows.find((o) => o.value === options[0].value ).id
                                 },
                                 {
-                                    optionId: _.find(voteRead.options.rows, {value: options[1].value}).id
+                                    optionId: voteRead.options.rows.find((o) => o.value === options[1].value ).id
                                 }
                             ];
 
@@ -7016,18 +6853,18 @@ suite('Users', function () {
                             await topicVoteStatus(agent, user.id, topic.id, voteRead.id, voteVoteResult1.data.token);
                             const voteReadAfterVote1 = (await topicVoteRead(agent, user.id, topic.id, voteRead.id)).body.data;
 
-                            _(voteList1).forEach(function (voteOption) {
-                                const option = _.find(voteReadAfterVote1.options.rows, {id: voteOption.optionId});
+                            voteList1.forEach((voteOption) => {
+                                const option = _.find(voteReadAfterVote1.options.rows, { id: voteOption.optionId });
                                 assert.equal(option.voteCount, 1);
                             });
 
                             // Vote for the 2nd time, change your vote, by choosing 1
                             const voteList2 = [
                                 {
-                                    optionId: _.find(voteRead.options.rows, {value: options[1].value}).id
+                                    optionId: voteRead.options.rows.find((o) => o.value === options[1].value ).id
                                 },
                                 {
-                                    optionId: _.find(voteRead.options.rows, {value: options[2].value}).id
+                                    optionId: voteRead.options.rows.find((o) => o.value === options[2].value ).id
                                 }
                             ];
 
@@ -7041,13 +6878,13 @@ suite('Users', function () {
                             const voteReadAfterVote2 = (await topicVoteRead(agent, user.id, topic.id, voteRead.id)).body.data;
                             // Check that the 2nd vote was counted
                             _(voteList2).forEach(function (voteOption) {
-                                const option = _.find(voteReadAfterVote2.options.rows, {id: voteOption.optionId});
+                                const option = _.find(voteReadAfterVote2.options.rows, { id: voteOption.optionId });
                                 assert.equal(option.voteCount, 1);
                                 assert.isTrue(option.selected);
                             });
 
                             // Check that the 1st vote was overwritten
-                            const optionOverwritten = _.find(voteReadAfterVote2.options.rows, {id: voteList1[0].optionId});
+                            const optionOverwritten = _.find(voteReadAfterVote2.options.rows, { id: voteList1[0].optionId });
                             assert.notProperty(optionOverwritten, 'voteCount');
                             assert.notProperty(optionOverwritten, 'selected');
 
@@ -7067,7 +6904,7 @@ suite('Users', function () {
 
                             // Make sure the results match with the result read with Topic list (/api/users/:userId/topics)
                             const listOfTopics = (await topicList(agent, user.id, ['vote'], null, null, null, null, null, null)).body.data;
-                            const topicVotedOn = _.find(listOfTopics.rows, {id: topic.id});
+                            const topicVotedOn = _.find(listOfTopics.rows, { id: topic.id });
 
                             // Topic list included votes dont have downloads
                             delete voteReadAfterVote2.downloads;
@@ -7201,7 +7038,7 @@ suite('Users', function () {
                             ];
                             await memberLib.topicMemberUsersCreate(topic.id, members);
                             const listOfTopics = (await topicList(agentUser2, user2.id, ['vote'], null, null, null, true, null, null)).body.data;
-                            const topicVotedOn = _.find(listOfTopics.rows, {id: topic.id});
+                            const topicVotedOn = _.find(listOfTopics.rows, { id: topic.id });
 
                             assert.deepEqual(topicVotedOn.vote, voteReadAfterVote2);
                         });
@@ -7406,7 +7243,7 @@ suite('Users', function () {
                             ];
                             await memberLib.topicMemberUsersCreate(topic.id, members);
                             const listOfTopics = (await topicList(agentUser2, user2.id, ['vote'], null, null, null, true, null, null)).body.data;
-                            const topicVotedOn = _.find(listOfTopics.rows, {id: topic.id});
+                            const topicVotedOn = _.find(listOfTopics.rows, { id: topic.id });
                             assert.deepEqual(topicVotedOn.vote, voteReadAfterVote2);
                         });
 
@@ -7633,10 +7470,10 @@ suite('Users', function () {
                                     // Vote for the first time
                                     const voteList1 = [
                                         {
-                                            optionId: _.find(voteRead.options.rows, {value: options[0].value}).id
+                                            optionId: _.find(voteRead.options.rows, { value: options[0].value }).id
                                         },
                                         {
-                                            optionId: _.find(voteRead.options.rows, {value: options[1].value}).id
+                                            optionId: _.find(voteRead.options.rows, { value: options[1].value }).id
                                         }
                                     ];
 
@@ -7646,10 +7483,10 @@ suite('Users', function () {
                                     // Vote for the 2nd time, change your vote, by choosing 1
                                     const voteList2 = [
                                         {
-                                            optionId: _.find(voteRead.options.rows, {value: options[1].value}).id
+                                            optionId: _.find(voteRead.options.rows, { value: options[1].value }).id
                                         },
                                         {
-                                            optionId: _.find(voteRead.options.rows, {value: options[2].value}).id
+                                            optionId: _.find(voteRead.options.rows, { value: options[2].value }).id
                                         }
                                     ];
 
@@ -7672,7 +7509,7 @@ suite('Users', function () {
 
                                     request('')
                                         .get(voteReadAfterVote2.downloads.bdocVote.split('?')[0])
-                                        .query({token: userBdocDownloadToken})
+                                        .query({ token: userBdocDownloadToken })
                                         .pipe(fileWriteStream);
 
                                     await fileWriteStreamPromised;
@@ -7701,7 +7538,7 @@ suite('Users', function () {
                                         '__userinfo.html',
                                         `${options[1].value}.html`,
                                         `${options[2].value}.html`,
-                                        'hääl.html',
+                                        'hääl.docx',
                                         'document.docx',
                                         'META-INF/manifest.xml',
                                         'META-INF/signatures-1.xml'
@@ -7754,10 +7591,10 @@ suite('Users', function () {
                                     // Vote for the first time
                                     const voteList1 = [
                                         {
-                                            optionId: voteRead.options.rows.find((o) => {return o.value === options[0].value}).id
+                                            optionId: voteRead.options.rows.find((o) => { return o.value === options[0].value }).id
                                         },
                                         {
-                                            optionId: voteRead.options.rows.find((o) => {return o.value === options[1].value}).id
+                                            optionId: voteRead.options.rows.find((o) => { return o.value === options[1].value }).id
                                         }
                                     ];
 
@@ -7767,10 +7604,10 @@ suite('Users', function () {
                                     // Vote for the 2nd time, change your vote, by choosing 1
                                     const voteList2 = [
                                         {
-                                            optionId: voteRead.options.rows.find((o) => {return o.value === options[1].value}).id
+                                            optionId: voteRead.options.rows.find((o) => { return o.value === options[1].value }).id
                                         },
                                         {
-                                            optionId: voteRead.options.rows.find((o) => {return o.value === options[2].value}).id
+                                            optionId: voteRead.options.rows.find((o) => { return o.value === options[2].value }).id
                                         }
                                     ];
 
@@ -7881,10 +7718,10 @@ suite('Users', function () {
                                     // Vote for the first time
                                     const voteList1 = [
                                         {
-                                            optionId: _.find(voteRead.options.rows, {value: options[0].value}).id
+                                            optionId: _.find(voteRead.options.rows, { value: options[0].value }).id
                                         },
                                         {
-                                            optionId: _.find(voteRead.options.rows, {value: options[1].value}).id
+                                            optionId: _.find(voteRead.options.rows, { value: options[1].value }).id
                                         }
                                     ];
 
@@ -7892,10 +7729,10 @@ suite('Users', function () {
                                     // Vote for the first time
                                     const voteList2 = [
                                         {
-                                            optionId: _.find(voteRead.options.rows, {value: options[0].value}).id
+                                            optionId: _.find(voteRead.options.rows, { value: options[0].value }).id
                                         },
                                         {
-                                            optionId: _.find(voteRead.options.rows, {value: options[2].value}).id
+                                            optionId: _.find(voteRead.options.rows, { value: options[2].value }).id
                                         }
                                     ];
 
@@ -7964,7 +7801,7 @@ suite('Users', function () {
                                     const fileWriteStreamPromised = cosUtil.streamToPromise(fileWriteStream);
                                     request('')
                                         .get(voteReadAfterVoteClosed.downloads.bdocFinal.split('?')[0])
-                                        .query({token: finalBdocDownloadToken})
+                                        .query({ token: finalBdocDownloadToken })
                                         .pipe(fileWriteStream);
 
                                     await fileWriteStreamPromised;
@@ -8288,10 +8125,10 @@ suite('Users', function () {
                             const topicVoteStatusResponse = await _topicVoteStatus(agent, user.id, topic.id, vote.id, response.data.token, 400);
                             const expectedResponse = {
                                 status:
-                                    {
-                                        code: 40010,
-                                        message: 'User has cancelled the signing process'
-                                    }
+                                {
+                                    code: 40010,
+                                    message: 'User has cancelled the signing process'
+                                }
                             }
                             assert.equal(topicVoteStatusResponse.body.status.code, 40010);
                             assert.deepEqual(topicVoteStatusResponse.body, expectedResponse);
@@ -8317,10 +8154,10 @@ suite('Users', function () {
                             const topicVoteStatusResponse = await _topicVoteStatus(agent, user.id, topic.id, vote.id, response.data.token, 400);
                             const expectedResponse = {
                                 status:
-                                    {
-                                        code: 40010,
-                                        message: 'User has cancelled the signing process'
-                                    }
+                                {
+                                    code: 40010,
+                                    message: 'User has cancelled the signing process'
+                                }
                             }
                             assert.equal(topicVoteStatusResponse.body.status.code, 40010);
                             assert.deepEqual(topicVoteStatusResponse.body, expectedResponse);
@@ -8363,581 +8200,6 @@ suite('Users', function () {
 
         });
 
-        // API - /api/users/:userId/topics/:topicId/comments
-        suite('Comments', function () {
-
-            suite('Create', function () {
-
-                const agent = request.agent(app);
-
-                let user;
-                let topic;
-
-                suiteSetup(async function () {
-                    user = await userLib.createUserAndLogin(agent, null, null, null);
-                    topic = (await topicCreate(agent, user.id)).body.data;
-                });
-
-                test('Success - type=pro with reply', async function () {
-                    const type = Comment.TYPES.pro;
-                    const subject = `Test ${type} comment subject`;
-                    const text = `Test ${type} comment text`;
-
-                    const comment = (await topicCommentCreate(agent, user.id, topic.id, null, null, type, subject, text)).body.data;
-                    assert.property(comment, 'id');
-                    assert.equal(comment.type, type);
-                    assert.equal(comment.subject, subject);
-                    assert.equal(comment.text, text);
-                    assert.equal(comment.creator.id, user.id);
-
-                    const commentReplyText = `Test Child comment for comment ${type}`;
-                    const commentReply = (await topicCommentCreate(agent, user.id, topic.id, comment.id, comment.edits.length - 1, null, null, commentReplyText)).body.data;
-
-                    assert.property(commentReply, 'id');
-                    assert.equal(commentReply.type, Comment.TYPES.reply);
-                    assert.notProperty(commentReply, 'subject');
-                    assert.equal(commentReply.text, commentReplyText);
-                    assert.equal(commentReply.creator.id, user.id);
-                    assert.equal(commentReply.parent.id, comment.id);
-                });
-
-                test('Success - type=con with reply', async function () {
-                    const type = Comment.TYPES.con;
-                    const subject = `Test ${type} comment subject`;
-                    const text = `Test ${type} comment text`;
-
-                    const comment = (await topicCommentCreate(agent, user.id, topic.id, null, null, type, subject, text)).body.data;
-                    assert.property(comment, 'id');
-                    assert.equal(comment.type, type);
-                    assert.equal(comment.subject, subject);
-                    assert.equal(comment.text, text);
-                    assert.equal(comment.creator.id, user.id);
-
-                    const commentReplyText = `Test Child comment for comment ${type}`;
-                    const commentReply = (await topicCommentCreate(agent, user.id, topic.id, comment.id, comment.edits.length - 1, null, null, commentReplyText)).body.data;
-
-                    assert.property(commentReply, 'id');
-                    assert.equal(commentReply.type, Comment.TYPES.reply);
-                    assert.notProperty(commentReply, 'subject');
-                    assert.equal(commentReply.text, commentReplyText);
-                    assert.equal(commentReply.creator.id, user.id);
-                    assert.equal(commentReply.parent.id, comment.id);
-                });
-
-                test('Success - type=poi with reply', async function () {
-                    const type = Comment.TYPES.poi;
-                    const subject = `Test ${type} comment subject`;
-                    const text = `Test ${type} comment text`;
-
-                    const comment = (await topicCommentCreate(agent, user.id, topic.id, null, null, type, subject, text)).body.data;
-                    assert.property(comment, 'id');
-                    assert.equal(comment.type, type);
-                    assert.equal(comment.subject, subject);
-                    assert.equal(comment.text, text);
-                    assert.equal(comment.creator.id, user.id);
-
-                    const commentReplyText = `Test Child comment for comment ${type}`;
-                    const commentReply = (await topicCommentCreate(agent, user.id, topic.id, comment.id, comment.edits.length - 1, null, null, commentReplyText)).body.data;
-
-                    assert.property(commentReply, 'id');
-                    assert.equal(commentReply.type, Comment.TYPES.reply);
-                    assert.notProperty(commentReply, 'subject');
-                    assert.equal(commentReply.text, commentReplyText);
-                    assert.equal(commentReply.creator.id, user.id);
-                    assert.equal(commentReply.parent.id, comment.id);
-                });
-
-                test('Success - test quotes "">\'!<', async function () {
-                    const type = Comment.TYPES.pro;
-                    const subject = 'subject test quotes "">\'!<';
-                    const text = 'text test quotes "">\'!<';
-
-                    const comment = (await topicCommentCreate(agent, user.id, topic.id, null, null, type, subject, text)).body.data;
-
-                    assert.property(comment, 'id');
-                    assert.equal(comment.type, type);
-                    assert.equal(comment.subject, subject);
-                    assert.equal(comment.text, text);
-                    assert.equal(comment.creator.id, user.id);
-                });
-
-                test('Fail - 40000 - text can be 1 - N characters longs - PRO', async function () {
-                    const type = Comment.TYPES.pro;
-                    const maxLength = Comment.TYPE_LENGTH_LIMIT[type];
-                    const subject = 'subject test quotes "">\'!<';
-                    const text = 'a'.repeat(maxLength + 1);
-
-                    const resBody = (await _topicCommentCreate(agent, user.id, topic.id, null, null, type, subject, text, 400)).body;
-
-                    const resBodyExpected = {
-                        status: {code: 40000},
-                        errors: {text: `Text can be 1 to ${maxLength} characters long.`}
-                    };
-
-                    assert.deepEqual(resBody, resBodyExpected);
-                });
-
-                test('Fail - 40000 - text can be 1 - N characters longs - POI', async function () {
-                    const type = Comment.TYPES.poi;
-                    const maxLength = Comment.TYPE_LENGTH_LIMIT[type];
-                    const subject = 'subject test quotes "">\'!<';
-                    const text = 'a'.repeat(maxLength + 1);
-
-                    const resBody = (await _topicCommentCreate(agent, user.id, topic.id, null, null, type, subject, text, 400)).body;
-
-                    const resBodyExpected = {
-                        status: {code: 40000},
-                        errors: {text: `Text can be 1 to ${maxLength} characters long.`}
-                    };
-
-                    assert.deepEqual(resBody, resBodyExpected);
-                });
-
-                test('Fail - 40300 - Forbidden - cannot comment on Topic you\'re not a member of or the Topic is not public', async function () {
-                    const type = Comment.TYPES.poi;
-                    const subject = 'subject test quotes "">\'!<';
-                    const text = 'should not pass!';
-
-                    const agentUser2 = request.agent(app);
-                    const user2 = await userLib.createUserAndLogin(agentUser2, null, null, null);
-
-                    const resBody = (await _topicCommentCreate(agentUser2, user2.id, topic.id, null, null, type, subject, text, 403)).body;
-
-                    const resBodyExpected = {
-                        status: {
-                            code: 40300,
-                            message: 'Insufficient permissions'
-                        }
-                    };
-
-                    assert.deepEqual(resBody, resBodyExpected);
-                });
-
-            });
-
-            suite('Update', function () {
-                const agent2 = request.agent(app);
-                const agent3 = request.agent(app);
-
-                let user2;
-                let user3;
-                let topic;
-
-                suiteSetup(async function () {
-                    user2 = await userLib.createUserAndLogin(agent2, null, null, null);
-                    user3 = await userLib.createUserAndLogin(agent3, null, null, null);
-                    topic = (await topicCreate(agent2, user2.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public)).body.data;
-                });
-
-                test('Success - edit comment by user', async function () {
-                    const type = Comment.TYPES.pro;
-                    const subject = 'to be edited by user';
-                    const text = 'Wohoo!';
-
-                    const comment = (await topicCommentCreate(agent3, user3.id, topic.id, null, null, type, subject, text)).body.data;
-                    assert.property(comment, 'id');
-                    assert.equal(comment.type, type);
-                    assert.equal(comment.subject, subject);
-                    assert.equal(comment.text, text);
-                    assert.equal(comment.type, Comment.TYPES.pro);
-                    assert.equal(comment.creator.id, user3.id);
-
-                    const editSubject = 'Edited by user';
-                    const editText = 'Jei, i edited';
-
-                    const status = (await topicCommentEdit(agent3, user3.id, topic.id, comment.id, editSubject, editText, Comment.TYPES.con)).body.status;
-                    assert.equal(status.code, 20000);
-                    const commentEdited = (await topicCommentList(agent3, user3.id, topic.id, 'date')).body.data.rows[0];
-                    assert.property(commentEdited, 'id');
-                    assert.property(commentEdited, 'edits');
-                    assert.equal(commentEdited.edits.length, 2);
-                    assert.equal(commentEdited.edits[0].subject, subject);
-                    assert.equal(commentEdited.edits[1].subject, editSubject);
-                    assert.equal(commentEdited.edits[0].text, text);
-                    assert.equal(commentEdited.edits[1].text, editText);
-                    assert.equal(commentEdited.edits[0].createdAt, commentEdited.createdAt);
-                    assert.notEqual(commentEdited.type, Comment.TYPES.reply);
-                    assert.equal(commentEdited.type, Comment.TYPES.con);
-                    assert.equal(commentEdited.subject, editSubject);
-                    assert.equal(commentEdited.text, editText);
-                    assert.equal(commentEdited.creator.id, user3.id);
-                    assert.equal(commentEdited.parent.id, comment.id);
-                });
-
-                test('Fail - 40000 - text can be 1 - N characters longs - PRO', async function () {
-                    const type = Comment.TYPES.pro;
-                    const maxLength = Comment.TYPE_LENGTH_LIMIT[type];
-                    const subject = 'to be edited by user';
-                    const text = 'Wohoo!';
-
-                    const comment = (await topicCommentCreate(agent3, user3.id, topic.id, null, null, type, subject, text)).body.data;
-                    const resBodyEdit = (await _topicCommentEdit(agent3, user3.id, topic.id, comment.id, subject + 'a', 'a'.repeat(maxLength + 1), type, 400)).body;
-
-                    const resBodyEditExpected = {
-                        status: {code: 40000},
-                        errors: {text: `Text can be 1 to ${maxLength} characters long.`}
-                    };
-
-                    assert.deepEqual(resBodyEdit, resBodyEditExpected);
-                });
-            });
-
-            suite('List', function () {
-                const agent = request.agent(app);
-
-                const commentType1 = Comment.TYPES.pro;
-                const commentSubj1 = 'Test comment 1 subj';
-                const commentText1 = 'Test comment 1 text';
-                const commentType2 = Comment.TYPES.con;
-                const commentSubj2 = 'Test comment 2 text';
-                const commentText2 = 'Test comment 2 subj';
-                const commentType3 = Comment.TYPES.poi;
-                const commentSubj3 = 'Test comment 3 text';
-                const commentText3 = 'Test comment 3 subj';
-
-                let user;
-                let topic;
-                let partner;
-                let comment1;
-                let comment2;
-                let comment3;
-
-                setup(async function () {
-                    user = await userLib.createUserAndLogin(agent, null, null, null);
-                    topic = (await topicCreate(agent, user.id)).body.data;
-                    comment1 = (await topicCommentCreate(agent, user.id, topic.id, null, null, commentType1, commentSubj1, commentText1)).body.data;
-                    comment2 = (await topicCommentCreate(agent, user.id, topic.id, null, null, commentType2, commentSubj2, commentText2)).body.data;
-                    comment3 = (await topicCommentCreate(agent, user.id, topic.id, null, null, commentType3, commentSubj3, commentText3)).body.data;
-                    partner = await Partner.create({
-                        website: 'notimportant',
-                        redirectUriRegexp: 'notimportant'
-                    });
-                });
-
-                test('Success', async function () {
-                    const list = (await topicCommentList(agent, user.id, topic.id, null)).body.data;
-                    const comments = list.rows;
-
-                    const creatorExpected = user.toJSON();
-                    delete creatorExpected.email; // Email is not returned
-                    delete creatorExpected.language; // Language is not returned
-
-                    assert.equal(list.count.total, 3);
-                    assert.equal(comments.length, 3);
-
-                    // Comment 1
-                    const c1 = _.find(comments, {id: comment1.id});
-
-                    assert.equal(c1.id, comment1.id);
-                    assert.equal(c1.type, comment1.type);
-                    assert.equal(c1.subject, comment1.subject);
-                    assert.equal(c1.text, comment1.text);
-                    assert.property(c1, 'createdAt');
-                    assert.equal(c1.parent.id, comment1.id);
-
-                    assert.deepEqual(c1.creator, creatorExpected);
-
-                    // Comment 2
-                    const c2 = _.find(comments, {id: comment2.id});
-
-                    assert.equal(c2.id, comment2.id);
-                    assert.equal(c2.type, comment2.type);
-                    assert.equal(c2.subject, comment2.subject);
-                    assert.equal(c2.text, comment2.text);
-                    assert.property(c2, 'createdAt');
-                    assert.equal(c2.parent.id, comment2.id);
-
-                    assert.deepEqual(c2.creator, creatorExpected);
-
-                    // Comment 3
-                    const c3 = _.find(comments, {id: comment3.id});
-
-                    assert.equal(c3.id, comment3.id);
-                    assert.equal(c3.type, comment3.type);
-                    assert.equal(c3.subject, comment3.subject);
-                    assert.equal(c3.text, comment3.text);
-                    assert.property(c3, 'createdAt');
-                    assert.equal(c3.parent.id, comment3.id);
-
-                    assert.deepEqual(c3.creator, creatorExpected);
-                });
-
-                test('Success v2', async function () {
-                    const list = (await topicCommentList(agent, user.id, topic.id, 'rating')).body.data;
-                    const comments = list.rows;
-
-                    const creatorExpected = user.toJSON();
-                    delete creatorExpected.email; // Email is not returned
-                    delete creatorExpected.language; // Language is not returned
-
-                    assert.equal(list.count.total, 3);
-                    assert.equal(comments.length, 3);
-
-                    // Comment 1
-                    const c1 = _.find(comments, {id: comment1.id});
-
-                    assert.equal(c1.id, comment1.id);
-                    assert.equal(c1.type, comment1.type);
-                    assert.equal(c1.subject, comment1.subject);
-                    assert.equal(c1.text, comment1.text);
-                    assert.property(c1, 'createdAt');
-                    assert.equal(c1.parent.id, comment1.id);
-
-                    assert.deepEqual(c1.creator, creatorExpected);
-                });
-
-                test('Success - Comments with replies - c1->r1.1 c2->r2.1 c2->r2.2 c3->r3.1', async function () {
-                    const replyText11 = 'R1.1';
-                    const replyText21 = 'R2.1';
-                    const replyText22 = 'R2.2';
-                    const replyText31 = 'R3.1';
-                    await topicCommentCreate(agent, user.id, topic.id, comment1.id, null, null, null, replyText11);
-                    await topicCommentCreate(agent, user.id, topic.id, comment2.id, null, null, null, replyText21);
-                    await topicCommentCreate(agent, user.id, topic.id, comment2.id, null, null, null, replyText22);
-                    await topicCommentCreate(agent, user.id, topic.id, comment3.id, null, null, null, replyText31);
-
-                    const list = (await topicCommentList(agent, user.id, topic.id, null)).body.data;
-                    const comments = list.rows;
-
-                    const creatorExpected = user.toJSON();
-                    delete creatorExpected.email; // Email is not returned
-                    delete creatorExpected.language; // Language is not returned
-
-                    assert.equal(list.count.total, 7);
-                    assert.equal(comments.length, 3);
-
-                    // Comment 1
-                    const c1 = _.find(comments, {id: comment1.id});
-
-                    assert.equal(c1.id, comment1.id);
-                    assert.equal(c1.type, comment1.type);
-                    assert.equal(c1.subject, comment1.subject);
-                    assert.equal(c1.text, commentText1);
-                    assert.property(c1, 'createdAt');
-                    assert.equal(c1.parent.id, comment1.id);
-
-                    assert.deepEqual(c1.creator, creatorExpected);
-
-                    // Comment 1 replies
-                    assert.equal(c1.replies.count, 1);
-                    assert.equal(c1.replies.rows.length, 1);
-
-                    const c1r1 = c1.replies.rows[0];
-
-                    assert.equal(c1r1.parent.id, comment1.id);
-                    assert.equal(c1r1.type, Comment.TYPES.reply);
-                    assert.isNull(c1r1.subject);
-                    assert.equal(c1r1.text, replyText11);
-                    assert.property(c1r1, 'createdAt');
-
-                    assert.deepEqual(c1r1.creator, creatorExpected);
-
-                    // Comment 2
-                    const c2 = _.find(comments, {id: comment2.id});
-
-                    assert.equal(c2.id, comment2.id);
-                    assert.equal(c2.type, comment2.type);
-                    assert.equal(c2.subject, comment2.subject);
-                    assert.equal(c2.text, comment2.text);
-                    assert.property(c2, 'createdAt');
-                    assert.equal(c2.parent.id, c2.id);
-
-                    assert.deepEqual(c2.creator, creatorExpected);
-
-                    // Comment 2 replies
-                    assert.equal(c2.replies.count, 2);
-                    assert.equal(c2.replies.rows.length, 2);
-
-                    const c2r1 = c2.replies.rows[0];
-
-                    assert.equal(c2r1.parent.id, comment2.id);
-                    assert.equal(c2r1.type, Comment.TYPES.reply);
-                    assert.isNull(c2r1.subject);
-                    assert.equal(c2r1.text, replyText21);
-                    assert.property(c2r1, 'createdAt');
-
-                    assert.deepEqual(c2r1.creator, creatorExpected);
-
-                    const c2r2 = c2.replies.rows[1];
-
-                    assert.equal(c2r2.parent.id, comment2.id);
-                    assert.equal(c2r2.type, Comment.TYPES.reply);
-                    assert.isNull(c2r2.subject);
-                    assert.equal(c2r2.text, replyText22);
-                    assert.property(c2r2, 'createdAt');
-
-                    assert.deepEqual(c2r2.creator, creatorExpected);
-
-                    // Comment 3
-                    const c3 = _.find(comments, {id: comment3.id});
-
-                    assert.equal(c3.id, comment3.id);
-                    assert.equal(c3.type, comment3.type);
-                    assert.equal(c3.subject, comment3.subject);
-                    assert.equal(c3.text, commentText3);
-                    assert.property(c3, 'createdAt');
-                    assert.equal(c3.parent.id, comment3.id);
-
-                    assert.deepEqual(c3.creator, creatorExpected);
-
-                    // Comment 1 replies
-                    assert.equal(c3.replies.count, 1);
-                    assert.equal(c3.replies.rows.length, 1);
-
-                    const c3r1 = c3.replies.rows[0];
-
-                    assert.equal(c3r1.parent.id, comment3.id);
-                    assert.equal(c3r1.type, Comment.TYPES.reply);
-                    assert.isNull(c3r1.subject);
-                    assert.equal(c3r1.text, replyText31);
-                    assert.property(c3r1, 'createdAt');
-
-                    assert.deepEqual(c3r1.creator, creatorExpected);
-                });
-
-                test('Success - User has Moderator permissions', async function () {
-                    await Topic.update(
-                        {
-                            sourcePartnerId: partner.id
-                        },
-                        {
-                            where: {
-                                id: topic.id
-                            }
-                        }
-                    );
-                    await Moderator.create({
-                        userId: user.id,
-                        partnerId: partner.id
-                    });
-                    const replyText11 = 'R1.1';
-                    const replyText21 = 'R2.1';
-                    const replyText22 = 'R2.2';
-                    await topicCommentCreate(agent, user.id, topic.id, comment1.id, null, null, null, replyText11);
-                    await topicCommentCreate(agent, user.id, topic.id, comment2.id, null, null, null, replyText21);
-                    await topicCommentCreate(agent, user.id, topic.id, comment2.id, null, null, null, replyText22);
-                    const list = (await topicCommentList(agent, user.id, topic.id, null)).body.data;
-
-                    const comments = list.rows;
-
-                    const creatorExpected = user.toJSON();
-                    creatorExpected.phoneNumber = null;
-                    delete creatorExpected.language; // Language is not returned
-
-                    assert.equal(list.count.total, 6);
-                    assert.equal(comments.length, 3);
-
-                    // Comment 1
-                    const c1 = _.find(comments, {id: comment1.id});
-
-                    assert.equal(c1.id, comment1.id);
-                    assert.equal(c1.type, comment1.type);
-                    assert.equal(c1.subject, comment1.subject);
-                    assert.equal(c1.text, commentText1);
-                    assert.property(c1, 'createdAt');
-                    assert.equal(c1.parent.id, comment1.id);
-
-                    assert.deepEqual(c1.creator, creatorExpected);
-
-                    // Comment 1 replies
-                    assert.equal(c1.replies.count, 1);
-                    assert.equal(c1.replies.rows.length, 1);
-
-                    const c1r1 = c1.replies.rows[0];
-
-                    assert.equal(c1r1.parent.id, comment1.id);
-                    assert.equal(c1r1.type, Comment.TYPES.reply);
-                    assert.isNull(c1r1.subject);
-                    assert.equal(c1r1.text, replyText11);
-                    assert.property(c1r1, 'createdAt');
-
-                    assert.deepEqual(c1r1.creator, creatorExpected);
-
-                    // Comment 2
-                    const c2 = _.find(comments, {id: comment2.id});
-
-                    assert.equal(c2.id, comment2.id);
-                    assert.equal(c2.type, comment2.type);
-                    assert.equal(c2.subject, comment2.subject);
-                    assert.equal(c2.text, comment2.text);
-                    assert.property(c2, 'createdAt');
-                    assert.equal(c2.parent.id, c2.id);
-
-                    assert.deepEqual(c2.creator, creatorExpected);
-
-                    // Comment 2 replies
-                    assert.equal(c2.replies.count, 2);
-                    assert.equal(c2.replies.rows.length, 2);
-
-                    const c2r1 = c2.replies.rows[0];
-
-                    assert.equal(c2r1.parent.id, comment2.id);
-                    assert.equal(c2r1.type, Comment.TYPES.reply);
-                    assert.isNull(c2r1.subject);
-                    assert.equal(c2r1.text, replyText21);
-                    assert.property(c2r1, 'createdAt');
-
-                    assert.deepEqual(c2r1.creator, creatorExpected);
-
-                    const c2r2 = c2.replies.rows[1];
-
-                    assert.equal(c2r2.parent.id, comment2.id);
-                    assert.equal(c2r2.type, Comment.TYPES.reply);
-                    assert.isNull(c2r2.subject);
-                    assert.equal(c2r2.text, replyText22);
-                    assert.property(c2r2, 'createdAt');
-
-                    assert.deepEqual(c2r2.creator, creatorExpected);
-                });
-            });
-
-            suite('Delete', function () {
-
-                const agent = request.agent(app);
-
-                const commentType = Comment.TYPES.con;
-                const commentSubject = 'Test comment subject for deletion';
-                const commentText = 'Test comment text for deletion';
-
-                let user;
-                let topic;
-                let comment;
-
-                suiteSetup(async function () {
-                    user = await userLib.createUserAndLogin(agent, null, null, null);
-
-                    topic = (await topicCreate(agent, user.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public)).body.data;
-
-                    comment = (await topicCommentCreate(agent, user.id, topic.id, null, null, commentType, commentSubject, commentText)).body.data;
-                });
-
-                test('Success', async function () {
-                    await topicCommentDelete(agent, user.id, topic.id, comment.id);
-                    const comments = (await topicCommentList(agent, user.id, topic.id, null)).body.data;
-                    assert.equal(comments.count.total, 1);
-                    assert.equal(comments.rows.length, 1);
-                    assert.isNotNull(comments.rows[0].deletedAt);
-                });
-
-
-                test('Success - delete own comment from Topic with read permissions', async function () {
-                    const agentComment = request.agent(app);
-
-                    const userComment = await userLib.createUserAndLogin(agentComment, null, null, null);
-
-                    const comment = (await topicCommentCreate(agentComment, userComment.id, topic.id, null, null, commentType, commentSubject, commentText)).body.data;
-
-                    await topicCommentDelete(agentComment, userComment.id, topic.id, comment.id);
-                });
-
-            });
-
-            suite('Reports', function () {
-                // See the tests for unauthenticated reports - Topics Comments Reports
-            });
-
-        });
-
         // API - /api/users/:userId/topics/:topicId/mentions
         suite.skip('Mentions', function () {
 
@@ -8963,7 +8225,7 @@ suite('Users', function () {
                     assert.equal(list.count, mentions.length);
 
                     // Mention
-                    const m1 = _.find(mentions, {id: mention1.id});
+                    const m1 = _.find(mentions, { id: mention1.id });
                     assert.deepEqual(m1, mention1);
                 });
 
@@ -9218,7 +8480,7 @@ suite('Users', function () {
                     });
 
                     const res = await request
-                        .attach("name", attachment.file, {contentType: 'text/plain'})
+                        .attach("name", attachment.file, { contentType: 'text/plain' })
                         .set('Content-Type', 'multipart/form-data')
                         .expect(403);
 
@@ -9241,7 +8503,7 @@ suite('Users', function () {
                     request.field('folder', 'test');
 
                     const res = await request
-                        .attach("name", file, {contentType: 'text/plain'})
+                        .attach("name", file, { contentType: 'text/plain' })
                         .set('Content-Type', 'multipart/form-data')
                         .expect(403);
 
@@ -9264,7 +8526,7 @@ suite('Users', function () {
                     request.field('folder', 'test');
 
                     return request
-                        .attach("name", file, {contentType: 'text/plain'})
+                        .attach("name", file, { contentType: 'text/plain' })
                         .set('Content-Type', 'multipart/form-data')
                         .expect(403);
                 });
@@ -9518,7 +8780,7 @@ suite('Users', function () {
 
                     const resBody = (await _topicReportModerate(agentModerator, topic.id, report.id, type, text, 400)).body;
                     const expectedBody = {
-                        status: {code: 40000},
+                        status: { code: 40000 },
                         errors: {
                             moderatedReasonType: 'TopicReport.moderatedReasonType cannot be null when moderator is set'
                         }
@@ -9532,7 +8794,7 @@ suite('Users', function () {
 
                     const resBody = (await _topicReportModerate(agentModerator, topic.id, report.id, type, text, 400)).body;
                     const expectedBody = {
-                        status: {code: 40000},
+                        status: { code: 40000 },
                         errors: {
                             moderatedReasonText: 'Text can be 1 to 2048 characters long.'
                         }
@@ -9584,7 +8846,7 @@ suite('Users', function () {
                     const text = 'Test: contains spam.';
 
                     // Create a moderator in DB so that the Moderation email flow is executed
-                    await Moderator.create({userId: userModerator.id});
+                    await Moderator.create({ userId: userModerator.id });
                     await topicReportModerate(agentModerator, topic.id, report.id, type, text);
                 });
 
@@ -9603,7 +8865,7 @@ suite('Users', function () {
                             code: 40001,
                             message: 'Bad request'
                         },
-                        errors: {text: 'Parameter "text" has to be between 10 and 4000 characters'}
+                        errors: { text: 'Parameter "text" has to be between 10 and 4000 characters' }
                     };
 
                     assert.deepEqual(resBody, expectedBody);
@@ -9616,7 +8878,7 @@ suite('Users', function () {
                             code: 40001,
                             message: 'Bad request'
                         },
-                        errors: {text: 'Parameter "text" has to be between 10 and 4000 characters'}
+                        errors: { text: 'Parameter "text" has to be between 10 and 4000 characters' }
                     };
 
                     assert.deepEqual(resBody, expectedBody);
@@ -9631,7 +8893,7 @@ suite('Users', function () {
                             code: 40001,
                             message: 'Bad request'
                         },
-                        errors: {text: 'Parameter "text" has to be between 10 and 4000 characters'}
+                        errors: { text: 'Parameter "text" has to be between 10 and 4000 characters' }
                     };
 
                     assert.deepEqual(resBody, expectedBody);
@@ -9677,7 +8939,7 @@ suite('Users', function () {
                     const text = 'Test: contains spam.';
 
                     // Create a moderator in DB so that the Moderation email flow is executed
-                    await Moderator.create({userId: userModerator.id});
+                    await Moderator.create({ userId: userModerator.id });
                     await topicReportModerate(agentModerator, topic.id, report.id, type, text);
                 });
 
@@ -9803,8 +9065,8 @@ suite('Topics', function () {
             ];
             await topicVoteCreate(creatorAgent, creator.id, topic.id, options, 1, 1, false, null, null, Vote.TYPES.regular, Vote.AUTH_TYPES.soft);
             await topicUpdateStatus(creatorAgent, creator.id, topic.id, Topic.STATUSES.followUp);
-            const topicR = (await topicRead(creatorAgent, creator.id, topic.id, ['vote', 'event'])).body;
-            const topicRUnauth = (await topicReadUnauth(request.agent(app), topic.id, ['vote', 'event'])).body;
+            let topicR = (await topicRead(creatorAgent, creator.id, topic.id, ['vote', 'event'])).body;
+            let topicRUnauth = (await topicReadUnauth(request.agent(app), topic.id, ['vote', 'event'])).body;
 
             assert.equal(topicR.data.status, Topic.STATUSES.followUp);
             // The only difference between auth and unauth is the permission, thus modify it in expected response.
@@ -10174,962 +9436,6 @@ suite('Topics', function () {
 
     });
 
-    suite('Comments', function () {
-
-        suite('List', function () {
-
-            const creatorAgent = request.agent(app);
-            const userAgent = request.agent(app);
-
-            let creator;
-            let topic;
-            let partner;
-
-            const commentType1 = Comment.TYPES.pro;
-            const commentSubj1 = 'Test comment 1 subj';
-            const commentText1 = 'Test comment 1 text';
-            const commentType2 = Comment.TYPES.con;
-            const commentSubj2 = 'Test comment 2 text';
-            const commentText2 = 'Test comment 2 subj';
-            const commentSubj3 = 'Test comment 3 subj';
-            const commentText3 = 'Test comment 3 text';
-
-            const replyText1 = 'R1';
-            const replyText2 = 'R2';
-            const replyText3 = 'R3';
-            const replyText21 = 'R2.1';
-            const replyText211 = 'R2.1.1';
-            const replyText212 = 'R2.1.2';
-            const replyText2121 = 'R2.1.2.1';
-            const replyText11 = 'R1.1';
-            const replyText111 = 'R1.1.1';
-            const replyText1111 = 'R1.1.1.1';
-            const replyText11111 = 'R1.1.1.1.1';
-
-            let comment1;
-            let comment2;
-            let comment3;
-            let reply1;
-            let reply2;
-            let reply3;
-            let reply11;
-            let reply21;
-            let reply211;
-            let reply212;
-            let reply2121;
-            let reply111;
-            let reply1111;
-            let reply11111;
-
-            suiteSetup(async function () {
-                creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);
-                topic = (await topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.communities, Topic.CATEGORIES.culture])).body.data;
-                comment1 = (await topicCommentCreate(creatorAgent, creator.id, topic.id, null, null, commentType1, commentSubj1, commentText1)).body.data;
-                comment2 = (await topicCommentCreate(creatorAgent, creator.id, topic.id, null, null, commentType2, commentSubj2, commentText2)).body.data;
-                comment3 = (await topicCommentCreate(creatorAgent, creator.id, topic.id, null, null, commentType1, commentSubj3, commentText3)).body.data;
-                partner = await Partner.create({
-                    website: 'notimportant',
-                    redirectUriRegexp: 'notimportant'
-                });
-
-                reply1 = (await topicCommentCreate(creatorAgent, creator.id, topic.id, comment3.id, null, null, null, replyText1)).body.data;
-                reply2 = (await topicCommentCreate(creatorAgent, creator.id, topic.id, comment3.id, null, null, null, replyText2)).body.data;
-                reply3 = (await topicCommentCreate(creatorAgent, creator.id, topic.id, comment3.id, null, null, null, replyText3)).body.data;
-
-                reply11 = (await topicCommentCreate(creatorAgent, creator.id, topic.id, reply1.id, null, null, null, replyText11)).body.data;
-                reply21 = (await topicCommentCreate(creatorAgent, creator.id, topic.id, reply2.id, null, null, null, replyText21)).body.data;
-
-                reply111 = (await topicCommentCreate(creatorAgent, creator.id, topic.id, reply11.id, null, null, null, replyText111)).body.data;
-                reply211 = (await topicCommentCreate(creatorAgent, creator.id, topic.id, reply21.id, null, null, null, replyText211)).body.data;
-                reply212 = (await topicCommentCreate(creatorAgent, creator.id, topic.id, reply21.id, null, null, null, replyText212)).body.data;
-                reply2121 = (await topicCommentCreate(creatorAgent, creator.id, topic.id, reply212.id, null, null, null, replyText2121)).body.data;
-                reply1111 = (await topicCommentCreate(creatorAgent, creator.id, topic.id, reply111.id, null, null, null, replyText1111)).body.data;
-
-                reply11111 = (await topicCommentCreate(creatorAgent, creator.id, topic.id, reply1111.id, null, null, null, replyText11111)).body.data;
-                reply11111.votes = {
-                    up: {count: 0},
-                    down: {count: 0},
-                    count: 0
-                };
-                reply11111.deletedAt = null;
-                reply1111.deletedAt = null;
-                reply1111.votes = {
-                    up: {count: 0},
-                    down: {count: 0},
-                    count: 0
-                };
-                reply111.deletedAt = null;
-                reply111.votes = {
-                    up: {count: 0},
-                    down: {count: 0},
-                    count: 0
-                };
-                reply11.deletedAt = null;
-                reply11.votes = {
-                    up: {count: 0},
-                    down: {count: 0},
-                    count: 0
-                };
-                reply1.deletedAt = null;
-                reply1.votes = {
-                    up: {count: 0},
-                    down: {count: 0},
-                    count: 0
-                };
-                reply2121.deletedAt = null;
-                reply2121.votes = {
-                    up: {count: 0},
-                    down: {count: 0},
-                    count: 0
-                };
-                reply211.deletedAt = null;
-                reply211.votes = {
-                    up: {count: 0},
-                    down: {count: 0},
-                    count: 0
-                };
-                reply212.deletedAt = null;
-                reply212.votes = {
-                    up: {count: 1},
-                    down: {count: 0},
-                    count: 1
-                };
-                reply21.deletedAt = null;
-                reply21.votes = {
-                    up: {count: 0},
-                    down: {count: 0},
-                    count: 0
-                };
-                reply2.deletedAt = null;
-                reply2.votes = {
-                    up: {count: 0},
-                    down: {count: 1},
-                    count: 1
-                };
-                reply3.deletedAt = null;
-                reply3.votes = {
-                    up: {count: 1},
-                    down: {count: 0},
-                    count: 1
-                };
-                comment3.deletedAt = null;
-                comment3.votes = {
-                    up: {count: 0},
-                    down: {count: 0},
-                    count: 0
-                };
-                await topicCommentVotesCreate(creatorAgent, topic.id, comment2.id, 1);
-                await topicCommentVotesCreate(creatorAgent, topic.id, comment1.id, -1);
-                await topicCommentVotesCreate(creatorAgent, topic.id, reply212.id, 1);
-                await topicCommentVotesCreate(creatorAgent, topic.id, reply2.id, -1);
-                await topicCommentVotesCreate(creatorAgent, topic.id, reply3.id, 1);
-            });
-
-            test('Success', async function () {
-                const topic = (await topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.communities, Topic.CATEGORIES.culture])).body.data;
-
-                await topicCommentCreate(creatorAgent, creator.id, topic.id, null, null, Comment.TYPES.pro, 'Subject', 'WOHOO! This is my comment.');
-                // Verify that the comments output is the same for unauthenticated and authenticated comment list API
-                const creatorCommentList = (await topicCommentList(creatorAgent, creator.id, topic.id, null)).body;
-                const userCommentList = (await topicCommentListUnauth(userAgent, topic.id, null)).body;
-
-                assert.deepEqual(creatorCommentList, userCommentList);
-            });
-
-            test('Success - public Topic without comments', async function () {
-                const topic = (await topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.defense, Topic.CATEGORIES.education])).body.data;
-                // Verify that the comments output is the same for unauthenticated and authenticated comment list API
-                const creatorCommentList = (await topicCommentList(creatorAgent, creator.id, topic.id, null)).body;
-                const userCommentList = (await topicCommentListUnauth(userAgent, topic.id, null)).body;
-
-                assert.deepEqual(creatorCommentList, userCommentList);
-            });
-
-            test('Success - Comments with replies v2 unauth orderBy date', async function () {
-                reply11111.replies = {
-                    count: 0,
-                    rows: []
-                };
-                reply1111.replies = {
-                    count: 1,
-                    rows: [reply11111]
-                };
-                reply111.replies = {
-                    count: 1,
-                    rows: [reply1111]
-                };
-                reply11.replies = {
-                    count: 1,
-                    rows: [reply111]
-                };
-                reply1.replies = {
-                    count: 1,
-                    rows: [reply11]
-                };
-                reply2121.replies = {
-                    count: 0,
-                    rows: []
-                };
-                reply211.replies = {
-                    count: 0,
-                    rows: []
-                };
-                reply212.replies = {
-                    count: 1,
-                    rows: [reply2121]
-                };
-                reply21.replies = {
-                    count: 2,
-                    rows: [reply211, reply212]
-                };
-                reply2.replies = {
-                    count: 1,
-                    rows: [reply21]
-                };
-                reply3.replies = {
-                    count: 0,
-                    rows: []
-                };
-                comment3.replies = {
-                    count: 3,
-                    rows: [reply1, reply2, reply3]
-                };
-                const data = (await topicCommentListUnauth(userAgent, topic.id, 'date')).body.data;
-                const expectedResult = {
-                    rows: [comment3, comment2, comment1],
-                    count: {
-                        total: 14,
-                        pro: 2,
-                        con: 1,
-                        poi: 0,
-                        reply: 11
-                    }
-                };
-                assert.shallowDeepEqual(data, expectedResult);
-            });
-
-            test('Success - Comments with replies v2 orderBy rating', async function () {
-                reply11111.replies = {
-                    count: 0,
-                    rows: []
-                };
-                reply1111.replies = {
-                    count: 1,
-                    rows: [reply11111]
-                };
-                reply111.replies = {
-                    count: 1,
-                    rows: [reply1111]
-                };
-                reply11.replies = {
-                    count: 1,
-                    rows: [reply111]
-                };
-                reply1.replies = {
-                    count: 1,
-                    rows: [reply11]
-                };
-                reply2121.replies = {
-                    count: 0,
-                    rows: []
-                };
-                reply211.replies = {
-                    count: 0,
-                    rows: []
-                };
-                reply212.replies = {
-                    count: 1,
-                    rows: [reply2121]
-                };
-                reply21.replies = {
-                    count: 2,
-                    rows: [reply212, reply211]
-                };
-                reply2.replies = {
-                    count: 1,
-                    rows: [reply21]
-                };
-                reply3.replies = {
-                    count: 0,
-                    rows: []
-                };
-                comment3.replies = {
-                    count: 3,
-                    rows: [reply3, reply1, reply2]
-                };
-                const data = (await topicCommentList(creatorAgent, creator.id, topic.id, 'rating')).body.data;
-                const expectedResult = {
-                    rows: [comment2, comment3, comment1],
-                    count: {
-                        total: 14,
-                        pro: 2,
-                        con: 1,
-                        poi: 0,
-                        reply: 11
-                    }
-                };
-                assert.shallowDeepEqual(data, expectedResult);
-            });
-
-            test('Success - Comments with replies v2 orderBy popularity', async function () {
-                reply11111.replies = {
-                    count: 0,
-                    rows: []
-                };
-                reply1111.replies = {
-                    count: 1,
-                    rows: [reply11111]
-                };
-                reply111.replies = {
-                    count: 1,
-                    rows: [reply1111]
-                };
-                reply11.replies = {
-                    count: 1,
-                    rows: [reply111]
-                };
-                reply1.replies = {
-                    count: 1,
-                    rows: [reply11]
-                };
-                reply2121.replies = {
-                    count: 0,
-                    rows: []
-                };
-                reply211.replies = {
-                    count: 0,
-                    rows: []
-                };
-                reply212.replies = {
-                    count: 1,
-                    rows: [reply2121]
-                };
-                reply21.replies = {
-                    count: 2,
-                    rows: [reply212, reply211]
-                };
-                reply2.replies = {
-                    count: 1,
-                    rows: [reply21]
-                };
-                reply3.replies = {
-                    count: 0,
-                    rows: []
-                };
-                comment3.replies = {
-                    count: 3,
-                    rows: [reply2, reply3, reply1]
-                };
-                const data = (await topicCommentList(creatorAgent, creator.id, topic.id, 'popularity')).body.data;
-                const expectedResult = {
-                    rows: [comment2, comment1, comment3],
-                    count: {
-                        total: 14,
-                        pro: 2,
-                        con: 1,
-                        poi: 0,
-                        reply:  11
-                    }
-                };
-                assert.shallowDeepEqual(data, expectedResult);
-            });
-
-            test('Success - Comments with replies v2 orderBy date user is moderator', async function () {
-                reply11111.replies = {
-                    count: 0,
-                    rows: []
-                };
-                reply1111.replies = {
-                    count: 1,
-                    rows: [reply11111]
-                };
-                reply111.replies = {
-                    count: 1,
-                    rows: [reply1111]
-                };
-                reply11.replies = {
-                    count: 1,
-                    rows: [reply111]
-                };
-                reply1.replies = {
-                    count: 1,
-                    rows: [reply11]
-                };
-                reply2121.replies = {
-                    count: 0,
-                    rows: []
-                };
-                reply211.replies = {
-                    count: 0,
-                    rows: []
-                };
-                reply212.replies = {
-                    count: 1,
-                    rows: [reply2121]
-                };
-                reply21.replies = {
-                    count: 2,
-                    rows: [reply211, reply212]
-                };
-                reply2.replies = {
-                    count: 1,
-                    rows: [reply21]
-                };
-                reply3.replies = {
-                    count: 0,
-                    rows: []
-                };
-                comment3.replies = {
-                    count: 3,
-                    rows: [reply1, reply2, reply3]
-                };
-                await Topic.update(
-                    {
-                        sourcePartnerId: partner.id
-                    },
-                    {
-                        where: {
-                            id: topic.id
-                        }
-                    }
-                );
-                await Moderator.create({
-                    userId: creator.id,
-                    partnerId: partner.id
-                });
-                const data = (await topicCommentList(creatorAgent, creator.id, topic.id, 'date')).body.data;
-                const expectedResult = {
-                    rows: [comment3, comment2, comment1],
-                    count: {
-                        total: 14,
-                        pro: 2,
-                        con: 1,
-                        poi: 0,
-                        reply: 11
-                    }
-                };
-
-                assert.shallowDeepEqual(data, expectedResult);
-
-                data.rows.forEach(function (comment) {
-                    assert.equal(comment.creator.email, creator.email);
-                    if (comment.replies && comment.replies.rows) {
-                        comment.replies.rows.forEach(function (creply) {
-                            assert.equal(creply.creator.email, creator.email);
-                        });
-                    }
-                });
-            });
-
-            test('Fail - 404 - trying to fetch comments of non-public Topic', async function () {
-                const topic = (await topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.private)).body.data;
-
-                return _topicCommentListUnauth(userAgent, topic.id, null, 404);
-            });
-
-        });
-
-        // API - /api/topics/:topicId/comments/:commentId/votes
-        suite('Votes', function () {
-
-            suite('Create', function () {
-                const creatorAgent = request.agent(app);
-                const userAgent = request.agent(app);
-                const user2Agent = request.agent(app);
-
-                let creator;
-                let topic;
-                let comment;
-
-                suiteSetup(async function () {
-                    creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);
-                    await userLib.createUserAndLogin(userAgent, null, null, null);
-                    await userLib.createUserAndLogin(user2Agent, null, null, null);
-                });
-
-                setup(async function () {
-                    topic = (await topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business])).body.data;
-                    comment = (await topicCommentCreate(creatorAgent, creator.id, topic.id, null, null, Comment.TYPES.pro, 'Subj', 'Text')).body.data;
-                });
-
-                test('Success - 20100 - Upvote', async function () {
-                    const resBody = (await topicCommentVotesCreate(creatorAgent, topic.id, comment.id, 1)).body;
-                    const expected = {
-                        status: {
-                            code: 20000
-                        },
-                        data: {
-                            up: {
-                                count: 1,
-                                selected: true
-                            },
-                            down: {
-                                count: 0,
-                                selected: false
-                            }
-                        }
-                    };
-                    assert.deepEqual(resBody, expected);
-                });
-
-
-                test('Success - 20100 - Downvote', async function () {
-                    const resBody = (await topicCommentVotesCreate(creatorAgent, topic.id, comment.id, -1)).body;
-                    const expected = {
-                        status: {
-                            code: 20000
-                        },
-                        data: {
-                            up: {
-                                count: 0,
-                                selected: false
-                            },
-                            down: {
-                                count: 1,
-                                selected: true
-                            }
-                        }
-                    };
-                    assert.deepEqual(resBody, expected);
-                });
-
-                test('Success - 20100 - clear vote', async function () {
-                    const resBody = (await topicCommentVotesCreate(creatorAgent, topic.id, comment.id, 0)).body;
-                    const expected = {
-                        status: {
-                            code: 20000
-                        },
-                        data: {
-                            up: {
-                                count: 0,
-                                selected: false
-                            },
-                            down: {
-                                count: 0,
-                                selected: false
-                            }
-                        }
-                    };
-                    assert.deepEqual(resBody, expected);
-                });
-
-                test('Success - 20100 - change vote from upvote to downvote', async function () {
-                    await topicCommentVotesCreate(creatorAgent, topic.id, comment.id, 1);
-                    const resBody = (await topicCommentVotesCreate(creatorAgent, topic.id, comment.id, -1)).body;
-                    const expected = {
-                        status: {
-                            code: 20000
-                        },
-                        data: {
-                            up: {
-                                count: 0,
-                                selected: false
-                            },
-                            down: {
-                                count: 1,
-                                selected: true
-                            }
-                        }
-                    };
-                    assert.deepEqual(resBody, expected);
-                });
-
-                test('Success - Multiple users voting', async function () {
-                    await topicCommentVotesCreate(creatorAgent, topic.id, comment.id, 1);
-                    await topicCommentVotesCreate(userAgent, topic.id, comment.id, 1);
-                    const resBody = (await topicCommentVotesCreate(user2Agent, topic.id, comment.id, -1)).body;
-                    const expected = {
-                        status: {
-                            code: 20000
-                        },
-                        data: {
-                            up: {
-                                count: 2,
-                                selected: false
-                            },
-                            down: {
-                                count: 1,
-                                selected: true
-                            }
-                        }
-                    };
-                    assert.deepEqual(resBody, expected);
-                });
-
-                test('Fail - 40000 - invalid vote value', async function () {
-                    const resBody = (await _topicCommentVotesCreate(creatorAgent, topic.id, comment.id, 666, 400)).body;
-                    const expectedBody = {
-                        status: {code: 40000},
-                        errors: {value: 'Vote value must be 1 (up-vote), -1 (down-vote) OR 0 to clear vote.'}
-                    };
-                    assert.deepEqual(resBody, expectedBody);
-                });
-            });
-
-            suite('List', function () {
-                const creatorAgent = request.agent(app);
-                const creatorAgent2 = request.agent(app);
-
-                let creator;
-                let topic;
-                let comment;
-
-                suiteSetup(async function () {
-                    creator = await userLib.createUserAndLogin(creatorAgent, null, null, null);
-                    await userLib.createUserAndLogin(creatorAgent2, null, null, null);
-                });
-
-                setup(async function () {
-                    topic = (await topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public, [Topic.CATEGORIES.agriculture, Topic.CATEGORIES.business])).body.data;
-                    comment = (await topicCommentCreate(creatorAgent, creator.id, topic.id, null, null, Comment.TYPES.pro, 'Subj', 'Text')).body.data
-                });
-
-                test('Success', async function () {
-                    await topicCommentVotesCreate(creatorAgent, topic.id, comment.id, 1);
-                    await topicCommentVotesCreate(creatorAgent2, topic.id, comment.id, 0); //Add cleared vote that should not be returned;
-                    const commentVotesList = (await topicCommentVotesList(creatorAgent, creator.id, topic.id, comment.id)).body.data;
-                    const commentVote = commentVotesList.rows[0];
-                    const expected = {
-                        rows: [
-                            {
-                                company: null,
-                                imageUrl: null,
-                                createdAt: commentVote.createdAt,
-                                updatedAt: commentVote.updatedAt,
-                                name: creator.name,
-                                vote: "up"
-                            }
-                        ],
-                        count: 1
-                    };
-
-                    assert.deepEqual(commentVotesList, expected);
-                });
-            });
-
-        });
-
-        // API - /api/topics/:topicId/comments/:commentId/reports
-        suite('Reports', function () {
-
-            suite('Create', function () {
-                const agentCreator = request.agent(app);
-                const agentReporter = request.agent(app);
-                const agentModerator = request.agent(app);
-
-                const emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportest.com';
-                const emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportest.com';
-                const emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportest.com';
-
-                let userCreator;
-                let userModerator;
-                let userReporter;
-
-                let partner;
-                let topic;
-                let comment;
-
-                suiteSetup(async function () {
-                    userCreator = await userLib.createUserAndLogin(agentCreator, emailCreator, null, null);
-                    userModerator = await userLib.createUser(agentModerator, emailModerator, null, null);
-                    userReporter = await userLib.createUserAndLogin(agentReporter, emailReporter, null, null);
-                    topic = (await topicCreate(agentCreator, userCreator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public)).body.data;
-                    comment = (await topicCommentCreate(agentCreator, userCreator.id, topic.id, null, null, Comment.TYPES.pro, 'test abuse report', 'test abuse report')).body.data;
-                    partner = await Partner.create({
-                        website: 'notimportant',
-                        redirectUriRegexp: 'notimportant'
-                    });
-
-                    await Topic.update(
-                        {
-                            sourcePartnerId: partner.id
-                        },
-                        {
-                            where: {
-                                id: topic.id
-                            }
-                        }
-                    );
-
-                    return Moderator.create({
-                        userId: userModerator.id,
-                        partnerId: partner.id
-                    });
-                });
-
-                test('Success', async function () {
-                    const reportText = 'Hate speech report test';
-
-                    const reportResult = (await topicCommentReportCreate(agentReporter, topic.id, comment.id, Report.TYPES.hate, reportText)).body.data;
-                    assert.isTrue(validator.isUUID(reportResult.id));
-                    assert.equal(reportResult.type, Report.TYPES.hate);
-                    assert.equal(reportResult.text, reportText);
-                    assert.property(reportResult, 'createdAt');
-                    assert.equal(reportResult.creator.id, userReporter.id);
-                });
-
-            });
-
-            suite('Read', function () {
-                const agentCreator = request.agent(app);
-                const agentReporter = request.agent(app);
-                const agentModerator = request.agent(app);
-
-                const emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportreadtest.com';
-                const emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportreadtest.com';
-                const emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@reportreadtest.com';
-
-                let userCreator;
-                let userModerator;
-
-                let partner;
-                let topic;
-                let comment;
-                let report;
-
-                suiteSetup(async function () {
-                    userCreator = await userLib.createUserAndLogin(agentCreator, emailCreator, null, null);
-                    userModerator = await userLib.createUser(agentModerator, emailModerator, null, null);
-                    await userLib.createUserAndLogin(agentReporter, emailReporter, null, null);
-                    topic = (await topicCreate(agentCreator, userCreator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.public)).body.data;
-                    partner = await Partner.create({
-                        website: 'notimportant',
-                        redirectUriRegexp: 'notimportant'
-                    });
-                    await Topic.update(
-                        {
-                            sourcePartnerId: partner.id
-                        },
-                        {
-                            where: {
-                                id: topic.id
-                            }
-                        }
-                    );
-                    await Moderator.create({
-                        userId: userModerator.id,
-                        partnerId: partner.id
-                    });
-                    comment = (await topicCommentCreate(agentCreator, userCreator.id, topic.id, null, null, Comment.TYPES.pro, 'test abuse report', 'test abuse report')).body.data;
-                    report = (await topicCommentReportCreate(agentReporter, topic.id, comment.id, Report.TYPES.hate, 'reported!')).body.data;
-                });
-
-                test('Success - token with audience', async function () {
-                    const token = cosJwt.getTokenRestrictedUse(
-                        {
-                            userId: userModerator.id
-                        },
-                        [
-                            'GET /api/topics/:topicId/comments/:commentId/reports/:reportId'
-                                .replace(':topicId', topic.id)
-                                .replace(':commentId', comment.id)
-                                .replace(':reportId', report.id)
-                        ]
-                    );
-
-                    const resBody = (await topicCommentReportRead(request.agent(app), topic.id, comment.id, report.id, token)).body;
-                    const expectedResult = {
-                        status: {code: 20000},
-                        data: {
-                            id: report.id,
-                            type: report.type,
-                            text: report.text,
-                            createdAt: report.createdAt,
-                            comment: {
-                                subject: comment.subject,
-                                text: comment.text,
-                                id: comment.id
-                            }
-                        }
-                    };
-                    assert.deepEqual(resBody, expectedResult);
-                });
-
-                test('Fail - 40100 - Invalid token', async function () {
-                    const token = {};
-                    return _topicCommentReportRead(request.agent(app), topic.id, comment.id, report.id, token, 401);
-                });
-
-                test('Fail - 40100 - invalid token - without audience', async function () {
-                    const token = jwt.sign(
-                        {},
-                        config.session.privateKey,
-                        {
-                            algorithm: config.session.algorithm
-                        }
-                    );
-
-                    return _topicCommentReportRead(request.agent(app), topic.id, comment.id, report.id, token, 401);
-                });
-
-                test('Fail - 40100 - invalid token - invalid audience', async function () {
-                    const token = cosJwt.getTokenRestrictedUse({}, 'GET /foo/bar');
-
-                    return _topicCommentReportRead(request.agent(app), topic.id, comment.id, report.id, token, 401);
-                });
-
-            });
-
-            suite('Moderate', function () {
-                const agentCreator = request.agent(app);
-                const agentReporter = request.agent(app);
-                const agentModerator = request.agent(app);
-
-                const emailCreator = 'creator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@repormoderationtest.com';
-                const emailReporter = 'reporter_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@repormoderationtest.com';
-                const emailModerator = 'moderator_' + Math.random().toString(36).replace(/[^a-z0-9]+/g, '') + 'A1@repormoderationtest.com';
-
-                let userCreator;
-                let userModerator;
-
-                let partner;
-                let topic;
-                let comment;
-                let report;
-
-                suiteSetup(async function () {
-                    userCreator = await userLib.createUserAndLogin(agentCreator, emailCreator, null, null);
-                    userModerator = await userLib.createUser(agentModerator, emailModerator, null, null);
-                    await userLib.createUserAndLogin(agentReporter, emailReporter, null, null);
-                    topic = (await topicCreate(agentCreator, userCreator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.private)).body.data;
-
-                    partner = await Partner.create({
-                        website: 'notimportant',
-                        redirectUriRegexp: 'notimportant'
-                    });
-                    await Topic.update(
-                        {
-                            sourcePartnerId: partner.id
-                        },
-                        {
-                            where: {
-                                id: topic.id
-                            }
-                        }
-                    );
-                    await Moderator.create({
-                        userId: userModerator.id,
-                        partnerId: partner.id
-                    });
-                    comment = (await topicCommentCreate(agentCreator, userCreator.id, topic.id, null, null, Comment.TYPES.pro, 'test abuse report', 'test abuse report')).body.data;
-                    report = (await topicCommentReportCreate(agentReporter, topic.id, comment.id, Report.TYPES.hate, 'Report create test text')).body.data;
-
-                });
-
-                test('Success', async function () {
-                    const moderateType = Comment.DELETE_REASON_TYPES.duplicate;
-                    const moderateText = 'Report create moderation text';
-
-                    const token = cosJwt.getTokenRestrictedUse(
-                        {
-                            userId: userModerator.id
-                        },
-                        [
-                            'POST /api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
-                                .replace(':topicId', topic.id)
-                                .replace(':commentId', comment.id)
-                                .replace(':reportId', report.id)
-                        ]
-                    );
-
-                    await topicCommentReportModerate(request.agent(app), topic.id, comment.id, report.id, token, moderateType, moderateText);
-
-                    const commentRead = (await Comment.findOne({
-                        where: {
-                            id: comment.id
-                        },
-                        paranoid: false
-                    })).toJSON();
-
-                    assert.equal(commentRead.deletedBy.id, userModerator.id);
-                    assert.equal(commentRead.report.id, report.id);
-                    assert.equal(commentRead.deletedReasonType, moderateType);
-                    assert.equal(commentRead.deletedReasonText, moderateText);
-                    assert.isNotNull(commentRead.deletedAt);
-                });
-
-                test('Fail - 40100 - Invalid token - random stuff', async function () {
-                    return _topicCommentReportModerate(request.agent(app), topic.id, comment.id, report.id, 'TOKEN HERE', Comment.DELETE_REASON_TYPES.abuse, 'not important', 401);
-                });
-
-                test('Fail - 40100 - Invalid token - invalid path', async function () {
-                    const path = '/totally/foobar/path';
-
-                    const token = jwt.sign(
-                        {
-                            path: path
-                        },
-                        config.session.privateKey,
-                        {
-                            algorithm: config.session.algorithm
-                        }
-                    );
-
-                    return _topicCommentReportModerate(request.agent(app), topic.id, comment.id, report.id, token, Comment.DELETE_REASON_TYPES.abuse, 'not important', 401);
-                });
-
-                test('Fail - 40010 - Report has become invalid cause comment has been updated after the report', async function () {
-                    // Revive the Comment we deleted on report
-                    await Comment.update(
-                        {
-                            deletedById: null,
-                            deletedAt: null,
-                            deletedReasonType: null,
-                            deletedReasonText: null,
-                            deletedByReportId: null
-
-                        },
-                        {
-                            where: {
-                                id: comment.id
-                            },
-                            paranoid: false
-                        }
-                    );
-
-                    report = (await topicCommentReportCreate(agentReporter, topic.id, comment.id, Report.TYPES.hate, 'Report create test text')).body.data;
-                    const moderateType = Comment.DELETE_REASON_TYPES.duplicate;
-                    const moderateText = 'Report create moderation text';
-
-                    const token = cosJwt.getTokenRestrictedUse(
-                        {
-                            userId: userModerator.id
-                        },
-                        [
-                            'POST /api/topics/:topicId/comments/:commentId/reports/:reportId/moderate'
-                                .replace(':topicId', topic.id)
-                                .replace(':commentId', comment.id)
-                                .replace(':reportId', report.id)
-                        ]
-                    );
-
-                    await Comment.update(
-                        {
-                            text: 'Update comment!'
-                        },
-                        {
-                            where: {
-                                id: comment.id
-                            },
-                            paranoid: false
-                        }
-                    );
-                    const resBody = (await _topicCommentReportModerate(request.agent(app), topic.id, comment.id, report.id, token, moderateType, moderateText, 400)).body;
-                    const expectedResult = {
-                        status: {
-                            code: 40010,
-                            message: 'Report has become invalid cause comment has been updated after the report'
-                        }
-                    };
-
-                    assert.deepEqual(resBody, expectedResult);
-                });
-            });
-
-        });
-
-    });
-
     suite('Votes', function () {
 
         suite('Read', function () {
@@ -11237,7 +9543,7 @@ suite('Topics', function () {
                     suite('Final', function () {
 
                         test('Fail - Unauthorized - JWT token expired', async function () {
-                            const token = jwt.sign({path: '/not/important'}, config.session.privateKey, {
+                            const token = jwt.sign({ path: '/not/important' }, config.session.privateKey, {
                                 expiresIn: '.1ms',
                                 algorithm: config.session.algorithm
                             });
@@ -11252,7 +9558,7 @@ suite('Topics', function () {
                         });
 
                         test('Fail - Bad Request - Invalid JWT token - invalid path', async function () {
-                            const token = jwt.sign({path: '/this/is/wrong'}, config.session.privateKey, {
+                            const token = jwt.sign({ path: '/this/is/wrong' }, config.session.privateKey, {
                                 expiresIn: '1m',
                                 algorithm: config.session.algorithm
                             });
@@ -11291,7 +9597,7 @@ suite('Topics', function () {
                         });
 
                         test('Fail - Bad Request - Invalid JWT token - invalid path', async function () {
-                            const token = jwt.sign({path: '/this/is/wrong'}, config.session.privateKey, {
+                            const token = jwt.sign({ path: '/this/is/wrong' }, config.session.privateKey, {
                                 expiresIn: '1m',
                                 algorithm: config.session.algorithm
                             });
@@ -11498,7 +9804,7 @@ suite('Topics', function () {
 
             test('Fail - Unauthorized - Invalid JWT token - invalid path', async function () {
                 const agent = request.agent(app);
-                const token = jwt.sign({path: '/this/is/wrong'}, config.session.privateKey, {
+                const token = jwt.sign({ path: '/this/is/wrong' }, config.session.privateKey, {
                     expiresIn: '1m',
                     algorithm: config.session.algorithm
                 });
@@ -11515,7 +9821,7 @@ suite('Topics', function () {
 
             test('Fail - Unauthorized - JWT token expired', async function () {
                 const agent = request.agent(app);
-                const token = jwt.sign({path: '/not/important'}, config.session.privateKey, {
+                const token = jwt.sign({ path: '/not/important' }, config.session.privateKey, {
                     expiresIn: '.1ms',
                     algorithm: config.session.algorithm
                 });
@@ -11733,7 +10039,7 @@ suite('Topics', function () {
                 const expectedResult = {
                     status: {
                         code: 40300,
-                        message: 'Forbidden'
+                        message: 'Insufficient permissions'
                     }
                 };
                 assert.deepEqual(resultMessage, expectedResult);

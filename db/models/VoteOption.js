@@ -49,6 +49,17 @@ module.exports = function (sequelize, DataTypes) {
                         msg: `Option value can be 1 to ${VALUE_MAX_LENGTH} characters long.`
                     }
                 }
+            },
+            ideaId: {
+                type: DataTypes.UUID,
+                allowNull: true,
+                references: {
+                    model: 'Ideas',
+                    key: 'id'
+                },
+                comment: 'Idea refered to this option',
+                onUpdate: 'CASCADE',
+                onDelete: 'CASCADE'
             }
         }
     );
@@ -60,6 +71,7 @@ module.exports = function (sequelize, DataTypes) {
         const data = {
             id: this.dataValues.id,
             value: this.dataValues.value,
+            ideaId: this.dataValues.ideaId,
             voteCount: this.dataValues.voteCount, // HAX: added by certain queries
             selected: this.dataValues.selected // HAX: added by certain queries
         };

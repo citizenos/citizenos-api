@@ -1,7 +1,5 @@
 'use strict';
 
-var _ = require('lodash');
-
 /**
  * Group
  *
@@ -59,7 +57,7 @@ module.exports = function (sequelize, DataTypes) {
             },
             visibility: {
                 type: DataTypes.ENUM,
-                values: _.values(VISIBILITY),
+                values: Object.values(VISIBILITY),
                 comment: 'Who can see (read) the Group apart from the Members.',
                 allowNull: false,
                 defaultValue: VISIBILITY.private

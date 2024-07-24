@@ -2620,6 +2620,9 @@ module.exports = function (app) {
                         muc.count as "members.users.count",
                         COALESCE(mgc.count, 0) as "members.groups.count",
                         COALESCE(tc.count, 0) AS "comments.count",
+                        ti."ideationId" as "ideationId",
+                        ti."ideationId" as "ideation.id",
+                        ti."ideaCount" as "ideation.ideas.count",
                         count(*) OVER()::integer AS "countTotal"
                         ${returncolumns}
                     FROM "TopicMemberGroups" gt
@@ -2677,9 +2680,35 @@ module.exports = function (app) {
                         LEFT JOIN "Activities" a ON ARRAY[t.id::text] <@ a."topicIds"
                         LEFT JOIN (
                             SELECT
+                                ti."topicId",
+                                ti."ideationId",
+                                i."createdAt",
+                                i."deadline",
+                                i."creatorId",
+                                COALESCE(id."ideaCount", 0) as "ideaCount"
+                            FROM "TopicIdeations" ti INNER JOIN
+                                (
+                                    SELECT
+                                        MAX("createdAt") as "createdAt",
+                                        "topicId"
+                                    FROM "TopicIdeations"
+                                    GROUP BY "topicId"
+                                ) AS _ti ON (_ti."topicId" = ti."topicId" AND _ti."createdAt" = ti."createdAt")
+                            LEFT JOIN "Ideations" i
+                                    ON i.id = ti."ideationId"
+                            LEFT JOIN (
+                                SELECT "ideationId",
+                                COUNT("ideationId") as "ideaCount"
+                                FROM "Ideas"
+                                GROUP BY "ideationId"
+                            ) id ON ti."ideationId" = id."ideationId"
+                        ) AS ti ON (ti."topicId" = t.id)
+                        LEFT JOIN (
+                            SELECT
                                 "topicId",
                                 COUNT(*) AS count
-                            FROM "TopicComments"
+                            FROM "DiscussionComments" dc
+                                JOIN "TopicDiscussions" td ON td."discussionId" = dc."discussionId"
                             GROUP BY "topicId"
                         ) AS tc ON (tc."topicId" = t.id)
                         ${join}
@@ -2687,7 +2716,7 @@ module.exports = function (app) {
                         AND gt."deletedAt" IS NULL
                         AND t."deletedAt" IS NULL
                         ${where}
-                    GROUP BY t.id, u.id, tv."voteId", ${groupBy} muc.count, mgc.count, tc.count
+                    GROUP BY t.id, u.id, tv."voteId", ${groupBy} muc.count, ti."ideationId", ti."ideaCount", mgc.count, tc.count
                     ${sortSql}
                     LIMIT :limit
                     OFFSET :offset
@@ -3100,8 +3129,14 @@ module.exports = function (app) {
                             );
 
                             await emailLib.sendRequestAddTopicGroup(newRequest[0]);
-
-                            return newRequest[0].toJSON();
+                            const resObject = newRequest[0].toJSON();
+                            resObject.topic = {
+                                id: topic.id,
+                                title: topic.title,
+                                visibility: topic.visibility,
+                                creator: {}
+                            };
+                            return resObject;
                         }
                     }
                 })
@@ -3335,7 +3370,9 @@ module.exports = function (app) {
                 },
                 transaction: t
             });
-            if (request.acceptedAt === null && request.rejectedAt === null) {
+            if (!request)
+                return res.notFound();
+            if (request?.acceptedAt === null && request?.rejectedAt === null) {
                 const group = await Group.findOne({
                     where: {
                         id: request.groupId
@@ -3374,8 +3411,6 @@ module.exports = function (app) {
                 });
             } else {
                 t.afterCommit(() => {
-                    if (!request)
-                        return res.notFound();
 
                     if (redirect) {
                         return res.redirect(redirect)

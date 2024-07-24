@@ -49,7 +49,7 @@ module.exports = function (sequelize, DataTypes) {
         },
         moderatedReasonType: {
             type: DataTypes.ENUM,
-            values: _.values(Report.TYPES),
+            values: Object.values(Report.TYPES),
             allowNull: true,
             comment: 'Moderation reason - verbal abuse, obscene content, hate speech etc..',
             validate: {

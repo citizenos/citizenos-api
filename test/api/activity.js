@@ -237,7 +237,7 @@ suite('Activities', function () {
         let user2;
         let partner;
 
-        suiteSetup(async function () {
+        setup(async function () {
             user = await userLib.createUserAndLogin(agent, null, null, null)
             await topicLib.topicCreate(agent, user.id, 'TEST', Topic.STATUSES.inProgress, '<html><head></head><body><h2>TEST</h2></body></html>', Topic.VISIBILITY.public);
             topic = (await topicLib.topicCreate(agent, user.id, 'TEST2', Topic.STATUSES.inProgress, '<html><head></head><body><h2>TEST2</h2></body></html>', Topic.VISIBILITY.public)).body.data;
@@ -262,9 +262,9 @@ suite('Activities', function () {
             await memberLib.topicMemberUsersCreate(topic.id,[{userId: user2.id,level: TopicMemberUser.LEVELS.read}]);
         });
 
-        test('Success - count 0 - user has never viewed activity feed', async function () {
+        test('Success - count 4 - user has never viewed activity feed', async function () {
             const count = (await activitiesUnreadCountRead (agent, {sourcePartnerId: partner.id})).body.data.count;
-            assert.equal(count, 0);
+            assert.equal(count, 4);
         });
 
         test('Success', async function () {

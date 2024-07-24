@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * TopicComment
+ * DiscussionComment
  *
  * @param {object} sequelize Sequelize instance
  * @param {object} DataTypes Sequelize DataTypes
@@ -12,15 +12,15 @@
  */
 module.exports = function (sequelize, DataTypes) {
 
-    var TopicComment = sequelize.define(
-        'TopicComment',
+    var DiscussionComment = sequelize.define(
+        'DiscussionComment',
         {
-            topicId: {
+            discussionId: {
                 type: DataTypes.UUID,
                 allowNull: false,
-                comment: 'To what Topic this Comment belongs to.',
+                comment: 'To what Discussion this Comment belongs to.',
                 references: {
-                    model: 'Topics',
+                    model: 'Discussions',
                     key: 'id'
                 },
                 onUpdate: 'CASCADE',
@@ -30,7 +30,7 @@ module.exports = function (sequelize, DataTypes) {
             commentId: {
                 type: DataTypes.UUID,
                 allowNull: false,
-                comment: 'Which Comment belongs to this Topic.',
+                comment: 'Which Comment belongs to this Discussion.',
                 references: {
                     model: 'Comments',
                     key: 'id'
@@ -45,5 +45,5 @@ module.exports = function (sequelize, DataTypes) {
         }
     );
 
-    return TopicComment;
+    return DiscussionComment;
 };

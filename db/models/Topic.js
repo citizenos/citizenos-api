@@ -1,6 +1,5 @@
 'use strict';
 
-const _ = require('lodash');
 const hooks = require('../../libs/sequelize/hooks');
 const util = require('util');
 const config = require('config');
@@ -20,8 +19,9 @@ module.exports = function (sequelize, DataTypes) {
 
     // The order of the status properties is important - you can move from top down (inProgress->voting->followUp..)
     const STATUSES = {
-        draft: 'draft',
-        inProgress: 'inProgress', // Being worked on
+        draft: 'draft', // Being worked on
+        ideation: 'ideation', // Idea gathering
+        inProgress: 'inProgress', // Being published and in discussion
         voting: 'voting', // Is being voted which means the Topic is locked and cannot be edited.
         followUp: 'followUp', // Done editing Topic and executing on the follow up plan.
         closed: 'closed' // Final status - Topic is completed and no editing/reopening/voting can occur.
@@ -106,7 +106,7 @@ module.exports = function (sequelize, DataTypes) {
             },
             status: {
                 type: DataTypes.ENUM,
-                values: _.values(STATUSES),
+                values: Object.values(STATUSES),
                 comment: 'Topic statuses.',
                 allowNull: false,
                 defaultValue: STATUSES.draft
@@ -118,7 +118,7 @@ module.exports = function (sequelize, DataTypes) {
             },
             visibility: {
                 type: DataTypes.ENUM,
-                values: _.values(VISIBILITY),
+                values: Object.values(VISIBILITY),
                 comment: 'Who can see (read) the Topic apart from the Members.',
                 allowNull: false,
                 defaultValue: VISIBILITY.private
@@ -277,8 +277,8 @@ module.exports = function (sequelize, DataTypes) {
             constraints: true
         });
 
-        Topic.belongsToMany(models.Comment, {
-            through: models.TopicComment,
+        Topic.belongsToMany(models.Discussion, {
+            through: models.TopicDiscussion,
             foreignKey: 'topicId',
             constraints: true
         });
@@ -308,6 +308,12 @@ module.exports = function (sequelize, DataTypes) {
         // Topic can have many Votes - that is Topic Vote, mini-Vote..
         Topic.belongsToMany(models.Vote, {
             through: models.TopicVote,
+            foreignKey: 'topicId',
+            constraints: true
+        });
+
+        Topic.belongsToMany(models.Ideation, {
+            through: models.TopicIdeation,
             foreignKey: 'topicId',
             constraints: true
         });

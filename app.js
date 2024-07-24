@@ -255,7 +255,7 @@ app.use(bodyParser.urlencoded({extended: false}));
 
 // CORS
 const corsOptions = config.api.cors;
-const corsPaths = lodash.cloneDeep(config.api.cors.paths);
+const corsPaths = JSON.parse(JSON.stringify(config.api.cors.paths));
 delete corsOptions.paths; // Remove the paths just in case it will conflict with CORS MW options now or in the future
 corsOptions.origin.forEach(function (pattern, i) {
     corsOptions.origin[i] = new RegExp(pattern, 'i');
@@ -291,6 +291,7 @@ const cosApiKey = config.api.key;
 if (!cosApiKey) {
     throw new Error('Invalid configuration! Invalid value for "api.key". Was: "' + cosApiKey + '". Must be something unique. This value is used for authenticating to webhooks ("/routes/api/internal") and originally used by Etherpad');
 }
+//const sessionConfig = JSON.parse(JSON.stringify(config.session));
 const sessionConfig = Object.assign({}, config.session);
 sessionConfig.name = 'sessionID';
 app.use(session(sessionConfig));

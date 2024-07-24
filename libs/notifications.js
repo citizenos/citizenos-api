@@ -42,7 +42,6 @@ module.exports = function (app) {
         }
         buildActivityString(activity);
         activity = await getActivityValues(activity);
-
         return activity;
     }
     const getActivityUsers = async function (data, values) {
@@ -227,7 +226,6 @@ module.exports = function (app) {
 
     const getActivityValues = async function (activity) {
         const values = {};
-
         if (activity.data.object) {
             let dataobject = activity.data.object;
             if (Array.isArray(dataobject)) {
@@ -542,7 +540,6 @@ module.exports = function (app) {
             const users = await getRelatedUsers(activity);
             if (!users?.length) return;
             const activityRes = await parseActivity(activity);
-
             const emailLib = app.get('email');
             return emailLib.sendTopicNotification(activityRes, users);
         } catch (err) {

@@ -25,7 +25,6 @@ module.exports = function (app) {
     const Certificate = require('undersign/lib/certificate');
     const Asic = require('undersign/lib/asic');
     const Tsl = require('undersign/lib/tsl');
-
     let tslCertificates;
 
     const tslPath = config.services.signature.certificates.tsl;
@@ -293,7 +292,6 @@ module.exports = function (app) {
 
         // Topic (document file)
         await _createTopicFile(topic, vote, transaction);
-
         // Metainfo file
         await _createMetainfoFile(topic, vote, transaction);
 
