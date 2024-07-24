@@ -75,7 +75,7 @@
     "SUBJECT": "Ваш ответ на идею был отмечен как неуместный"
   },
   "REPORT_IDEA_COMMENT_MODERATOR": {
-    "SUBJECT": "Пожалуйста, модерируйте этот ответ на идею, который был отмечен неуместным"
+    "SUBJECT": "An idea reply has been reported in a topic you moderate"
   },
   "REPORT_IDEA_CREATOR": {
     "SUBJECT": "Ваша идея был помечена, как неуместная"
