@@ -97,12 +97,12 @@
     "grunt-eslint": "24.3.0",
     "grunt-exec": "3.0.0",
     "grunt-plantuml": "1.0.3",
-    "husky": "8.0.3",
+    "husky": "^8.0.0",
     "mocha": "10.3.0",
     "supertest": "6.3.4"
   },
   "engines": {
-    "node": "20.9.0",
-    "npm": "10.1.0"
+    "node": "20.15.1",
+    "npm": "10.7.0"
   }
 }

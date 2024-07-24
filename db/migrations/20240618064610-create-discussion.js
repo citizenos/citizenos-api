@@ -81,9 +81,9 @@ module.exports = {
       });
       await queryInterface.sequelize.query(
         `INSERT INTO "Discussions"("id", "creatorId", "question", "createdAt", "updatedAt")
-            SELECT t.id, t."creatorId", t.title, t."createdAt", NOW() FROM "Topics" t;
+            SELECT t.id, t."creatorId", '', t."createdAt", NOW() FROM "Topics" t JOIN "TopicComments" tc ON tc."topicId" = t.id GROUP BY t.id;
           INSERT INTO "TopicDiscussions"("topicId", "discussionId")
-            SELECT t.id AS "topicId", t.id as "discussionId" FROM "Topics" t;
+            SELECT t.id AS "topicId", t.id as "discussionId" FROM "Topics" t JOIN "Discussions" d ON t.id=d.id;
           `
         , {
           transaction: t

@@ -112,7 +112,7 @@ module.exports = function (app) {
                         );
                     if (topic.status !== Topic.STATUSES.draft) {
 
-                        topic.status = Topic.STATUSES.ideation;
+                        topic.status = Topic.STATUSES.inProgress;
 
                         await cosActivities
                             .updateActivity(
