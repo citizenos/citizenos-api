@@ -72,25 +72,25 @@
     "SUBJECT": "Bitte moderieren Sie diesen gemeldeten Diskussionsinhalt"
   },
   "REPORT_IDEA_COMMENT_CREATOR": {
-    "SUBJECT": "Your reply to an idea has been reported as inappropriate"
+    "SUBJECT": "Ihre Antwort auf eine Idee wurde als unangemessen gemeldet"
   },
   "REPORT_IDEA_COMMENT_MODERATOR": {
-    "SUBJECT": "Please moderate this reported idea reply"
+    "SUBJECT": "Bitte moderieren Sie eine Antwort auf diese gemeldete Idee"
   },
   "REPORT_IDEA_CREATOR": {
-    "SUBJECT": "Your idea has been reported as inappropriate"
+    "SUBJECT": "Ihre Idee wurde als unangemessen gemeldet"
   },
   "REPORT_IDEA_MODERATOR": {
-    "SUBJECT": "An idea has been reported in a topic you moderate"
+    "SUBJECT": "Eine Idee wurde in einem Thema gemeldet, das Sie moderieren"
   },
   "TO_PARLIAMENT": {
     "SUBJECT": "Rahvaalgatus.ee edastab kollektiivse pöördumise \"{{topic.title}}\""
   },
   "NEWSLETTER": {
-    "SUBJECT": "Changes in the Citizen OS Platform User Experience"
+    "SUBJECT": "Änderungen in der Benutzererfahrung der Citizen OS Plattform"
   },
   "REQUEST_ADD_TOPIC_TO_GROUP": {
-    "SUBJECT": "Request to add topic to group {{group.name}}"
+    "SUBJECT": "Anfrage, Thema zur Gruppe {{group.name}} hinzuzufügen"
   },
   "NOTIFICATIONS": {
     "SUBJECT": "Eine Aktualisierung zum Thema “{{topicTitle}}”",
