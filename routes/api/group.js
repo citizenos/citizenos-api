@@ -2486,6 +2486,7 @@ module.exports = function (app) {
 
         if (!userId && visibility) {
             visibility = Group.VISIBILITY.public;
+            where += ` AND t.status <> 'draft' `
         }
         if (visibility) {
             where += ` AND t.visibility=:visibility `;
