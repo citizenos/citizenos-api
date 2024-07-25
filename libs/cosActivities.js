@@ -27,7 +27,7 @@ module.exports = function (app) {
         return targetObject;
     };
 
-    const _saveActivity = async function (activity, transaction) { //eslint-disable-line complexity
+    const _saveActivity = async function (activity, transaction) {
         const activityObject = {
             data: activity
         };

@@ -50,7 +50,7 @@ suite('BDOC', function () {
             });
 
             suiteTeardown(async function () {
-                fs.unlinkSync(bdocPath); // eslint-disable-line no-sync
+                fs.unlinkSync(bdocPath);
             });
         });
     });

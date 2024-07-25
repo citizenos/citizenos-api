@@ -106,13 +106,13 @@ suite('cosBdoc', function () {
 
         test.skip('Success', async function () {
             const fileBuffer = cosBdoc.getFinalBdoc(topic.id, vote.id);
-            return fs.writeFileAsync(voteFileDir + '/final.bdoc', Buffer.from(fileBuffer, 'base64')); // eslint-disable-line no-buffer-constructor
+            return fs.writeFileAsync(voteFileDir + '/final.bdoc', Buffer.from(fileBuffer, 'base64'));
         });
 
 
         // NB! Disable query logging when generating data, otherwise it will fill HDD with logs
         suite.skip('Performance', function () {
-            this.timeout(0); //eslint-disable-line no-invalid-this
+            this.timeout(0);
 
             // Run GC in a loop. Due to GC logic, first call to gc() will not free as much memory as possible. Every gc() call will a bit more if possible
             const runGC = function () {
@@ -250,7 +250,7 @@ suite('cosBdoc', function () {
                         logger.debug('Vote files created', process.memoryUsage());
 
                         // Create creator VoteUserContainer. Just for testing, everybody gets the same signed file.
-                        const fileContents = await fs.readFileAsync(SIGNED_VOTE_FILE_PATH); // eslint-disable-line no-sync
+                        const fileContents = await fs.readFileAsync(SIGNED_VOTE_FILE_PATH);
 
                         await VoteUserContainer
                             .create(

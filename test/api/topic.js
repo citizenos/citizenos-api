@@ -732,7 +732,7 @@ const _topicAttachmentDownload = async function (agent, userId, topicId, attachm
 
 };
 //TODO: Missing test to use it?
-const topicAttachmentDownload = async function (agent, userId, topicId, attachmentId) { //eslint-disable-line no-unused-vars
+const topicAttachmentDownload = async function (agent, userId, topicId, attachmentId) { //eslint-disable-line
     return _topicAttachmentDownload(agent, userId, topicId, attachmentId, 200);
 };
 
@@ -990,7 +990,7 @@ const _topicVoteStatusUnauth = async function (agent, topicId, voteId, token, ex
 };
 
 //TODO: Missing test to use it?
-const topicVoteStatusUnauth = async function (agent, topicId, voteId, token) { //eslint-disable-line no-unused-vars
+const topicVoteStatusUnauth = async function (agent, topicId, voteId, token) {
     return _topicVoteStatusUnauth(agent, topicId, voteId, token, 200);
 };
 
@@ -1042,7 +1042,7 @@ const _topicVoteSignUnauth = async function (agent, topicId, voteId, voteList, c
 };
 
 //TODO: Missing test to use it?
-const topicVoteSignUnauth = async function (agent, topicId, voteId, voteList, certificate, pid, token) { //eslint-disable-line no-unused-vars
+const topicVoteSignUnauth = async function (agent, topicId, voteId, voteList, certificate, pid, token) { //eslint-disable-line
     return _topicVoteSignUnauth(agent, topicId, voteId, voteList, certificate, pid, token, 200);
 };
 
@@ -1059,7 +1059,7 @@ const _topicVoteDownloadBdocFinalUnauth = async function (agent, topicId, voteId
 };
 
 //TODO: Missing test to use it?
-const topicVoteDownloadBdocFinalUnauth = async function (agent, topicId, voteId, token) { //eslint-disable-line no-unused-vars
+const topicVoteDownloadBdocFinalUnauth = async function (agent, topicId, voteId, token) { //eslint-disable-line
     return _topicVoteDownloadBdocFinalUnauth(agent, topicId, voteId, token, 200);
 };
 
@@ -1075,7 +1075,7 @@ const _topicVoteDownloadBdocUserUnauth = async function (agent, topicId, voteId,
         .expect(expectedHttpCode);
 };
 
-const topicVoteDownloadBdocUserUnauth = async function (agent, topicId, voteId, token) { //eslint-disable-line no-unused-vars
+const topicVoteDownloadBdocUserUnauth = async function (agent, topicId, voteId, token) { //eslint-disable-line
     return _topicVoteDownloadBdocUserUnauth(agent, topicId, voteId, token, 200);
 };
 
@@ -1694,7 +1694,7 @@ suite('Users', function () {
                 });
 
                 suite('After voting', function () {
-                    this.timeout(38000); //eslint-disable-line no-invalid-this
+                    this.timeout(38000);
 
                     let vote;
                     let creator;
@@ -2103,6 +2103,7 @@ suite('Users', function () {
             });
 
             test('Fail - Bad Request - visibility is null - should not modify existing value', async function () {
+                const topicStatusNew = Topic.STATUSES.voting;
                 await _topicUpdate(agent, user.id, topic.id, topicStatusNew, null, null, null, null, 400);
 
                 const topicNew = (await topicRead(agent, user.id, topic.id, null)).body.data;
@@ -4731,7 +4732,7 @@ suite('Users', function () {
                 await _topicJoinJoin(request.agent(app), topic.join.token, 401);
             });
 
-            suite('Token', async function () {
+            suite('Token', function () {
 
                 suite('Read', function () {
 
@@ -4772,7 +4773,7 @@ suite('Users', function () {
 
                 });
 
-                suite('Update', async function () {
+                suite('Update', function () {
 
                     test('Success - regenerate token', async function () {
                         const resData = (await topicUpdateTokenJoin(agentCreator, creator.id, topic.id, TopicJoin.LEVELS.edit)).body.data;
@@ -4844,7 +4845,7 @@ suite('Users', function () {
                         assert.deepEqual(resBody, resBodyExpected);
                     });
 
-                    suite('Level', async function () {
+                    suite('Level', function () {
 
                         test('Success', async function () {
                             const token = topic.join.token;
@@ -6539,7 +6540,7 @@ suite('Users', function () {
                 });
 
                 suite('authType === hard', function () {
-                    this.timeout(10000); //eslint-disable-line no-invalid-this
+                    this.timeout(10000);
 
                     suite('ID-card', function () {
 
@@ -6583,7 +6584,7 @@ suite('Users', function () {
                                     }
                                 ];
 
-                                const certificate = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
+                                const certificate = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign_hex_encoded_der.crt').toString();
                                 const res = await topicVoteVote(agent, user.id, topic.id, vote.id, voteList, certificate, null, null, null);
                                 const status = res.body.status;
                                 const data = res.body.data;
@@ -6601,7 +6602,7 @@ suite('Users', function () {
                                     }
                                 ];
 
-                                const certificate = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
+                                const certificate = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign_hex_encoded_der.crt').toString();
                                 const res = await topicVoteVoteUnauth(reqAgent, topicPublic.id, vote2.id, voteList, certificate, null, null, null);
                                 const status = res.body.status;
                                 const data = res.body.data;
@@ -6619,7 +6620,7 @@ suite('Users', function () {
                                     }
                                 ];
 
-                                const certificate = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
+                                const certificate = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign_hex_encoded_der.crt').toString();
                                 const status = (await _topicVoteVoteUnauth(reqAgent, topic.id, vote.id, voteList, certificate, null, null, null, 401)).body.status;
 
                                 assert.deepEqual(status, {
@@ -6658,7 +6659,7 @@ suite('Users', function () {
                                         connectionId: UserConnection.CONNECTION_IDS.esteid,
                                         connectionUserId: 'PNOEE-19101010021'
                                     });
-                                const certificate = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign_hex_encoded_der.crt').toString(); //eslint-disable-line no-sync
+                                const certificate = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign_hex_encoded_der.crt').toString();
                                 const resBody = (await _topicVoteVote(agent, user.id, topic.id, vote.id, voteList, certificate, null, null, null, 400)).body;
                                 const expectedBody = {
                                     status: {
@@ -6701,8 +6702,8 @@ suite('Users', function () {
                                 /**To run this test, it needs a private key cert pair, cert should be in hex format, also add issuer data to config file and also
                                  * in the cosSignature.js in _handleSigningResult comment out timemark part
                                  **/
-                                const certificate = fs.readFileSync('./test/resources/certificates/my_good_cert_hex.crt').toString(); //eslint-disable-line no-sync
-                                const privateKey = fs.readFileSync('./test/resources/certificates/my_good_key.pem'); //eslint-disable-line no-sync
+                                const certificate = fs.readFileSync('./test/resources/certificates/my_good_cert_hex.crt').toString();
+                                const privateKey = fs.readFileSync('./test/resources/certificates/my_good_key.pem');
                                 const resBody = (await topicVoteVote(agent, user.id, topic.id, vote.id, voteList, certificate, null, null, null)).body;
 
                                 const status = resBody.status;
@@ -7248,7 +7249,7 @@ suite('Users', function () {
                         });
 
                         test('Success - Estonian mobile number and PID bdocUri exists', async function () {
-                            this.timeout(24000); //eslint-disable-line no-invalid-this
+                            this.timeout(24000);
 
                             const phoneNumber = '+37200000766';
                             const pid = '60001019906';
@@ -7946,7 +7947,7 @@ suite('Users', function () {
                         });
 
                         test('Success - unauth - Estonian PID 2 time same option', async function () {
-                            this.timeout(30000); //eslint-disable-line no-invalid-this
+                            this.timeout(30000);
                             const reqAgent = request.agent(app);
                             await UserConnection.destroy({
                                 where: {
@@ -8032,7 +8033,7 @@ suite('Users', function () {
                         });
 
                         test('Success - bdocUri exists', async function () {
-                            this.timeout(30000); //eslint-disable-line no-invalid-this
+                            this.timeout(30000);
 
                             const countryCode = 'EE';
                             const pid = '30303039914';
@@ -8107,7 +8108,7 @@ suite('Users', function () {
                         });
 
                         test('Fail - 40010 - User has cancelled the signing process', async function () {
-                            this.timeout(15000); // eslint-disable-line no-invalid-this
+                            this.timeout(15000);
 
                             const countryCode = 'EE';
                             const pid = '30403039917';
@@ -8136,7 +8137,7 @@ suite('Users', function () {
 
                         // FIXME: Known to fail, needs some attention. More details from @ilmartyrk
                         test('Fail - 40010 - User has cancelled the signing process Latvian PID', async function () {
-                            this.timeout(55000); //eslint-disable-line no-invalid-this
+                            this.timeout(55000);
 
                             const countryCode = 'LV';
                             const pid = '030403-10016';
@@ -8233,7 +8234,7 @@ suite('Users', function () {
         });
 
         // API - /api/users/:userId/topics/:topicId/attachments
-        suite('Attachments', async function () {
+        suite('Attachments', function () {
             const creatorAgent = request.agent(app);
             const agent = request.agent(app);
             let creator;
@@ -8248,7 +8249,7 @@ suite('Users', function () {
                 topic2 = (await topicCreate(creatorAgent, creator.id, null, Topic.STATUSES.inProgress, null, Topic.VISIBILITY.private)).body.data;
             });
 
-            suite('Create', async function () {
+            suite('Create', function () {
                 test('Success', async function () {
                     const expectedAttachment = {
                         name: 'testfilename.pdf',
@@ -8291,7 +8292,7 @@ suite('Users', function () {
                 });
             });
 
-            suite('Read', async function () {
+            suite('Read', function () {
                 let attachment;
 
                 suiteSetup(async function () {
@@ -8344,7 +8345,7 @@ suite('Users', function () {
                 });
             });
 
-            suite('Update', async function () {
+            suite('Update', function () {
                 let attachment;
 
                 setup(async function () {
@@ -8382,7 +8383,7 @@ suite('Users', function () {
                 });
             });
 
-            suite('Delete', async function () {
+            suite('Delete', function () {
                 let attachment;
 
                 setup(async function () {
@@ -9867,7 +9868,7 @@ suite('Topics', function () {
             });
 
             test('Success - non-authenticated User', async function () {
-                this.timeout(5000); //eslint-disable-line no-invalid-this
+                this.timeout(5000);
 
                 const list = (await topicMentionListUnauth(agent, topic.id)).body.data;
                 const mentions = list.rows;
@@ -9878,7 +9879,7 @@ suite('Topics', function () {
             });
 
             test('Success - non-authenticated User read from cache', async function () {
-                this.timeout(5000); //eslint-disable-line no-invalid-this
+                this.timeout(5000);
 
                 const list = (await topicMentionListUnauth(agent, topic.id)).body.data;
                 const mentions = list.rows;
@@ -9910,7 +9911,7 @@ suite('Topics', function () {
                 });
 
                 test('Non-authenticated User', async function () {
-                    this.timeout(5000); //eslint-disable-line no-invalid-this
+                    this.timeout(5000);
 
                     const resBody = (await _topicMentionListUnauth(agent, topic.id, 400)).body;
                     const expectedBody = {

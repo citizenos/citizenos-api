@@ -13,8 +13,8 @@
 module.exports = function (sequelize, DataTypes) {
 
     const IdeaReport = sequelize.define(
-        'IdeaReport',{
-           ideaId: {
+        'IdeaReport', {
+        ideaId: {
             type: DataTypes.UUID,
             allowNull: false,
             references: {
@@ -39,9 +39,9 @@ module.exports = function (sequelize, DataTypes) {
             primaryKey: true
         }
     },
-    {
-        timestamps: false
-    });
+        {
+            timestamps: false
+        });
 
     return IdeaReport;
 };

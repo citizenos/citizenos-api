@@ -11,7 +11,7 @@ const logger = app.get('logger');
 const db = app.get('models').sequelize;
 
 const syncDb = async function () {
-    if (process.env.FORCE_DB_SYNC == true && app.get('env') !== 'production') { // eslint-disable-line no-process-env, eqeqeq
+    if (process.env.FORCE_DB_SYNC == true && app.get('env') !== 'production') {
         return db
             .sync({
                 logging: function (msg) {

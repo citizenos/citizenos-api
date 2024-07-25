@@ -1,17 +1,15 @@
 'use strict';
 
 const assert = require('chai').assert;
+const config = {
+    url: {
+        api: 'https://api.citizenos.com',
+        fe: 'https://fe.citizenos.com'
+    }
+};
+const url = require('../../libs/url')(config);
 
 suite('Url', function () {
-
-    const config = {
-        url: {
-            api: 'https://api.citizenos.com',
-            fe: 'https://fe.citizenos.com'
-        }
-    };
-
-    const url = require('../../libs/url')(config);
 
     suite('getApi', function () {
 

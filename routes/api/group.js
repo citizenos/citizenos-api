@@ -1516,7 +1516,7 @@ module.exports = function (app) {
         });
 
         await db.transaction(async function (t) {
-            const [memberUser, created] = await GroupMemberUser.findOrCreate({ // eslint-disable-line
+            const [memberUser, created] = await GroupMemberUser.findOrCreate({ //eslint-disable-line
                 where: {
                     groupId: group.id,
                     userId: userId
@@ -1578,7 +1578,7 @@ module.exports = function (app) {
 
 
         await db.transaction(async function (t) {
-            const [memberUser, created] = await GroupMemberUser.findOrCreate({ // eslint-disable-line
+            const [memberUser, created] = await GroupMemberUser.findOrCreate({ //eslint-disable-line
                 where: {
                     groupId: group.id,
                     userId: userId
@@ -2012,6 +2012,7 @@ module.exports = function (app) {
         try {
             hasAccess = await _hasPermission(groupId, invite.userId, GroupMemberUser.LEVELS.read, null, null);
         } catch (e) {
+            logger.debug(e);
             hasAccess = false;
         }
 

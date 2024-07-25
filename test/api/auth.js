@@ -588,10 +588,10 @@ suite('Auth', function () {
             });
 
             test('Success - client certificate in X-SSL-Client-Cert header', async function () {
-                this.timeout(5000); //eslint-disable-line no-invalid-this
+                this.timeout(5000);
 
                 const agent = request.agent(app);
-                const cert = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign.pem', {encoding: 'utf8'}).replace(/\n/g, ''); //eslint-disable-line no-sync
+                const cert = fs.readFileSync('./test/resources/certificates/good-jaak-kristjan_jõeorg_esteid_sign.pem', {encoding: 'utf8'}).replace(/\n/g, '');
                 await _loginId(agent, null, cert, 200);
             });
 
@@ -616,7 +616,7 @@ suite('Auth', function () {
                 });
 
                 test('Success - 20001 - Estonian mobile number and PID', async function () {
-                    this.timeout(15000); //eslint-disable-line no-invalid-this
+                    this.timeout(15000);
 
                     const phoneNumber = '+37200000766';
                     const pid = '60001019906';
@@ -646,7 +646,7 @@ suite('Auth', function () {
                 });
 
                 test('Success - 20001 - Estonian mobile number and PID EID2016', async function () {
-                    this.timeout(15000); //eslint-disable-line no-invalid-this
+                    this.timeout(15000);
 
                     const phoneNumber = '+37268000769';
                     const pid = '60001017869';
@@ -787,7 +787,7 @@ suite('Auth', function () {
                     });
 
                     test('Success - 20003 - created', async function () {
-                        this.timeout(35000); //eslint-disable-line no-invalid-this
+                        this.timeout(35000);
 
                         const agent = request.agent(app);
 
@@ -833,7 +833,7 @@ suite('Auth', function () {
                     });
 
                     test('Success - 20002 - existing User', async function () {
-                        this.timeout(35000); //eslint-disable-line no-invalid-this
+                        this.timeout(35000);
 
                         const response = (await loginMobileInit(agent2, pid, phoneNumber)).body.data;
                         const userInfoFromMobiilIdStatusResponse = (await loginMobilestatus(agent2, response.token)).body;
@@ -864,7 +864,7 @@ suite('Auth', function () {
                 });
 
                 test('Success - 20001 - Estonian PID', async function () {
-                    this.timeout(5000); //eslint-disable-line no-invalid-this
+                    this.timeout(5000);
                     const response = (await loginSmartIdInit(request.agent(app), pid)).body;
                     assert.equal(response.status.code, 20001);
                     assert.match(response.data.challengeID, /[0-9]{4}/);
@@ -912,7 +912,7 @@ suite('Auth', function () {
                     });
 
                     test('Success - Exisiting User, not logged in, multiple PID UserConnections accounts - login to account with provided userId that has connection', async function () {
-                        this.timeout(35000); //eslint-disable-line no-invalid-this
+                        this.timeout(35000);
                         const agent = request.agent(app);
                         const agent2 = request.agent(app);
                         const user = await userLib.createUser(agent, null, null, null);
@@ -975,7 +975,7 @@ suite('Auth', function () {
                     });
 
                     test('Success - Exisiting User, not logged in, multiple PID UserConnections accounts - login to default account with provided invalid userId', async function () {
-                        this.timeout(35000); //eslint-disable-line no-invalid-this
+                        this.timeout(35000);
                         const agent = request.agent(app);
                         const agent2 = request.agent(app);
                         const user = await userLib.createUser(agent, null, null, null);
@@ -1040,7 +1040,7 @@ suite('Auth', function () {
                     });
 
                     test('Success - 20003 - created', async function () {
-                        this.timeout(40000); //eslint-disable-line no-invalid-this
+                        this.timeout(40000);
 
                         const agent = request.agent(app);
 
@@ -1053,7 +1053,7 @@ suite('Auth', function () {
                     });
 
                     test('Fail - 40010 - User refused', async function () {
-                        this.timeout(40000); //eslint-disable-line no-invalid-this
+                        this.timeout(40000);
 
                         pid = '30403039939';
                         const agent = request.agent(app);
@@ -1071,7 +1071,7 @@ suite('Auth', function () {
 
 
                     test('Fail - 40011 - Timeout', async function () {
-                        this.timeout(120000); //eslint-disable-line no-invalid-this
+                        this.timeout(120000);
                         pid = '30403039983'
                         const agent = request.agent(app);
 
@@ -1092,7 +1092,7 @@ suite('Auth', function () {
                     const agent2 = request.agent(app);
 
                     test('Success - 20002 - existing User', async function () {
-                        this.timeout(30000); //eslint-disable-line no-invalid-this
+                        this.timeout(30000);
                         pid = '30303039914';
                         const user = await userLib.createUser(agent2, null, null, null);
 

@@ -46,7 +46,7 @@ const topicLib = require('./topic');
 // API - /api/search*
 suite('Search', function () {
 
-    suite('Public', async () => {
+    suite('Public', function () {
         // GET /api/search?include=my.topic&include=my.group&include=public.topic&limit=5&str=test
 
         setup(async function () {
@@ -73,7 +73,7 @@ suite('Search', function () {
 
     suite('Authenticated', function() {
 
-        suite('Users', async () => {
+        suite('Users', function () {
             let agent;
             let user;
             let agent2;

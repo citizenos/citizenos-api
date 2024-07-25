@@ -2481,9 +2481,9 @@ suite('Users', function () {
                 await _groupJoinJoin(request.agent(app), group.join.token, 401);
             });
 
-            suite('Token', async function () {
+            suite('Token', function () {
 
-                suite('Update', async function () {
+                suite('Update', function () {
 
                     test('Success - regenerate token', async function () {
                         const resData = (await groupUpdateTokenJoin(agentCreator, creator.id, group.id, GroupJoin.LEVELS.admin)).body.data;
@@ -2555,7 +2555,7 @@ suite('Users', function () {
                         assert.deepEqual(resBody, resBodyExpected);
                     });
 
-                    suite('Level', async function () {
+                    suite('Level', function () {
 
                         test('Success', async function () {
                             const token = group.join.token;
@@ -2891,7 +2891,7 @@ suite('Users', function () {
                     });
                 });
 
-                suite('Accept', async function () {
+                suite('Accept', function () {
                     test('Success', async function () {
                         let groupMembers = (await groupMembersTopicsList(agentGroupCreator, groupCreator.id, group.id)).body.data;
                         assert.equal(groupMembers.rows.length, 0);
@@ -2934,7 +2934,7 @@ suite('Users', function () {
                     });
                 });
 
-                suite('Reject', async function () {
+                suite('Reject', function () {
                     test('Success', async function () {
                         const request = (await groupRequestAddTopicCreate(agentTopicCreator, topicCreator.id, group.id, topic.id, TopicMemberGroup.LEVELS.edit, 'Please accept this topic')).body.data;
                         assert.equal(request.count, 1);

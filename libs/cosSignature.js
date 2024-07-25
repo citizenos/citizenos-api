@@ -1064,6 +1064,7 @@ module.exports = function (app) {
 
             return fs.createReadStream(finalContainerDownloadPath);
         } catch (err) {
+            logger.debug(err);
             try {
                 logger.info('_generateFinalContainer', 'Cache miss for final BDOC file', finalContainerDownloadPath);
                 await fsExtra.mkdirsAsync(voteFileDir);

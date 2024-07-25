@@ -8,14 +8,14 @@
  * @returns {object} {langCode: translations}
  */
 
-var fs = require('fs');
+const fs = require('fs');
 
 module.exports = function (translationFileDir) {
-    var translations = {};
+    const translations = {};
 
-    var files = fs.readdirSync(translationFileDir); // eslint-disable-line no-sync
-    files.forEach(function (file) {
-        var lang = file.split('.')[0];
+    const files = fs.readdirSync(translationFileDir);
+    files.forEach((file) => {
+        const lang = file.split('.')[0];
         translations[lang] = require(translationFileDir + '/' + file);
     });
 

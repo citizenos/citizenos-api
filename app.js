@@ -3,7 +3,7 @@
 const config = require('config');
 const express = require('express');
 const session = require('express-session');
-const RedisStore = require("connect-redis").default
+const RedisStoreSession = require("connect-redis").default
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
@@ -36,27 +36,30 @@ const StreamUpload = require('stream_upload');
 const notifications = require('./libs/notifications');
 const SlowDown = require('express-slow-down');
 const rateLimit = require('express-rate-limit')
-const Redis = require('ioredis');
+const { createClient } = require('redis');
 
 let rateLimitStore, speedLimitStore;
 if (config.rateLimit && config.rateLimit.storageType === 'redis') {
-    const RLRedisStore = require('rate-limit-redis');
+    const { RedisStore } = require('rate-limit-redis');
     const redisUrl = config.rateLimit.client?.url;
     const redisOptions = config.rateLimit.client?.options;
-    const client = new Redis(redisUrl, redisOptions);
-
-    rateLimitStore = new RLRedisStore({
+    const redisConf = Object.assign({url: redisUrl}, redisOptions);
+    const client = createClient(redisConf);
+    client.connect();
+    rateLimitStore = new RedisStore({
         client,
-        prefix: 'rl'
+        prefix: 'rl',
+        sendCommand: (...args) => client.sendCommand(args)
     });
 
-    speedLimitStore = new RLRedisStore({
+    speedLimitStore = new RedisStore({
         client,
-        prefix: 'sl'
+        prefix: 'sl',
+        sendCommand: (...args) => client.sendCommand(args)
     });
 
     /*Set Redis Session store*/
-    config.session.store = new RedisStore({
+    config.session.store = new RedisStoreSession({
         client
     });
 }
@@ -67,6 +70,7 @@ const rateLimiter = function (allowedRequests, blockTime, skipSuccess) {
             return next();
         }
     }
+
     return rateLimit({
         store: rateLimitStore,
         windowMs: blockTime || (15 * 60 * 1000), // default 15 minutes
@@ -87,13 +91,13 @@ const speedLimiter = function (allowedRequests, skipSuccess, blockTime, delay) {
             return next();
         }
     }
-    return new SlowDown({
+    return SlowDown.slowDown({
         store: speedLimitStore,
         windowMs: blockTime || (15 * 60 * 1000), // default 15 minutes
         delayAfter: allowedRequests || 15, // allow 15 requests per 15 minutes, then...
-        delayMs: delay || 1000, // response time increases by default 1s per request
+        delayMs: () => delay || 1000, // response time increases by default 1s per request
         skipSuccessfulRequests: skipSuccess || true,
-        onLimitReached: function (req) {
+        handler: (req) => {
             logger.warn('express-slow-down', 'RATE LIMIT HIT!', `${req.method} ${req.path}`, req.ip, req.rateLimit);
         }
     })
@@ -249,9 +253,9 @@ require('./libs/passport/index')(app).init();
 // Configure middleware
 app.use(cookieParser());
 app.use(bodyParser.json());
-app.use(bodyParser.json({type: 'application/json'}));
-app.use(bodyParser.json({type: 'application/csp-report'}));
-app.use(bodyParser.urlencoded({extended: false}));
+app.use(bodyParser.json({ type: 'application/json' }));
+app.use(bodyParser.json({ type: 'application/csp-report' }));
+app.use(bodyParser.urlencoded({ extended: false }));
 
 // CORS
 const corsOptions = config.api.cors;

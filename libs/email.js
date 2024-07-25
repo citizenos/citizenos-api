@@ -31,7 +31,7 @@ module.exports = function (app) {
     const emailFooterImageName = 'together.png';
     let emailHeaderLogo = path.join(templateRoot, 'images/logo-email.png');
     const emailFooterImage = path.join(templateRoot, 'images/together.png');
-    if (fs.existsSync(path.join(templateRootLocal, 'images/logo-email.png'))) { //eslint-disable-line no-sync
+    if (fs.existsSync(path.join(templateRootLocal, 'images/logo-email.png'))) {
         emailHeaderLogo = path.join(templateRootLocal, 'images/logo-email.png');
     }
     logger.debug('Using email header logo from', emailHeaderLogo);
@@ -117,18 +117,20 @@ module.exports = function (app) {
 
         // TODO: Rewrite to async FS operations
         try {
-            templateObj.body = fs.readFileSync(pathTemplate, { encoding: 'utf8' }); // eslint-disable-line no-sync
+            templateObj.body = fs.readFileSync(pathTemplate, { encoding: 'utf8' });
         } catch (e) {
+            logger.debug(e);
             logger.warn('Could not read template using fallback instead!', pathTemplate, pathTemplateFallback);
-            templateObj.body = fs.readFileSync(pathTemplateFallback, { encoding: 'utf8' }); // eslint-disable-line no-sync
+            templateObj.body = fs.readFileSync(pathTemplateFallback, { encoding: 'utf8' });
         }
 
         // TODO: Rewrite to async FS operations
         try {
-            templateObj.translations = JSON.parse(fs.readFileSync(pathTranslations, { encoding: 'utf8' })); // eslint-disable-line no-sync
+            templateObj.translations = JSON.parse(fs.readFileSync(pathTranslations, { encoding: 'utf8' }));
         } catch (e) {
+            logger.debug(e);
             logger.warn('Could not read translations using fallback instead!', pathTemplate, pathTemplateFallback);
-            templateObj.translations = JSON.parse(fs.readFileSync(pathTranslationsFallback, { encoding: 'utf8' })); // eslint-disable-line no-sync
+            templateObj.translations = JSON.parse(fs.readFileSync(pathTranslationsFallback, { encoding: 'utf8' }));
         }
 
         templateCache[pathTemplate] = templateObj;

@@ -1494,7 +1494,7 @@ module.exports = function (app) {
                 );
                 [topicJoin] = await Promise.all([topicJoinPromise, memberUserPromise, activityPromise]);
                 t.afterCommit(async () => {
-                    topic = await cosEtherpad.syncTopicWithPad( // eslint-disable-line require-atomic-updates
+                    topic = await cosEtherpad.syncTopicWithPad(
                         topic.id,
                         req.method + ' ' + req.path,
                         {
@@ -1632,7 +1632,7 @@ module.exports = function (app) {
                 );
 
                 t.afterCommit(async () => {
-                    topic = await cosEtherpad.syncTopicWithPad( // eslint-disable-line require-atomic-updates
+                    topic = await cosEtherpad.syncTopicWithPad(
                         topic.id,
                         req.method + ' ' + req.path,
                         {
@@ -3817,6 +3817,7 @@ module.exports = function (app) {
             try {
                 results = await checkPermissionsForGroups(memberId, req.user.userId);
             } catch (err) {
+                logger.debug(err)
                 return res.forbidden();
             }
 
@@ -4948,7 +4949,7 @@ module.exports = function (app) {
         });
 
         await db.transaction(async function (t) {
-            const [memberUser, created] = await TopicMemberUser.findOrCreate({ // eslint-disable-line
+            const [memberUser, created] = await TopicMemberUser.findOrCreate({//eslint-disable-line
                 where: {
                     topicId: topic.id,
                     userId: userId
@@ -5019,7 +5020,7 @@ module.exports = function (app) {
 
 
         await db.transaction(async function (t) {
-            const [memberUser, created] = await TopicMemberUser.findOrCreate({ // eslint-disable-line
+            const [memberUser, created] = await TopicMemberUser.findOrCreate({//eslint-disable-line
                 where: {
                     topicId: topic.id,
                     userId: userId

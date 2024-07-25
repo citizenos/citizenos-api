@@ -1,0 +1,16 @@
+{
+    "plugins":  ["mocha"],
+    "env": {
+        "jest": true,
+        "node": true,
+        "mocha": true,
+        "es6": true
+    },
+    "parserOptions": {
+        "ecmaVersion": 11
+    },
+    "extends": ["eslint:recommended", "plugin:mocha/recommended"],
+    "rules": {
+        "no-multi-spaces": ["error"]
+    }
+}

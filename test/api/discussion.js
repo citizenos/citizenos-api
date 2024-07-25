@@ -1499,11 +1499,6 @@ suite('Users', function () {
 
             });
 
-        });
-
-        // API - /api/users/:userId/topics/:topicId/comments
-        suite('Comments', function () {
-
             suite('Create', function () {
 
                 const agent = request.agent(app);
@@ -1726,7 +1721,7 @@ suite('Users', function () {
                 });
             });
 
-            suite('List', function () {
+            suite('List V2', function () {
                 const agent = request.agent(app);
 
                 const commentType1 = Comment.TYPES.pro;
@@ -2078,10 +2073,6 @@ suite('Users', function () {
                     await topicCommentDelete(agentComment, userComment.id, topic.id, discussion.id, comment.id);
                 });
 
-            });
-
-            suite('Reports', function () {
-                // See the tests for unauthenticated reports - Topics Comments Reports
             });
 
         });

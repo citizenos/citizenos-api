@@ -121,6 +121,7 @@ suite('cosJwt', function () {
 
                 throw new Error('Should throw an error if payload parameter is missing!');
             } catch (err) {
+                console.error(err);
                 return;
             }
         });
@@ -130,6 +131,7 @@ suite('cosJwt', function () {
                 cosJwt.getTokenRestrictedUse({foo: 'bar'});
                 throw new Error('Should throw an error if audience parameter is missing!');
             } catch (err) {
+                console.error(err);
                 return;
             }
         });
@@ -140,6 +142,7 @@ suite('cosJwt', function () {
 
                 throw new Error('Should throw an error if audience parameter value is in invalid format!');
             } catch (err) {
+                console.error(err);
                 return;
             }
         });

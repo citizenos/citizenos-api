@@ -178,7 +178,7 @@ module.exports = function (sequelize, DataTypes) {
 
         Idea.belongsToMany(models.Report, {
             through: models.IdeaReport,
-            foreignKey: 'IdeaId',
+            foreignKey: 'ideaId',
             constraints: true
         });
 
