@@ -75,7 +75,7 @@
     "SUBJECT": "Tvoja odpoveď na nápad bola nahlásená ako nevhodná"
   },
   "REPORT_IDEA_COMMENT_MODERATOR": {
-    "SUBJECT": "An idea reply has been reported in a topic you moderate"
+    "SUBJECT": "V téme, ktorú moderujete, bola nahlásená odpoveď na nápad"
   },
   "REPORT_IDEA_CREATOR": {
     "SUBJECT": "Tvoj nápad bol nahlásený ako nevhodný"
