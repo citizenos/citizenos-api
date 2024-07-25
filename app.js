@@ -43,7 +43,7 @@ if (config.rateLimit && config.rateLimit.storageType === 'redis') {
     const { RedisStore } = require('rate-limit-redis');
     const redisUrl = config.rateLimit.client?.url;
     const redisOptions = config.rateLimit.client?.options;
-    const redisConf = Object.assign({url: redisUrl}, redisOptions);
+    const redisConf = Object.assign({url: process.env.REDIS_URL || redisUrl}, redisOptions);
     const client = createClient(redisConf);
     client.connect();
     rateLimitStore = new RedisStore({

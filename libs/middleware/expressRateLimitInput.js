@@ -2,6 +2,7 @@
 const _ = require('lodash');
 const {RateLimiterMemory, RateLimiterRedis} = require('rate-limiter-flexible'); // FIXME: Allow configurable RateLimiter...
 const assert = require('assert');
+const { createClient } = require('redis');
 
 function ExpressRateLimitInput (app) {
     const config = app.get('config');
@@ -34,8 +35,10 @@ function ExpressRateLimitInput (app) {
         // BUT, when it comes to node-rate-limiter-flexible, the storage and limiter configuration itself are defined as one.
         let rateLimiter;
         if (config.rateLimit && config.rateLimit.storageType === 'redis') {
-            const Redis = require('ioredis');
-            const client = new Redis(config.rateLimit.client.url, config.rateLimit.client.options);
+            const redisConf = Object.assign({url: process.env.REDIS_URL || config.rateLimit.client.url}, config.rateLimit.client.options);
+            const client = createClient(redisConf);
+            client.connect();
+
             rateLimiter = new RateLimiterRedis({
                 storeClient: client,
                 duration: windowMs / 1000,
