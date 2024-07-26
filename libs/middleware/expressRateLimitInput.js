@@ -1,10 +1,10 @@
 'use strict';
 const _ = require('lodash');
-const {RateLimiterMemory, RateLimiterRedis} = require('rate-limiter-flexible'); // FIXME: Allow configurable RateLimiter...
+const { RateLimiterMemory, RateLimiterRedis } = require('rate-limiter-flexible'); // FIXME: Allow configurable RateLimiter...
 const assert = require('assert');
 const { createClient } = require('redis');
 
-function ExpressRateLimitInput (app) {
+function ExpressRateLimitInput(app) {
     const config = app.get('config');
     const logger = app.get('logger');
 
@@ -23,7 +23,7 @@ function ExpressRateLimitInput (app) {
      * @see https://expressjs.com/en/guide/writing-middleware.html
      * @see https://lodash.com/docs/4.17.15#get
      */
-    return function expressRateLimitInput (properties, windowMs, max) {
+    return function expressRateLimitInput(properties, windowMs, max) {
         assert(properties && Array.isArray(properties), `Parameter "properties" is required and must be an array of dot notation strings of properties. Value: ${properties}`);
         assert(windowMs && Number.isInteger(windowMs), `Parameter "windowMs" is required and must be an integer determining the window size in milliseconds. Value: ${windowMs}`);
         assert(max && Number.isInteger(max), `Parameter "max" and must be an integer determining the maximum number of events in given window. Value: ${max}`);
@@ -35,8 +35,14 @@ function ExpressRateLimitInput (app) {
         // BUT, when it comes to node-rate-limiter-flexible, the storage and limiter configuration itself are defined as one.
         let rateLimiter;
         if (config.rateLimit && config.rateLimit.storageType === 'redis') {
-            const redisConf = Object.assign({url: process.env.REDIS_URL || config.rateLimit.client.url}, config.rateLimit.client.options);
+            const redisConf = Object.assign({ url: process.env.REDIS_URL || config.rateLimit.client.url }, config.rateLimit.client.options);
             const client = createClient(redisConf);
+
+            client.on('error', err => logger.error('Redis Client Error', err))
+            client.on('end', () => {
+                logger.log('Redis connection ended');
+            });
+
             client.connect();
 
             rateLimiter = new RateLimiterRedis({
