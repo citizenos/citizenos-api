@@ -7,7 +7,19 @@ const { createClient } = require('redis');
 function ExpressRateLimitInput(app) {
     const config = app.get('config');
     const logger = app.get('logger');
+    let client;
+    if (config.rateLimit && config.rateLimit.storageType === 'redis') {
+        const redisConf = Object.assign({ url: process.env.REDIS_URL || config.rateLimit.client.url }, config.rateLimit.client.options);
+        client = createClient(redisConf);
 
+        client.on('error', err => logger.error('Redis Client Error', err))
+        client.on('end', () => {
+            logger.log('Redis connection ended');
+        });
+
+        client.connect();
+
+    }
     /**
      * Express Rate Limit Input middleware - rate limiting middleware for doing rate limiting based on input.
      *
@@ -34,16 +46,7 @@ function ExpressRateLimitInput(app) {
         // NOTE: Would have liked that you pass in a rate limit storage, like express-rate-limit, so that storage type definition and limits configuration was separate.
         // BUT, when it comes to node-rate-limiter-flexible, the storage and limiter configuration itself are defined as one.
         let rateLimiter;
-        if (config.rateLimit && config.rateLimit.storageType === 'redis') {
-            const redisConf = Object.assign({ url: process.env.REDIS_URL || config.rateLimit.client.url }, config.rateLimit.client.options);
-            const client = createClient(redisConf);
-
-            client.on('error', err => logger.error('Redis Client Error', err))
-            client.on('end', () => {
-                logger.log('Redis connection ended');
-            });
-
-            client.connect();
+        if (config.rateLimit && config.rateLimit.storageType === 'redis' && client) {
 
             rateLimiter = new RateLimiterRedis({
                 storeClient: client,
