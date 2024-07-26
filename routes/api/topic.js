@@ -1748,6 +1748,7 @@ module.exports = function (app) {
             const topicId = req.params.topicId;
             const user = req.user;
             const partner = req.locals.partner;
+            await cosEtherpad.syncTopicWithPad(topicId);
             const topic = await _topicReadAuth(topicId, include, user, partner);
             const revision = await cosEtherpad.topicPadRevisions(topicId);
             topic.revision = revision.revisions;
@@ -1799,6 +1800,7 @@ module.exports = function (app) {
         }
 
         try {
+            await cosEtherpad.syncTopicWithPad(topicId);
             const topic = await _topicReadUnauth(topicId, include);
 
             if (!topic) {
