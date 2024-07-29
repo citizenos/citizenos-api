@@ -3,7 +3,7 @@
         <tr>
             <td valign="middle" style="padding:22px 22px 22px 0;">
                 <p id="header_title_description">
-                    An idea has been reported in
+                    Bol nahlásený nápad v
                 </p>
                 <p id="header_title">{{topic.title}}</p>
             </td>
@@ -14,16 +14,16 @@
     <tbody>
         <tr>
             <td valign="middle" style="padding-bottom: 32px;">
-                Hi {{userModerator.name}}!
+                Ahoj {{userModerator.name}}!
             </td>
         </tr>
         <tr>
           <td width="100%">
-            An idea has been reported as inappropriate in a topic you moderate.{{#isUserNotified}} The idea's author has been notified. {{/isUserNotified}}{{^isUserNotified}}The idea's author has now deleted their account.{{/isUserNotified}} Please see the reasons for reporting below, review the content, and decide on the necessary course of action.
+            V téme, ktorú moderujete, bol nahlásený nápad, označený ako nevhodný.{{#isUserNotified}} Autor/ka nápadu bol/a upovedomený/á. {{/isUserNotified}}{{^isUserNotified}}Autor nápadu už odstránil svoj účet.{{/isUserNotified}} Prosím, prezrite si dôvody nahlásenia nižšie, prejdite si obsah a rozhodnite o ďalšom potrebnom postupe.
             </td>
         </tr>
         <tr>
-            <td><p class="info_heading">Content</p></td>
+            <td><p class="info_heading">Obsah</p></td>
         </tr>
         <tr>
             <td valign="middle">
@@ -50,7 +50,7 @@
             </td>
         </tr>
         <tr>
-            <td><p class="info_heading">Reason</p></td>
+            <td><p class="info_heading">Dôvod</p></td>
         </tr>
         <tr>
             <td>
@@ -76,20 +76,20 @@
             <td style="padding-bottom: 32px; padding-top: 16px;">
                 <p class="submit_button">
                     <a href="{{linkModerate}}" target="_blank"
-                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 60px;">Review idea</a>
+                        style="color:#FFFFFF; text-decoration: none; font-weight: 600;padding: 9px 60px;">Prezrite si nápad</a>
                 </p>
             </td>
         </tr>
 
         <tr>
             <td valign="bottom" style="border-top: 1px solid #E1E7EE;padding-top:16px;font-size:14px;">
-                You can also leave it as is, but other moderators may decide to have it hidden by default (users will get a warning prior to seeing the content).
+                Môžete to tiež ponechať bezo zmien, ale iní moderátori sa môžu rozhodnúť, že to bude predvolene skryté (používatelia dostanú upozornenie pred zobrazením obsahu).
             </td>
         </tr>
         <tr>
             <td valign="bottom" style="padding-top:16px;font-size: 14px;">
-                <a href="{{linkViewModerationGuidelines}}">Learn more about the Citizen OS moderation process
-                    here.</a>
+                <a href="{{linkViewModerationGuidelines}}">Viac o moderačnom procese Citizen OS sa dozviete
+                    tu.</a>
             </td>
         </tr>
     </tbody>
