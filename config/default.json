@@ -153,6 +153,13 @@
             "C": "EE"
           },
           {
+
+            "CN": "SK ID Solutions EID-Q 2021E",
+            "OID": "NTREE-10747013",
+            "O": "SK ID Solutions AS",
+            "C": "EE"
+          },
+          {
             "CN": "ESTEID-SK 2015",
             "OID": "NTREE-10747013",
             "O": "AS Sertifitseerimiskeskus",
@@ -166,7 +173,7 @@
           },
           {
             "C": "EE",
-            "O": "AS Sertifitseerimiskeskus",
+            "O": "AS Sertifitseerimiskes"O": "SK ID Solutions AS",kus",
             "OID": "NTREE-10747013",
             "CN": "TEST of EID-SK 2016"
           },
