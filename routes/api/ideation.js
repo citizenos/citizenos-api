@@ -12,7 +12,8 @@ module.exports = function (app) {
     const db = models.sequelize;
     const Op = db.Sequelize.Op;
     const { injectReplacements } = require('sequelize/lib/utils/sql');
-
+    const QueryStream = app.get('QueryStream');
+    const fastCsv = app.get('fastCsv');
 
     const Ideation = models.Ideation;
     const TopicMemberUser = models.TopicMemberUser;
@@ -285,6 +286,54 @@ module.exports = function (app) {
         } catch (err) {
             next(err);
         }
+    });
+
+    app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId/download', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
+        try {
+            const ideationId = req.params.ideationId;
+            const connectionManager = db.connectionManager;
+            const connection = await connectionManager.getConnection();
+
+            const query = new QueryStream(
+                `
+                    SELECT i.statement, i.description, i."createdAt"
+                    FROM "Ideas" i WHERE "ideationId" = $1
+                ;`,
+                [ideationId]
+            );
+
+            const stream = connection.query(query);
+
+            const csvStream = fastCsv.format({
+                headers: true,
+                rowDelimiter: '\r\n'
+            });
+
+            stream.on('data', function (voteResult) {
+                csvStream.write(voteResult);
+            });
+
+            stream.on('error', function (err) {
+                logger.error('Generating ideation CSV FAILED', err);
+                csvStream.end();
+                connectionManager.releaseConnection(connection);
+            });
+
+            stream.on('end', function () {
+                logger.debug('Generating ideation CSV succeeded');
+
+                csvStream.end();
+                connectionManager.releaseConnection(connection);
+            });
+
+            res.set('Content-disposition', `attachment; filename=${ideationId}.csv`);
+            res.set('Content-Type', 'text/csv');
+
+            csvStream.pipe(res);
+        } catch (err) {
+            next(err);
+        }
+
     });
 
     app.get('/api/users/:userId/topics/:topicId/ideations/:ideationId', loginCheck(['partner']), topicLib.hasPermission(TopicMemberUser.LEVELS.read, true), async (req, res, next) => {
