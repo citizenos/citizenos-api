@@ -296,8 +296,38 @@ module.exports = function (app) {
 
             const query = new QueryStream(
                 `
-                    SELECT i.statement, i.description, i."createdAt"
-                    FROM "Ideas" i WHERE "ideationId" = $1
+                SELECT
+                    u.name,
+                    i."createdAt"::date as date,
+                    i."createdAt"::time as time,
+                    i.statement,
+                    i.description,
+                    iv."count" as likes,
+                    f.folders
+                FROM "Ideas" i
+                JOIN "Users" u ON u.id = i."authorId"
+                LEFT JOIN (
+                    SELECT
+                        ii."ideaId",
+                        ii."count"
+                        FROM (
+                            SELECT
+                            i.id AS "ideaId",
+                                COALESCE(cvu.count, 0) as "count"
+                            FROM "Ideas" i
+                                LEFT JOIN ( SELECT "ideaId", COUNT(value) as count FROM "IdeaVotes" WHERE value > 0 GROUP BY "ideaId") cvu ON i.id = cvu."ideaId"
+                            WHERE i."ideationId" = $1
+                            GROUP BY i.id, cvu.count
+                        ) ii
+                ) iv ON iv."ideaId" = i.id
+                LEFT JOIN (
+                    SELECT f."ideationId",
+                    array_agg(f.name) as folders
+                    FROM "Folders" f WHERE f."ideationId" = $1
+                    GROUP BY f."ideationId"
+                ) f ON f."ideationId" = i."ideationId"
+
+                WHERE i."ideationId" = $1
                 ;`,
                 [ideationId]
             );
